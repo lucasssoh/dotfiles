@@ -12,6 +12,6 @@ alias la='ls -lAh'
 # Tes commandes actuelles
 alias refresh-brave='rm ~/.config/BraveSoftware/Brave-Browser/SingletonLock'
 
-# Paths ()
+# Paths (Tes configurations existantes)
 export PATH="$HOME/.symfony5/bin:$HOME/.symfony/bin:$PATH"
 . "$HOME/.cargo/env" 2>/dev/null

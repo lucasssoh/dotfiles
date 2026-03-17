@@ -1,0 +1,113 @@
+# --- CONFIGURATION GÉNÉRALE ---
+add_newline = true
+
+# On définit l'ordre d'affichage (Dossier > Git > Langages > Suite)
+format = """
+$os\
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$python\
+$php\
+$nodejs\
+$rust\
+$c\
+$golang\
+$java\
+$lua\
+$docker_context\
+$cmd_duration\
+$line_break\
+$character"""
+
+# Remplit l'espace vide entre le chemin et les infos de langage
+[fill]
+symbol = " "
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vicmd_symbol = "[❮](bold yellow)"
+
+[directory]
+style = "bold blue"
+read_only = " 󰌾"
+truncation_length = 4
+truncate_to_repo = true # Tronque le chemin à partir de la racine du repo Git
+
+# --- SYSTÈME DE CONTRÔLE DE VERSION ---
+[git_branch]
+symbol = " "
+style = "bold purple"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "bold red"
+format = "([\\[$all_status$ahead_behind\\]]($style) )"
+
+# --- LANGAGES & ENVIRONNEMENTS ---
+# S'affiche seulement si un fichier .py ou venv est présent
+[python]
+symbol = "🐍 "
+style = "yellow"
+pyenv_prefix = "venv "
+format = "via [$symbol$version]($style) "
+
+# S'affiche si composer.json ou .php est présent
+[php]
+symbol = "🐘 "
+style = "blue"
+format = "via [$symbol$version]($style) "
+
+# S'affiche si package.json ou node_modules est présent
+[nodejs]
+symbol = " "
+style = "green"
+format = "via [$symbol$version]($style) "
+
+# Pour tes outils en Rust (comme Starship lui-même)
+[rust]
+symbol = "🦀 "
+style = "red"
+format = "via [$symbol$version]($style) "
+
+# Pour tes cours d'algorithmique ou projets système
+[c]
+symbol = " "
+style = "149"
+format = "via [$symbol$version]($style) "
+
+[golang]
+symbol = " "
+style = "cyan"
+format = "via [$symbol$version]($style) "
+
+[java]
+symbol = "☕ "
+style = "166"
+format = "via [$symbol$version]($style) "
+
+[lua]
+symbol = "🌙 "
+style = "blue"
+format = "via [$symbol$version]($style) "
+
+# --- UTILITAIRES ---
+[docker_context]
+symbol = " "
+style = "bold blue"
+format = "inside [$symbol$context]($style) "
+
+[cmd_duration]
+min_time = 2_000 # Affiche le temps d'exécution si > 2 secondes
+style = "bold yellow"
+format = "took [$duration]($style) "
+
+[os]
+disabled = false
+format = "[$symbol]($style) "
+
+[os.symbols]
+Fedora = " "
+Linux = " "

@@ -1,0 +1,57 @@
+[general]
+import = [
+    "~/.config/alacritty/themes/themes/{theme}.toml"
+]
+
+[window]
+padding = { x = 12, y = 12 }
+dynamic_title = true
+
+# Opacité : 1.0 est opaque, 0.0 est invisible.
+# 0.85 à 0.90 est le "sweet spot" pour voir le flou derrière.
+opacity = 0.85
+
+# Permet au gestionnaire de fenêtres de flouter l'arrière-plan
+blur = true 
+
+[font]
+# On utilise JetBrainsMono Nerd Font (très lisible en gras)
+normal = { family = "JetBrainsMono", style = "regular" }
+bold = { family = "JetBrainsMono", style = "Bold" }
+
+# Augmenter légèrement la taille aide aussi au rendu "Bold"
+size = 12
+
+[cursor]
+style = { shape = "Beam", blinking = "On" }
+
+# Default colors
+[colors.primary]
+background = '#000000'
+foreground = '#ffffff'
+
+[colors.cursor]
+text = '#F81CE5'
+cursor = '#ffffff'
+
+# Normal colors
+[colors.normal]
+black   = '#000000'
+red     = '#fe0100'
+green   = '#33ff00'
+yellow  = '#feff00'
+blue    = '#0066ff'
+magenta = '#cc00ff'
+cyan    = '#00ffff'
+white   = '#d0d0d0'
+
+# Bright colors
+[colors.bright]
+black   = '#808080'
+red     = '#fe0100'
+green   = '#33ff00'
+yellow  = '#feff00'
+blue    = '#0066ff'
+magenta = '#cc00ff'
+cyan    = '#00ffff'
+white   = '#FFFFFF'
