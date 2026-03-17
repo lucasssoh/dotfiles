@@ -18,7 +18,7 @@ $PKGMGR git curl
 DOTFILES_DIR=$(pwd)
 
 # On lance les modules
-for module in fonts bash wezterm; do
+for module in fonts bash wezterm nvim; do
     if [ -d "$DOTFILES_DIR/$module" ]; then
         echo "[INFO] Lancement du module : $module"
         cd "$DOTFILES_DIR/$module" && chmod +x ./install.sh && ./install.sh
