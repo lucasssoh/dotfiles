@@ -3,17 +3,17 @@
 # =========================
 format = """
 $os\
+$username\
 $directory\
 $git_branch\
 $git_status\
-
+$docker_context\
 $python\
 $nodejs\
 $java\
 $rust\
 $golang\
 $c\
-$docker_context\
 $cmd_duration\
 $line_break\
 $character
@@ -24,13 +24,27 @@ $character
 # =========================
 [os]
 disabled = false
-format = "[](bold white) "
+format = "[$symbol $os](bold white)"
+
+[os.symbols]
+Arch = ""
+Fedora = ""
+Linux = ""
+Macos = ""
+Windows = ""
 
 # =========================
-# DIRECTORY
+# USER (pill vert avec coins)
+# =========================
+[username]
+format = " [$user](bg:green fg:black)"
+show_always = true
+
+# =========================
+# DIRECTORY (pill bleu avec coins)
 # =========================
 [directory]
-format = "[ $path ](bold blue)"
+format = " [ $path ](bg:blue fg:white)"
 truncation_length = 3
 truncate_to_repo = true
 
@@ -47,46 +61,36 @@ format = "[ $all_status$ahead_behind ](bold red)"
 # =========================
 # LANGAGES
 # =========================
-
 [python]
-symbol = ""
-format = "[ py $version ](bg:yellow fg:black)"
+format = "[ py $version ](yellow)"
 
 [nodejs]
-symbol = ""
-format = "[ node $version ](bg:green fg:black)"
+format = "[ node $version ](green)"
 
 [java]
-symbol = ""
-format = "[ java $version ](bg:red fg:white)"
+format = "[ java $version ](red)"
 
 [rust]
-symbol = ""
-format = "[ rs $version ](bg:color208 fg:black)"  # orange (plus lisible que red)
+format = "[ rs $version ](red)"
 
 [golang]
-symbol = ""
-format = "[ go $version ](bg:cyan fg:black)"
+format = "[ go $version ](cyan)"
 
 [c]
-symbol = ""
 format = ""
-
 
 # =========================
 # DEVOPS / ENV
 # =========================
-
 [docker_context]
-format = "[ docker $context ](bg:blue fg:white)"
+format = "[ docker $context ](blue)"
 
 [kubernetes]
-format = "[ k8s $context ](bg:cyan fg:black)"
+format = "[ k8s $context ](cyan)"
 
 # =========================
 # PERF
 # =========================
-
 [cmd_duration]
 min_time = 2000
 format = "[ $duration ](dimmed yellow)"
@@ -94,8 +98,7 @@ format = "[ $duration ](dimmed yellow)"
 # =========================
 # PROMPT
 # =========================
-
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-vicmd_symbol = "[❮](bold yellow)"
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜]bold red)"
+vicmd_symbol = "[➜](bold yellow)"
