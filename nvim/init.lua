@@ -4,67 +4,82 @@ vim.opt.number = true
 vim.opt.relativenumber = true 
 vim.opt.termguicolors = true 
 vim.opt.mouse = 'a'
-vim.opt.cursorline = true -- Souligne la ligne actuelle pour le look "IDE"
+vim.opt.cursorline = true
+vim.opt.clipboard = "unnamedplus" -- Permet d'utiliser le presse-papier système par défaut
 
--- --- SÉCURITÉ GIT (Évite l'erreur ksshaskpass) ---
+-- Sécurité Git
 vim.fn.setenv("SSH_ASKPASS", "")
 
--- --- INSTALLATION DU GESTIONNAIRE DE PLUGINS (LAZY) ---
+-- --- LAZY.NVIM ---
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath })
 end
 vim.opt.rtp:prepend(lazypath)
 
--- --- CONFIGURATION DES PLUGINS ---
+-- --- PLUGINS ---
 require("lazy").setup({
-  -- 1. Le Thème Hyper-style (Version stable et accessible)
-  { 
-    "rktjmp/lush.nvim" -- Moteur de rendu de couleurs nécessaire pour les thèmes modernes
-  },
-  { 
-    "EdenEast/nightfox.nvim", -- La variante 'carbonfox' est le clone parfait du style Hyper
-    lazy = false, 
-    priority = 1000, 
-    config = function() 
-      vim.cmd("colorscheme carbonfox") 
-    end 
-  },
-  
-  -- 2. L'explorateur de fichiers (Nvim-Tree)
+  { "rktjmp/lush.nvim" },
+  { "EdenEast/nightfox.nvim", lazy = false, priority = 1000, config = function() vim.cmd("colorscheme carbonfox") end },
+
+  -- L'explorateur (Nvim-Tree)
   {
     "nvim-tree/nvim-tree.lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
-      require("nvim-tree").setup({
-        view = { 
-          width = 30, 
-          side = "left" 
-        },
-        renderer = { 
-          icons = { show = { file = true, folder = true } },
-          highlight_opened_files = "all",
-          add_trailing = true, -- Ajoute un slash aux dossiers
-        },
-        filters = { dotfiles = false } -- Affiche les fichiers cachés (important pour tes dotfiles)
-      })
-      -- Raccourci Espace + e
+      require("nvim-tree").setup({ view = { width = 30 }, renderer = { highlight_opened_files = "all" }, filters = { dotfiles = false } })
       vim.keymap.set('n', '<leader>e', ':NvimTreeToggle<CR>', { silent = true })
     end
   },
 
-  -- 3. La barre d'état (Lualine) stylisée
+  -- Barre d'état (Lualine)
+  { "nvim-lualine/lualine.nvim", dependencies = { "nvim-tree/nvim-web-devicons" }, config = function() require('lualine').setup({ options = { theme = 'carbonfox', globalstatus = true } }) end },
+
+  -- --- LE PACK LSP & AUTO-COMPLÉTION ---
   {
-    "nvim-lualine/lualine.nvim",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
+    'VonHeikemen/lsp-zero.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      -- Gestionnaire de serveurs (LSP, Linters, Formatters)
+      {'williamboman/mason.nvim'},
+      {'williamboman/mason-lspconfig.nvim'},
+
+      -- LSP Support
+      {'neovim/nvim-lspconfig'},
+      -- Auto-complétion
+      {'hrsh7th/nvim-cmp'},
+      {'hrsh7th/cmp-nvim-lsp'},
+      {'L3MON4D3/LuaSnip'},
+    },
     config = function()
-      require('lualine').setup({
-        options = { 
-          theme = 'carbonfox',
-          section_separators = { left = '', right = '' },
-          component_separators = { left = '', right = '' },
-          globalstatus = true, -- Une seule barre en bas, même avec plusieurs splits
-        }
+      local lsp_zero = require('lsp-zero')
+      lsp_zero.extend_lspconfig()
+
+      lsp_zero.on_attach(function(client, bufnr)
+        -- Raccourcis clavier quand le LSP est actif
+        lsp_zero.default_keymaps({buffer = bufnr})
+        local opts = {buffer = bufnr}
+        vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end, opts) -- Go to definition
+        vim.keymap.set('n', 'K', function() vim.lsp.buf.hover() end, opts)       -- Documentation
+        vim.keymap.set('n', '<leader>ca', function() vim.lsp.buf.code_action() end, opts) -- Fix rapide (ESLint fix)
+      end)
+
+      require('mason').setup({})
+      require('mason-lspconfig').setup({
+        -- Ici tu listes les serveurs que tu veux installer automatiquement
+        ensure_installed = {'eslint', 'pyright', 'phpactor', 'symfony_ls'},
+        handlers = {
+          lsp_zero.default_setup,
+        },
+      })
+
+      -- Config de l'auto-complétion (Menu déroulant)
+      local cmp = require('cmp')
+      cmp.setup({
+        mapping = cmp.mapping.preset.insert({
+          ['<CR>'] = cmp.mapping.confirm({select = true}), -- Entrée pour valider
+          ['<Tab>'] = cmp.mapping.select_next_item(),    -- Tab pour descendre
+        })
       })
     end
   }
