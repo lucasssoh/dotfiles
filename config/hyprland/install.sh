@@ -52,13 +52,26 @@ safe_link() {
 # Hyprland
 safe_link "$DOTFILES_DIR/config/hyprland/hyprland.conf" ~/.config/hypr/hyprland.conf
 
-# Wallpaper
+# ------------------------
+# Wallpaper et Configuration hyprpaper
+# ------------------------
 WALL_DIR="$HOME/Pictures/Wallpapers"
 mkdir -p "$WALL_DIR"
+mkdir -p ~/.config/hypr
+
 WALL_SRC="$DOTFILES_DIR/config/hyprland/wallpapers/pepper-carrot.jpg"
+WALL_DEST="$WALL_DIR/pepper-carrot.jpg"
+
 if [ -f "$WALL_SRC" ]; then
-    safe_link "$WALL_SRC" "$WALL_DIR/pepper-carrot.jpg"
-    echo "[INFO] Wallpaper ajouté : $WALL_DIR/pepper-carrot.jpg"
+    safe_link "$WALL_SRC" "$WALL_DEST"
+    
+    # Génération dynamique du fichier hyprpaper.conf
+    cat <<EOF > ~/.config/hypr/hyprpaper.conf
+preload = $WALL_DEST
+wallpaper = ,$WALL_DEST
+splash = false
+EOF
+    echo "[INFO] Wallpaper et config hyprpaper générés."
 fi
 
 # Waybar
