@@ -21,6 +21,7 @@ sudo dnf install -y \
     curl \
     git \
     wget \
+    tar \
     xdg-utils
 
 echo "[INFO] Activation des services essentiels..."
