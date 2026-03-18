@@ -2,6 +2,7 @@
 set -e
 
 echo "[INFO] Mise à jour du système..."
+sudo dnf copr enable solopasha/hyprland
 sudo dnf update -y
 
 echo "[INFO] Installation des services de base..."
