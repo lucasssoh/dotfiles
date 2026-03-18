@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 FONT_DIR="$HOME/.local/share/fonts"
 mkdir -p "$FONT_DIR"
 
 if fc-list : family | grep -iq "JetBrainsMono"; then
-    echo "[INFO] JetBrains Mono est déjà installé."
+    echo "[INFO] JetBrains Mono déjà installé"
 else
     echo "[INFO] Téléchargement de JetBrains Mono Nerd Font..."
     curl -L https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip -o /tmp/jb.zip
@@ -16,5 +17,5 @@ else
     fc-cache -fv
     
     rm /tmp/jb.zip
-    echo "[OK] Polices installées avec succès."
+    echo "[OK] Polices installées"
 fi

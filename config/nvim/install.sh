@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-# 1. Installation de Neovim
+# 1. Installer Neovim si besoin
 if ! command -v nvim &> /dev/null; then
     echo "[INFO] Installation de Neovim..."
     if command -v dnf &> /dev/null; then
@@ -11,16 +12,18 @@ if ! command -v nvim &> /dev/null; then
 fi
 
 # 2. Liens symboliques
-MODULE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/nvim
 
 safe_link() {
     local src=$1
     local dest=$2
-    [ -L "$dest" ] || [ -f "$dest" ] && rm -rf "$dest"
+    if [ -L "$dest" ] || [ -f "$dest" ]; then
+        rm -rf "$dest"
+    fi
     ln -s "$src" "$dest"
 }
 
-safe_link "$MODULE_DIR/init.lua" ~/.config/nvim/init.lua
+safe_link "$DOTFILES_DIR/config/nvim/init.lua" ~/.config/nvim/init.lua
 
-echo "[OK] Neovim est configuré."
+echo "[OK] Neovim configuré"

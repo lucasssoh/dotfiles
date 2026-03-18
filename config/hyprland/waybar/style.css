@@ -1,0 +1,7 @@
+/* Minimal style */
+* {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: #ffffff;
+    background: #222222;
+}
