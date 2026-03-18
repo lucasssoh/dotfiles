@@ -21,7 +21,7 @@ fi
 $PKG_INSTALL hyprland xdg-desktop-portal-hyprland hyprpaper
 
 # Installer les accessoires
-$PKG_INSTALL waybar wofi foot starship fzf zoxide
+$PKG_INSTALL waybar wofi foot fzf zoxide
 
 # ------------------------
 # Créer dossiers de config
