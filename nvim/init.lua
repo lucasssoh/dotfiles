@@ -66,13 +66,36 @@ require("lazy").setup({
 
       require('mason').setup({})
       require('mason-lspconfig').setup({
-        -- Ici tu listes les serveurs que tu veux installer automatiquement
-        ensure_installed = {'eslint', 'pyright', 'phpactor', 'symfony_ls'},
+        ensure_installed = {
+          -- --- WEB & FRONTEND ---
+          'ts_ls',                    -- React / JS / TS (Anciennement tsserver)
+          'angularls',                -- Angular
+          'html',                     -- HTML
+          'cssls',                    -- CSS
+          'tailwindcss',              -- Tailwind CSS (Si tu l'utilises, c'est un must)
+          'eslint',                   -- Le fameux ESLint pour le JS/TS
+
+          -- --- PHP & SYMFONY (Projets L3) ---
+          'intelephense',             -- Le plus rapide pour PHP
+
+          -- --- JAVA (Cours de Programmation) ---
+          'jdtls',                    -- Eclipse JDT.LS
+
+          -- --- C / C++ (Système & Algo) ---
+          'clangd',                   -- C / C++
+
+          -- --- PYTHON (Jeu des Amazones / IA) ---
+          'pyright',                  -- Le standard de Microsoft pour Python
+
+          -- --- AUTRES ---
+          'lua_ls',                   -- Pour configurer ton Neovim sans erreurs
+          'bashls',                   -- Pour tes scripts d'installation dotfiles
+          'yamlls',                   -- Pour tes configs Symfony / Docker
+        },
         handlers = {
           lsp_zero.default_setup,
         },
       })
-
       -- Config de l'auto-complétion (Menu déroulant)
       local cmp = require('cmp')
       cmp.setup({
