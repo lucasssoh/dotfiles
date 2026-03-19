@@ -11,6 +11,7 @@ sudo dnf install -y \
     bluetooth \
     bluez \
     bluez-tools \
+    blueman \
     pipewire \
     pipewire-pulse \
     wireplumber \
