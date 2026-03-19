@@ -30,7 +30,7 @@
         "format-ethernet": "󰈀 {bandwidthDownBits}",
         "format-disconnected": "󰖪",
         "tooltip-format": "{essid} {signalStrength}%",
-        "on-click": "wezterm start nmtui"
+        "on-click": "wezterm start --always-new-process nmtui"
     },
 
     "bluetooth": {
@@ -39,7 +39,8 @@
         "format-connected-battery": " {device_alias} {device_battery_percentage}%",
         "tooltip-format": "{controller_alias}\t{controller_address}",
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
-        "on-click": "blueman-manager"
+        "on-click": "blueman-manager",
+        "on-click-right": "wezterm start --always-new-process bluetoothctl power on"
     },
 
     "battery": {
@@ -52,6 +53,6 @@
         "format": "{icon} {volume}%",
         "format-muted": "󰝟",
         "format-icons": { "default": ["", ""] },
-        "on-click": "wezterm start pulsemixer"
+        "on-click": "wezterm start --always-new-process pulsemixer"
     }
 }
