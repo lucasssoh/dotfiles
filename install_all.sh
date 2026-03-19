@@ -18,22 +18,23 @@ fi
 # -----------------------------
 # Installer les bases
 # -----------------------------
-echo "[INFO] Installation des bases (git, curl)..."
-$PKGMGR git curl
+echo "[INFO] Installation des bases (git, curl, ImageMagick)..."
+
+$PKGMGR git curl imagemagick
 
 echo "[INFO] Installation de pip..."
 if command -v python3 &> /dev/null; then
     if command -v dnf &> /dev/null; then
-        sudo dnf install -y python3-pip
+        # Sur Fedora, on prend aussi python3-devel pour plus de sécurité avec pip
+        sudo dnf install -y python3-pip python3-devel
     elif command -v pacman &> /dev/null; then
         sudo pacman -S --noconfirm python-pip
     elif command -v apt-get &> /dev/null; then
-        sudo apt-get install -y python3-pip
+        sudo apt-get install -y python3-pip python3-dev
     fi
 else
     echo "[WARN] Python3 n'est pas installé, pip ignoré."
 fi
-
 
 # -----------------------------
 # Définir le dossier racine
