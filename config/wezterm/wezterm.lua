@@ -6,7 +6,7 @@ config.window_background_opacity = 0.85
 config.kde_window_background_blur = true 
 config.font = wezterm.font { family = 'JetBrainsMono Nerd Font', weight = 'Bold' }
 config.font_size = 11.0
-config.color_scheme = 'Gruvbox Dark (Grit)'
+config.color_scheme = 'Humanoid light (base16)'
 
 -- --- MULTIPLEXAGE & INTERFACE ---
 config.enable_tab_bar = true
