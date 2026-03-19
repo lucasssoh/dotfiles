@@ -6,53 +6,48 @@
     "margin-left": 10,
     "margin-right": 10,
     "spacing": 4,
-
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
     "modules-right": ["network", "bluetooth", "pulseaudio", "battery"],
-
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
         "format-icons": {
-            "active": "",
-            "default": ""
+            "active": "",
+            "default": ""
         }
     },
-
     "clock": {
-        "format": " {:%H:%M   %d/%m}",
+        "format": " {:%H:%M   %d/%m}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
     },
-
     "network": {
-        "format-wifi": "  {bandwidthDownBits}",
+        "format-wifi": "  {bandwidthDownBits}",
         "format-ethernet": "󰈀 {bandwidthDownBits}",
         "format-disconnected": "󰖪",
         "tooltip-format": "{essid} {signalStrength}%",
-        "on-click": "wezterm start --always-new-process nmtui"
+        "on-click": "~/.config/hypr/scripts/popup.sh nmtui network-popup",
+        "on-click-right": "~/.config/hypr/scripts/popup.sh 'nmcli dev wifi list' wifi-list"
     },
-
     "bluetooth": {
-        "format": " {status}",
-        "format-connected": " {device_alias}",
-        "format-connected-battery": " {device_alias} {device_battery_percentage}%",
+        "format": " {status}",
+        "format-connected": " {device_alias}",
+        "format-connected-battery": " {device_alias} {device_battery_percentage}%",
         "tooltip-format": "{controller_alias}\t{controller_address}",
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
-        "on-click": "blueman-manager",
-        "on-click-right": "wezterm start --always-new-process bluetoothctl power on"
+        "on-click": "~/.config/hypr/scripts/popup.sh bluetoothctl bt-popup",
+        "on-click-right": "rfkill toggle bluetooth"
     },
-
     "battery": {
         "states": { "warning": 30, "critical": 15 },
         "format": "{icon} {capacity}%",
-        "format-icons": ["", "", "", "", ""]
+        "format-icons": ["", "", "", "", ""]
     },
-
     "pulseaudio": {
         "format": "{icon} {volume}%",
         "format-muted": "󰝟",
-        "format-icons": { "default": ["", ""] },
-        "on-click": "wezterm start --always-new-process /var/lib/snapd/snap/bin/pulsemixer"
+        "format-icons": { "default": ["", ""] },
+        "on-click": "~/.config/hypr/scripts/popup.sh pulsemixer audio-popup",
+        "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle"
     }
 }
