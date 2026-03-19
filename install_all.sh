@@ -64,6 +64,31 @@ if [ -d "$HYPR_PATH" ]; then
     chmod +x "$HYPR_PATH/install.sh"
     "$HYPR_PATH/install.sh"
 fi
+
+# -----------------------------
+# Thème Visuel (Pywal & Wallpaper)
+# -----------------------------
+echo "[INFO] Configuration du thème visuel..."
+
+# 1. Installer Pywal via pip (si pas déjà fait)
+if ! command -v wal &> /dev/null; then
+    pip install pywal --user
+fi
+
+# 2. S'assurer que le dossier des fonds d'écran existe dans tes dotfiles
+WALLPAPER_DIR="$DOTFILES_DIR/config/hypr/wallpapers"
+if [ -d "$WALLPAPER_DIR" ]; then
+    # On prend le premier wallpaper trouvé pour initialiser le thème
+    FIRST_WALL=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" \) | head -n 1)
+    
+    if [ -n "$FIRST_WALL" ]; then
+        echo "[INFO] Application du thème basé sur : $(basename "$FIRST_WALL")"
+        # On utilise le PATH local au cas où le shell n'est pas encore rechargé
+        "$HOME/.local/bin/wal" -i "$FIRST_WALL"
+    fi
+else
+    echo "[WARN] Dossier wallpapers introuvable dans $WALLPAPER_DIR"
+fi
 # -----------------------------
 # Terminé
 # -----------------------------
