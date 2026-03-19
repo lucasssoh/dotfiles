@@ -1,5 +1,5 @@
-/* 1. Importation obligatoire des couleurs de Pywal */
-@import url("../../.cache/wal/colors-waybar.css");
+/* 1. Importation des couleurs de Pywal (chemin absolu vers ton home) */
+@import url("file:///home/lucas/.cache/wal/colors-waybar.css");
 
 * {
     font-family: "JetBrainsMono Nerd Font", monospace;
@@ -9,7 +9,7 @@
 }
 
 window#waybar {
-    /* On utilise @background (couleur dominante sombre du wall) */
+    /* On utilise la variable @background de Pywal avec une opacité de 0.8 */
     background: rgba(@background, 0.8); 
     color: @foreground;
     border-radius: 10px;
@@ -17,28 +17,30 @@ window#waybar {
 
 #workspaces button {
     padding: 0 5px;
-    /* Couleur assombrie pour les inactifs */
+    /* Couleur pour les icônes inactives (souvent un gris/teinte sombre du wall) */
     color: @color8; 
 }
 
 #workspaces button.active {
-    /* Couleur vive du wallpaper pour le workspace actif */
+    /* La couleur d'accentuation principale du wallpaper */
     color: @color2; 
 }
 
 #clock, #network, #bluetooth, #pulseaudio, #battery {
     padding: 0 10px;
     margin: 4px 2px;
-    /* Un léger voile basé sur le texte pour la cohérence */
+    /* Un léger voile basé sur la couleur du texte pour le relief */
     background: rgba(@foreground, 0.05);
     border-radius: 6px;
 }
 
-/* On utilise les accents de Pywal pour garder de la variété */
-#network { color: @color4; }
-#bluetooth { color: @color5; }
-#battery { color: @color6; }
-#clock { 
-    color: @color2; 
-    font-weight: bold; 
+/* On distribue les différentes couleurs de la palette Pywal pour les icônes */
+#network    { color: @color4; }
+#bluetooth  { color: @color5; }
+#battery    { color: @color6; }
+#clock      { color: @color2; font-weight: bold; }
+
+/* Optionnel : si tu veux une bordure assortie en bas de la barre */
+#waybar {
+    border-bottom: 2px solid @color2;
 }
