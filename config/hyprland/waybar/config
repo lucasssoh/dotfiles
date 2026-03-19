@@ -53,6 +53,6 @@
         "format": "{icon} {volume}%",
         "format-muted": "󰝟",
         "format-icons": { "default": ["", ""] },
-        "on-click": "wezterm start --always-new-process pulsemixer"
+        "on-click": "wezterm start --always-new-process /var/lib/snapd/snap/bin/pulsemixer"
     }
 }
