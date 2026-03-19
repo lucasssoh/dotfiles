@@ -95,6 +95,25 @@ sudo dnf install -y \
     xdg-user-dirs
 
 # =========================
+# GRAPHICAL LIBS (runtime minimal)
+# =========================
+echo "[INFO] Librairies graphiques de base..."
+sudo dnf install -y \
+    wayland \
+    wayland-protocols \
+    xorg-x11-server-Xwayland \
+    gtk3 \
+    gtk4 \
+    qt5-qtbase \
+    qt6-qtbase \
+    libX11 \
+    libXcursor \
+    libXrandr \
+    libXi \
+    libXext \
+    libXrender
+
+# =========================
 # UTILITAIRES ESSENTIELS
 # =========================
 echo "[INFO] Utilitaires..."
