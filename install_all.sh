@@ -76,7 +76,7 @@ if ! command -v wal &> /dev/null; then
 fi
 
 # 2. S'assurer que le dossier des fonds d'écran existe dans tes dotfiles
-WALLPAPER_DIR="$DOTFILES_DIR/config/hypr/wallpapers"
+WALLPAPER_DIR="$DOTFILES_DIR/config/hyprland/wallpapers"
 if [ -d "$WALLPAPER_DIR" ]; then
     # On prend le premier wallpaper trouvé pour initialiser le thème
     FIRST_WALL=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" \) | head -n 1)
