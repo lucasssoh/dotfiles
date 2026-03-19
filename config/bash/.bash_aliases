@@ -36,15 +36,3 @@ hsync() {
         echo "󰅚 Environnement graphique non détecté."
     fi
 }
-
-# --- PATHS & ENVIRONNEMENT ---
-export PATH="$HOME/.symfony5/bin:$HOME/.symfony/bin:$PATH"
-
-# Chargement Cargo (Rust)
-if [ -f "$HOME/.cargo/env" ]; then
-    . "$HOME/.cargo/env"
-fi
-
-# NVM (si présent)
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
