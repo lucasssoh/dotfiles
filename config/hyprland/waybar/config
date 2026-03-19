@@ -9,6 +9,20 @@
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
     "modules-right": ["network", "bluetooth", "pulseaudio", "battery"],
+    
+    "group/left": {
+    "orientation": "horizontal",
+    "modules": ["hyprland/workspaces", "hyprland/window"]
+    },
+    "group/center": {
+    "orientation": "horizontal",
+    "modules": ["clock"]
+    },
+    "group/right": {
+    "orientation": "horizontal",
+    "modules": ["network", "bluetooth", "pulseaudio", "battery"]
+    },
+    
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",

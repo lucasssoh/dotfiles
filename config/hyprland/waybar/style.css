@@ -5,29 +5,38 @@
     border-radius: 0;
 }
 
+/* Fenêtre principale transparente */
 window#waybar {
-    background: rgba(10, 15, 10, 0.8); /* Vert profond sombre */
+    background: transparent;
     color: #e0e0e0;
-    border-radius: 10px;
 }
 
+/* Les trois pilules */
+#left, #center, #right {
+    background: rgba(10, 15, 10, 0.85);
+    border-radius: 16px;
+    border: 0.5px solid rgba(46, 204, 113, 0.2);
+    padding: 0 8px;
+    margin: 8px 4px;
+}
+
+/* Workspaces */
 #workspaces button {
     padding: 0 5px;
     color: #4a5d4a;
+    background: transparent;
 }
-
 #workspaces button.active {
-    color: #2ecc71; /* Vert émeraude */
+    color: #2ecc71;
 }
 
-#clock, #network, #bluetooth, #pulseaudio, #battery {
-    padding: 0 10px;
-    margin: 4px 2px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-}
+/* Modules individuels */
+#clock    { color: #2ecc71; font-weight: bold; padding: 0 10px; }
+#network  { color: #5dade2; padding: 0 8px; }
+#bluetooth{ color: #85c1e9; padding: 0 8px; }
+#pulseaudio { color: #e0e0e0; padding: 0 8px; }
+#battery  { color: #a9dfbf; padding: 0 8px; }
 
-#network { color: #5dade2; }
-#bluetooth { color: #85c1e9; }
-#battery { color: #a9dfbf; }
-#clock { color: #2ecc71; font-weight: bold; }
+/* Battery critique */
+#battery.warning  { color: #f39c12; }
+#battery.critical { color: #e74c3c; }
