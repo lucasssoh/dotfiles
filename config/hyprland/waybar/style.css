@@ -1,4 +1,4 @@
-/* 1. Importation des couleurs de Pywal (chemin absolu vers ton home) */
+/* 1. Importation des couleurs de Pywal */
 @import url("file:///home/lucas/.cache/wal/colors-waybar.css");
 
 * {
@@ -8,39 +8,34 @@
     border-radius: 0;
 }
 
-window#waybar {
-    /* On utilise la variable @background de Pywal avec une opacité de 0.8 */
-    background: @background; 
-    color: @foreground;
+/* Barre principale */
+#waybar {
+    background: rgba(var(--background-rgb), 0.8); /* transparent */
+    color: var(--foreground);
     border-radius: 10px;
+    border-bottom: 2px solid var(--color2);
 }
 
+/* Workspaces */
 #workspaces button {
     padding: 0 5px;
-    /* Couleur pour les icônes inactives (souvent un gris/teinte sombre du wall) */
-    color: @color8; 
+    color: var(--color8);
 }
 
 #workspaces button.active {
-    /* La couleur d'accentuation principale du wallpaper */
-    color: @color2; 
+    color: var(--color2);
 }
 
+/* Modules */
 #clock, #network, #bluetooth, #pulseaudio, #battery {
     padding: 0 10px;
     margin: 4px 2px;
-    /* Un léger voile basé sur la couleur du texte pour le relief */
-    background: rgba(@foreground, 0.05);
+    background: rgba(var(--foreground-rgb), 0.05);
     border-radius: 6px;
 }
 
-/* On distribue les différentes couleurs de la palette Pywal pour les icônes */
-#network    { color: @color4; }
-#bluetooth  { color: @color5; }
-#battery    { color: @color6; }
-#clock      { color: @color2; font-weight: bold; }
-
-/* Optionnel : si tu veux une bordure assortie en bas de la barre */
-#waybar {
-    border-bottom: 2px solid @color2;
-}
+/* Couleurs d'icônes */
+#network    { color: var(--color4); }
+#bluetooth  { color: var(--color5); }
+#battery    { color: var(--color6); }
+#clock      { color: var(--color2); font-weight: bold; }
