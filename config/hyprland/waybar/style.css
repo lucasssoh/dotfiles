@@ -1,6 +1,3 @@
-/* 1. Importation des couleurs de Pywal */
-@import url("file:///home/lucas/.cache/wal/colors-waybar.css");
-
 * {
     font-family: "JetBrainsMono Nerd Font", monospace;
     font-size: 13px;
@@ -8,34 +5,29 @@
     border-radius: 0;
 }
 
-/* Barre principale */
-#waybar {
-    background: rgba(var(--background-rgb), 0.8); /* transparent */
-    color: var(--foreground);
+window#waybar {
+    background: rgba(10, 15, 10, 0.8); /* Vert profond sombre */
+    color: #e0e0e0;
     border-radius: 10px;
-    border-bottom: 2px solid var(--color2);
 }
 
-/* Workspaces */
 #workspaces button {
     padding: 0 5px;
-    color: var(--color8);
+    color: #4a5d4a;
 }
 
 #workspaces button.active {
-    color: var(--color2);
+    color: #2ecc71; /* Vert émeraude */
 }
 
-/* Modules */
 #clock, #network, #bluetooth, #pulseaudio, #battery {
     padding: 0 10px;
     margin: 4px 2px;
-    background: rgba(var(--foreground-rgb), 0.05);
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 6px;
 }
 
-/* Couleurs d'icônes */
-#network    { color: var(--color4); }
-#bluetooth  { color: var(--color5); }
-#battery    { color: var(--color6); }
-#clock      { color: var(--color2); font-weight: bold; }
+#network { color: #5dade2; }
+#bluetooth { color: #85c1e9; }
+#battery { color: #a9dfbf; }
+#clock { color: #2ecc71; font-weight: bold; }
