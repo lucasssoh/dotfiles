@@ -125,10 +125,22 @@ sudo dnf install -y \
     git \
     rsync \
     nano \
-    snapd \
+    snapd
 
-sudo ln -s /var/lib/snapd/snap /snap
-sudo snap install pulsemixer
+# Activer le socket snapd
+sudo systemctl enable --now snapd.socket
+
+# Créer le lien classique /snap si nécessaire
+if [ ! -e /snap ]; then
+    sudo ln -s /var/lib/snapd/snap /snap
+fi
+
+# Attendre que snap soit prêt
+echo "[INFO] Attente que snapd soit opérationnel..."
+sleep 5
+
+# Installer les snaps (exemple : pulsemixer)
+sudo snap install pulsemixer --classic || echo "[WARN] pulsemixer n'a pas pu être installé pour l'instant"
 
 # =========================
 # ACTIVATION SERVICES
