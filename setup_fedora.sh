@@ -99,8 +99,6 @@ sudo dnf install -y \
 # =========================
 echo "[INFO] Librairies graphiques de base..."
 sudo dnf install -y \
-    wayland \
-    wayland-protocols \
     xorg-x11-server-Xwayland \
     gtk3 \
     gtk4 \
