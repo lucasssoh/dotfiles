@@ -20,7 +20,7 @@ fi
 # -----------------------------
 echo "[INFO] Installation des bases (git, curl, ImageMagick)..."
 
-$PKGMGR git curl imagemagick
+$PKGMGR git curl ImageMagick
 
 echo "[INFO] Installation de pip..."
 if command -v python3 &> /dev/null; then
