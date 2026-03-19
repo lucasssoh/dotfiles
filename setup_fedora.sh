@@ -124,7 +124,11 @@ sudo dnf install -y \
     wget \
     git \
     rsync \
-    nano
+    nano \
+    snapd \
+
+sudo ln -s /var/lib/snapd/snap /snap
+sudo snap install pulsemixer
 
 # =========================
 # ACTIVATION SERVICES
