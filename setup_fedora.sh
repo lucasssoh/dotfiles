@@ -8,12 +8,14 @@ sudo dnf update -y
 echo "[INFO] Installation des services de base..."
 sudo dnf install -y \
     NetworkManager \
+    NetworkManager-tui \
     bluetooth \
     bluez \
     bluez-tools \
     blueman \
     pipewire \
     pipewire-pulse \
+    pulsemixer \
     wireplumber \
     xdg-desktop-portal \
     xdg-desktop-portal-hyprland \
