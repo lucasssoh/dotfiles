@@ -28,6 +28,8 @@ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin"
 # 2. On ajoute tes dossiers personnels via la fonction (qui évite les doublons)
 add_to_path "$HOME/.local/bin"
 add_to_path "$HOME/.cargo/bin"
+# Dans ton ~/.bashrc, sous les autres add_to_path
+add_to_path "/var/lib/snapd/snap/bin"
 
 # --- OUTILS DE PERFORMANCE ---
 # On vérifie que zoxide est installé avant l'eval pour éviter les erreurs au login
