@@ -10,7 +10,7 @@
 
 window#waybar {
     /* On utilise la variable @background de Pywal avec une opacité de 0.8 */
-    background: rgba(@background, 0.8); 
+    background: @background; 
     color: @foreground;
     border-radius: 10px;
 }
