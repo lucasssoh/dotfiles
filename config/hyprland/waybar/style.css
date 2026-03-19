@@ -4,35 +4,45 @@
     border: none;
     border-radius: 0;
     background: transparent;
+    min-height: 0;
 }
 
-/* Fenêtre principale */
 window#waybar {
     background: transparent;
     color: #e0e0e0;
 }
 
-/* Les trois pilules — border-radius APRÈS le * reset */
-#left, #center, #right {
+/* Pilules */
+.modules-left,
+.modules-center,
+.modules-right {
     background: rgba(10, 15, 10, 0.85);
     border-radius: 16px;
     border: 0.5px solid rgba(46, 204, 113, 0.2);
-    padding: 0 8px;
-    margin: 8px 4px;
+    margin: 4px 4px;
+    padding: 0 6px;
 }
 
 /* Workspaces */
+#workspaces {
+    padding: 0;
+    margin: 0;
+}
 #workspaces button {
-    padding: 0 5px;
+    padding: 0 6px;
     color: #4a5d4a;
     background: transparent;
-    border-radius: 8px;
+    border-radius: 12px;
+    min-width: 0;
 }
 #workspaces button.active {
     color: #2ecc71;
 }
+#workspaces button:hover {
+    background: rgba(46, 204, 113, 0.1);
+}
 
-/* Modules individuels */
+/* Modules */
 #clock      { color: #2ecc71; font-weight: bold; padding: 0 10px; }
 #network    { color: #5dade2; padding: 0 8px; }
 #bluetooth  { color: #85c1e9; padding: 0 8px; }

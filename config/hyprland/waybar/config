@@ -2,27 +2,27 @@
     "layer": "top",
     "position": "top",
     "height": 32,
-    "margin-top": 5,
+    "margin-top": 8,
     "margin-left": 10,
     "margin-right": 10,
-    "spacing": 4,
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
-    "modules-center": ["clock"],
-    "modules-right": ["network", "bluetooth", "pulseaudio", "battery"],
-    
+    "spacing": 0,
+    "modules-left": ["group/left"],
+    "modules-center": ["group/center"],
+    "modules-right": ["group/right"],
+
     "group/left": {
-    "orientation": "horizontal",
-    "modules": ["hyprland/workspaces", "hyprland/window"]
+        "orientation": "horizontal",
+        "modules": ["hyprland/workspaces", "hyprland/window"]
     },
     "group/center": {
-    "orientation": "horizontal",
-    "modules": ["clock"]
+        "orientation": "horizontal",
+        "modules": ["clock"]
     },
     "group/right": {
-    "orientation": "horizontal",
-    "modules": ["network", "bluetooth", "pulseaudio", "battery"]
+        "orientation": "horizontal",
+        "modules": ["network", "bluetooth", "pulseaudio", "battery"]
     },
-    
+
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
