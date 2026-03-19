@@ -1,7 +1,57 @@
 {
     "layer": "top",
     "position": "top",
-    "modules-left": ["workspaces"],
+    "height": 32,
+    "margin-top": 5,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 4,
+
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["network", "pulseaudio", "battery"]
+    "modules-right": ["network", "bluetooth", "pulseaudio", "battery"],
+
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "on-click": "activate",
+        "format-icons": {
+            "active": "",
+            "default": ""
+        }
+    },
+
+    "clock": {
+        "format": " {:%H:%M   %d/%m}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
+    "network": {
+        "format-wifi": "  {bandwidthDownBits}",
+        "format-ethernet": "󰈀 {bandwidthDownBits}",
+        "format-disconnected": "󰖪",
+        "tooltip-format": "{essid} {signalStrength}%",
+        "on-click": "wezterm start nmtui"
+    },
+
+    "bluetooth": {
+        "format": " {status}",
+        "format-connected": " {device_alias}",
+        "format-connected-battery": " {device_alias} {device_battery_percentage}%",
+        "tooltip-format": "{controller_alias}\t{controller_address}",
+        "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
+        "on-click": "blueman-manager"
+    },
+
+    "battery": {
+        "states": { "warning": 30, "critical": 15 },
+        "format": "{icon} {capacity}%",
+        "format-icons": ["", "", "", "", ""]
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "󰝟",
+        "format-icons": { "default": ["", ""] },
+        "on-click": "wezterm start pulsemixer"
+    }
 }
