@@ -10,9 +10,18 @@ alias ll='ls -lh'
 alias la='ls -lAh'
 alias dots='cd ~/dotfiles' # Accès rapide à ton repo
 
+# --- DOCKER (Ton nouveau workflow) ---
+alias d='docker'
+alias dc='docker-compose'
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias dstop='docker stop $(docker ps -q)'
+# Entrer dans un container : dex nom_du_container
+alias dex='docker exec -it'
+
 # --- FIXES & UTILS ---
 alias refresh-brave='rm ~/.config/BraveSoftware/Brave-Browser/SingletonLock'
 alias g='git'
+alias src='source ~/.bashrc && echo "󰚰 Config rechargée !"'
 
 # --- GESTION HYPRLAND (SSH & DEBUG) ---
 # Lecture rapide des logs de la session actuelle

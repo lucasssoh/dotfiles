@@ -1,5 +1,4 @@
 # --- INTERACTIF ---
-# Si on n'est pas dans un shell interactif, on ne fait rien
 [[ $- != *i* ]] && return
 
 # --- HISTORIQUE ---
@@ -9,25 +8,27 @@ export HISTFILESIZE=20000
 shopt -s histappend
 
 # --- OPTIONS BASH ---
-shopt -s autocd      # cd automatique si on tape un nom de dossier
-shopt -s globstar    # support des ** (recherche récursive)
-shopt -s checkwinsize # vérifie la taille de la fenêtre après chaque commande
+shopt -s autocd globstar checkwinsize
+
+# --- FONCTIONS SYSTÈME ---
+# Ajoute au PATH proprement (sans doublons)
+add_to_path() {
+    if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
+        export PATH="$1:$PATH"
+    fi
+}
 
 # --- ALIAS ---
-if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
-fi
+[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+
+# --- GESTION DU PATH ---
+add_to_path "$HOME/.local/bin"
+add_to_path "$HOME/.cargo/bin"
 
 # --- OUTILS DE PERFORMANCE ---
-# Zoxide (cd intelligent)
 eval "$(zoxide init bash)"
+# FZF (Recherche floue)
+[ -f /usr/share/fzf/shell/key-bindings.bash ] && source /usr/share/fzf/shell/key-bindings.bash
 
-# FZF (Recherche floue pour CTRL+R)
-source /usr/share/fzf/shell/key-bindings.bash 2>/dev/null
-
-# --- STYLE (À LA FIN) ---
+# --- STYLE ---
 eval "$(starship init bash)"
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
