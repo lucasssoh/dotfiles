@@ -3,15 +3,16 @@
     font-size: 13px;
     border: none;
     border-radius: 0;
+    background: transparent;
 }
 
-/* Fenêtre principale transparente */
+/* Fenêtre principale */
 window#waybar {
     background: transparent;
     color: #e0e0e0;
 }
 
-/* Les trois pilules */
+/* Les trois pilules — border-radius APRÈS le * reset */
 #left, #center, #right {
     background: rgba(10, 15, 10, 0.85);
     border-radius: 16px;
@@ -25,18 +26,18 @@ window#waybar {
     padding: 0 5px;
     color: #4a5d4a;
     background: transparent;
+    border-radius: 8px;
 }
 #workspaces button.active {
     color: #2ecc71;
 }
 
 /* Modules individuels */
-#clock    { color: #2ecc71; font-weight: bold; padding: 0 10px; }
-#network  { color: #5dade2; padding: 0 8px; }
-#bluetooth{ color: #85c1e9; padding: 0 8px; }
+#clock      { color: #2ecc71; font-weight: bold; padding: 0 10px; }
+#network    { color: #5dade2; padding: 0 8px; }
+#bluetooth  { color: #85c1e9; padding: 0 8px; }
 #pulseaudio { color: #e0e0e0; padding: 0 8px; }
-#battery  { color: #a9dfbf; padding: 0 8px; }
+#battery    { color: #a9dfbf; padding: 0 8px; }
 
-/* Battery critique */
 #battery.warning  { color: #f39c12; }
 #battery.critical { color: #e74c3c; }
