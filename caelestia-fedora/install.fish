@@ -154,7 +154,8 @@ function ensure_tools
     # Base tools
     # Mettre à jour Qt6 en premier pour éviter les conflits
     sudo dnf upgrade $noconfirm qt6-qtbase qt6-qtbase-gui qt6-qtdeclarative --allowerasing
-    sudo dnf install $noconfirm git curl scdoc tar unzip libnotify swappy grim wl-clipboard pkgconf-pkg-config ffmpeg-free-devel libavutil-free libavutil-free-devel slurp wf-recorder glib2 fuzzel python3-build python3-installer hatch python3-hatch-vcs libdrm-devel freeglut-devel clang ddcutil brightnessctl cava NetworkManager lm_sensors fish aubio pipewire glibc qt6-qtdeclarative libgcc libqalculate hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk bluez bluez-tools inotify-tools wireplumber trash-cli foot fastfetch btop jq socat adw-gtk3-theme papirus-icon-theme qt5ct qt6ct wayland-protocols-devel hyprland-protocols-devel hyprlang sdbus-cpp hyprwayland-scanner-devel ImageMagick pulseaudio-libs cargo go xdg-utils nodejs-npm cmake pkg-config pango thunar cairo hyprutils libxkbcommon libjpeg-turbo hyprqt6engine hyprpolkitagent --allowerasing
+    sudo dnf install $noconfirm git curl scdoc tar unzip libnotify swappy grim wl-clipboard pkgconf-pkg-config ffmpeg-free-devel libavutil-free libavutil-free-devel slurp wf-recorder glib2 fuzzel python3-build python3-installer hatch python3-hatch-vcs libdrm-devel freeglut-devel clang ddcutil brightnessctl cava NetworkManager lm_sensors fish aubio pipewire glibc qt6-qtdeclarative libgcc libqalculate hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk bluez bluez-tools inotify-tools wireplumber trash-cli foot fastfetch btop jq socat adw-gtk3-theme papirus-icon-theme qt5ct qt6ct wayland-protocols-devel hyprland-protocols-devel hyprlang sdbus-cpp hyprwayland-scanner-devel ImageMagick pulseaudio-libs cargo go xdg-utils nodejs-npm cmake pkg-config pango thunar cairo hyprutils libxkbcommon libjpeg-turbo --allowerasing
+    # hyprqt6engine hyprpolkitagent
 end
 
 function sass_install
