@@ -33,6 +33,10 @@ safe_link() {
         echo "[SKIP] Source introuvable : $src"
         return
     fi
+    # Si le destinataire est un dossier réel (pas un lien), on le dégage pour mettre le lien
+    if [ -d "$dest" ] && [ ! -L "$dest" ]; then
+        rm -rf "$dest"
+    fi
     mkdir -p "$(dirname "$dest")"
     [ -L "$dest" ] || [ -f "$dest" ] && rm -rf "$dest"
     ln -s "$src" "$dest"
