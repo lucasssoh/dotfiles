@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Zen Browser
 Comment=Experience a calmer internet
-Exec=zen-browser %u
+Exec=zen-browser
 Icon=/opt/zen-browser/browser/chrome/icons/default/default128.png
 Terminal=false
 Type=Application
