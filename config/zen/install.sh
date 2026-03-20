@@ -23,7 +23,8 @@ sudo flatpak install -y flathub io.github.zen_browser.zen
 # Optionnel : Créer un alias pour le lancer plus vite dans le terminal
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Si tu veux pouvoir taper 'zen' dans ton terminal
-sudo ln -sf /var/lib/flatpak/exports/bin/io.github.zen_browser.zen /usr/local/bin/zen
+# Symlinks pour lancer zen depuis le terminal et Hyprland
+sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen
+sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen-browser
 
 echo "[OK] Zen Browser (Flatpak) installé."
