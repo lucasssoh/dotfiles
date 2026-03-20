@@ -794,9 +794,19 @@ if set -q _flag_zen
 
     if confirm-overwrite $hosts/caelestiafox.json
         log 'Installing zen native app manifest...'
+
+        # Crée le répertoire s'il n'existe pas
         mkdir -p $hosts
-        cp zen/native_app/manifest.json $hosts/caelestiafox.json
-        sed -i "s|{{ \$lib }}|$lib|g" $hosts/caelestiafox.json
+
+        # Copie le manifest original dans un fichier temporaire
+        set tmp_manifest (mktemp)
+        cp zen/native_app/manifest.json $tmp_manifest
+
+        # Remplace {{ $lib }} par la valeur de $lib dans le fichier temporaire
+        string replace '{{ $lib }}' $lib -- $tmp_manifest > $hosts/caelestiafox.json
+
+        # Supprime le fichier temporaire
+        rm $tmp_manifest
     end
 
     if confirm-overwrite $lib/caelestiafox
