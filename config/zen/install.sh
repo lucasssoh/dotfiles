@@ -17,7 +17,7 @@ sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flat
 # 2. Installation de Zen Browser
 echo "[INFO] Installation de Zen Browser via Flatpak..."
 # On utilise l'ID de l'application sur Flathub
-flatpak install -y flathub io.github.zen_browser.zen
+sudo flatpak install -y flathub io.github.zen_browser.zen
 
 # 3. Intégration (Ta philosophie)
 # Optionnel : Créer un alias pour le lancer plus vite dans le terminal
