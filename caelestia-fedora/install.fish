@@ -422,14 +422,9 @@ function cli_install --description 'Build & install caelestia-cli from source'
     set -l wheel (ls dist/*.whl ^/dev/null)
     if test -n "$wheel"
         echo (set_color green)"==> Installing wheel with pip (resolves deps)"(set_color normal)
-        # Fedora protège le site-packages : --break-system-packages peut être requis
         sudo python3 -m pip install --upgrade $wheel --break-system-packages; or begin
             echo (set_color red)"pip install failed; falling back to 'python -m installer' + explicit deps"(set_color normal)
-
-            # Fallback minimal : installer le wheel brut + dépendances connues
             sudo python3 -m installer $wheel; or begin; popd >/dev/null; return 1; end
-
-            # Dépendances runtime explicites (complète au besoin)
             set -l reqs materialyoucolor
             echo (set_color green)"==> Installing runtime deps with pip (explicit)"(set_color normal)
             sudo python3 -m pip install --upgrade $reqs --break-system-packages; or begin; popd >/dev/null; return 1; end
@@ -438,6 +433,18 @@ function cli_install --description 'Build & install caelestia-cli from source'
         echo (set_color red)"ERROR: wheel not found in dist/"(set_color normal)
         popd >/dev/null
         return 1
+    end
+
+    # --- materialyoucolor : forcer une version 2.x compatible ---
+    echo (set_color green)"==> Installing compatible materialyoucolor (2.x)"(set_color normal)
+    set -l myc_version (python3 -m pip index versions materialyoucolor 2>/dev/null \
+        | string match -r '\d+\.\d+\.\d+' \
+        | string match -r '^2\.' \
+        | head -n 1)
+    if test -n "$myc_version"
+        sudo python3 -m pip install "materialyoucolor==$myc_version" --break-system-packages --force-reinstall
+    else
+        sudo python3 -m pip install "materialyoucolor<3.0.0" --break-system-packages --force-reinstall
     end
 
     # --- Completions Fish ---
@@ -456,7 +463,6 @@ function cli_install --description 'Build & install caelestia-cli from source'
         return 1
     end
 
-    # Test d’import de la dépendance clé
     if not python3 -c "import materialyoucolor" >/dev/null 2>&1
         echo (set_color red)"ERROR: Python runtime dependency missing (materialyoucolor)."(set_color normal)
         echo "Hint: sudo python3 -m pip install materialyoucolor --break-system-packages"
