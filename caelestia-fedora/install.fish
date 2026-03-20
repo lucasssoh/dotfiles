@@ -47,7 +47,7 @@ function confirm-overwrite -a path
         "$HOME/.config/starship.toml" \
         "$HOME/.config/fish" \
         "$HOME/.config/nvim" \
-"       "$HOME/.config/wezterm"
+       "$HOME/.config/wezterm"
 
     if contains -- $path $protected
         log "Protected config detected ($path), skipping overwrite."
