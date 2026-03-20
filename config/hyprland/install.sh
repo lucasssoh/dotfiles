@@ -38,4 +38,19 @@ else
     exit 1
 fi
 
+
+# --- Lien symbolique wallpapers ---
+WALLPAPERS_SRC="$REPO_ROOT/config/hyprland/wallpapers"
+WALLPAPERS_DST="$HOME/Images/Wallpapers"
+
+if [ -d "$WALLPAPERS_SRC" ]; then
+    mkdir -p "$HOME/Images"
+    if [ -e "$WALLPAPERS_DST" ] || [ -L "$WALLPAPERS_DST" ]; then
+        echo "[INFO] $WALLPAPERS_DST existe déjà, skip."
+    else
+        ln -s "$WALLPAPERS_SRC" "$WALLPAPERS_DST"
+        echo "[OK] Wallpapers liés : $WALLPAPERS_DST -> $WALLPAPERS_SRC"
+    end
+fi
+
 echo "[OK] Installation Hyprland/Caelestia terminée (via Fish)"
