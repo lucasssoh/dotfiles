@@ -441,8 +441,9 @@ function cli_install --description 'Build & install caelestia-cli from source'
     # --- materialyoucolor : forcer une version 2.x compatible ---
     echo (set_color green)"==> Installing compatible materialyoucolor (2.x)"(set_color normal)
     set -l myc_version (python3 -m pip index versions materialyoucolor 2>/dev/null \
-        | string match -r '\d+\.\d+\.\d+' \
-        | string match -r '^2\.' \
+        | string replace -r '.*Available versions: ' '' \
+        | string split ', ' \
+        | string match -r '^2\.\d+\.\d+$' \
         | head -n 1)
     if test -n "$myc_version"
         sudo python3 -m pip install "materialyoucolor==$myc_version" --break-system-packages --force-reinstall
