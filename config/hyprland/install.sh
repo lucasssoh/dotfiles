@@ -3,7 +3,7 @@ set -e
 
 echo "[INFO] Installation minimale pour Caelestia (Fish + npm + sass)"
 
-# --- Détection du gestionnaire de paquets ---
+# --- Gestionnaire de paquets ---
 if command -v dnf &> /dev/null; then
     PKG="sudo dnf install -y"
 elif command -v pacman &> /dev/null; then
@@ -15,23 +15,26 @@ else
     exit 1
 fi
 
-# --- Installer Fish, npm ---
+# --- Installer Fish et npm ---
 echo "[INFO] Installation de Fish, npm..."
 $PKG fish npm
 
-# --- Installer Sass via npm si présent ---
+# --- Sass via npm ---
 if command -v npm &> /dev/null; then
     echo "[INFO] Installation de Sass via npm..."
     sudo npm install -g sass
 fi
 
-# --- Lancer le script fish ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/install.fish" ]; then
+# --- Lancer install.fish ---
+# Corrigé pour pointer vers le bon emplacement
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+INSTALL_FISH="$REPO_ROOT/caelestia-fedora/install.fish"
+
+if [ -f "$INSTALL_FISH" ]; then
     echo "[INFO] Lancement de install.fish..."
-    fish "$SCRIPT_DIR/install.fish"
+    fish "$INSTALL_FISH"
 else
-    echo "[ERREUR] install.fish introuvable !"
+    echo "[ERREUR] install.fish introuvable dans $INSTALL_FISH !"
     exit 1
 fi
 
