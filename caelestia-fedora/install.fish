@@ -42,14 +42,24 @@ function input -a text
 end
 
 function confirm-overwrite -a path
+    #  CONFIGS À PROTÉGER
+    set -l protected \
+        "$HOME/.config/starship.toml" \
+        "$HOME/.config/fish" \
+        "$HOME/.config/nvim" \
+"       "$HOME/.config/wezterm"
+
+    if contains -- $path $protected
+        log "Protected config detected ($path), skipping overwrite."
+        return 1
+    end
+
     if test -e $path -o -L $path
-        # No prompt if noconfirm
         if set -q noconfirm
             input "$path already exists. Overwrite? [Y/n]"
             log 'Removing...'
             rm -rf $path
         else
-            # Prompt user
             read -l -p "input '$path already exists. Overwrite? [Y/n] ' -n" confirm || exit 1
 
             if test "$confirm" = 'n' -o "$confirm" = 'N'
