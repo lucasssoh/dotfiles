@@ -50,7 +50,7 @@ if [ -d "$WALLPAPERS_SRC" ]; then
     else
         ln -s "$WALLPAPERS_SRC" "$WALLPAPERS_DST"
         echo "[OK] Wallpapers liés : $WALLPAPERS_DST -> $WALLPAPERS_SRC"
-    end
+    fi
 fi
 
 echo "[OK] Installation Hyprland/Caelestia terminée (via Fish)"
