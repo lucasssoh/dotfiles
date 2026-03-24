@@ -42,14 +42,14 @@ Windows = ""
 # USER (pill vert avec coins)
 # =========================
 [username]
-format = "[$user ](bg:green fg:black)"
+format = "[$user ](bg:green fg:bold black)"
 show_always = true
 
 # =========================
 # DIRECTORY (pill bleu avec coins)
 # =========================
 [directory]
-format = "[ $path](bg:blue fg:white)"
+format = "[ $path](bg:blue fg:bold white)"
 truncation_length = 3
 truncate_to_repo = true
 
@@ -104,5 +104,5 @@ format = "[ $duration ](dimmed yellow)"
 # PROMPT
 # =========================
 [character]
-success_symbol = "[-→](bold green)"
-error_symbol = "[-→](bold red)"
+success_symbol = "[→](bold green)"
+error_symbol = "[→](bold red)"
