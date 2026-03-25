@@ -40,7 +40,7 @@ fi
 
 
 # --- Lien symbolique wallpapers ---
-WALLPAPERS_SRC="$REPO_ROOT/config/hyprland/wallpapers"
+WALLPAPERS_SRC="$REPO_ROOT/wallpapers"
 WALLPAPERS_DST="$HOME/Images/Wallpapers"
 
 if [ -d "$WALLPAPERS_SRC" ]; then
