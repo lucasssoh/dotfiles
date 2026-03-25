@@ -35,9 +35,9 @@ add_to_path "/var/lib/snapd/snap/bin"
 # --- LOGIQUE DE CONTEXTE (SSH vs LOCAL) ---
 # Cette variable sera lue par ton starship.toml
 if [ -n "$SSH_CONNECTION" ]; then
-    export PROMPT_CONTEXT="(remote) "
+    export PROMPT_CONTEXT="(remote)"
 else
-    export PROMPT_CONTEXT=""
+    export PROMPT_CONTEXT="•"
 fi
 
 # --- OUTILS DE PERFORMANCE ---

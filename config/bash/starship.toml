@@ -3,7 +3,7 @@
 # =========================
 format = """
 $os\
-[$env:$PROMPT_CONTEXT](fg:grey)\
+${custom.context}\
 [](fg:white)\
 $username\
 $directory\
@@ -38,7 +38,13 @@ Linux = ""
 Macos = ""
 Windows = ""
 
-
+# =========================
+# MODULE CUSTOM (Distant vs Local)
+# =========================
+[custom.context]
+command = "echo $PROMPT_CONTEXT" 
+format = "[$output ](fg:grey)"
+when = "true"
 # =========================
 # USER (pill vert avec coins)
 # =========================
