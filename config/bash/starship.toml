@@ -3,7 +3,7 @@
 # =========================
 format = """
 $os\
-[${env:PROMPT_CONTEXT}](fg:grey)\
+[$env:$PROMPT_CONTEXT](fg:grey)\
 [](fg:white)\
 $username\
 $directory\
