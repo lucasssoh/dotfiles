@@ -3,8 +3,9 @@
 # =========================
 format = """
 $os\
-${custom.context}\
+
 [](fg:white)\
+${custom.context}\
 $username\
 $directory\
 [](fg:blue)\
@@ -43,7 +44,7 @@ Windows = ""
 # =========================
 [custom.context]
 command = "echo $PROMPT_CONTEXT" 
-format = "[$output ](fg:grey)"
+format = "[$output ](bg:white fg:bold black)"
 when = "true"
 # =========================
 # USER (pill vert avec coins)
