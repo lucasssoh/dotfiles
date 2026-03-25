@@ -31,6 +31,15 @@ add_to_path "$HOME/.cargo/bin"
 # Dans ton ~/.bashrc, sous les autres add_to_path
 add_to_path "/var/lib/snapd/snap/bin"
 
+
+# --- LOGIQUE DE CONTEXTE (SSH vs LOCAL) ---
+# Cette variable sera lue par ton starship.toml
+if [ -n "$SSH_CONNECTION" ]; then
+    export PROMPT_CONTEXT="(remote) "
+else
+    export PROMPT_CONTEXT=""
+fi
+
 # --- OUTILS DE PERFORMANCE ---
 # On vérifie que zoxide est installé avant l'eval pour éviter les erreurs au login
 command -v zoxide >/dev/null && eval "$(zoxide init bash)"

@@ -3,8 +3,8 @@
 # =========================
 format = """
 $os\
-
-[](fg:green)\
+[${env:PROMPT_CONTEXT}](fg:grey)\
+[](fg:white)\
 $username\
 $directory\
 [](fg:blue)\
@@ -23,6 +23,7 @@ $line_break\
 $character
 """
 
+add_newline = false
 # =========================
 # OS
 # =========================
@@ -42,7 +43,7 @@ Windows = ""
 # USER (pill vert avec coins)
 # =========================
 [username]
-format = "[$user ](bg:green fg:bold black)"
+format = "[$user ](bg:white fg:bold black)"
 show_always = true
 
 # =========================

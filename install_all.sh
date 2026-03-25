@@ -46,7 +46,7 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # -----------------------------
 # Lancer chaque module
 # -----------------------------
-MODULES=(fonts bash kitty nvim)
+MODULES=(fonts bash tmux kitty nvim)
 HYPR_MODULE="hyprland"
 
 for module in "${MODULES[@]}"; do
