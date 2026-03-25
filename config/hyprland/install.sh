@@ -38,19 +38,9 @@ else
     exit 1
 fi
 
+echo "[INFO] Configuration des wallpapers..."
 
-# --- Lien symbolique wallpapers ---
-WALLPAPERS_SRC="$REPO_ROOT/wallpapers"
-WALLPAPERS_DST="$HOME/Images/Wallpapers"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ -d "$WALLPAPERS_SRC" ]; then
-    mkdir -p "$HOME/Images"
-    if [ -e "$WALLPAPERS_DST" ] || [ -L "$WALLPAPERS_DST" ]; then
-        echo "[INFO] $WALLPAPERS_DST existe déjà, skip."
-    else
-        ln -s "$WALLPAPERS_SRC" "$WALLPAPERS_DST"
-        echo "[OK] Wallpapers liés : $WALLPAPERS_DST -> $WALLPAPERS_SRC"
-    fi
-fi
+bash "$SCRIPT_DIR/set_wallpapers.sh"
 
-echo "[OK] Installation Hyprland/Caelestia terminée (via Fish)"
