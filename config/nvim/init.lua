@@ -45,6 +45,48 @@ require("lazy").setup({
         config = function() vim.cmd("colorscheme carbonfox") end,
     },
 
+    require("start"),
+    -- Fuzzy Finder (Telescope)
+    {
+        "nvim-telescope/telescope.nvim",
+        tag = "0.1.5",
+        dependencies = { 
+            "nvim-lua/plenary.nvim",
+            { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' }
+        },
+        config = function()
+            local telescope = require("telescope")
+            telescope.setup({
+                defaults = {
+                    mappings = {
+                        i = {
+                            ["<C-M-j>"] = "move_selection_next",
+                            ["<C-M-k>"] = "move_selection_previous",
+                        },
+                    },
+                },
+            })
+            -- On charge l'extension de recherche rapide
+            telescope.load_extension('fzf')
+
+            -- Mappings pratiques
+            local builtin = require('telescope.builtin')
+            vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+            vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
+            vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+        end,
+    },
+    -- Project Management
+    {
+        "ahmedkhalf/project.nvim",
+        config = function()
+            require("project_nvim").setup({
+                -- Détecte la racine via .git ou d'autres fichiers
+                detection_methods = { "lsp", "pattern" },
+                patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "Makefile", "package.json" },
+            })
+        end
+    },
     -- File Explorer
     {
         "nvim-tree/nvim-tree.lua",

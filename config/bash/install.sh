@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-# 1. Installer outils shell
+# 1. Installer outils shell et dépendances Neovim (Telescope)
+echo "[INFO] Installation des dépendances..."
 if command -v dnf &> /dev/null; then
-    sudo dnf install -y fzf zoxide
+    # Fedora
+    sudo dnf install -y fzf zoxide ripgrep fd-find make gcc
 elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm fzf zoxide
+    # Arch Linux
+    sudo pacman -S --noconfirm fzf zoxide ripgrep fd make gcc
 elif command -v apt-get &> /dev/null; then
-    sudo apt-get install -y fzf zoxide
+    # Debian / Ubuntu
+    sudo apt-get update
+    sudo apt-get install -y fzf ripgrep fd-find make gcc
+    # Zoxide n'est pas toujours sur les vieux dépôts APT, on check
+    if ! command -v zoxide &> /dev/null; then
+        curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+    fi
 fi
 
 # 2. Installer Starship si besoin
@@ -29,8 +38,11 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-safe_link "$DOTFILES_DIR/config/bash/.bashrc" ~/.bashrc
-safe_link "$DOTFILES_DIR/config/bash/.bash_aliases" ~/.bash_aliases
-safe_link "$DOTFILES_DIR/config/bash/starship.toml" ~/.config/starship.toml
+# On s'assure que les dossiers parents existent
+mkdir -p ~/.config/bash
 
-echo "[OK] Bash et Starship configurés"
+safe_link "$DOTFILES_DIR/config/bash/.bashrc" "$HOME/.bashrc"
+safe_link "$DOTFILES_DIR/config/bash/.bash_aliases" "$HOME/.bash_aliases"
+safe_link "$DOTFILES_DIR/config/bash/starship.toml" "$HOME/.config/starship.toml"
+
+echo "[OK] Environnement shell configuré avec succès"
