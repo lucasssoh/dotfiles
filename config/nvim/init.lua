@@ -46,6 +46,7 @@ require("lazy").setup({
     },
 
     require("start"),
+    require("cursor"),
     -- Fuzzy Finder (Telescope)
     {
         "nvim-telescope/telescope.nvim",
