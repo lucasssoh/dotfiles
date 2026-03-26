@@ -123,6 +123,16 @@ require("lazy").setup({
             lsp_zero.on_attach(function(client, bufnr)
                 lsp_zero.default_keymaps({ buffer = bufnr })
             end)
+	    -- AJOUTE CECI POUR LA COMPLÉTION
+	    local cmp = require('cmp')
+	    cmp.setup({
+		mapping = cmp.mapping.preset.insert({
+		    ['<C-Space>'] = cmp.mapping.complete(), -- Forcer la complétion
+		    ['<CR>'] = cmp.mapping.confirm({select = true}), -- Entrée pour valider
+		    ['<Tab>'] = cmp.mapping.select_next_item(), -- Tab pour descendre
+		    ['<S-Tab>'] = cmp.mapping.select_prev_item(), -- Shift+Tab pour monter
+		})
+	    })
             require("mason").setup({})
             require("mason-lspconfig").setup({
                 ensure_installed = { "ts_ls", "pyright", "lua_ls", "clangd" },
