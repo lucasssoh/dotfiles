@@ -47,5 +47,30 @@ command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 # FZF (Recherche floue)
 [ -f /usr/share/fzf/shell/key-bindings.bash ] && source /usr/share/fzf/shell/key-bindings.bash
 
+
+# --- LANGUAGES & RUNTIMES ---
+
+# 1. NVM (Node Version Manager)
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # On charge NVM sans activer de version par défaut (gain de performance au login)
+    \. "$NVM_DIR/nvm.sh" --no-use
+    # On charge les complétions bash pour nvm
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+fi
+
+# 2. Python / Pipx (Pour tes linters/formatters)
+add_to_path "$HOME/.local/bin" # Pour s'assurer que les binaires pipx sont vus
+
+# 3. Fonction nvm_auto_switch (Bonus L3/Projets)
+# Charge la version de node spécifiée dans un fichier .nvmrc s'il existe
+cd() {
+    builtin cd "$@" && \
+    if [ -f ".nvmrc" ] && [ -s ".nvmrc" ]; then
+        echo -e "\033[0;34m(nvm) Détection .nvmrc...\033[0m"
+        nvm use
+    fi
+}
+
 # --- STYLE ---
 command -v starship >/dev/null && eval "$(starship init bash)"
