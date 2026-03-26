@@ -11,6 +11,7 @@ vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.termguicolors = true
 vim.opt.mouse = "a"
+vim.opt.paste = false
 vim.opt.cursorline = true
 vim.opt.clipboard = "unnamedplus"
 vim.opt.timeoutlen = 50 
@@ -37,14 +38,25 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-    -- Thème
-    {
-        "EdenEast/nightfox.nvim",
-        lazy = false,
-        priority = 1000,
-        config = function() vim.cmd("colorscheme carbonfox") end,
-    },
-
+	-- Thème
+	{
+	    "savq/melange-nvim",
+	    config = function()
+		vim.cmd.colorscheme("melange")
+		
+		-- 1. On force le fond en noir pur (#000000)
+		vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
+		vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
+		
+		-- 2. On ajuste les détails pour qu'ils restent visibles sur le noir
+		vim.api.nvim_set_hl(0, "LineNr", { fg = "#5e5249", bg = "NONE" }) -- Numéros discrets
+		vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#35271e" })        -- Séparateurs visibles
+		vim.api.nvim_set_hl(0, "CursorLine", { bg = "#1a1a1a" })          -- Ligne sous le curseur subtile
+		
+		-- 3. Si tu veux que SmoothCursor soit raccord avec le bois :
+		vim.api.nvim_set_hl(0, "SmoothCursor", { fg = "#d79921" })
+	    end
+	},
     require("start"),
     require("cursor"),
     -- Fuzzy Finder (Telescope)
@@ -77,17 +89,34 @@ require("lazy").setup({
             vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
         end,
     },
-    -- Project Management
-    {
-        "ahmedkhalf/project.nvim",
-        config = function()
-            require("project_nvim").setup({
-                -- Détecte la racine via .git ou d'autres fichiers
-                detection_methods = { "lsp", "pattern" },
-                patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "Makefile", "package.json" },
-            })
-        end
-    },
+	-- Project Management (Fork moderne et maintenu)
+	    {
+		"coffebar/neovim-project",
+		opts = {
+		    projects = { -- Tes répertoires de projets habituels
+			"~/Documents/projets/*",
+			"~/Code/*",
+			"~/University/*", -- Ajoute tes chemins ici
+		    },
+		    -- Utilise les mêmes patterns que tu avais
+		    detection_methods = { "lsp", "pattern" },
+		    patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "Makefile", "package.json" },
+		    
+		    -- Optionnel : sauvegarde auto de la session (très pratique)
+		    last_session_on_startup = false, 
+		    dashboard_mode = true,
+		},
+		init = function()
+		    -- Indispensable pour que les sessions fonctionnent
+		    vim.opt.sessionoptions:append("globals")
+		end,
+		dependencies = {
+		    { "nvim-lua/plenary.nvim" },
+		    { "nvim-telescope/telescope.nvim" },
+		    { "Shatur/neovim-session-manager" },
+		},
+	    },
+
     -- File Explorer
     {
         "nvim-tree/nvim-tree.lua",
@@ -98,13 +127,19 @@ require("lazy").setup({
         end,
     },
 
-    -- Statusline
-    {
-        "nvim-lualine/lualine.nvim",
-        config = function()
-            require("lualine").setup({ options = { theme = "carbonfox", globalstatus = true } })
-        end,
-    },
+	-- Statusline
+	{
+	    "nvim-lualine/lualine.nvim",
+	    dependencies = { "nvim-tree/nvim-web-devicons" }, -- Optionnel mais recommandé
+	    config = function()
+		require("lualine").setup({ 
+		    options = { 
+			theme = "melange", -- Utilise les couleurs de ton thème actuel
+			globalstatus = true, 
+		    } 
+		})
+	    end,
+	},
 
     -- LSP & Completion
     {
@@ -157,5 +192,5 @@ require("lazy").setup({
 -- Commande de reload
 vim.api.nvim_create_user_command("ReloadConfig", function()
     dofile(vim.fn.stdpath("config") .. "/init.lua")
-    print("Config rechargée !")
+    print("Config reloaded!")
 end, {})
