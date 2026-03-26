@@ -1,47 +1,57 @@
 local wezterm = require 'wezterm'
-local config = {}
+local config = wezterm.config_builder()
 
--- --- APPARENCE (On garde tes réglages) ---
-config.window_background_opacity = 0.85
-config.kde_window_background_blur = true 
-config.font = wezterm.font { family = 'JetBrainsMono Nerd Font', weight = 'Bold' }
-config.font_size = 11.0
-config.color_scheme = 'Humanoid dark (base16)'
+-- --- POLICE (FIN & ÉTROIT) ---
+config.font = wezterm.font_with_fallback({
+  { 
+    family = 'Iosevka NF', 
+    weight = 'Regular', -- Ta précieuse finesse
+  },
+})
+config.font_size = 12.0
+config.line_height = 1.0
 
--- --- MULTIPLEXAGE & INTERFACE ---
-config.enable_tab_bar = true
-config.hide_tab_bar_if_only_one_tab = true
--- On ne met PAS de window_decorations pour garder celles du DE
+config.front_end = "WebGpu" -- Plus moderne/fluide
+config.freetype_load_target = "Light"
 
-config.inactive_pane_hsb = {
-  saturation = 0.2,
-  brightness = 0.8,
+-- --- APPARENCE ---
+config.window_background_opacity = 0.90
+config.macos_window_background_blur = 20 -- Active le flou (même sous Linux/Wayland)
+config.window_decorations = "NONE" -- Look clean pour Hyprland
+config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
+
+-- --- CURSEUR (L'EFFET "SMOOTH") ---
+-- WezTerm n'a pas exactement la "traînée de particules" de Kitty,
+-- mais il propose une animation de transition ultra-fluide.
+config.default_cursor_style = 'BlinkingBlock'
+config.cursor_blink_ease_in = 'EaseIn'
+config.cursor_blink_ease_out = 'EaseOut'
+config.cursor_blink_rate = 500
+
+-- --- THÈME COULEURS (Humanoid Dark) ---
+config.colors = {
+  foreground = "#f8f8f2",
+  background = "#111011",
+  cursor_bg = "#ffffff", -- Ton curseur blanc
+  selection_fg = "#f8f8f2",
+  selection_bg = "#484e54",
+
+  ansi = {
+    "#232629", "#b0151a", "#028902", "#ffb400",
+    "#0082c9", "#6d61a1", "#008b8b", "#f8f8f2",
+  },
+  brights = {
+    "#484e54", "#b0151a", "#028902", "#ffb400",
+    "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
+  },
 }
 
-
--- --- RACCOURCIS POUR LES PANNEAUX (MULTIPLEXING) ---
+-- --- RACCOURCIS ---
+config.disable_default_key_bindings = false -- On garde les bases
 config.keys = {
-  -- Diviser verticalement (Split vertical)
-  { key = 'v', mods = 'ALT', action = wezterm.action.SplitVertical({ domain = 'CurrentPaneDomain' }) },
-  -- Diviser horizontalement (Split horizontal)
-  { key = 'h', mods = 'ALT', action = wezterm.action.SplitHorizontal({ domain = 'CurrentPaneDomain' }) },
-  -- Fermer le panneau actuel
-  { key = 'x', mods = 'ALT', action = wezterm.action.CloseCurrentPane({ confirm = true }) },
-  -- Naviguer entre les panneaux avec ALT + Flèches
-  { key = 'LeftArrow',  mods = 'ALT', action = wezterm.action.ActivatePaneDirection('Left') },
-  { key = 'RightArrow', mods = 'ALT', action = wezterm.action.ActivatePaneDirection('Right') },
-  { key = 'UpArrow',    mods = 'ALT', action = wezterm.action.ActivatePaneDirection('Up') },
-  { key = 'DownArrow',  mods = 'ALT', action = wezterm.action.ActivatePaneDirection('Down') },
-
--- REDIMENSIONNER (Resizing) avec SHIFT + ALT + Flèches
-  -- On utilise un pas de 5 pour que ça aille assez vite
-  { key = 'LeftArrow',  mods = 'SHIFT|ALT', action = wezterm.action.AdjustPaneSize({ 'Left', 5 }) },
-  { key = 'RightArrow', mods = 'SHIFT|ALT', action = wezterm.action.AdjustPaneSize({ 'Right', 5 }) },
-  { key = 'UpArrow',    mods = 'SHIFT|ALT', action = wezterm.action.AdjustPaneSize({ 'Up', 5 }) },
-  { key = 'DownArrow',  mods = 'SHIFT|ALT', action = wezterm.action.AdjustPaneSize({ 'Down', 5 }) },
-
-  -- Le Zoom (ALT + Z) reste super utile pour isoler un terminal
-  { key = 'z', mods = 'ALT', action = wezterm.action.TogglePaneZoomState },
+  { key = 'c', mods = 'CTRL|SHIFT', action = wezterm.action.CopyTo 'Clipboard' },
+  { key = 'v', mods = 'CTRL|SHIFT', action = wezterm.action.PasteFrom 'Clipboard' },
+  { key = 'F5', mods = 'CTRL|SHIFT', action = wezterm.action.ReloadConfiguration },
 }
 
 return config

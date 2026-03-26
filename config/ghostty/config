@@ -1,0 +1,64 @@
+# --- FENÊTRE ---
+window-padding-x = 2
+window-padding-y = 2
+window-decoration = false
+
+# --- POLICE ---
+font-family = "Iosevka NF"
+font-style = "Regular"
+font-style-bold = "Bold"
+font-style-italic = "Regular Italic"
+font-style-bold-italic = "Bold Italic"
+font-size = 12.0
+
+# Syntaxe correcte pour les ligatures sur ta version :
+font-feature = calt
+font-feature = liga
+
+# --- APPARENCE ---
+background = #111011
+foreground = #f8f8f2
+background-opacity = 0.90
+background-blur = true
+
+
+# --- CURSEUR & TRAIL (CORRIGÉ) ---
+cursor-style = block
+shell-integration-features = no-cursor
+
+# Ghostty utilise 'cursor-trail' mais il faut l'activer ainsi :
+cursor-opacity = 1.0
+cursor-vte-trail = true
+
+# Si 'cursor-trail-color' ne passe pas, c'est que Ghostty utilise 
+# la couleur du curseur pour la traînée. Change la couleur du curseur :
+cursor-color = #ffffff
+
+
+# --- THÈME COULEURS (Humanoid Dark) ---
+palette = 0=#232629
+palette = 8=#484e54
+palette = 1=#b0151a
+palette = 9=#b0151a
+palette = 2=#028902
+palette = 10=#028902
+palette = 3=#ffb400
+palette = 11=#ffb400
+palette = 4=#0082c9
+palette = 12=#0082c9
+palette = 5=#6d61a1
+palette = 13=#6d61a1
+palette = 6=#008b8b
+palette = 14=#008b8b
+palette = 7=#f8f8f2
+palette = 15=#fcfcf6
+
+selection-foreground = #f8f8f2
+selection-background = #484e54
+
+# --- RACCOURCIS SYSTÈME ---
+# Ghostty n'a pas besoin de 'clear_all_shortcuts' car il est minimaliste par défaut.
+keybind = ctrl+shift+c=copy_to_clipboard
+keybind = ctrl+shift+v=paste_from_clipboard
+# Recharge la config (Ghostty le fait souvent à la volée à la sauvegarde)
+keybind = ctrl+shift+f5=reload_config
