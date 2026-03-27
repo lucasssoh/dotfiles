@@ -28,6 +28,10 @@ alias src='source ~/.bashrc && echo "󰚰 Config rechargée !"'
 alias hlog='cat ${XDG_RUNTIME_DIR}/hypr/$(ls -t ${XDG_RUNTIME_DIR}/hypr/ 2>/dev/null | head -n 1)/hyprland.log'
 alias hlogf='tail -f ${XDG_RUNTIME_DIR}/hypr/$(ls -t ${XDG_RUNTIME_DIR}/hypr/ 2>/dev/null | head -n 1)/hyprland.log'
 
+# Alias pour gérer manuellement les sessions tmux via tmux-resurrect
+alias tmux-save='~/.tmux/plugins/tmux-resurrect/scripts/save.sh'
+alias tmux-restore='~/.tmux/plugins/tmux-resurrect/scripts/restore.sh'
+
 # Fonction de synchronisation SSH -> Hyprland
 # À taper une fois en arrivant en SSH
 hsync() {
