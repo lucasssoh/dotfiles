@@ -60,7 +60,7 @@ require("lazy").setup({
 		vim.api.nvim_set_hl(0, "SmoothCursor", { fg = "#d79921" })
 	    end
 	},
-    require("color-picker"),
+    require("colorpicker"),
     require("start"),
     require("cursor"),
     -- Fuzzy Finder (Telescope)
