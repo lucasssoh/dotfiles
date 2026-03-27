@@ -15,6 +15,9 @@ vim.opt.paste = false
 vim.opt.cursorline = true
 vim.opt.clipboard = "unnamedplus"
 vim.opt.timeoutlen = 50 
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
 
 -- =======================
 -- MAPPINGS CLAVIER
@@ -57,6 +60,7 @@ require("lazy").setup({
 		vim.api.nvim_set_hl(0, "SmoothCursor", { fg = "#d79921" })
 	    end
 	},
+    require("color-picker"),
     require("start"),
     require("cursor"),
     -- Fuzzy Finder (Telescope)
