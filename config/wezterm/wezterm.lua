@@ -19,14 +19,7 @@ config.window_background_opacity = 0.90
 config.macos_window_background_blur = 20 -- Active le flou (même sous Linux/Wayland)
 config.window_decorations = "NONE" -- Look clean pour Hyprland
 config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
-
--- --- CURSEUR (L'EFFET "SMOOTH") ---
--- WezTerm n'a pas exactement la "traînée de particules" de Kitty,
--- mais il propose une animation de transition ultra-fluide.
-config.default_cursor_style = 'BlinkingBlock'
-config.cursor_blink_ease_in = 'EaseIn'
-config.cursor_blink_ease_out = 'EaseOut'
-config.cursor_blink_rate = 500
+config.cursor_blink_rate = 800
 
 -- --- THÈME COULEURS (Humanoid Dark) ---
 config.colors = {

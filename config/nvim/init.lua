@@ -14,7 +14,8 @@ vim.opt.mouse = "a"
 vim.opt.paste = false
 vim.opt.cursorline = true
 vim.opt.clipboard = "unnamedplus"
-vim.opt.timeoutlen = 50 
+vim.opt.timeoutlen = 300 
+vim.opt.ttimeoutlen = 0 
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
@@ -63,6 +64,7 @@ require("lazy").setup({
     require("colorpicker"),
     require("start"),
     require("cursor"),
+    require("commenter"),
     -- Fuzzy Finder (Telescope)
     {
         "nvim-telescope/telescope.nvim",
@@ -98,14 +100,11 @@ require("lazy").setup({
 		"coffebar/neovim-project",
 		opts = {
 		    projects = { -- Tes répertoires de projets habituels
-			"~/Documents/projets/*",
-			"~/Code/*",
-			"~/University/*", -- Ajoute tes chemins ici
+			"~/code/*",
 		    },
 		    -- Utilise les mêmes patterns que tu avais
 		    detection_methods = { "lsp", "pattern" },
 		    patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "Makefile", "package.json" },
-		    
 		    -- Optionnel : sauvegarde auto de la session (très pratique)
 		    last_session_on_startup = false, 
 		    dashboard_mode = true,
@@ -120,14 +119,24 @@ require("lazy").setup({
 		    { "Shatur/neovim-session-manager" },
 		},
 	    },
-
     -- File Explorer
     {
         "nvim-tree/nvim-tree.lua",
         dependencies = { "nvim-tree/nvim-web-devicons" },
         config = function()
-            require("nvim-tree").setup({ view = { width = 30 } })
-            key.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true })
+            require("nvim-tree").setup({ 
+                view = { 
+                    width = 30 
+                },
+                filters = {
+                    dotfiles = false, -- Affiche les fichiers cachés (ex: .env)
+                    custom = {},      -- Vide les filtres personnalisés
+                },
+                git = {
+                    ignore = false,   -- TRÈS IMPORTANT : Affiche les fichiers même s'ils sont dans .gitignore
+                },
+            })
+            vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true })
         end,
     },
 
