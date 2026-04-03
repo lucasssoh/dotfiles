@@ -39,8 +39,6 @@ local function apply_bg(bg)
         -- Éditeur principal
         "Normal",
         "NormalNC",
-        "NormalFloat",
-        "FloatBorder",
         "SignColumn",
         "FoldColumn",
         "EndOfBuffer",
@@ -50,23 +48,6 @@ local function apply_bg(bg)
         "NvimTreeNormalNC",
         "NvimTreeEndOfBuffer",
         "NvimTreeWinSeparator",
-
-        -- Telescope
-        "TelescopeNormal",
-        "TelescopeBorder",
-        "TelescopePromptNormal",
-        "TelescopePromptBorder",
-        "TelescopeResultsNormal",
-        "TelescopeResultsBorder",
-        "TelescopePreviewNormal",
-        "TelescopePreviewBorder",
-
-        -- LSP / completion
-        "Pmenu",
-        "PmenuSbar",
-
-        -- Terminal
-        "Terminal",
     }
 
     for _, group in ipairs(groups) do

@@ -38,6 +38,7 @@ require("lazy").setup({
     spec = {
         require("cursor"),
         require("start"),
+        require("lsp.mason"),
         { import = "plugins" },
         require("theme"),
    },
