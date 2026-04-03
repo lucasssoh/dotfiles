@@ -32,6 +32,12 @@ key.set("i", "kj", "<Esc>", { silent = true })
 key.set({'n', 'i', 'v'}, '<A-v>', '<Nop>', { silent = true })
 key.set({'n', 'i', 'v'}, '<A-s>', '<Nop>', { silent = true })
 
+
+key.set("n", "<leader>h", "<C-w>h", { desc = "Go to the left window" })
+key.set("n", "<leader>l", "<C-w>l", { desc = "Go to the right window" })
+
+key.set("n", "<leader>j", "<C-w>j", { desc = "Go to the bottom window" })
+key.set("n", "<leader>k", "<C-w>k", { desc = "Go to the top windows" })
 -- =======================
 -- PLUGINS (LAZY.NVIM)
 -- =======================
