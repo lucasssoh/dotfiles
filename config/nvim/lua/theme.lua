@@ -36,13 +36,12 @@ local function apply_bg(bg)
     end
 
     local groups = {
-        -- Éditeur principal
         "Normal",
         "NormalNC",
-        "SignColumn",
-        "FoldColumn",
         "EndOfBuffer",
-
+        "LineNr",
+        "LineNrAbove",
+        "LineNrBelow",
         -- Nvim-tree
         "NvimTreeNormal",
         "NvimTreeNormalNC",
