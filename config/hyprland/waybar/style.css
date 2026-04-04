@@ -21,19 +21,17 @@
     font-weight: 400;
     border: none;
     border-radius: 0;
-    box-shadow: none;
     min-height: 0;
-    transition: background 0.2s ease, color 0.2s ease;
 }
 
-/* ── The bar itself is invisible — pills are the containers ─ */
+/* ── Bar itself is invisible — pills are the containers ───── */
 window#waybar {
     background: transparent;
     border: none;
 }
 
-.modules-left   { margin-left:  0; }
-.modules-right  { margin-right: 0; }
+.modules-left  { margin-left:  0; }
+.modules-right { margin-right: 0; }
 
 /* ── Pill base — shared by all modules ────────────────────── */
 #workspaces,
@@ -57,16 +55,14 @@ window#waybar {
     color: @subtle;
 }
 
-/* ── Stat pill: netspeed + cpu + temp + memory grouped ───── */
-/* We fake grouping visually by removing margins between them
-   and flattening inner borders */
+/* ── Stat pill: netspeed + cpu + temp + memory ────────────── */
 #custom-netspeed {
     border-radius: 100px 0 0 100px;
     border-right: none;
     padding-right: 8px;
     margin-right: 0;
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-    font-size: 10.5px;
+    font-size: 10px;
     color: @muted;
 }
 
@@ -94,7 +90,7 @@ window#waybar {
     margin-right: 6px;
 }
 
-/* ── Connectivity pill: network + bluetooth + audio + battery */
+/* ── Connectivity pill: network + bt + audio + battery ───── */
 #network {
     border-radius: 100px 0 0 100px;
     border-right: none;
@@ -127,7 +123,7 @@ window#waybar {
     margin-right: 4px;
 }
 
-/* ── Hover on stat/connectivity items ─────────────────────── */
+/* ── Hover ────────────────────────────────────────────────── */
 #cpu:hover,
 #temperature:hover,
 #memory:hover,
@@ -152,7 +148,6 @@ window#waybar {
     padding: 0 3px;
     border-radius: 100px;
     min-width: 0;
-    letter-spacing: 1px;
 }
 
 #workspaces button.active {
@@ -178,17 +173,14 @@ window#waybar {
     color: alpha(@subtle, 0.75);
     font-size: 12px;
     font-style: italic;
-    max-width: 240px;
 }
 
-/* ── Clock (center) ───────────────────────────────────────── */
+/* ── Clock ────────────────────────────────────────────────── */
 #clock {
     font-size: 14px;
     font-weight: 600;
     color: @text;
-    letter-spacing: 0.3px;
     padding: 4px 16px;
-    cursor: pointer;
 }
 
 #clock:hover {
@@ -197,7 +189,7 @@ window#waybar {
 
 /* ── Network speed ────────────────────────────────────────── */
 #custom-netspeed {
-    font-size: 10.5px;
+    font-size: 10px;
     color: @muted;
 }
 
@@ -216,16 +208,16 @@ window#waybar {
 #memory { color: @subtle; }
 
 /* ── Network ──────────────────────────────────────────────── */
-#network           { color: @subtle; }
-#network.wifi      { color: @text; }
-#network.ethernet  { color: @accent2; }
+#network              { color: @subtle; }
+#network.wifi         { color: @text; }
+#network.ethernet     { color: @accent2; }
 #network.disconnected { color: @muted; }
 
 /* ── Bluetooth ────────────────────────────────────────────── */
-#bluetooth            { color: @muted; }
-#bluetooth.connected  { color: @accent; }
+#bluetooth           { color: @muted; }
+#bluetooth.connected { color: @accent; }
 #bluetooth.off,
-#bluetooth.disabled   { color: alpha(@muted, 0.4); }
+#bluetooth.disabled  { color: alpha(@muted, 0.4); }
 
 /* ── Volume ───────────────────────────────────────────────── */
 #pulseaudio       { color: @subtle; }
@@ -255,7 +247,7 @@ window#waybar {
 }
 #tray > .passive { -gtk-icon-effect: dim; }
 
-/* ── Power button ─────────────────────────────────────────── */
+/* ── Power ────────────────────────────────────────────────── */
 #custom-power {
     color: alpha(@muted, 0.7);
     font-size: 14px;
