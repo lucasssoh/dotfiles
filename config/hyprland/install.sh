@@ -263,7 +263,7 @@ else
 fi
 
 # ============================================================
-# WALLPAPER SETUP AUTOMATIC
+# WALLPAPER SETUP & ROFI INTEGRATION
 # ============================================================
 
 section "Wallpaper automation"
@@ -273,36 +273,61 @@ RESTORE_SCRIPT="$REPO_DIR/scripts/restore_wallpaper.sh"
 STATE_FILE="$HOME/.cache/current_wallpaper"
 WALLPAPER_DIR="$HOME/Images/Wallpapers"
 
-# 1️⃣ Crée dossier d'images si pas existant
+# 1️⃣ Create wallpaper directory
 mkdir -p "$WALLPAPER_DIR"
 
-# 2️⃣ Rendre les scripts exécutables
+# 2️⃣ Make scripts executable in the repo
 chmod +x "$WP_SCRIPT" "$RESTORE_SCRIPT"
 
-# 3️⃣ Crée un symlink vers ~/.local/bin pour pouvoir lancer depuis rofi
+# 3️⃣ Symlink to ~/.local/bin (Make sure this is in your $PATH)
 mkdir -p "$HOME/.local/bin"
 ln -sfn "$WP_SCRIPT" "$HOME/.local/bin/set_wallpaper"
 ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
-ok "Wallpaper scripts ready and in PATH."
 
-# 4️⃣ Sww daemon lancé pour que restore fonctionne
-if pgrep -x swww-daemon >/dev/null; then
-    swww-daemon &
-    ok "swww-daemon running."
-fi
+# 4️⃣ Create a .desktop file so it appears in Rofi/App Launchers
+mkdir -p "$HOME/.local/share/applications"
+cat <<EOF > "$HOME/.local/share/applications/set_wallpaper.desktop"
+[Desktop Entry]
+Name=Set Wallpaper
+Exec=set_wallpaper
+Icon=background
+Type=Application
+Categories=Settings;
+Terminal=false
+EOF
 
-# 5️⃣ Si pas de wallpaper dans le STATE_FILE, mettre le premier dispo
-if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
-    FIRST_WP=$(ls -1t "$WALLPAPER_DIR" | head -n1)
-    if [ -n "$FIRST_WP" ]; then
-        echo "$WALLPAPER_DIR/$FIRST_WP" > "$STATE_FILE"
-        restore_wallpaper
-        ok "Initial wallpaper set: $FIRST_WP"
-    else
-        warn "No wallpapers found in $WALLPAPER_DIR. Please add some images."
+ok "Wallpaper scripts ready and added to App Launcher."
+
+# 5️⃣ Start swww-daemon ONLY if in a Wayland session and not already running
+if [ -n "$WAYLAND_DISPLAY" ]; then
+    if ! pgrep -x "swww-daemon" >/dev/null; then
+        swww-daemon --format xrgb &
+        sleep 1
+        ok "swww-daemon started."
     fi
 else
-    restore_wallpaper
+    info "Not in Wayland. swww-daemon will start with Hyprland later."
+fi
+
+# 6️⃣ Handle State File & Initial Wallpaper
+if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
+    # Find first image (supports jpg, png, jpeg, webp)
+    FIRST_WP=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" -o -name "*.webp" \) | head -n 1)
+    
+    if [ -n "$FIRST_WP" ]; then
+        echo "$FIRST_WP" > "$STATE_FILE"
+        ok "Initial wallpaper registered: $(basename "$FIRST_WP")"
+    else
+        warn "No wallpapers found in $WALLPAPER_DIR."
+    fi
+fi
+
+# 7️⃣ Apply wallpaper ONLY if Wayland and Daemon are active
+if [ -n "$WAYLAND_DISPLAY" ] && pgrep -x "swww-daemon" >/dev/null; then
+    bash "$RESTORE_SCRIPT"
+    ok "Wallpaper applied."
+else
+    info "Wallpaper will be applied automatically when you launch Hyprland."
 fi
 
 # ============================================================
