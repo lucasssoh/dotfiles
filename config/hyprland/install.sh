@@ -215,7 +215,7 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,hyprlock,hypridle,scripts,gsimplecal}
+    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,hyprlock,hypridle,scripts,khal}
     ok "Old configs removed"
 fi
 
@@ -223,7 +223,7 @@ section "Linking configuration directories"
 
 # Define the folders to be linked as entire directories
 # Based on your ls -R output
-modules=("hypr" "waybar" "rofi" "dunst" "hyprlock" "hypridle" "scripts" "gsimplecal")
+modules=("hypr" "waybar" "rofi" "dunst" "hyprlock" "hypridle" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

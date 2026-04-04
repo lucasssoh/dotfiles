@@ -1,0 +1,18 @@
+[calendars]
+[[personal]]
+path = ~/.local/share/khal/calendars/personal
+color = light blue
+
+[sqlite]
+path = ~/.local/share/khal/khal.db
+
+[locale]
+timeformat = %H:%M
+dateformat = %d/%m/%Y
+longdateformat = %A %d %B %Y
+datetimeformat = %d/%m/%Y %H:%M
+longdatetimeformat = %A %d %B %Y %H:%M
+firstweekday = 0
+
+[view]
+bold_for_light_color = false
