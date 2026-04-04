@@ -23,8 +23,8 @@
         "bluetooth",
         "pulseaudio",
         "battery",
-        "tray",
-        "custom/power"
+        "custom/power",
+        "tray"
     ],
 
     "hyprland/workspaces": {
@@ -57,8 +57,7 @@
     },
 
     "clock": {
-        "format": "{:%H:%M}",
-        "format-alt": "{:%A %d %B}",
+        "format": "{:%H:%M}  <span size='small' alpha='60%'>{:%a %d %b}<\/span>",
         "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
         "interval": 10,
         "on-click": "gnome-calendar || GNOME_CALENDAR_APP=1 gnome-calendar 2>/dev/null || khal interactive 2>/dev/null || foot --title=calendar bash -c 'cal -y; read'",
