@@ -93,7 +93,7 @@ if [ "$DISTRO" = "fedora" ]; then
 
     PKGS=(
         # Hyprland ecosystem
-        hyprland hyprlock hypridle xdg-desktop-portal-hyprland
+        hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal 
         # Wallpaper daemon
@@ -123,7 +123,7 @@ if [ "$DISTRO" = "fedora" ]; then
 elif [ "$DISTRO" = "arch" ]; then
     PKGS=(
         # Hyprland ecosystem
-        hyprland hyprlock hypridle xdg-desktop-portal-hyprland
+        hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal
         # Wallpaper daemon
@@ -159,7 +159,7 @@ elif [ "$DISTRO" = "debian" ]; then
         network-manager network-manager-gnome
         blueman
         wl-clipboard
-        xdg-desktop-portal-hyprland
+        xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         polkit-gnome xdg-user-dirs
         brightnessctl playerctl
         grim slurp
