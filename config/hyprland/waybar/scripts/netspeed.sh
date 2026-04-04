@@ -1,46 +1,52 @@
 #!/usr/bin/env bash
 # ============================================================
-# NETSPEED.SH — Live network upload/download speed for Waybar
-# Auto-detects the active interface (wifi or ethernet)
+# NETSPEED.SH — Live network speed for Waybar
+# Reads /proc/net/dev directly — no sleep, instant output
+# Uses a state file to compute delta between calls
 # ============================================================
 
-# Find active network interface
 IFACE=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')
 
 if [ -z "$IFACE" ]; then
-    echo "󰤭 --"
+    echo "󰤭"
     exit 0
 fi
 
-RX_FILE="/sys/class/net/$IFACE/statistics/rx_bytes"
-TX_FILE="/sys/class/net/$IFACE/statistics/tx_bytes"
+STATE_FILE="/tmp/waybar-netspeed-$IFACE"
+NOW=$(date +%s%N)  # nanoseconds
 
-if [ ! -f "$RX_FILE" ]; then
-    echo "󰤭 --"
+# Read current bytes from /proc/net/dev (no sleep needed)
+read RX TX <<< $(awk -v iface="$IFACE:" '
+    $1 == iface { print $2, $10 }
+' /proc/net/dev)
+
+if [ -z "$RX" ]; then
+    echo "󰤭"
     exit 0
 fi
 
-RX1=$(cat "$RX_FILE")
-TX1=$(cat "$TX_FILE")
-sleep 1
-RX2=$(cat "$RX_FILE")
-TX2=$(cat "$TX_FILE")
+# First call: just save state, output placeholder
+if [ ! -f "$STATE_FILE" ]; then
+    echo "$NOW $RX $TX" > "$STATE_FILE"
+    echo "↓ -- ↑ --"
+    exit 0
+fi
 
-RX_RATE=$(( RX2 - RX1 ))
-TX_RATE=$(( TX2 - TX1 ))
+read PREV_TIME PREV_RX PREV_TX < "$STATE_FILE"
+echo "$NOW $RX $TX" > "$STATE_FILE"
+
+ELAPSED=$(( (NOW - PREV_TIME) / 1000000 ))  # ms
+[ "$ELAPSED" -lt 1 ] && ELAPSED=1
+
+RX_RATE=$(( (RX - PREV_RX) * 1000 / ELAPSED ))  # bytes/s
+TX_RATE=$(( (TX - PREV_TX) * 1000 / ELAPSED ))  # bytes/s
 
 format_rate() {
-    local bytes=$1
-    if   (( bytes >= 1048576 )); then
-        printf "%.1f MB/s" "$(echo "scale=1; $bytes/1048576" | bc)"
-    elif (( bytes >= 1024 )); then
-        printf "%.0f KB/s" "$(echo "scale=0; $bytes/1024" | bc)"
-    else
-        printf "%d B/s" "$bytes"
+    local b=$1
+    if   (( b >= 1048576 )); then printf "%.1f MB/s" "$(echo "scale=1; $b/1048576" | bc)"
+    elif (( b >= 1024 ));    then printf "%d KB/s"   $(( b / 1024 ))
+    else                          printf "%d B/s"    "$b"
     fi
 }
 
-DOWN=$(format_rate $RX_RATE)
-UP=$(format_rate $TX_RATE)
-
-echo "󰇚 $DOWN  󰕒 $UP"
+echo "↓ $(format_rate $RX_RATE)  ↑ $(format_rate $TX_RATE)"
