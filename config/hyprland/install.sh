@@ -263,32 +263,44 @@ else
 fi
 
 # ============================================================
-# WALLPAPER
+# WALLPAPER SETUP AUTOMATIC
 # ============================================================
-section "Wallpaper"
 
-# Destination folder where wallpapers are linked by set_wallpapers.sh
-WALLPAPERS_DST="$HOME/Images/Wallpapers"
-HYPR_WALLPAPER="$REPO_DIR/hypr/wallpaper.jpg"
+section "Wallpaper automation"
 
-if [ -d "$WALLPAPERS_DST" ]; then
-    mkdir -p "$REPO_DIR/hypr"
+WP_SCRIPT="$REPO_DIR/scripts/set_wallpaper.sh"
+RESTORE_SCRIPT="$REPO_DIR/scripts/restore_wallpaper.sh"
+STATE_FILE="$HOME/.cache/current_wallpaper"
+WALLPAPER_DIR="$HOME/Images/Wallpapers"
 
-    # If no default wallpaper exists in hypr folder, pick the first from WALLPAPERS_DST
-    if [ ! -f "$HYPR_WALLPAPER" ]; then
-        FIRST_WP=$(ls -1t "$WALLPAPERS_DST" | head -n1)
-        if [ -n "$FIRST_WP" ]; then
-            cp "$WALLPAPERS_DST/$FIRST_WP" "$HYPR_WALLPAPER"
-            ok "Default wallpaper set: $HYPR_WALLPAPER"
-        else
-            warn "No wallpapers in $WALLPAPERS_DST to set as default."
-        fi
+# 1️⃣ Crée dossier d'images si pas existant
+mkdir -p "$WALLPAPER_DIR"
+
+# 2️⃣ Rendre les scripts exécutables
+chmod +x "$WP_SCRIPT" "$RESTORE_SCRIPT"
+
+# 3️⃣ Crée un symlink vers ~/.local/bin pour pouvoir lancer depuis rofi
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$WP_SCRIPT" "$HOME/.local/bin/set_wallpaper"
+ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
+ok "Wallpaper scripts ready and in PATH."
+
+# 4️⃣ Sww daemon lancé pour que restore fonctionne
+pgrep -x swww-daemon >/dev/null || swww init
+ok "swww-daemon running."
+
+# 5️⃣ Si pas de wallpaper dans le STATE_FILE, mettre le premier dispo
+if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
+    FIRST_WP=$(ls -1t "$WALLPAPER_DIR" | head -n1)
+    if [ -n "$FIRST_WP" ]; then
+        echo "$WALLPAPER_DIR/$FIRST_WP" > "$STATE_FILE"
+        restore_wallpaper
+        ok "Initial wallpaper set: $FIRST_WP"
     else
-        info "Default wallpaper already exists: $HYPR_WALLPAPER"
+        warn "No wallpapers found in $WALLPAPER_DIR. Please add some images."
     fi
 else
-    warn "Wallpapers directory not found: $WALLPAPERS_DST"
-    info "Make sure set_wallpapers.sh has been run and contains your images."
+    restore_wallpaper
 fi
 
 # ============================================================
