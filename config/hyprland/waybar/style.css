@@ -68,7 +68,6 @@ window#waybar {
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
     font-size: 10.5px;
     color: @muted;
-    line-height: 1.25;
 }
 
 #cpu {
