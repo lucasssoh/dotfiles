@@ -3,13 +3,11 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
         require("nvim-tree").setup({
-            -- Surveillance système pour le rafraîchissement auto
             filesystem_watchers = { enable = true },
-            
             renderer = {
                 icons = {
                     show = {
-                        git = true, -- Active les icônes Git
+                        git = true,
                         file = true,
                         folder = true,
                         folder_arrow = true,
@@ -18,10 +16,10 @@ return {
                         git = {
                             unstaged = "✗",
                             staged = "✓",
-                            unmerged = "",
+                            unmerged = "",
                             renamed = "➜",
                             untracked = "★",
-                            deleted = "",
+                            deleted = "",
                             ignored = "◌",
                         },
                     },
@@ -29,16 +27,9 @@ return {
             },
             git = {
                 enable = true,
-                ignore = false, -- Pour voir aussi les icônes sur les fichiers ignorés
-                show_on_dirs = true, -- Très pratique : l'icône remonte sur les dossiers parents
+                ignore = false,
+                show_on_dirs = true,
             },
-        })
-
-        -- Le petit hack pour forcer Git à se rafraîchir quand tu reviens sur Neovim
-        vim.api.nvim_create_autocmd("FocusGained", {
-            callback = function()
-                require("nvim-tree.api").git.reload()
-            end,
         })
     end,
 }
