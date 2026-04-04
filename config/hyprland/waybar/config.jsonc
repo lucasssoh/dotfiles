@@ -1,0 +1,157 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 36,
+    "spacing": 4,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
+
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/netspeed",
+        "network",
+        "bluetooth",
+        "pulseaudio",
+        "cpu",
+        "temperature",
+        "memory",
+        "battery",
+        "tray",
+        "custom/power"
+    ],
+
+    "hyprland/workspaces": {
+        "format": "{name}",
+        "on-click": "activate",
+        "on-scroll-up":   "hyprctl dispatch workspace e-1",
+        "on-scroll-down": "hyprctl dispatch workspace e+1",
+        "sort-by-number": true,
+        "persistent-workspaces": {
+            "1": [], "2": [], "3": [], "4": [], "5": []
+        }
+    },
+
+    "hyprland/window": {
+        "format": "{}",
+        "max-length": 50,
+        "separate-outputs": true,
+        "rewrite": {
+            "(.*) — Mozilla Firefox": "󰈹  $1",
+            "(.*)WezTerm":            "  WezTerm",
+            "(.*)Thunar":             "󰉋  Fichiers",
+            "(.*)Neovim":             "  $1"
+        }
+    },
+
+    "clock": {
+        "format": "{:%H:%M}",
+        "format-alt": "{:%A %d %B}",
+        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+        "interval": 10,
+        "calendar": {
+            "mode": "month",
+            "format": {
+                "today": "<span color='#6b9fff'><b><u>{}</u></b></span>"
+            }
+        }
+    },
+
+    "custom/netspeed": {
+        "exec": "~/.config/waybar/scripts/netspeed.sh",
+        "interval": 2,
+        "format": "{}",
+        "tooltip": false
+    },
+
+    "network": {
+        "interval": 5,
+        "format-wifi":        "󰤨  {essid}",
+        "format-ethernet":    "󰈀  {ifname}",
+        "format-disconnected":"󰤭  Off",
+        "format-linked":      "󰈀  (no IP)",
+        "tooltip-format-wifi":     "󰤨 {essid}  {signalStrength}%\n{ipaddr} / {cidr}",
+        "tooltip-format-ethernet": "󰈀 {ifname} — {ipaddr} / {cidr}",
+        "on-click": "nm-connection-editor"
+    },
+
+    "bluetooth": {
+        "format":           "󰂯",
+        "format-connected": "󰂱  {device_alias}",
+        "format-disabled":  "󰂲",
+        "format-off":       "󰂲",
+        "tooltip-format":                    "{controller_alias}\n{num_connections} appareil(s)",
+        "tooltip-format-connected":          "{controller_alias}\n\n{device_enumerate}",
+        "tooltip-format-enumerate-connected":"  {device_alias}",
+        "on-click": "blueman-manager"
+    },
+
+    "pulseaudio": {
+        "format":       "{icon}  {volume}%",
+        "format-muted": "󰝟  muet",
+        "format-icons": {
+            "headphone": "󰋋",
+            "headset":   "󰋎",
+            "speaker":   "󰓃",
+            "default":  ["󰕿","󰖀","󰕾"]
+        },
+        "tooltip-format": "{desc} — {volume}%",
+        "on-click":       "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "scroll-step": 2
+    },
+
+    "cpu": {
+        "format": "󰍛  {usage}%",
+        "interval": 3,
+        "tooltip-format": "Charge : {usage}%\nFréquence moy. : {avg_frequency:.2f} GHz"
+    },
+
+    "temperature": {
+        "critical-threshold": 85,
+        "format":          "󰔏  {temperatureC}°C",
+        "format-critical": "󰸁  {temperatureC}°C",
+        "interval": 5,
+        "tooltip-format": "Température CPU : {temperatureC}°C"
+    },
+
+    "memory": {
+        "format": "󰾆  {percentage}%",
+        "tooltip-format": "RAM : {used:.1f} Go / {total:.1f} Go\nLibre : {avail:.1f} Go",
+        "interval": 10
+    },
+
+    "battery": {
+        "states": {
+            "full":     100,
+            "good":     80,
+            "warning":  30,
+            "critical": 15
+        },
+        "format":          "{icon}  {capacity}%",
+        "format-full":     "󰁹  {capacity}%",
+        "format-charging": "󰂄  {capacity}%",
+        "format-plugged":  "󰚥  {capacity}%",
+        "format-icons":   ["󰂎","󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"],
+        "tooltip-format":  "{timeTo}\nConso : {power:.1f} W",
+        "interval": 30
+    },
+
+    "tray": {
+        "icon-size": 16,
+        "spacing": 8,
+        "show-passive-items": true
+    },
+
+    "custom/power": {
+        "format": "⏻",
+        "tooltip": false,
+        "on-click": "~/.config/scripts/powermenu.sh"
+    }
+}

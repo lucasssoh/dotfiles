@@ -1,0 +1,76 @@
+# ============================================================
+# DUNSTRC — Clean notification daemon config
+# ============================================================
+
+[global]
+    monitor = 0
+    follow = mouse
+
+    # Position (top-right, macOS style)
+    origin = top-right
+    offset = 12x48
+    notification_limit = 5
+
+    # Geometry
+    width = (0, 360)
+    height = 120
+    padding = 14
+    horizontal_padding = 16
+    text_icon_padding = 12
+    gap_size = 6
+
+    # Style
+    frame_width = 1
+    frame_color = "#3a3a3c"
+    corner_radius = 12
+    transparency = 10
+
+    sort = yes
+    idle_threshold = 120
+
+    font = SF Pro Text, Inter, Noto Sans 12
+    line_height = 2
+    markup = full
+    format = "<b>%s</b>\n%b"
+    alignment = left
+    vertical_alignment = center
+    word_wrap = yes
+    ellipsize = middle
+    ignore_newline = no
+
+    icon_theme = Papirus-Dark
+    enable_recursive_icon_lookup = true
+    icon_position = left
+    min_icon_size = 32
+    max_icon_size = 48
+
+    show_age_threshold = 60
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = yes
+    sticky_history = yes
+    history_length = 20
+
+    mouse_left_click  = close_current
+    mouse_middle_click = do_action, close_current
+    mouse_right_click = close_all
+
+    dmenu = rofi -dmenu -p dunst
+
+[urgency_low]
+    background = "#1c1c1e"
+    foreground = "#8e8e93"
+    frame_color = "#3a3a3c"
+    timeout = 4
+
+[urgency_normal]
+    background = "#1c1c1e"
+    foreground = "#e5e5ea"
+    frame_color = "#3a3a3c"
+    timeout = 6
+
+[urgency_critical]
+    background = "#1c1c1e"
+    foreground = "#ff453a"
+    frame_color = "#ff453a"
+    timeout = 0

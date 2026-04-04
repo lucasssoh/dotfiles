@@ -1,0 +1,86 @@
+/* ============================================================
+   ROFI LAUNCHER.RASI — Sobre, macOS Spotlight-like
+   ============================================================ */
+
+* {
+    bg:      #1c1c1e;
+    surface: #2c2c2e;
+    overlay: #3a3a3c;
+    muted:   #636366;
+    text:    #e5e5ea;
+    accent:  #6b9fff;
+    urgent:  #ff453a;
+
+    font: "SF Pro Text, Inter, Noto Sans 13";
+    background-color: transparent;
+    text-color: @text;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    spacing: 0;
+}
+
+window {
+    width: 520px;
+    background-color: @bg;
+    border: 1px solid @overlay;
+    border-radius: 14px;
+    padding: 12px;
+}
+
+inputbar {
+    background-color: @surface;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    children: [prompt, entry];
+}
+
+prompt {
+    text-color: @accent;
+    padding-right: 8px;
+    font-weight: bold;
+}
+
+entry {
+    text-color: @text;
+    placeholder: "Rechercher…";
+    placeholder-color: @muted;
+}
+
+listview {
+    lines: 8;
+    scrollbar: false;
+    spacing: 2px;
+}
+
+element {
+    padding: 8px 12px;
+    border-radius: 8px;
+    children: [element-icon, element-text];
+    spacing: 10px;
+}
+
+element-icon {
+    size: 20px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    vertical-align: 0.5;
+    text-color: @text;
+}
+
+element selected {
+    background-color: alpha(#6b9fff, 0.15);
+    text-color: @accent;
+}
+
+element selected > element-text {
+    text-color: @accent;
+}
+
+element normal.urgent,
+element alternate.urgent {
+    text-color: @urgent;
+}
