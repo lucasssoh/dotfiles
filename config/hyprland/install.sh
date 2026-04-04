@@ -4,6 +4,9 @@
 # Fedora / Arch / Debian-Ubuntu
 # Uses symlinks so edits in the repo reflect live immediately
 # ============================================================
+RESET_MODE=false
+[ "$1" = "--reset" ] && RESET_MODE=true
+
 set -e
 
 BOLD="\e[1m"
@@ -22,19 +25,6 @@ section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$HOME/.config"
 
-if [ "$RESET_MODE" = true ]; then
-    warn "Reset mode enabled — removing old configs"
-
-    rm -rf "$CONFIG/hypr"
-    rm -rf "$CONFIG/waybar"
-    rm -rf "$CONFIG/rofi"
-    rm -rf "$CONFIG/dunst"
-    rm -rf "$CONFIG/hyprlock"
-    rm -rf "$CONFIG/hypridle"
-    rm -rf "$CONFIG/scripts"
-
-    ok "Old configs removed"
-fi
 # ============================================================
 # SYMLINK HELPER
 # safe_link <repo_path> <target_path>
@@ -223,6 +213,22 @@ fi
 # ============================================================
 # SYMLINK CONFIG
 # ============================================================
+
+if [ "$RESET_MODE" = true ]; then
+    warn "Reset mode enabled — removing old configs"
+
+    rm -rf "$CONFIG/hypr"
+    rm -rf "$CONFIG/waybar"
+    rm -rf "$CONFIG/rofi"
+    rm -rf "$CONFIG/dunst"
+    rm -rf "$CONFIG/hyprlock"
+    rm -rf "$CONFIG/hypridle"
+    rm -rf "$CONFIG/scripts"
+
+    ok "Old configs removed"
+fi
+
+
 section "Symlinking configs"
 
 # Hyprland — link each file individually so the user's
