@@ -1,3 +1,4 @@
+
 /* ============================================================
    WAYBAR STYLE.CSS — Pill-based, macOS/GNOME minimal
    ============================================================ */
@@ -51,7 +52,7 @@ window#waybar {
     border: 1px solid alpha(@overlay, 0.5);
     border-radius: 100px;
     padding: 4px 13px;
-    margin: 0 3px;
+    margin: 4px 3px;
     color: @subtle;
 }
 
@@ -60,6 +61,8 @@ window#waybar {
     border-radius: 100px 0 0 100px;
     border-right: none;
     padding-right: 8px;
+    margin-top: 4px;
+    margin-bottom: 4px;
     margin-right: 0;
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
     font-size: 10px;
@@ -71,7 +74,7 @@ window#waybar {
     border-left: 1px solid alpha(@overlay, 0.5);
     border-right: none;
     padding: 4px 10px;
-    margin: 0;
+    margin: 4px 0;
 }
 
 #temperature {
@@ -79,15 +82,14 @@ window#waybar {
     border-left: 1px solid alpha(@overlay, 0.5);
     border-right: none;
     padding: 4px 10px;
-    margin: 0;
+    margin: 4px 0;
 }
 
 #memory {
     border-radius: 0 100px 100px 0;
     border-left: 1px solid alpha(@overlay, 0.5);
     padding: 4px 13px 4px 10px;
-    margin: 0;
-    margin-right: 6px;
+    margin: 4px 6px 4px 0;
 }
 
 /* ── Connectivity pill: network + bt + audio + battery ───── */
@@ -95,8 +97,7 @@ window#waybar {
     border-radius: 100px 0 0 100px;
     border-right: none;
     padding-right: 8px;
-    margin-right: 0;
-    margin-left: 6px;
+    margin: 4px 0 4px 6px;
 }
 
 #bluetooth {
@@ -104,7 +105,7 @@ window#waybar {
     border-left: 1px solid alpha(@overlay, 0.5);
     border-right: none;
     padding: 4px 10px;
-    margin: 0;
+    margin: 4px 0;
 }
 
 #pulseaudio {
@@ -112,7 +113,7 @@ window#waybar {
     border-left: 1px solid alpha(@overlay, 0.5);
     border-right: none;
     padding: 4px 10px;
-    margin: 0;
+    margin: 4px 0;
 }
 
 #battery {
@@ -120,7 +121,7 @@ window#waybar {
     border-left: 1px solid alpha(@overlay, 0.5);
     border-right: none;
     padding: 4px 10px;
-    margin: 0;
+    margin: 4px 0;
 }
 
 /* ── Hover ────────────────────────────────────────────────── */
@@ -243,7 +244,7 @@ window#waybar {
     border: 1px solid alpha(@overlay, 0.5);
     border-radius: 100px;
     padding: 4px 10px;
-    margin: 0 3px;
+    margin: 4px 3px;
 }
 #tray > .passive { -gtk-icon-effect: dim; }
 
@@ -252,8 +253,7 @@ window#waybar {
     border-radius: 0 100px 100px 0;
     border-left: 1px solid alpha(@overlay, 0.5);
     padding: 4px 13px 4px 10px;
-    margin: 0;
-    margin-right: 4px;
+    margin: 4px 4px 4px 0;
     color: alpha(@muted, 0.7);
     font-size: 13px;
 }
@@ -272,3 +272,4 @@ tooltip {
     padding: 6px 12px;
 }
 tooltip label { color: @text; }
+
