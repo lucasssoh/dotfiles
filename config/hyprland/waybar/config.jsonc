@@ -1,76 +1,69 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 34,
+    "height": 36,
     "margin-top": 8,
-    "margin-left": 12,
-    "margin-right": 12,
-    "spacing": 10,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 0,
 
     "modules-left": [
-        "group/pills-workspaces",
+        "hyprland/workspaces",
         "hyprland/window"
     ],
     "modules-center": [
         "clock"
     ],
     "modules-right": [
-        "group/pills-connection",
-        "group/pills-hardware",
-        "group/pills-system"
+        "custom/netspeed",
+        "cpu",
+        "temperature",
+        "memory",
+        "network",
+        "bluetooth",
+        "pulseaudio",
+        "battery",
+        "tray",
+        "custom/power"
     ],
 
-    /* --- GROUPES (Les Capsules) --- */
-    "group/pills-workspaces": {
-        "orientation": "horizontal",
-        "modules": ["hyprland/workspaces"]
-    },
-
-    "group/pills-connection": {
-        "orientation": "horizontal",
-        "modules": ["custom/netspeed", "network", "bluetooth"]
-    },
-
-    "group/pills-hardware": {
-        "orientation": "horizontal",
-        "modules": ["pulseaudio", "cpu", "memory", "battery"]
-    },
-
-    "group/pills-system": {
-        "orientation": "horizontal",
-        "modules": ["tray", "custom/power"]
-    },
-
-    /* --- CONFIGURATION DES MODULES --- */
     "hyprland/workspaces": {
-        "format": "{name}",
+        "format": "<span>{icon}</span>",
+        "format-icons": {
+            "active":  "●",
+            "default": "○",
+            "urgent":  "◉"
+        },
         "on-click": "activate",
-        "all-outputs": true,
+        "on-scroll-up":   "hyprctl dispatch workspace e-1",
+        "on-scroll-down": "hyprctl dispatch workspace e+1",
         "sort-by-number": true,
         "persistent-workspaces": {
-            "1": [], "2": [], "3": [], "4": []
+            "1": [], "2": [], "3": [], "4": [], "5": []
         }
     },
 
     "hyprland/window": {
-        "format": "{}",
-        "max-length": 40,
+        "format": "{title}",
+        "max-length": 45,
         "separate-outputs": true,
         "rewrite": {
             "(.*) — Mozilla Firefox": "󰈹  $1",
-            "(.*)WezTerm": "  Terminal",
-            "(.*)Thunar": "󰉋  Fichiers",
-            "nvim (.*)": "󟅑  $1"
+            "(.*)WezTerm":            "  Terminal",
+            "(.*)Thunar":             "󰉋  Files",
+            "(.*)Neovim":             "  $1",
+            "(.*)nvim(.*)":           "  $1"
         }
     },
 
     "clock": {
         "format": "{:%H:%M}",
-        "format-alt": "󰃭 {:%a %d %b}",
-        "tooltip-format": "<tt><small>{calendar}</small></tt>",
+        "format-alt": "{:%A %d %B}",
+        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+        "interval": 10,
+        "on-click": "gnome-calendar || GNOME_CALENDAR_APP=1 gnome-calendar 2>/dev/null || khal interactive 2>/dev/null || foot --title=calendar bash -c 'cal -y; read'",
         "calendar": {
             "mode": "month",
-            "on-scroll": 1,
             "format": {
                 "today": "<span color='#6b9fff'><b><u>{}</u></b></span>"
             }
@@ -84,54 +77,88 @@
         "tooltip": false
     },
 
-    "network": {
-        "format-wifi": "󰤨",
-        "format-ethernet": "󰈀",
-        "format-disconnected": "󰤭",
-        "on-click": "nm-connection-editor",
-        "tooltip-format": "{essid} ({signalStrength}%)"
-    },
-
-    "bluetooth": {
-        "format": "󰂯",
-        "format-connected": "󰂱",
-        "format-disabled": "󰂲",
-        "on-click": "blueman-manager"
-    },
-
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-muted": "󰝟",
-        "format-icons": {
-            "default": ["󰕿", "󰖀", "󰕾"]
-        },
-        "on-click": "pavucontrol"
-    },
-
     "cpu": {
         "format": "󰍛 {usage}%",
-        "interval": 5
+        "interval": 3,
+        "tooltip-format": "CPU load: {usage}%\nAvg freq: {avg_frequency:.2f} GHz"
+    },
+
+    "temperature": {
+        "critical-threshold": 85,
+        "format":          "󰔏 {temperatureC}°C",
+        "format-critical": "󰸁 {temperatureC}°C",
+        "interval": 5,
+        "tooltip-format": "CPU temp: {temperatureC}°C"
     },
 
     "memory": {
         "format": "󰾆 {percentage}%",
+        "tooltip-format": "Used: {used:.1f} GB / {total:.1f} GB\nFree: {avail:.1f} GB",
         "interval": 10
     },
 
+    "network": {
+        "interval": 5,
+        "format-wifi":        "󰤨 {essid}",
+        "format-ethernet":    "󰈀 {ifname}",
+        "format-disconnected":"󰤭",
+        "format-linked":      "󰈀",
+        "tooltip-format-wifi":     "󰤨 {essid}  {signalStrength}%\n{ipaddr} / {cidr}",
+        "tooltip-format-ethernet": "󰈀 {ifname} — {ipaddr} / {cidr}",
+        "on-click": "nm-connection-editor"
+    },
+
+    "bluetooth": {
+        "format":           "󰂯",
+        "format-connected": "󰂱 {device_alias}",
+        "format-disabled":  "󰂲",
+        "format-off":       "",
+        "tooltip-format":                    "{controller_alias}\n{num_connections} device(s)",
+        "tooltip-format-connected":          "{controller_alias}\n\n{device_enumerate}",
+        "tooltip-format-enumerate-connected":"  {device_alias}",
+        "on-click": "blueman-manager"
+    },
+
+    "pulseaudio": {
+        "format":       "{icon} {volume}%",
+        "format-muted": "󰝟",
+        "format-icons": {
+            "headphone": "󰋋",
+            "headset":   "󰋎",
+            "speaker":   "󰓃",
+            "default":  ["󰕿","󰖀","󰕾"]
+        },
+        "tooltip-format": "{desc} — {volume}%",
+        "on-click":       "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "scroll-step": 2
+    },
+
     "battery": {
-        "states": { "warning": 30, "critical": 15 },
-        "format": "{icon} {capacity}%",
+        "states": {
+            "full":     100,
+            "good":     80,
+            "warning":  30,
+            "critical": 15
+        },
+        "format":          "{icon} {capacity}%",
+        "format-full":     "󰁹 {capacity}%",
         "format-charging": "󰂄 {capacity}%",
-        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+        "format-plugged":  "󰚥 {capacity}%",
+        "format-icons":   ["󰂎","󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"],
+        "tooltip-format":  "{timeTo}\nPower: {power:.1f} W",
+        "interval": 30
     },
 
     "tray": {
-        "icon-size": 16,
-        "spacing": 8
+        "icon-size": 14,
+        "spacing": 6,
+        "show-passive-items": false
     },
 
     "custom/power": {
         "format": "⏻",
+        "tooltip": false,
         "on-click": "~/.config/scripts/powermenu.sh"
     }
 }

@@ -1,116 +1,281 @@
-/* --- Variables macOS Dark Mode --- */
-@define-color bg_pill  rgba(28, 28, 30, 0.82);
-@define-color border   rgba(255, 255, 255, 0.12);
-@define-color text     #e5e5ea;
-@define-color accent   #6b9fff;
-@define-color muted    rgba(229, 229, 234, 0.4);
+/* ============================================================
+   WAYBAR STYLE.CSS — Pill-based, macOS/GNOME minimal
+   ============================================================ */
 
+@define-color background  #1c1c1e;
+@define-color surface     #2c2c2e;
+@define-color overlay     #3a3a3c;
+@define-color muted       #636366;
+@define-color subtle      #8e8e93;
+@define-color text        #e5e5ea;
+@define-color accent      #6b9fff;
+@define-color accent2     #5ac8fa;
+@define-color urgent      #ff453a;
+@define-color warning     #ffd60a;
+@define-color success     #30d158;
+
+/* ── Reset ────────────────────────────────────────────────── */
 * {
-    font-family: "SF Pro Text", "Inter", "JetBrainsMono Nerd Font";
+    font-family: "SF Pro Text", "Inter", "Noto Sans", sans-serif;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     border: none;
     border-radius: 0;
-    transition: all 0.3s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: none;
+    min-height: 0;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
-/* On rend la barre invisible pour ne garder que les pills */
+/* ── The bar itself is invisible — pills are the containers ─ */
 window#waybar {
     background: transparent;
+    border: none;
 }
 
-/* --- Style Global des Pills --- */
-.modules-left > widget > box,
-.modules-center > widget > box,
-.modules-right > widget > box,
-#clock {
-    background: @bg_pill;
-    border: 1px solid @border;
-    border-radius: 100px; /* Effet Gélule */
-    padding: 2px 14px;
-    margin: 0 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.modules-left   { margin-left:  0; }
+.modules-right  { margin-right: 0; }
+.modules-center { margin: 0 auto; }
+
+/* ── Pill base — shared by all modules ────────────────────── */
+#workspaces,
+#window,
+#clock,
+#custom-netspeed,
+#cpu,
+#temperature,
+#memory,
+#network,
+#bluetooth,
+#pulseaudio,
+#battery,
+#tray,
+#custom-power {
+    background: alpha(@background, 0.88);
+    border: 1px solid alpha(@overlay, 0.5);
+    border-radius: 100px;
+    padding: 4px 13px;
+    margin: 0 3px;
+    color: @subtle;
 }
 
-/* --- Workspaces --- */
+/* ── Stat pill: netspeed + cpu + temp + memory grouped ───── */
+/* We fake grouping visually by removing margins between them
+   and flattening inner borders */
+#custom-netspeed {
+    border-radius: 100px 0 0 100px;
+    border-right: none;
+    padding-right: 8px;
+    margin-right: 0;
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+    font-size: 10.5px;
+    color: @muted;
+    line-height: 1.25;
+}
+
+#cpu {
+    border-radius: 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    border-right: none;
+    padding: 4px 10px;
+    margin: 0;
+}
+
+#temperature {
+    border-radius: 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    border-right: none;
+    padding: 4px 10px;
+    margin: 0;
+}
+
+#memory {
+    border-radius: 0 100px 100px 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    padding: 4px 13px 4px 10px;
+    margin: 0;
+    margin-right: 6px;
+}
+
+/* ── Connectivity pill: network + bluetooth + audio + battery */
+#network {
+    border-radius: 100px 0 0 100px;
+    border-right: none;
+    padding-right: 8px;
+    margin-right: 0;
+    margin-left: 6px;
+}
+
+#bluetooth {
+    border-radius: 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    border-right: none;
+    padding: 4px 10px;
+    margin: 0;
+}
+
+#pulseaudio {
+    border-radius: 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    border-right: none;
+    padding: 4px 10px;
+    margin: 0;
+}
+
+#battery {
+    border-radius: 0 100px 100px 0;
+    border-left: 1px solid alpha(@overlay, 0.5);
+    padding: 4px 13px 4px 10px;
+    margin: 0;
+    margin-right: 4px;
+}
+
+/* ── Hover on stat/connectivity items ─────────────────────── */
+#cpu:hover,
+#temperature:hover,
+#memory:hover,
+#network:hover,
+#bluetooth:hover,
+#pulseaudio:hover,
+#battery:hover {
+    background: @surface;
+    color: @text;
+}
+
+/* ── Workspaces ───────────────────────────────────────────── */
 #workspaces {
-    background: transparent;
+    padding: 4px 10px;
+    margin-right: 4px;
 }
 
 #workspaces button {
-    color: @muted;
-    padding: 0 8px;
-    margin: 4px 2px;
+    font-size: 7px;
+    color: @overlay;
+    background: transparent;
+    padding: 0 3px;
     border-radius: 100px;
+    min-width: 0;
+    letter-spacing: 1px;
 }
 
 #workspaces button.active {
     color: @accent;
-    background: rgba(107, 159, 255, 0.18);
-    font-weight: 700;
+    font-size: 8px;
+}
+
+#workspaces button.occupied {
+    color: @muted;
+}
+
+#workspaces button.urgent {
+    color: @urgent;
 }
 
 #workspaces button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     color: @text;
 }
 
-/* --- Window Title (Discret) --- */
+/* ── Active window ────────────────────────────────────────── */
 #window {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    color: rgba(229, 229, 234, 0.6);
+    color: alpha(@subtle, 0.75);
+    font-size: 12px;
     font-style: italic;
-    margin-left: 10px;
+    max-width: 240px;
 }
 
-/* --- Clock (Pill Centrale) --- */
+/* ── Clock (center) ───────────────────────────────────────── */
 #clock {
-    font-weight: 700;
-    padding: 2px 20px;
-}
-
-/* --- Modules Internes (Détails) --- */
-#custom-netspeed, #network, #bluetooth, #pulseaudio, #cpu, #memory, #battery, #tray, #custom-power {
-    background: transparent;
-    border: none;
-    margin: 0;
-    padding: 0 8px;
-    color: rgba(229, 229, 234, 0.85);
-}
-
-/* Séparateurs verticaux subtils entre les icônes */
-#network, #pulseaudio, #cpu, #memory {
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* --- Hovers Dynamiques --- */
-.modules-right > widget > box:hover {
-    background: rgba(44, 44, 46, 0.95);
-    border: 1px solid rgba(107, 159, 255, 0.4);
-}
-
-/* --- Power Button --- */
-#custom-power {
-    color: #ff453a;
     font-size: 14px;
-    padding-right: 4px;
-}
-
-#custom-power:hover {
-    color: #ff3b30;
-    transform: scale(1.1);
-}
-
-/* --- Tooltip --- */
-tooltip {
-    background: @bg_pill;
-    border: 1px solid @border;
-    border-radius: 12px;
-    padding: 10px;
-}
-
-tooltip label {
+    font-weight: 600;
     color: @text;
+    letter-spacing: 0.3px;
+    padding: 4px 16px;
+    cursor: pointer;
 }
+
+#clock:hover {
+    background: @surface;
+}
+
+/* ── Network speed ────────────────────────────────────────── */
+#custom-netspeed {
+    font-size: 10.5px;
+    color: @muted;
+}
+
+/* ── CPU ──────────────────────────────────────────────────── */
+#cpu { color: @subtle; }
+
+/* ── Temperature ──────────────────────────────────────────── */
+#temperature          { color: @subtle; }
+#temperature.critical {
+    color: @urgent;
+    font-weight: 500;
+    animation: blink 1s steps(1) infinite;
+}
+
+/* ── Memory ───────────────────────────────────────────────── */
+#memory { color: @subtle; }
+
+/* ── Network ──────────────────────────────────────────────── */
+#network           { color: @subtle; }
+#network.wifi      { color: @text; }
+#network.ethernet  { color: @accent2; }
+#network.disconnected { color: @muted; }
+
+/* ── Bluetooth ────────────────────────────────────────────── */
+#bluetooth            { color: @muted; }
+#bluetooth.connected  { color: @accent; }
+#bluetooth.off,
+#bluetooth.disabled   { color: alpha(@muted, 0.4); }
+
+/* ── Volume ───────────────────────────────────────────────── */
+#pulseaudio       { color: @subtle; }
+#pulseaudio.muted { color: @muted; }
+
+/* ── Battery ──────────────────────────────────────────────── */
+#battery          { color: @subtle; }
+#battery.good     { color: @text; }
+#battery.full,
+#battery.charging { color: @success; }
+#battery.plugged  { color: @accent2; }
+#battery.warning  { color: @warning; }
+#battery.critical {
+    color: @urgent;
+    animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink { 50% { color: alpha(@urgent, 0.3); } }
+
+/* ── Tray ─────────────────────────────────────────────────── */
+#tray {
+    background: alpha(@background, 0.88);
+    border: 1px solid alpha(@overlay, 0.5);
+    border-radius: 100px;
+    padding: 4px 10px;
+    margin: 0 3px;
+}
+#tray > .passive { -gtk-icon-effect: dim; }
+
+/* ── Power button ─────────────────────────────────────────── */
+#custom-power {
+    color: alpha(@muted, 0.7);
+    font-size: 14px;
+    padding: 4px 11px;
+    margin-left: 2px;
+}
+#custom-power:hover {
+    color: @urgent;
+    background: alpha(@urgent, 0.12);
+}
+
+/* ── Tooltip ──────────────────────────────────────────────── */
+tooltip {
+    background: @surface;
+    border: 1px solid alpha(@overlay, 0.8);
+    border-radius: 12px;
+    color: @text;
+    font-size: 12px;
+    padding: 6px 12px;
+}
+tooltip label { color: @text; }
