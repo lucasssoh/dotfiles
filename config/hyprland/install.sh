@@ -209,54 +209,42 @@ else
         warn "https://www.nerdfonts.com/font-downloads"
     fi
 fi
-
 # ============================================================
 # SYMLINK CONFIG
 # ============================================================
 
 if [ "$RESET_MODE" = true ]; then
-    warn "Reset mode enabled — removing old configs"
-
-    rm -rf "$CONFIG/hypr"
-    rm -rf "$CONFIG/waybar"
-    rm -rf "$CONFIG/rofi"
-    rm -rf "$CONFIG/dunst"
-    rm -rf "$CONFIG/hyprlock"
-    rm -rf "$CONFIG/hypridle"
-    rm -rf "$CONFIG/scripts"
-
+    warn "Reset mode enabled — removing old configs from $CONFIG"
+    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,hyprlock,hypridle,scripts}
     ok "Old configs removed"
 fi
 
+section "Linking configuration directories"
 
-section "Symlinking configs"
+# Define the folders to be linked as entire directories
+# Based on your ls -R output
+modules=("hypr" "waybar" "rofi" "dunst" "hyprlock" "hypridle" "scripts")
 
-# Hyprland — link each file individually so the user's
-# ~/.config/hypr/ dir can hold extra personal files
-mkdir -p "$CONFIG/hypr"
-for f in "$REPO_DIR/hypr/"*; do
-    safe_link "$f" "$CONFIG/hypr/$(basename "$f")"
+for mod in "${modules[@]}"; do
+    if [ -d "$REPO_DIR/$mod" ]; then
+        # Link the entire folder so new files are tracked automatically
+        safe_link "$REPO_DIR/$mod" "$CONFIG/$mod"
+    else
+        warn "Source directory $mod not found in repo, skipping."
+    fi
 done
 
-# Waybar — link the whole config dir
-safe_link "$REPO_DIR/waybar"          "$CONFIG/waybar"
-chmod +x "$REPO_DIR/waybar/scripts/"*.sh
+# Handle standalone scripts in the root of your repo (like set_wallpapers.sh)
+if [ -f "$REPO_DIR/set_wallpapers.sh" ]; then
+    chmod +x "$REPO_DIR/set_wallpapers.sh"
+    # Optional: link it to a bin folder or leave it in the repo
+fi
 
-# Rofi
-safe_link "$REPO_DIR/rofi"            "$CONFIG/rofi"
+# Ensure all scripts inside the repo are executable
+# Since the folders are symlinked, this makes them executable in ~/.config too
+find "$REPO_DIR" -type f -name "*.sh" -exec chmod +x {} +
 
-# Dunst
-safe_link "$REPO_DIR/dunst"           "$CONFIG/dunst"
-
-# Hyprlock
-safe_link "$REPO_DIR/hyprlock"        "$CONFIG/hyprlock"
-
-# Hypridle
-safe_link "$REPO_DIR/hypridle"        "$CONFIG/hypridle"
-
-# Scripts
-safe_link "$REPO_DIR/scripts"         "$CONFIG/scripts"
-chmod +x "$REPO_DIR/scripts/"*.sh
+ok "All directories linked. Changes in the repo are now live."
 
 # ============================================================
 # TEMPERATURE SENSOR
