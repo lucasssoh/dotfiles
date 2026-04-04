@@ -60,7 +60,8 @@ section "Detecting distribution"
 
 if command -v dnf &>/dev/null; then
     DISTRO="fedora"
-    PKG_INSTALL="sudo dnf install -y"
+    # --skip-unavailable: don't abort if a package doesn't exist or is already installed
+    PKG_INSTALL="sudo dnf install -y --skip-unavailable"
     PKG_UPDATE="sudo dnf check-update -y || true"
     info "Fedora detected"
 elif command -v pacman &>/dev/null; then
@@ -98,16 +99,16 @@ if [ "$DISTRO" = "fedora" ]; then
         NetworkManager network-manager-applet nm-connection-editor
         # Bluetooth
         blueman bluez bluez-tools
-        # Audio
-        pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
+        # Audio (pipewire-pulseaudio is the correct Fedora package name)
+        pipewire pipewire-pulseaudio pipewire-alsa wireplumber pavucontrol
         # Clipboard
         wl-clipboard cliphist
         # Icons / theme
         papirus-icon-theme gnome-themes-extra gtk-murrine-engine adwaita-cursor-theme
         # Fonts (Nerd Fonts for Waybar icons)
         google-noto-sans-fonts google-noto-emoji-fonts jetbrains-mono-fonts-all
-        # System deps
-        polkit-gnome xdg-user-dirs brightnessctl playerctl
+        # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
+        polkit xdg-user-dirs brightnessctl playerctl
         # Screenshots
         grim slurp
         # Tools
