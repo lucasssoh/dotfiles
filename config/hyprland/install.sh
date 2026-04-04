@@ -267,30 +267,28 @@ fi
 # ============================================================
 section "Wallpaper"
 
-# Source wallpapers directory
-WALLPAPERS_SRC="$REPO_DIR/wallpapers"
+# Destination folder where wallpapers are linked by set_wallpapers.sh
+WALLPAPERS_DST="$HOME/Images/Wallpapers"
 HYPR_WALLPAPER="$REPO_DIR/hypr/wallpaper.jpg"
 
-# If the wallpapers folder exists
-if [ -d "$WALLPAPERS_SRC" ]; then
-    # Ensure hypr folder exists
+if [ -d "$WALLPAPERS_DST" ]; then
     mkdir -p "$REPO_DIR/hypr"
 
-    # If no default wallpaper exists, use the first one from the folder
+    # If no default wallpaper exists in hypr folder, pick the first from WALLPAPERS_DST
     if [ ! -f "$HYPR_WALLPAPER" ]; then
-        FIRST_WP=$(ls -1t "$WALLPAPERS_SRC" | head -n1)
+        FIRST_WP=$(ls -1t "$WALLPAPERS_DST" | head -n1)
         if [ -n "$FIRST_WP" ]; then
-            cp "$WALLPAPERS_SRC/$FIRST_WP" "$HYPR_WALLPAPER"
+            cp "$WALLPAPERS_DST/$FIRST_WP" "$HYPR_WALLPAPER"
             ok "Default wallpaper set: $HYPR_WALLPAPER"
         else
-            warn "No files in $WALLPAPERS_SRC to set as default wallpaper."
+            warn "No wallpapers in $WALLPAPERS_DST to set as default."
         fi
     else
-        info "Default wallpaper already present: $HYPR_WALLPAPER"
+        info "Default wallpaper already exists: $HYPR_WALLPAPER"
     fi
 else
-    warn "Wallpapers directory not found: $WALLPAPERS_SRC"
-    info "Place your images in this folder or adjust the path in set_wallpaper.sh"
+    warn "Wallpapers directory not found: $WALLPAPERS_DST"
+    info "Make sure set_wallpapers.sh has been run and contains your images."
 fi
 
 # ============================================================
