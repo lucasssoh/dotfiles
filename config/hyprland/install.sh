@@ -286,8 +286,10 @@ ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
 ok "Wallpaper scripts ready and in PATH."
 
 # 4️⃣ Sww daemon lancé pour que restore fonctionne
-pgrep -x swww-daemon >/dev/null || swww init
-ok "swww-daemon running."
+if pgrep -x swww-daemon >/dev/null; then
+    swww-daemon &
+    ok "swww-daemon running."
+fi
 
 # 5️⃣ Si pas de wallpaper dans le STATE_FILE, mettre le premier dispo
 if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
