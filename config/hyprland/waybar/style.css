@@ -259,7 +259,7 @@ window#waybar {
 }
 #custom-power:hover {
     color: @urgent;
-    background: alpha(@urgent, 0.12);
+    background:@surface; 
 }
 
 /* ── Tooltip ──────────────────────────────────────────────── */
