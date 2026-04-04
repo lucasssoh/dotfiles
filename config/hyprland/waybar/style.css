@@ -1,207 +1,116 @@
-/* ============================================================
-   WAYBAR STYLE.CSS — Minimal, macOS-like
-   Mirror colors from colors.conf when you retheme
-   ============================================================ */
+/* --- Variables macOS Dark Mode --- */
+@define-color bg_pill  rgba(28, 28, 30, 0.82);
+@define-color border   rgba(255, 255, 255, 0.12);
+@define-color text     #e5e5ea;
+@define-color accent   #6b9fff;
+@define-color muted    rgba(229, 229, 234, 0.4);
 
-@define-color background  #1c1c1e;
-@define-color surface     #2c2c2e;
-@define-color overlay     #3a3a3c;
-@define-color muted       #636366;
-@define-color subtle      #8e8e93;
-@define-color text        #e5e5ea;
-@define-color accent      #6b9fff;
-@define-color accent2     #5ac8fa;
-@define-color urgent      #ff453a;
-@define-color warning     #ffd60a;
-@define-color success     #30d158;
-
-/* ── Reset ────────────────────────────────────────────────── */
 * {
-    font-family: "SF Pro Text", "Inter", "Noto Sans", sans-serif;
+    font-family: "SF Pro Text", "Inter", "JetBrainsMono Nerd Font";
     font-size: 13px;
-    font-weight: 400;
+    font-weight: 500;
     border: none;
     border-radius: 0;
-    box-shadow: none;
-    min-height: 0;
-    transition: all 0.15s ease;
+    transition: all 0.3s cubic-bezier(.4, 0, .2, 1);
 }
 
-/* ── Bar window ───────────────────────────────────────────── */
+/* On rend la barre invisible pour ne garder que les pills */
 window#waybar {
-    background: alpha(@background, 0.90);
-    border-radius: 12px;
-    border: 1px solid alpha(@overlay, 0.7);
-    color: @text;
+    background: transparent;
 }
 
-.modules-left,
-.modules-center,
-.modules-right {
-    padding: 0 4px;
+/* --- Style Global des Pills --- */
+.modules-left > widget > box,
+.modules-center > widget > box,
+.modules-right > widget > box,
+#clock {
+    background: @bg_pill;
+    border: 1px solid @border;
+    border-radius: 100px; /* Effet Gélule */
+    padding: 2px 14px;
+    margin: 0 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* ── Default module style ─────────────────────────────────── */
-#workspaces,
-#window,
-#clock,
-#custom-netspeed,
-#network,
-#bluetooth,
-#pulseaudio,
-#cpu,
-#temperature,
-#memory,
-#battery,
-#tray,
-#custom-power {
-    padding: 0 10px;
-    margin: 4px 1px;
-    border-radius: 8px;
-    color: @subtle;
-}
-
-/* ── Generic hover ────────────────────────────────────────── */
-#network:hover,
-#bluetooth:hover,
-#pulseaudio:hover,
-#cpu:hover,
-#temperature:hover,
-#memory:hover,
-#battery:hover,
-#custom-netspeed:hover {
-    background: @surface;
-    color: @text;
-}
-
-/* ── Workspaces ───────────────────────────────────────────── */
+/* --- Workspaces --- */
 #workspaces {
     background: transparent;
-    padding: 0 2px;
 }
 
 #workspaces button {
-    font-size: 12px;
-    font-weight: 500;
     color: @muted;
-    background: transparent;
-    padding: 2px 9px;
-    border-radius: 6px;
-    min-width: 0;
-}
-
-#workspaces button:hover {
-    background: @surface;
-    color: @text;
+    padding: 0 8px;
+    margin: 4px 2px;
+    border-radius: 100px;
 }
 
 #workspaces button.active {
     color: @accent;
-    background: alpha(@accent, 0.14);
+    background: rgba(107, 159, 255, 0.18);
     font-weight: 700;
 }
 
-#workspaces button.urgent {
-    color: @urgent;
-    background: alpha(@urgent, 0.14);
+#workspaces button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: @text;
 }
 
-/* ── Active window title ──────────────────────────────────── */
+/* --- Window Title (Discret) --- */
 #window {
-    color: alpha(@subtle, 0.7);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: rgba(229, 229, 234, 0.6);
     font-style: italic;
-    font-size: 12px;
-    background: transparent;
+    margin-left: 10px;
 }
 
-/* ── Clock ────────────────────────────────────────────────── */
+/* --- Clock (Pill Centrale) --- */
 #clock {
-    font-size: 14px;
-    font-weight: 600;
-    color: @text;
-    letter-spacing: 0.3px;
+    font-weight: 700;
+    padding: 2px 20px;
+}
+
+/* --- Modules Internes (Détails) --- */
+#custom-netspeed, #network, #bluetooth, #pulseaudio, #cpu, #memory, #battery, #tray, #custom-power {
     background: transparent;
-}
-
-/* ── Network speed ────────────────────────────────────────── */
-#custom-netspeed {
-    font-size: 11px;
-    color: alpha(@subtle, 0.8);
-    font-family: "JetBrains Mono", "Fira Code", monospace;
+    border: none;
+    margin: 0;
     padding: 0 8px;
+    color: rgba(229, 229, 234, 0.85);
 }
 
-/* ── WiFi / Ethernet ──────────────────────────────────────── */
-#network { color: @subtle; }
-#network.wifi     { color: @text; }
-#network.ethernet { color: @accent2; }
-#network.disconnected,
-#network.disabled { color: @muted; }
-
-/* ── Bluetooth ────────────────────────────────────────────── */
-#bluetooth            { color: @muted; }
-#bluetooth.connected  { color: @accent; }
-#bluetooth.disabled,
-#bluetooth.off        { color: alpha(@muted, 0.5); }
-
-/* ── Volume ───────────────────────────────────────────────── */
-#pulseaudio       { color: @subtle; }
-#pulseaudio.muted { color: @muted; }
-
-/* ── CPU ──────────────────────────────────────────────────── */
-#cpu { color: @subtle; }
-
-/* ── Temperature ──────────────────────────────────────────── */
-#temperature          { color: @subtle; }
-#temperature.critical {
-    color: @urgent;
-    font-weight: 600;
-    animation: blink-urgent 1s steps(1) infinite;
+/* Séparateurs verticaux subtils entre les icônes */
+#network, #pulseaudio, #cpu, #memory {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ── RAM ──────────────────────────────────────────────────── */
-#memory { color: @subtle; }
-
-/* ── Battery ──────────────────────────────────────────────── */
-#battery          { color: @subtle; }
-#battery.good     { color: @text; }
-#battery.full     { color: @success; }
-#battery.charging { color: @success; }
-#battery.plugged  { color: @accent2; }
-#battery.warning  { color: @warning; }
-#battery.critical {
-    color: @urgent;
-    animation: blink-urgent 1s steps(1) infinite;
+/* --- Hovers Dynamiques --- */
+.modules-right > widget > box:hover {
+    background: rgba(44, 44, 46, 0.95);
+    border: 1px solid rgba(107, 159, 255, 0.4);
 }
 
-@keyframes blink-urgent {
-    50% { color: alpha(@urgent, 0.3); }
-}
-
-/* ── Tray ─────────────────────────────────────────────────── */
-#tray { background: transparent; padding: 0 6px; }
-#tray > .passive        { -gtk-icon-effect: dim; }
-#tray > .needs-attention { -gtk-icon-effect: highlight; color: @warning; }
-
-/* ── Power button ─────────────────────────────────────────── */
+/* --- Power Button --- */
 #custom-power {
-    color: alpha(@subtle, 0.6);
-    font-size: 15px;
-    padding: 0 12px;
-    border-radius: 8px;
-}
-#custom-power:hover {
-    color: @urgent;
-    background: alpha(@urgent, 0.12);
+    color: #ff453a;
+    font-size: 14px;
+    padding-right: 4px;
 }
 
-/* ── Tooltip ──────────────────────────────────────────────── */
-tooltip {
-    background: @surface;
-    border: 1px solid @overlay;
-    border-radius: 10px;
-    color: @text;
-    font-size: 12px;
-    padding: 6px 10px;
+#custom-power:hover {
+    color: #ff3b30;
+    transform: scale(1.1);
 }
-tooltip label { color: @text; }
+
+/* --- Tooltip --- */
+tooltip {
+    background: @bg_pill;
+    border: 1px solid @border;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+tooltip label {
+    color: @text;
+}
