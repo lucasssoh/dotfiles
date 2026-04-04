@@ -1,5 +1,5 @@
 /* ============================================================
-   ROFI LAUNCHER.RASI — Sobre, macOS Spotlight-like
+   ROFI LAUNCHER.RASI — Fixed Syntax
    ============================================================ */
 
 * {
@@ -11,76 +11,76 @@
     accent:  #6b9fff;
     urgent:  #ff453a;
 
-    font: "SF Pro Text, Inter, Noto Sans 13";
+    font: "SF Pro Text 13";
     background-color: transparent;
     text-color: @text;
-    border: 0;
-    margin: 0;
-    padding: 0;
-    spacing: 0;
 }
 
 window {
-    width: 520px;
+    width:            520px;
     background-color: @bg;
-    border: 1px solid @overlay;
-    border-radius: 14px;
-    padding: 12px;
+    border-radius:    14px;
+    padding:          12px;
+    border:           1px solid;
+    border-color:     @overlay;
 }
 
 inputbar {
     background-color: @surface;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-    children: [prompt, entry];
+    border-radius:    10px;
+    padding:          10px 14px;
+    margin:           0px 0px 10px 0px;
+    children:         [ prompt, entry ];
 }
 
 prompt {
     text-color: @accent;
-    padding-right: 8px;
-    font-weight: bold;
+    margin:     0px 8px 0px 0px;
 }
 
 entry {
-    text-color: @text;
-    placeholder: "Rechercher…";
+    text-color:        @text;
+    placeholder:       "Search...";
     placeholder-color: @muted;
 }
 
 listview {
-    lines: 8;
-    scrollbar: false;
-    spacing: 2px;
+    lines:           8;
+    scrollbar:       false;
+    spacing:         4px;
+    fixed-columns:   true;
 }
 
 element {
-    padding: 8px 12px;
+    padding:       8px 12px;
     border-radius: 8px;
-    children: [element-icon, element-text];
-    spacing: 10px;
+    spacing:       10px;
 }
 
 element-icon {
-    size: 20px;
+    size:           24px;
     vertical-align: 0.5;
 }
 
 element-text {
     vertical-align: 0.5;
-    text-color: @text;
+    text-color:     inherit; 
 }
 
+/* Sélection et états */
 element selected {
-    background-color: alpha(#6b9fff, 0.15);
+    background-color: #6b9fff26;
+    text-color:       @accent;
+}
+
+elements elected.normal {
+    background-color: #6b9fff26;
     text-color: @accent;
 }
 
-element selected > element-text {
-    text-color: @accent;
+element urgent {
+    text-color: @urgent;
 }
-
-element normal.urgent,
-element alternate.urgent {
+element normal.urgent {
     text-color: @urgent;
 }
