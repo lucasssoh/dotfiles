@@ -60,7 +60,7 @@
         "format": "{:%H:%M · %a %d %b}",
         "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
         "interval": 10,
-        "on-click": "wezterm start --class calendar --title Calendar -- khal interactive",
+        "on-click": "rofi -dmenu -p 'Agenda' -input <(khal list today 7d) -theme ~/.config/rofi/launcher.rasi -no-fixed-num-lines -no-custom",       
         "calendar": {
             "mode": "month",
             "format": {
