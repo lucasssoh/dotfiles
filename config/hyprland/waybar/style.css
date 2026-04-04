@@ -34,7 +34,6 @@ window#waybar {
 
 .modules-left   { margin-left:  0; }
 .modules-right  { margin-right: 0; }
-.modules-center { margin: 0 auto; }
 
 /* ── Pill base — shared by all modules ────────────────────── */
 #workspaces,
