@@ -1,19 +1,19 @@
 
 /* ============================================================
-   WAYBAR STYLE.CSS — Pill-based, macOS/GNOME minimal
+   WAYBAR STYLE.CSS — Squared-rounded, high contrast
    ============================================================ */
 
 @define-color background  #1c1c1e;
 @define-color surface     #2c2c2e;
-@define-color overlay     #3a3a3c;
-@define-color muted       #636366;
-@define-color subtle      #8e8e93;
-@define-color text        #e5e5ea;
-@define-color accent      #6b9fff;
-@define-color accent2     #5ac8fa;
+@define-color overlay     #48484a;
+@define-color muted       #8e8e93;
+@define-color subtle      #aeaeb2;
+@define-color text        #f2f2f7;
+@define-color accent      #4f9eff;
+@define-color accent2     #32ade6;
 @define-color urgent      #ff453a;
 @define-color warning     #ffd60a;
-@define-color success     #30d158;
+@define-color success     #34c759;
 
 /* ── Reset ────────────────────────────────────────────────── */
 * {
@@ -25,7 +25,7 @@
     min-height: 0;
 }
 
-/* ── Bar itself is invisible — pills are the containers ───── */
+/* ── Bar itself ───────────────────────────────────────────── */
 window#waybar {
     background: transparent;
     border: none;
@@ -48,17 +48,17 @@ window#waybar {
 #battery,
 #tray,
 #custom-power {
-    background: alpha(@background, 0.88);
-    border: 1px solid alpha(@overlay, 0.5);
-    border-radius: 100px;
-    padding: 4px 13px;
+    background: alpha(@background, 0.92);
+    border: 1px solid alpha(@overlay, 0.6);
+    border-radius: 6px;
+    padding: 4px 12px;
     margin: 4px 3px;
-    color: @subtle;
+    color: @text;
 }
 
-/* ── Stat pill: netspeed + cpu + temp + memory ────────────── */
+/* ── Stat group: netspeed + cpu + temp + memory ───────────── */
 #custom-netspeed {
-    border-radius: 100px 0 0 100px;
+    border-radius: 6px 0 0 6px;
     border-right: none;
     padding-right: 8px;
     margin-top: 4px;
@@ -66,7 +66,7 @@ window#waybar {
     margin-right: 0;
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
     font-size: 10px;
-    color: @muted;
+    color: @subtle;
 }
 
 #cpu {
@@ -75,6 +75,7 @@ window#waybar {
     border-right: none;
     padding: 4px 10px;
     margin: 4px 0;
+    color: @text;
 }
 
 #temperature {
@@ -83,18 +84,20 @@ window#waybar {
     border-right: none;
     padding: 4px 10px;
     margin: 4px 0;
+    color: @text;
 }
 
 #memory {
-    border-radius: 0 100px 100px 0;
+    border-radius: 0 6px 6px 0;
     border-left: 1px solid alpha(@overlay, 0.5);
-    padding: 4px 13px 4px 10px;
+    padding: 4px 12px 4px 10px;
     margin: 4px 6px 4px 0;
+    color: @text;
 }
 
-/* ── Connectivity pill: network + bt + audio + battery ───── */
+/* ── Connectivity group: network + bt + audio + battery ───── */
 #network {
-    border-radius: 100px 0 0 100px;
+    border-radius: 6px 0 0 6px;
     border-right: none;
     padding-right: 8px;
     margin: 4px 0 4px 6px;
@@ -138,7 +141,7 @@ window#waybar {
 
 /* ── Workspaces ───────────────────────────────────────────── */
 #workspaces {
-    padding: 4px 10px;
+    padding: 4px 8px;
     margin-right: 4px;
 }
 
@@ -147,13 +150,14 @@ window#waybar {
     color: @overlay;
     background: transparent;
     padding: 0 3px;
-    border-radius: 100px;
+    border-radius: 3px;
     min-width: 0;
 }
 
 #workspaces button.active {
     color: @accent;
     font-size: 8px;
+    background: alpha(@accent, 0.12);
 }
 
 #workspaces button.occupied {
@@ -165,20 +169,20 @@ window#waybar {
 }
 
 #workspaces button:hover {
-    background: transparent;
+    background: alpha(@text, 0.06);
     color: @text;
 }
 
 /* ── Active window ────────────────────────────────────────── */
 #window {
-    color: alpha(@subtle, 0.75);
+    color: alpha(@subtle, 0.8);
     font-size: 12px;
     font-style: italic;
 }
 
 /* ── Clock ────────────────────────────────────────────────── */
 #clock {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: @text;
     padding: 4px 16px;
@@ -191,14 +195,14 @@ window#waybar {
 /* ── Network speed ────────────────────────────────────────── */
 #custom-netspeed {
     font-size: 10px;
-    color: @muted;
+    color: @subtle;
 }
 
 /* ── CPU ──────────────────────────────────────────────────── */
-#cpu { color: @subtle; }
+#cpu { color: @text; }
 
 /* ── Temperature ──────────────────────────────────────────── */
-#temperature          { color: @subtle; }
+#temperature          { color: @text; }
 #temperature.critical {
     color: @urgent;
     font-weight: 500;
@@ -206,13 +210,22 @@ window#waybar {
 }
 
 /* ── Memory ───────────────────────────────────────────────── */
-#memory { color: @subtle; }
+#memory { color: @text; }
 
-/* ── Network ──────────────────────────────────────────────── */
+/* ── Network — inner pill via format label ────────────────── */
 #network              { color: @subtle; }
-#network.wifi         { color: @text; }
+#network.wifi         { color: @accent2; }
 #network.ethernet     { color: @accent2; }
 #network.disconnected { color: @muted; }
+
+/* Inner-pill effect on the label inside network/bluetooth */
+#network label,
+#bluetooth label {
+    background: alpha(@overlay, 0.5);
+    border: 1px solid alpha(@overlay, 0.8);
+    border-radius: 4px;
+    padding: 0 6px;
+}
 
 /* ── Bluetooth ────────────────────────────────────────────── */
 #bluetooth           { color: @muted; }
@@ -221,11 +234,11 @@ window#waybar {
 #bluetooth.disabled  { color: alpha(@muted, 0.4); }
 
 /* ── Volume ───────────────────────────────────────────────── */
-#pulseaudio       { color: @subtle; }
+#pulseaudio       { color: @text; }
 #pulseaudio.muted { color: @muted; }
 
 /* ── Battery ──────────────────────────────────────────────── */
-#battery          { color: @subtle; }
+#battery          { color: @text; }
 #battery.good     { color: @text; }
 #battery.full,
 #battery.charging { color: @success; }
@@ -240,33 +253,33 @@ window#waybar {
 
 /* ── Tray ─────────────────────────────────────────────────── */
 #tray {
-    background: alpha(@background, 0.88);
-    border: 1px solid alpha(@overlay, 0.5);
-    border-radius: 100px;
+    background: alpha(@background, 0.92);
+    border: 1px solid alpha(@overlay, 0.6);
+    border-radius: 6px;
     padding: 4px 10px;
     margin: 4px 3px;
 }
 #tray > .passive { -gtk-icon-effect: dim; }
 
-/* ── Power — closes the connectivity pill ─────────────────── */
+/* ── Power ────────────────────────────────────────────────── */
 #custom-power {
-    border-radius: 0 100px 100px 0;
+    border-radius: 0 6px 6px 0;
     border-left: 1px solid alpha(@overlay, 0.5);
-    padding: 4px 13px 4px 10px;
+    padding: 4px 12px 4px 10px;
     margin: 4px 4px 4px 0;
-    color: alpha(@muted, 0.7);
+    color: alpha(@muted, 0.8);
     font-size: 13px;
 }
 #custom-power:hover {
     color: @urgent;
-    background:@surface; 
+    background: @surface;
 }
 
 /* ── Tooltip ──────────────────────────────────────────────── */
 tooltip {
     background: @surface;
-    border: 1px solid alpha(@overlay, 0.8);
-    border-radius: 12px;
+    border: 1px solid alpha(@overlay, 0.9);
+    border-radius: 8px;
     color: @text;
     font-size: 12px;
     padding: 6px 12px;

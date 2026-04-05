@@ -60,11 +60,11 @@
         "format": "{:%H:%M · %a %d %b}",
         "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
         "interval": 10,
-        "on-click": "rofi -dmenu -p 'Agenda' -input <(khal list today 7d) -theme ~/.config/rofi/launcher.rasi -no-fixed-num-lines -no-custom",       
+        "on-click": "rofi -dmenu -p 'Agenda' -input <(khal list today 7d) -theme ~/.config/rofi/launcher.rasi -no-fixed-num-lines -no-custom",
         "calendar": {
             "mode": "month",
             "format": {
-                "today": "<span color='#6b9fff'><b><u>{}</u></b></span>"
+                "today": "<span color='#4f9eff'><b><u>{}</u></b></span>"
             }
         }
     },
@@ -98,10 +98,10 @@
 
     "network": {
         "interval": 5,
-        "format-wifi":        "󰤨 {essid}",
-        "format-ethernet":    "󰈀 {ifname}",
-        "format-disconnected":"󰤭",
-        "format-linked":      "󰈀",
+        "format-wifi":         "<span bgcolor='#1e2a36' fgcolor='#32ade6'> 󰤨 {essid} </span>",
+        "format-ethernet":     "<span bgcolor='#1e2a36' fgcolor='#32ade6'> 󰈀 {ifname} </span>",
+        "format-disconnected": "󰤭",
+        "format-linked":       "<span bgcolor='#1e2a36' fgcolor='#8e8e93'> 󰈀 linked </span>",
         "tooltip-format-wifi":     "󰤨 {essid}  {signalStrength}%\n{ipaddr} / {cidr}",
         "tooltip-format-ethernet": "󰈀 {ifname} — {ipaddr} / {cidr}",
         "on-click": "nm-connection-editor"
@@ -109,7 +109,7 @@
 
     "bluetooth": {
         "format":           "󰂯",
-        "format-connected": "󰂱 {device_alias}",
+        "format-connected": "<span bgcolor='#1a2035' fgcolor='#4f9eff'> 󰂱 {device_alias} </span>",
         "format-disabled":  "󰂲",
         "format-off":       "",
         "tooltip-format":                    "{controller_alias}\n{num_connections} device(s)",
