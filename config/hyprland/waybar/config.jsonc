@@ -13,6 +13,11 @@
         "custom/media-next",
         "custom/media-text",
 
+
+    ],
+
+    "modules-center": [],
+    "modules-right": [
         "hyprland/workspaces",
         "hyprland/window",
         "custom/netspeed",
@@ -26,9 +31,6 @@
         "clock",
         "custom/power"
     ],
-
-    "modules-center": [],
-    "modules-right": [],
 
     // --- MEDIA (inchangé) ---
     "custom/media-prev": {
