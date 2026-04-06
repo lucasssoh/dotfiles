@@ -43,9 +43,12 @@ TX_RATE=$(( (TX - PREV_TX) * 1000 / ELAPSED ))  # bytes/s
 
 format_rate() {
     local b=$1
-    if   (( b >= 1048576 )); then printf "%.1f MB/s" "$(echo "scale=1; $b/1048576" | bc)"
-    elif (( b >= 1024 ));    then printf "%d KB/s"   $(( b / 1024 ))
-    else                          printf "%d B/s"    "$b"
+    if   (( b >= 1048576 )); then 
+        printf "%4.1f MB/s" "$(echo "scale=1; $b/1048576" | bc)"
+    elif (( b >= 1024 ));    then 
+        printf "%4d KB/s" $(( b / 1024 ))
+    else 
+        printf "%4d  B/s" "$b"
     fi
 }
 
