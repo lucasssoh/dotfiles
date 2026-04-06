@@ -20,7 +20,7 @@ window#waybar {
 ========================= */
 
 .modules-left {
-    margin: 6px 0;
+    margin:  0;
     padding: 0;
 }
 
@@ -29,11 +29,11 @@ window#waybar {
 ========================= */
 
 #custom-media {
-    background: @surface;
-    color: @text;
-    margin: 2px 8px 2px 4px; 
+    background: @background;
+    color: @accent;
+    margin: 0; 
     padding: 0 12px;
-    border-radius: 12px;
+    border-radius: 0 0 12px 0;
     min-width: 220px;
     transition: all 0.2s ease;
 }
@@ -41,6 +41,7 @@ window#waybar {
 
 /* état paused */
 #custom-media.paused {
+    border : none;
     opacity: 0.6;
 }
 
