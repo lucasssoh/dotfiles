@@ -11,60 +11,119 @@
     border: none;
 }
 
-window#waybar { background: transparent; }
+window#waybar {
+    background: transparent;
+}
 
-/* --- GAUCHE (Workspaces + App) --- */
+/* =========================
+   GLOBAL CONTAINER
+========================= */
+
 .modules-left {
-    background: @background;
-    border-radius: 12px;
     margin: 6px 0;
-    padding: 0 10px;
+    padding: 0;
 }
-#workspaces button { color: @muted; padding: 0 4px; }
-#workspaces button.active { color: @text; }
-#window { border-left: 1px solid @overlay; margin-left: 10px; padding-left: 10px; color: @muted; min-width: 150px; }
 
-/* --- CENTRE (Média : S'affiche UNIQUEMENT si actif) --- */
-.modules-center { background: transparent; }
+/* =========================
+   🎵 MEDIA (bloc séparé)
+========================= */
 
-#custom-media-prev, #custom-media-play, #custom-media-next, #custom-media-text {
-    background: @background;
+#custom-media-prev,
+#custom-media-play,
+#custom-media-next,
+#custom-media-text {
+    background: @surface;
     color: @text;
-    padding: 0 5px;
-    margin: 6px 0;
-}
-#custom-media-prev { border-radius: 12px 0 0 12px; padding-left: 12px; }
-#custom-media-next { border-right: 1px solid @overlay; }
-#custom-media-text { 
-    border-radius: 0 12px 12px 0; 
-    padding-right: 15px; 
-    color: @accent; 
-    font-weight: bold;
-    min-width: 180px; /* FIX : Empêche le saut de texte */
+    margin: 6px 4px;
+    padding: 0 6px;
 }
 
-/* --- DROITE (Système + Vitesse) --- */
-.modules-right {
+#custom-media-prev {
+    border-radius: 12px 0 0 12px;
+    padding-left: 10px;
+}
+
+#custom-media-text {
+    border-radius: 0 12px 12px 0;
+    color: @accent;
+    font-weight: bold;
+    min-width: 180px;
+    margin-right: 10px; /* séparation avec bloc principal */
+}
+
+/* =========================
+   🔵 BLOC PRINCIPAL
+========================= */
+
+#workspaces,
+#window,
+#custom-netspeed,
+#cpu,
+#temperature,
+#memory,
+#network,
+#bluetooth,
+#pulseaudio,
+#battery,
+#clock,
+#custom-power {
     background: @background;
-    border-radius: 12px;
-    margin: 6px 0;
     padding: 0 10px;
+}
+
+/* bordures internes */
+
+#window,
+#custom-netspeed,
+#cpu,
+#temperature,
+#memory,
+#network,
+#bluetooth,
+#pulseaudio,
+#clock {
+    border-left: 1px solid @overlay;
+}
+
+/* coins arrondis */
+
+#workspaces {
+    border-radius: 12px 0 0 12px;
+    padding-left: 12px;
+}
+
+#custom-power {
+    border-radius: 0 12px 12px 0;
+    padding-right: 12px;
+}
+
+/* =========================
+   DÉTAILS
+========================= */
+
+#workspaces button {
+    color: @muted;
+    padding: 0 4px;
+}
+
+#workspaces button.active {
+    color: @text;
+}
+
+#window {
+    color: @muted;
+    min-width: 150px;
 }
 
 #custom-netspeed {
-    min-width: 85px; /* FIX : Empêche les gros chiffres de pousser les autres modules */
+    min-width: 85px;
     padding-right: 10px;
-}
-
-#cpu, #temperature, #memory, #network, #bluetooth, #pulseaudio, #battery, #clock {
-    border-left: 1px solid @overlay;
-    padding: 0 10px;
 }
 
 #battery {
     background: @surface;
     border-radius: 6px;
-    margin: 5px 4px;
+    margin: 4px 6px;
     padding: 0 8px;
     border-left: none;
 }

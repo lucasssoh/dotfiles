@@ -8,18 +8,13 @@
     "spacing": 0,
 
     "modules-left": [
-        "hyprland/workspaces",
-        "hyprland/window"
-    ],
-
-    "modules-center": [
         "custom/media-prev",
         "custom/media-play",
         "custom/media-next",
-        "custom/media-text"
-    ],
+        "custom/media-text",
 
-    "modules-right": [
+        "hyprland/workspaces",
+        "hyprland/window",
         "custom/netspeed",
         "cpu",
         "temperature",
@@ -32,7 +27,10 @@
         "custom/power"
     ],
 
-    // --- CENTRE (Média) ---
+    "modules-center": [],
+    "modules-right": [],
+
+    // --- MEDIA (inchangé) ---
     "custom/media-prev": {
         "format": "󰒮",
         "on-click": "playerctl previous",
@@ -59,35 +57,62 @@
         "on-click": "playerctl play-pause"
     },
 
-    // --- GAUCHE ---
+    // --- WORKSPACES ---
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
         "format-icons": { "active": "●", "default": "●", "empty": "○" },
         "persistent-workspaces": { "*": 5 }
     },
+
     "hyprland/window": {
         "format": "{title}",
         "max-length": 30,
-        "rewrite": { "(.*) — Mozilla Firefox": "󰈹 $1", "Spotify.*": "Spotify", "WezTerm": "Terminal" }
+        "rewrite": {
+            "(.*) — Mozilla Firefox": "󰈹 $1",
+            "Spotify.*": "Spotify",
+            "WezTerm": "Terminal"
+        }
     },
 
-    // --- DROITE (Système) ---
-    "custom/netspeed": { 
-        "exec": "~/.config/waybar/scripts/netspeed.sh", 
-        "interval": 2, 
-        "format": "{}" 
+    // --- SYSTEM ---
+    "custom/netspeed": {
+        "exec": "~/.config/waybar/scripts/netspeed.sh",
+        "interval": 2,
+        "format": "{}"
     },
-    "network": { "format-wifi": "󰤨 {essid}", "format-disconnected": "󰤭 off", "on-click": "nm-connection-editor" },
-    "bluetooth": { "format": "󰂲", "on-click": "blueman-manager" },
+
+    "network": {
+        "format-wifi": "󰤨 {essid}",
+        "format-disconnected": "󰤭 off",
+        "on-click": "nm-connection-editor"
+    },
+
+    "bluetooth": {
+        "format": "󰂲",
+        "on-click": "blueman-manager"
+    },
+
     "battery": {
         "format": "{icon} {capacity}%",
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"] 
+        "format-icons": ["󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"]
     },
-    "clock": { "format": "{:%H:%M  |  %d/%m}" },
-    "pulseaudio": { "format": "{icon} {volume}%", "on-click": "pavucontrol" },
+
+    "clock": {
+        "format": "{:%H:%M  |  %d/%m}"
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "on-click": "pavucontrol"
+    },
+
     "cpu": { "format": "cpu {usage:02}%" },
     "temperature": { "format": "tmp {temperatureC}°" },
     "memory": { "format": "ram {percentage:02}%" },
-    "custom/power": { "format": "⏻", "on-click": "~/.config/scripts/powermenu.sh" }
+
+    "custom/power": {
+        "format": "⏻",
+        "on-click": "~/.config/scripts/powermenu.sh"
+    }
 }
