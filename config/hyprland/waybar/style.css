@@ -31,11 +31,11 @@ window#waybar {
 #custom-media {
     background: @surface;
     color: @text;
-    margin: 6px 8px 6px 4px;
+    margin: 2px 8px 2px 4px; 
     padding: 0 12px;
     border-radius: 12px;
     min-width: 220px;
-
+    height: 20px; 
     transition: all 0.2s ease;
 }
 
@@ -75,6 +75,7 @@ window#waybar {
 #custom-power {
     background: @background;
     padding: 0 10px;
+    margin: 0;
 }
 
 /* bordures internes */
@@ -129,7 +130,7 @@ window#waybar {
 #battery {
     background: @surface;
     border-radius: 6px;
-    margin: 4px 6px;
+    margin: 3px 6px;
     padding: 0 8px;
     border-left: none;
 }
