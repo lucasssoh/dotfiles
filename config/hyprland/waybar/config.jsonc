@@ -2,7 +2,7 @@
     "layer": "top",
     "position": "top",
     "height": 36,
-    "margin-top": 8,
+    "margin-top": 0,
     "margin-left": 12,
     "margin-right": 12,
     "spacing": 0,
@@ -32,71 +32,60 @@
         "custom/power"
     ],
 
-    // ── BLOC CENTRE : MÉDIA ───────────────────────────────────
+    // --- CENTRE (Média) ---
     "custom/media-prev": {
         "format": "󰒮",
         "on-click": "playerctl previous",
-        "exec": "playerctl status && echo '󰒮'",
+        "exec": "playerctl status > /dev/null 2>&1 && echo '󰒮' || echo ''",
         "interval": 1
     },
-
     "custom/media-play": {
         "format": "{}",
-        "exec": "playerctl status | grep -q 'Playing' && echo '󰏤' || echo '󰐊'",
+        "exec": "playerctl status | grep -q 'Playing' && echo '󰏤' || (playerctl status | grep -q 'Paused' && echo '󰐊' || echo '')",
         "on-click": "playerctl play-pause",
         "interval": 1
     },
-
     "custom/media-next": {
         "format": "󰒭",
         "on-click": "playerctl next",
-        "exec": "playerctl status && echo '󰒭'",
+        "exec": "playerctl status > /dev/null 2>&1 && echo '󰒭' || echo ''",
         "interval": 1
     },
-
     "custom/media-text": {
         "format": "{}",
         "escape": true,
         "return-type": "json",
-        "exec": "zscroll -l 25 --delay 0.2 --match-command \"playerctl status\" --match-text \"Playing\" \"--scroll 1\" --match-text \"Paused\" \"--scroll 0\" \"playerctl metadata --format '{{title}} - {{artist}}'\"",
+        "exec": "playerctl status > /dev/null 2>&1 && zscroll -l 20 --delay 0.2 --match-command \"playerctl status\" --match-text \"Playing\" \"--scroll 1\" --match-text \"Paused\" \"--scroll 0\" \"playerctl metadata --format '{{title}} - {{artist}}'\" || echo ''",
         "on-click": "playerctl play-pause"
     },
 
-    // ── BLOC GAUCHE : NAVIGATION ──────────────────────────────
+    // --- GAUCHE ---
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
         "format-icons": { "active": "●", "default": "●", "empty": "○" },
         "persistent-workspaces": { "*": 5 }
     },
-
     "hyprland/window": {
         "format": "{title}",
         "max-length": 30,
-        "rewrite": { "(.*) — Mozilla Firefox": "󰈹 $1", "Spotify.*": "Spotify" }
+        "rewrite": { "(.*) — Mozilla Firefox": "󰈹 $1", "Spotify.*": "Spotify", "WezTerm": "Terminal" }
     },
 
-    // ── BLOC DROITE : SYSTÈME ─────────────────────────────────
-    "network": {
-        "format-wifi": "󰤨 {essid}",
-        "format-disconnected": "󰤭 off",
-        "on-click": "nm-connection-editor"
+    // --- DROITE (Système) ---
+    "custom/netspeed": { 
+        "exec": "~/.config/waybar/scripts/netspeed.sh", 
+        "interval": 2, 
+        "format": "{}" 
     },
-    "bluetooth": {
-        "format": "󰂲",
-        "format-connected": "󰂱 {device_alias}",
-        "on-click": "blueman-manager"
-    },
+    "network": { "format-wifi": "󰤨 {essid}", "format-disconnected": "󰤭 off", "on-click": "nm-connection-editor" },
+    "bluetooth": { "format": "󰂲", "on-click": "blueman-manager" },
     "battery": {
         "format": "{icon} {capacity}%",
         "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"] 
     },
-    "clock": {
-        "format": "{:%H:%M  |  %d/%m}",
-        "tooltip-format": "<tt>{calendar}</tt>"
-    },
-    "pulseaudio": { "format": "{icon} {volume}%", "format-icons": { "default": ["󰕿","󰖀","󰕾"] }, "on-click": "pavucontrol" },
-    "custom/netspeed": { "exec": "~/.config/waybar/scripts/netspeed.sh", "interval": 2, "format": "{}" },
+    "clock": { "format": "{:%H:%M  |  %d/%m}" },
+    "pulseaudio": { "format": "{icon} {volume}%", "on-click": "pavucontrol" },
     "cpu": { "format": "cpu {usage:02}%" },
     "temperature": { "format": "tmp {temperatureC}°" },
     "memory": { "format": "ram {percentage:02}%" },

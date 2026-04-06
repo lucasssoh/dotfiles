@@ -9,32 +9,41 @@
     font-family: "JetBrains Mono", sans-serif;
     font-size: 13px;
     border: none;
-    border-radius: 0;
 }
 
-window#waybar {
-    background: transparent;
-}
+window#waybar { background: transparent; }
 
-/* ── STYLE DES PILLS (LES BLOCS) ── */
-
-/* Bloc GAUCHE */
+/* --- GAUCHE (Workspaces + App) --- */
 .modules-left {
     background: @background;
     border-radius: 12px;
     margin: 6px 0;
     padding: 0 10px;
 }
+#workspaces button { color: @muted; padding: 0 4px; }
+#workspaces button.active { color: @text; }
+#window { border-left: 1px solid @overlay; margin-left: 10px; padding-left: 10px; color: @muted; min-width: 150px; }
 
-/* Bloc CENTRE (Média) */
-.modules-center {
+/* --- CENTRE (Média : S'affiche UNIQUEMENT si actif) --- */
+.modules-center { background: transparent; }
+
+#custom-media-prev, #custom-media-play, #custom-media-next, #custom-media-text {
     background: @background;
-    border-radius: 12px;
+    color: @text;
+    padding: 0 5px;
     margin: 6px 0;
-    padding: 0 12px;
+}
+#custom-media-prev { border-radius: 12px 0 0 12px; padding-left: 12px; }
+#custom-media-next { border-right: 1px solid @overlay; }
+#custom-media-text { 
+    border-radius: 0 12px 12px 0; 
+    padding-right: 15px; 
+    color: @accent; 
+    font-weight: bold;
+    min-width: 180px; /* FIX : Empêche le saut de texte */
 }
 
-/* Bloc DROITE (Système) */
+/* --- DROITE (Système + Vitesse) --- */
 .modules-right {
     background: @background;
     border-radius: 12px;
@@ -42,52 +51,16 @@ window#waybar {
     padding: 0 10px;
 }
 
-/* ── DÉTAILS MÉDIA (CENTRE) ── */
-#custom-media-prev, #custom-media-play, #custom-media-next {
-    color: @text;
-    padding: 0 5px;
+#custom-netspeed {
+    min-width: 85px; /* FIX : Empêche les gros chiffres de pousser les autres modules */
+    padding-right: 10px;
 }
 
-#custom-media-text {
-    color: @accent;
-    font-weight: bold;
-    padding-left: 10px;
-    min-width: 150px;
-}
-
-#custom-media-prev:hover, #custom-media-play:hover, #custom-media-next:hover {
-    color: @accent;
-}
-
-/* ── DÉTAILS NAVIGATION (GAUCHE) ── */
-#workspaces button {
-    color: @muted;
-    padding: 0 4px;
-}
-
-#workspaces button.active {
-    color: @text;
-}
-
-#window {
-    border-left: 1px solid @overlay;
-    margin-left: 10px;
-    padding-left: 10px;
-    color: @muted;
-    font-style: italic;
-}
-
-/* ── DÉTAILS SYSTÈME (DROITE) ── */
 #cpu, #temperature, #memory, #network, #bluetooth, #pulseaudio, #battery, #clock {
     border-left: 1px solid @overlay;
     padding: 0 10px;
 }
 
-#custom-netspeed { padding-right: 10px; }
-#custom-power { color: @muted; padding-left: 10px; }
-#clock { font-weight: bold; color: @text; }
-
-/* Spécifique Batterie horizontale */
 #battery {
     background: @surface;
     border-radius: 6px;
