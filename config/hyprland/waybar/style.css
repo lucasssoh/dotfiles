@@ -35,7 +35,6 @@ window#waybar {
     padding: 0 12px;
     border-radius: 12px;
     min-width: 220px;
-    height: 20px; 
     transition: all 0.2s ease;
 }
 
