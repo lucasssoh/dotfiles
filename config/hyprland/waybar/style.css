@@ -1,13 +1,12 @@
 @define-color background  #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
-@define-color muted       #48484a;
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
-@define-color spotify     #1db954;
+@define-color muted       #48484a;
 
 * {
-    font-family: "JetBrains Mono", "SF Pro Text", sans-serif;
+    font-family: "JetBrains Mono", sans-serif;
     font-size: 13px;
     border: none;
     border-radius: 0;
@@ -17,44 +16,50 @@ window#waybar {
     background: transparent;
 }
 
-/* ── Conteneur Gauche : Media + [Workspaces | Window] ── */
+/* ── STYLE DES PILLS (LES BLOCS) ── */
+
+/* Bloc GAUCHE */
 .modules-left {
-    margin: 6px 4px;
-}
-
-#custom-media {
-    background: @background;
-    color: @text;
-    border-radius: 12px;
-    padding: 0 12px;
-    margin-right: 10px;
-}
-
-/* On groupe Workspaces et Window dans la même pill */
-#workspaces {
-    background: @background;
-    border-radius: 12px 0 0 12px;
-    padding: 0 8px;
-}
-
-#window {
-    background: @background;
-    border-radius: 0 12px 12px 0;
-    padding: 0 15px;
-    color: @muted;
-    font-style: italic;
-    border-left: 1px solid @overlay;
-}
-
-/* ── Conteneur Droite : Tout le monitoring ── */
-.modules-right {
     background: @background;
     border-radius: 12px;
-    margin: 6px 4px;
+    margin: 6px 0;
     padding: 0 10px;
 }
 
-/* Style des points pour les workspaces */
+/* Bloc CENTRE (Média) */
+.modules-center {
+    background: @background;
+    border-radius: 12px;
+    margin: 6px 0;
+    padding: 0 12px;
+}
+
+/* Bloc DROITE (Système) */
+.modules-right {
+    background: @background;
+    border-radius: 12px;
+    margin: 6px 0;
+    padding: 0 10px;
+}
+
+/* ── DÉTAILS MÉDIA (CENTRE) ── */
+#custom-media-prev, #custom-media-play, #custom-media-next {
+    color: @text;
+    padding: 0 5px;
+}
+
+#custom-media-text {
+    color: @accent;
+    font-weight: bold;
+    padding-left: 10px;
+    min-width: 150px;
+}
+
+#custom-media-prev:hover, #custom-media-play:hover, #custom-media-next:hover {
+    color: @accent;
+}
+
+/* ── DÉTAILS NAVIGATION (GAUCHE) ── */
 #workspaces button {
     color: @muted;
     padding: 0 4px;
@@ -64,61 +69,29 @@ window#waybar {
     color: @text;
 }
 
-#workspaces button.occupied {
-    color: @accent;
+#window {
+    border-left: 1px solid @overlay;
+    margin-left: 10px;
+    padding-left: 10px;
+    color: @muted;
+    font-style: italic;
 }
 
-/* Séparateurs entre les stats de droite */
+/* ── DÉTAILS SYSTÈME (DROITE) ── */
 #cpu, #temperature, #memory, #network, #bluetooth, #pulseaudio, #battery, #clock {
     border-left: 1px solid @overlay;
     padding: 0 10px;
-    margin: 4px 0;
 }
 
-/* On retire la bordure pour le premier module de droite */
-#custom-netspeed {
-    padding: 0 10px;
-}
+#custom-netspeed { padding-right: 10px; }
+#custom-power { color: @muted; padding-left: 10px; }
+#clock { font-weight: bold; color: @text; }
 
-/* Bouton Power */
-#custom-power {
-    padding-left: 10px;
-    color: @muted;
-}
-
-#custom-power:hover {
-    color: #ff453a;
-}
-
-#clock {
-    background: transparent;
-    font-weight: bold;
-    padding: 0 12px;
-    min-width: 100px; /* Donne de l'espace pour la date */
-}
-
-/* Style de la batterie horizontale */
+/* Spécifique Batterie horizontale */
 #battery {
     background: @surface;
-    color: @text;
-    border-radius: 8px;
-    padding: 2px 10px;
-    margin: 4px 2px;
-    border-left: none; /* On retire la bordure car on utilise une pill */
+    border-radius: 6px;
+    margin: 5px 4px;
+    padding: 0 8px;
+    border-left: none;
 }
-
-#battery.charging, #battery.plugged {
-    color: #34c759;
-}
-
-#battery.critical:not(.charging) {
-    background-color: #ff453a;
-    color: white;
-    animation-name: blink;
-    animation-duration: 0.5s;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-direction: alternate;
-}
-
-
