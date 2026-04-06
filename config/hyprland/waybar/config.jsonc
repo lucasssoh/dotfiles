@@ -8,12 +8,7 @@
     "spacing": 0,
 
     "modules-left": [
-        "custom/media-prev",
-        "custom/media-play",
-        "custom/media-next",
-        "custom/media-text",
-
-
+        "custom/media",
     ],
 
     "modules-center": [],

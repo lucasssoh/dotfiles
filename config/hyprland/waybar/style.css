@@ -25,55 +25,31 @@ window#waybar {
 }
 
 /* =========================
-   🎵 MEDIA GROUP
+   🎵 MEDIA CLEAN
 ========================= */
 
-#custom-media-prev,
-#custom-media-play,
-#custom-media-next,
 #custom-media {
     background: @surface;
     color: @text;
-    padding: 0 8px;
-    margin: 6px 0;
+    margin: 6px 8px 6px 4px;
+    padding: 0 12px;
+    border-radius: 12px;
+    min-width: 220px;
+
+    transition: all 0.2s ease;
 }
 
-/* coins arrondis du groupe */
-#custom-media-prev {
-    border-radius: 12px 0 0 12px;
-    padding-left: 10px;
-}
-
-#custom-media {
-    border-radius: 0 12px 12px 0;
-    padding-right: 12px;
-    min-width: 180px;
-}
-
-/* séparation interne propre */
-#custom-media-play,
-#custom-media-next,
-#custom-media {
-    border-left: 1px solid @overlay;
-}
-
-/* état dynamique */
-#custom-media.playing {
-    color: @accent;
-}
-
+/* état paused */
 #custom-media.paused {
     opacity: 0.6;
 }
 
-/* hover UX */
-#custom-media-prev:hover,
-#custom-media-play:hover,
-#custom-media-next:hover {
-    background: @overlay;
+/* état playing */
+#custom-media.playing {
+    color: @accent;
 }
 
-/* caché si rien ne joue */
+/* aucun player */
 #custom-media.none,
 #custom-media.stopped {
     background: transparent;
