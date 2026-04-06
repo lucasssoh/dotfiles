@@ -55,7 +55,7 @@
     "on-click": "playerctl play-pause",
     "on-click-right": "playerctl next",
         "on-click-middle": "playerctl previous"
-    }
+    },
 
     // --- WORKSPACES ---
     "hyprland/workspaces": {
