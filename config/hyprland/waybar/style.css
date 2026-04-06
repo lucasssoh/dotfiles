@@ -1,285 +1,91 @@
-/* ============================================================
-   WAYBAR STYLE.CSS — Barre unifiée, fond #141414, pills internes
-   ============================================================ */
-
 @define-color background  #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
 @define-color muted       #48484a;
-@define-color subtle      #8e8e93;
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
-@define-color accent2     #32ade6;
-@define-color urgent      #ff453a;
-@define-color warning     #ffd60a;
-@define-color success     #34c759;
+@define-color spotify     #1db954;
 
-/* ── Reset ────────────────────────────────────────────────── */
 * {
-    font-family: "SF Pro Text", "Inter", "Noto Sans", sans-serif;
+    font-family: "JetBrains Mono", "SF Pro Text", sans-serif;
     font-size: 13px;
-    font-weight: 400;
     border: none;
     border-radius: 0;
-    min-height: 0;
 }
 
-/* ── Barre principale ─────────────────────────────────────── */
 window#waybar {
     background: transparent;
-    border: none;
 }
 
-/* Barre centrée comme un bloc unique */
-.modules-left,
-.modules-center,
+/* ── Conteneur Gauche : Media + [Workspaces | Window] ── */
+.modules-left {
+    margin: 6px 4px;
+}
+
+#custom-media {
+    background: @background;
+    color: @text;
+    border-radius: 12px;
+    padding: 0 12px;
+    margin-right: 10px;
+}
+
+/* On groupe Workspaces et Window dans la même pill */
+#workspaces {
+    background: @background;
+    border-radius: 12px 0 0 12px;
+    padding: 0 8px;
+}
+
+#window {
+    background: @background;
+    border-radius: 0 12px 12px 0;
+    padding: 0 15px;
+    color: @muted;
+    font-style: italic;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Conteneur Droite : Tout le monitoring ── */
 .modules-right {
     background: @background;
     border-radius: 12px;
     margin: 6px 4px;
+    padding: 0 10px;
 }
 
-.modules-left   { margin-left:  8px; border-radius: 12px 0 0 12px; margin-right: 0; padding-left: 6px; }
-.modules-right  { margin-right: 8px; border-radius: 0 12px 12px 0; margin-left:  0; padding-right: 6px; }
-.modules-center {
-    border-radius: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0 4px;
-}
-
-/* ── Séparateur vertical entre modules ────────────────────── */
-/* Simulé via margin sur chaque module */
-
-/* ── Base modules — pas de fond individuel ────────────────── */
-#workspaces,
-#hyprland-window,
-#clock,
-#custom-netspeed,
-#cpu,
-#temperature,
-#memory,
-#network,
-#bluetooth,
-#pulseaudio,
-#battery,
-#tray,
-#custom-power,
-#custom-media {
-    background: transparent;
-    padding: 0 6px;
-    margin: 0;
-    color: @text;
-}
-
-/* ── Séparateurs visuels via border-left ──────────────────── */
-#cpu,
-#temperature,
-#memory,
-#network,
-#bluetooth,
-#battery,
-#clock,
-#custom-power {
-    border-left: 1px solid @overlay;
-    padding-left: 10px;
-    margin-left: 2px;
-}
-
-/* ── Workspaces ───────────────────────────────────────────── */
-#workspaces {
-    padding: 0 4px;
-}
-
+/* Style des points pour les workspaces */
 #workspaces button {
-    font-size: 14px;
     color: @muted;
-    background: transparent;
-    padding: 2px 3px;
-    border-radius: 7px;
-    min-width: 26px;
-    min-height: 26px;
-    transition: background 200ms ease, color 200ms ease;
+    padding: 0 4px;
 }
 
 #workspaces button.active {
     color: @text;
-    background: @overlay;
 }
 
 #workspaces button.occupied {
-    color: @subtle;
+    color: @accent;
 }
 
-#workspaces button.urgent {
-    color: @urgent;
-    background: alpha(@urgent, 0.12);
-}
-
-#workspaces button:hover {
-    background: alpha(@text, 0.06);
-    color: @text;
-}
-
-/* ── Fenêtre active ───────────────────────────────────────── */
-#hyprland-window {
-    color: @subtle;
-    font-size: 12px;
-    font-style: italic;
-    padding: 0 8px;
-}
-
-/* ── Vitesse réseau — monospace, largeur fixe ─────────────── */
-#custom-netspeed {
-    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-    font-size: 10px;
-    color: @subtle;
-    min-width: 120px;
-    padding: 0 8px;
-}
-
-/* ── CPU ──────────────────────────────────────────────────── */
-#cpu {
-    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-    font-size: 11px;
-    color: @subtle;
-    min-width: 46px;
-}
-
-/* ── Température ──────────────────────────────────────────── */
-#temperature {
-    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-    font-size: 11px;
-    color: @subtle;
-    min-width: 46px;
-}
-
-#temperature.critical {
-    color: @urgent;
-    animation: blink 1s steps(1) infinite;
-}
-
-/* ── Mémoire ──────────────────────────────────────────────── */
-#memory {
-    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-    font-size: 11px;
-    color: @subtle;
-    min-width: 46px;
-}
-
-/* ── Réseau — dans une pill ───────────────────────────────── */
-#network {
-    background: @surface;
-    border-radius: 7px;
-    padding: 3px 9px;
-    margin: 5px 4px;
-    border-left: none;
-    color: @accent2;
-    font-size: 12px;
-}
-
-#network.wifi         { color: @accent2; }
-#network.ethernet     { color: @accent2; }
-#network.disconnected { color: @muted; }
-#network.linked       { color: @subtle; }
-
-/* ── Bluetooth — dans une pill ────────────────────────────── */
-#bluetooth {
-    background: @surface;
-    border-radius: 7px;
-    padding: 3px 9px;
-    margin: 5px 4px;
-    border-left: none;
-    color: @muted;
-    font-size: 12px;
-}
-
-#bluetooth.connected  { color: @accent; }
-#bluetooth.off,
-#bluetooth.disabled   { color: alpha(@muted, 0.35); }
-
-/* ── Volume ───────────────────────────────────────────────── */
-#pulseaudio {
-    color: @subtle;
-    font-size: 12px;
+/* Séparateurs entre les stats de droite */
+#cpu, #temperature, #memory, #network, #bluetooth, #pulseaudio, #battery, #clock {
     border-left: 1px solid @overlay;
-    padding-left: 10px;
-    margin-left: 2px;
+    padding: 0 10px;
+    margin: 4px 0;
 }
 
-#pulseaudio.muted { color: @muted; }
-
-/* ── Batterie — dans une pill ─────────────────────────────── */
-#battery {
-    background: @surface;
-    border-radius: 7px;
-    padding: 3px 9px;
-    margin: 5px 4px;
-    border-left: none;
-    color: @text;
-    font-size: 12px;
-}
-
-#battery.full,
-#battery.charging { color: @success; }
-#battery.plugged  { color: @accent2; }
-#battery.warning  { color: @warning; }
-#battery.critical {
-    color: @urgent;
-    animation: blink 1s steps(1) infinite;
-}
-
-/* ── Horloge ──────────────────────────────────────────────── */
-#clock {
-    font-size: 13px;
-    font-weight: 600;
-    color: @text;
+/* On retire la bordure pour le premier module de droite */
+#custom-netspeed {
     padding: 0 10px;
 }
 
-/* ── Bouton power ─────────────────────────────────────────── */
+/* Bouton Power */
 #custom-power {
-    color: alpha(@subtle, 0.6);
-    font-size: 14px;
-    padding: 0 10px 0 8px;
-    border-left: 1px solid @overlay;
-    margin-left: 2px;
+    padding-left: 10px;
+    color: @muted;
 }
 
 #custom-power:hover {
-    color: @urgent;
+    color: #ff453a;
 }
-
-/* ── Tray ─────────────────────────────────────────────────── */
-#tray {
-    padding: 0 8px;
-    border-left: 1px solid @overlay;
-    margin-left: 2px;
-}
-
-#tray > .passive { -gtk-icon-effect: dim; }
-
-/* ── Media flottant (custom-media) ───────────────────────── */
-#custom-media {
-    background: @background;
-    border-radius: 10px;
-    padding: 4px 12px;
-    margin: 6px 0 6px 8px;
-    color: @text;
-    font-size: 12px;
-    border-left: none;
-}
-
-/* ── Tooltip ──────────────────────────────────────────────── */
-tooltip {
-    background: @surface;
-    border-radius: 8px;
-    color: @text;
-    font-size: 12px;
-    padding: 6px 12px;
-}
-
-tooltip label { color: @text; }
-
-/* ── Blink animation ──────────────────────────────────────── */
-@keyframes blink { 50% { color: alpha(@urgent, 0.3); } }

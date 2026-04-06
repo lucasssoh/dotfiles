@@ -3,8 +3,8 @@
     "position": "top",
     "height": 36,
     "margin-top": 8,
-    "margin-left": 0,
-    "margin-right": 0,
+    "margin-left": 12,
+    "margin-right": 12,
     "spacing": 0,
     "exclusive": true,
 
@@ -13,190 +13,90 @@
         "hyprland/workspaces",
         "hyprland/window"
     ],
-    "modules-center": [
+    "modules-center": [], // Le vide central fait office de [spacer]
+    "modules-right": [
         "custom/netspeed",
         "cpu",
         "temperature",
         "memory",
         "network",
         "bluetooth",
-        "pulseaudio"
-    ],
-    "modules-right": [
+        "pulseaudio",
         "battery",
         "clock",
-        "tray",
         "custom/power"
     ],
 
-    // ── Workspaces ────────────────────────────────────────────
+    // ── Media (Ton script Bash) ───────────────────────────────
+    "custom/media": {
+        "exec": "~/.config/waybar/scripts/media.sh",
+        "return-type": "json",
+        "on-click": "playerctl play-pause",
+        "on-click-right": "playerctl next",
+        "on-click-middle": "playerctl previous",
+        "interval": 1
+    },
+
+    // ── Workspaces (Logique ○ / ●) ─────────────────────────────
     "hyprland/workspaces": {
         "format": "{icon}",
-        "format-icons": {
-            "1": "󰆍",
-            "2": "󰈹",
-            "3": "󰓃",
-            "4": "󰎄",
-            "5": "󰌆",
-            "active":  "●",
-            "default": "○",
-            "urgent":  "◉"
-        },
         "on-click": "activate",
-        "on-scroll-up":   "hyprctl dispatch workspace e-1",
-        "on-scroll-down": "hyprctl dispatch workspace e+1",
-        "sort-by-number": true,
+        "format-icons": {
+            "active": "●",
+            "default": "●",
+            "empty": "○",
+            "urgent": "◉"
+        },
         "persistent-workspaces": {
-            "1": [], "2": [], "3": [], "4": [], "5": []
+            "*": 5 
         }
-        // Note: pour afficher l'icône de l'app courante par workspace,
-        // utiliser un script externe (voir custom/media pattern ci-dessous)
-        // ou le plugin hyprland-workspaces avec icon-map.
     },
 
     // ── Fenêtre active ────────────────────────────────────────
     "hyprland/window": {
         "format": "{title}",
-        "max-length": 40,
+        "max-length": 35,
         "separate-outputs": true,
         "rewrite": {
-            "(.*) — Mozilla Firefox": "󰈹  $1",
-            "(.*)WezTerm":            "  Terminal",
-            "(.*)Thunar":             "󰉋  Files",
-            "(.*)Neovim":             "  $1",
-            "(.*)nvim(.*)":           "  $1",
-            "(.*)Spotify.*":          "  Spotify",
-            "(.*)YouTube.*":          "  YouTube"
+            "(.*) — Mozilla Firefox": "󰈹 $1",
+            "(.*)WezTerm": "Terminal",
+            "Spotify.*": "Spotify",
+            "YouTube.*": "YouTube",
+            "(.*)Neovim": "nvim $1"
         }
     },
 
-    // ── Vitesse réseau ────────────────────────────────────────
-    // Le script gère la largeur fixe avec printf pour aligner les chiffres
+    // ── Performance & Stats ───────────────────────────────────
     "custom/netspeed": {
         "exec": "~/.config/waybar/scripts/netspeed.sh",
         "interval": 2,
-        "format": "{}",
-        "tooltip": false
+        "format": "{}"
     },
+    "cpu": { "format": "cpu {usage:02}%" },
+    "temperature": { "format": "tmp {temperatureC}°" },
+    "memory": { "format": "ram {percentage:02}%" },
 
-    // ── CPU ───────────────────────────────────────────────────
-    "cpu": {
-        "format": "cpu {usage:02}%",
-        "interval": 3,
-        "tooltip-format": "CPU load: {usage}%\nAvg freq: {avg_frequency:.2f} GHz"
-    },
-
-    // ── Température ───────────────────────────────────────────
-    "temperature": {
-        "critical-threshold": 85,
-        "format":          "tmp {temperatureC}°",
-        "format-critical": "tmp {temperatureC}°",
-        "interval": 5,
-        "tooltip-format": "CPU temp: {temperatureC}°C"
-    },
-
-    // ── Mémoire ───────────────────────────────────────────────
-    "memory": {
-        "format": "ram {percentage:02}%",
-        "tooltip-format": "Used: {used:.1f} GB / {total:.1f} GB\nFree: {avail:.1f} GB",
-        "interval": 10
-    },
-
-    // ── Réseau (wifi / ethernet) — pill ───────────────────────
+    // ── Systèmes ──────────────────────────────────────────────
     "network": {
-        "interval": 5,
-        "format-wifi":         "󰤨 {essid}",
-        "format-ethernet":     "󰈀 {ifname}",
-        "format-disconnected": "󰤭 off",
-        "format-linked":       "󰈀 linked",
-        "tooltip-format-wifi":     "󰤨 {essid}  {signalStrength}%\n{ipaddr} / {cidr}",
-        "tooltip-format-ethernet": "󰈀 {ifname} — {ipaddr} / {cidr}",
-        "on-click": "nm-connection-editor"
+        "format-wifi": "󰤨  {essid}",
+        "format-ethernet": "󰈀  {ifname}",
+        "format-disconnected": "󰤭  off"
     },
-
-    // ── Bluetooth — pill ──────────────────────────────────────
     "bluetooth": {
-        "format":           "󰂲",
-        "format-connected": "󰂱 {device_alias}",
-        "format-disabled":  "",
-        "format-off":       "󰂲",
-        "tooltip-format":                    "{controller_alias}\n{num_connections} appareil(s)",
-        "tooltip-format-connected":          "{controller_alias}\n\n{device_enumerate}",
-        "tooltip-format-enumerate-connected":"  {device_alias}",
-        "on-click": "blueman-manager"
+        "format": "󰂲",
+        "format-connected": "󰂱 {device_alias}"
     },
-
-    // ── Volume ────────────────────────────────────────────────
     "pulseaudio": {
-        "format":       "{icon} {volume}%",
-        "format-muted": "󰝟",
-        "format-icons": {
-            "headphone": "󰋋",
-            "headset":   "󰋎",
-            "speaker":   "󰓃",
-            "default":  ["󰕿","󰖀","󰕾"]
-        },
-        "tooltip-format": "{desc} — {volume}%",
-        "on-click":       "pavucontrol",
-        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "scroll-step": 2
+        "format": "{icon} {volume}%",
+        "format-icons": { "default": ["󰕿","󰖀","󰕾"] }
     },
-
-    // ── Batterie — pill ───────────────────────────────────────
     "battery": {
-        "states": {
-            "full":     100,
-            "good":     80,
-            "warning":  30,
-            "critical": 15
-        },
-        "format":          "{icon} {capacity}%",
-        "format-full":     "󰁹 {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-plugged":  "󰚥 {capacity}%",
-        "format-icons":   ["󰂎","󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"],
-        "tooltip-format":  "{timeTo}\nPower: {power:.1f} W",
-        "interval": 30
+        "format": "{icon} {capacity}%",
+        "format-icons": ["󰂎","󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"]
     },
-
-    // ── Horloge ───────────────────────────────────────────────
-    "clock": {
-        "format": "{:%H:%M\n<span size='xx-small'>{:%a %d %b}</span>}",
-        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
-        "interval": 10,
-        "calendar": {
-            "mode": "month",
-            "format": {
-                "today": "<span color='#4f9eff'><b><u>{}</u></b></span>"
-            }
-        }
-    },
-
-    // ── Tray ──────────────────────────────────────────────────
-    "tray": {
-        "icon-size": 14,
-        "spacing": 6,
-        "show-passive-items": false
-    },
-
-    // ── Power ──────────────────────────────────────────────────
+    "clock": { "format": "{:%H:%M}" },
     "custom/power": {
         "format": "⏻",
-        "tooltip": false,
         "on-click": "~/.config/scripts/powermenu.sh"
-    },
-
-    // ── Media flottant (mpris) ────────────────────────────────
-    // Nécessite: playerctl + le script media.sh ci-dessous
-    // Affiche : titre · artiste avec contrôles via on-click
-    "custom/media": {
-        "exec": "~/.config/waybar/scripts/media.sh",
-        "interval": 2,
-        "format": "{}",
-        "return-type": "json",
-        "on-click":       "playerctl play-pause",
-        "on-click-right": "playerctl next",
-        "on-click-middle": "playerctl previous",
-        "tooltip": true
     }
 }
