@@ -13,7 +13,7 @@
         "hyprland/workspaces",
         "hyprland/window"
     ],
-    "modules-center": [], // Le vide central fait office de [spacer]
+    "modules-center": [], 
     "modules-right": [
         "custom/netspeed",
         "cpu",
@@ -27,7 +27,6 @@
         "custom/power"
     ],
 
-    // ── Media (Ton script Bash) ───────────────────────────────
     "custom/media": {
         "exec": "~/.config/waybar/scripts/media.sh",
         "return-type": "json",
@@ -37,7 +36,6 @@
         "interval": 1
     },
 
-    // ── Workspaces (Logique ○ / ●) ─────────────────────────────
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
@@ -52,51 +50,60 @@
         }
     },
 
-    // ── Fenêtre active ────────────────────────────────────────
     "hyprland/window": {
         "format": "{title}",
         "max-length": 35,
-        "separate-outputs": true,
         "rewrite": {
             "(.*) — Mozilla Firefox": "󰈹 $1",
             "(.*)WezTerm": "Terminal",
             "Spotify.*": "Spotify",
-            "YouTube.*": "YouTube",
-            "(.*)Neovim": "nvim $1"
+            "YouTube.*": "YouTube"
         }
     },
 
-    // ── Performance & Stats ───────────────────────────────────
-    "custom/netspeed": {
-        "exec": "~/.config/waybar/scripts/netspeed.sh",
-        "interval": 2,
-        "format": "{}"
-    },
-    "cpu": { "format": "cpu {usage:02}%" },
-    "temperature": { "format": "tmp {temperatureC}°" },
-    "memory": { "format": "ram {percentage:02}%" },
-
-    // ── Systèmes ──────────────────────────────────────────────
+    // ── Réseau (Clic activé) ──────────────────────────────────
     "network": {
-        "format-wifi": "󰤨  {essid}",
-        "format-ethernet": "󰈀  {ifname}",
-        "format-disconnected": "󰤭  off"
+        "format-wifi": "󰤨 {essid}",
+        "format-ethernet": "󰈀 {ifname}",
+        "format-disconnected": "󰤭 off",
+        "on-click": "nm-connection-editor" // Ouvre le manager
     },
+
+    // ── Bluetooth (Clic activé) ───────────────────────────────
     "bluetooth": {
         "format": "󰂲",
-        "format-connected": "󰂱 {device_alias}"
+        "format-connected": "󰂱 {device_alias}",
+        "on-click": "blueman-manager" // Ouvre le manager
     },
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-icons": { "default": ["󰕿","󰖀","󰕾"] }
-    },
+
+    // ── Batterie (Icônes horizontales) ────────────────────────
     "battery": {
+        "states": { "warning": 30, "critical": 15 },
         "format": "{icon} {capacity}%",
-        "format-icons": ["󰂎","󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"]
+        "format-charging": "󰂄 {capacity}%",
+        "format-plugged": "󰚥 {capacity}%",
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"] 
     },
-    "clock": { "format": "{:%H:%M}" },
+
+    // ── Horloge (Date ajoutée) ────────────────────────────────
+    "clock": {
+        "format": "{:%H:%M  |  %d/%m}", // Affiche l'heure et la date (jour/mois)
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
     "custom/power": {
         "format": "⏻",
         "on-click": "~/.config/scripts/powermenu.sh"
+    },
+
+    // Modules techniques
+    "custom/netspeed": { "exec": "~/.config/waybar/scripts/netspeed.sh", "interval": 2, "format": "{}" },
+    "cpu": { "format": "cpu {usage:02}%" },
+    "temperature": { "format": "tmp {temperatureC}°" },
+    "memory": { "format": "ram {percentage:02}%" },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-icons": { "default": ["󰕿","󰖀","󰕾"] },
+        "on-click": "pavucontrol"
     }
 }
