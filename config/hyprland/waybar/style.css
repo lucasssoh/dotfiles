@@ -38,6 +38,12 @@ window#waybar {
 
     transition: all 0.2s ease;
 }
+#custom-media {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* état paused */
 #custom-media.paused {
