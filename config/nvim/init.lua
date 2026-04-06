@@ -13,7 +13,23 @@ vim.opt.termguicolors = true
 vim.opt.mouse = "a"
 vim.opt.paste = false
 vim.opt.cursorline = true
+
 vim.opt.clipboard = "unnamedplus"
+
+if vim.fn.has('nvim-0.10') == 1 then
+    vim.g.clipboard = {
+        name = 'OSC 52',
+        copy = {
+            ['+'] = require('vim.ui.clipboard.osc52').copy('+'),
+            ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
+        },
+        paste = {
+            ['+'] = require('vim.ui.clipboard.osc52').paste('+'),
+            ['*'] = require('vim.ui.clipboard.osc52').paste('*'),
+        },
+    }
+end
+
 vim.opt.timeoutlen = 300
 vim.opt.ttimeoutlen = 0
 vim.opt.tabstop = 4
