@@ -52,4 +52,4 @@ format_rate() {
     fi
 }
 
-echo "↓ $(format_rate $RX_RATE)  ↑ $(format_rate $TX_RATE)"
+echo "↓ $(format_rate $RX_RATE)"

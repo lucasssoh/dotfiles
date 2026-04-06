@@ -30,6 +30,7 @@
     "custom/media": {
         "exec": "~/.config/waybar/scripts/media.sh",
         "return-type": "json",
+        "max-length": 6,
         "interval": 1,
         "on-click": "playerctl play-pause",
         "on-click-right": "playerctl next",
@@ -59,6 +60,9 @@
         "exec": "~/.config/waybar/scripts/netspeed.sh",
         "interval": 2,
         "format": "{}"
+        ,
+        "max-length":15,
+        "min-length":15,
     },
 
     "network": {
