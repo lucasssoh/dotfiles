@@ -25,32 +25,61 @@ window#waybar {
 }
 
 /* =========================
-   🎵 MEDIA (bloc séparé)
+   🎵 MEDIA GROUP
 ========================= */
 
 #custom-media-prev,
 #custom-media-play,
 #custom-media-next,
-#custom-media-text {
+#custom-media {
     background: @surface;
     color: @text;
-    margin: 6px 4px;
-    padding: 0 6px;
+    padding: 0 8px;
+    margin: 6px 0;
 }
 
+/* coins arrondis du groupe */
 #custom-media-prev {
     border-radius: 12px 0 0 12px;
     padding-left: 10px;
 }
 
-#custom-media-text {
+#custom-media {
     border-radius: 0 12px 12px 0;
-    color: @accent;
-    font-weight: bold;
+    padding-right: 12px;
     min-width: 180px;
-    margin-right: 10px; /* séparation avec bloc principal */
 }
 
+/* séparation interne propre */
+#custom-media-play,
+#custom-media-next,
+#custom-media {
+    border-left: 1px solid @overlay;
+}
+
+/* état dynamique */
+#custom-media.playing {
+    color: @accent;
+}
+
+#custom-media.paused {
+    opacity: 0.6;
+}
+
+/* hover UX */
+#custom-media-prev:hover,
+#custom-media-play:hover,
+#custom-media-next:hover {
+    background: @overlay;
+}
+
+/* caché si rien ne joue */
+#custom-media.none,
+#custom-media.stopped {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
 /* =========================
    🔵 BLOC PRINCIPAL
 ========================= */
