@@ -32,28 +32,12 @@
         "custom/power"
     ],
 
-    "custom/media-prev": {
-        "format": "󰒮",
-        "on-click": "playerctl previous",
-        "interval": 5
-    },
-    "custom/media-play": {
-        "format": "󰐊",
-        "on-click": "playerctl play-pause",
-        "interval": 5
-    },
-    "custom/media-next": {
-        "format": "󰒭",
-        "on-click": "playerctl next",
-        "interval": 5
-    },
-
     "custom/media": {
-    "exec": "~/.config/waybar/scripts/media.sh",
-    "return-type": "json",
-    "interval": 1,
-    "on-click": "playerctl play-pause",
-    "on-click-right": "playerctl next",
+        "exec": "~/.config/waybar/scripts/media.sh",
+        "return-type": "json",
+        "interval": 1,
+        "on-click": "playerctl play-pause",
+        "on-click-right": "playerctl next",
         "on-click-middle": "playerctl previous"
     },
 
