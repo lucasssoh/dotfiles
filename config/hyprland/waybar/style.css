@@ -121,7 +121,4 @@ window#waybar {
     animation-direction: alternate;
 }
 
-/* On s'assure que les modules cliquables montrent un curseur de main au survol */
-#network, #bluetooth, #pulseaudio, #custom-media, #custom-power {
-    cursor: pointer;
-}
+
