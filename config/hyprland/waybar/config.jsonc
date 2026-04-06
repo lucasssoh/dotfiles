@@ -3,33 +3,41 @@
     "position": "top",
     "height": 36,
     "margin-top": 8,
-    "margin-left": 10,
-    "margin-right": 10,
+    "margin-left": 0,
+    "margin-right": 0,
     "spacing": 0,
+    "exclusive": true,
 
     "modules-left": [
+        "custom/media",
         "hyprland/workspaces",
         "hyprland/window"
     ],
     "modules-center": [
-        "clock"
-    ],
-    "modules-right": [
         "custom/netspeed",
         "cpu",
         "temperature",
         "memory",
         "network",
         "bluetooth",
-        "pulseaudio",
+        "pulseaudio"
+    ],
+    "modules-right": [
         "battery",
-        "custom/power",
-        "tray"
+        "clock",
+        "tray",
+        "custom/power"
     ],
 
+    // ── Workspaces ────────────────────────────────────────────
     "hyprland/workspaces": {
-        "format": "<span>{icon}</span>",
+        "format": "{icon}",
         "format-icons": {
+            "1": "󰆍",
+            "2": "󰈹",
+            "3": "󰓃",
+            "4": "󰎄",
+            "5": "󰌆",
             "active":  "●",
             "default": "○",
             "urgent":  "◉"
@@ -41,34 +49,29 @@
         "persistent-workspaces": {
             "1": [], "2": [], "3": [], "4": [], "5": []
         }
+        // Note: pour afficher l'icône de l'app courante par workspace,
+        // utiliser un script externe (voir custom/media pattern ci-dessous)
+        // ou le plugin hyprland-workspaces avec icon-map.
     },
 
+    // ── Fenêtre active ────────────────────────────────────────
     "hyprland/window": {
         "format": "{title}",
-        "max-length": 45,
+        "max-length": 40,
         "separate-outputs": true,
         "rewrite": {
             "(.*) — Mozilla Firefox": "󰈹  $1",
             "(.*)WezTerm":            "  Terminal",
             "(.*)Thunar":             "󰉋  Files",
             "(.*)Neovim":             "  $1",
-            "(.*)nvim(.*)":           "  $1"
+            "(.*)nvim(.*)":           "  $1",
+            "(.*)Spotify.*":          "  Spotify",
+            "(.*)YouTube.*":          "  YouTube"
         }
     },
 
-    "clock": {
-        "format": "{:%H:%M · %a %d %b}",
-        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
-        "interval": 10,
-        "on-click": "rofi -dmenu -p 'Agenda' -input <(khal list today 7d) -theme ~/.config/rofi/launcher.rasi -no-fixed-num-lines -no-custom",
-        "calendar": {
-            "mode": "month",
-            "format": {
-                "today": "<span color='#4f9eff'><b><u>{}</u></b></span>"
-            }
-        }
-    },
-
+    // ── Vitesse réseau ────────────────────────────────────────
+    // Le script gère la largeur fixe avec printf pour aligner les chiffres
     "custom/netspeed": {
         "exec": "~/.config/waybar/scripts/netspeed.sh",
         "interval": 2,
@@ -76,48 +79,54 @@
         "tooltip": false
     },
 
+    // ── CPU ───────────────────────────────────────────────────
     "cpu": {
-        "format": "󰍛 {usage}%",
+        "format": "cpu {usage:02}%",
         "interval": 3,
         "tooltip-format": "CPU load: {usage}%\nAvg freq: {avg_frequency:.2f} GHz"
     },
 
+    // ── Température ───────────────────────────────────────────
     "temperature": {
         "critical-threshold": 85,
-        "format":          "󰔏 {temperatureC}°C",
-        "format-critical": "󰸁 {temperatureC}°C",
+        "format":          "tmp {temperatureC}°",
+        "format-critical": "tmp {temperatureC}°",
         "interval": 5,
         "tooltip-format": "CPU temp: {temperatureC}°C"
     },
 
+    // ── Mémoire ───────────────────────────────────────────────
     "memory": {
-        "format": "󰾆 {percentage}%",
+        "format": "ram {percentage:02}%",
         "tooltip-format": "Used: {used:.1f} GB / {total:.1f} GB\nFree: {avail:.1f} GB",
         "interval": 10
     },
 
+    // ── Réseau (wifi / ethernet) — pill ───────────────────────
     "network": {
         "interval": 5,
-        "format-wifi":         "<span bgcolor='#1e2a36' fgcolor='#32ade6'> 󰤨 {essid} </span>",
-        "format-ethernet":     "<span bgcolor='#1e2a36' fgcolor='#32ade6'> 󰈀 {ifname} </span>",
-        "format-disconnected": "󰤭",
-        "format-linked":       "<span bgcolor='#1e2a36' fgcolor='#8e8e93'> 󰈀 linked </span>",
+        "format-wifi":         "󰤨 {essid}",
+        "format-ethernet":     "󰈀 {ifname}",
+        "format-disconnected": "󰤭 off",
+        "format-linked":       "󰈀 linked",
         "tooltip-format-wifi":     "󰤨 {essid}  {signalStrength}%\n{ipaddr} / {cidr}",
         "tooltip-format-ethernet": "󰈀 {ifname} — {ipaddr} / {cidr}",
         "on-click": "nm-connection-editor"
     },
 
+    // ── Bluetooth — pill ──────────────────────────────────────
     "bluetooth": {
-        "format":           "󰂯",
-        "format-connected": "<span bgcolor='#1a2035' fgcolor='#4f9eff'> 󰂱 {device_alias} </span>",
-        "format-disabled":  "󰂲",
-        "format-off":       "",
-        "tooltip-format":                    "{controller_alias}\n{num_connections} device(s)",
+        "format":           "󰂲",
+        "format-connected": "󰂱 {device_alias}",
+        "format-disabled":  "",
+        "format-off":       "󰂲",
+        "tooltip-format":                    "{controller_alias}\n{num_connections} appareil(s)",
         "tooltip-format-connected":          "{controller_alias}\n\n{device_enumerate}",
         "tooltip-format-enumerate-connected":"  {device_alias}",
         "on-click": "blueman-manager"
     },
 
+    // ── Volume ────────────────────────────────────────────────
     "pulseaudio": {
         "format":       "{icon} {volume}%",
         "format-muted": "󰝟",
@@ -133,6 +142,7 @@
         "scroll-step": 2
     },
 
+    // ── Batterie — pill ───────────────────────────────────────
     "battery": {
         "states": {
             "full":     100,
@@ -149,15 +159,44 @@
         "interval": 30
     },
 
+    // ── Horloge ───────────────────────────────────────────────
+    "clock": {
+        "format": "{:%H:%M\n<span size='xx-small'>{:%a %d %b}</span>}",
+        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+        "interval": 10,
+        "calendar": {
+            "mode": "month",
+            "format": {
+                "today": "<span color='#4f9eff'><b><u>{}</u></b></span>"
+            }
+        }
+    },
+
+    // ── Tray ──────────────────────────────────────────────────
     "tray": {
         "icon-size": 14,
         "spacing": 6,
         "show-passive-items": false
     },
 
+    // ── Power ──────────────────────────────────────────────────
     "custom/power": {
         "format": "⏻",
         "tooltip": false,
         "on-click": "~/.config/scripts/powermenu.sh"
+    },
+
+    // ── Media flottant (mpris) ────────────────────────────────
+    // Nécessite: playerctl + le script media.sh ci-dessous
+    // Affiche : titre · artiste avec contrôles via on-click
+    "custom/media": {
+        "exec": "~/.config/waybar/scripts/media.sh",
+        "interval": 2,
+        "format": "{}",
+        "return-type": "json",
+        "on-click":       "playerctl play-pause",
+        "on-click-right": "playerctl next",
+        "on-click-middle": "playerctl previous",
+        "tooltip": true
     }
 }
