@@ -3,11 +3,11 @@
 # POWERMENU.SH — Power menu via Rofi
 # ============================================================
 
-LOCK="🔒 Lock"
-SUSPEND="💤 Suspend"
-REBOOT="🔄 Reboot"
-SHUTDOWN="⏻ Shutdown"
-LOGOUT="🚪 Logout"
+LOCK="Lock"
+SUSPEND="Suspend"
+REBOOT="Reboot"
+SHUTDOWN="Shutdown"
+LOGOUT="Logout"
 
 CHOICE=$(printf "$LOCK\n$SUSPEND\n$REBOOT\n$SHUTDOWN\n$LOGOUT" \
     | rofi -dmenu \
@@ -17,7 +17,7 @@ CHOICE=$(printf "$LOCK\n$SUSPEND\n$REBOOT\n$SHUTDOWN\n$LOGOUT" \
            -no-fixed-num-lines)
 
 case "$CHOICE" in
-    "$LOCK")     loginctl lock-session ;;
+    "$LOCK")     hyprlock ;;
     "$SUSPEND")  systemctl suspend ;;
     "$REBOOT")   systemctl reboot ;;
     "$SHUTDOWN") systemctl poweroff ;;
