@@ -2,5 +2,6 @@
 vt = 1
 
 [default_session]
-command = "bash -c 'tuigreet --time --greeting \"$(cat /usr/local/share/login-manager/ascii.txt)\" --cmd /usr/local/bin/greetd-wrapper --sessions /usr/share/wayland-sessions:/usr/share/xsessions --remember --remember-user --asterisks'"
+# Using full path for tuigreet and wrapping in bash -c
+command = "bash -c '/usr/bin/tuigreet --time --greeting \"$(cat /usr/local/share/login-manager/ascii.txt)\" --cmd /usr/local/bin/greetd-wrapper --sessions /usr/share/wayland-sessions:/usr/share/xsessions --remember --remember-user --asterisks'"
 user = "greeter"
