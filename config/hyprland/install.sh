@@ -93,7 +93,7 @@ if [ "$DISTRO" = "fedora" ]; then
 
     PKGS=(
         # Hyprland ecosystem
-        hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+        dbus-x11 dbus-daemon hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal 
         # Wallpaper daemon
@@ -123,7 +123,7 @@ if [ "$DISTRO" = "fedora" ]; then
 elif [ "$DISTRO" = "arch" ]; then
     PKGS=(
         # Hyprland ecosystem
-        hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+        dbus hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal
         # Wallpaper daemon
@@ -153,7 +153,7 @@ elif [ "$DISTRO" = "arch" ]; then
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
     PKGS=(
-        hyprland
+        dbus dbus-x11 hyprland
         waybar dunst rofi khal
         pipewire pipewire-pulse wireplumber pavucontrol
         network-manager network-manager-gnome
