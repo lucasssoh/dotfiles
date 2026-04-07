@@ -59,7 +59,7 @@ section "Installing greetd + agreety"
 $PKG_UPDATE
 
 if [ "$DISTRO" = "fedora" ]; then
-    PKGS=(greetd greetd-agreety)
+    PKGS=(greetd)
 elif [ "$DISTRO" = "arch" ]; then
     PKGS=(greetd greetd-agreety)
 elif [ "$DISTRO" = "debian" ]; then
