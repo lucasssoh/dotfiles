@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
+# --- Path Definitions ---
+DBUS_RUN="/usr/bin/dbus-run-session"
+HYPRLAND="/usr/bin/Hyprland"
+
 # --- Environment Setup ---
+# Essential for Wayland and Hyprland portals
 export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=Hyprland
 export XDG_SESSION_DESKTOP=Hyprland
 
-# Hardware acceleration (Useful for Intel/AMD)
-export WLR_NO_HARDWARE_CURSORS=1 
-
-# Fix for some apps failing to start in Wayland
+# Standard Wayland environment variables
 export QT_QPA_PLATFORM=wayland
 export GDK_BACKEND=wayland
 export SDL_VIDEODRIVER=wayland
@@ -16,16 +18,21 @@ export CLUTTER_BACKEND=wayland
 
 # --- Execution ---
 
-# Case 1: tuigreet passed a specific command (via F3 menu)
+# Use the command passed by tuigreet (from F2/F3 menus)
 if [ -n "$1" ]; then
-    # We use dbus-run-session to ensure a session bus is available
-    exec dbus-run-session "$@"
-else
-    # Case 2: Fallback to Hyprland if no command was provided
-    if command -v Hyprland &>/dev/null; then
-        exec dbus-run-session Hyprland
+    if [ -x "$DBUS_RUN" ]; then
+        exec "$DBUS_RUN" "$@"
     else
-        # Last resort: if Hyprland is missing, don't stay stuck
+        exec "$@"
+    fi
+else
+    # Default fallback to Hyprland
+    if [ -x "$DBUS_RUN" ] && [ -x "$HYPRLAND" ]; then
+        exec "$DBUS_RUN" "$HYPRLAND"
+    elif [ -x "$HYPRLAND" ]; then
+        exec "$HYPRLAND"
+    else
+        # If all else fails, drop to bash so you aren't locked out
         exec bash
     fi
 fi
