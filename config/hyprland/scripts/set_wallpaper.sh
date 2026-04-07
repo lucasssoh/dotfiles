@@ -1,24 +1,22 @@
 #!/usr/bin/env bash
 
-WALLPAPER_DIR="$HOME/Images/Wallpapers"
-STATE_FILE="$HOME/.cache/current_wallpaper"
+WALL_DIR="$HOME/Images/Wallpapers"
+CONF_FILE="$HOME/.config/hypr/hyprpaper.conf"
 
-# On filtre uniquement les formats d'image (dont jxl)
-SELECTED=$(ls -t "$WALLPAPER_DIR" | grep -E "\.(jpg|jpeg|png|webp|jxl)$" | rofi -dmenu -p "Wallpaper")
-
+# Sélection
+SELECTED=$(ls -t "$WALL_DIR" | grep -E "\.(jpg|jpeg|png|webp|jxl)$" | rofi -dmenu -p "Wallpaper")
 [ -z "$SELECTED" ] && exit 0
 
-FULL_PATH="$WALLPAPER_DIR/$SELECTED"
+FULL_PATH="$WALL_DIR/$SELECTED"
 
-# On vérifie si le daemon tourne, sinon on le lance en arrière-plan
-if ! pgrep -x "swww-daemon" > /dev/null; then
-    swww-daemon &
-    sleep 0.5 # Petit délai pour laisser le temps au socket de s'ouvrir
-fi
+# Mise à jour en temps réel
+hyprctl hyprpaper unload all
+hyprctl hyprpaper preload "$FULL_PATH"
+hyprctl hyprpaper wallpaper ",$FULL_PATH"
 
-swww img "$FULL_PATH" \
-    --transition-type fade \
-    --transition-duration 0.2 \
-    --transition-fps 75 # Optionnel : caler sur ton taux de rafraîchissement
-
-echo "$FULL_PATH" > "$STATE_FILE"
+# Persistance pour le prochain boot (écriture du config)
+cat <<EOF > "$CONF_FILE"
+preload = $FULL_PATH
+wallpaper = ,$FULL_PATH
+splash = false
+EOF
