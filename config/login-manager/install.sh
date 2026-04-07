@@ -11,19 +11,15 @@ RED="\e[31m"
 BLUE="\e[34m"
 RESET="\e[0m"
 
-# Display functions (Now in English)
+# Display functions
 info()    { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()      { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
 err()     { echo -e "${RED}[ ERR]${RESET}  $*"; exit 1; }
 section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 
-# Repo root directory
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ============================================================
-# BEFORE STARTING
-# ============================================================
 section "LOGIN MANAGER INSTALLATION (GREETD + TUIGREET)"
 
 warn "This script will modify system-wide login manager configuration."
@@ -31,87 +27,69 @@ read -rp "Continue? [y/N]: " CONFIRM
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || err "Installation aborted."
 
 # ============================================================
-# DISTRO DETECTION & PACKAGE INSTALLATION
+# PACKAGE INSTALLATION
 # ============================================================
 section "Package Installation"
 
 if command -v dnf &>/dev/null; then
-    info "Fedora detected. Enabling COPR repository for tuigreet..."
+    info "Fedora detected. Enabling COPR for tuigreet..."
     sudo dnf copr enable -y pennbauman/ports
     sudo dnf install -y greetd greetd-tuigreet
 elif command -v pacman &>/dev/null; then
-    info "Arch Linux detected."
     sudo pacman -S --noconfirm --needed greetd greetd-tuigreet
-else
-    err "Unsupported distribution for automatic tuigreet installation."
 fi
 
 # ============================================================
-# GREETER USER SETUP
+# USER SETUP
 # ============================================================
 section "Greeter User Configuration"
 
 if ! id "greeter" &>/dev/null; then
-    info "Creating system user 'greeter'..."
     sudo useradd -r -M -G video,render -s /sbin/nologin greeter
     ok "User 'greeter' created."
 else
-    info "Updating 'greeter' user groups..."
     sudo usermod -aG video,render greeter
     ok "User groups updated."
 fi
 
 # ============================================================
-# FILE DEPLOYMENT
+# ASCII ART TO /ETC/ISSUE (The Fix)
+# ============================================================
+section "Deploying ASCII Art"
+
+if [ -f "$REPO_DIR/assets/ascii.txt" ]; then
+    # We copy your ASCII to /etc/issue so tuigreet can read it natively
+    sudo cp "$REPO_DIR/assets/ascii.txt" /etc/issue
+    ok "ASCII art deployed to /etc/issue"
+else
+    err "assets/ascii.txt not found!"
+fi
+
+# ============================================================
+# CONFIG DEPLOYMENT
 # ============================================================
 section "Configuration Deployment"
 
-# 1. Create directory for custom ASCII art
-sudo mkdir -p /usr/local/share/login-manager/
-
-# 2. Backup old config if it exists
-if [ -f /etc/greetd/config.toml ]; then
-    sudo cp /etc/greetd/config.toml /etc/greetd/config.toml.bak
-    info "Backup of /etc/greetd/config.toml created."
-fi
-
-# 3. Install files from repo to system
-info "Installing files..."
 sudo install -Dm644 "$REPO_DIR/greetd/config.toml" /etc/greetd/config.toml
 sudo install -Dm755 "$REPO_DIR/scripts/greetd-wrapper.sh" /usr/local/bin/greetd-wrapper
-sudo install -Dm644 "$REPO_DIR/assets/ascii.txt" /usr/local/share/login-manager/ascii.txt
 
-# 4. Set permissions (critical for greeter user access)
-sudo chown greeter:greeter /usr/local/share/login-manager/ascii.txt
-sudo chmod 644 /usr/local/share/login-manager/ascii.txt
+# Create cache directory for --remember features
+sudo mkdir -p /var/cache/tuigreet
+sudo chown greeter:greeter /var/cache/tuigreet
+sudo chmod 0755 /var/cache/tuigreet
 
-ok "Files installed successfully."
+ok "Configuration and wrapper installed."
 
 # ============================================================
 # SERVICE MANAGEMENT
 # ============================================================
 section "Enabling Service"
 
-# Disable common display managers
 for dm in gdm sddm lightdm; do
-    if systemctl is-enabled "$dm" &>/dev/null; then
-        sudo systemctl disable "$dm"
-        warn "Service $dm disabled."
-    fi
+    sudo systemctl disable "$dm" &>/dev/null || true
 done
 
-# Enable and start greetd
 sudo systemctl enable greetd
 ok "greetd is now enabled."
 
-# ============================================================
-# FINAL NOTE
-# ============================================================
-echo -e "\n${GREEN}${BOLD}✅ INSTALLATION COMPLETE${RESET}"
-echo "-------------------------------------------------------"
-echo "Important Notes:"
-echo "1. Reboot to apply changes."
-echo "2. Inside tuigreet, use F2 to select your session."
-echo "3. If something goes wrong (black screen):"
-echo "   Press Ctrl+Alt+F2 to login and disable greetd."
-echo "-------------------------------------------------------"
+echo -e "\n${GREEN}${BOLD}✅ INSTALLATION COMPLETE${RESET}\n"

@@ -2,5 +2,5 @@
 vt = 1
 
 [default_session]
-command = "bash -c 'tuigreet --time --greeting \"$(cat /usr/local/share/login-manager/ascii.txt)\" --cmd /usr/local/bin/greetd-wrapper --sessions /usr/share/wayland-sessions:/usr/share/xsessions --remember --remember-user --asterisks'"
+command = "tuigreet --time --issue --cmd /usr/local/bin/greetd-wrapper --remember --asterisks"
 user = "greeter"
