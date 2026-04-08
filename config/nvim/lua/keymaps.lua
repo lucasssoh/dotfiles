@@ -21,3 +21,15 @@ key.set({ "n", "i", "v" }, "<A-s>", "<Nop>", { silent = true })
 
 -- NvimTree
 key.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true, desc = "Toggle file explorer" })
+
+-- Navigation entre les onglets (buffers)
+key.set("n", "<Tab>", ":bnext<CR>", { silent = true, desc = "Next buffer" })
+key.set("n", "<S-Tab>", ":bprevious<CR>", { silent = true, desc = "Previous buffer" })
+
+-- Fermer l'onglet actuel
+key.set("n", "<leader>x", ":bdelete<CR>", { silent = true, desc = "Close buffer" })
+
+-- Naviguer par position (Optionnel : Alt + numéro)
+key.set("n", "<A-1>", "<Cmd>BufferLineGoToBuffer 1<CR>", { silent = true })
+key.set("n", "<A-2>", "<Cmd>BufferLineGoToBuffer 2<CR>", { silent = true })
+key.set("n", "<A-3>", "<Cmd>BufferLineGoToBuffer 3<CR>", { silent = true })
