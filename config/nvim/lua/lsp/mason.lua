@@ -30,8 +30,8 @@ return {
 
         require("mason").setup({})
         require("mason-lspconfig").setup({
-            ensure_installed = { "ts_ls", "pyright", "lua_ls", "clangd" },
-            handlers = { lsp_zero.default_setup },
+            ensure_installed = { "ts_ls", "pyright", "lua_ls", "clangd","jdtls" },
+            handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
         })
     end,
 }
