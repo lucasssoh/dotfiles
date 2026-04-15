@@ -1,4 +1,3 @@
-```markdown
 # Dotfiles
 
 ## Installation
@@ -28,4 +27,3 @@ chmod +x setup_fedora.sh install_all.sh
 
 * **setup_fedora.sh** : Mise à jour du système, installation des drivers (Mesa/Vulkan), de la stack audio (Pipewire), du Bluetooth et des services de base.
 * **install_all.sh** : Installation modulaire des polices, de Tmux, de Wezterm, de Neovim et de l'environnement graphique Hyprland.
-```
