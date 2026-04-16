@@ -34,6 +34,7 @@ add_to_path() {
 
 add_to_path "$HOME/.local/bin"
 add_to_path "$HOME/.cargo/bin"
+add_to_path "$HOME/.npm-global/bin"
 add_to_path "/var/lib/snapd/snap/bin"
 
 # =========================

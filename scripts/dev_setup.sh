@@ -38,6 +38,35 @@ else
     echo "NVM déjà présent."
 fi
 
+# 4.5. Google Gemini CLI
+echo -e "${GREEN}[4.5/6] Installation du Gemini CLI...${NC}"
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+if [ -d "$NVM_DIR" ]; then
+    # 1. Nettoyage du .npmrc (toujours nécessaire)
+    [ -f "$HOME/.npmrc" ] && sed -i '/prefix=/d' "$HOME/.npmrc"
+
+    # 2. Garantie d'avoir Node (Correction de la syntaxe nvm)
+    # On essaie d'utiliser la version courante, sinon on installe la LTS
+    if ! nvm use default --delete-prefix &>/dev/null; then
+        echo "Configuration de Node LTS..."
+        nvm install --lts
+        nvm alias default 'lts/*'
+        nvm use default
+    fi
+
+    # 3. Installation
+    if ! command -v gemini &>/dev/null; then
+        echo "Installation de @google/gemini-cli..."
+        npm install -g @google/gemini-cli
+    else
+        echo "Gemini CLI déjà présent ($(gemini --version 2>/dev/null | head -n 1))."
+    fi
+else
+    echo -e "${BLUE}WARN: NVM non détecté.${NC}"
+fi
+
 # 5. Docker (Installation DNF5 compatible)
 echo -e "${GREEN}[5/6] Configuration de Docker...${NC}"
 if ! command -v docker &> /dev/null; then
