@@ -24,47 +24,38 @@ python3 -m pip install --user --upgrade pip 2>/dev/null || echo "Pip déjà à j
 echo -e "${GREEN}[3/6] Installation de Java (OpenJDK 21)...${NC}"
 sudo dnf install -y java-21-openjdk-devel
 
-# 4. NVM (Node Version Manager)
-echo -e "${GREEN}[4/6] Installation de NVM...${NC}"
-if [ ! -d "$HOME/.nvm" ]; then
-    # PROFILE=/dev/null empêche l'installeur de toucher à ton .bashrc
+# 4. NVM & Node 22 (LTS - Requis pour Gemini CLI)
+echo -e "${GREEN}[4/6] Configuration de Node.js via NVM...${NC}"
+export NVM_DIR="$HOME/.nvm"
+
+# Installation de NVM si absent
+if [ ! -d "$NVM_DIR" ]; then
+    echo "Installation de NVM..."
     PROFILE=/dev/null curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-    
-    # Chargement manuel UNIQUEMENT pour la durée du script
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    nvm install --lts
-else
-    echo "NVM déjà présent."
 fi
+
+# Chargement impératif pour la suite du script
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# On force Node 22. Node 18 provoque des erreurs de dépendances (Engine) avec Gemini
+echo "Installation et activation de Node 22 (LTS)..."
+nvm install 22 --silent
+nvm alias default 22
+nvm use default --delete-prefix --silent
 
 # 4.5. Google Gemini CLI
 echo -e "${GREEN}[4.5/6] Installation du Gemini CLI...${NC}"
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-if [ -d "$NVM_DIR" ]; then
-    # 1. Nettoyage du .npmrc (toujours nécessaire)
-    [ -f "$HOME/.npmrc" ] && sed -i '/prefix=/d' "$HOME/.npmrc"
+# 1. Nettoyage définitif du .npmrc (Évite les conflits NVM/Prefix)
+[ -f "$HOME/.npmrc" ] && sed -i '/prefix=/d' "$HOME/.npmrc"
 
-    # 2. Garantie d'avoir Node (Correction de la syntaxe nvm)
-    # On essaie d'utiliser la version courante, sinon on installe la LTS
-    if ! nvm use default --delete-prefix &>/dev/null; then
-        echo "Configuration de Node LTS..."
-        nvm install --lts
-        nvm alias default 'lts/*'
-        nvm use default
-    fi
-
-    # 3. Installation
-    if ! command -v gemini &>/dev/null; then
-        echo "Installation de @google/gemini-cli..."
-        npm install -g @google/gemini-cli
-    else
-        echo "Gemini CLI déjà présent ($(gemini --version 2>/dev/null | head -n 1))."
-    fi
+# 2. Installation globale liée à la version Node active
+# On vérifie si gemini répond, sinon on installe
+if ! command -v gemini &>/dev/null; then
+    echo "Installation de @google/gemini-cli via npm..."
+    npm install -g @google/gemini-cli
 else
-    echo -e "${BLUE}WARN: NVM non détecté.${NC}"
+    echo "Gemini CLI déjà présent ($(node -v))."
 fi
 
 # 5. Docker (Installation DNF5 compatible)
