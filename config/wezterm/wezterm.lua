@@ -3,9 +3,9 @@ local config = wezterm.config_builder()
 
 -- --- POLICE (FIN & ÉTROIT) ---
 config.font = wezterm.font_with_fallback({
-  { 
-    family = 'Iosevka NF', 
-    weight = 'Regular', -- Ta précieuse finesse
+  {
+    family = 'Iosevka NF',
+    weight = 'Regular',
   },
 })
 config.font_size = 12.0
@@ -13,13 +13,13 @@ config.line_height = 1.0
 
 config.front_end = "WebGpu" -- Plus moderne/fluide
 config.freetype_load_target = "Light"
-
+config.automatically_reload_config = true
 -- --- APPARENCE ---
 config.window_background_opacity = 0.90
 config.macos_window_background_blur = 20 -- Active le flou (même sous Linux/Wayland)
-config.window_decorations = "NONE" -- Look clean pour Hyprland
+config.window_decorations = "RESIZE" -- Look clean pour Hyprland
 config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
-config.cursor_blink_rate = 800
+config.cursor_blink_rate = 1300
 
 -- --- THÈME COULEURS (Humanoid Dark) ---
 config.colors = {
