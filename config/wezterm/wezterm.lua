@@ -17,7 +17,7 @@ config.automatically_reload_config = true
 -- --- APPARENCE ---
 config.window_background_opacity = 0.90
 config.macos_window_background_blur = 20 -- Active le flou (même sous Linux/Wayland)
-config.window_decorations = "RESIZE" -- Look clean pour Hyprland
+config.window_decorations = "NONE"
 config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
 config.cursor_blink_rate = 1300
 
