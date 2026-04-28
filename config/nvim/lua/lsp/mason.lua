@@ -11,6 +11,7 @@ return {
         "hrsh7th/nvim-cmp",
         "hrsh7th/cmp-nvim-lsp",
         "L3MON4D3/LuaSnip",
+        "mfussenegger/nvim-jdtls",
     },
     config = function()
         local lsp_zero = require("lsp-zero")
@@ -30,7 +31,7 @@ return {
 
         require("mason").setup({})
         require("mason-lspconfig").setup({
-            ensure_installed = { "ts_ls", "pyright", "lua_ls", "clangd","jdtls" },
+            ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd"},
             handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
         })
     end,
