@@ -21,6 +21,9 @@ config.window_decorations = "NONE"
 config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
 config.cursor_blink_rate = 1300
 
+config.tab_bar_at_bottom = true
+
+config.use_fancy_tab_bar = false
 -- --- THÈME COULEURS (Humanoid Dark) ---
 config.colors = {
   foreground = "#f8f8f2",
@@ -36,6 +39,28 @@ config.colors = {
   brights = {
     "#484e54", "#b0151a", "#028902", "#ffb400",
     "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
+  },
+  tab_bar = {
+    -- Rend le fond de la barre d'onglets invisible
+    background = "rgba(0, 0, 0, 0)", 
+
+    -- Couleurs des onglets
+    active_tab = {
+      bg_color = "#555555", -- Fond légèrement blanc/transparent pour l'onglet actif
+      fg_color = "#000000",
+    },
+    inactive_tab = {
+      bg_color = "rgba(0, 0, 0, 0)", -- Fond totalement transparent pour les inactifs
+      fg_color = "#888888",
+    },
+    inactive_tab_hover = {
+      bg_color = "rgba(255, 255, 255, 0.05)",
+      fg_color = "#f8f8f2",
+    },
+    new_tab = {
+      bg_color = "rgba(0, 0, 0, 0)",
+      fg_color = "#f8f8f2",
+    },
   },
 }
 
