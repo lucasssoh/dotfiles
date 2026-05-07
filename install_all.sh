@@ -47,8 +47,8 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Lancer chaque module
 # -----------------------------
 MODULES=(fonts bash tmux wezterm nvim)
-HYPR_MODULE="hyprland"
-
+# HYPR_MODULE="hyprland"
+#
 for module in "${MODULES[@]}"; do
     MODULE_PATH="$DOTFILES_DIR/config/$module"
     if [ -d "$MODULE_PATH" ]; then
@@ -61,13 +61,28 @@ done
 # -----------------------------
 # Installer Hyprland en dernier
 # -----------------------------
-HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
-if [ -d "$HYPR_PATH" ]; then
-    echo "[INFO] Lancement du module Hyprland"
-    chmod +x "$HYPR_PATH/install.sh"
-    "$HYPR_PATH/install.sh"
-fi
+# HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
+# if [ -d "$HYPR_PATH" ]; then
+#     echo "[INFO] Lancement du module Hyprland"
+#     chmod +x "$HYPR_PATH/install.sh"
+#     "$HYPR_PATH/install.sh"
+# fi
 
+# -----------------------------
+# Installer KDE Plasma 
+# -----------------------------
+# On change HYPR_MODULE par KDE_MODULE
+KDE_MODULE="kde"
+KDE_PATH="$DOTFILES_DIR/config/$KDE_MODULE"
+
+if [ -d "$KDE_PATH" ]; then
+    echo "[INFO] Lancement du module KDE Plasma 6"
+    chmod +x "$KDE_PATH/install.sh"
+    # L'appel au script kde/install.sh s'occupera du --allowerasing
+    "$KDE_PATH/install.sh"
+else
+    echo "[WARN] Module KDE non trouvé dans $KDE_PATH"
+fi
 # -----------------------------
 # Terminé
 # -----------------------------
