@@ -4,7 +4,7 @@ local jdtls = require("jdtls")
 local lombok_path = "/home/lucas/.local/share/nvim/mason/packages/jdtls/lombok.jar"
 
 -- 2. Trouver la racine du projet (là où se trouve le pom.xml)
-local root_markers = { "pom.xml", "mvnw", "gradlew", ".git" }
+local root_markers = { "pom.xml", "mvnw", "gradlew", ".git", "build.gradle" }
 local root_dir = require("jdtls.setup").find_root(root_markers)
 
 if not root_dir then
@@ -20,7 +20,7 @@ local workspace_dir = "/home/lucas/.cache/jdtls/workspace/" .. project_name
 local config = {
     cmd = {
         "jdtls",
-        "--jvm-arg=-javaagent:" .. lombok_path,
+        "-javaagent:" .. lombok_path,
         "-data", workspace_dir,
     },
     root_dir = root_dir,
