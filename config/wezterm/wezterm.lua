@@ -10,7 +10,6 @@ config.font = wezterm.font_with_fallback({
 })
 config.font_size = 12.0
 config.line_height = 1.0
-
 config.front_end = "WebGpu" -- Plus moderne/fluide
 config.freetype_load_target = "Light"
 config.automatically_reload_config = true
@@ -20,11 +19,16 @@ config.macos_window_background_blur = 20 -- Active le flou (même sous Linux/Way
 config.window_decorations = "NONE"
 config.window_padding = { left = 2, right = 2, top = 2, bottom = 2 }
 config.cursor_blink_rate = 1300
-
 config.tab_bar_at_bottom = true
 
 config.use_fancy_tab_bar = false
+-- --- EVENEMENTS ---
+wezterm.on('gui-startup', function(cmd)
+  local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+  window:gui_window():maximize()
+end)
 -- --- THÈME COULEURS (Humanoid Dark) ---
+
 config.colors = {
   foreground = "#f8f8f2",
   background = "#111011",
