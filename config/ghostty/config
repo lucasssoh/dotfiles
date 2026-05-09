@@ -28,7 +28,6 @@ shell-integration-features = no-cursor
 
 # Ghostty utilise 'cursor-trail' mais il faut l'activer ainsi :
 cursor-opacity = 1.0
-cursor-vte-trail = true
 
 # Si 'cursor-trail-color' ne passe pas, c'est que Ghostty utilise 
 # la couleur du curseur pour la traînée. Change la couleur du curseur :
