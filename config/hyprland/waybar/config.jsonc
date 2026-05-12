@@ -82,7 +82,7 @@
     },
 
     "clock": {
-        "format": "{:%H:%M  |  %d/%m}"
+        "format": "{:%d/%m  |  %H:%M}"
     },
 
     "pulseaudio": {
