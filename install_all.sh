@@ -61,12 +61,12 @@ done
 # -----------------------------
 # Installer Hyprland en dernier
 # -----------------------------
-# HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
-# if [ -d "$HYPR_PATH" ]; then
-#     echo "[INFO] Lancement du module Hyprland"
-#     chmod +x "$HYPR_PATH/install.sh"
-#     "$HYPR_PATH/install.sh"
-# fi
+HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
+if [ -d "$HYPR_PATH" ]; then
+    echo "[INFO] Lancement du module Hyprland"
+    chmod +x "$HYPR_PATH/install.sh"
+    "$HYPR_PATH/install.sh"
+fi
 
 # -----------------------------
 # Installer KDE Plasma 

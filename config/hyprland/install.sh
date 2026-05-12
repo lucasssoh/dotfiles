@@ -89,11 +89,11 @@ section "Installing packages"
 $PKG_UPDATE
 
 if [ "$DISTRO" = "fedora" ]; then
-    sudo dnf copr enable -y solopasha/hyprland 2>/dev/null || true
+    sudo dnf copr enable -y ashbuk/Hyprland-Fedora 2>/dev/null || true
 
     PKGS=(
         # Hyprland ecosystem
-        dbus-x11 dbus-daemon hyprland hyprpaper hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+        dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal 
         # Wallpaper daemon
