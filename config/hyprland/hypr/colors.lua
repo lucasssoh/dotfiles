@@ -10,7 +10,7 @@ return {
     subtle     = "0xff8e8e93",
     text       = "0xffe5e5ea",
     accent     = "0xff6b9fff",   -- Bleu macOS-like
-    accent2    = "0xff5ac8fa",   -- Bleu secondaire clair
+    accent2    = "0xffd0ffff",   -- Bleu secondaire clair
     urgent     = "0xffff453a",
     warning    = "0xffffd60a",
     success    = "0xff30d158"
@@ -27,7 +27,7 @@ return {
 -- subtle:      #8e8e93
 -- text:        #e5e5ea
 -- accent:      #6b9fff
--- accent2:     #5ac8fa
+-- accent2:     #d0ffff
 -- urgent:      #ff453a
 -- warning:     #ffd60a
 -- success:     #30d158

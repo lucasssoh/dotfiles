@@ -40,8 +40,6 @@ hl.on("hyprland.start", function()
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
     
-    -- Optionnel : Lancer tes apps par défaut au démarrage
-    -- hl.exec_cmd("wezterm")
 end)-- ============================================================
 -- INPUT
 -- ============================================================
@@ -50,6 +48,8 @@ hl.config({
         kb_layout  = "fr",
         kb_variant = "azerty",
         follow_mouse = 1,
+        repeat_rate = 45,
+        repeat_delay = 200,
         sensitivity  = 0,
         touchpad = {
             natural_scroll       = true,
@@ -115,16 +115,12 @@ hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
 -- ============================================================
 -- ANIMATIONS
 -- ============================================================
--- Note : Pas besoin de hl.config pour les animations globales ici, 
--- le paramètre 'enabled' se gère directement par leaf.
 
--- Windows (Correction : "windows" avec guillemets)
 hl.animation({ leaf = "windows", enabled = true, speed = 4, bezier = "smooth", style = "slide" })
 
 -- Fade
 hl.animation({ leaf = "fade", enabled = true, speed = 4, bezier = "smooth" })
 
--- Workspaces (Correction : suppression de 'name' qui est inutile)
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "snap", style = "slide" })
 
 -- ============================================================
@@ -140,7 +136,6 @@ hl.config({
     },
 })
 
--- Imports des autres modules (doivent être chargés après la config de base)
 require("monitors")
 require("windowrules")
 require("keybinds")
