@@ -1,5 +1,5 @@
 -- ============================================================
--- HYPRLAND.LUA — Main config (converti depuis hyprland.conf)
+-- HYPRLAND.LUA — Main config
 -- ============================================================
 
 -- ============================================================
@@ -18,25 +18,31 @@ hl.env("XDG_SESSION_DESKTOP",   "Hyprland")
 hl.env("MOZ_ENABLE_WAYLAND",    "1")
 
 -- ============================================================
--- SOURCES (require = ancien source =)
+-- SOURCES
 -- ============================================================
-require("colors")       -- colors.conf  → colors.lua
-require("monitors")     -- monitors.conf → monitors.lua
-require("keybinds")     -- keybinds.conf → keybinds.lua
-require("windowrules")  -- windowrules.conf → windowrules.lua
+local colors = require("colors")
 
 -- ============================================================
--- AUTOSTART
+-- AUTOSTART (Nouvelle syntaxe Lua 0.55+)
 -- ============================================================
-hl.exec_once("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-hl.exec_once("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-hl.exec_once("hyprpaper")
-hl.exec_once("waybar")
-hl.exec_once("dunst")
-hl.exec_once("hypridle")
-hl.exec_once("wl-paste --watch cliphist store")
 
--- ============================================================
+hl.on("hyprland.start", function()
+    -- Environnement système (important pour Wayland/Portal)
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    
+    -- Services et Daemons
+    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
+    hl.exec_cmd("hyprpaper")
+    hl.exec_cmd("waybar")
+    hl.exec_cmd("dunst")
+    hl.exec_cmd("hypridle")
+    
+    -- Gestion du presse-papier
+    hl.exec_cmd("wl-paste --watch cliphist store")
+    
+    -- Optionnel : Lancer tes apps par défaut au démarrage
+    -- hl.exec_cmd("wezterm")
+end)-- ============================================================
 -- INPUT
 -- ============================================================
 hl.config({
@@ -46,10 +52,10 @@ hl.config({
         follow_mouse = 1,
         sensitivity  = 0,
         touchpad = {
-            natural_scroll      = true,
-            tap_to_click        = true,
+            natural_scroll       = true,
+            tap_to_click         = true,
             disable_while_typing = true,
-            scroll_factor       = 0.3,
+            scroll_factor        = 0.3,
         },
     },
 })
@@ -63,8 +69,8 @@ hl.config({
         gaps_out         = 10,
         border_size      = 1,
         col = {
-            active_border   = "$accent",   -- défini dans colors.lua
-            inactive_border = "$overlay",
+            active_border   = colors.accent,
+            inactive_border = colors.overlay,
         },
         layout           = "dwindle",
         resize_on_border = true,
@@ -100,47 +106,41 @@ hl.config({
 })
 
 -- ============================================================
--- ANIMATIONS
+-- CURVES
 -- ============================================================
 hl.curve("smooth", { type = "bezier", points = { {0.05, 0.9}, {0.1, 1.05} } })
-hl.curve("linear", { type = "bezier", points = { {0.0,  0.0}, {1.0, 1.0}  } })
-hl.curve("snap",   { type = "bezier", points = { {0.2,  1.0}, {0.2, 1.0}  } })
-
-hl.config({
-    animations = {
-        enabled = true,
-    },
-})
-
-hl.animation({ name = "windows",    duration = 4, curve = "smooth", style = "slide"  })
-hl.animation({ name = "windowsOut", duration = 3, curve = "snap",   style = "slide"  })
-hl.animation({ name = "fade",       duration = 4, curve = "smooth"                   })
-hl.animation({ name = "workspaces", duration = 4, curve = "snap",   style = "slide"  })
+hl.curve("linear", { type = "bezier", points = { {0.0, 0.0}, {1.0, 1.0} } })
+hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
 
 -- ============================================================
--- LAYOUT
+-- ANIMATIONS
+-- ============================================================
+-- Note : Pas besoin de hl.config pour les animations globales ici, 
+-- le paramètre 'enabled' se gère directement par leaf.
+
+-- Windows (Correction : "windows" avec guillemets)
+hl.animation({ leaf = "windows", enabled = true, speed = 4, bezier = "smooth", style = "slide" })
+
+-- Fade
+hl.animation({ leaf = "fade", enabled = true, speed = 4, bezier = "smooth" })
+
+-- Workspaces (Correction : suppression de 'name' qui est inutile)
+hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "snap", style = "slide" })
+
+-- ============================================================
+-- LAYOUT & MISC
 -- ============================================================
 hl.config({
     dwindle = {
-        pseudotile     = true,
+        force_split = 0,
+
         preserve_split = true,
         smart_split    = true,
+        smart_resizing = true,
     },
 })
 
--- ============================================================
--- MISC
--- ============================================================
-hl.config({
-    misc = {
-        force_default_wallpaper  = 0,
-        disable_hyprland_logo    = true,
-        disable_splash_rendering = true,
-        vfr                      = true,  -- économie d'énergie laptop
-        mouse_move_enables_dpms  = true,
-        key_press_enables_dpms   = true,
-    },
-    cursor = {
-        no_hardware_cursors = false,
-    },
-})
+-- Imports des autres modules (doivent être chargés après la config de base)
+require("monitors")
+require("windowrules")
+require("keybinds")

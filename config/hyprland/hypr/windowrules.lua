@@ -12,7 +12,6 @@ hl.window_rule({
     match   = { class = "firefox" },
     opacity = "1.0 override",
     workspace = "2",
-    blur    = false,
 })
 
 -- ============================================================
@@ -29,7 +28,6 @@ hl.window_rule({
 -- Dialogues (tout ce qui n'est PAS la fenêtre principale "— Thunar")
 hl.window_rule({
     match  = { class = "thunar", title = "^(?!.*— Thunar)" },
-    float  = true,
     size   = "900 600",
     center = true,
 })
@@ -75,7 +73,7 @@ hl.window_rule({
 -- TOUTES LES FENÊTRES FLOTTANTES → centrées
 -- ============================================================
 hl.window_rule({
-    match  = { floating = true },
+    match  = { float= true },
     center = true,
 })
 
