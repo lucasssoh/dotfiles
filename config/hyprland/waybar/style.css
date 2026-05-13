@@ -66,10 +66,13 @@ window#waybar {
 #custom-netspeed,
 #cpu,
 #temperature,
+#custom-fan,
 #memory,
 #network,
 #bluetooth,
 #pulseaudio,
+#custom-mic,
+#custom-performance,
 #battery,
 #clock,
 #custom-power {

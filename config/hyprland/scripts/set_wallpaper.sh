@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 
+# Configuration des chemins
 WALL_DIR="$HOME/Images/Wallpapers"
-CONF_FILE="$HOME/.config/hypr/hyprpaper.conf"
+RASI_THEME="$HOME/.config/rofi/wallpaper.rasi"
 
-# Sélection
-SELECTED=$(ls -t "$WALL_DIR" | grep -E "\.(jpg|jpeg|png|webp|jxl)$" | rofi -dmenu -p "Wallpaper")
-[ -z "$SELECTED" ] && exit 0
+# Vérification du daemon awww (spécifique à ton setup Fedora/Hyprland)
+if ! pidof awww-daemon >/dev/null; then
+    awww-daemon &
+    sleep 0.5
+fi
 
-FULL_PATH="$WALL_DIR/$SELECTED"
+# Génération de la liste avec icônes et appel de Rofi
+SELECTED=$(
+    for img in "$WALL_DIR"/*; do
+        # On accepte les extensions courantes (insensible à la casse)
+        [[ "$img" =~ \.(jpg|jpeg|png|webp|PNG|JPG)$ ]] || continue
+        printf "%s\0icon\x1f%s\n" "$(basename "$img")" "$img"
+    done | rofi -dmenu -i -theme "$RASI_THEME" -p "" -name "wallpaper-picker"
+)
 
-# Mise à jour en temps réel
-hyprctl hyprpaper unload all
-hyprctl hyprpaper preload "$FULL_PATH"
-hyprctl hyprpaper wallpaper ",$FULL_PATH"
-
-# Persistance pour le prochain boot (écriture du config)
-cat <<EOF > "$CONF_FILE"
-preload = $FULL_PATH
-wallpaper = ,$FULL_PATH
-splash = false
-EOF
+# Application du wallpaper si un choix a été fait
+if [ -n "$SELECTED" ]; then
+    awww img "$WALL_DIR/$SELECTED" \
+        --transition-type wipe \
+        --transition-angle 30 \
+        --transition-fps 60 \
+        --transition-duration 1
+fi

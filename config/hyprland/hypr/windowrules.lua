@@ -17,10 +17,10 @@ hl.window_rule({
 -- ============================================================
 -- WEZTERM
 -- ============================================================
-hl.window_rule({
-    match   = { class = "org.wezfurlong.wezterm" },
-    opacity = "0.95 override",
-})
+-- hl.window_rule({
+--     match   = { class = "org.wezfurlong.wezterm" },
+--     opacity = "0.95 override",
+-- })
 
 -- ============================================================
 -- THUNAR — dialogues flottants, fenêtre principale en tuile
@@ -85,5 +85,22 @@ hl.window_rule({
     float        = true,
     size         = "820 420",
     center       = true,
+    stay_focused = true,
+})
+
+-- ============================================================
+-- ROFI (Launcher & Powermenu)
+-- ============================================================
+hl.window_rule({
+    match = { class = "Rofi" },
+    -- Désactive totalement l'animation pour cette classe
+    no_anim = true,
+    -- Force le flottement (déjà géré globalement mais on sécurise)
+    float = true,
+    -- Évite que le flou (blur) ne doive être recalculé à l'ouverture
+    no_blur = true,
+    -- S'assure que la fenêtre est immédiatement centrée sans "glisser"
+    center = true,
+    -- Garde le focus pour éviter de devoir recliquer
     stay_focused = true,
 })

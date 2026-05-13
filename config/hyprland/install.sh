@@ -89,7 +89,7 @@ section "Installing packages"
 $PKG_UPDATE
 
 if [ "$DISTRO" = "fedora" ]; then
-    sudo dnf copr enable -y ashbuk/Hyprland-Fedora 2>/dev/null || true
+    sudo dnf copr enable -y lionheartp/Hyprland 2>/dev/null || true
 
     PKGS=(
         # Hyprland ecosystem
@@ -97,7 +97,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal 
         # Wallpaper daemon
-        swww
+        awww
         # Network
         NetworkManager network-manager-applet nm-connection-editor
         # Bluetooth
@@ -127,7 +127,7 @@ elif [ "$DISTRO" = "arch" ]; then
         # Bar / notifications / launcher
         waybar dunst rofi-wayland khal
         # Wallpaper daemon
-        swww
+        awww
         # Network
         networkmanager network-manager-applet nm-connection-editor
         # Bluetooth
@@ -284,12 +284,12 @@ mkdir -p "$HOME/.local/bin"
 ln -sfn "$WP_SCRIPT" "$HOME/.local/bin/set_wallpaper"
 ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
 
-# 4️⃣ Create a .desktop file so it appears in Rofi/App Launchers
+# 4️⃣ Create a .desktop file with ABSOLUTE PATH
 mkdir -p "$HOME/.local/share/applications"
 cat <<EOF > "$HOME/.local/share/applications/set_wallpaper.desktop"
 [Desktop Entry]
 Name=Set Wallpaper
-Exec=set_wallpaper
+Exec=$HOME/.local/bin/set_wallpaper
 Icon=background
 Type=Application
 Categories=Settings;
@@ -298,22 +298,25 @@ EOF
 
 ok "Wallpaper scripts ready and added to App Launcher."
 
-# 5️⃣ Start swww-daemon ONLY if in a Wayland session and not already running
+# Start awww daemon ONLY if in a Wayland session and not already running
 if [ -n "$WAYLAND_DISPLAY" ]; then
-    if ! pgrep -x "swww-daemon" >/dev/null; then
-        swww-daemon --format xrgb &
+    if ! pgrep -x "awww-daemon" >/dev/null; then
+        awww-daemon &
         sleep 1
-        ok "swww-daemon started."
+        ok "awww-daemon started."
+    else
+        info "awww-daemon already running."
     fi
 else
-    info "Not in Wayland. swww-daemon will start with Hyprland later."
+    info "Not in Wayland. awww-daemon will start with Hyprland later."
 fi
 
 # 6️⃣ Handle State File & Initial Wallpaper
 if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
-    # Find first image (supports jpg, png, jpeg, webp)
-    FIRST_WP=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" -o -name "*.webp" \) | head -n 1)
-    
+    FIRST_WP=$(find "$WALLPAPER_DIR" -type f \( \
+        -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" -o -name "*.webp" \
+    \) | head -n 1)
+
     if [ -n "$FIRST_WP" ]; then
         echo "$FIRST_WP" > "$STATE_FILE"
         ok "Initial wallpaper registered: $(basename "$FIRST_WP")"
@@ -322,14 +325,23 @@ if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
     fi
 fi
 
-# 7️⃣ Apply wallpaper ONLY if Wayland and Daemon are active
-if [ -n "$WAYLAND_DISPLAY" ] && pgrep -x "swww-daemon" >/dev/null; then
-    bash "$RESTORE_SCRIPT"
-    ok "Wallpaper applied."
-else
-    info "Wallpaper will be applied automatically when you launch Hyprland."
-fi
+# 7️⃣ Apply wallpaper (awww version)
+if [ -n "$WAYLAND_DISPLAY" ] && pgrep -x "awww-daemon" >/dev/null; then
+    if [ -f "$STATE_FILE" ]; then
+        CURRENT_WP=$(cat "$STATE_FILE")
 
+        if [ -f "$CURRENT_WP" ]; then
+            awww img "$CURRENT_WP"
+            ok "Wallpaper applied via awww."
+        else
+            warn "State file points to invalid wallpaper."
+        fi
+    else
+        info "No state file found, skipping wallpaper apply."
+    fi
+else
+    info "Wallpaper will be applied automatically when awww-daemon starts."
+fi
 # ============================================================
 # MONITORS
 # ============================================================

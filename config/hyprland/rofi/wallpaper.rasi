@@ -1,0 +1,81 @@
+/* ~/.config/rofi/wallpaper.rasi */
+@import "share.rasi"
+
+configuration {
+    show-icons: true;
+}
+
+window {
+    width:            820px;
+    height:           700px;
+    anchor:           center;
+    location:         center;
+    border-color:     @selected;  /* Utilise ta variable de sélection */
+    background-color: @bg;        /* Utilise ton bg #111111 */
+    padding:          18px;
+}
+
+mainbox {
+    background-color: transparent;
+    spacing:          14px;
+    children:         [ inputbar, listview ];
+}
+
+inputbar {
+    padding:          12px 16px;
+    background-color: @bg-alt;    /* Utilise ton bg-alt #1b1b1b */
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    enabled:          true;
+    text-color:       @selected;
+    background-color: transparent;
+    margin:           0px 8px 0px 0px;
+}
+
+entry {
+    placeholder:       "Search wallpaper...";
+    placeholder-color: @fg;
+    text-color:        @fg-alt;
+    background-color:  transparent;
+}
+
+listview {
+    columns:          3;
+    lines:            2;
+    flow:             horizontal;
+    fixed-height:     true;
+    fixed-columns:    true;
+    cycle:            false;
+    scrollbar:        false;
+    spacing:          16px;
+    background-color: transparent;
+}
+
+element {
+    orientation:      vertical;
+    padding:          10px;
+    spacing:          10px;
+    background-color: transparent;
+}
+
+element selected.normal {
+    background-color: @bg-alt;
+    border:           1px;
+    border-color:     @selected;
+}
+
+element-icon {
+    size:             210px;
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+    border-radius:    14px;
+    background-color: transparent;
+}
+
+element-text {
+    horizontal-align: 0.5;
+    text-color:       @fg-alt;
+    background-color: transparent;
+}

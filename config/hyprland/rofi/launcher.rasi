@@ -11,7 +11,7 @@
     accent:  #6b9fff;
     urgent:  #ff453a;
 
-    font: "SF Pro Text 13";
+    font: "Iosevka NF 12";
     background-color: transparent;
     text-color: @text;
 }

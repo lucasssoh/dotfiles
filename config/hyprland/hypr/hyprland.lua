@@ -32,7 +32,6 @@ hl.on("hyprland.start", function()
     
     -- Services et Daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-    hl.exec_cmd("hyprpaper")
     hl.exec_cmd("waybar")
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
@@ -60,6 +59,11 @@ hl.config({
     },
 })
 
+hl.gesture({
+    fingers = 3,
+    direction = "horizontal",
+    action = "workspace",
+})
 -- ============================================================
 -- GENERAL
 -- ============================================================

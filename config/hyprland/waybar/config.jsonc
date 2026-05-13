@@ -6,11 +6,9 @@
     "margin-left": 0,
     "margin-right": 12,
     "spacing": 0,
-
     "modules-left": [
-        "custom/media",
+        "custom/media"
     ],
-
     "modules-center": [],
     "modules-right": [
         "hyprland/workspaces",
@@ -18,33 +16,59 @@
         "custom/netspeed",
         "cpu",
         "temperature",
+        "custom/fan",
         "memory",
         "network",
         "bluetooth",
         "pulseaudio",
+        "custom/mic",
+        "custom/performance",
         "battery",
         "clock",
         "custom/power"
     ],
 
+    // ── Performance Profile ────────────────────────────────────────────────
+    "custom/performance": {
+        "exec": "~/.config/waybar/scripts/performance.sh",
+        "return-type": "json",
+        "interval": 5,
+        "on-click": "~/.config/waybar/scripts/rofi-performance.sh",
+        "signal": 1
+    },
+
+    // ── Microphone ─────────────────────────────────────────────────────────
+    "custom/mic": {
+        "exec": "~/.config/waybar/scripts/mic-status.sh",
+        "return-type": "json",
+        "interval": 1,
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        "tooltip": false
+    },
+    // ── Média ──────────────────────────────────────────────────────────────
     "custom/media": {
         "exec": "~/.config/waybar/scripts/media.sh",
         "return-type": "json",
-        "max-length": 6,
+        "max-length": 60,
         "interval": 1,
         "on-click": "playerctl play-pause",
         "on-click-right": "playerctl next",
         "on-click-middle": "playerctl previous"
     },
 
-    // --- WORKSPACES ---
+    // ── Workspaces ─────────────────────────────────────────────────────────
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
-        "format-icons": { "active": "●", "default": "●", "empty": "○" },
+        "format-icons": {
+            "active": "●",
+            "default": "●",
+            "empty": "○"
+        },
         "persistent-workspaces": { "*": 5 }
     },
 
+    // ── Fenêtre active ─────────────────────────────────────────────────────
     "hyprland/window": {
         "format": "{title}",
         "max-length": 30,
@@ -52,50 +76,78 @@
             "(.*) — Mozilla Firefox": "󰈹 $1",
             "Spotify.*": "Spotify",
             "WezTerm": "Terminal"
-        }
+        },
+        // Clic sur le titre → launcher rofi (apps ouvertes + installées)
+        "on-click": "~/.config/waybar/scripts/rofi-launcher.sh"
     },
 
-    // --- SYSTEM ---
+    // ── Réseau vitesse ─────────────────────────────────────────────────────
     "custom/netspeed": {
         "exec": "~/.config/waybar/scripts/netspeed.sh",
         "interval": 2,
-        "format": "{}"
-        ,
-        "max-length":15,
-        "min-length":15,
+        "format": "{}",
+        "max-length": 15,
+        "min-length": 15
     },
 
+    // ── WiFi → rofi-wifi ───────────────────────────────────────────────────
     "network": {
         "format-wifi": "󰤨 {essid}",
         "format-disconnected": "󰤭 off",
-        "on-click": "nm-connection-editor"
+        "on-click": "~/.config/waybar/scripts/rofi-wifi.sh"
     },
 
+    // ── Bluetooth → rofi-bluetooth ─────────────────────────────────────────
     "bluetooth": {
-        "format": "󰂲",
-        "on-click": "blueman-manager"
+        "format": "󰂯",
+        "format-connected": "󰂱",
+        "format-connected-battery": "󰂱 {device_battery_percentage}%",
+        "tooltip-format-connected": "{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_alias}",
+        "on-click": "~/.config/waybar/scripts/rofi-bluetooth.sh"
     },
 
+    // ── Batterie ───────────────────────────────────────────────────────────
     "battery": {
         "format": "{icon} {capacity}%",
         "format-icons": ["󰁺","󰁻","󰁼","󰁽","󰁾","󰁿","󰂀","󰂁","󰂂","󰁹"]
     },
 
+    // ── Horloge ────────────────────────────────────────────────────────────
     "clock": {
         "format": "{:%d/%m  |  %H:%M}"
     },
 
+    // ── Audio → rofi-audio ─────────────────────────────────────────────────
     "pulseaudio": {
         "format": "{icon} {volume}%",
-        "on-click": "pavucontrol"
+        "format-muted": "󰖁 muet",
+        "format-icons": {
+            "default": ["󰕿","󰖀","󰕾"]
+        },
+        // Clic gauche → menu rofi audio | clic droit → pavucontrol complet
+        "on-click": "~/.config/waybar/scripts/rofi-audio.sh",
+        "on-click-right": "pavucontrol"
     },
 
-    "cpu": { "format": "cpu {usage:02}%" },
-    "temperature": { "format": "tmp {temperatureC}°" },
-    "memory": { "format": "ram {percentage:02}%" },
+    // ── System ─────────────────────────────────────────────────────────────
+    "cpu": {
+        "format": "cpu {usage:02}%"
+    },
+    "temperature": {
+        "format": "tmp {temperatureC}°"
+    },
+    "memory": {
+        "format": "ram {percentage:02}%"
+    },
+    "custom/fan": {
+        "exec": "~/.config/waybar/scripts/fan.sh",
+        "interval": 2
+    },
 
+    // ── Power → rofi-power ─────────────────────────────────────────────────
     "custom/power": {
         "format": "⏻",
-        "on-click": "~/.config/scripts/powermenu.sh"
+        "on-click": "~/.config/waybar/scripts/rofi-power.sh"
     }
 }

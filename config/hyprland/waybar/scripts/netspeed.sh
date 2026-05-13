@@ -4,7 +4,7 @@
 # Reads /proc/net/dev directly — no sleep, instant output
 # Uses a state file to compute delta between calls
 # ============================================================
-
+export LC_NUMERIC=C
 IFACE=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')
 
 if [ -z "$IFACE" ]; then

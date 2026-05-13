@@ -10,7 +10,7 @@ local mod = "SUPER"
 hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
 hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("thunar"))
 hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
-hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("rofi -show drun -theme ~/.config/rofi/launcher.rasi"))
+hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("$HOME/.config/waybar/scripts/rofi-launcher.sh"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grimblast copy area"))
 hl.bind("+ Print",          hl.dsp.exec_cmd("grimblast copy screen"))
@@ -51,11 +51,6 @@ hl.define_submap("resize", function()
     hl.bind("+ Return", hl.dsp.submap("reset"))
 end)
 
-hl.gesture({
-    fingers = 3,
-    direction = "horizontal",
-    action = "workspace",
-})
 -- ============================================================
 -- WORKSPACES — rangée de chiffres AZERTY
 -- ============================================================
@@ -85,8 +80,8 @@ hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "e+1" }))
 
 -- Scratchpad
-hl.bind(mod .. "+ S",         hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mod .. "+ SHIFT+ S", hl.dsp.window.move({ workspace = "special:magic" }))
+hl.bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
 
 -- Souris (grab)
 hl.bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
