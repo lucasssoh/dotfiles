@@ -58,4 +58,4 @@ case "${class,,}" in  # Convertit la classe en minuscules pour plus de robustess
 esac
 TEXT="$ICON  $title"
 
-echo "{\"text\": \"$TEXT\", \"class\": \"filled\"}"
+jq -cn --arg text "$ICON  $title" --arg class "filled" '{text: $text, class: $class}'
