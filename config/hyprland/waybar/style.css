@@ -25,6 +25,40 @@ window#waybar {
 }
 
 /* =========================
+    WINDOW 
+ ========================= */
+
+#custom-window {
+    background-color: @background;
+    color: @muted;
+    
+    margin: 0 15px;
+    padding: 0 12px;
+    border-radius: 0 0 12px 12px;
+
+    opacity: 0.8;
+    
+    transition: 
+        min-width 0.3s cubic-bezier(0.45, 0, 0.55, 1),
+        opacity 0.2s ease,
+        margin 0.3s ease,
+        padding 0.3s ease;
+}
+
+#custom-window.empty {
+    background: transparent;
+    opacity: 0;
+    
+    /* On force la réduction au minimum */
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+#custom-window.filled {
+    color: @text;
+}
+/* =========================
    🎵 MEDIA CLEAN
 ========================= */
 

@@ -7,12 +7,14 @@
     "margin-right": 12,
     "spacing": 0,
     "modules-left": [
+        "custom/window"
+    ],
+    "modules-center": [
         "custom/media"
     ],
-    "modules-center": [],
     "modules-right": [
         "hyprland/workspaces",
-        "hyprland/window",
+        "clock",
         "custom/netspeed",
         "cpu",
         "temperature",
@@ -24,9 +26,15 @@
         "custom/mic",
         "custom/performance",
         "battery",
-        "clock",
         "custom/power"
     ],
+
+    "custom/window": {
+        "exec": "~/.config/waybar/scripts/window.sh",
+        "return-type": "json",
+        "interval": 0,
+        "on-click": "~/.config/waybar/scripts/rofi-launcher.sh"
+    },
 
     // ── Performance Profile ────────────────────────────────────────────────
     "custom/performance": {
@@ -66,19 +74,6 @@
             "empty": "○"
         },
         "persistent-workspaces": { "*": 5 }
-    },
-
-    // ── Fenêtre active ─────────────────────────────────────────────────────
-    "hyprland/window": {
-        "format": "{title}",
-        "max-length": 30,
-        "rewrite": {
-            "(.*) — Mozilla Firefox": "󰈹 $1",
-            "Spotify.*": "Spotify",
-            "WezTerm": "Terminal"
-        },
-        // Clic sur le titre → launcher rofi (apps ouvertes + installées)
-        "on-click": "~/.config/waybar/scripts/rofi-launcher.sh"
     },
 
     // ── Réseau vitesse ─────────────────────────────────────────────────────
@@ -132,7 +127,7 @@
 
     // ── System ─────────────────────────────────────────────────────────────
     "cpu": {
-        "format": "cpu {usage:02}%"
+        "format": "cpu {usage:02}% {max_frequency:.1f}Ghz"
     },
     "temperature": {
         "format": "tmp {temperatureC}°"

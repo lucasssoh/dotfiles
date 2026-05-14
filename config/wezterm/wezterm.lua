@@ -16,6 +16,7 @@ config.font_size = 12.0
 config.line_height = 1.0
 
 config.front_end = "WebGpu"
+config.prefer_egl = true
 config.freetype_load_target = "Light"
 config.automatically_reload_config = true
 
