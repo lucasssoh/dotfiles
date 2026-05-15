@@ -46,7 +46,6 @@ hl.define_submap("resize", function()
     hl.bind("+ L",      hl.dsp.window.resize({ x =  5, y = 0,  relative = true }), { repeating = true })
     hl.bind("+ K",      hl.dsp.window.resize({ x = 0,  y = -5, relative = true }), { repeating = true })
     hl.bind("+ J",      hl.dsp.window.resize({ x = 0,  y =  5, relative = true }), { repeating = true })
-    
     hl.bind("+ Escape", hl.dsp.submap("reset"))
     hl.bind("+ Return", hl.dsp.submap("reset"))
 end)
