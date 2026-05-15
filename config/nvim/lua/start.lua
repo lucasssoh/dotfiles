@@ -8,31 +8,47 @@ M.config = function()
     local alpha = require("alpha")
     local dashboard = require("alpha.themes.dashboard")
 
-    -- COUCOU ! Header (Keep your ASCII art here)
+    -- =========================================================
+    -- HEADER (ASCII ART)
+    -- =========================================================
     dashboard.section.header.val = {
-        [[  ██████╗  ██████╗ ██╗   ██╗  ██████╗  ██████╗ ██╗   ██╗    ██╗ ]],
-        [[ ██╔════╝ ██╔═══██╗██║   ██║ ██╔════╝ ██╔═══██╗██║   ██║    ██║ ]],
-        [[ ██║      ██║   ██║██║   ██║ ██║      ██║   ██║██║   ██║    ██║ ]],
-        [[ ██║      ██║   ██║██║   ██║ ██║      ██║   ██║██║   ██║    ╚═╝ ]],
-        [[ ╚██████╗ ╚██████╔╝╚██████╔╝ ╚██████╗ ╚██████╔╝╚██████╔╝    ██╗ ]],
-        [[  ╚═════╝  ╚═════╝  ╚═════╝   ╚═════╝  ╚═════╝  ╚═════╝     ╚═╝ ]],
+        [[      ___           ___                    ___           ___           ___     ]],
+        [[     /\  \         /\  \                  /\  \         /\  \         /\__\    ]],
+        [[    /::\  \       /::\  \                /::\  \        \:\  \       /:/ _/_   ]],
+        [[   /:/\:\  \     /:/\:\  \              /:/\:\  \        \:\  \     /:/ /\__\  ]],
+        [[  /:/  \:\  \   /:/  \:\  \            /::\~\:\__\       /::\  \   /:/ /:/ _/_ ]],
+        [[ /:/__/ \:\__\ /:/__/ \:\__\          /:/\:\ \:|__|     /:/\:\__\ /:/_/:/ /\__\]],
+        [[ \:\  \  \/__/ \:\  \  \/__/          \:\~\:\/:/  /    /:/  \/__/ \:\/:/ /:/  /]],
+        [[  \:\  \        \:\  \                 \:\ \::/  /    /:/  /       \::/_/:/  / ]],
+        [[   \:\  \        \:\  \                 \:\/:/  /     \/__/         \:\/:/  /  ]],
+        [[    \:\__\        \:\__\                 \::/__/                     \::/  /   ]],
+        [[     \/__/         \/__/                  ~~                          \/__/    ]],
     }
 
-    -- Updated Buttons
+    -- =========================================================
+    -- BUTTONS
+    -- =========================================================
     dashboard.section.buttons.val = {
-        dashboard.button("p", "󱔗  Projects", ":Telescope projects<CR>"), -- NEW: Open recent projects
-        dashboard.button("f", "󰈞  Find File", ":Telescope find_files <CR>"),
-        dashboard.button("n", "  New File", ":ene <BAR> startinsert <CR>"),
-        dashboard.button("r", "󰄉  Recent Files", ":Telescope oldfiles <CR>"),
-        dashboard.button("c", "  Configuration", ":e $MYVIMRC <CR>"),
+        dashboard.button("p", "󱔗  Projects", ":Telescope projects<CR>"),
+        dashboard.button("f", "󰈞  Find File", ":Telescope find_files<CR>"),
+        dashboard.button("n", "  New File", ":ene | startinsert<CR>"),
+        dashboard.button("r", "󰄉  Recent Files", ":Telescope oldfiles<CR>"),
+        dashboard.button("c", "  Configuration", ":e $MYVIMRC<CR>"),
         dashboard.button("q", "󰅙  Quit", ":qa<CR>"),
     }
 
-    -- Footer
+    -- =========================================================
+    -- FOOTER
+    -- =========================================================
     local stats = require("lazy").stats()
-    local ms = (math.floor(stats.startuptime * 100 + 0.5) / 100)
-    dashboard.section.footer.val = "⚡ " .. stats.count .. " plugins loaded in " .. ms .. "ms"
+    local ms = math.floor(stats.startuptime * 100 + 0.5) / 100
 
+    dashboard.section.footer.val =
+        "⚡ " .. stats.count .. " plugins loaded in " .. ms .. "ms"
+
+    -- =========================================================
+    -- SETUP
+    -- =========================================================
     alpha.setup(dashboard.config)
 end
 

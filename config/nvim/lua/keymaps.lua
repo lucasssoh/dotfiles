@@ -29,7 +29,33 @@ key.set("n", "<S-Tab>", ":bprevious<CR>", { silent = true, desc = "Previous buff
 -- Fermer l'onglet actuel
 key.set("n", "<leader>x", ":bdelete<CR>", { silent = true, desc = "Close buffer" })
 
--- Naviguer par position (Optionnel : Alt + numéro)
+-- Naviguer par position (Optionnel : Alt + numéro
 key.set("n", "<A-1>", "<Cmd>BufferLineGoToBuffer 1<CR>", { silent = true })
 key.set("n", "<A-2>", "<Cmd>BufferLineGoToBuffer 2<CR>", { silent = true })
 key.set("n", "<A-3>", "<Cmd>BufferLineGoToBuffer 3<CR>", { silent = true })
+
+-- LSP diagnostic
+key.set("n", "gz", vim.diagnostic.open_float, { desc = "Diagnostics float" })
+
+key.set("n", "<leader>q", function()
+    -- ferme toutes les fenêtres flottantes (LSP, plugins, menus)
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+        local cfg = vim.api.nvim_win_get_config(win)
+        if cfg.relative ~= "" then
+            vim.api.nvim_win_close(win, false)
+        end
+    end
+end, { desc = "Close floating windows" })
+
+key.set("n", "<leader>Q", function()
+    local bufname = vim.api.nvim_buf_get_name(0)
+
+    if bufname == "" then
+        vim.cmd("q")
+        return
+    end
+
+    -- fallback normal buffer close
+    vim.cmd("bd")
+end, { desc = "Smart quit buffer" })
+

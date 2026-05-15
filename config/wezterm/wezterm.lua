@@ -35,7 +35,7 @@ config.use_fancy_tab_bar = false
 -- PANE FOCUS VISUAL (GRISAGE INACTIF)
 -- =========================
 config.inactive_pane_hsb = {
-  saturation = 0.15,  -- désature les panes non focus
+  saturation = 0.55,  -- désature les panes non focus
   brightness = 0.45,  -- les assombrit légèrement
 }
 

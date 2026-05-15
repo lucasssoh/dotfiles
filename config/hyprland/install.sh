@@ -113,7 +113,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
         polkit xdg-user-dirs brightnessctl playerctl
         # Screenshots
-        grim slurp
+        grim slurp grimblast
         # Tools
         bc jq curl git lm_sensors unzip
         # Qt theming
