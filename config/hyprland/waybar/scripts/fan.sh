@@ -6,7 +6,7 @@ if [ -f "$FAN_PATH" ]; then
     RPM=$(cat "$FAN_PATH")
 
     formatted_rpm=$(printf "%4d" "$RPM")
-    echo " ${formatted_rpm} RPM"
+    echo "󰈐 ${formatted_rpm} RPM"
 else
-    echo " N/A"
+    echo "󰈐 N/A"
 fi

@@ -1,61 +1,53 @@
 #!/usr/bin/env bash
 
-win=$(hyprctl activewindow -j 2>/dev/null)
+# Quitter proprement sur pipe brisé (SIGPIPE)
+trap 'exit 0' SIGPIPE
 
-title=$(echo "$win" | jq -r '.title // empty')
-class=$(echo "$win" | jq -r '.class // empty')
+format_window() {
+    local win
+    win=$(hyprctl activewindow -j 2>/dev/null) || { printf '{"text":"","class":"empty"}\n'; return; }
 
-if [[ -z "$title" ]]; then
-    echo '{"text": "", "class": "empty"}'
-    exit 0
-fi
+    local title class
+    title=$(printf '%s' "$win" | jq -re '.title // empty' 2>/dev/null) || { printf '{"text":"","class":"empty"}\n'; return; }
+    class=$(printf '%s' "$win" | jq -re '.class // empty' 2>/dev/null) || class=""
 
-MAX=35
-[[ ${#title} -gt $MAX ]] && title="${title:0:$((MAX-2))}…"
+    local MAX=35
+    [[ ${#title} -gt $MAX ]] && title="${title:0:$((MAX-2))}…"
 
-ICON=""
+    local ICON
+    case "${class,,}" in
+        *firefox*|*zen*)                              ICON="󰈹" ;;
+        *chromium*|*chrome*|*brave*|*opera*)          ICON="󰊯" ;;
+        *wezterm*|*ghostty*|*alacritty*|*kitty*|*foot*|*term*) ICON="" ;;
+        *code*|*visual-studio-code*)                  ICON="󰨞" ;;
+        *nvim*|*vim*)                                 ICON="" ;;
+        *spotify*)                                    ICON="󰓇" ;;
+        *vlc*|*mpv*)                                  ICON="󰕼" ;;
+        *pavucontrol*)                                ICON="󰓃" ;;
+        *discord*|*webcord*)                          ICON="󰙯" ;;
+        *slack*)                                      ICON="󰒱" ;;
+        *telegram*|*tg*)                              ICON="󰔁" ;;
+        *signal*)                                     ICON="󰈼" ;;
+        *thunderbird*|*evolution*|*geary*|*mail*)     ICON="󰇮" ;;
+        *thunar*|*nautilus*|*dolphin*|*pcmanfm*)      ICON="󰉋" ;;
+        *btop*|*htop*)                                ICON="󰄪" ;;
+        *settings*|*control-center*)                  ICON="󰒓" ;;
+        *obsidian*)                                   ICON="󱓧" ;;
+        *gimp*|*inkscape*)                            ICON="󰔉" ;;
+        *steam*)                                      ICON="󰓓" ;;
+        *lutris*|*heroic*|*bottles*|*itch*)           ICON="󰺵" ;;
+        *)                                            ICON="󰓎" ;;
+    esac
 
-case "${class,,}" in  # Convertit la classe en minuscules pour plus de robustesse
-    # --- Navigateurs Web ---
-    *firefox*)          ICON="󰈹" ;;
-    *chromium*|*chrome*|*brave*|*opera*) ICON="󰊯" ;;
-    *zen*)              ICON="󰈹" ;; # Navigateur Zen
+    printf '{"text":"%s  %s","class":"filled"}\n' "$ICON" "$title"
+}
 
-    # --- Terminaux ---
-    *wezterm*|*ghostty*|*alacritty*|*kitty*|*foot*|*term*) ICON="" ;;
+# État initial
+format_window
 
-    # --- Développement & Éditeurs ---
-    *code*|*visual-studio-code*) ICON="󰨞" ;;
-    *nvim*|*vim*)       ICON="" ;;
-    *emacs*)            ICON="" ;;
-    *sublime-text*)     ICON="" ;;
-
-    # --- Multimédia ---
-    *spotify*)          ICON="󰓇" ;;
-    *vlc*|*mpv*)        ICON="󰕼" ;;
-    *pavucontrol*)      ICON="󰓃" ;;
-
-    # --- Communication ---
-    *discord*|*webcord*) ICON="󰙯" ;;
-    *slack*)            ICON="󰒱" ;;
-    *telegram*|*tg*)    ICON="󰔁" ;;
-    *signal*)           ICON="󰈼" ;;
-    *thunderbird*|*evolution*|*geary*|*mail*) ICON="󰇮" ;;
-
-    # --- Fichiers & Système ---
-    *thunar*|*nautilus*|*dolphin*|*pcmanfm*) ICON="󰉋" ;;
-    *btop*|*htop*)      ICON="󰄪" ;;
-    *settings*|*control-center*) ICON="󰒓" ;;
-
-    # --- Autres ---
-    *obsidian*)         ICON="󱓧" ;;
-    *gimp*|*inkscape*)  ICON="󰔉" ;;
-    *steam*)            ICON="󰓓" ;;
-    *lutris*|*heroic*|*bottles*|*itch*) ICON="󰺵" ;;
-
-    # --- Par défaut ---
-    *)                  ICON="󰓎" ;;
-esac
-TEXT="$ICON  $title"
-
-jq -cn --arg text "$ICON  $title" --arg class "filled" '{text: $text, class: $class}'
+# Listener événementiel via le socket Hyprland
+socat -U - "UNIX-CONNECT:$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock" 2>/dev/null \
+| grep -E --line-buffered '^(activewindow|windowtitle)>>' \
+| while IFS= read -r _; do
+    format_window || exit 0
+done

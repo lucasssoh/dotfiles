@@ -4,9 +4,10 @@
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
 @define-color muted       #48484a;
+@define-color play        #116611;
 
 * {
-    font-family: "JetBrains Mono", sans-serif;
+    font-family: "Iosevka Nerd Font", sans-serif;
     font-size: 13px;
     border: none;
 }
@@ -18,86 +19,73 @@ window#waybar {
 /* =========================
    GLOBAL CONTAINER
 ========================= */
-
 .modules-left {
     margin:  0;
     padding: 0;
 }
 
 /* =========================
-    WINDOW 
- ========================= */
-
-#custom-window {
+   WINDOW (module natif hyprland/window)
+========================= */
+#window {
     background-color: @background;
-    color: @muted;
-    
+    color: @text;
     margin: 0 15px;
     padding: 0 12px;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 12px 0;
+    opacity: 0.9;
 
-    opacity: 0.8;
-    
     transition: 
-        min-width 0.3s cubic-bezier(0.45, 0, 0.55, 1),
-        opacity 0.2s ease,
-        margin 0.3s ease,
-        padding 0.3s ease;
+        all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.2s ease;
 }
 
-#custom-window.empty {
+/* Aucune fenêtre active */
+#window.empty {
     background: transparent;
     opacity: 0;
-    
-    /* On force la réduction au minimum */
-    min-width: 0;
-    margin: 0;
-    padding: 0;
+    margin: 0;     /* Important : supprime l'espace extérieur */
+    padding: 0;    /* Important : supprime l'espace intérieur */
+    border: none;
+    min-width: 0;  /* S'assure que le module ne prend pas de place */
 }
 
-#custom-window.filled {
+/* Fenêtre active */
+#window {
     color: @text;
 }
-/* =========================
-   🎵 MEDIA CLEAN
-========================= */
 
-#custom-media {
+/* =========================
+   MEDIA (module natif mpris)
+========================= */
+#mpris {
     background: @background;
-    color: @accent;
-    margin: 0; 
+    color: @play;
+    margin: 0 12px;
+    opacity : 0.8;
     padding: 0 12px;
-    border-radius: 0 0 12px 0;
+    border-radius: 0 0 12px 12px;
     min-width: 220px;
     transition: all 0.2s ease;
 }
 
-
-/* état paused */
-#custom-media.paused {
-    border : none;
+#mpris.paused {
+    border: none;
+    color: @muted;
     opacity: 0.6;
 }
 
-/* état playing */
-#custom-media.playing {
-    color: @accent;
+#mpris.playing {
+    color: @play;
 }
 
-/* aucun player */
-#custom-media.none,
-#custom-media.stopped {
-    background: transparent;
-    padding: 0;
-    margin: 0;
-}
+/* aucun player / stopped — mpris disparaît tout seul quand vide */
+
 /* =========================
-   🔵 BLOC PRINCIPAL
+   BLOC PRINCIPAL
 ========================= */
-
 #workspaces,
 #window,
-#custom-netspeed,
 #cpu,
 #temperature,
 #custom-fan,
@@ -105,7 +93,7 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
-#custom-mic,
+#wireplumber,
 #custom-performance,
 #battery,
 #clock,
@@ -116,21 +104,22 @@ window#waybar {
 }
 
 /* bordures internes */
-
 #window,
-#custom-netspeed,
 #cpu,
 #temperature,
 #memory,
 #network,
 #bluetooth,
 #pulseaudio,
+#wireplumber,
 #clock {
     border-left: 1px solid @overlay;
 }
 
+#network {
+    min-width: 100px;
+}
 /* coins arrondis */
-
 #workspaces {
     border-radius: 0px 0 0 12px;
     padding-left: 12px;
@@ -144,7 +133,6 @@ window#waybar {
 /* =========================
    DÉTAILS
 ========================= */
-
 #workspaces button {
     color: @muted;
     padding: 0 4px;
@@ -159,11 +147,6 @@ window#waybar {
     min-width: 150px;
 }
 
-#custom-netspeed {
-    min-width: 85px;
-    padding-right: 10px;
-}
-
 #battery {
     background: @surface;
     border-radius: 6px;
@@ -171,3 +154,4 @@ window#waybar {
     padding: 0 8px;
     border-left: none;
 }
+

@@ -7,7 +7,7 @@ local mod = "SUPER"
 -- ============================================================
 -- APPLICATIONS
 -- ============================================================
-hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("ghostty"))
+hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
 hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("thunar"))
 hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
 hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("$HOME/.config/waybar/scripts/rofi-launcher.sh"))

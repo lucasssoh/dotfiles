@@ -69,12 +69,12 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 5,
-        gaps_out         = 10,
+        gaps_in          = 4,
+        gaps_out         = 8,
         border_size      = 1,
         col = {
-            active_border   = colors.accent,
-            inactive_border = colors.overlay,
+            active_border   = colors.accent2,
+            inactive_border = colors.background,
         },
         layout           = "dwindle",
         resize_on_border = true,
@@ -86,7 +86,7 @@ hl.config({
 -- ============================================================
 hl.config({
     decoration = {
-        rounding = 6,
+        rounding = 8,
         blur = {
             enabled           = false,
             size              = 6,
@@ -96,13 +96,13 @@ hl.config({
             ignore_opacity    = false,
         },
         shadow = {
-            enabled       = true,
+            enabled       = true, -- Change to true to activate
             range         = 20,
             render_power  = 3,
             color         = "rgba(0,0,0,0.4)",
             color_inactive= "rgba(0,0,0,0.2)",
         },
-        inactive_opacity = 0.93,
+        inactive_opacity = 1.0,
         active_opacity   = 1.0,
         dim_inactive     = true,
         dim_strength     = 0.1,

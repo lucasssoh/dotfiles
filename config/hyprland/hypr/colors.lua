@@ -9,8 +9,9 @@ return {
     muted      = "0xff636366",
     subtle     = "0xff8e8e93",
     text       = "0xffe5e5ea",
-    accent     = "0xff6b9fff",   -- Bleu macOS-like
+    accent     = "0xff6b9fff",   -- Bleu
     accent2    = "0xffd0ffff",   -- Bleu secondaire clair
+    accent3    = "0xffc8823c",   -- Orang renard
     urgent     = "0xffff453a",
     warning    = "0xffffd60a",
     success    = "0xff30d158"
@@ -28,6 +29,7 @@ return {
 -- text:        #e5e5ea
 -- accent:      #6b9fff
 -- accent2:     #d0ffff
+-- accent3:     #c8823c
 -- urgent:      #ff453a
 -- warning:     #ffd60a
 -- success:     #30d158

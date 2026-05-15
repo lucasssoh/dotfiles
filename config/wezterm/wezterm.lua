@@ -80,7 +80,7 @@ config.colors = {
     },
 
     new_tab = {
-      bg_color = "rgba(10, 10, 10, 0.45)",
+      bg_color = "rgba(10, 10, 10, 0.85)",
       fg_color = "#666666",
     },
 
