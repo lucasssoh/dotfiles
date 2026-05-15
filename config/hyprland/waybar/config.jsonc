@@ -116,12 +116,14 @@
     // ── Sortie Audio (Haut-parleurs/Casque) ──────────────────────────
     "pulseaudio#output": {
         "format": "{icon} {volume}%",
-        "format-muted": "󰖁 muet",
+        "format-muted": "󰖁 ",
+
         "format-icons": {
             "headphone": "󰋋",
             "default": ["󰕿", "󰖀", "󰕾"]
         },
-        "on-click": "~/.config/waybar/scripts/rofi-audio.sh",
+
+        "on-click": "wezterm start --class audio-tui-float -- wiremix",
         "on-click-right": "pavucontrol",
         "scroll-step": 5
     },

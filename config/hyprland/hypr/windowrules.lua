@@ -52,13 +52,15 @@ hl.window_rule({ match = { title = "^Preferences$" }, float = true })
 hl.window_rule({ match = { title = "^Settings$"    }, float = true })
 
 -- ============================================================
--- PAVUCONTROL — mixeur flottant
+-- PAVUCONTROL — GUI audio fallback
 -- ============================================================
 hl.window_rule({
-    match  = { class = "pavucontrol" },
-    float  = true,
-    size   = "700 450",
-    center = true,
+    match        = { class = "org.pulseaudio.pavucontrol" },
+    float        = true,
+    size         = "900 550",
+    center       = true,
+    stay_focused = true,
+    opacity      = "0.97 override",
 })
 
 -- ============================================================
@@ -124,6 +126,18 @@ hl.window_rule({
     match        = { class = "bt-tui-float" },
     float        = true,
     size         = "700 480",
+    center       = true,
+    stay_focused = true,
+    no_anim      = false,
+})
+
+-- ============================================================
+-- WIREMIX — Audio TUI
+-- ============================================================
+hl.window_rule({
+    match        = { class = "audio-tui-float" },
+    float        = true,
+    size         = "900 550",
     center       = true,
     stay_focused = true,
     no_anim      = false,
