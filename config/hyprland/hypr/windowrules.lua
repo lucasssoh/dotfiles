@@ -104,3 +104,27 @@ hl.window_rule({
     -- Garde le focus pour éviter de devoir recliquer
     stay_focused = true,
 })
+
+-- ============================================================
+-- NMTUI — WiFi flottant centré
+-- ============================================================
+hl.window_rule({
+    match        = { class = "nm-tui-float" },
+    float        = true,
+    size         = "600 400",
+    center       = true,
+    stay_focused = true,
+    no_anim      = false,
+})
+
+-- ============================================================
+-- BLUETUITH — Bluetooth flottant centré
+-- ============================================================
+hl.window_rule({
+    match        = { class = "bt-tui-float" },
+    float        = true,
+    size         = "700 480",
+    center       = true,
+    stay_focused = true,
+    no_anim      = false,
+})

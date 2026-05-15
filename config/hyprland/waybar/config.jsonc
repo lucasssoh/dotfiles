@@ -85,7 +85,7 @@
         "format-disconnected": "󰤭 ----o/s", 
         "format-disabled": "󰤭 ----o/s",
         "tooltip-format": "{essid}",
-        "on-click": "~/.config/waybar/scripts/rofi-wifi.sh",
+        "on-click": "wezterm start --class nm-tui-float -- nmtui",
         "min-length": 10, // Force une longueur minimale de caractères
         "fixed-width": true
     },
@@ -99,7 +99,7 @@
         "tooltip-format": "{controller_alias}\t{controller_address}",
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
         "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-        "on-click": "~/.config/waybar/scripts/rofi-bluetooth.sh"
+        "on-click": "wezterm start --class bt-tui-float -- bluetuith" 
     },
 
     // ── Batterie ───────────────────────────────────────────────────────

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -e
-
 echo "[INFO] Mise à jour système..."
 sudo dnf upgrade -y
-
 # =========================
 # BASE SYSTEM (indispensable)
 # =========================
@@ -19,7 +17,6 @@ sudo dnf install -y \
     less \
     which \
     file
-
 # =========================
 # RESEAU (wifi + ethernet)
 # =========================
@@ -38,6 +35,12 @@ sudo dnf install -y \
 echo "[INFO] Bluetooth..."
 sudo dnf install -y \
     bluez
+ 
+# bluetuith — TUI Bluetooth via copr
+echo "[INFO] Installation de bluetuith via copr..."
+sudo dnf copr enable -y lxdes/bluetuith
+sudo dnf install -y bluetuith
+echo "[OK] bluetuith installé."
 
 # =========================
 # AUDIO (stack moderne)
@@ -49,7 +52,6 @@ sudo dnf install -y \
     pipewire-alsa \
     wireplumber \
     alsa-utils
-
 # =========================
 # GPU / RENDERING (headless ready)
 # =========================
@@ -58,7 +60,6 @@ sudo dnf install -y \
     mesa-dri-drivers \
     mesa-vulkan-drivers \
     vulkan-loader
-
 # =========================
 # INPUT DEVICES
 # =========================
@@ -66,7 +67,6 @@ echo "[INFO] Input..."
 sudo dnf install -y \
     libinput \
     xkeyboard-config
-
 # =========================
 # STOCKAGE (USB / FS standards)
 # =========================
@@ -76,7 +76,6 @@ sudo dnf install -y \
     ntfs-3g \
     exfatprogs \
     dosfstools
-
 # =========================
 # SYSTEM SERVICES / DBUS
 # =========================
@@ -85,7 +84,6 @@ sudo dnf install -y \
     dbus \
     dbus-broker \
     polkit
-
 # =========================
 # STANDARDS FREEDESKTOP (neutre)
 # =========================
@@ -93,7 +91,6 @@ echo "[INFO] Standards..."
 sudo dnf install -y \
     xdg-utils \
     xdg-user-dirs
-
 # =========================
 # GRAPHICAL LIBS (runtime minimal)
 # =========================
@@ -110,7 +107,6 @@ sudo dnf install -y \
     libXi \
     libXext \
     libXrender
-
 # =========================
 # UTILITAIRES ESSENTIELS
 # =========================
@@ -126,22 +122,17 @@ sudo dnf install -y \
     rsync \
     nano \
     snapd
-
 # Activer le socket snapd
 sudo systemctl enable --now snapd.socket
-
 # Créer le lien classique /snap si nécessaire
 if [ ! -e /snap ]; then
     sudo ln -s /var/lib/snapd/snap /snap
 fi
-
 # Attendre que snap soit prêt
 echo "[INFO] Attente que snapd soit opérationnel..."
 sleep 5
-
 # Installer les snaps (exemple : pulsemixer)
 sudo snap install pulsemixer --classic || echo "[WARN] pulsemixer n'a pas pu être installé pour l'instant"
-
 # =========================
 # ACTIVATION SERVICES
 # =========================
@@ -149,5 +140,4 @@ echo "[INFO] Activation services..."
 sudo systemctl enable --now NetworkManager
 sudo systemctl enable --now bluetooth
 sudo systemctl enable --now dbus-broker
-
 echo "[OK] Base système Fedora prête ✔"
