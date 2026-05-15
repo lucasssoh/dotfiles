@@ -13,6 +13,9 @@ echo -e "${GREEN}[1/6] Installation des outils système essentiels...${NC}"
 sudo dnf install -y @development-tools @c-development
 sudo dnf install -y curl wget git cmake gcc-c++ gdb clang lldb libstdc++-devel
 
+# Libs pour Manim
+sudo dnf install -y fribidi-devel harfbuzz-devel pango-devel cairo-devel
+
 # 2. Python (System wide + venv)
 echo -e "${GREEN}[2/6] Configuration Python...${NC}"
 sudo dnf install -y python3 python3-pip python3-devel
