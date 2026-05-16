@@ -1,10 +1,19 @@
+/* =========================================================
+   COLORS
+========================================================= */
+
 @define-color background  #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
+@define-color accent2     #4fefff;
 @define-color muted       #48484a;
 @define-color play        #116611;
+
+/* =========================================================
+   GLOBAL
+========================================================= */
 
 * {
     font-family: "Iosevka Nerd Font", sans-serif;
@@ -16,123 +25,30 @@ window#waybar {
     background: transparent;
 }
 
-/* =========================
-   GLOBAL CONTAINER
-========================= */
 .modules-left {
-    margin:  0;
+    margin: 0;
     padding: 0;
 }
 
-/* =========================
-   WINDOW (module natif hyprland/window)
-========================= */
-#window {
-    background-color: @background;
-    color: @text;
-    margin: 0 15px;
-    padding: 0 12px;
-    border-radius: 0 0 12px 0;
-    opacity: 0.9;
+/* =========================================================
+   LEFT MODULES
+========================================================= */
 
-    transition: 
-        all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 0.2s ease;
-}
+/* ── Clock ─────────────────────────────────────────────── */
 
-/* Aucune fenêtre active */
-#window.empty {
-    background: transparent;
-    opacity: 0;
-    margin: 0;     /* Important : supprime l'espace extérieur */
-    padding: 0;    /* Important : supprime l'espace intérieur */
-    border: none;
-    min-width: 0;  /* S'assure que le module ne prend pas de place */
-}
-
-/* Fenêtre active */
-#window {
-    color: @text;
-}
-
-/* =========================
-   MEDIA (module natif mpris)
-========================= */
-#mpris {
-    background: @background;
-    color: @play;
-    margin: 0 12px;
-    opacity : 0.8;
-    padding: 0 12px;
-    border-radius: 0 0 12px 12px;
-    min-width: 220px;
-    transition: all 0.2s ease;
-}
-
-#mpris.paused {
-    border: none;
-    color: @muted;
-    opacity: 0.6;
-}
-
-#mpris.playing {
-    color: @play;
-}
-
-/* aucun player / stopped — mpris disparaît tout seul quand vide */
-
-/* =========================
-   BLOC PRINCIPAL
-========================= */
-#workspaces,
-#window,
-#cpu,
-#temperature,
-#custom-fan,
-#memory,
-#network,
-#bluetooth,
-#pulseaudio,
-#wireplumber,
-#custom-performance,
-#battery,
-#clock,
-#custom-power {
+#clock {
     background: @background;
     padding: 0 10px;
-    margin: 0;
 }
 
-/* bordures internes */
-#window,
-#cpu,
-#temperature,
-#memory,
-#network,
-#bluetooth,
-#pulseaudio,
-#wireplumber,
-#clock {
-    border-left: 1px solid @overlay;
-}
+/* ── Workspaces ────────────────────────────────────────── */
 
-#network {
-    min-width: 100px;
-}
-/* coins arrondis */
 #workspaces {
-    border-radius: 0px 0 0 12px;
-    padding-left: 12px;
-}
-
-#custom-power {
-    border-radius: 0 0px 12px 0;
+    background: @background;
     padding-right: 12px;
+    border-radius: 0 0 12px 0;
 }
 
-/* =========================
-   DÉTAILS
-========================= */
 #workspaces button {
     color: @muted;
     padding: 0 4px;
@@ -142,10 +58,139 @@ window#waybar {
     color: @text;
 }
 
+/* ── Active Window ─────────────────────────────────────── */
+
 #window {
-    color: @muted;
-    min-width: 150px;
+    background-color: @background;
+    margin: 0 30px;
+    padding: 0 15px;
+    border-radius: 0 0 12px 12px;
+    opacity: 0.9;
+    min-width: 0;
+
+    transition:
+        opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Aucune fenêtre active */
+
+window#waybar.empty #window {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* =========================================================
+   CENTER MODULES
+========================================================= */
+
+/* ── Media ─────────────────────────────────────────────── */
+
+#mpris {
+    background: transparent;
+    color: @play;
+    margin: 0 12px;
+    opacity: 0.8;
+    padding: 0 12px;
+    border-radius: 0 0 12px 12px;
+    min-width: 0;
+
+    transition: all 0.2s ease;
+}
+
+#mpris.paused {
+    background: @background;
+    border: none;
+    color: @muted;
+    opacity: 0.6;
+    min-width: 220px;
+}
+
+#mpris.playing {
+    background: @background;
+    color: @play;
+    min-width: 220px;
+}
+
+/* =========================================================
+   RIGHT MODULES
+========================================================= */
+
+/* ── CPU ───────────────────────────────────────────────── */
+
+#cpu {
+    background: @background;
+    padding: 0 10px;
+    padding-left: 12px;
+    border-radius: 0 0 0 12px;
+}
+
+/* ── Temperature ───────────────────────────────────────── */
+
+#temperature {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Fan ───────────────────────────────────────────────── */
+
+#custom-fan {
+    background: @background;
+    padding: 0 10px;
+}
+
+/* ── Memory ────────────────────────────────────────────── */
+
+#memory {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Network ───────────────────────────────────────────── */
+
+#network {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+    min-width: 100px;
+}
+
+/* ── Bluetooth ─────────────────────────────────────────── */
+
+#bluetooth {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Audio Output ──────────────────────────────────────── */
+
+#pulseaudio {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Audio Input ───────────────────────────────────────── */
+
+#wireplumber {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Performance ───────────────────────────────────────── */
+
+#custom-performance {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+}
+
+/* ── Battery ───────────────────────────────────────────── */
 
 #battery {
     background: @surface;
@@ -155,3 +200,11 @@ window#waybar {
     border-left: none;
 }
 
+/* ── Power ─────────────────────────────────────────────── */
+
+#custom-power {
+    background: @background;
+    padding: 0 10px;
+    padding-right: 12px;
+    border-radius: 0 0 12px 0;
+}
