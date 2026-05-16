@@ -107,10 +107,15 @@ format = "[ k8s $context ](cyan)"
 [cmd_duration]
 min_time = 2000
 format = "[ $duration ](dimmed yellow)"
-
+ 
 # =========================
 # PROMPT
 # =========================
 [character]
 success_symbol = "[➜ ](bold green)"
 error_symbol = "[➜ ](bold red)"
+vimcmd_symbol = "[N](bold yellow) "
+vimcmd_replace_one_symbol = "[R](bold red) "
+vimcmd_replace_symbol = "[R](bold red) "
+vimcmd_visual_symbol = "[V](bold cyan) "
+

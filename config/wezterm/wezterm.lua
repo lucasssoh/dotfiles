@@ -25,7 +25,7 @@ config.window_background_opacity = 0.90
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
-config.cursor_blink_rate = 1300
+config.cursor_blink_rate = 0
 config.use_fancy_tab_bar = false
 
 -- =========================
@@ -114,11 +114,29 @@ config.keys = {
   { key = 'w', mods = 'ALT|SHIFT', action = act.CloseCurrentTab { confirm = false } },
   { key = 'n', mods = 'ALT|SHIFT', action = act.ActivateTabRelative(1) },
   { key = 'p', mods = 'ALT|SHIFT', action = act.ActivateTabRelative(-1) },
+
+  -- =========================
+  -- Wezterm copy
+  -- =========================
+  { key = "Escape", mods = "CTRL",action = act.ActivateCopyMode,},
 }
 
 wezterm.on('format-tab-title', function(tab, panes, tabs, hover, max_width)
   local pane = tab.active_pane
   return string.format(' tab %d:%d ', tab.tab_index + 1, pane.pane_id)
 end)
+
+config.key_tables = {
+  copy_mode = {
+    { key = "h", mods = "NONE", action = act.CopyMode "MoveLeft" },
+    { key = "j", mods = "NONE", action = act.CopyMode "MoveDown" },
+    { key = "k", mods = "NONE", action = act.CopyMode "MoveUp" },
+    { key = "l", mods = "NONE", action = act.CopyMode "MoveRight" },
+
+    { key = "v", mods = "NONE", action = act.CopyMode { SetSelectionMode = "Cell" } },
+    { key = "y", mods = "NONE", action = act.CopyTo "ClipboardAndPrimarySelection" },
+    { key = "/", mods = "NONE", action = act.Search "CurrentSelectionOrEmptyString" },
+  }
+}
 
 return config

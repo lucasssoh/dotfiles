@@ -1,3 +1,4 @@
+
 # --- INTERACTIF ---
 [[ -o interactive ]] || return
 
@@ -7,7 +8,6 @@
 HISTSIZE=10000
 SAVEHIST=20000
 HISTFILE=~/.zsh_history
-
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_SPACE
 setopt SHARE_HISTORY
@@ -25,13 +25,11 @@ setopt CHECK_JOBS
 # PATH (BASE PROPRE)
 # =========================
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH"
-
 add_to_path() {
     if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
         export PATH="$1:$PATH"
     fi
 }
-
 add_to_path "$HOME/.local/bin"
 add_to_path "$HOME/.cargo/bin"
 add_to_path "$HOME/.npm-global/bin"
@@ -72,29 +70,70 @@ fi
 # AUTO NVM SWITCH (propre ZSH)
 # =========================
 autoload -U add-zsh-hook
-
 load-nvmrc() {
   if [ -f .nvmrc ]; then
     echo "(nvm) Détection .nvmrc..."
     nvm use
   fi
 }
-
 add-zsh-hook chpwd load-nvmrc
 load-nvmrc
-
-# =========================
-# STARSHIP
-# =========================
-command -v starship >/dev/null && eval "$(starship init zsh)"
 
 # =========================
 # SDKMAN
 # =========================
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-# Plugins Zsh
+
+# =========================
+# PLUGINS ZSH (autosuggestions EN PREMIER)
+# =========================
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#777777"
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# =========================
+# VI MODE ZSH (AVANT starship et syntax-highlighting)
+# =========================
+bindkey -v
+export KEYTIMEOUT=1
+
+# Curseur : barre en insert, bloc en normal
+function zle-keymap-select {
+  if [[ ${KEYMAP} == vicmd ]] || [[ $1 = 'block' ]]; then
+    echo -ne '\e[1 q'   # bloc  → normal mode
+  elif [[ ${KEYMAP} == main ]] || [[ ${KEYMAP} == viins ]] || [[ $1 = 'beam' ]]; then
+    echo -ne '\e[5 q'   # barre → insert mode
+  fi
+}
+zle -N zle-keymap-select
+
+function zle-line-init {
+  echo -ne '\e[5 q'     # barre par défaut au démarrage
+}
+zle -N zle-line-init
+
+# =========================
+# JK / KJ ESCAPE (INSERT MODE)
+# =========================
+jk-escape() {
+  zle vi-cmd-mode
+}
+kj-escape() {
+  zle vi-cmd-mode
+}
+zle -N jk-escape
+zle -N kj-escape
+bindkey -M viins 'jk' jk-escape
+bindkey -M viins 'kj' kj-escape
+
+# =========================
+# STARSHIP (APRÈS vi mode, AVANT syntax-highlighting)
+# =========================
+command -v starship >/dev/null && eval "$(starship init zsh)"
+
+# =========================
+# SYNTAX HIGHLIGHTING (EN DERNIER — obligatoire)
+# =========================
 source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
