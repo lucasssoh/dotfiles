@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
-SOCKET="/run/user/$(id -u)/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+SOCKET=""
+for i in $(seq 1 30); do
+    SOCKET=$(find /run/user/$(id -u)/hypr/ -name ".socket2.sock" 2>/dev/null | head -1)
+    [ -n "$SOCKET" ] && break
+    sleep 1
+done
+
+[ -z "$SOCKET" ] && exit 1
+
 LOCK="/tmp/dashboard-lock"
 
 launch_dashboard() {
@@ -28,13 +37,12 @@ print('empty' if not non_dash else 'occupied')
 "
 }
 
-socat - UNIX-CONNECT:"$SOCKET" | while IFS= read -r line; do
+socat UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
     EVENT=$(echo "$line" | cut -d'>' -f1)
     DATA=$(echo "$line" | sed 's/.*>>//')
 
     case "$EVENT" in
-        workspace|workspacev2)
-            [ "$EVENT" = "workspacev2" ] && continue
+        workspace)
             WS=$(echo "$DATA" | tr -d '[:space:]')
             RESULT=$(is_workspace_empty "$WS")
             if [ "$RESULT" = "empty" ]; then
@@ -47,9 +55,6 @@ socat - UNIX-CONNECT:"$SOCKET" | while IFS= read -r line; do
             CLASS=$(echo "$DATA" | cut -d',' -f3)
             echo "$CLASS" | grep -q "dashboard" && continue
             hide_dashboard
-            ;;
-        closewindow)
-            # Ignorer — on gère via workspace event uniquement
             ;;
     esac
 done
