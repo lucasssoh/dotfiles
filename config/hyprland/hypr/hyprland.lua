@@ -33,7 +33,7 @@ hl.on("hyprland.start", function()
 --[[     hl.exec_cmd("waybar") ]]
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
-    hl.exec_cmd("awww")
+    hl.exec_cmd("awww-daemon")
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
     hl.exec_cmd("hyprcorners")

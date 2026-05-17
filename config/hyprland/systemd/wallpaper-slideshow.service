@@ -4,6 +4,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sleep 3
 ExecStart=%h/.config/hypr/scripts/wallpaper-slideshow.sh
 Restart=always
 RestartSec=5
