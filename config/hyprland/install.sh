@@ -233,6 +233,18 @@ for mod in "${modules[@]}"; do
         warn "Source directory $mod not found in repo, skipping."
     fi
 done
+# ── Scripts hypr ─────────────────────────────────────────────
+section "Linking hypr scripts"
+
+SCRIPTS_SRC="$REPO_DIR/scripts"
+SCRIPTS_DST="$HOME/.config/hypr/scripts"
+mkdir -p "$SCRIPTS_DST"
+
+find "$SCRIPTS_SRC" -maxdepth 1 -name "*.sh" | while read -r script; do
+    safe_link "$script" "$SCRIPTS_DST/$(basename "$script")"
+done
+
+ok "Hypr scripts linked."
 
 # Handle standalone scripts in the root of your repo (like set_wallpapers.sh)
 if [ -f "$REPO_DIR/set_wallpapers.sh" ]; then

@@ -1,0 +1,1 @@
+00:55:10.577  WARN   window::os::wayland::connection > Unable to resolve appearance using xdg-desktop-portal: get_appearance.read_setting: Reading xdg-portal org.freedesktop.appearance color-scheme: org.freedesktop.DBus.Error.NameHasNoOwner: Could not activate remote peer 'org.freedesktop.portal.Desktop': startup job failed

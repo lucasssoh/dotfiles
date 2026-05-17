@@ -142,3 +142,33 @@ hl.window_rule({
     stay_focused = true,
     no_anim      = false,
 })
+
+-- ============================================================
+-- DASHBOARD
+-- ============================================================
+
+-- Dashboard fastfetch (haut-droit)
+hl.window_rule({
+    match    = { class = "dashboard-fastfetch" },
+    float    = true,
+    pin      = true,
+    size     = "720 380",
+    move     = "1180 40",
+    no_focus = true,
+    no_blur  = true,
+    no_anim  = false,
+    animation= "slide right",
+})
+
+-- Dashboard clock (bas-gauche)
+hl.window_rule({
+    match    = { class = "dashboard-clock" },
+    float    = true,
+    pin      = true,
+    size     = "500 200",
+    move     = "20 820",
+    no_focus = true,
+    no_blur  = true,
+    no_anim  = false,
+    animation= "slide bottom",
+})

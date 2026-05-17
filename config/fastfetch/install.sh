@@ -3,12 +3,12 @@ set -e
 
 # 1. Installer fastfetch
 if command -v dnf &> /dev/null; then
-    sudo dnf install -y fastfetch
+    sudo dnf install -y fastfetch chafa
 elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm fastfetch
+    sudo pacman -S --noconfirm fastfetch chafa
 elif command -v apt-get &> /dev/null; then
     sudo apt-get update
-    sudo apt-get install -y fastfetch
+    sudo apt-get install -y fastfetch chafa
 fi
 
 # 2. Liens symboliques
