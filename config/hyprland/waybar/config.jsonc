@@ -16,6 +16,7 @@
     // ============================================================
 
     "modules-left": [
+        "custom/waybar-lock",
         "clock",
         "hyprland/workspaces",
         "hyprland/window"
@@ -43,6 +44,13 @@
     // LEFT MODULES
     // ============================================================
 
+    //--- lock waybar ---------------------------------------------
+    "custom/waybar-lock": {
+        "exec": "[ -f /tmp/waybar-locked ] && echo '󰌾' || echo '󰌿'",
+        "interval": 2,
+        "on-click": "[ -f /tmp/waybar-locked ] && ~/.config/hypr/scripts/waybar-toggle.sh unlock || ~/.config/hypr/scripts/waybar-toggle.sh lock",
+        "tooltip": false
+    },
     // ── Clock ────────────────────────────────────────────────────
     "clock": {
         "format": "{:%H:%M}",

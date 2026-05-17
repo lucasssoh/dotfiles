@@ -6,7 +6,7 @@
 -- ENVIRONMENT
 -- ============================================================
 hl.env("XCURSOR_SIZE",          "24")
-hl.env("XCURSOR_THEME",         "Bibata-Modern-Classic")
+hl.env("XCURSOR_THEME",         "breeze_cursors")
 hl.env("QT_QPA_PLATFORM",       "wayland")
 hl.env("QT_QPA_PLATFORMTHEME",  "qt6ct")
 hl.env("GDK_BACKEND",           "wayland,x11")
@@ -25,18 +25,19 @@ local colors = require("colors")
 -- ============================================================
 -- AUTOSTART (Nouvelle syntaxe Lua 0.55+)
 -- ============================================================
-
 hl.on("hyprland.start", function()
     -- Environnement système (important pour Wayland/Portal)
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
     -- Services et Daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-    hl.exec_cmd("waybar")
+--[[     hl.exec_cmd("waybar") ]]
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
     hl.exec_cmd("awww")
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
+    hl.exec_cmd("hyprcorners")
+    hl.exec_cmd("~/.config/hypr/scripts/waybar-autohide.sh")
 end)-- ============================================================
 -- INPUT
 -- ============================================================
@@ -69,9 +70,9 @@ hl.config({
     general = {
         gaps_in          = 4,
         gaps_out         = 8,
-        border_size      = 0,
+        border_size      = 1,
         col = {
-            active_border   = "rgba(0,0,0,0)",
+            active_border   = "rgba(0,0,0,1)",
             inactive_border = "rgba(0,0,0,0)",
         },
         layout           = "dwindle",
@@ -100,8 +101,8 @@ hl.config({
             color         = "rgba(0,0,0,0.55)",
             color_inactive= "rgba(0,0,0,0)",
         },
-        inactive_opacity = 1.0,
-        active_opacity   = 1.0,
+        inactive_opacity = 0.9,
+        active_opacity   = 1,
         dim_inactive     = true,
         dim_strength     = 0.35,
     },
