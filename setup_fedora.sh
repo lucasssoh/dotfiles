@@ -140,4 +140,6 @@ echo "[INFO] Activation services..."
 sudo systemctl enable --now NetworkManager
 sudo systemctl enable --now bluetooth
 sudo systemctl enable --now dbus-broker
+
+sudo loginctl enable-linger "$USER"
 echo "[OK] Base système Fedora prête ✔"

@@ -1,0 +1,13 @@
+[Unit]
+Description=Bluetooth Audio Profile Auto-Switch
+After=pipewire.service wireplumber.service
+Wants=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=%h/.config/wireplumber/scripts/bt-audio-switch.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
