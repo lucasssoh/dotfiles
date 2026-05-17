@@ -38,7 +38,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("wl-paste --watch cliphist store")
     hl.exec_cmd("hyprcorners")
     hl.exec_cmd("~/.config/hypr/scripts/waybar-autohide.sh")
-    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-dashboard.sh")
 end)-- ============================================================
 -- INPUT
 -- ============================================================
