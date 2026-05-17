@@ -1,0 +1,1 @@
+/home/lucas/code/dotfiles/config/hyprland/scripts/wallpaper-slideshow.sh

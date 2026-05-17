@@ -1,0 +1,12 @@
+[Unit]
+Description=Wallpaper Slideshow (OLED burn-in protection)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/wallpaper-slideshow.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

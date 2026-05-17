@@ -1,0 +1,37 @@
+@import "share.rasi"
+
+window {
+    width:  400px;
+    height: 120px;
+}
+
+mainbox {
+    background-color: transparent;
+    spacing:          10px;
+    children:         [ listview ];
+}
+
+listview {
+    columns:          2;
+    lines:            1;
+    spacing:          10px;
+    background-color: transparent;
+}
+
+element {
+    padding:          16px;
+    background-color: transparent;
+    orientation:      horizontal;
+}
+
+element selected.normal {
+    background-color: @bg-alt;
+    border:           1px;
+    border-color:     @selected;
+}
+
+element-text {
+    horizontal-align: 0.5;
+    text-color:       @fg-alt;
+    background-color: transparent;
+}
