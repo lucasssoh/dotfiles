@@ -69,10 +69,10 @@ hl.config({
     general = {
         gaps_in          = 4,
         gaps_out         = 8,
-        border_size      = 1,
+        border_size      = 0,
         col = {
-            active_border   = colors.accent2,
-            inactive_border = colors.background,
+            active_border   = "rgba(0,0,0,0)",
+            inactive_border = "rgba(0,0,0,0)",
         },
         layout           = "dwindle",
         resize_on_border = true,
@@ -94,16 +94,16 @@ hl.config({
             ignore_opacity    = false,
         },
         shadow = {
-            enabled       = true, -- Change to true to activate
-            range         = 20,
-            render_power  = 3,
-            color         = "rgba(0,0,0,0.4)",
-            color_inactive= "rgba(0,0,0,0.2)",
+            enabled       = true,
+            range         = 24,
+            render_power  = 4,
+            color         = "rgba(0,0,0,0.55)",
+            color_inactive= "rgba(0,0,0,0)",
         },
         inactive_opacity = 1.0,
         active_opacity   = 1.0,
         dim_inactive     = true,
-        dim_strength     = 0.1,
+        dim_strength     = 0.35,
     },
 })
 

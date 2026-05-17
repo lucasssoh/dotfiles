@@ -1,50 +1,111 @@
 #!/usr/bin/env bash
-# rofi-power.sh — Power menu avec rofi (calqué sur common.rasi + theme.rasi)
 
-RASI="$HOME/.config/rofi/theme.rasi"
+set -euo pipefail
 
-# Options
-SHUTDOWN="󰐥  Éteindre"
-REBOOT="󰑓  Redémarrer"
-SUSPEND="󰤄  Veille"
-HIBERNATE="󰒲  Hibernation"
-LOCK="󰌾  Verrouiller"
-LOGOUT="󰍃  Déconnexion"
+RASI="$HOME/.config/rofi/power.rasi"
 
-CHOICE=$(printf "%s\n%s\n%s\n%s\n%s\n%s" \
-    "$LOCK" "$SUSPEND" "$HIBERNATE" "$LOGOUT" "$REBOOT" "$SHUTDOWN" \
-    | rofi -dmenu \
-           -p "⏻  Session" \
-           -theme "$RASI" \
-           -no-custom \
-           -i)
+# =========================================================
+# OPTIONS
+# =========================================================
+
+declare -A ACTIONS=(
+    ["󰌾"]="lock"
+    ["󰤄"]="suspend"
+    ["󰒲"]="hibernate"
+    ["󰍃"]="logout"
+    ["󰑓"]="reboot"
+    ["󰐥"]="shutdown"
+)
+
+OPTIONS=$(printf "%s\n" \
+    "󰌾" \
+    "󰤄" \
+    "󰒲" \
+    "󰍃" \
+    "󰑓" \
+    "󰐥")
+
+# =========================================================
+# MENU
+# =========================================================
+
+CHOICE=$(echo "$OPTIONS" | rofi -dmenu \
+    -theme "$RASI" \
+    -p "⏻" \
+    -no-custom \
+    -format s \
+    -i)
 
 [[ -z "$CHOICE" ]] && exit 0
 
-case "$CHOICE" in
-    "$SHUTDOWN")
-        systemctl poweroff
+ACTION="${ACTIONS[$CHOICE]}"
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+lock_screen() {
+    if command -v hyprlock >/dev/null 2>&1; then
+        hyprlock
+    elif command -v swaylock >/dev/null 2>&1; then
+        swaylock
+    else
+        notify-send "Lock" "Aucun locker trouvé"
+        return 1
+    fi
+}
+
+confirm() {
+    echo -e "Non\nOui" | rofi -dmenu \
+        -theme "$RASI" \
+        -p "$1" \
+        -no-custom \
+        -selected-row 0 \
+        | grep -qx "Oui"
+}
+
+# =========================================================
+# ACTIONS
+# =========================================================
+
+case "$ACTION" in
+
+    lock)
+        lock_screen
         ;;
-    "$REBOOT")
-        systemctl reboot
-        ;;
-    "$SUSPEND")
-        systemctl suspend
-        ;;
-    "$HIBERNATE")
-        systemctl hibernate
-        ;;
-    "$LOCK")
-        # Adapte selon ton locker : swaylock, hyprlock, etc.
-        if command -v hyprlock &>/dev/null; then
-            hyprlock
-        elif command -v swaylock &>/dev/null; then
-            swaylock
-        else
-            notify-send "Power" "Aucun locker trouvé (hyprlock/swaylock)"
+
+    suspend)
+        if confirm "Mettre en veille ?" ; then
+            lock_screen &
+            sleep 1
+            systemctl suspend
         fi
         ;;
-    "$LOGOUT")
-        hyprctl dispatch exit
+
+    hibernate)
+        if confirm "Hiberner ?" ; then
+            lock_screen &
+            sleep 1
+            systemctl hibernate
+        fi
         ;;
+
+    logout)
+        if confirm "Se déconnecter ?" ; then
+            loginctl terminate-user "$USER"
+        fi
+        ;;
+
+    reboot)
+        if confirm "Redémarrer ?" ; then
+            systemctl reboot
+        fi
+        ;;
+
+    shutdown)
+        if confirm "Éteindre ?" ; then
+            systemctl poweroff
+        fi
+        ;;
+
 esac

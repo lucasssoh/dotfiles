@@ -97,12 +97,12 @@
 
     // ── CPU ──────────────────────────────────────────────────────
     "cpu": {
-        "format": "cpu {usage:02}% {max_frequency:.2f}Ghz"
+        "format": "  cpu {usage:02}% - {max_frequency:.2f}Ghz"
     },
 
     // ── Temperature ──────────────────────────────────────────────
     "temperature": {
-        "format": "tmp {temperatureC}°"
+        "format": "󰔏 tmp {temperatureC}°"
     },
 
     // ── Fans ─────────────────────────────────────────────────────
@@ -113,26 +113,26 @@
 
     // ── Memory ───────────────────────────────────────────────────
     "memory": {
-        "format": "ram {percentage:02}%"
+        "format": "󰘚  ram {percentage:02}%"
     },
 
     // ── Network ──────────────────────────────────────────────────
     "network": {
         "interval": 5,
 
-        // :4 force une largeur de 4 caractères
-        // pour éviter que la barre bouge
-        "format-wifi": "󰤨 {bandwidthDownOctets:4}",
-        "format-ethernet": "󰈀 {bandwidthDownOctets:4}",
+        "format-wifi": "{icon}  {bandwidthDownOctets:4}",
+        "format-ethernet": "󰈀  {bandwidthDownOctets:4}",
 
         // Affichage fixe quand rien n'est connecté
-        "format-disconnected": "󰤭 ----o/s",
-        "format-disabled": "󰤭 ----o/s",
+        "format-disconnected": "󰤭  ----o/s",
+        "format-disabled": "󰤭  ----o/s",
 
-        "tooltip-format": "{essid}",
+        "tooltip-format": "{essid} ({signalStrength}%)",
         "on-click": "wezterm start --class nm-tui-float -- nmtui",
 
-        // Force une longueur minimale
+        "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+
+        // Force une longueur minimale pour éviter que la barre bouge
         "min-length": 10,
         "fixed-width": true
     },
@@ -142,7 +142,7 @@
         "format": "󰂯",
         "format-disabled": "󰂲",
         "format-connected": "󰂱",
-        "format-connected-battery": "󰂱 {device_battery_percentage}%",
+        "format-connected-battery": "󰂱  {device_battery_percentage}%",
 
         "tooltip-format": "{controller_alias}\t{controller_address}",
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
@@ -157,7 +157,7 @@
         "format-muted": "󰖁 ",
 
         "format-icons": {
-            "headphone": "󰋋",
+            "headphone": "󰋋 ",
             "default": ["󰕿", "󰖀", "󰕾"]
         },
 

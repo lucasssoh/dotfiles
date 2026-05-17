@@ -16,7 +16,7 @@
 ========================================================= */
 
 * {
-    font-family: "Iosevka Nerd Font", sans-serif;
+    font-family: "Comfortaa";
     font-size: 13px;
     border: none;
 }
@@ -39,6 +39,7 @@ window#waybar {
 #clock {
     background: @background;
     padding: 0 10px;
+    min-width: 40px;
 }
 
 /* ── Workspaces ────────────────────────────────────────── */
@@ -72,8 +73,6 @@ window#waybar {
         opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Aucune fenêtre active */
-
 window#waybar.empty #window {
     background: transparent;
     margin: 0;
@@ -84,8 +83,6 @@ window#waybar.empty #window {
 /* =========================================================
    CENTER MODULES
 ========================================================= */
-
-/* ── Media ─────────────────────────────────────────────── */
 
 #mpris {
     background: transparent;
@@ -117,39 +114,33 @@ window#waybar.empty #window {
    RIGHT MODULES
 ========================================================= */
 
-/* ── CPU ───────────────────────────────────────────────── */
-
 #cpu {
     background: @background;
     padding: 0 10px;
     padding-left: 12px;
     border-radius: 0 0 0 12px;
+    min-width: 165px;
 }
-
-/* ── Temperature ───────────────────────────────────────── */
 
 #temperature {
     background: @background;
-    padding: 0 10px;
+    padding: 0 0 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 85px;
 }
-
-/* ── Fan ───────────────────────────────────────────────── */
 
 #custom-fan {
     background: @background;
-    padding: 0 10px;
+    padding: 0 15px 0 0;
+    min-width: 85px;
 }
-
-/* ── Memory ────────────────────────────────────────────── */
 
 #memory {
     background: @background;
     padding: 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 105px;
 }
-
-/* ── Network ───────────────────────────────────────────── */
 
 #network {
     background: @background;
@@ -158,39 +149,35 @@ window#waybar.empty #window {
     min-width: 100px;
 }
 
-/* ── Bluetooth ─────────────────────────────────────────── */
-
 #bluetooth {
     background: @background;
     padding: 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 60px;
 }
 
-/* ── Audio Output ──────────────────────────────────────── */
-
-#pulseaudio {
+/* Corrigé pour correspondre à ton JSON (pulseaudio#output) */
+#pulseaudio.output {
     background: @background;
     padding: 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 60px;
 }
 
-/* ── Audio Input ───────────────────────────────────────── */
-
-#wireplumber {
+/* Corrigé pour correspondre à ton JSON (pulseaudio#input) */
+#pulseaudio.input {
     background: @background;
     padding: 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 60px;
 }
-
-/* ── Performance ───────────────────────────────────────── */
 
 #custom-performance {
     background: @background;
     padding: 0 10px;
     border-left: 1px solid @overlay;
+    min-width: 20px;
 }
-
-/* ── Battery ───────────────────────────────────────────── */
 
 #battery {
     background: @surface;
@@ -198,13 +185,13 @@ window#waybar.empty #window {
     margin: 3px 6px;
     padding: 0 8px;
     border-left: none;
+    min-width: 30px;
 }
-
-/* ── Power ─────────────────────────────────────────────── */
 
 #custom-power {
     background: @background;
     padding: 0 10px;
     padding-right: 12px;
     border-radius: 0 0 12px 0;
+    min-width: 5px;
 }

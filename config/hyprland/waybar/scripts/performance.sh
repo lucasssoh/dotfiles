@@ -1,8 +1,27 @@
 #!/bin/bash
-ARG=$(powerprofilesctl get)
-case $ARG in
-    performance) ICON="󰓅" ;;
-    balanced)    ICON="󰾅" ;;
-    power-saver) ICON="󰾆" ;;
+
+PROFILE=$(powerprofilesctl get)
+
+case "$PROFILE" in
+    performance)
+        ICON=""
+        LABEL="Performance"
+        ;;
+
+    balanced)
+        ICON="󰾅"
+        LABEL="Balanced"
+        ;;
+
+    power-saver)
+        ICON="󰌪"
+        LABEL="Power Saver"
+        ;;
+
+    *)
+        ICON="󰈐"
+        LABEL="Unknown"
+        ;;
 esac
-echo "{\"text\": \"$ICON\", \"tooltip\": \"Mode: $ARG\"}"
+
+echo "{\"text\": \"$ICON\", \"tooltip\": \"$LABEL\"}"
