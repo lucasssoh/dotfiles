@@ -152,12 +152,12 @@ hl.window_rule({
     match    = { class = "dashboard-fastfetch" },
     float    = true,
     pin      = true,
-    size     = "720 380",
-    move     = "1180 40",
+    size     = "720 440",
+    move     = "180 140",
     no_focus = true,
     no_blur  = true,
     no_anim  = false,
-    animation= "slide right",
+    animation= "slide left",
 })
 
 -- Dashboard clock (bas-gauche)
@@ -166,9 +166,9 @@ hl.window_rule({
     float    = true,
     pin      = true,
     size     = "500 200",
-    move     = "20 820",
+    move     = "1020 820",
     no_focus = true,
     no_blur  = true,
     no_anim  = false,
-    animation= "slide bottom",
+    animation= "slide right",
 })

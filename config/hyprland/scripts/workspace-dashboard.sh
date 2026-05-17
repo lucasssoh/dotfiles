@@ -56,5 +56,27 @@ socat UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
             echo "$CLASS" | grep -q "dashboard" && continue
             hide_dashboard
             ;;
-    esac
+        closewindow)
+            ADDR=$(echo "$DATA" | tr -d '[:space:]')
+            # Ignorer si c'est une fenêtre dashboard qui se ferme
+            IS_DASH=$(hyprctl clients -j 2>/dev/null | python3 -c "
+import json, sys
+clients = json.load(sys.stdin)
+for c in clients:
+    if c.get('address','').lstrip('0x') == '$ADDR':
+        print('dashboard' if 'dashboard' in c.get('class','') else 'other')
+        sys.exit()
+print('other')
+" 2>/dev/null)
+            [ "$IS_DASH" = "dashboard" ] && continue
+            sleep 0.3
+            WS=$(hyprctl activeworkspace -j | python3 -c "
+import json, sys
+print(json.load(sys.stdin)['id'])
+")
+            RESULT=$(is_workspace_empty "$WS")
+            if [ "$RESULT" = "empty" ]; then
+                launch_dashboard
+            fi
+            ;;    esac
 done
