@@ -1,1 +1,0 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/waybar-toggle.sh

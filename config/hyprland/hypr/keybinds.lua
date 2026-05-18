@@ -15,13 +15,14 @@ hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme 
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grimblast copy area"))
 hl.bind("+ Print",          hl.dsp.exec_cmd("grimblast copy screen"))
 hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("dex $HOME/.local/share/applications/set_wallpaper.desktop || gtk-launch set_wallpaper"))
-
+hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power.sh"))
+hl.bind(mod .. "+ Z", hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 -- ============================================================
 -- FENÊTRES
 -- ============================================================
 hl.bind(mod .. "+ Q",           hl.dsp.window.kill())
 hl.bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
-hl.bind(mod .. "+ SHIFT+ F",     hl.dsp.window.fullscreen({ mode = 1 }))
+hl.bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
 hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())
 --[[ hl.bind(mod .. "+ T",           hl.dsp.window.toggle_split()) ]]
 hl.bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))

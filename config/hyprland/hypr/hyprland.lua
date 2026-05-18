@@ -36,9 +36,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("awww-daemon")
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
-    hl.exec_cmd("hyprcorners")
-    hl.exec_cmd("~/.config/hypr/scripts/waybar-autohide.sh")
-end)-- ============================================================
+end)
+
+
+-- ============================================================
 -- INPUT
 -- ============================================================
 hl.config({
