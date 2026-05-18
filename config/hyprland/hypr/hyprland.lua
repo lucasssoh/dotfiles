@@ -28,16 +28,23 @@ local colors = require("colors")
 hl.on("hyprland.start", function()
     -- Environnement système (important pour Wayland/Portal)
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    
+    -- FORCE SYSTEMD À RECONNAÎTRE LA SESSION HYPRLAND
+    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    hl.exec_cmd("systemctl --user start graphical-session.target")
+    
     -- Services et Daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
---[[     hl.exec_cmd("waybar") ]]
+    hl.exec_cmd("waybar")
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
-    hl.exec_cmd("awww-daemon")
+    
+    -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
+    hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
+    
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
 end)
-
 
 -- ============================================================
 -- INPUT
@@ -71,9 +78,9 @@ hl.config({
     general = {
         gaps_in          = 4,
         gaps_out         = 8,
-        border_size      = 1,
+        border_size      = 2,
         col = {
-            active_border   = "rgba(0,0,0,1)",
+            active_border   = "rgba(144, 166, 220, 1)",
             inactive_border = "rgba(0,0,0,0)",
         },
         layout           = "dwindle",
@@ -96,7 +103,7 @@ hl.config({
             ignore_opacity    = false,
         },
         shadow = {
-            enabled       = true,
+            enabled       = false,
             range         = 24,
             render_power  = 4,
             color         = "rgba(0,0,0,0.55)",

@@ -1,6 +1,6 @@
 @import "common"
 
 listview {
-    columns: 3;
-    lines: 2;
+    columns: 1;
+    lines: 6;
 }

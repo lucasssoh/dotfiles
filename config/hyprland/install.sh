@@ -113,7 +113,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
         polkit xdg-user-dirs brightnessctl playerctl
         # Screenshots
-        grim slurp grimblast
+        satty grim slurp grimblast
         # Tools
         bc jq curl git lm_sensors unzip
         # Qt theming
@@ -143,7 +143,7 @@ elif [ "$DISTRO" = "arch" ]; then
         # System deps
         polkit-gnome xdg-user-dirs brightnessctl playerctl
         # Screenshots
-        grim slurp
+        satty grim slurp
         # Tools
         bc jq curl git lm_sensors unzip
         # Qt
@@ -162,7 +162,7 @@ elif [ "$DISTRO" = "debian" ]; then
         xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         polkit-gnome xdg-user-dirs
         brightnessctl playerctl
-        grim slurp
+        satty grim slurp
         papirus-icon-theme
         fonts-noto fonts-noto-color-emoji
         bc jq curl git lm-sensors unzip
@@ -184,6 +184,29 @@ ok "Pipewire running."
 if [ "$DISTRO" != "debian" ]; then
     sudo systemctl enable --now bluetooth 2>/dev/null || true
     ok "Bluetooth enabled."
+fi
+
+# 2. GESTION DES SERVICES PERSOS (Le chaînon manquant !)
+SYSTEMD_DST="$HOME/.config/systemd/user"
+mkdir -p "$SYSTEMD_DST"
+
+if [ -d "$REPO_DIR/systemd" ]; then
+    info "Linking and enabling custom systemd services..."
+    
+    # On boucle sur tous les fichiers .service présents dans le dossier systemd du repo
+    find "$REPO_DIR/systemd" -type f -name "*.service" | while read -r service_file; do
+        SERVICE_NAME=$(basename "$service_file")
+        
+        # On crée le lien symbolique dans ~/.config/systemd/user/
+        safe_link "$service_file" "$SYSTEMD_DST/$SERVICE_NAME"
+        
+        # On force la recharge de systemd et l'activation propre du service
+        systemctl --user daemon-reload
+        systemctl --user enable "$SERVICE_NAME"
+        ok "Service systemd activé : $SERVICE_NAME"
+    done
+else
+    warn "Dossier 'systemd' introuvable dans le dépôt. Passage."
 fi
 
 # ============================================================

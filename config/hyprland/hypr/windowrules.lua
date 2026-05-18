@@ -172,3 +172,15 @@ hl.window_rule({
     no_anim  = false,
     animation= "slide right",
 })
+
+-- ============================================================
+-- SCREENSHOT — Outil de retouche Satty
+-- ============================================================
+hl.window_rule({
+    match        = { class = "com.gabm.satty" },
+    float        = true,
+    size         = "1200 780",
+    center       = true,
+    stay_focused = true,
+    no_anim      = true,
+})

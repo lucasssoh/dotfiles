@@ -13,7 +13,7 @@ apply_wall() {
     awww img "$1" \
         --transition-type wipe \
         --transition-angle 30 \
-        --transition-fps 60 \
+        --transition-fps 45 \
         --transition-duration 1
 }
 
@@ -38,7 +38,7 @@ while true; do
 
         2)
             DURATION=$(rofi -dmenu \
-                -p "Durée (secondes)" \
+                -p "Duration" \
                 -name "wallpaper-duration" \
                 -no-show-icons \
                 -lines 0 \
@@ -61,7 +61,7 @@ while true; do
                     -theme "$RASI_THEME" \
                     -p "Slideshow" \
                     -name "wallpaper-picker" \
-                    -mesg "Shift+Entrée pour cocher · Entrée pour valider"
+                    -mesg "Shift+Enter to select· Enter to validate"
             )
             if [ -z "$CHOSEN" ] && [ $? -ne 0 ]; then
                 step=2

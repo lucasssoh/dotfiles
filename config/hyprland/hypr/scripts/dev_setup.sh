@@ -1,0 +1,1 @@
+/home/lucas/code/dotfiles/scripts/dev_setup.sh

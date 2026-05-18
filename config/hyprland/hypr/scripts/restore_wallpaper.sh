@@ -1,0 +1,1 @@
+/home/lucas/code/dotfiles/config/hyprland/scripts/restore_wallpaper.sh

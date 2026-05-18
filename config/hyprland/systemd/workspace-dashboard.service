@@ -11,4 +11,4 @@ RestartSec=3
 PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR HYPRLAND_INSTANCE_SIGNATURE DBUS_SESSION_BUS_ADDRESS
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target
