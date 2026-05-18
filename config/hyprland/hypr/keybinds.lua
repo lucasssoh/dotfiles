@@ -10,7 +10,7 @@ local mod = "SUPER"
 hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
 hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("thunar"))
 hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
-hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("$HOME/.config/waybar/scripts/rofi-launcher.sh"))
+hl.bind(mod .. "+ Space", hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grimblast copy area"))
 hl.bind("+ Print",          hl.dsp.exec_cmd("grimblast copy screen"))
