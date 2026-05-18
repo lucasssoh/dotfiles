@@ -157,7 +157,7 @@ hl.window_rule({
     no_focus = true,
     no_blur  = true,
     no_anim  = false,
-    animation= "slide left",
+    animation= "fade",
 })
 
 -- Dashboard clock (bas-gauche)
@@ -170,7 +170,7 @@ hl.window_rule({
     no_focus = true,
     no_blur  = true,
     no_anim  = false,
-    animation= "slide right",
+    animation= "fade",
 })
 
 -- ============================================================
