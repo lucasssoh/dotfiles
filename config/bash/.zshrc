@@ -137,3 +137,7 @@ command -v starship >/dev/null && eval "$(starship init zsh)"
 # =========================
 source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+# =========================
+# CCNOTE
+# =========================
+source ~/.config/ccnote/ccnote.zsh

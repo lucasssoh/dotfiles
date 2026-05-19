@@ -20,7 +20,20 @@ return {
         require("nvim-tree").setup({
             on_attach = my_on_attach,
             filesystem_watchers = { enable = true },
+            
+            -- =================================================================
+            -- CONFIGURATION REQUUISE POUR L'ISOLATION CCNOTE
+            -- =================================================================
+            sync_root_with_cwd = true, -- Aligne la racine de l'arbre sur le dossier du terminal
+            respect_buf_cwd = true,    -- Force nvim-tree à respecter le dossier de lancement
+            update_focused_file = {
+                enable = true,
+                update_root = true,    -- Change la racine si tu navigues ailleurs
+            },
+            -- =================================================================
+
             renderer = {
+                root_folder_label = false,
                 icons = {
                     show = {
                         git = true,
