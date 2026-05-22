@@ -93,7 +93,7 @@
         "player-icons": {
             "spotify": "󰓇",
             "firefox": "󰗃",
-            "mpv": "󰎁",
+            "mpv*": "󰎁",
             "default": "󰎈"
         },
         "max-length": 60

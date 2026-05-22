@@ -1,8 +1,9 @@
 return {
     "nvim-lualine/lualine.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
+
     config = function()
-        -- Fonction pour récupérer uniquement le nom du dossier courant (ex: "cm-deeplearning")
+        -- Nom du dossier courant
         local function get_current_folder()
             local cwd = vim.fn.getcwd()
             return "  " .. vim.fn.fnamemodify(cwd, ":t")
@@ -12,34 +13,66 @@ return {
             options = {
                 theme = "auto",
                 globalstatus = true,
-                component_separators = { left = '', right = ''},
-                section_separators = { left = '', right = ''},
+
+                -- Séparateurs internes arrondis
+                component_separators = {
+                    left = "",
+                    right = "",
+                },
+
+                -- Bordures uniquement vers l’intérieur
+                section_separators = {
+                    left = "",
+                    right = "",
+                },
             },
+
             sections = {
-                -- Le Mode (NORMAL, INSERT, etc.) reste tout à gauche
-                lualine_a = { "mode" },
-                
-                -- =================================================================
-                -- BLOC GAUCHE : DOSSIER ACTUEL PUIS BRANCHES & INFOS GIT
-                -- =================================================================
+                lualine_a = {
+                    {
+                        "mode",
+                        separator = { right = "" },
+                    }
+                },
+
                 lualine_b = {
                     {
                         get_current_folder,
-                        color = "WarningMsg", -- S'adapte dynamiquement à ton thème
+                        color = "WarningMsg",
                     },
-                    "branch",
-                    "diff",
-                    "diagnostics"
-                },
-                
-                -- Centre vide pour un visuel épuré
-                lualine_c = {},
-                -- =================================================================
 
-                lualine_x = { "encoding", "fileformat", "filetype" },
-                lualine_y = { "progress" },
-                lualine_z = { "location" },
+                    {
+                        "branch",
+                        separator = { right = "" },
+                    },
+
+                    "diff",
+                    "diagnostics",
+                },
+
+                lualine_c = {},
+
+                lualine_x = {
+                    "encoding",
+                    "fileformat",
+                    "filetype",
+                },
+
+                lualine_y = {
+                    {
+                        "progress",
+                        separator = { left = "" },
+                    }
+                },
+
+                lualine_z = {
+                    {
+                        "location",
+                        separator = { left = "" },
+                    }
+                },
             },
         })
     end,
 }
+

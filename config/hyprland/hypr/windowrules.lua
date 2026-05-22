@@ -184,3 +184,13 @@ hl.window_rule({
     stay_focused = true,
     no_anim      = true,
 })
+
+-- -- ============================================================
+-- -- MPV — lecteur vidéo flottant
+-- -- ============================================================
+-- hl.window_rule({
+--     match  = { class = "mpv" },
+--     float  = true,
+--     size   = "1280 720",
+--     center = true,
+-- })

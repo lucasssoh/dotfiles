@@ -1,0 +1,1 @@
+/home/lucas/code/dotfiles/config/hyprland/scripts/pip-daemon.sh
