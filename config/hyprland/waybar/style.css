@@ -35,9 +35,9 @@ window#waybar {
 ========================================================= */
 /* --- Waybar lock -------------------------------------- */
 
-#custom-waybar-lock {
+#custom-logo{
     background-color: @background;
-    padding: 0 10px;
+    padding: 0 0 0 10px;
 }
 
 /* ── Clock ─────────────────────────────────────────────── */
