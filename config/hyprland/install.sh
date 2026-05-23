@@ -95,7 +95,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # Hyprland ecosystem
         dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
-        waybar dunst rofi-wayland khal 
+        waybar dunst rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -125,7 +125,7 @@ elif [ "$DISTRO" = "arch" ]; then
         # Hyprland ecosystem
         dbus hyprland hyprlock hyprpaper hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
-        waybar dunst rofi-wayland khal
+        waybar dunst rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -154,7 +154,7 @@ elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
     PKGS=(
         dbus dbus-x11 hyprland hyprpaper
-        waybar dunst rofi khal
+        waybar dunst rofi khal hyprsunset
         pipewire pipewire-pulse wireplumber pavucontrol
         network-manager network-manager-gnome
         blueman
@@ -401,7 +401,7 @@ echo "    Super + W         ->Wallpapers"
 echo "    Super + Space     → App launcher (Rofi)"
 echo "    Super + E         → Thunar"
 echo "    Super + B         → Firefox"
-echo "    Super + L         → Lock screen"
+echo "    Super + Esc         → Lock screen"
 echo "    Super + Q         → Close window"
 echo "    Super + Shift + M → Exit Hyprland"
 echo "    Super + Shift + R → Reload config"
