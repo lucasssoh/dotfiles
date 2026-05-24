@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
+
 WALL_DIR="$HOME/Images/Wallpapers"
+CACHE_DIR="$HOME/.cache/filtered_wallpapers"
 PLAYLIST_FILE="$HOME/.config/hypr/wallpaper-playlist.json"
 
 if ! pidof awww-daemon >/dev/null; then
@@ -34,6 +36,12 @@ with open('$PLAYLIST_FILE') as f:
     d = json.load(f)
 print(d.get('duration', 120))
 ")
+    SOURCE=$(python3 -c "
+import json, os
+with open('$PLAYLIST_FILE') as f:
+    d = json.load(f)
+print(d.get('source', os.path.expanduser('$WALL_DIR')))
+")
     mapfile -t walls < <(python3 -c "
 import json
 with open('$PLAYLIST_FILE') as f:
@@ -43,6 +51,7 @@ for w in d['walls']:
 ")
 else
     DURATION=120
+    SOURCE="$WALL_DIR"
     mapfile -t walls < <(find "$WALL_DIR" -maxdepth 1 \
         -iregex '.*\.\(jpg\|jpeg\|png\|webp\)' -printf '%f\n')
 fi
@@ -52,7 +61,7 @@ fi
 while true; do
     mapfile -t shuffled < <(shuffle "${walls[@]}")
     for img in "${shuffled[@]}"; do
-        apply_wall "$WALL_DIR/$img"
+        apply_wall "$SOURCE/$img"
         sleep "$DURATION"
     done
 done

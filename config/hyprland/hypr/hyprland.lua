@@ -41,7 +41,7 @@ hl.on("hyprland.start", function()
     
     -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
-    
+    hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
 end)

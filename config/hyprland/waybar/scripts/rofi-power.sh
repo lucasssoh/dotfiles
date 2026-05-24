@@ -2,7 +2,10 @@
 
 set -euo pipefail
 
+# Path to the main menu theme
 RASI="$HOME/.config/rofi/power.rasi"
+# Path to the confirmation menu theme
+RASI_CONFIRM="$HOME/.config/rofi/confirm.rasi"
 
 # =========================================================
 # OPTIONS
@@ -50,18 +53,18 @@ lock_screen() {
     elif command -v swaylock >/dev/null 2>&1; then
         swaylock
     else
-        notify-send "Lock" "Aucun locker trouvé"
+        notify-send "Lock" "No locker found"
         return 1
     fi
 }
 
 confirm() {
-    echo -e "Non\nOui" | rofi -dmenu \
-        -theme "$RASI" \
+    echo -e "No\nGo ahead" | rofi -dmenu \
+        -theme "$RASI_CONFIRM" \
         -p "$1" \
         -no-custom \
         -selected-row 0 \
-        | grep -qx "Oui"
+        | grep -qx "Go ahead"
 }
 
 # =========================================================
@@ -75,7 +78,7 @@ case "$ACTION" in
         ;;
 
     suspend)
-        if confirm "Mettre en veille ?" ; then
+        if confirm "Suspend system?" ; then
             lock_screen &
             sleep 1
             systemctl suspend
@@ -83,7 +86,7 @@ case "$ACTION" in
         ;;
 
     hibernate)
-        if confirm "Hiberner ?" ; then
+        if confirm "Hibernate system?" ; then
             lock_screen &
             sleep 1
             systemctl hibernate
@@ -91,19 +94,19 @@ case "$ACTION" in
         ;;
 
     logout)
-        if confirm "Se déconnecter ?" ; then
+        if confirm "Log out?" ; then
             loginctl terminate-user "$USER"
         fi
         ;;
 
     reboot)
-        if confirm "Redémarrer ?" ; then
+        if confirm "Reboot system?" ; then
             systemctl reboot
         fi
         ;;
 
     shutdown)
-        if confirm "Éteindre ?" ; then
+        if confirm "Power off?" ; then
             systemctl poweroff
         fi
         ;;

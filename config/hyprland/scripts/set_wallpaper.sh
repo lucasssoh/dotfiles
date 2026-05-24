@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 WALL_DIR="$HOME/Images/Wallpapers"
+CACHE_DIR="$HOME/.cache/filtered_wallpapers"
 RASI_THEME="$HOME/.config/rofi/wallpaper.rasi"
 RASI_MODE="$HOME/.config/rofi/wallpaper-mode.rasi"
 PLAYLIST_FILE="$HOME/.config/hypr/wallpaper-playlist.json"
@@ -19,6 +20,7 @@ apply_wall() {
 
 step=1
 MODE=""
+FILTER=""
 DURATION=""
 CHOSEN=""
 
@@ -33,46 +35,58 @@ while true; do
                 -no-custom \
                 -lines 2)
             [ -z "$MODE" ] && exit 0
-            [ "$MODE" = "Dynamic" ] && step=2 || step=10
+            [ "$MODE" = "Dynamic" ] && step=2 || step=20
             ;;
 
+        # ── DYNAMIC ──────────────────────────────────────────────
         2)
+            FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
+                -theme "$RASI_MODE" \
+                -p "" \
+                -name "wallpaper-picker" \
+                -no-show-icons \
+                -no-custom \
+                -lines 2)
+            [ -z "$FILTER" ] && step=1 && continue
+            step=3
+            ;;
+
+        3)
             DURATION=$(rofi -dmenu \
-                -p "Duration" \
+                -p "Duration (seconds)" \
                 -name "wallpaper-duration" \
                 -no-show-icons \
                 -lines 0 \
                 -theme-str 'window { width: 400px; height: 60px; } mainbox { children: [ inputbar ]; }' \
                 < /dev/null)
-            if [ -z "$DURATION" ]; then
-                step=1
-                continue
-            fi
+            [ -z "$DURATION" ] && step=2 && continue
             [[ "$DURATION" =~ ^[0-9]+$ ]] || DURATION=120
-            step=3
+            step=4
             ;;
 
-        3)
+        4)
+            SRC_DIR="$WALL_DIR"
+            [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
+
             CHOSEN=$(
-                for img in "$WALL_DIR"/*; do
+                for img in "$SRC_DIR"/*; do
                     [[ "$img" =~ \.(jpg|jpeg|png|webp|PNG|JPG)$ ]] || continue
                     printf "%s\0icon\x1f%s\n" "$(basename "$img")" "$img"
                 done | rofi -dmenu -i -multi-select \
                     -theme "$RASI_THEME" \
                     -p "Slideshow" \
                     -name "wallpaper-picker" \
-                    -mesg "Shift+Enter to select· Enter to validate"
+                    -mesg "Shift+Enter to select · Enter to validate"
             )
-            if [ -z "$CHOSEN" ] && [ $? -ne 0 ]; then
-                step=2
-                continue
-            fi
-            step=4
+            [ -z "$CHOSEN" ] && [ $? -ne 0 ] && step=3 && continue
+            step=5
             ;;
 
-        4)
+        5)
             if [ -z "$CHOSEN" ]; then
-                mapfile -t walls < <(find "$WALL_DIR" -maxdepth 1 \
+                SRC_DIR="$WALL_DIR"
+                [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
+                mapfile -t walls < <(find "$SRC_DIR" -maxdepth 1 \
                     -iregex '.*\.\(jpg\|jpeg\|png\|webp\)' -printf '%f\n')
             else
                 mapfile -t walls <<< "$CHOSEN"
@@ -81,18 +95,35 @@ while true; do
             python3 -c "
 import json, sys
 duration = int(sys.argv[1])
-walls = [w for w in sys.argv[2:] if w]
+source = sys.argv[2]
+walls = [w for w in sys.argv[3:] if w]
 with open('$PLAYLIST_FILE', 'w') as f:
-    json.dump({'mode': 'dynamic', 'duration': duration, 'walls': walls}, f)
-" "$DURATION" "${walls[@]}"
+    json.dump({'mode': 'dynamic', 'duration': duration, 'source': source, 'walls': walls}, f)
+" "$DURATION" "$SRC_DIR" "${walls[@]}"
 
             systemctl --user restart wallpaper-slideshow.service
             exit 0
             ;;
 
-        10)
+        # ── STATIC ───────────────────────────────────────────────
+        20)
+            FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
+                -theme "$RASI_MODE" \
+                -p "" \
+                -name "wallpaper-picker" \
+                -no-show-icons \
+                -no-custom \
+                -lines 2)
+            [ -z "$FILTER" ] && step=1 && continue
+            step=21
+            ;;
+
+        21)
+            SRC_DIR="$WALL_DIR"
+            [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
+
             SELECTED=$(
-                for img in "$WALL_DIR"/*; do
+                for img in "$SRC_DIR"/*; do
                     [[ "$img" =~ \.(jpg|jpeg|png|webp|PNG|JPG)$ ]] || continue
                     printf "%s\0icon\x1f%s\n" "$(basename "$img")" "$img"
                 done | rofi -dmenu -i \
@@ -100,10 +131,7 @@ with open('$PLAYLIST_FILE', 'w') as f:
                     -p "Wallpaper" \
                     -name "wallpaper-picker"
             )
-            if [ -z "$SELECTED" ]; then
-                step=1
-                continue
-            fi
+            [ -z "$SELECTED" ] && step=20 && continue
 
             systemctl --user stop wallpaper-slideshow.service
             python3 -c "
@@ -111,7 +139,7 @@ import json
 with open('$PLAYLIST_FILE', 'w') as f:
     json.dump({'mode': 'static', 'walls': ['$SELECTED']}, f)
 "
-            apply_wall "$WALL_DIR/$SELECTED"
+            apply_wall "$SRC_DIR/$SELECTED"
             exit 0
             ;;
     esac

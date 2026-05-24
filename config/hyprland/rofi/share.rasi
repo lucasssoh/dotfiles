@@ -6,21 +6,22 @@
   padding: 0;
   spacing: 0;
 
-  /* --- Palette Nightfox --- */
-  bg:      #131a24;    /* Background (cdark) */
-  bg-alt:  #1f2d3d;    /* Selection/Input (sel0) */
+  /* --- Nouvelle Palette Système --- */
+  bg:      #1c1c1e;    /* background  -> Fond principal */
+  bg-alt:  #2c2c2e;    /* surface     -> Remplissage des éléments/inputs */
   
-  fg:      #719cd6;    /* Unselected text (blue) */
-  fg-alt:  #cdcecf;    /* Focused text (fg) */
+  fg:      #8e8e93;    /* subtle      -> Texte non sélectionné */
+  fg-alt:  #e5e5ea;    /* text        -> Texte focalisé / Principal */
 
-  urgent:  #c94f6d;    /* Errors/Urgent (red) */
-  active:  #81b29a;    /* Active states (green) */
+  urgent:  #ff453a;    /* urgent      -> Erreurs/Urgent (Rouge) */
+  active:  #6b9fff;    /* accent      -> États actifs / Sélection (Bleu) */
 
   /* --- Variables Agnostiques --- */
   selected:         @fg-alt;
   background-color: @bg;
   text-color:       @fg;
 }
+
 configuration {
   font: "Iosevka Nerd Font 12";
   terminal: "wezterm";
