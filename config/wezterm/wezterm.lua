@@ -41,7 +41,7 @@ config.inactive_pane_hsb = {
 -- =========================
 config.colors = {
   foreground = "#f8f8f2",
-  background = "#111011",
+  background = "#000b12",
   cursor_bg = "#ffffff",
   selection_fg = "#f8f8f2",
   selection_bg = "#484e54",
@@ -56,7 +56,7 @@ config.colors = {
     "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
   },
   tab_bar = {
-    background = "rgba(17, 16, 17, 0.75)",
+    background = "rgba(0, 3, 4, 0.87)",
     active_tab = {
       bg_color = "rgba(17, 16, 17, 0.92)",
       fg_color = "#f8f8f2",
