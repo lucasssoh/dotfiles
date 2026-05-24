@@ -1,0 +1,14 @@
+[Unit]
+Description=Pause wallpaper slideshow on fullscreen
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sleep 3
+ExecStart=%h/.config/hypr/scripts/slideshow-fullscreen-guard.sh
+Restart=on-failure
+RestartSec=3
+PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR
+
+[Install]
+WantedBy=graphical-session.target
