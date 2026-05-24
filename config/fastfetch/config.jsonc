@@ -26,6 +26,11 @@
     },
     "modules": [
         {
+            "type": "colors",
+            "paddingLeft": 16,
+            "symbol": "circle"
+        },
+        {
             "type": "custom", // HardwareStart
             // {#1} is equivalent to `\u001b[1m`. {#} is equivalent to `\u001b[m`
             "format": "{#90}┌{$1} Hardware {$1}{$1}┐{#}"
@@ -83,26 +88,6 @@
             "keyColor": "32"
         },
         {
-            "key": "Theme",
-            "type": "theme",
-            "keyColor": "92"
-        },
-        {
-            "key": "Icons",
-            "type": "icons",
-            "keyColor": "36"
-        },
-        {
-            "key": "Font",
-            "type": "font",
-            "keyColor": "96"
-        },
-        {
-            "key": "Font",
-            "type": "terminalfont",
-            "keyColor": "34"
-        },
-        {
             "key": "Terminal",
             "type": "terminal",
             "keyColor": "94"
@@ -110,6 +95,11 @@
                 {
             "type": "custom", // InformationEnd
             "format": "{#90}└{$1}────────────────────────{$1}┘{#}"
+        },
+        {
+            "type": "colors",
+            "paddingLeft": 16,
+            "symbol": "circle"
         }
     ]
 }
