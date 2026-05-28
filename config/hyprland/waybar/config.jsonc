@@ -17,7 +17,6 @@
 
     "modules-left": [
         "custom/logo",
-        "clock",
         "hyprland/workspaces",
         "hyprland/window"
     ],
@@ -35,6 +34,7 @@
         "bluetooth",
         "pulseaudio#output",
         "pulseaudio#input",
+        "clock",
         "custom/performance",
         "battery",
         "custom/power"
@@ -49,11 +49,8 @@
         "format": "",
         "tooltip": false
     },
-    // ── Clock ────────────────────────────────────────────────────
-    "clock": {
-        "format": "{:%H:%M}",
-        "tooltip-format":"{:%d-%m-%y}"
-    },
+    
+
 
     // ── Workspaces ───────────────────────────────────────────────
     "hyprland/workspaces": {
@@ -186,6 +183,11 @@
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-",
 
         "scroll-step": 5
+    },
+
+    // ── Clock ────────────────────────────────────────────────────
+    "clock": {
+        "format": "{:%H:%M - %d/%m/%y}"
     },
 
     // ── Performance Profile ──────────────────────────────────────

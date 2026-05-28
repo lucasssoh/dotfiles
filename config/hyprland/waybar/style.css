@@ -37,16 +37,10 @@ window#waybar {
 
 #custom-logo{
     background-color: @background;
-    padding: 0 0 0 10px;
+    padding: 0 10px 0 10px;
 }
 
-/* ── Clock ─────────────────────────────────────────────── */
 
-#clock {
-    background: @background;
-    padding: 0 10px;
-    min-width: 40px;
-}
 
 /* ── Workspaces ────────────────────────────────────────── */
 
@@ -176,6 +170,15 @@ window#waybar.empty #window {
     padding: 0 10px;
     border-left: 1px solid @overlay;
     min-width: 60px;
+}
+
+/* ── Clock ─────────────────────────────────────────────── */
+
+#clock {
+    background: @background;
+    padding: 0 10px;
+    border-left: 1px solid @overlay;
+    min-width: 40px;
 }
 
 #custom-performance {
