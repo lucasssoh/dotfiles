@@ -16,7 +16,7 @@
 ========================================================= */
 
 * {
-    font-family: "Comfortaa";
+    font-family: "Iosevka NFP SemiBold";
     font-size: 13px;
     border: none;
 }
@@ -38,6 +38,7 @@ window#waybar {
 #custom-logo{
     background-color: @background;
     padding: 0 10px 0 10px;
+    border-radius: 8px 0 0 8px;
 }
 
 
@@ -47,7 +48,7 @@ window#waybar {
 #workspaces {
     background: @background;
     padding-right: 12px;
-    border-radius: 0 0 12px 0;
+    border-radius: 0 8px 8px 0;
 }
 
 #workspaces button {
@@ -63,9 +64,9 @@ window#waybar {
 
 #window {
     background-color: @background;
-    margin: 0 30px;
+    margin: 0 8px;
     padding: 0 15px;
-    border-radius: 0 0 12px 12px;
+    border-radius: 8px;
     opacity: 0.9;
     min-width: 0;
 
@@ -90,7 +91,7 @@ window#waybar.empty #window {
     margin: 0 12px;
     opacity: 0.8;
     padding: 0 12px;
-    border-radius: 0 0 12px 12px;
+    border-radius: 8px;
     min-width: 0;
 
     transition: all 0.2s ease;
@@ -113,12 +114,20 @@ window#waybar.empty #window {
 /* =========================================================
    RIGHT MODULES
 ========================================================= */
+/* ── Clock ─────────────────────────────────────────────── */
+
+#clock {
+    background: @background;
+    padding: 0 10px;
+    border-radius: 8px 0 0 8px;
+    min-width: 140px;
+}
 
 #cpu {
     background: @background;
     padding: 0 10px;
     padding-left: 12px;
-    border-radius: 0 0 0 12px;
+    border-left: 1px solid @overlay;
     min-width: 165px;
 }
 
@@ -172,14 +181,7 @@ window#waybar.empty #window {
     min-width: 60px;
 }
 
-/* ── Clock ─────────────────────────────────────────────── */
 
-#clock {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 40px;
-}
 
 #custom-performance {
     background: @background;
@@ -201,6 +203,6 @@ window#waybar.empty #window {
     background: @background;
     padding: 0 10px;
     padding-right: 12px;
-    border-radius: 0 0 12px 0;
+    border-radius: 0 8px 8px 0;
     min-width: 5px;
 }
