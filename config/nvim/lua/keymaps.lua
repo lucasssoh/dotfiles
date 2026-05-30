@@ -59,3 +59,11 @@ key.set("n", "<leader>Q", function()
     vim.cmd("bd")
 end, { desc = "Smart quit buffer" })
 
+-- ============================================================
+-- SOURIS : Bloquer le glissé en mode Normal pour éviter le mode Visuel
+-- ============================================================
+key.set("n", "<LeftDrag>", "<Nop>", { silent = true })
+key.set("n", "<2-LeftDrag>", "<Nop>", { silent = true })
+key.set("n", "<3-LeftDrag>", "<Nop>", { silent = true })
+key.set("n", "<4-LeftDrag>", "<Nop>", { silent = true })
+

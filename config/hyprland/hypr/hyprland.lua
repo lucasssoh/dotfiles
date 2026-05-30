@@ -80,8 +80,16 @@ hl.config({
         gaps_out         = 8,
         border_size      = 2,
         col = {
-            active_border   = "rgba(150, 150, 150, 1)",
-            inactive_border = "rgba(0,0,0,0)",
+            active_border = {
+                colors = {
+                    "rgba(89DCEBFF)",
+                    "rgba(FFFFFFFF)",
+                    "rgba(89DCEBFF)",
+                },
+                angle = 45,
+            },
+            inactive_border = "rgba(595959aa)",
+
         },
         layout           = "dwindle",
         resize_on_border = true,
@@ -93,7 +101,7 @@ hl.config({
 -- ============================================================
 hl.config({
     decoration = {
-        rounding = 8,
+        rounding = 4,
         blur = {
             enabled           = false,
             size              = 6,

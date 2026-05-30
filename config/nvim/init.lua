@@ -10,7 +10,7 @@ vim.g.mapleader = " "
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.termguicolors = true
-vim.opt.mouse = "a"
+vim.opt.mouse = "n"
 vim.opt.paste = false
 vim.opt.cursorline = true
 
