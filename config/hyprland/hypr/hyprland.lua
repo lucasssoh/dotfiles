@@ -38,6 +38,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
+    hl.exec_cmd("/usr/bin/kdeconnectd")
     
     -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
@@ -83,7 +84,7 @@ hl.config({
             active_border = {
                 colors = {
                     "rgba(89DCEBFF)",
-                    "rgba(FFFFFFFF)",
+                    "rgba(336699FF)",
                     "rgba(89DCEBFF)",
                 },
                 angle = 45,
@@ -117,7 +118,7 @@ hl.config({
             color         = "rgba(0,0,0,0.55)",
             color_inactive= "rgba(0,0,0,0)",
         },
-        inactive_opacity = 0.9,
+        inactive_opacity = 0.98,
         active_opacity   = 1,
         dim_inactive     = true,
         dim_strength     = 0.35,

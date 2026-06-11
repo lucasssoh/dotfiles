@@ -18,6 +18,7 @@
     "modules-left": [
         "custom/logo",
         "hyprland/workspaces",
+        "custom/gap",
         "hyprland/window"
     ],
 
@@ -26,6 +27,7 @@
     ],
 
     "modules-right": [
+        "custom/apps",
         "clock",
         "cpu",
         "temperature",
@@ -62,6 +64,11 @@
         }
     },
 
+    // --- Gap -----------------------------------------------------
+    "custom/gap": {
+        "format": " " // <-- Modifié ici (vide pour être invisible, sert uniquement de bordure droite)
+    },
+
     // ── Active Window ────────────────────────────────────────────
     "hyprland/window": {
         "format": "<span foreground='#4fefff'>{initialTitle}</span> <span foreground='#48484a'>·</span> <span foreground='#f2f2f7'>{title}</span>",
@@ -92,6 +99,13 @@
     // ============================================================
     // RIGHT MODULES
     // ============================================================
+
+    // ── Running Apps ─────────────────────────────────────────────
+    "custom/apps": {
+        "exec": "~/.config/waybar/scripts/apps.sh",
+        "interval": 5,
+        "tooltip": false
+    },
 
     // ── Clock ────────────────────────────────────────────────────
     "clock": {

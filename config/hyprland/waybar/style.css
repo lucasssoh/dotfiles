@@ -5,6 +5,7 @@
 @define-color background  #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
+@define-color overlay2    #505050; /* Nouvelle couleur vive bleu clair/blanc */
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
 @define-color accent2     #4fefff;
@@ -12,11 +13,11 @@
 @define-color play        #116611;
 
 /* =========================================================
-   GLOBAL
+   GLOBAL & FACTORISATION DES STYLES
 ========================================================= */
 
 * {
-    font-family: "Iosevka NFP SemiBold";
+    font-family: "JetBrains Mono";
     font-size: 13px;
     border: none;
 }
@@ -30,25 +31,58 @@ window#waybar {
     padding: 0;
 }
 
-/* =========================================================
-   LEFT MODULES
-========================================================= */
-/* --- Waybar lock -------------------------------------- */
+/* --- Couleur de fond globale pour tous les modules actifs --- */
+#custom-logo, #workspaces, #custom-gap, #window,
+#clock, #cpu, #temperature, #custom-fan, #memory, #network, 
+#bluetooth, #pulseaudio.output, #pulseaudio.input, 
+#custom-performance, #battery, #custom-power, #mpris.paused, #mpris.playing {
+    background: @background;
+}
 
-#custom-logo{
-    background-color: @background;
-    padding: 0 10px 0 10px;
+/* --- Uniquement les bordures Haut & Bas (2px @overlay2) --- */
+#custom-logo, #workspaces, #custom-gap,
+#clock, #cpu, #temperature, #custom-fan, #memory, #network, 
+#bluetooth, #pulseaudio.output, #pulseaudio.input, 
+#custom-performance, #battery, #custom-power {
+    border-top: 2px solid @overlay2;
+    border-bottom: 2px solid @overlay2;
+}
+
+/* --- Bordures Haut & Bas pour Window et Mpris (@overlay) --- */
+#window, #mpris, #custom-apps {
+    border-top: 2px solid @overlay;
+    border-bottom: 2px solid @overlay;
+}
+
+/* --- FACTORISATION DES ARRONDIS (Border-Radius) --- */
+/* Extrémités gauches des blocs (Coins Gauches) */
+#custom-logo, #clock {
     border-radius: 4px 0 0 4px;
 }
 
+/* Extrémités droites des blocs (Coins Droits) */
+#custom-gap, #custom-power {
+    border-radius: 0 4px 4px 0;
+}
 
+/* Blocs indépendants (Tous les coins arrondis) */
+#window, #mpris {
+    border-radius: 4px;
+}
+
+
+/* =========================================================
+   LEFT MODULES
+========================================================= */
+
+#custom-logo {
+    padding: 0 10px 0 10px;
+}
 
 /* ── Workspaces ────────────────────────────────────────── */
 
 #workspaces {
-    background: @background;
-    padding-right: 12px;
-    border-radius: 0 4px 4px 0;
+    padding-right: 4px;
 }
 
 #workspaces button {
@@ -60,18 +94,18 @@ window#waybar {
     color: @text;
 }
 
+#custom-gap {
+    padding-right: 1px;
+}
+
 /* ── Active Window ─────────────────────────────────────── */
 
 #window {
-    background-color: @background;
     margin: 0 4px;
     padding: 0 15px;
-    border-radius: 4px;
     opacity: 0.9;
-    min-width: 0;
-
-    transition:
-        opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 100px;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 window#waybar.empty #window {
@@ -81,128 +115,64 @@ window#waybar.empty #window {
     border: none;
 }
 
+
 /* =========================================================
    CENTER MODULES
 ========================================================= */
 
 #mpris {
-    background: transparent;
+    background: transparent; /* Fond invisible par défaut si pas de musique */
     color: @play;
     margin: 0 12px;
     opacity: 0.8;
     padding: 0 12px;
-    border-radius: 4px;
     min-width: 0;
-
     transition: all 0.2s ease;
 }
 
-#mpris.paused {
-    background: @background;
-    border: none;
-    color: @muted;
-    opacity: 0.6;
+#mpris.paused, #mpris.playing {
     min-width: 220px;
 }
 
-#mpris.playing {
-    background: @background;
-    color: @play;
-    min-width: 220px;
-}
+#mpris.paused { color: @muted; opacity: 0.6; }
+#mpris.playing { color: @play; }
+
 
 /* =========================================================
    RIGHT MODULES
 ========================================================= */
-/* ── Clock ─────────────────────────────────────────────── */
 
-#clock {
-    background: @background;
-    padding: 0 10px;
-    border-radius: 4px 0 0 4px;
-    min-width: 140px;
-}
-
-#cpu {
-    background: @background;
-    padding: 0 10px;
-    padding-left: 12px;
-    border-left: 1px solid @overlay;
-    min-width: 165px;
-}
-
-#temperature {
-    background: @background;
-    padding: 0 0 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 85px;
-}
-
-#custom-fan {
-    background: @background;
-    padding: 0 15px 0 0;
-    min-width: 85px;
-}
-
-#memory {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 105px;
-}
-
-#network {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 100px;
-}
-
-#bluetooth {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 60px;
-}
-
-/* Corrigé pour correspondre à ton JSON (pulseaudio#output) */
-#pulseaudio.output {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 60px;
-}
-
-/* Corrigé pour correspondre à ton JSON (pulseaudio#input) */
-#pulseaudio.input {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 60px;
-}
-
-
-
-#custom-performance {
-    background: @background;
-    padding: 0 10px;
-    border-left: 1px solid @overlay;
-    min-width: 20px;
-}
+#custom-apps { padding: 0 10px; min-width: 20px; }
+#clock { padding: 0 10px; min-width: 140px; }
+#cpu { padding: 0 10px 0 12px; min-width: 165px; }
+#temperature { padding: 0 0 0 10px; min-width: 85px; }
+#custom-fan { padding: 0 15px 0 0; min-width: 85px; }
+#memory { padding: 0 10px; min-width: 105px; }
+#network { padding: 0 10px; min-width: 100px; }
+#bluetooth { padding: 0 10px; min-width: 60px; }
+#pulseaudio.output { padding: 0 10px; min-width: 60px; }
+#pulseaudio.input { padding: 0 10px; min-width: 60px; }
+#custom-performance { padding: 0 10px; min-width: 20px; }
 
 #battery {
-    background: @surface;
-    border-radius: 6px;
+    border-radius: 6px; /* Devient une pilule stylisée incrustée dans la ligne */
     margin: 3px 6px;
     padding: 0 4px;
-    border-left: none;
     min-width: 30px;
 }
 
 #custom-power {
-    background: @background;
-    padding: 0 10px;
-    padding-right: 12px;
-    border-radius: 0 4px 4px 0;
+    color: rgb(255, 110, 110);
+    padding: 0 10px 0 12px;
     min-width: 5px;
+}
+
+#custom-apps {
+    background: @surface;
+    border-radius: 4px;
+    opacity: 0.8;
+    color: @text;
+    padding: 1px 12px;
+    margin: 1px 6px;
+    letter-spacing: 4px;
 }
