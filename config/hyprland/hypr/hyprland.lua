@@ -38,13 +38,14 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
     hl.exec_cmd("dunst")
     hl.exec_cmd("hypridle")
-    hl.exec_cmd("/usr/bin/kdeconnectd")
     
     -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
     -- Gestion du presse-papier
     hl.exec_cmd("wl-paste --watch cliphist store")
+    -- Démon D-Bus Nemo (permet l'intégration universelle "Ouvrir l'emplacement")
+    hl.exec_cmd("nemo --no-desktop --gapplication-service")
 end)
 
 -- ============================================================

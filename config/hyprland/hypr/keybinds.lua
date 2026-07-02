@@ -8,7 +8,7 @@ local mod = "SUPER"
 -- APPLICATIONS
 -- ============================================================
 hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
-hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("thunar"))
+hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"))
 hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
 hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
@@ -20,8 +20,15 @@ hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 -- ============================================================
 -- FENÊTRES
--- ============================================================
-hl.bind(mod .. "+ Q",           hl.dsp.window.kill())
+-- -- ============================================================
+-- hl.bind(mod .. "+ Q",           hl.dsp.window.kill())
+hl.bind(mod .. "+ Q", function()
+    local w = hl.get_active_window()
+    if w ~= nil then
+        hl.dispatch(hl.dsp.window.kill({ window = "address:" .. w.address }))
+    end
+end)
+
 hl.bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
 hl.bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
 hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())

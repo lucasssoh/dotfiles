@@ -1,0 +1,8 @@
+{
+  "policies": {
+    "SearchEngines": {
+      "Default": "Google"
+    },
+    "DontCheckDefaultBrowser": true
+  }
+}

@@ -194,3 +194,92 @@ hl.window_rule({
 --     size   = "1280 720",
 --     center = true,
 -- })
+
+-- ============================================================
+-- NEMO — Fenêtre principale en tuile, tout le reste flotte
+-- ============================================================
+-- 1. Fenêtre principale : si le titre se termine par " — Gestionnaire de fichiers" (ou " — File Manager")
+hl.window_rule({
+    match  = { class = "nemo", title = " — Gestionnaire de fichiers$" },
+    tile   = true,
+})
+hl.window_rule({
+    match  = { class = "nemo", title = " — File Manager$" },
+    tile   = true,
+})
+
+-- 2. Dialogues Nemo, propriétés, transferts et fenêtres d'extraction File-Roller (Inversé)
+hl.window_rule({
+    match  = { class = "nemo", title = "^(?!.* — (Gestionnaire de fichiers|File Manager))" },
+    float  = true,
+    center = true,
+    size   = "850 550",
+})
+hl.window_rule({
+    match  = { class = "file-roller" },
+    float  = true,
+    center = true,
+})
+
+-- Opacité globale pour Nemo
+hl.window_rule({
+    match   = { class = "nemo" },
+    opacity = "0.95 override",
+})
+
+-- ============================================================
+-- FIREFOX — Téléchargements, Paramètres et Popups
+-- ============================================================
+-- Bloque la fenêtre principale sur le Workspace 2
+hl.window_rule({
+    match     = { class = "firefox", title = " — Mozilla Firefox$" },
+    workspace = "2",
+    tile      = true,
+})
+
+-- Force le flottement pour les préférences, la bibliothèque et les fenêtres de login
+hl.window_rule({
+    match = { class = "firefox", title = "^(Password Required|Page Info|S'identifier|Bibliothèque|Library|Préférences|Preferences|Paramètres|Settings)" },
+    float = true,
+    center = true,
+    stay_focused = true,
+})
+
+-- ============================================================
+-- STEAM & LUNCHERS JEUX (Lutris, Heroic, Rockstar)
+-- ============================================================
+-- Règles globales pour forcer le flottement sur tous les popups de jeux/launchers
+hl.window_rule({
+    match = { class = "steam", title = "^(?!Steam$)" },
+    float = true,
+    center = true,
+})
+hl.window_rule({
+    match = { class = "lutris", title = "^(?!Lutris$)" },
+    float = true,
+    center = true,
+})
+
+-- Fenêtres d'amis, de chat ou de propriétés Steam
+hl.window_rule({ match = { class = "steam", title = "^(Amis|Friends|Lancement|Configuring|Properties|Steam - Self Updater)" }, float = true })
+
+-- Rockstar Games Launcher
+hl.window_rule({
+    match        = { class = "steam_proton", title = "^Rockstar Games Launcher" },
+    float        = true,
+    size         = "1200 800",
+    center       = true,
+    stay_focused = true,
+    no_blur      = true,
+    no_anim      = true,
+    opacity      = "1.0 override",
+})
+
+-- ============================================================
+-- BOÎTES DE DIALOGUE UNIVERSELLES (XDG Portals, GTK, QT)
+-- ============================================================
+-- Cible absolument tous les dialogues d'ouverture/sauvegarde lancés par Nemo ou tes navigateurs
+hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select)" }, float = true, center = true, stay_focused = true })
+hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true })
+hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, stay_focused = true })
+hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, stay_focused = true })
