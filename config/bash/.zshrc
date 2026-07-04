@@ -20,6 +20,7 @@ setopt AUTO_CD
 setopt GLOBSTAR_SHORT
 unsetopt CORRECT
 setopt CHECK_JOBS
+setopt INTERACTIVE_COMMENTS
 
 # =========================
 # PATH (BASE PROPRE)
