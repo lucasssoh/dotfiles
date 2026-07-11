@@ -91,6 +91,9 @@ export SDKMAN_DIR="$HOME/.sdkman"
 # =========================
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#777777"
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_COMPLETION_IGNORE="*fatandfurious*"
+ZSH_AUTOSUGGEST_HISTORY_IGNORE="*fatandfurious*"
+zstyle ':completion:*:*:-command-:*:*' ignored-patterns 'fatandfurious'
 source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 # =========================
@@ -142,3 +145,4 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # CCNOTE
 # =========================
 source ~/.config/ccnote/ccnote.zsh
+export PATH="$HOME/.npm-global/bin:$PATH"

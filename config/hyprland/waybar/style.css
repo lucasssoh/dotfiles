@@ -35,7 +35,7 @@ window#waybar {
 #custom-logo, #workspaces, #custom-gap, #window,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network, 
 #bluetooth, #pulseaudio.output, #pulseaudio.input, 
-#custom-performance, #battery, #custom-power, #mpris.paused, #mpris.playing {
+#custom-hdr, #custom-performance, #battery, #custom-power, #mpris.paused, #mpris.playing {
     background: @background;
 }
 
@@ -43,7 +43,7 @@ window#waybar {
 #custom-logo, #workspaces, #custom-gap,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network, 
 #bluetooth, #pulseaudio.output, #pulseaudio.input, 
-#custom-performance, #battery, #custom-power {
+#custom-hdr, #custom-performance, #battery, #custom-power {
     border-top: 2px solid @overlay2;
     border-bottom: 2px solid @overlay2;
 }
@@ -161,6 +161,11 @@ window#waybar.empty #window {
     min-width: 30px;
 }
 
+/* ── HDR Toggle ───────────────────────────────────────── */
+#custom-hdr { padding: 0 10px; min-width: 20px; }
+#custom-hdr.hdr-on  { color: @accent2; }   /* cyan quand HDR actif */
+#custom-hdr.hdr-off { color: @text; }
+#custom-hdr.hdr-na  { color: @muted; }      /* grisé : non compatible */
 #custom-power {
     color: rgb(255, 110, 110);
     padding: 0 10px 0 12px;

@@ -37,6 +37,7 @@
         "bluetooth",
         "pulseaudio#output",
         "pulseaudio#input",
+        "custom/hdr",
         "custom/performance",
         "battery",
         "custom/power"
@@ -200,7 +201,15 @@
         "scroll-step": 5
     },
 
-
+    // ── HDR Toggle ───────────────────────────────────────────────
+    "custom/hdr": {
+        "exec": "~/.config/waybar/scripts/hdr.sh status",
+        "return-type": "json",
+        "interval": 3,
+        "on-click": "~/.config/waybar/scripts/hdr.sh toggle",
+        "on-click-right": "~/.config/waybar/scripts/hdr.sh menu",
+        "signal": 3
+    },
 
     // ── Performance Profile ──────────────────────────────────────
     "custom/performance": {
