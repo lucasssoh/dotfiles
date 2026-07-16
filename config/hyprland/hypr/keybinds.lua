@@ -20,12 +20,14 @@ hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 -- ============================================================
 -- FENÊTRES
--- -- ============================================================
--- hl.bind(mod .. "+ Q",           hl.dsp.window.kill())
+-- ============================================================
+-- close (pas kill) : ferme uniquement la fenêtre/tuile visée. kill force-tue
+-- tout le processus — pour une appli multi-fenêtres (Firefox...), ça fermait
+-- TOUTES ses fenêtres d'un coup au lieu de la seule fenêtre active.
 hl.bind(mod .. "+ Q", function()
     local w = hl.get_active_window()
     if w ~= nil then
-        hl.dispatch(hl.dsp.window.kill({ window = "address:" .. w.address }))
+        hl.dispatch(hl.dsp.window.close({ window = "address:" .. w.address }))
     end
 end)
 
@@ -83,9 +85,13 @@ for _, ws in ipairs(ws_keys) do
     hl.bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
 end
 
--- Scroll souris pour les workspaces relatifs
-hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "e+1" }))
+-- Scroll souris pour les workspaces relatifs au moniteur courant (ne saute
+-- jamais sur l'écran d'à côté, contrairement à e±1)
+hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "m-1" }))
+hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "m+1" }))
+
+-- Compacter les workspaces occupés vers le début de leur plage (par moniteur)
+hl.bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
 
 -- Scratchpad
 hl.bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))

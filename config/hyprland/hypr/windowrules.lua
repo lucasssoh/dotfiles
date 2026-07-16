@@ -237,27 +237,85 @@ hl.window_rule({
     tile      = true,
 })
 
--- Force le flottement pour les préférences, la bibliothèque et les fenêtres de login
+-- Force le flottement pour les préférences et les fenêtres de login
+-- NB : class="firefox" ne correspond à rien sur ce système (la vraie classe
+-- rapportée par hyprctl clients est "org.mozilla.firefox") — cette règle est
+-- donc inactive depuis le début. Non corrigée ici : ces titres n'ont pas été
+-- vérifiés en conditions réelles (contrainte de la tâche : pas de valeur
+-- devinée). "Bibliothèque"/"Library" retirés de cette liste, gérés par la
+-- règle dédiée et vérifiée ci-dessous.
 hl.window_rule({
-    match = { class = "firefox", title = "^(Password Required|Page Info|S'identifier|Bibliothèque|Library|Préférences|Preferences|Paramètres|Settings)" },
+    match = { class = "firefox", title = "^(Password Required|Page Info|S'identifier|Préférences|Preferences|Paramètres|Settings)" },
     float = true,
     center = true,
+    stay_focused = true,
+})
+
+-- Bibliothèque (historique/marque-pages/téléchargements) — popup confirmée
+-- via `hyprctl clients` : class="org.mozilla.firefox", title="Bibliothèque"
+-- (locale FR de ce système). "Library" ajouté pour couvrir les sessions en
+-- anglais (même fenêtre, titre localisé — pas testé sur ce système FR, mais
+-- c'est le nom officiel Mozilla de cette fenêtre en EN). Flottante, centrée,
+-- taille raisonnable, garde le focus à l'ouverture. Pas de pin : elle doit
+-- suivre le workspace courant.
+hl.window_rule({
+    match        = { class = "org.mozilla.firefox", title = "^(Bibliothèque|Library)$" },
+    float        = true,
+    center       = true,
+    size         = "900 650",
     stay_focused = true,
 })
 
 -- ============================================================
 -- STEAM & LUNCHERS JEUX (Lutris, Heroic, Rockstar)
 -- ============================================================
--- Règles globales pour forcer le flottement sur tous les popups de jeux/launchers
+-- Règles globales pour forcer le flottement sur tous les popups de jeux/launchers.
+-- (popups confirmées via hyprctl clients : Steam "Propriétés"/config de jeu a pour
+-- title le nom du jeu, ex. "Assetto Corsa Competizione" — pas de liste figée possible.)
+--
+-- NB IMPORTANT : le motif "^(?!Steam$)" (lookahead négatif) testé initialement ne
+-- matche RIEN sur ce système — confirmé en live (fenêtre restée tuilée malgré une
+-- classe qui matchait). Le moteur de regex de ce binding ne supporte pas le
+-- lookahead de façon fiable (limitation connue de la regex Hyprland/std::regex).
+-- Solution : flotter TOUT ce qui est class=steam, puis une règle plus bas (donc
+-- prioritaire — "l'ordre compte", cf. l'en-tête du fichier) repasse la fenêtre
+-- principale "Steam" en tuile via un match exact, sans lookahead.
+-- no_follow_mouse : sans ça, le focus-follows-mouse (input.follow_mouse=1
+-- dans hyprland.lua) reprend la main dès que le curseur n'est pas au-dessus
+-- de la popup fraîchement ouverte — stay_focused seul ne suffit pas.
 hl.window_rule({
-    match = { class = "steam", title = "^(?!Steam$)" },
-    float = true,
-    center = true,
+    match          = { class = "steam" },
+    float          = true,
+    center         = true,
+    stay_focused   = true,
+    no_follow_mouse = true,
+})
+-- stay_focused/no_follow_mouse remis explicitement à false : sans ça, ces
+-- propriétés restent héritées de la règle du dessus (les propriétés non
+-- redéfinies par une règle plus spécifique ne sont pas réinitialisées), ce
+-- qui perturbe le grab d'input des menus contextuels de cette fenêtre.
+hl.window_rule({
+    match           = { class = "steam", title = "^Steam$" },
+    tile            = true,
+    stay_focused    = false,
+    no_follow_mouse = false,
+})
+
+-- NB : class="lutris" ne correspond à rien sur ce système (la vraie classe
+-- rapportée par hyprctl clients est "net.lutris.Lutris") — cette règle était
+-- donc inactive depuis le début. Même limitation de lookahead que Steam ci-dessus.
+hl.window_rule({
+    match          = { class = "net.lutris.Lutris" },
+    float          = true,
+    center         = true,
+    stay_focused   = true,
+    no_follow_mouse = true,
 })
 hl.window_rule({
-    match = { class = "lutris", title = "^(?!Lutris$)" },
-    float = true,
-    center = true,
+    match           = { class = "net.lutris.Lutris", title = "^Lutris$" },
+    tile            = true,
+    stay_focused    = false,
+    no_follow_mouse = false,
 })
 
 -- Fenêtres d'amis, de chat ou de propriétés Steam

@@ -57,12 +57,9 @@
 
     // ── Workspaces ───────────────────────────────────────────────
     "hyprland/workspaces": {
-        "format": "{icon}",
-        "format-icons": {
-            "active": "●",
-            "default": "●",
-            "empty": "○"
-        }
+        "format": "{id}",
+        "all-outputs": false,
+        "disable-scroll-wraparound": true
     },
 
     // --- Gap -----------------------------------------------------

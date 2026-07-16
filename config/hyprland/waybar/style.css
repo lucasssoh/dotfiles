@@ -85,13 +85,24 @@ window#waybar {
     padding-right: 4px;
 }
 
+/* Occupé mais pas actif (ni .active ni .empty) : couleur intermédiaire */
 #workspaces button {
-    color: @muted;
+    color: @text;
     padding: 0 4px;
+    min-width: 16px;
+    border-radius: 2px;
 }
 
+/* Persistant vide : atténué */
+#workspaces button.empty {
+    color: @muted;
+}
+
+/* Focus actuel : contraste fort, pastille pleine */
 #workspaces button.active {
-    color: @text;
+    color: @background;
+    background: @accent2;
+    padding: 0 7px;
 }
 
 #custom-gap {

@@ -46,6 +46,18 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("wl-paste --watch cliphist store")
     -- Démon D-Bus Nemo (permet l'intégration universelle "Ouvrir l'emplacement")
     hl.exec_cmd("nemo --no-desktop --gapplication-service")
+
+    -- Workspaces fixes 1-10 (posés à l'exécution via hyprctl eval, donc pas
+    -- persistés dans un fichier — à rejouer à chaque démarrage, cf. aussi
+    -- config.reloaded ci-dessous pour le cas `hyprctl reload`)
+    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+end)
+
+-- Un `hyprctl reload` recharge les fichiers Lua statiques et efface les
+-- règles posées en runtime (workspace_rule, monitor tuning) — on les rejoue
+-- ici pour que les 10 workspaces fixes survivent à un reload.
+hl.on("config.reloaded", function()
+    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 end)
 
 -- ============================================================
