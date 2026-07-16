@@ -74,8 +74,13 @@ hdr_capable() {
 }
 
 # Applique HDR ou SDR en préservant mode/position/scale courants
+#
+# NB : ce setup charge sa config via un binding Lua custom (hl.*), qui bascule
+# Hyprland sur un parser "non-legacy" où `hyprctl keyword` est refusé
+# ("keyword can't work with non-legacy parsers. Use eval."). On pilote donc
+# via `hyprctl eval '<lua hl.*>'` (même pattern que scripts/workspace-manager.sh).
 apply() {
-    local m="$1" want="$2" j w h rr x y scale base
+    local m="$1" want="$2" j w h rr x y scale mode position
     j=$(hyprctl monitors -j | jq -r --arg m "$m" '.[] | select(.name==$m)')
     w=$(jq -r '.width'        <<<"$j")
     h=$(jq -r '.height'       <<<"$j")
@@ -83,14 +88,14 @@ apply() {
     x=$(jq -r '.x'            <<<"$j")
     y=$(jq -r '.y'            <<<"$j")
     scale=$(jq -r '.scale'    <<<"$j")
-    rr=$(printf '%.2f' "$rr")
-    base="${m},${w}x${h}@${rr},${x}x${y},${scale}"
+    rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # locale FR = virgule décimale, casse le format "W x H@RR"
+    mode="${w}x${h}@${rr}"
+    position="${x}x${y}"
 
     if [[ "$want" == "hdr" ]]; then
-        hyprctl keyword monitor \
-            "${base},bitdepth,10,cm,hdr,sdrbrightness,${SDRBRIGHTNESS},sdrsaturation,${SDRSATURATION}"
+        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"hdr\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION} })"
     else
-        hyprctl keyword monitor "${base},bitdepth,8,cm,auto"
+        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 8, cm = \"auto\" })"
     fi
 }
 

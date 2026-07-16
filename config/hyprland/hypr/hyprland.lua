@@ -60,6 +60,15 @@ hl.on("config.reloaded", function()
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 end)
 
+-- Écran externe branché/débranché : reconsolide 1-10 par rôle sans hyprctl reload.
+hl.on("monitor.added", function()
+    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+end)
+
+hl.on("monitor.removed", function()
+    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+end)
+
 -- ============================================================
 -- INPUT
 -- ============================================================

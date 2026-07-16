@@ -108,7 +108,7 @@ if [[ -n "$first_external" ]]; then
     rr=$(jq -r '.refreshRate' <<<"$j")
     x=$(jq -r '.x'            <<<"$j")
     y=$(jq -r '.y'            <<<"$j")
-    rr=$(printf '%.2f' "$rr")
+    rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # locale FR = virgule décimale, casse le format "W x H@RR"
     mode="${w}x${h}@${rr}"
     position="${x}x${y}"
 
