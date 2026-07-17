@@ -2,17 +2,36 @@
 set -euo pipefail
 
 # =========================================================
-# workspace-manager.sh — assignation workspaces + tuning écran
-# externe, résolus par RÔLE (jamais par nom de connecteur).
+# workspace-manager.sh — moteur unique : écrans actifs, position,
+# alignement et refresh rate max, résolus par RÔLE (jamais par nom
+# de connecteur — les noms peuvent changer d'un branchement à
+# l'autre, ex. DP-2 devenu DP-9 en cours de session). L'externe est
+# toujours mis en SDR ici : le HDR n'est jamais auto-appliqué, c'est
+# un choix manuel via waybar/scripts/hdr.sh (cf. plus bas).
 #
 #   Interne  = 1er moniteur dont le nom matche eDP*/LVDS*/DSI*
-#   Externe  = tout le reste, dans l'ordre de `hyprctl monitors -j`
+#   Externe  = 1er moniteur restant, dans l'ordre de `hyprctl monitors`
 #
-#   Workspaces 1-7  -> interne
-#   Workspaces 8-10 -> 1er externe détecté, sinon interne (repli)
+#   Workspaces 1-7  -> interne (ou externe si interne inactif)
+#   Workspaces 8-10 -> externe (ou interne si externe inactif/absent)
 #
-# Idempotent : ne fait que rejouer des `hyprctl eval` déterministes,
-# sans état — relançable sans effet de bord.
+# La disposition voulue (quels écrans utiliser, lequel est à gauche,
+# comment ils s'alignent) est lue depuis un état JSON persistant —
+# même pattern que le système de wallpapers (set_wallpaper.sh /
+# restore_wallpaper.sh + wallpaper-playlist.json) :
+#
+#   ~/.config/hypr/display-layout.json
+#   { "mode": "both"|"internal"|"external",
+#     "position": "external-left"|"external-right",
+#     "align": "center"|"top"|"bottom" }
+#
+# Écrit par scripts/display-layout.sh (menu rofi / module waybar).
+# Absent ou invalide -> défaut both / external-left / center.
+#
+# Idempotent : ne fait que rejouer des `hyprctl eval` déterministes
+# à partir de l'état courant + du fichier JSON — relançable sans
+# effet de bord. Appelé par les hooks hyprland.start / config.reloaded
+# / monitor.added / monitor.removed (hypr/hyprland.lua).
 #
 # NB : ce setup charge sa config via un binding Lua custom (hl.*),
 # ce qui bascule Hyprland sur un parser "non-legacy" où `hyprctl
@@ -21,100 +40,156 @@ set -euo pipefail
 # qui appelle exactement les mêmes fonctions que hypr/monitors.lua.
 # =========================================================
 
-EXT_SCALE="1.2"
-EXT_SDRBRIGHTNESS="1.2"
-EXT_SDRSATURATION="1.0"
-CACHE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hdr-toggle"
+STATE_FILE="$HOME/.config/hypr/display-layout.json"
+SCALE_STATE_FILE="$HOME/.config/hypr/scale.json"
 
-mons_json="$(hyprctl monitors -j)"
+# ---- Disposition voulue (état persistant, défauts si absent/invalide) ----
+layout_mode="both"
+layout_position="external-left"
+layout_align="center"
+if [[ -f "$STATE_FILE" ]]; then
+    v="$(jq -r '.mode // empty'     "$STATE_FILE" 2>/dev/null || true)"
+    if [[ "$v" =~ ^(both|internal|external)$ ]]; then layout_mode="$v"; fi
+    v="$(jq -r '.position // empty' "$STATE_FILE" 2>/dev/null || true)"
+    if [[ "$v" =~ ^(external-left|external-right)$ ]]; then layout_position="$v"; fi
+    v="$(jq -r '.align // empty'    "$STATE_FILE" 2>/dev/null || true)"
+    if [[ "$v" =~ ^(center|top|bottom)$ ]]; then layout_align="$v"; fi
+fi
 
-# ---- Résolution des rôles --------------------------------------------
+# ---- Scale voulu par rôle (état persistant, défauts si absent/invalide) ----
+# Écrit par waybar/scripts/scale.sh (module par écran, cf. hdr.sh). Toujours
+# par RÔLE, jamais par nom de connecteur -- mêmes garanties que ci-dessus.
+INT_SCALE="1"
+EXT_SCALE="1.25"
+if [[ -f "$SCALE_STATE_FILE" ]]; then
+    v="$(jq -r '.internal // empty' "$SCALE_STATE_FILE" 2>/dev/null || true)"
+    if [[ -n "$v" ]]; then INT_SCALE="$v"; fi
+    v="$(jq -r '.external // empty' "$SCALE_STATE_FILE" 2>/dev/null || true)"
+    if [[ -n "$v" ]]; then EXT_SCALE="$v"; fi
+fi
+
+# ---- Tous les moniteurs connectés, y compris désactivés ----------------
+# ("monitors -j" seul EXCLUT les écrans désactivés — indispensable pour
+# résoudre les rôles/modes même quand un écran a été éteint par un choix
+# de mode précédent.)
+mons_json="$(hyprctl monitors all -j)"
+
+# ---- Résolution des rôles ------------------------------------------------
 
 internal="$(jq -r '[.[] | select(.name | test("^(eDP|LVDS|DSI)"))][0].name // empty' <<<"$mons_json")"
 if [[ -z "$internal" ]]; then
     # Aucune dalle laptop détectée (poste fixe) : repli sur le 1er moniteur listé
     internal="$(jq -r '.[0].name // empty' <<<"$mons_json")"
 fi
-
 [[ -z "$internal" ]] && { echo "workspace-manager: aucun moniteur détecté" >&2; exit 0; }
 
 first_external="$(jq -r --arg m "$internal" '[.[] | select(.name != $m)][0].name // empty' <<<"$mons_json")"
 
-# ---- Tuning de l'interne (refresh rate max dispo à la résolution native) ----
-# Le catch-all générique de monitors.lua utilise mode="preferred", qui peut
-# pointer vers un mode plus bas que le max réel du panneau (ex: 60Hz alors que
-# 144Hz est disponible) — on résout donc le refresh max disponible ici, sans
-# jamais coder le chiffre en dur (dépend du panneau, pas du connecteur).
-int_json="$(jq -r --arg m "$internal" '.[] | select(.name==$m)' <<<"$mons_json")"
-iw=$(jq -r '.width' <<<"$int_json")
-ih=$(jq -r '.height' <<<"$int_json")
-ix=$(jq -r '.x'      <<<"$int_json")
-iy=$(jq -r '.y'      <<<"$int_json")
-
-best_rr="$(jq -r --arg m "$internal" --argjson w "$iw" --argjson h "$ih" '
-    .[] | select(.name==$m) | .availableModes[]?
-    | select(startswith(($w|tostring) + "x" + ($h|tostring) + "@"))
-    | capture("@(?<rr>[0-9.]+)Hz").rr | tonumber
-' <<<"$mons_json" | sort -rn | head -1)"
-
-if [[ -n "$best_rr" ]]; then
-    hyprctl eval "hl.monitor({ output = \"$internal\", mode = \"${iw}x${ih}@${best_rr}\", position = \"${ix}x${iy}\", scale = 1 })" >/dev/null
+# ---- Résolution des écrans actifs selon le mode voulu (+ garde-fous) ---
+active_internal=true
+active_external=true
+case "$layout_mode" in
+    internal) active_external=false ;;
+    external) active_internal=false ;;
+esac
+[[ -z "$first_external" ]] && active_external=false   # pas d'externe connecté -> ne peut pas être actif
+if [[ "$active_internal" != true && "$active_external" != true ]]; then
+    active_internal=true   # jamais zéro écran actif : repli sur l'interne
 fi
 
-# ---- Assignation des workspaces ---------------------------------------
+# ---- Helper : meilleur taux de rafraîchissement dispo à la résolution
+#      native courante de l'écran (jamais codé en dur — dépend du panneau) ----
+best_refresh() {
+    local name="$1" w h
+    w=$(jq -r --arg m "$name" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
+    h=$(jq -r --arg m "$name" '.[] | select(.name==$m) | .height' <<<"$mons_json")
+    jq -r --arg m "$name" --argjson w "$w" --argjson h "$h" '
+        .[] | select(.name==$m) | .availableModes[]?
+        | select(startswith(($w|tostring) + "x" + ($h|tostring) + "@"))
+        | capture("@(?<rr>[0-9.]+)Hz").rr | tonumber
+    ' <<<"$mons_json" | sort -rn | head -1
+}
+
+# ---- Position / alignement (coordonnées logiques = pixels ÷ scale) -----
+# L'interne est à INT_SCALE, l'externe à EXT_SCALE — mêmes valeurs que
+# celles qu'on va appliquer plus bas.
+int_w=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
+int_h=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .height' <<<"$mons_json")
+int_lw=$(jq -n --argjson w "$int_w" --argjson s "$INT_SCALE" '($w / $s) | floor')
+int_lh=$(jq -n --argjson h "$int_h" --argjson s "$INT_SCALE" '($h / $s) | floor')
+int_x=0
+int_y=0
+
+if [[ -n "$first_external" ]]; then
+    ext_w=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
+    ext_h=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .height' <<<"$mons_json")
+    ext_lw=$(jq -n --argjson w "$ext_w" --argjson s "$EXT_SCALE" '($w / $s) | floor')
+    ext_lh=$(jq -n --argjson h "$ext_h" --argjson s "$EXT_SCALE" '($h / $s) | floor')
+    ext_x=0
+    ext_y=0
+fi
+
+if [[ "$active_internal" == true && "$active_external" == true ]]; then
+    if [[ "$layout_position" == "external-left" ]]; then
+        ext_x=0; int_x=$ext_lw
+    else
+        int_x=0; ext_x=$int_lw
+    fi
+    max_h=$(( int_lh > ext_lh ? int_lh : ext_lh ))
+    case "$layout_align" in
+        top)    int_y=0; ext_y=0 ;;
+        bottom) int_y=$(( max_h - int_lh )); ext_y=$(( max_h - ext_lh )) ;;
+        *)      int_y=$(( (max_h - int_lh) / 2 )); ext_y=$(( (max_h - ext_lh) / 2 )) ;;
+    esac
+fi
+# Un seul écran actif -> déjà x=0/y=0 par défaut ci-dessus, rien à faire de plus.
+
+# ---- Applique l'interne (si actif) --------------------------------------
+if [[ "$active_internal" == true ]]; then
+    best_rr="$(best_refresh "$internal")"
+    int_mode="preferred"
+    [[ -n "$best_rr" ]] && int_mode="${int_w}x${int_h}@${best_rr}"
+    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = ${INT_SCALE} })" >/dev/null
+fi
+
+# ---- Applique l'externe (si actif) : refresh max, toujours en SDR -------
+# SDR est TOUJOURS le défaut ici (bureau, démarrage, reload, hotplug) : le HDR
+# n'est jamais auto-appliqué, sous peine de fausser les couleurs de tout
+# contenu non-HDR. Le HDR est un choix strictement manuel de l'utilisateur,
+# activé à la demande pour du contenu multimédia via le module waybar dédié
+# (waybar/scripts/hdr.sh toggle/menu) — indépendant de ce script.
+if [[ "$active_external" == true ]]; then
+    best_rr="$(best_refresh "$first_external")"
+    ext_mode="preferred"
+    [[ -n "$best_rr" ]] && ext_mode="${ext_w}x${ext_h}@${best_rr}"
+    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = ${EXT_SCALE}, bitdepth = 8, cm = \"auto\" })" >/dev/null
+fi
+
+# ---- Éteint l'écran non désiré, APRÈS avoir activé les autres ----------
+# ORDRE CRITIQUE : si on désactivait avant d'activer, on peut passer par un
+# instant à zéro écran actif (ex. bascule externe-seul -> interne-seul), ce
+# qui fait basculer Hyprland sur son fallback headless — et ce fallback fait
+# planter ce build 0.55.3 (SEGV confirmé, cf. hyprlandCrashReport4932.txt :
+# applyMonitorRule -> onDisconnect -> enterUnsafeState -> CHeadlessOutput::
+# commit -> SEGV). Activer d'abord garantit toujours >= 1 écran actif.
+[[ "$active_internal" != true ]] && \
+    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })" >/dev/null
+[[ -n "$first_external" && "$active_external" != true ]] && \
+    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = true })" >/dev/null
+
+# ---- Assignation des workspaces (1-7 / 8-10), repliées sur l'écran actif --
+if [[ "$active_internal" == true && "$active_external" == true ]]; then
+    int_target="$internal"; ext_target="$first_external"
+elif [[ "$active_internal" == true ]]; then
+    int_target="$internal"; ext_target="$internal"
+else
+    int_target="$first_external"; ext_target="$first_external"
+fi
 
 apply_workspace_rule() {
     local ws="$1" mon="$2"
     hyprctl eval "hl.workspace_rule({ workspace = \"$ws\", monitor = \"$mon\", persistent = true })" >/dev/null
 }
 
-for i in 1 2 3 4 5 6 7; do
-    apply_workspace_rule "$i" "$internal"
-done
-
-ext_target="${first_external:-$internal}"
-for i in 8 9 10; do
-    apply_workspace_rule "$i" "$ext_target"
-done
-
-# ---- Tuning de l'externe (scale + HDR selon EDID) ----------------------
-
-hdr_capable() {
-    local m="$1" cache="$CACHE_DIR/cap-$m" edid="" path cap=1
-    if [[ -f "$cache" ]]; then
-        [[ "$(cat "$cache")" == "1" ]]; return
-    fi
-    mkdir -p "$CACHE_DIR"
-    for path in /sys/class/drm/*-"$m"/edid; do
-        [[ -e "$path" ]] && { edid="$path"; break; }
-    done
-    if [[ -n "$edid" ]] && command -v edid-decode >/dev/null 2>&1; then
-        if edid-decode "$edid" 2>/dev/null \
-             | grep -qiE 'HDR Static Metadata|SMPTE ST ?2084|ST2084'; then
-            cap=1
-        else
-            cap=0
-        fi
-    fi
-    echo "$cap" > "$cache"
-    [[ "$cap" == "1" ]]
-}
-
-if [[ -n "$first_external" ]]; then
-    m="$first_external"
-    j="$(jq -r --arg m "$m" '.[] | select(.name==$m)' <<<"$mons_json")"
-    w=$(jq -r '.width'        <<<"$j")
-    h=$(jq -r '.height'       <<<"$j")
-    rr=$(jq -r '.refreshRate' <<<"$j")
-    x=$(jq -r '.x'            <<<"$j")
-    y=$(jq -r '.y'            <<<"$j")
-    rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # locale FR = virgule décimale, casse le format "W x H@RR"
-    mode="${w}x${h}@${rr}"
-    position="${x}x${y}"
-
-    if hdr_capable "$m"; then
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${EXT_SCALE}, bitdepth = 10, cm = \"hdr\", sdrbrightness = ${EXT_SDRBRIGHTNESS}, sdrsaturation = ${EXT_SDRSATURATION} })" >/dev/null
-    else
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${EXT_SCALE}, bitdepth = 8, cm = \"auto\" })" >/dev/null
-    fi
-fi
+for i in 1 2 3 4 5 6 7; do apply_workspace_rule "$i" "$int_target"; done
+for i in 8 9 10;         do apply_workspace_rule "$i" "$ext_target"; done

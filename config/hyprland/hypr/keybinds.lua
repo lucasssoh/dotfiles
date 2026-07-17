@@ -14,6 +14,7 @@ hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
 hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("dex $HOME/.local/share/applications/set_wallpaper.desktop || gtk-launch set_wallpaper"))
+hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh menu"))
 
 hl.bind(mod .. "+ Delete",  hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power.sh"))
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))

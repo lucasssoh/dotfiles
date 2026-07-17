@@ -35,7 +35,7 @@ window#waybar {
 #custom-logo, #workspaces, #custom-gap, #window,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network, 
 #bluetooth, #pulseaudio.output, #pulseaudio.input, 
-#custom-hdr, #custom-performance, #battery, #custom-power, #mpris.paused, #mpris.playing {
+#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-power, #mpris.paused, #mpris.playing {
     background: @background;
 }
 
@@ -43,7 +43,7 @@ window#waybar {
 #custom-logo, #workspaces, #custom-gap,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network, 
 #bluetooth, #pulseaudio.output, #pulseaudio.input, 
-#custom-hdr, #custom-performance, #battery, #custom-power {
+#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-power {
     border-top: 2px solid @overlay2;
     border-bottom: 2px solid @overlay2;
 }
@@ -171,6 +171,22 @@ window#waybar.empty #window {
     padding: 0 4px;
     min-width: 30px;
 }
+
+/* ── Groupe "écran" (display + scale + hdr) ──────────────
+   Les 3 modules forment un groupe visuel : encadré par une bordure
+   gauche (1er module) / droite (dernier). Icône devant : cf. plus bas
+   (GTK CSS ne supporte pas ::before sur ces widgets). */
+#custom-display { border-left: 2px solid @overlay2; }
+#custom-hdr     { border-right: 2px solid @overlay2; }
+
+/* ── Disposition d'écrans ─────────────────────────────── */
+#custom-display { padding: 0 10px; min-width: 20px; }
+#custom-display.display-both     { color: @text; }
+#custom-display.display-internal { color: @accent2; }  /* cyan : externe éteint */
+#custom-display.display-external { color: @accent2; }  /* cyan : interne éteint */
+
+/* ── Scale (par écran) ────────────────────────────────── */
+#custom-scale { padding: 0 10px; min-width: 20px; color: @text; }
 
 /* ── HDR Toggle ───────────────────────────────────────── */
 #custom-hdr { padding: 0 10px; min-width: 20px; }

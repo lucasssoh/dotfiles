@@ -37,6 +37,8 @@
         "bluetooth",
         "pulseaudio#output",
         "pulseaudio#input",
+        "custom/display",
+        "custom/scale",
         "custom/hdr",
         "custom/performance",
         "battery",
@@ -196,6 +198,24 @@
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-",
 
         "scroll-step": 5
+    },
+
+    // ── Disposition d'écrans ────────────────────────────────────
+    "custom/display": {
+        "exec": "~/.config/hypr/scripts/display-layout.sh status",
+        "return-type": "json",
+        "interval": 5,
+        "on-click": "~/.config/hypr/scripts/display-layout.sh menu",
+        "signal": 4
+    },
+
+    // ── Scale (mise à l'échelle, par écran) ─────────────────────
+    "custom/scale": {
+        "exec": "~/.config/waybar/scripts/scale.sh status",
+        "return-type": "json",
+        "interval": 5,
+        "on-click": "~/.config/waybar/scripts/scale.sh menu",
+        "signal": 5
     },
 
     // ── HDR Toggle ───────────────────────────────────────────────
