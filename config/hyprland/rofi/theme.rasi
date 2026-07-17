@@ -1,11 +1,8 @@
 @import "share"
 
-/*
- * ROFI colours
- *
- * Inspired by nightfox
- */
-
+/* theme.rasi — menus "liste avec recherche" (hdr, scale, wifi, mic,
+ * password, launcher…). Couleurs et style de sélection hérités de
+ * share.rasi ; ce fichier ne pose que la structure (largeur, lignes). */
 
 window {
   transparency: "real";
@@ -17,17 +14,14 @@ mainbox {
 }
 
 inputbar {
-  background-color: @bg-alt;
   children: [prompt, entry];
 }
 
 entry {
-  background-color: inherit;
   padding: 12px 3px;
 }
 
 prompt {
-  background-color: inherit;
   padding: 12px;
 }
 
@@ -46,8 +40,4 @@ element-icon {
 
 element-text {
   padding: 10px 0;
-}
-
-element-text selected {
-  text-color: @active;
 }

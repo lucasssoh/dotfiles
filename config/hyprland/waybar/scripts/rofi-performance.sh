@@ -1,6 +1,6 @@
 #!/bin/bash
 # Utilise ton rasi spécifique
-CHOSEN=$(echo -e "Performance\nBalanced\nPower-saver" | rofi -dmenu -theme ~/.config/rofi/performance.rasi -p "Power Profile")
+CHOSEN=$(echo -e "Performance\nBalanced\nPower-saver" | rofi -dmenu -theme ~/.config/rofi/performance.rasi -mesg "Power Profile")
 
 case $CHOSEN in
     Performance) powerprofilesctl set performance ;;

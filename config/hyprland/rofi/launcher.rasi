@@ -1,60 +1,26 @@
-/* ============================================================
-   ROFI LAUNCHER.RASI — Fixed Syntax
-   ============================================================ */
-
-* {
-    bg:      #1c1c1e;
-    surface: #2c2c2e;
-    overlay: #3a3a3c;
-    muted:   #636366;
-    text:    #e5e5ea;
-    accent:  #6b9fff;
-    urgent:  #ff453a;
-
-    font: "Iosevka NF 12";
-    background-color: transparent;
-    text-color: @text;
-}
+/* rofi/launcher.rasi — barre de recherche (drun / launcher, powermenu…).
+ * Couleurs et style de sélection hérités de share.rasi ; structure seule ici. */
+@import "share"
 
 window {
-    width:            520px;
-    background-color: @bg;
-    border-radius:    14px;
-    padding:          12px;
-    border:           1px solid;
-    border-color:     @overlay;
+    width: 520px;
 }
 
 inputbar {
-    background-color: @surface;
-    border-radius:    10px;
-    padding:          10px 14px;
-    margin:           0px 0px 10px 0px;
-    children:         [ prompt, entry ];
+    margin: 0px 0px 10px 0px;
 }
 
 prompt {
-    text-color: @accent;
-    margin:     0px 8px 0px 0px;
+    margin: 0px 8px 0px 0px;
 }
 
 entry {
-    text-color:        @text;
-    placeholder:       "Search...";
-    placeholder-color: @muted;
+    placeholder: "Search...";
 }
 
 listview {
-    lines:           8;
-    scrollbar:       false;
-    spacing:         4px;
-    fixed-columns:   true;
-}
-
-element {
-    padding:       8px 12px;
-    border-radius: 8px;
-    spacing:       10px;
+    lines:         8;
+    fixed-columns: true;
 }
 
 element-icon {
@@ -62,25 +28,10 @@ element-icon {
     vertical-align: 0.5;
 }
 
-element-text {
-    vertical-align: 0.5;
-    text-color:     inherit; 
-}
-
-/* Sélection et états */
-element selected {
-    background-color: #6b9fff26;
-    text-color:       @accent;
-}
-
-elements elected.normal {
-    background-color: #6b9fff26;
-    text-color: @accent;
-}
-
 element urgent {
     text-color: @urgent;
 }
+
 element normal.urgent {
     text-color: @urgent;
 }

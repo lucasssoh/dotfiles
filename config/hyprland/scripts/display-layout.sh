@@ -85,14 +85,14 @@ cmd_menu() {
     current_state
 
     if [[ -z "$first_external" ]]; then
-        notify-send "Écrans" "Aucun écran externe détecté — un seul écran actif."
+        notify-send "Displays" "No external screen detected — only one screen active."
         exit 0
     fi
 
     local choice new_mode
     choice=$(printf "All\n%s\n%s" "$internal_label" "$external_label" | rofi -dmenu \
         -theme "$RASI" -theme-str 'listview { columns: 3; }' \
-        -p "" -name "display-picker" -no-show-icons -no-custom -lines 1)
+        -mesg "Displays" -name "display-picker" -no-show-icons -no-custom -lines 1)
     [[ -z "$choice" ]] && exit 0
     case "$choice" in
         "All")             new_mode="both" ;;
@@ -105,13 +105,13 @@ cmd_menu() {
     if [[ "$new_mode" == "both" ]]; then
         choice=$(printf "%s à gauche\n%s à droite" "$external_label" "$external_label" | rofi -dmenu \
             -theme "$RASI" \
-            -p "" -name "display-picker" -no-show-icons -no-custom -lines 1)
+            -mesg "Position" -name "display-picker" -no-show-icons -no-custom -lines 1)
         [[ -z "$choice" ]] && exit 0
         [[ "$choice" == "$external_label à gauche" ]] && new_position="external-left" || new_position="external-right"
 
         choice=$(printf "Centré\nHaut\nBas" | rofi -dmenu \
             -theme "$RASI" -theme-str 'listview { columns: 3; }' \
-            -p "" -name "display-picker" -no-show-icons -no-custom -lines 1)
+            -mesg "Alignment" -name "display-picker" -no-show-icons -no-custom -lines 1)
         [[ -z "$choice" ]] && exit 0
         case "$choice" in
             "Centré") new_align="center" ;;
@@ -133,15 +133,15 @@ cmd_status() {
     case "$mode" in
         internal) label="int" ;;
         external) label="ext" ;;
-        *)        label="2" ;;
+        *)        label="all" ;;
     esac
 
     if [[ "$mode" == "both" && -z "$first_external" ]]; then
-        tooltip="Interne seul (aucun externe détecté)\\nClic: changer la disposition"
+        tooltip="Internal only (no external detected)\\nClick: change layout"
     elif [[ "$mode" == "both" ]]; then
-        tooltip="Les deux écrans · ${position} · ${align}\\nClic: changer la disposition"
+        tooltip="Both screens · ${position} · ${align}\\nClick: change layout"
     else
-        tooltip="${label} · Clic: changer la disposition"
+        tooltip="${label} · Click: change layout"
     fi
 
     printf '{"text":"%s %s","class":"display-%s","tooltip":"%s"}\n' "$ICON" "$label" "$mode" "$tooltip"

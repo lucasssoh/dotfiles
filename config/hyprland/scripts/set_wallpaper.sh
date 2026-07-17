@@ -29,7 +29,7 @@ while true; do
         1)
             MODE=$(printf "Static\nDynamic" | rofi -dmenu \
                 -theme "$RASI_MODE" \
-                -p "" \
+                -mesg "Wallpaper Mode" \
                 -name "wallpaper-picker" \
                 -no-show-icons \
                 -no-custom \
@@ -42,7 +42,7 @@ while true; do
         2)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
-                -p "" \
+                -mesg "Filter" \
                 -name "wallpaper-picker" \
                 -no-show-icons \
                 -no-custom \
@@ -109,7 +109,7 @@ with open('$PLAYLIST_FILE', 'w') as f:
         20)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
-                -p "" \
+                -mesg "Filter" \
                 -name "wallpaper-picker" \
                 -no-show-icons \
                 -no-custom \

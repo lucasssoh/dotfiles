@@ -124,7 +124,7 @@ cmd_menu() {
     done < <(clean_pcts_for "$m")
 
     if [[ ${#rows[@]} -eq 0 ]]; then
-        notify-send "Scale" "Aucun palier propre trouvé pour $m"
+        notify-send "Scale" "No clean scale step found for $m"
         exit 0
     fi
 

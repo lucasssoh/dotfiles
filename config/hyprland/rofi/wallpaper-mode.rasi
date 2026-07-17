@@ -1,37 +1,30 @@
+/* wallpaper-mode.rasi — menu compact 2 colonnes (mode wallpaper, position
+ * externe, alignement, disposition d'écrans…). Couleurs/sélection héritées
+ * de share.rasi ; structure seule ici. Pas d'inputbar (choix fixes,
+ * -no-custom) -> le titre passe par le widget "message" (-mesg côté script). */
 @import "share.rasi"
 
 window {
     width:  400px;
-    height: 120px;
+    height: 160px;
 }
 
 mainbox {
-    background-color: transparent;
-    spacing:          10px;
-    children:         [ listview ];
+    spacing:  10px;
+    children: [ message, listview ];
 }
 
 listview {
-    columns:          2;
-    lines:            1;
-    spacing:          10px;
-    background-color: transparent;
+    columns: 2;
+    lines:   1;
+    spacing: 10px;
 }
 
 element {
-    padding:          16px;
-    background-color: transparent;
-    orientation:      horizontal;
-}
-
-element selected.normal {
-    background-color: @bg-alt;
-    border:           1px;
-    border-color:     @selected;
+    padding:     16px;
+    orientation: horizontal;
 }
 
 element-text {
     horizontal-align: 0.5;
-    text-color:       @fg-alt;
-    background-color: transparent;
 }

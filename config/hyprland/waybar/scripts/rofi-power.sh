@@ -34,7 +34,7 @@ OPTIONS=$(printf "%s\n" \
 
 CHOICE=$(echo "$OPTIONS" | rofi -dmenu \
     -theme "$RASI" \
-    -p "⏻" \
+    -mesg "Power" \
     -no-custom \
     -format s \
     -i)
@@ -61,7 +61,7 @@ lock_screen() {
 confirm() {
     echo -e "No\nGo ahead" | rofi -dmenu \
         -theme "$RASI_CONFIRM" \
-        -p "$1" \
+        -mesg "$1" \
         -no-custom \
         -selected-row 0 \
         | grep -qx "Go ahead"

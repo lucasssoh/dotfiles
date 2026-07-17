@@ -1,4 +1,12 @@
-/* ~/.config/rofi/share.rasi */
+/* ~/.config/rofi/share.rasi
+ *
+ * Palette + widgets de base COMMUNS À TOUS LES MENUS ROFI DU SYSTÈME.
+ * Reprend exactement les couleurs de waybar (style.css) pour que barre et
+ * menus forment un seul et même langage visuel : même fond, même texte,
+ * même surbrillance cyan (celle du workspace actif / HDR-on / etc.).
+ * Chaque thème-feuille (theme, common, wallpaper, launcher, …) importe ce
+ * fichier et ne doit plus redéfinir de couleurs, seulement sa structure
+ * (largeur, colonnes, lignes). */
 
 * {
   border:  0;
@@ -6,18 +14,21 @@
   padding: 0;
   spacing: 0;
 
-  /* --- Nouvelle Palette Système --- */
-  bg:      #1c1c1e;    /* background  -> Fond principal */
-  bg-alt:  #2c2c2e;    /* surface     -> Remplissage des éléments/inputs */
-  
-  fg:      #8e8e93;    /* subtle      -> Texte non sélectionné */
-  fg-alt:  #e5e5ea;    /* text        -> Texte focalisé / Principal */
+  /* --- Palette système (= waybar/style.css) --- */
+  bg:      #141414;    /* background -> Fond principal (= waybar) */
+  bg-alt:  #1e1e20;    /* surface    -> Remplissage inputbar/éléments (= waybar) */
 
-  urgent:  #ff453a;    /* urgent      -> Erreurs/Urgent (Rouge) */
-  active:  #6b9fff;    /* accent      -> États actifs / Sélection (Bleu) */
+  fg:      #8e8e93;    /* subtle     -> Texte non sélectionné / placeholder */
+  fg-alt:  #f2f2f7;    /* text       -> Texte focalisé / principal (= waybar) */
+  muted:   #48484a;    /* muted      -> Secondaire atténué (= waybar) */
+
+  border-color-base: #505050; /* overlay2 -> bordure fenêtre (= waybar) */
+  blue:    #4f9eff;    /* accent bleu -> prompts / titres (= waybar) */
+  urgent:  #ff453a;    /* urgent     -> Erreurs/Urgent (Rouge) */
+  active:  #4fefff;    /* accent cyan -> surbrillance système (= waybar) */
 
   /* --- Variables Agnostiques --- */
-  selected:         @fg-alt;
+  selected:         @active;
   background-color: @bg;
   text-color:       @fg;
 }
@@ -84,10 +95,103 @@ window {
     font:                        "Iosevka Nerd Font 12";
     enabled:                     true;
     margin:                      0px;
-    padding:                     0px;
-    border:                      0px solid;
-    border-radius:               0px;
-    border-color:                @selected;
+    padding:                     12px;
+    border:                      1px solid;
+    border-radius:                6px;
+    border-color:                @border-color-base;
     cursor:                      "default";
     background-color:            @bg;
+}
+
+/* ── Widgets de base : disposition/couleurs communes à TOUS les menus ──
+   Les thèmes-feuilles n'overrident que colonnes/lignes/largeur, jamais
+   les couleurs ni le style de sélection définis ici. */
+
+mainbox {
+    background-color: transparent;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    border-radius:    6px;
+    padding:           10px 12px;
+    spacing:           8px;
+    children:          [ prompt, entry ];
+}
+
+prompt {
+    background-color: inherit;
+    text-color:        @blue;
+}
+
+entry {
+    background-color:  inherit;
+    text-color:         @fg-alt;
+    placeholder-color:  @fg;
+}
+
+listview {
+    background-color: transparent;
+    spacing:            8px;
+    scrollbar:          false;
+}
+
+element {
+    background-color: transparent;
+    text-color:         @fg;
+    border-radius:      6px;
+    padding:            8px 10px;
+    spacing:            10px;
+    cursor:             pointer;
+}
+
+element-icon {
+    background-color: transparent;
+    size:                20px;
+    vertical-align:      0.5;
+}
+
+element-text {
+    background-color: inherit;
+    text-color:          inherit;
+    vertical-align:      0.5;
+    horizontal-align:    0.0;
+}
+
+/* ── Sélection : recette unique pour tout le système ──
+   Fond teinté ~10% cyan + barre verticale accent à gauche + texte cyan. */
+element selected {
+    background-color: #4fefff1a;
+    border:            0px 0px 0px 2px;
+    border-color:       @active;
+    text-color:         @active;
+}
+
+/* ── Titre ("message") : pour les menus SANS barre de recherche
+   (grilles à choix fixe : power/performance/confirm/wallpaper-mode/…).
+   Ces menus n'ont pas d'inputbar, donc -p n'a nulle part où s'afficher ;
+   les scripts y passent le titre via -mesg à la place. */
+message {
+    enabled:           true;
+    padding:            10px;
+    border-radius:      6px;
+    background-color:  @bg-alt;
+    text-color:         @fg-alt;
+}
+
+textbox {
+    background-color: inherit;
+    text-color:         inherit;
+    vertical-align:     0.5;
+    horizontal-align:   0.5;
+    placeholder-color:  @fg;
+    blink:              true;
+    markup:             true;
+}
+
+error-message {
+    padding:            12px;
+    border-radius:      6px;
+    background-color:  @bg;
+    text-color:         @fg-alt;
 }

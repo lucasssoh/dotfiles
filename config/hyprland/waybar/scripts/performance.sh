@@ -24,4 +24,4 @@ case "$PROFILE" in
         ;;
 esac
 
-echo "{\"text\": \"$ICON\", \"tooltip\": \"$LABEL\"}"
+echo "{\"text\": \"$ICON\", \"tooltip\": \"Power profile: $LABEL\\nClick: change\"}"
