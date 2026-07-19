@@ -2,5 +2,5 @@
 vt = 1
 
 [default_session]
-command = "tuigreet --time --issue --cmd /usr/local/bin/greetd-wrapper --remember --asterisks"
+command = "tuigreet --time --issue --cmd /usr/bin/start-hyprland --remember --asterisks"
 user = "greeter"

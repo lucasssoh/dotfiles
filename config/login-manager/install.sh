@@ -58,9 +58,11 @@ fi
 section "Deploying ASCII Art"
 
 if [ -f "$REPO_DIR/assets/ascii.txt" ]; then
-    # We copy your ASCII to /etc/issue so tuigreet can read it natively
-    sudo cp "$REPO_DIR/assets/ascii.txt" /etc/issue
-    ok "ASCII art deployed to /etc/issue"
+    # Installed to a stable system path (not /etc/issue directly, which is a
+    # package-managed symlink that gets overwritten on updates) ; restored
+    # into /etc/issue on every boot by restore-issue.service.
+    sudo install -Dm644 "$REPO_DIR/assets/ascii.txt" /usr/local/share/tuigreet/issue.txt
+    ok "ASCII art source deployed to /usr/local/share/tuigreet/issue.txt"
 else
     err "assets/ascii.txt not found!"
 fi
@@ -71,14 +73,24 @@ fi
 section "Configuration Deployment"
 
 sudo install -Dm644 "$REPO_DIR/greetd/config.toml" /etc/greetd/config.toml
-sudo install -Dm755 "$REPO_DIR/scripts/greetd-wrapper.sh" /usr/local/bin/greetd-wrapper
 
 # Create cache directory for --remember features
 sudo mkdir -p /var/cache/tuigreet
 sudo chown greeter:greeter /var/cache/tuigreet
 sudo chmod 0755 /var/cache/tuigreet
 
-ok "Configuration and wrapper installed."
+ok "Configuration installed."
+
+# ============================================================
+# ASCII ART PERSISTENCE SERVICE
+# ============================================================
+section "Enabling ASCII Art Restore Service"
+
+sudo install -Dm644 "$REPO_DIR/systemd/restore-issue.service" /etc/systemd/system/restore-issue.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now restore-issue.service
+
+ok "restore-issue.service enabled (re-applies ASCII art to /etc/issue on every boot)."
 
 # ============================================================
 # SERVICE MANAGEMENT
