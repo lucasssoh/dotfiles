@@ -95,7 +95,9 @@ if [ "$DISTRO" = "fedora" ]; then
         # Hyprland ecosystem
         dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
-        waybar dunst rofi-wayland khal hyprsunset
+        # (SwayNotificationCenter remplace dunst comme démon de notifications
+        # actif ; dunst reste installé/dispo en fallback, non démarré)
+        waybar dunst SwayNotificationCenter rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -115,9 +117,12 @@ if [ "$DISTRO" = "fedora" ]; then
         # Screenshots
         satty grim slurp grimblast
         # Tools
-        bc jq curl git lm_sensors unzip
+        bc jq curl git lm_sensors unzip socat
         # Qt theming
         qt5ct qt6ct
+        # Orbit (WiFi/Bluetooth/VPN manager) build deps -- pas de paquet Fedora,
+        # compilé depuis les sources plus bas dans ce script
+        rust cargo gtk4-devel gtk4-layer-shell-devel NetworkManager-libnm-devel bluez-libs-devel
     )
 
 elif [ "$DISTRO" = "arch" ]; then
@@ -125,7 +130,7 @@ elif [ "$DISTRO" = "arch" ]; then
         # Hyprland ecosystem
         dbus hyprland hyprlock hyprpaper hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
-        waybar dunst rofi-wayland khal hyprsunset
+        waybar dunst swaync rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -145,13 +150,17 @@ elif [ "$DISTRO" = "arch" ]; then
         # Screenshots
         satty grim slurp
         # Tools
-        bc jq curl git lm_sensors unzip
+        bc jq curl git lm_sensors unzip socat
         # Qt
         qt5ct qt6ct
+        # Orbit build deps
+        rust cargo gtk4-layer-shell libnm bluez-libs
     )
 
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
+    warn "swaync (SwayNotificationCenter) is often not packaged in apt — install manually if 'swaync' isn't found."
+    warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     PKGS=(
         dbus dbus-x11 hyprland hyprpaper
         waybar dunst rofi khal hyprsunset
@@ -165,13 +174,44 @@ elif [ "$DISTRO" = "debian" ]; then
         satty grim slurp
         papirus-icon-theme
         fonts-noto fonts-noto-color-emoji
-        bc jq curl git lm-sensors unzip
+        bc jq curl git lm-sensors unzip socat
         qt5ct
     )
 fi
 
 $PKG_INSTALL "${PKGS[@]}"
 ok "Packages installed."
+
+# ============================================================
+# ORBIT (WiFi/Bluetooth/VPN manager, natif Wayland)
+# ============================================================
+# Pas de paquet Fedora/Debian -- compilé depuis les sources. Le code source
+# (modifié : logo/titre retirés, toggle intelligent, troncature des noms
+# trop longs -- cf. orbit-vendor/README.md pour le détail) est VENDORISÉ
+# directement dans ce repo (orbit-vendor/) plutôt que cloné depuis GitHub à
+# chaque install -- Orbit est un projet solo-dev à faible activité ; si son
+# repo disparaît un jour, notre install ne doit pas en dépendre. Binaire
+# installé dans ~/.local/bin (pas besoin de sudo), config dans
+# config/hyprland/orbit/ (symlinkée plus bas comme les autres dossiers).
+section "Building Orbit (WiFi/Bluetooth manager)"
+
+ORBIT_BUILD="$HOME/.cache/orbit-build"
+
+if ! command -v cargo &>/dev/null; then
+    warn "cargo not found — skipping Orbit build. Install a Rust toolchain and re-run this script to get it."
+else
+    rm -rf "$ORBIT_BUILD"
+    mkdir -p "$ORBIT_BUILD"
+    cp -r "$REPO_DIR/orbit-vendor/." "$ORBIT_BUILD/"
+
+    if (cd "$ORBIT_BUILD" && cargo build --release); then
+        mkdir -p "$HOME/.local/bin"
+        install -Dm755 "$ORBIT_BUILD/target/release/orbit" "$HOME/.local/bin/orbit"
+        ok "Orbit built and installed to ~/.local/bin/orbit."
+    else
+        warn "Orbit build failed — WiFi/Bluetooth waybar clicks will fall back to nmtui/blueman-manager until this is fixed."
+    fi
+fi
 
 # ============================================================
 # SYSTEMD USER SERVICES
@@ -238,7 +278,7 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,hyprlock,hypridle,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,hyprlock,hypridle,scripts,khal}
     ok "Old configs removed"
 fi
 
@@ -246,7 +286,7 @@ section "Linking configuration directories"
 
 # Define the folders to be linked as entire directories
 # Based on your ls -R output
-modules=("hypr" "waybar" "rofi" "dunst" "hyprlock" "hypridle" "scripts" "khal")
+modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "hyprlock" "hypridle" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

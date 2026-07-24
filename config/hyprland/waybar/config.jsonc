@@ -42,6 +42,7 @@
         "custom/hdr",
         "custom/performance",
         "battery",
+        "custom/notification",
         "custom/power"
     ],
 
@@ -84,16 +85,18 @@
     // ============================================================
 
     // ── Media ────────────────────────────────────────────────────
+    // Juste une indication qu'un son joue -- titre/artiste et contrôles
+    // complets sont dans swaync (widget mpris du centre de notifications).
     "mpris": {
-        "format": "{player_icon}  {title} · {artist}",
-        "format-paused": "-  {title} · {artist}",
+        "format": "{player_icon}",
+        "format-paused": "{player_icon}",
         "player-icons": {
             "spotify": "󰓇",
             "firefox": "󰗃",
             "mpv*": "󰎁",
             "default": "󰎈"
         },
-        "max-length": 60
+        "tooltip-format": "{title} · {artist}"
     },
 
     // ============================================================
@@ -146,7 +149,8 @@
         "format-disabled": "󰤭  ----o/s",
 
         "tooltip-format": "{essid} ({signalStrength}%)",
-        "on-click": "wezterm start --class nm-tui-float -- nmtui",
+        "on-click": "~/.config/waybar/scripts/orbit-toggle.sh wifi",
+        "on-click-right": "wezterm start --class nm-tui-float -- nmtui",
 
         "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
 
@@ -166,7 +170,8 @@
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
         "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
 
-        "on-click": "wezterm start --class bt-tui-float -- bluetuith"
+        "on-click": "~/.config/waybar/scripts/orbit-toggle.sh bluetooth",
+        "on-click-right": "blueman-manager"
     },
 
     // ── Audio Output ─────────────────────────────────────────────
@@ -179,7 +184,7 @@
             "default": ["󰕿", "󰖀", "󰕾"]
         },
 
-        "on-click": "wezterm start --class audio-tui-float -- wiremix",
+        "on-click": "~/.config/waybar/scripts/audio.sh output",
         "on-click-right": "pavucontrol",
         "scroll-step": 5
     },
@@ -190,7 +195,9 @@
         "format-source": "󰍬 {volume}%",
         "format-source-muted": "󰍭 ---",
 
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        // Le mute reste sur XF86AudioMicMute (clavier) ; le clic ouvre
+        // le choix du micro par défaut (clic droit = pavucontrol avancé)
+        "on-click": "~/.config/waybar/scripts/audio.sh input",
         "on-click-right": "pavucontrol",
 
         // Gestion du volume du micro
@@ -244,6 +251,31 @@
             "󰁺","󰁻","󰁼","󰁽","󰁾",
             "󰁿","󰂀","󰂁","󰂂","󰁹"
         ]
+    },
+
+    // ── Notifications (swaync) ──────────────────────────────────
+    // Format waybar officiel de swaync (README upstream) : "alt" (défini
+    // par swaync-client -swb) sert à la fois de clé format-icons ET de
+    // classe CSS -> cf. #custom-notification.* dans style.css.
+    "custom/notification": {
+        "tooltip": true,
+        "format": "{icon}",
+        "format-icons": {
+            "notification": "󱅫",
+            "none": "󰂜",
+            "dnd-notification": "󰂠",
+            "dnd-none": "󰪓",
+            "inhibited-notification": "󰂛",
+            "inhibited-none": "󰪑",
+            "dnd-inhibited-notification": "󰂛",
+            "dnd-inhibited-none": "󰪑"
+        },
+        "return-type": "json",
+        "exec-if": "which swaync-client",
+        "exec": "swaync-client -swb",
+        "on-click": "~/.config/waybar/scripts/swaync-toggle.sh",
+        "on-click-right": "swaync-client -d -sw",
+        "escape": true
     },
 
     // ── Power ────────────────────────────────────────────────────

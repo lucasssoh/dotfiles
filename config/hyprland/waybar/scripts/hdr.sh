@@ -73,6 +73,37 @@ hdr_capable() {
     [[ "$cap" == "1" ]]
 }
 
+# Luminance HDR réelle du panneau, lue dans l'EDID (Desired content max
+# frame-average / min luminance) -- sans ça, Hyprland retombe sur des défauts
+# génériques (sdr_max_luminance=80, sdr_min_luminance=0.2) qui n'ont aucun
+# rapport avec la vraie capacité de l'écran -> HDR plat/délavé. Mis en cache
+# comme hdr_capable (l'EDID ne change pas). Imprime "max min", vide si
+# indisponible -- apply() retombe alors sur cm="hdr" (comportement actuel).
+hdr_luminance() {
+    local m="$1" cache="$CACHE_DIR/lum-$m" edid="" path max="" min=""
+    if [[ -f "$cache" ]]; then
+        cat "$cache"
+        return
+    fi
+    mkdir -p "$CACHE_DIR"
+    for path in /sys/class/drm/*-"$m"/edid; do
+        [[ -e "$path" ]] && { edid="$path"; break; }
+    done
+    if [[ -n "$edid" ]] && command -v edid-decode >/dev/null 2>&1; then
+        max=$(edid-decode "$edid" 2>/dev/null \
+            | sed -n 's/.*Desired content max frame-average luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
+        min=$(edid-decode "$edid" 2>/dev/null \
+            | sed -n 's/.*Desired content min luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
+        # sdr_max_luminance exige un entier côté Hyprland (testé en live : un
+        # float est rejeté avec "integer type requires a bool or an integer").
+        if [[ -n "$max" ]]; then
+            max="${max%%.*}"
+        fi
+    fi
+    printf '%s %s' "$max" "$min" > "$cache"
+    printf '%s %s' "$max" "$min"
+}
+
 # Applique HDR ou SDR en préservant mode/position/scale courants
 #
 # NB : ce setup charge sa config via un binding Lua custom (hl.*), qui bascule
@@ -93,7 +124,14 @@ apply() {
     position="${x}x${y}"
 
     if [[ "$want" == "hdr" ]]; then
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"hdr\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION} })"
+        local lum max min cm="hdr" extra=""
+        lum="$(hdr_luminance "$m")"
+        max="${lum%% *}"; min="${lum##* }"
+        if [[ -n "$max" && -n "$min" ]]; then
+            cm="hdredid"
+            extra=", sdr_max_luminance = ${max}, sdr_min_luminance = ${min}"
+        fi
+        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"${cm}\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION}${extra} })"
     else
         hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 8, cm = \"auto\" })"
     fi

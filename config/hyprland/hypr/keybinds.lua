@@ -19,6 +19,7 @@ hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layo
 hl.bind(mod .. "+ Delete",  hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power.sh"))
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
+hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
 -- ============================================================
 -- FENÊTRES
 -- ============================================================

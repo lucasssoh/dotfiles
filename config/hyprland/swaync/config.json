@@ -1,0 +1,65 @@
+{
+    "$schema": "/etc/xdg/swaync/configSchema.json",
+    "positionX": "right",
+    "positionY": "top",
+    "layer": "overlay",
+    "layer-shell": true,
+    "cssPriority": "user",
+    "control-center-margin-top": 8,
+    "control-center-margin-bottom": 8,
+    "control-center-margin-right": 8,
+    "control-center-margin-left": 8,
+    "control-center-width": 380,
+    "control-center-height": 600,
+    "notification-window-width": 340,
+    "fit-to-screen": false,
+    "keyboard-shortcuts": true,
+    "image-visibility": "when-available",
+    "transition-time": 150,
+    "hide-on-clear": false,
+    "hide-on-action": true,
+    "script-fail-notify": true,
+    "notification-icon-size": 48,
+    "notification-body-image-height": 100,
+    "notification-body-image-width": 200,
+    "timeout": 6,
+    "timeout-low": 4,
+    "timeout-critical": 0,
+    "notification-grouping": true,
+    "widgets": [
+        "title",
+        "dnd",
+        "mpris",
+        "buttons-grid",
+        "notifications"
+    ],
+    "widget-config": {
+        "title": {
+            "text": "Notifications",
+            "clear-all-button": true,
+            "button-text": "Tout effacer"
+        },
+        "dnd": {
+            "text": "Ne pas déranger"
+        },
+        "mpris": {
+            "show-album-art": "when-available",
+            "autohide": true
+        },
+        "buttons-grid": {
+            "buttons-per-row": 2,
+            "actions": [
+                {
+                    "label": "󰽥",
+                    "type": "normal",
+                    "command": "~/.config/hypr/scripts/toggle-night-mode.sh"
+                },
+                {
+                    "label": "󰹑",
+                    "type": "normal",
+                    "command": "~/.config/waybar/scripts/screenshot-region.sh"
+                }
+            ]
+        }
+    }
+}

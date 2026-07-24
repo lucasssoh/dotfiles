@@ -36,9 +36,21 @@ hl.on("hyprland.start", function()
     -- Services et Daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
     hl.exec_cmd("waybar")
-    hl.exec_cmd("dunst")
+    -- swaync remplace dunst (centre de contrôle avec historique/toggles/mpris ;
+    -- les deux se disputeraient le nom D-Bus org.freedesktop.Notifications,
+    -- donc dunst n'est plus lancé -- config gardée dans le repo en fallback).
+    hl.exec_cmd("swaync")
     hl.exec_cmd("hypridle")
-    
+    -- Gestionnaire WiFi/Bluetooth/VPN natif Wayland (remplace le détour par
+    -- gnome-control-center) -- compilé depuis les sources par install.sh,
+    -- cf. config/hyprland/orbit-build/. `orbit toggle` (waybar) réutilise ce
+    -- daemon caché plutôt que d'en relancer un par clic.
+    hl.exec_cmd("orbit daemon")
+    -- Ferme Orbit au clic en dehors (comme swaync) -- GTK/gtk4-layer-shell
+    -- ne prévient jamais Orbit d'une perte de focus (surface layer-shell),
+    -- donc on s'appuie sur les événements Hyprland à la place.
+    hl.exec_cmd("bash ~/.config/hypr/scripts/orbit-autoclose.sh")
+
     -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")

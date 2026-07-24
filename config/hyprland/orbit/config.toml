@@ -1,0 +1,21 @@
+# Orbit — position/marges/transitions
+# (couleurs -> theme.toml, police -> style.css, dans ce même dossier)
+
+# Coin haut-droit, comme le centre de notifications swaync -- même langage
+# visuel "panneau flottant" pour tous les popups système.
+position = "top-right"
+
+# Mêmes valeurs que control-center-margin-* dans swaync/config.json --
+# Hyprland décale déjà automatiquement les surfaces ancrées en haut pour
+# dégager la zone réservée par waybar, donc pas besoin d'ajouter la hauteur
+# de la barre nous-mêmes (le faire donnait un panneau plus bas que swaync).
+margin_top = 8
+margin_bottom = 8
+margin_left = 8
+margin_right = 8
+
+window_transition = "slidedown"
+window_transition_duration = 150
+
+stack_transition = "slidehorizontal"
+stack_transition_duration = 150
