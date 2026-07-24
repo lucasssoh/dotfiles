@@ -25,7 +25,7 @@
     "timeout": 6,
     "timeout-low": 4,
     "timeout-critical": 0,
-    "notification-grouping": true,
+    "notification-grouping": false,
     "widgets": [
         "title",
         "dnd",
@@ -44,7 +44,8 @@
         },
         "mpris": {
             "show-album-art": "when-available",
-            "autohide": true
+            "autohide": true,
+            "blacklist": ["playerctld"]
         },
         "buttons-grid": {
             "buttons-per-row": 2,

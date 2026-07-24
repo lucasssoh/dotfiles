@@ -112,11 +112,35 @@ window, .blank-window, .floating-notifications {
     border-radius: 999px;
 }
 
-/* Média (mpris) */
+/* Média (mpris) -- le thème par défaut de swaync dessine la pochette
+   d'album floutée en fond (.mpris-background) avec un voile semi-transparent
+   par-dessus (.mpris-overlay) + une ombre portée sur la carte et la
+   pochette : on neutralise tout ça pour garder un aplat uni comme le reste
+   du système. */
 .widget-mpris, .widget-mpris-player {
     background: @surface;
     border-radius: 8px;
     color: @text;
+}
+
+.widget-mpris .widget-mpris-player {
+    box-shadow: none;
+}
+
+/* .mpris-background est un vrai widget GtkPicture (la pochette d'album),
+   pas un fond CSS -- "background: transparent" n'a aucun effet dessus, il
+   faut le rendre invisible via opacity pour révéler l'aplat @surface du
+   parent. */
+.widget-mpris .widget-mpris-player .mpris-background {
+    opacity: 0;
+}
+
+.widget-mpris .widget-mpris-player .mpris-overlay {
+    background-color: transparent;
+}
+
+.widget-mpris .widget-mpris-player .mpris-overlay .widget-mpris-album-art {
+    box-shadow: none;
 }
 
 .widget-mpris-title    { color: @text; font-weight: bold; }

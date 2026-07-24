@@ -40,17 +40,10 @@ hl.on("hyprland.start", function()
     -- les deux se disputeraient le nom D-Bus org.freedesktop.Notifications,
     -- donc dunst n'est plus lancé -- config gardée dans le repo en fallback).
     hl.exec_cmd("swaync")
-    hl.exec_cmd("hypridle")
-    -- Gestionnaire WiFi/Bluetooth/VPN natif Wayland (remplace le détour par
-    -- gnome-control-center) -- compilé depuis les sources par install.sh,
-    -- cf. config/hyprland/orbit-build/. `orbit toggle` (waybar) réutilise ce
-    -- daemon caché plutôt que d'en relancer un par clic.
-    hl.exec_cmd("orbit daemon")
-    -- Ferme Orbit au clic en dehors (comme swaync) -- GTK/gtk4-layer-shell
-    -- ne prévient jamais Orbit d'une perte de focus (surface layer-shell),
-    -- donc on s'appuie sur les événements Hyprland à la place.
-    hl.exec_cmd("bash ~/.config/hypr/scripts/orbit-autoclose.sh")
-
+    -- Désactivé sur cette machine (config restée en place et corrigée, cf.
+    -- hypridle.conf ci-dessus, mais pas activée -- problème connu non traité
+    -- ici). À réactiver en décommentant la ligne ci-dessous.
+    -- hl.exec_cmd("hypridle")
     -- RESTAURATION DU WALLPAPER (On lance notre aiguillage)
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
@@ -63,6 +56,22 @@ hl.on("hyprland.start", function()
     -- persistés dans un fichier — à rejouer à chaque démarrage, cf. aussi
     -- config.reloaded ci-dessous pour le cas `hyprctl reload`)
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+
+    -- Gestionnaire WiFi/Bluetooth/VPN natif Wayland (remplace le détour par
+    -- gnome-control-center) -- compilé depuis les sources vendorisées par
+    -- install.sh, cf. config/hyprland/orbit-vendor/. `orbit toggle` (waybar)
+    -- réutilise ce daemon caché plutôt que d'en relancer un par clic.
+    -- Plus lancé ici directement : client layer-shell GTK4 démarré trop tôt,
+    -- il pouvait échouer à démarrer sans que rien ne le relance (essayé un
+    -- sleep bloquant, puis un lancement en fin de séquence -- toujours pas
+    -- fiable au reboot réel). Géré par un service systemd --user à la place
+    -- (cf. config/hyprland/systemd/orbit.service), avec retry automatique
+    -- (Restart=on-failure) : démarre tout seul dès que graphical-session.target
+    -- est atteint (déclenché plus haut).
+    -- Ferme Orbit au clic en dehors (comme swaync) -- GTK/gtk4-layer-shell
+    -- ne prévient jamais Orbit d'une perte de focus (surface layer-shell),
+    -- donc on s'appuie sur les événements Hyprland à la place.
+    hl.exec_cmd("bash ~/.config/hypr/scripts/orbit-autoclose.sh")
 end)
 
 -- Un `hyprctl reload` recharge les fichiers Lua statiques et efface les
