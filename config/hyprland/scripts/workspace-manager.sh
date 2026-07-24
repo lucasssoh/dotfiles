@@ -76,7 +76,38 @@ mons_json="$(hyprctl monitors all -j)"
 
 # ---- Résolution des rôles ------------------------------------------------
 
-internal="$(jq -r '[.[] | select(.name | test("^(eDP|LVDS|DSI)"))][0].name // empty' <<<"$mons_json")"
+# Connecteur de la dalle interne lu depuis DRM : persiste même quand la dalle
+# est éteinte/désactivée (contrairement à `hyprctl monitors`, qui la perd dès
+# qu'elle est hors ligne -- bug vécu en prod : mode "externe seul" -> dalle
+# éteinte -> disparue de `mons_json` -> repli ci-dessous la reclassait comme
+# interne l'écran externe -> plus aucun moyen de revenir en arrière). Dynamique
+# (suit le connecteur réel), jamais codé en dur.
+internal_from_drm() {
+    local d
+    # 1) connecteur interne CONNECTÉ = la dalle réelle de ce boot (gère le MUX
+    #    double-GPU : la dalle peut apparaître sur card1-eDP-* ou card2-eDP-*
+    #    selon le routage au démarrage -- bug vécu en prod : prendre le 1er
+    #    connecteur du glob sans vérifier son status pouvait pointer sur un
+    #    connecteur fantôme d'un GPU non utilisé ce boot).
+    for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
+        [[ -e "$d" ]] || continue
+        [[ "$(cat "$d/status" 2>/dev/null)" == connected ]] || continue
+        basename "$d" | sed -E 's/^card[0-9]+-//'
+        return 0
+    done
+    # 2) repli : n'importe quel connecteur interne (dalle éteinte/désactivée
+    #    mais toujours la nôtre) -- évite le deadlock "externe-seul".
+    for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
+        [[ -e "$d" ]] || continue
+        basename "$d" | sed -E 's/^card[0-9]+-//'
+        return 0
+    done
+}
+
+internal="$(internal_from_drm)"
+if [[ -z "$internal" ]]; then
+    internal="$(jq -r '[.[] | select(.name | test("^(eDP|LVDS|DSI)"))][0].name // empty' <<<"$mons_json")"
+fi
 if [[ -z "$internal" ]]; then
     # Aucune dalle laptop détectée (poste fixe) : repli sur le 1er moniteur listé
     internal="$(jq -r '.[0].name // empty' <<<"$mons_json")"
