@@ -7,5 +7,9 @@ set -euo pipefail
 # doivent jamais être ouverts en même temps.
 # =========================================================
 
+# ~/.local/bin (où install.sh place orbit) n'est pas dans le PATH des
+# processus lancés par Hyprland -- seul le profil zsh l'ajoute.
+export PATH="$HOME/.local/bin:$PATH"
+
 orbit hide >/dev/null 2>&1 || true
 swaync-client -t -sw

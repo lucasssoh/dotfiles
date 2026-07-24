@@ -15,6 +15,10 @@ set -uo pipefail
 # script referme Orbit juste après l'avoir ouvert.
 # =========================================================
 
+# ~/.local/bin (où install.sh place orbit) n'est pas dans le PATH des
+# processus lancés par Hyprland -- seul le profil zsh l'ajoute.
+export PATH="$HOME/.local/bin:$PATH"
+
 SOCKET=""
 for _ in $(seq 1 30); do
     SOCKET=$(find "/run/user/$(id -u)/hypr/" -name ".socket2.sock" 2>/dev/null | head -1)
