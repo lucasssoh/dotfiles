@@ -35,7 +35,7 @@ window#waybar {
 #custom-logo, #workspaces, #custom-gap, #window,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network,
 #bluetooth, #pulseaudio.output, #pulseaudio.input,
-#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power, #mpris.paused, #mpris.playing {
+#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power{
     background: @background;
 }
 
@@ -49,7 +49,7 @@ window#waybar {
 }
 
 /* --- Bordures Haut & Bas pour Window et Mpris (@overlay) --- */
-#window, #mpris, #custom-apps {
+#window, #custom-apps {
     border-top: 2px solid @overlay;
     border-bottom: 2px solid @overlay;
 }
@@ -66,7 +66,7 @@ window#waybar {
 }
 
 /* Blocs indépendants (Tous les coins arrondis) */
-#window, #mpris {
+#window{
     border-radius: 4px;
 }
 
