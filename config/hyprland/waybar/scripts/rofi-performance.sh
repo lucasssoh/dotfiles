@@ -1,5 +1,5 @@
 #!/bin/bash
-# Utilise ton rasi spécifique
+# rofi-performance.sh — menu Rofi pour choisir le profil d'alimentation
 CHOSEN=$(echo -e "Performance\nBalanced\nPower-saver" | rofi -dmenu -theme ~/.config/rofi/performance.rasi -mesg "Power Profile")
 
 case $CHOSEN in

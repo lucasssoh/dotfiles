@@ -94,8 +94,8 @@ hdr_luminance() {
             | sed -n 's/.*Desired content max frame-average luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
         min=$(edid-decode "$edid" 2>/dev/null \
             | sed -n 's/.*Desired content min luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
-        # sdr_max_luminance exige un entier côté Hyprland (testé en live : un
-        # float est rejeté avec "integer type requires a bool or an integer").
+        # sdr_max_luminance exige un entier côté Hyprland : un float est
+        # rejeté avec "integer type requires a bool or an integer".
         if [[ -n "$max" ]]; then
             max="${max%%.*}"
         fi

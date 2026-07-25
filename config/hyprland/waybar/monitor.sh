@@ -1,4 +1,10 @@
 #!/bin/bash
+# =========================================================
+# monitor.sh — rechargement à chaud de Waybar : redémarre le process
+# dès que config.jsonc ou style.css est modifié, pour itérer sur le
+# thème/la config sans avoir à relancer manuellement. Outil de
+# développement, pas lancé par l'autostart de session.
+# =========================================================
 exec > /tmp/waybar_monitor.log 2>&1
 
 CONFIG_FILES=(

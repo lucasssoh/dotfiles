@@ -49,10 +49,12 @@ icon_for() {
     esac
 }
 
-declare -A NAME_OF
+declare -A NAME_OF  # ligne affichée dans rofi -> nom pactl du périphérique
 ROWS=()
 
-# Appelée directement (pas en $(...)) : cf. wifi.sh pour la raison.
+# Remplit ROWS/NAME_OF en variables globales plutôt que de renvoyer un
+# résultat via $(...) : cf. wifi.sh pour la raison (un subshell perdrait
+# les tableaux associatifs remplis à l'intérieur).
 build_rows() {
     ROWS=()
     NAME_OF=()

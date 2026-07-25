@@ -1,3 +1,10 @@
+//! Carrousel de cartes de wallpapers : gère la navigation circulaire
+//! (molette, clic, clavier via main.rs), l'animation de défilement par
+//! interpolation exponentielle, et l'entrée en cascade au lancement.
+//! Widget custom plutôt que layout manager standard, car position, largeur
+//! et hauteur de chaque carte changent en continu — voir le commentaire
+//! sur `Carousel` plus bas pour le contexte complet.
+
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
@@ -263,6 +270,8 @@ glib::wrapper! {
 }
 
 impl Carousel {
+    /// Construit le carrousel et parente toutes les cartes fournies,
+    /// en branchant clic, molette/trackpad et la boucle d'animation.
     pub fn new(cards: Vec<Card>) -> Self {
         let carousel: Self = glib::Object::builder().build();
         carousel.set_overflow(gtk4::Overflow::Hidden);
@@ -359,6 +368,8 @@ impl Carousel {
         }
     }
 
+    /// Indice de la carte actuellement au focus, dérivé de `target` (pas de
+    /// `offset`, qui n'est que sa version animée/interpolée).
     pub fn focused_index(&self) -> usize {
         let len = self.imp().entries.borrow().len();
         if len == 0 {
@@ -375,6 +386,8 @@ impl Carousel {
         self.imp().entries.borrow().get(index).cloned()
     }
 
+    /// Déplace la cible de focus de `delta` cartes (navigation clavier,
+    /// cf. main.rs) ; l'animation vers cette nouvelle cible est gérée par `tick`.
     pub fn move_focus(&self, delta: i32) {
         self.imp().target.set(self.imp().target.get() + delta as f64);
     }

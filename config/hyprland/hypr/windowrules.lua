@@ -1,8 +1,10 @@
 -- ============================================================
--- WINDOWRULES.LUA — Règles par application
+-- windowrules.lua — Règles par application
 -- ============================================================
--- Syntaxe : hl.window_rule({ match = { ... }, effect = value, ... })
--- Les règles sont évaluées de haut en bas — l'ordre compte !
+-- Syntaxe : hl.window_rule({ match = { ... }, effet = valeur, ... })
+-- Les règles sont évaluées de haut en bas — l'ordre compte ! Une règle
+-- plus spécifique placée après une règle générale peut la surcharger
+-- (cf. Steam et Lutris plus bas).
 -- ============================================================
 
 -- ============================================================
@@ -52,7 +54,7 @@ hl.window_rule({ match = { title = "^Preferences$" }, float = true })
 hl.window_rule({ match = { title = "^Settings$"    }, float = true })
 
 -- ============================================================
--- PAVUCONTROL — GUI audio fallback
+-- PAVUCONTROL — GUI audio de secours
 -- ============================================================
 hl.window_rule({
     match        = { class = "org.pulseaudio.pavucontrol" },
@@ -72,7 +74,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- TOUTES LES FENÊTRES FLOTTANTES → centrées
+-- TOUTES LES FENÊTRES FLOTTANTES → centrées par défaut
 -- ============================================================
 hl.window_rule({
     match  = { float= true },
@@ -91,24 +93,24 @@ hl.window_rule({
 })
 
 -- ============================================================
--- ROFI (Launcher & Powermenu)
+-- ROFI (launcher & powermenu)
 -- ============================================================
 hl.window_rule({
     match = { class = "Rofi" },
-    -- Désactive totalement l'animation pour cette classe
+    -- Désactive l'animation pour cette classe (rendu instantané)
     no_anim = true,
-    -- Force le flottement (déjà géré globalement mais on sécurise)
+    -- Force le flottement (déjà géré globalement, redondance volontaire)
     float = true,
-    -- Évite que le flou (blur) ne doive être recalculé à l'ouverture
+    -- Évite un recalcul du flou à l'ouverture
     no_blur = true,
-    -- S'assure que la fenêtre est immédiatement centrée sans "glisser"
+    -- Centre immédiatement la fenêtre sans effet de glissement
     center = true,
-    -- Garde le focus pour éviter de devoir recliquer
+    -- Conserve le focus pour permettre la saisie sans reclic
     stay_focused = true,
 })
 
 -- ============================================================
--- NMTUI — WiFi flottant centré
+-- NMTUI — WiFi (TUI dans un terminal flottant) centré
 -- ============================================================
 hl.window_rule({
     match        = { class = "nm-tui-float" },
@@ -120,7 +122,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- BLUETUITH — Bluetooth flottant centré
+-- BLUETUITH — Bluetooth (TUI) centré
 -- ============================================================
 hl.window_rule({
     match        = { class = "bt-tui-float" },
@@ -132,7 +134,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- WIREMIX — Audio TUI
+-- WIREMIX — Audio (TUI)
 -- ============================================================
 hl.window_rule({
     match        = { class = "audio-tui-float" },
@@ -144,10 +146,10 @@ hl.window_rule({
 })
 
 -- ============================================================
--- DASHBOARD
+-- DASHBOARD — widgets flottants non focusables
 -- ============================================================
 
--- Dashboard fastfetch (haut-droit)
+-- Fastfetch (haut-droit)
 hl.window_rule({
     match    = { class = "dashboard-fastfetch" },
     float    = true,
@@ -160,7 +162,7 @@ hl.window_rule({
     animation= "fade",
 })
 
--- Dashboard clock (bas-gauche)
+-- Horloge (bas-gauche)
 hl.window_rule({
     match    = { class = "dashboard-clock" },
     float    = true,
@@ -174,7 +176,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- SCREENSHOT — Outil de retouche Satty
+-- SCREENSHOT — outil de retouche Satty
 -- ============================================================
 hl.window_rule({
     match        = { class = "com.gabm.satty" },
@@ -196,9 +198,10 @@ hl.window_rule({
 -- })
 
 -- ============================================================
--- NEMO — Fenêtre principale en tuile, tout le reste flotte
+-- NEMO — fenêtre principale en tuile, tout le reste flotte
 -- ============================================================
--- 1. Fenêtre principale : si le titre se termine par " — Gestionnaire de fichiers" (ou " — File Manager")
+-- 1. Fenêtre principale : titre se terminant par " — Gestionnaire de
+--    fichiers" (FR) ou " — File Manager" (EN)
 hl.window_rule({
     match  = { class = "nemo", title = " — Gestionnaire de fichiers$" },
     tile   = true,
@@ -208,7 +211,8 @@ hl.window_rule({
     tile   = true,
 })
 
--- 2. Dialogues Nemo, propriétés, transferts et fenêtres d'extraction File-Roller (Inversé)
+-- 2. Tout le reste (dialogues, propriétés, transferts, extraction
+--    File-Roller) : match inversé de la règle ci-dessus
 hl.window_rule({
     match  = { class = "nemo", title = "^(?!.* — (Gestionnaire de fichiers|File Manager))" },
     float  = true,
@@ -228,22 +232,21 @@ hl.window_rule({
 })
 
 -- ============================================================
--- FIREFOX — Téléchargements, Paramètres et Popups
+-- FIREFOX — téléchargements, paramètres et popups
 -- ============================================================
--- Bloque la fenêtre principale sur le Workspace 2
+-- Fenêtre principale en tuile sur le workspace 2
 hl.window_rule({
     match     = { class = "firefox", title = " — Mozilla Firefox$" },
     workspace = "2",
     tile      = true,
 })
 
--- Force le flottement pour les préférences et les fenêtres de login
--- NB : class="firefox" ne correspond à rien sur ce système (la vraie classe
--- rapportée par hyprctl clients est "org.mozilla.firefox") — cette règle est
--- donc inactive depuis le début. Non corrigée ici : ces titres n'ont pas été
--- vérifiés en conditions réelles (contrainte de la tâche : pas de valeur
--- devinée). "Bibliothèque"/"Library" retirés de cette liste, gérés par la
--- règle dédiée et vérifiée ci-dessous.
+-- Flottement pour les fenêtres de préférences et de login.
+-- Note : la classe réellement rapportée par hyprctl clients sur ce
+-- système est "org.mozilla.firefox", pas "firefox" — cette règle est
+-- donc inactive en l'état. Les titres visés n'ont pas été vérifiés en
+-- conditions réelles ; à corriger si le besoin se confirme. La fenêtre
+-- Bibliothèque est déjà couverte séparément ci-dessous.
 hl.window_rule({
     match = { class = "firefox", title = "^(Password Required|Page Info|S'identifier|Préférences|Preferences|Paramètres|Settings)" },
     float = true,
@@ -251,13 +254,12 @@ hl.window_rule({
     stay_focused = true,
 })
 
--- Bibliothèque (historique/marque-pages/téléchargements) — popup confirmée
--- via `hyprctl clients` : class="org.mozilla.firefox", title="Bibliothèque"
--- (locale FR de ce système). "Library" ajouté pour couvrir les sessions en
--- anglais (même fenêtre, titre localisé — pas testé sur ce système FR, mais
--- c'est le nom officiel Mozilla de cette fenêtre en EN). Flottante, centrée,
--- taille raisonnable, garde le focus à l'ouverture. Pas de pin : elle doit
--- suivre le workspace courant.
+-- Bibliothèque (historique/marque-pages/téléchargements) — popup
+-- confirmée via hyprctl clients : class="org.mozilla.firefox",
+-- title="Bibliothèque" (locale FR). "Library" couvre le nom officiel
+-- Mozilla en anglais pour la même fenêtre. Flottante, centrée, taille
+-- fixe, garde le focus à l'ouverture. Pas de pin : elle doit suivre le
+-- workspace courant plutôt que rester épinglée à l'écran.
 hl.window_rule({
     match        = { class = "org.mozilla.firefox", title = "^(Bibliothèque|Library)$" },
     float        = true,
@@ -267,22 +269,24 @@ hl.window_rule({
 })
 
 -- ============================================================
--- STEAM & LUNCHERS JEUX (Lutris, Heroic, Rockstar)
+-- STEAM & LAUNCHERS DE JEUX (Lutris, Heroic, Rockstar)
 -- ============================================================
--- Règles globales pour forcer le flottement sur tous les popups de jeux/launchers.
--- (popups confirmées via hyprctl clients : Steam "Propriétés"/config de jeu a pour
--- title le nom du jeu, ex. "Assetto Corsa Competizione" — pas de liste figée possible.)
+-- Force le flottement sur tous les popups des launchers de jeux : ces
+-- fenêtres n'ont pas de titre fixe exploitable (ex. le dialogue de
+-- config de jeu Steam prend le nom du jeu, ex. "Assetto Corsa
+-- Competizione"), donc pas de liste de titres figée possible.
 --
--- NB IMPORTANT : le motif "^(?!Steam$)" (lookahead négatif) testé initialement ne
--- matche RIEN sur ce système — confirmé en live (fenêtre restée tuilée malgré une
--- classe qui matchait). Le moteur de regex de ce binding ne supporte pas le
--- lookahead de façon fiable (limitation connue de la regex Hyprland/std::regex).
--- Solution : flotter TOUT ce qui est class=steam, puis une règle plus bas (donc
--- prioritaire — "l'ordre compte", cf. l'en-tête du fichier) repasse la fenêtre
--- principale "Steam" en tuile via un match exact, sans lookahead.
--- no_follow_mouse : sans ça, le focus-follows-mouse (input.follow_mouse=1
--- dans hyprland.lua) reprend la main dès que le curseur n'est pas au-dessus
--- de la popup fraîchement ouverte — stay_focused seul ne suffit pas.
+-- Le lookahead négatif "^(?!Steam$)" (pour exclure uniquement la
+-- fenêtre principale de cette règle) ne fonctionne pas ici : le moteur
+-- de regex utilisé par Hyprland ne supporte pas les lookaheads de façon
+-- fiable. Solution retenue : flotter TOUT ce qui a class=steam, puis
+-- une règle plus bas (donc prioritaire, cf. l'en-tête du fichier) repasse
+-- la fenêtre principale "Steam" en tuile via un match exact sans lookahead.
+--
+-- no_follow_mouse : sans cette option, le focus-follows-mouse
+-- (input.follow_mouse=1 dans hyprland.lua) reprend la main dès que le
+-- curseur n'est pas au-dessus de la popup fraîchement ouverte —
+-- stay_focused seul ne suffit pas à empêcher ce vol de focus.
 hl.window_rule({
     match          = { class = "steam" },
     float          = true,
@@ -290,10 +294,11 @@ hl.window_rule({
     stay_focused   = true,
     no_follow_mouse = true,
 })
--- stay_focused/no_follow_mouse remis explicitement à false : sans ça, ces
--- propriétés restent héritées de la règle du dessus (les propriétés non
--- redéfinies par une règle plus spécifique ne sont pas réinitialisées), ce
--- qui perturbe le grab d'input des menus contextuels de cette fenêtre.
+-- stay_focused/no_follow_mouse remis explicitement à false pour la
+-- fenêtre principale : sans ça, ces propriétés restent héritées de la
+-- règle du dessus (les propriétés non redéfinies par une règle plus
+-- spécifique ne sont pas réinitialisées), ce qui perturbe la capture
+-- d'input des menus contextuels de cette fenêtre.
 hl.window_rule({
     match           = { class = "steam", title = "^Steam$" },
     tile            = true,
@@ -301,9 +306,9 @@ hl.window_rule({
     no_follow_mouse = false,
 })
 
--- NB : class="lutris" ne correspond à rien sur ce système (la vraie classe
--- rapportée par hyprctl clients est "net.lutris.Lutris") — cette règle était
--- donc inactive depuis le début. Même limitation de lookahead que Steam ci-dessus.
+-- Lutris : même limitation de lookahead que Steam ci-dessus. La classe
+-- réellement rapportée par hyprctl clients est "net.lutris.Lutris", pas
+-- "lutris" — la règle cible donc directement le nom exact.
 hl.window_rule({
     match          = { class = "net.lutris.Lutris" },
     float          = true,
@@ -336,7 +341,8 @@ hl.window_rule({
 -- ============================================================
 -- BOÎTES DE DIALOGUE UNIVERSELLES (XDG Portals, GTK, QT)
 -- ============================================================
--- Cible absolument tous les dialogues d'ouverture/sauvegarde lancés par Nemo ou tes navigateurs
+-- Filet de sécurité générique : cible tout dialogue d'ouverture/
+-- sauvegarde lancé par Nemo ou un navigateur, quel que soit le toolkit.
 hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select)" }, float = true, center = true, stay_focused = true })
 hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true })
 hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, stay_focused = true })

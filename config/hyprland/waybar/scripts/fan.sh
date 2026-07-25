@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# =========================================================
+# fan.sh — module waybar affichant la vitesse du premier ventilateur
+# rapporté par hwmon (RPM), ou "N/A" si aucun capteur n'est trouvé.
+# =========================================================
 
 FAN_PATH=$(find /sys/class/hwmon/hwmon*/fan1_input 2>/dev/null | head -n 1)
 

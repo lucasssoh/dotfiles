@@ -17,9 +17,9 @@ set -euo pipefail
 # GNOME) qui donnent une résolution LOGIQUE ENTIÈRE en largeur ET en
 # hauteur pour CETTE résolution précise — donc jamais de valeur "moche"
 # (floue/sous-pixel). Ça correspond à ce qu'Hyprland impose déjà de facto :
-# une demande scale=1.2 sur l'externe (2560×1440, testé en session) a été
-# silencieusement arrondie à 1.25, seul palier propre proche pour cette
-# largeur (2560/1.25=2048, entier ; 2560/1.2=2133.33, pas entier).
+# sur un écran 2560x1440, une demande scale=1.2 est silencieusement
+# arrondie à 1.25, seul palier propre proche pour cette largeur
+# (2560/1.25=2048, entier ; 2560/1.2=2133.33, pas entier).
 #
 # N'applique rien directement : écrit le scale choisi par RÔLE (jamais par
 # nom de connecteur, cf. scripts/workspace-manager.sh) dans l'état

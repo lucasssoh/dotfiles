@@ -1,4 +1,8 @@
 #!/bin/bash
+# =========================================================
+# performance.sh — module waybar affichant le profil d'alimentation
+# actif (performance/équilibré/économie), via power-profiles-daemon.
+# =========================================================
 
 PROFILE=$(powerprofilesctl get)
 

@@ -1,3 +1,6 @@
+//! Chargement du thème CSS de Prisme : fallback intégré au binaire,
+//! surchargé par le fichier utilisateur si présent.
+
 /// Palette de secours, identique à waybar/style.css et orbit/theme.toml --
 /// utilisée si ~/.config/prisme/style.css n'existe pas encore (avant
 /// install.sh, ou en lançant le binaire directement depuis prisme-src/ pour
@@ -107,6 +110,8 @@ pub fn load(display: &gtk4::gdk::Display) {
     }
 }
 
+/// Emplacement du CSS utilisateur, symlinké par install.sh depuis
+/// config/hyprland/prisme/style.css.
 fn user_style_path() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
     Some(std::path::PathBuf::from(home).join(".config/prisme/style.css"))

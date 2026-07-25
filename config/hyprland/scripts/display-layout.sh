@@ -18,34 +18,36 @@ set -euo pipefail
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
 RASI="$HOME/.config/rofi/wallpaper-mode.rasi"
-# nf-md-monitor -- GTK/waybar ne supporte pas ::before en CSS (testé,
-# "Invalid name of pseudo-class"), donc l'icône du groupe "écran"
+# nf-md-monitor -- GTK/waybar ne supporte pas le sélecteur CSS ::before
+# ("Invalid name of pseudo-class"), donc l'icône du groupe "écran"
 # (display+scale+hdr) est injectée ici, en tête du 1er module du trio.
 ICON="󰍹"
 WAYBAR_SIGNAL=4
 
-# Connecteur de la dalle interne lu depuis DRM : persiste même quand la dalle
-# est éteinte/désactivée (contrairement à `hyprctl monitors`, qui la perd dès
-# qu'elle est hors ligne -- bug vécu en prod : mode "externe seul" -> dalle
-# éteinte -> disparue de `mons_json` -> repli ci-dessous la reclassait comme
-# interne l'écran externe -> plus aucun moyen de revenir en arrière). Dynamique
-# (suit le connecteur réel), jamais codé en dur. Même helper dans
-# workspace-manager.sh (source de vérité du moteur).
+# Connecteur de la dalle interne lu depuis DRM plutôt que via
+# `hyprctl monitors`, qui perd la dalle dès qu'elle est hors ligne. Lire
+# depuis DRM évite qu'en mode "externe seul" (dalle éteinte, donc absente
+# des données moniteurs) le repli ci-dessous ne reclasse l'écran externe
+# comme interne, ce qui rendrait impossible le retour à l'affichage
+# interne. Résolution dynamique (suit le connecteur réel, jamais codé en
+# dur). Même helper dupliqué dans workspace-manager.sh (source de vérité
+# du moteur).
 internal_from_drm() {
     local d
-    # 1) connecteur interne CONNECTÉ = la dalle réelle de ce boot (gère le MUX
-    #    double-GPU : la dalle peut apparaître sur card1-eDP-* ou card2-eDP-*
-    #    selon le routage au démarrage -- bug vécu en prod : prendre le 1er
-    #    connecteur du glob sans vérifier son status pouvait pointer sur un
-    #    connecteur fantôme d'un GPU non utilisé ce boot).
+    # 1) Connecteur interne CONNECTÉ = la dalle réelle de ce boot. Gère le
+    #    MUX double-GPU (la dalle peut apparaître sur card1-eDP-* ou
+    #    card2-eDP-* selon le routage choisi au démarrage) : vérifier le
+    #    status est nécessaire, car le premier connecteur du glob peut
+    #    être un connecteur fantôme d'un GPU non utilisé ce boot.
     for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
         [[ -e "$d" ]] || continue
         [[ "$(cat "$d/status" 2>/dev/null)" == connected ]] || continue
         basename "$d" | sed -E 's/^card[0-9]+-//'
         return 0
     done
-    # 2) repli : n'importe quel connecteur interne (dalle éteinte/désactivée
-    #    mais toujours la nôtre) -- évite le deadlock "externe-seul".
+    # 2) Repli : n'importe quel connecteur interne, même désactivé — évite
+    #    un verrouillage en mode "externe seul" (dalle éteinte, absente du
+    #    premier motif ci-dessus, mais toujours la nôtre).
     for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
         [[ -e "$d" ]] || continue
         basename "$d" | sed -E 's/^card[0-9]+-//'
@@ -54,14 +56,13 @@ internal_from_drm() {
 }
 
 resolve_roles() {
-    # NB : `[[ cond ]] && var=val` (sans fi) plutôt que `if...fi` est banni
-    # dans ce fichier : si c'est la DERNIÈRE commande exécutée d'une fonction
-    # et que cond est fausse, le statut de sortie de la fonction devient 1
-    # (le `&&` court-circuite) -> avec `set -e`, l'appel de la fonction tue
-    # le script entier, silencieusement, dans le cas le plus courant (cond
-    # fausse = pas besoin de repli). Bug vécu en prod ici (resolve_roles
-    # mourait dès que external_label était déjà non-vide, càd le cas normal)
-    # -> toujours `if [[ cond ]]; then var=val; fi` à la place.
+    # NB : dans cette fonction, préférer `if [[ cond ]]; then var=val; fi`
+    # à la forme courte `[[ cond ]] && var=val`. Sous `set -e`, si cette
+    # forme courte est la dernière instruction exécutée de la fonction et
+    # que la condition est fausse, le `&&` fait sortir la fonction avec un
+    # statut non nul, ce qui termine tout le script silencieusement — y
+    # compris dans le cas le plus courant où la condition est fausse
+    # simplement parce qu'aucun repli n'est nécessaire.
     local internal
     mons_json="$(hyprctl monitors all -j)"
     internal="$(internal_from_drm)"
@@ -74,11 +75,11 @@ resolve_roles() {
     first_external="$(jq -r --arg m "$internal" '[.[] | select(.name != $m)][0].name // empty' <<<"$mons_json")"
 
     # Noms affichés dans le menu : la dalle interne n'a pas de nom "grand
-    # public" exploitable (le descriptif EDID est le fabricant du panneau,
-    # ex. "Chimei Innolux ...") -> libellé générique fixe. L'externe, lui,
-    # a un vrai nom de marque reconnaissable dans son descriptif EDID -> on
-    # en extrait le 1er mot dynamiquement (jamais codé en dur : ça suit
-    # l'écran réellement branché, quel qu'il soit).
+    # public" exploitable (son descriptif EDID est le fabricant du panneau,
+    # ex. "Chimei Innolux ..."), d'où un libellé générique fixe. L'externe,
+    # lui, a un vrai nom de marque dans son descriptif EDID : on en extrait
+    # dynamiquement le premier mot (jamais codé en dur — suit l'écran
+    # réellement branché, quel qu'il soit).
     internal_label="Laptop"
     external_label="Externe"
     if [[ -n "$first_external" ]]; then

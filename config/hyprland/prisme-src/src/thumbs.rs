@@ -1,3 +1,8 @@
+//! Décodage et mise à l'échelle asynchrones des vignettes de wallpapers.
+//! Le décodage (coûteux, CPU) tourne sur des threads dédiés hors de la
+//! boucle GTK ; seule la construction finale de la texture GObject revient
+//! sur le thread principal, GTK l'exigeant.
+
 use gtk4::gdk::{self, MemoryFormat, MemoryTexture};
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -19,6 +24,8 @@ struct DecodedImage {
     orig_height: i32,
 }
 
+/// Résultat de décodage d'une vignette, prêt à être posé sur une carte par
+/// index. `texture` est `None` si l'image n'a pas pu être décodée.
 pub struct ThumbResult {
     pub index: usize,
     pub texture: Option<gdk::Texture>,
@@ -79,6 +86,8 @@ pub fn spawn_loader(paths: Vec<(usize, PathBuf)>) -> async_channel::Receiver<Thu
     out_rx
 }
 
+/// Décode l'image et la redimensionne à `CARD_HEIGHT`, en conservant les
+/// dimensions d'origine pour le calcul du ratio d'affichage (cf. card.rs).
 fn decode_and_scale(path: &std::path::Path) -> Option<DecodedImage> {
     let img = image::open(path).ok()?;
     let (orig_width, orig_height) = (img.width() as i32, img.height() as i32);

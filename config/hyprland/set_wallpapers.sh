@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+# Symlinke le dossier de wallpapers du repo vers ~/Images/Wallpapers, en
+# remplaçant proprement tout dossier ou lien préexistant à cet emplacement.
 set -e
 
 echo "[INFO] Configuration des wallpapers"
 
-# On récupère le chemin absolu du repo
-# Depuis config/hyprland/, le repo root est à 2 niveaux au-dessus (../..)
+# Chemin absolu du repo : depuis config/hyprland/, la racine du repo est
+# deux niveaux au-dessus (../..)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WALLPAPERS_SRC="$REPO_ROOT/wallpapers"
 WALLPAPERS_DST="$HOME/Images/Wallpapers"
@@ -15,13 +17,13 @@ if [ ! -d "$WALLPAPERS_SRC" ]; then
     exit 1
 fi
 
-# 2. Nettoyage drastique pour éviter les sous-dossiers imbriqués
-# Si c'est un dossier réel, on le renomme en .bak par sécurité
+# 2. Nettoyage de la destination pour éviter les dossiers imbriqués :
+# un vrai dossier existant est renommé en .bak par sécurité...
 if [ -d "$WALLPAPERS_DST" ] && [ ! -L "$WALLPAPERS_DST" ]; then
     mv "$WALLPAPERS_DST" "${WALLPAPERS_DST}.bak"
 fi
 
-# Si c'est un lien (même cassé ou pointant ailleurs), on le supprime
+# ...puis tout lien symbolique restant (valide ou cassé) est supprimé
 rm -rf "$WALLPAPERS_DST"
 
 # 3. Création du lien symbolique propre

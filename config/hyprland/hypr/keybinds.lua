@@ -1,5 +1,9 @@
 -- ============================================================
--- KEYBINDS.LUA — Raccourcis clavier (layout AZERTY)
+-- keybinds.lua — Raccourcis clavier (disposition AZERTY)
+-- ============================================================
+-- Chargé en dernier par hyprland.lua. Les symboles de touches (ampersand,
+-- eacute, ...) correspondent aux caractères produits par la rangée de
+-- chiffres en AZERTY, pas aux touches physiques 1-10.
 -- ============================================================
 
 local mod = "SUPER"
@@ -14,8 +18,8 @@ hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
 hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
--- Chemin absolu obligatoire : les process lancés par Hyprland n'ont pas
--- ~/.local/bin dans leur PATH (cf. commit bbb8f61).
+-- Chemin absolu obligatoire : les processus lancés par Hyprland n'héritent
+-- pas de ~/.local/bin dans leur PATH (cf. commit bbb8f61).
 hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh menu"))
 
@@ -23,12 +27,13 @@ hl.bind(mod .. "+ Delete",  hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
+
 -- ============================================================
 -- FENÊTRES
 -- ============================================================
--- close (pas kill) : ferme uniquement la fenêtre/tuile visée. kill force-tue
--- tout le processus — pour une appli multi-fenêtres (Firefox...), ça fermait
--- TOUTES ses fenêtres d'un coup au lieu de la seule fenêtre active.
+-- close (et non kill) : ferme uniquement la fenêtre/tuile visée. kill
+-- tue le processus entier — pour une appli multi-fenêtres (Firefox...),
+-- ça fermerait toutes ses fenêtres au lieu de la seule fenêtre active.
 hl.bind(mod .. "+ Q", function()
     local w = hl.get_active_window()
     if w ~= nil then
@@ -42,22 +47,22 @@ hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())
 --[[ hl.bind(mod .. "+ T",           hl.dsp.window.toggle_split()) ]]
 hl.bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
 
--- Focus (hjkl)
+-- Déplacement du focus entre fenêtres (hjkl)
 hl.bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }))
 hl.bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }))
 hl.bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }))
 hl.bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }))
 
--- Déplacer fenêtre
+-- Déplacement de la fenêtre active dans la direction indiquée
 hl.bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }))
 hl.bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }))
 hl.bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }))
 hl.bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }))
 
--- Submap resize corrigée
+-- Submap de redimensionnement : SUPER+R entre dans "resize", hjkl
+-- redimensionne par pas de 5px, Escape/Entrée en sort.
 hl.bind(mod .. "+ R", hl.dsp.submap("resize"))
 hl.define_submap("resize", function()
-    -- On utilise hl.dsp.window.resize
     hl.bind("+ H",      hl.dsp.window.resize({ x = -5, y = 0,  relative = true }), { repeating = true })
     hl.bind("+ L",      hl.dsp.window.resize({ x =  5, y = 0,  relative = true }), { repeating = true })
     hl.bind("+ K",      hl.dsp.window.resize({ x = 0,  y = -5, relative = true }), { repeating = true })
@@ -67,8 +72,11 @@ hl.define_submap("resize", function()
 end)
 
 -- ============================================================
--- WORKSPACES — rangée de chiffres AZERTY
+-- WORKSPACES — rangée de chiffres en disposition AZERTY
 -- ============================================================
+-- Table de correspondance touche AZERTY → numéro de workspace (1-10),
+-- car les touches physiques 1-10 produisent des symboles non numériques
+-- en AZERTY (&, é, ", ', etc.).
 local ws_keys = {
     { key = "ampersand",  n = 1  },
     { key = "eacute",     n = 2  },
@@ -83,26 +91,27 @@ local ws_keys = {
 }
 
 for _, ws in ipairs(ws_keys) do
-    -- Pour changer de workspace (focus)
+    -- SUPER+touche : bascule le focus vers le workspace n
     hl.bind(mod .. "+ " .. ws.key, hl.dsp.focus({ workspace = tostring(ws.n) }))
 
-    -- Pour déplacer la fenêtre active vers un workspace
+    -- SUPER+SHIFT+touche : déplace la fenêtre active vers le workspace n
     hl.bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
 end
 
--- Scroll souris pour les workspaces relatifs au moniteur courant (ne saute
--- jamais sur l'écran d'à côté, contrairement à e±1)
+-- Molette souris : navigue entre workspaces relatifs au moniteur sous le
+-- curseur (m-1/m+1), sans jamais sauter sur l'écran voisin contrairement
+-- à un simple offset global (e-1/e+1).
 hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "m-1" }))
 hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "m+1" }))
 
--- Compacter les workspaces occupés vers le début de leur plage (par moniteur)
+-- Compacte les workspaces occupés vers le début de leur plage, par moniteur
 hl.bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
 
--- Scratchpad
+-- Scratchpad (workspace spécial "magic")
 hl.bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
 
--- Souris (grab)
+-- Déplacement/redimensionnement de fenêtre à la souris (boutons 8/9)
 hl.bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
@@ -113,6 +122,7 @@ hl.bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
 hl.bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
 
+-- Volume, micro et rétroéclairage : touches multimédia, sans modificateur
 hl.bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
 hl.bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { repeating = true })
 hl.bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })

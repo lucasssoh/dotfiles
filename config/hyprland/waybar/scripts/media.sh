@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# media.sh — version clean, robuste, contrôlée
+# =========================================================
+# media.sh — module waybar affichant le morceau en cours de lecture
+# (titre, artiste, icône par lecteur), via playerctl. Case vide si
+# aucun lecteur MPRIS actif ou si la lecture est arrêtée.
+# =========================================================
 
 PLAYER=$(playerctl -l 2>/dev/null | head -1)
 
@@ -15,34 +19,25 @@ if [[ "$STATUS" == "Stopped" || -z "$STATUS" ]]; then
     exit 0
 fi
 
-# =========================
-# CONFIG
-# =========================
+# ---- Réglages d'affichage --------------------------------
 MAX_TITLE=25
 MAX_ARTIST=20
 MAX_TOOLTIP=60
-SCROLL_WIDTH=30   # largeur visible
+SCROLL_WIDTH=30   # largeur visible en mode défilement
 SCROLL_ENABLED=0  # 0 = off / 1 = on
 
-# =========================
-# DATA
-# =========================
+# ---- Métadonnées du morceau ------------------------------
 TITLE=$(playerctl -p "$PLAYER" metadata title 2>/dev/null | tr '\n' ' ')
 ARTIST=$(playerctl -p "$PLAYER" metadata artist 2>/dev/null | tr '\n' ' ')
 
-# fallback safe
 [[ -z "$TITLE" ]] && TITLE="Unknown"
 [[ -z "$ARTIST" ]] && ARTIST=""
 
-# =========================
-# TRUNCATION PROPRE
-# =========================
+# Troncature avec ellipse pour respecter la largeur du module
 [[ ${#TITLE}  -gt $MAX_TITLE ]]  && TITLE="${TITLE:0:$((MAX_TITLE-2))}…"
 [[ ${#ARTIST} -gt $MAX_ARTIST ]] && ARTIST="${ARTIST:0:$((MAX_ARTIST-2))}…"
 
-# =========================
-# ICON
-# =========================
+# Icône selon le lecteur MPRIS actif
 case "$PLAYER" in
     *spotify*) ICON="󰓇" ;;
     *firefox*|*chromium*|*youtube*) ICON="󰗃" ;;
@@ -50,15 +45,11 @@ case "$PLAYER" in
     *) ICON="󰎈" ;;
 esac
 
-# =========================
-# TEXT BUILD
-# =========================
 FULL_TEXT="${ICON} ${TITLE}"
 [[ -n "$ARTIST" ]] && FULL_TEXT="${FULL_TEXT} · ${ARTIST}"
 
-# =========================
-# SCROLL (optionnel)
-# =========================
+# Défilement optionnel (désactivé par défaut) : fait glisser une fenêtre
+# de SCROLL_WIDTH caractères dans le texte complet, au rythme de l'horloge
 if [[ $SCROLL_ENABLED -eq 1 && ${#FULL_TEXT} -gt $SCROLL_WIDTH ]]; then
     LEN=${#FULL_TEXT}
     OFFSET=$(( $(date +%s) % LEN ))
@@ -67,19 +58,10 @@ else
     TEXT="$FULL_TEXT"
 fi
 
-# =========================
-# TOOLTIP SAFE
-# =========================
 TOOLTIP=$(printf "%s - %s" "$TITLE" "$ARTIST" | head -c $MAX_TOOLTIP)
 
-# =========================
-# CLASS
-# =========================
 CLASS="playing"
 [[ "$STATUS" == "Paused" ]] && CLASS="paused"
 
-# =========================
-# OUTPUT
-# =========================
 printf '{"text": "%s", "tooltip": "%s", "class": "%s"}' \
     "$TEXT" "$TOOLTIP" "$CLASS"

@@ -1,3 +1,9 @@
+//! Prisme — sélecteur de wallpaper natif Wayland (GTK4 + layer-shell),
+//! remplaçant l'ancien menu rofi (scripts/set_wallpaper.sh). Une seule
+//! fenêtre plein écran présente un carrousel de vignettes (carousel.rs,
+//! card.rs) ; le choix est appliqué via awww/systemd en réutilisant le
+//! même format d'état que les scripts bash historiques (apply.rs).
+
 mod apply;
 mod card;
 mod carousel;
@@ -22,12 +28,16 @@ const DURATION_MIN: u32 = 5;
 const DURATION_MAX: u32 = 3600;
 const DURATION_STEP: u32 = 10;
 
+/// Mode d'application du wallpaper choisi, cf. apply.rs : image fixe
+/// unique, ou diaporama tournant sur une sélection de plusieurs images.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Static,
     Dynamic,
 }
 
+/// Point d'entrée : force le rendu GPU puis délègue la construction de
+/// l'unique fenêtre à `build_ui` à chaque activation de la GApplication.
 fn main() -> glib::ExitCode {
     // Sans ça, GSK choisit ici un rendu logiciel de repli, invisible dans
     // les logs sauf via GDK_DEBUG=opengl (aucune ligne EGL/GL n'apparaît) --
@@ -44,6 +54,9 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
+/// Construit la fenêtre layer-shell plein écran, son carrousel de
+/// wallpapers, l'en-tête/pied de page, et branche les raccourcis clavier
+/// et le chargement asynchrone des vignettes.
 fn build_ui(app: &Application) {
     // GApplication réactive l'instance déjà en cours plutôt que d'en
     // relancer une nouvelle (ex. Super+W pressé deux fois avant que la

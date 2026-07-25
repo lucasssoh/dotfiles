@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# =========================================================
+# workspace-dashboard.sh — affiche les widgets fastfetch/horloge
+# (cf. dashboard-fastfetch.sh, dashboard-clock.sh, et leurs windowrules
+# dans hypr/windowrules.lua) sur un workspace vide, et les masque dès
+# qu'une vraie fenêtre (non flottante, non-dashboard) y apparaît.
+# Réagit en direct aux événements Hyprland du workspace actif. Lancé
+# en service systemd --user (cf. systemd/workspace-dashboard.service).
+# =========================================================
 
 SOCKET=""
 for i in $(seq 1 30); do
@@ -9,12 +17,12 @@ done
 
 [ -z "$SOCKET" ] && exit 1
 
-LOCK="/tmp/dashboard-lock"
+LOCK="/tmp/dashboard-lock"  # empêche deux lancements concurrents du dashboard
 
 launch_dashboard() {
     [ -f "$LOCK" ] && return
 
-    # Déjà lancé ?
+    # Déjà affiché : rien à faire
     pgrep -f "dashboard-fastfetch" >/dev/null && return
 
     touch "$LOCK"
@@ -37,6 +45,8 @@ hide_dashboard() {
     pkill -f "dashboard-clock" 2>/dev/null
 }
 
+# "Vraie" fenêtre = tuilée et non-dashboard ; sert à décider si le
+# dashboard doit céder la place ou rester affiché sur ce workspace
 workspace_has_real_windows() {
     local ws=$1
 
@@ -71,9 +81,12 @@ print(json.load(sys.stdin)['id'])
     fi
 }
 
-# État initial
+# État initial (au lancement du service, avant tout événement)
 update_dashboard
 
+# Réévalue l'état du dashboard à chaque événement pouvant changer le
+# contenu du workspace actif. Le sleep laisse le temps à `hyprctl clients`
+# de refléter le changement avant d'être interrogé.
 socat UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
     EVENT=$(echo "$line" | cut -d'>' -f1)
 

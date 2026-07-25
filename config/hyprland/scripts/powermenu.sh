@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
-# POWERMENU.SH — Power menu via Rofi
+# powermenu.sh — Menu d'alimentation (verrouiller/veille/redémarrer/
+# éteindre/déconnecter) présenté via Rofi.
 # ============================================================
 
 LOCK="Lock"

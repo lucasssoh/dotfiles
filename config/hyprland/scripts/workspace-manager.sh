@@ -76,27 +76,30 @@ mons_json="$(hyprctl monitors all -j)"
 
 # ---- Résolution des rôles ------------------------------------------------
 
-# Connecteur de la dalle interne lu depuis DRM : persiste même quand la dalle
-# est éteinte/désactivée (contrairement à `hyprctl monitors`, qui la perd dès
-# qu'elle est hors ligne -- bug vécu en prod : mode "externe seul" -> dalle
-# éteinte -> disparue de `mons_json` -> repli ci-dessous la reclassait comme
-# interne l'écran externe -> plus aucun moyen de revenir en arrière). Dynamique
-# (suit le connecteur réel), jamais codé en dur.
+# Connecteur de la dalle interne lu depuis DRM plutôt que via
+# `hyprctl monitors`, qui perd la dalle dès qu'elle est hors ligne. Lire
+# depuis DRM évite qu'en mode "externe seul" (dalle éteinte, donc absente
+# des données moniteurs) le repli ci-dessous ne reclasse l'écran externe
+# comme interne, ce qui rendrait impossible le retour à l'affichage
+# interne. Résolution dynamique (suit le connecteur réel, jamais codé en
+# dur). Même helper dupliqué dans scripts/display-layout.sh (lecture
+# seule, pour l'affichage du menu).
 internal_from_drm() {
     local d
-    # 1) connecteur interne CONNECTÉ = la dalle réelle de ce boot (gère le MUX
-    #    double-GPU : la dalle peut apparaître sur card1-eDP-* ou card2-eDP-*
-    #    selon le routage au démarrage -- bug vécu en prod : prendre le 1er
-    #    connecteur du glob sans vérifier son status pouvait pointer sur un
-    #    connecteur fantôme d'un GPU non utilisé ce boot).
+    # 1) Connecteur interne CONNECTÉ = la dalle réelle de ce boot. Gère le
+    #    MUX double-GPU (la dalle peut apparaître sur card1-eDP-* ou
+    #    card2-eDP-* selon le routage choisi au démarrage) : vérifier le
+    #    status est nécessaire, car le premier connecteur du glob peut
+    #    être un connecteur fantôme d'un GPU non utilisé ce boot.
     for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
         [[ -e "$d" ]] || continue
         [[ "$(cat "$d/status" 2>/dev/null)" == connected ]] || continue
         basename "$d" | sed -E 's/^card[0-9]+-//'
         return 0
     done
-    # 2) repli : n'importe quel connecteur interne (dalle éteinte/désactivée
-    #    mais toujours la nôtre) -- évite le deadlock "externe-seul".
+    # 2) Repli : n'importe quel connecteur interne, même désactivé — évite
+    #    un verrouillage en mode "externe seul" (dalle éteinte, absente du
+    #    premier motif ci-dessus, mais toujours la nôtre).
     for d in /sys/class/drm/card*-eDP-* /sys/class/drm/card*-LVDS-* /sys/class/drm/card*-DSI-*; do
         [[ -e "$d" ]] || continue
         basename "$d" | sed -E 's/^card[0-9]+-//'
@@ -197,12 +200,13 @@ if [[ "$active_external" == true ]]; then
 fi
 
 # ---- Éteint l'écran non désiré, APRÈS avoir activé les autres ----------
-# ORDRE CRITIQUE : si on désactivait avant d'activer, on peut passer par un
+# ORDRE CRITIQUE : désactiver avant d'activer peut faire transiter par un
 # instant à zéro écran actif (ex. bascule externe-seul -> interne-seul), ce
-# qui fait basculer Hyprland sur son fallback headless — et ce fallback fait
-# planter ce build 0.55.3 (SEGV confirmé, cf. hyprlandCrashReport4932.txt :
+# qui fait basculer Hyprland sur son fallback headless. Sur ce build 0.55.3,
+# ce fallback provoque un SEGV (cf. hyprlandCrashReport4932.txt :
 # applyMonitorRule -> onDisconnect -> enterUnsafeState -> CHeadlessOutput::
-# commit -> SEGV). Activer d'abord garantit toujours >= 1 écran actif.
+# commit -> SEGV). Activer d'abord garantit qu'au moins un écran reste actif
+# à tout instant.
 [[ "$active_internal" != true ]] && \
     hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })" >/dev/null
 [[ -n "$first_external" && "$active_external" != true ]] && \

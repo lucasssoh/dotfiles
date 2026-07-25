@@ -1,3 +1,6 @@
+//! Localisation minimale de l'interface (français / anglais), dérivée des
+//! variables d'environnement de locale plutôt que d'un fichier de config.
+
 /// Détection minimale de langue -- pas de crate i18n complète pour deux
 /// langues et une poignée de chaînes courtes. `LC_ALL`/`LC_MESSAGES`/`LANG`
 /// dans cet ordre (même priorité que la libc), premier qui existe et n'est
@@ -14,6 +17,8 @@ fn detect_french() -> bool {
     false
 }
 
+/// Ensemble des chaînes affichées par l'UI, résolues une fois au démarrage
+/// selon la locale détectée (cf. `load`).
 #[derive(Clone, Copy)]
 pub struct Strings {
     pub mode_static: &'static str,
@@ -23,6 +28,7 @@ pub struct Strings {
 }
 
 impl Strings {
+    /// Libellé du compteur de sélection dans la barre du bas (ex. "3 selected").
     pub fn selected_count(&self, n: usize) -> String {
         if self.french {
             format!("{n} sélectionné(s)")
@@ -32,6 +38,7 @@ impl Strings {
     }
 }
 
+/// Résout les chaînes d'interface pour la locale courante du processus.
 pub fn load() -> Strings {
     if detect_french() {
         Strings {

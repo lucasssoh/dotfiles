@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rofi-launcher.sh
+# rofi-launcher.sh — ouvre le lanceur d'applications Rofi (mode drun)
 
 RASI="$HOME/.config/rofi/theme.rasi"
 

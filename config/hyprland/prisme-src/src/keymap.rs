@@ -1,3 +1,7 @@
+//! Raccourcis clavier configurables de Prisme : fichier texte optionnel
+//! (`~/.config/prisme/keymap.conf`) mappant des noms d'action vers des
+//! touches GDK, avec un fallback intégré si le fichier est absent.
+
 use gtk4::gdk;
 use std::collections::HashMap;
 
@@ -34,6 +38,8 @@ select = Down, j, J
 deselect = Up, k, K
 ";
 
+/// Table résolue touche GDK -> action, prête à interroger depuis le
+/// gestionnaire d'événements clavier.
 pub struct Keymap(HashMap<gdk::Key, Action>);
 
 impl Keymap {
@@ -47,11 +53,13 @@ impl Keymap {
         Self(parse(&content))
     }
 
+    /// Action associée à une touche, s'il y en a une.
     pub fn action(&self, key: gdk::Key) -> Option<Action> {
         self.0.get(&key).copied()
     }
 }
 
+/// Emplacement du fichier de config utilisateur, symlinké par install.sh.
 fn user_path() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
     Some(std::path::PathBuf::from(home).join(".config/prisme/keymap.conf"))
@@ -95,6 +103,8 @@ fn parse(content: &str) -> HashMap<gdk::Key, Action> {
     map
 }
 
+/// Convertit un nom d'action textuel (côté gauche du `=` dans keymap.conf)
+/// en variante d'`Action`.
 fn parse_action(name: &str) -> Option<Action> {
     Some(match name {
         "close" => Action::Close,

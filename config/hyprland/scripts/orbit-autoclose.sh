@@ -3,16 +3,16 @@ set -uo pipefail
 
 # =========================================================
 # orbit-autoclose.sh — ferme Orbit dès qu'une autre fenêtre prend le focus
-# (comme swaync, dont le panneau se ferme nativement au clic en dehors).
+# (même comportement que le panneau swaync, qui se ferme nativement au
+# clic en dehors).
 #
 # Orbit est une simple surface layer-shell : GTK/gtk4-layer-shell n'émet
-# jamais de perte de focus pour ce genre de surface (testé en live -- la
-# propriété "is-active" ne passe à faux à aucun moment quand on bascule
-# vers une autre appli). On s'appuie donc directement sur les événements
-# Hyprland (activewindow), qui eux sont fiables. Vérifié aussi : ouvrir
-# Orbit lui-même ne déclenche AUCUN événement activewindow (les surfaces
-# layer-shell n'apparaissent pas dans ce flux) -- donc aucun risque que ce
-# script referme Orbit juste après l'avoir ouvert.
+# jamais d'événement de perte de focus pour ce type de surface (sa
+# propriété "is-active" ne repasse jamais à faux). On s'appuie donc sur
+# les événements Hyprland (activewindow) à la place, qui sont fiables.
+# Ouvrir Orbit lui-même ne déclenche aucun événement activewindow (les
+# surfaces layer-shell n'apparaissent pas dans ce flux), donc ce script
+# ne risque pas de refermer Orbit juste après son ouverture.
 # =========================================================
 
 # ~/.local/bin (où install.sh place orbit) n'est pas dans le PATH des
