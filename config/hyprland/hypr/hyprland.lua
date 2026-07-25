@@ -31,7 +31,13 @@ hl.on("hyprland.start", function()
     
     -- FORCE SYSTEMD À RECONNAÎTRE LA SESSION HYPRLAND
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    hl.exec_cmd("systemctl --user start graphical-session.target")
+    -- NB : `systemctl --user start graphical-session.target` ne sert à rien ici
+    -- -- cette target système a RefuseManualStart=yes (cf. /usr/lib/systemd/
+    -- user/graphical-session.target) et loginctl ne marque pas cette session
+    -- comme "graphique" (Type=unspecified/Class=manager), donc elle ne
+    -- s'active jamais toute seule non plus. Résultat : tout service
+    -- WantedBy=graphical-session.target (ex. orbit.service) ne démarre
+    -- jamais tout seul au login -- démarrage explicite ci-dessous à la place.
     
     -- Services et Daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
@@ -65,9 +71,12 @@ hl.on("hyprland.start", function()
     -- il pouvait échouer à démarrer sans que rien ne le relance (essayé un
     -- sleep bloquant, puis un lancement en fin de séquence -- toujours pas
     -- fiable au reboot réel). Géré par un service systemd --user à la place
-    -- (cf. config/hyprland/systemd/orbit.service), avec retry automatique
-    -- (Restart=on-failure) : démarre tout seul dès que graphical-session.target
-    -- est atteint (déclenché plus haut).
+    -- (cf. config/hyprland/systemd/orbit.service, ExecStartPre sleep 3 +
+    -- Restart=on-failure), démarré explicitement ici -- PAS via
+    -- WantedBy=graphical-session.target (cf. note plus haut : cette target
+    -- ne s'active jamais tout seule sur cette session, donc le service ne
+    -- démarrait jamais sans restart manuel au login).
+    hl.exec_cmd("systemctl --user start orbit.service")
     -- Ferme Orbit au clic en dehors (comme swaync) -- GTK/gtk4-layer-shell
     -- ne prévient jamais Orbit d'une perte de focus (surface layer-shell),
     -- donc on s'appuie sur les événements Hyprland à la place.

@@ -598,10 +598,10 @@ window switch.orbit-toggle-switch,
 window switch.orbit-toggle-switch:not(:backdrop),
 window switch.orbit-toggle-switch trough,
 window switch.orbit-toggle-switch:not(:backdrop) trough {{
-    background-color: rgba(255, 255, 255, 0.12) !important;
-    background-image: none !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: none !important;
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
     border-radius: 9999px;
     min-width: 44px;
     min-height: 24px;
@@ -612,16 +612,16 @@ window switch.orbit-toggle-switch:checked:not(:backdrop),
 window switch.orbit-toggle-switch:checked:hover,
 window switch.orbit-toggle-switch:checked trough,
 window switch.orbit-toggle-switch:checked:not(:backdrop) trough {{
-    background-color: {accent} !important;
-    background-image: none !important;
-    border-color: {accent} !important;
-    box-shadow: none !important;
+    background-color: {accent};
+    background-image: none;
+    border-color: {accent};
+    box-shadow: none;
 }}
 
 window switch.orbit-toggle-switch slider {{
-    background-color: #ffffff !important;
+    background-color: #ffffff;
     border-radius: 9999px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     min-width: 18px;
     min-height: 18px;
     margin: 3px;
@@ -629,7 +629,7 @@ window switch.orbit-toggle-switch slider {{
 
 window switch.orbit-toggle-switch:checked slider,
 window switch.orbit-toggle-switch:checked:not(:backdrop) slider {{
-    background-color: {accent_fg} !important;
+    background-color: {accent_fg};
 }}
 
 .orbit-battery-mini {{
