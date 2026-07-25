@@ -29,6 +29,18 @@ const BOTTOM_MARGIN_PX: f64 = 24.0;
 /// choisies "dépassent" visiblement de la rangée même hors focus.
 const SELECTED_HEIGHT_BOOST: f64 = 26.0;
 
+/// Distance non signée sur l'anneau entre deux positions (le plus court des
+/// deux chemins possibles) -- utilisée pour l'entrée en cascade (`tick`) et
+/// par main.rs pour l'ordre de chargement des vignettes, afin que les deux
+/// s'accordent sur la même notion de "proche du point de départ".
+pub(crate) fn ring_distance(i: f64, origin: f64, len: f64) -> f64 {
+    if len <= 0.0 {
+        return 0.0;
+    }
+    let raw = (i - origin).rem_euclid(len);
+    raw.min(len - raw)
+}
+
 mod imp {
     use super::*;
 
@@ -47,6 +59,14 @@ mod imp {
         /// valeurs -- ça évite toute ambiguïté de sens au passage du dernier
         /// au premier élément.
         pub offset: Cell<f64>,
+        /// Indice de départ de l'animation d'entrée en cascade -- figé une
+        /// fois pour toutes par `set_focus_index` (0 par défaut), jamais mis
+        /// à jour ensuite. Contrairement à `target`/`offset`, ce point ne
+        /// doit PAS suivre le défilement : si on recalculait la distance à
+        /// chaque frame à partir du focus courant, faire défiler pendant la
+        /// première seconde ferait "dé-révéler" des cartes déjà apparues
+        /// (leur délai changerait sous leurs pieds).
+        pub reveal_origin: Cell<f64>,
         pub scroll_accum: Cell<f64>,
         pub start: Cell<Option<Instant>>,
         pub last_frame_us: Cell<Option<i64>>,
@@ -179,19 +199,46 @@ mod imp {
             };
             self.last_frame_us.set(Some(now_us));
 
-            let ease = 1.0 - (-EASE_RATE * dt).exp();
-            let target = self.target.get();
-            let offset = self.offset.get();
-            let next = offset + (target - offset) * ease;
-            self.offset
-                .set(if (next - target).abs() < 0.0005 { target } else { next });
-
             if self.start.get().is_none() {
                 self.start.set(Some(Instant::now()));
             }
             let elapsed_ms = self.start.get().unwrap().elapsed().as_secs_f64() * 1000.0;
-            for (i, card) in self.entries.borrow().iter().enumerate() {
-                let delay = i as f64 * CASCADE_STAGGER_MS;
+            let len_f = self.entries.borrow().len() as f64;
+            // Point le plus loin possible sur l'anneau depuis le départ de
+            // la cascade -- passé son délai + sa durée, plus aucune carte
+            // ne peut encore changer de valeur de reveal.
+            let cascade_running =
+                elapsed_ms < (len_f / 2.0).floor() * CASCADE_STAGGER_MS + CASCADE_DURATION_MS;
+            let target = self.target.get();
+            let offset = self.offset.get();
+            let still_easing = (target - offset).abs() > 0.0005;
+
+            // Rien à animer -- ne touche à rien et surtout ne redemande pas
+            // de frame via queue_allocate(). Mesuré à ~65% d'un cœur en
+            // continu (relayout + redessin des ~25 cartes 120-180 fois par
+            // seconde) avant ce garde-fou, alors que rien ne bouge à
+            // l'écran ; quasi nul après. Les changements hors-animation
+            // (sélection, cf. main.rs) redemandent un allocate eux-mêmes au
+            // moment où ils se produisent, donc rien ne reste figé par
+            // erreur.
+            if !still_easing && !cascade_running {
+                return;
+            }
+
+            let ease = 1.0 - (-EASE_RATE * dt).exp();
+            let next = offset + (target - offset) * ease;
+            self.offset
+                .set(if (next - target).abs() < 0.0005 { target } else { next });
+
+            let entries = self.entries.borrow();
+            let origin = self.reveal_origin.get();
+            for (i, card) in entries.iter().enumerate() {
+                // Distance sur l'anneau depuis le point de départ (pas
+                // l'indice brut) -- l'entrée en cascade part de la carte
+                // initialement au focus et déborde vers les deux côtés à la
+                // fois, plutôt qu'un simple balayage gauche→droite.
+                let dist = ring_distance(i as f64, origin, len_f);
+                let delay = dist * CASCADE_STAGGER_MS;
                 let t = ((elapsed_ms - delay) / CASCADE_DURATION_MS).clamp(0.0, 1.0);
                 let eased = 1.0 - (1.0 - t).powi(3);
                 card.set_reveal(eased);
@@ -330,6 +377,23 @@ impl Carousel {
 
     pub fn move_focus(&self, delta: i32) {
         self.imp().target.set(self.imp().target.get() + delta as f64);
+    }
+
+    /// Positionne le focus directement sur `index`, sans faire défiler
+    /// depuis 0 -- utilisé une fois à l'ouverture pour démarrer sur le
+    /// dernier fond appliqué en Statique (cf. `apply::last_static`) plutôt
+    /// que sur la première carte de la liste. Fixe aussi le point de départ
+    /// de l'entrée en cascade (cf. `reveal_origin`) sur ce même indice, pour
+    /// que l'animation d'entrée déborde depuis cette carte plutôt que
+    /// depuis le début de la liste.
+    pub fn set_focus_index(&self, index: usize) {
+        let len = self.imp().entries.borrow().len();
+        if len == 0 || index >= len {
+            return;
+        }
+        self.imp().target.set(index as f64);
+        self.imp().offset.set(index as f64);
+        self.imp().reveal_origin.set(index as f64);
     }
 
     pub fn activate_focused(&self) {

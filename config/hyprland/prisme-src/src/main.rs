@@ -2,6 +2,7 @@ mod apply;
 mod card;
 mod carousel;
 mod i18n;
+mod keymap;
 mod theme;
 mod thumbs;
 mod wallpapers;
@@ -67,7 +68,6 @@ fn build_ui(app: &Application) {
     for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
         window.set_anchor(edge, true);
     }
-
     if let Some(display) = gtk4::gdk::Display::default() {
         theme::load(&display);
     }
@@ -212,13 +212,34 @@ fn build_ui(app: &Application) {
         let new_carousel = carousel::Carousel::new(cards);
         carousel_mount.append(&new_carousel);
 
+        // Ouvre directement sur le dernier fond appliqué en Statique
+        // (indépendant du mode courant -- passer en Diaporama ne doit pas
+        // faire perdre ce repère, cf. apply::last_static) plutôt que sur la
+        // première carte de la liste.
+        let initial_index = apply::last_static().and_then(|name| walls.iter().position(|w| w.name == name));
+        if let Some(index) = initial_index {
+            new_carousel.set_focus_index(index);
+        }
+
         // Vignettes en arrière-plan (thumbs.rs) -- ne bloque pas
-        // l'affichage sur le décodage de toute la collection.
-        let thumb_paths = walls
+        // l'affichage sur le décodage de toute la collection. Chargées à
+        // partir de la carte initialement au focus et en éventail vers les
+        // deux côtés (même notion de distance que l'entrée en cascade, cf.
+        // carousel::ring_distance) : c'est elle qu'on regarde en premier,
+        // donc elle doit être la première à afficher sa vraie image plutôt
+        // que de suivre l'ordre alphabétique brut.
+        let focus_origin = initial_index.unwrap_or(0) as f64;
+        let len_f = walls.len() as f64;
+        let mut thumb_paths: Vec<(usize, std::path::PathBuf)> = walls
             .iter()
             .enumerate()
             .map(|(i, w)| (i, w.path.clone()))
             .collect();
+        thumb_paths.sort_by(|(i, _), (j, _)| {
+            let di = carousel::ring_distance(*i as f64, focus_origin, len_f);
+            let dj = carousel::ring_distance(*j as f64, focus_origin, len_f);
+            di.total_cmp(&dj)
+        });
         let rx = thumbs::spawn_loader(thumb_paths);
         let carousel_for_thumbs = new_carousel.clone();
         glib::MainContext::default().spawn_local(async move {
@@ -307,49 +328,60 @@ fn build_ui(app: &Application) {
         mode_toggle.connect_clicked(move |_| toggle_mode());
     }
 
+    let keymap = keymap::Keymap::load();
     let key_controller = gtk4::EventControllerKey::new();
     let window_for_key = window.clone();
     key_controller.connect_key_pressed(move |_, key, _, _| {
-        use gtk4::gdk::Key;
-        match key {
-            Key::Escape => {
+        use keymap::Action;
+        let Some(action) = keymap.action(key) else {
+            return glib::Propagation::Proceed;
+        };
+        match action {
+            Action::Close => {
                 window_for_key.close();
             }
-            Key::Left | Key::h | Key::H => {
+            Action::MoveLeft => {
                 if let Some(c) = current_carousel.borrow().as_ref() {
                     c.move_focus(-1);
                 }
             }
-            Key::Right | Key::l | Key::L => {
+            Action::MoveRight => {
                 if let Some(c) = current_carousel.borrow().as_ref() {
                     c.move_focus(1);
                 }
             }
-            Key::Return | Key::KP_Enter => {
+            Action::Activate => {
                 if let Some(c) = current_carousel.borrow().as_ref() {
                     c.activate_focused();
                 }
             }
-            Key::Tab => toggle_mode(),
-            Key::Down | Key::j | Key::J if mode.get() == Mode::Dynamic => {
+            Action::ToggleMode => toggle_mode(),
+            Action::Select if mode.get() == Mode::Dynamic => {
                 if let Some(c) = current_carousel.borrow().as_ref() {
                     let idx = c.focused_index();
                     if let Some(card) = c.card_at(idx) {
                         card.set_selected(true);
                     }
+                    // La sélection change la hauteur allouée à la carte
+                    // (cf. carousel.rs) -- il faut redemander un allocate
+                    // explicitement ici : le tick loop ne le fait plus tout
+                    // seul une fois posé (cf. sa doc), pour ne pas coûter
+                    // un relayout complet à chaque frame sans raison.
+                    c.queue_allocate();
                 }
                 update_counter();
             }
-            Key::Up | Key::k | Key::K if mode.get() == Mode::Dynamic => {
+            Action::Deselect if mode.get() == Mode::Dynamic => {
                 if let Some(c) = current_carousel.borrow().as_ref() {
                     let idx = c.focused_index();
                     if let Some(card) = c.card_at(idx) {
                         card.set_selected(false);
                     }
+                    c.queue_allocate();
                 }
                 update_counter();
             }
-            _ => return glib::Propagation::Proceed,
+            Action::Select | Action::Deselect => return glib::Propagation::Proceed,
         }
         glib::Propagation::Stop
     });
