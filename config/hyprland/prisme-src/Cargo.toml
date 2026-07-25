@@ -1,0 +1,25 @@
+[package]
+name = "prisme"
+version = "0.1.0"
+edition = "2021"
+description = "Wallpaper picker natif Wayland (cartes en parallélogramme)"
+license = "MIT"
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_14"] }
+gtk4-layer-shell = "0.4"
+async-channel = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Décodage/redimensionnement des vignettes en thread -- gdk::Texture est un
+# GObject (!Send), impossible à construire hors du thread principal ; on
+# décode donc en pixels bruts ici (Send), gtk4::gdk (réexporté par gtk4, pas
+# besoin d'une dépendance séparée) ne sert plus qu'à emballer ces octets en
+# MemoryTexture sur le thread GTK.
+# Épinglé sous 0.25.10 : cette version relève le MSRV à 1.88 (on a 1.85 ici).
+image = { version = ">=0.25, <0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

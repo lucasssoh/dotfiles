@@ -214,6 +214,34 @@ else
 fi
 
 # ============================================================
+# PRISME (wallpaper picker natif Wayland)
+# ============================================================
+# Même logique que le bloc Orbit ci-dessus : source vendorisée dans ce dépôt
+# (prisme-src/), compilée à l'install, binaire dans ~/.local/bin. Config
+# (thème CSS) dans config/hyprland/prisme/, symlinkée plus bas comme les
+# autres dossiers. awww reste le backend d'application (inchangé) ; Prisme
+# ne remplace que l'UI de sélection (auparavant rofi).
+section "Building Prisme (wallpaper picker)"
+
+PRISME_BUILD="$HOME/.cache/prisme-build"
+
+if ! command -v cargo &>/dev/null; then
+    warn "cargo not found — skipping Prisme build. Install a Rust toolchain and re-run this script to get it."
+else
+    rm -rf "$PRISME_BUILD"
+    mkdir -p "$PRISME_BUILD"
+    cp -r "$REPO_DIR/prisme-src/." "$PRISME_BUILD/"
+
+    if (cd "$PRISME_BUILD" && cargo build --release); then
+        mkdir -p "$HOME/.local/bin"
+        install -Dm755 "$PRISME_BUILD/target/release/prisme" "$HOME/.local/bin/prisme"
+        ok "Prisme built and installed to ~/.local/bin/prisme."
+    else
+        warn "Prisme build failed — Super+W will fail to launch until this is fixed."
+    fi
+fi
+
+# ============================================================
 # SYSTEMD USER SERVICES
 # ============================================================
 section "Enabling services"
@@ -278,7 +306,7 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,prisme,hyprlock,scripts,khal}
     ok "Old configs removed"
 fi
 
@@ -286,7 +314,7 @@ section "Linking configuration directories"
 
 # Define the folders to be linked as entire directories
 # Based on your ls -R output
-modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "hyprlock" "scripts" "khal")
+modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "hyprlock" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

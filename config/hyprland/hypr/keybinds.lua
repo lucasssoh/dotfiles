@@ -13,7 +13,10 @@ hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
 hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
-hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("dex $HOME/.local/share/applications/set_wallpaper.desktop || gtk-launch set_wallpaper"))
+hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
+-- Chemin absolu obligatoire : les process lancés par Hyprland n'ont pas
+-- ~/.local/bin dans leur PATH (cf. commit bbb8f61).
+hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh menu"))
 
 hl.bind(mod .. "+ Delete",  hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power.sh"))

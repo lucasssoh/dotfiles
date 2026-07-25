@@ -1,0 +1,67 @@
+/* Prisme — thème, palette identique à waybar/style.css et orbit/theme.toml.
+   Recharge : relancer prisme (pas de daemon, contrairement à Orbit). */
+
+* {
+    font-family: "JetBrains Mono";
+}
+
+*:focus,
+*:focus-visible {
+    outline: none;
+}
+
+window,
+.background {
+    background-color: rgba(20, 20, 20, 0.72);
+}
+
+.prisme-header,
+.prisme-footer {
+    color: #f2f2f7;
+}
+
+.prisme-header {
+    border-bottom: 1px solid #505050;
+    padding: 14px 24px;
+}
+
+.prisme-footer {
+    border-top: 1px solid #505050;
+    padding: 10px 24px;
+    color: #8e8e93;
+    font-size: 0.9em;
+}
+
+.prisme-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #f2f2f7;
+}
+
+.prisme-hint {
+    color: #8e8e93;
+    font-size: 0.9em;
+}
+
+.prisme-mode-toggle {
+    background-color: transparent;
+    background-image: none;
+    color: #8e8e93;
+    border: 1px solid #505050;
+    border-radius: 6px;
+    box-shadow: none;
+    padding: 4px 14px;
+}
+
+.prisme-mode-toggle:checked {
+    background-color: #2c2c2e;
+    color: #4fefff;
+    border-color: #4fefff;
+}
+
+.prisme-duration-chip {
+    color: #8e8e93;
+    border: 1px solid #505050;
+    border-radius: 6px;
+    padding: 4px 10px;
+}

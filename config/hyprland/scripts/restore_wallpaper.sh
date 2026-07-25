@@ -19,7 +19,10 @@ if [ "$MODE" = "static" ]; then
     systemctl --user stop wallpaper-slideshow.service 2>/dev/null
     
     SELECTED_WALL=$(python3 -c "import json; print(json.load(open('$PLAYLIST_FILE'))['walls'][0])")
-    awww img "$WALL_DIR/$SELECTED_WALL" --transition-type none
+    # `source` est écrit par Prisme (Original vs Filtré) -- absent des
+    # playlists écrites par l'ancien picker rofi, d'où le repli sur WALL_DIR.
+    SRC_DIR=$(python3 -c "import json; d = json.load(open('$PLAYLIST_FILE')); print(d.get('source') or '$WALL_DIR')")
+    awww img "$SRC_DIR/$SELECTED_WALL" --transition-type none
 
 elif [ "$MODE" = "dynamic" ]; then
     # Mode Dynamique : On demande poliment à systemd de lancer TON service personnalisé
