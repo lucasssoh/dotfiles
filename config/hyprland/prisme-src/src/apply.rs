@@ -1,3 +1,9 @@
+//! Application du wallpaper choisi : écrit l'état dans
+//! `wallpaper-playlist.json` et pilote awww/systemd, en restant
+//! compatible avec le format lu par les scripts bash historiques
+//! (restore_wallpaper.sh, wallpaper-slideshow.sh). Prisme est une UI de
+//! remplacement, pas un nouveau backend.
+
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -10,6 +16,18 @@ use std::process::{Command, Stdio};
 fn playlist_path() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME non défini");
     PathBuf::from(home).join(".config/hypr/wallpaper-playlist.json")
+}
+
+/// Cache des variantes "filtrées" (recadrées/étendues au format de l'écran
+/// actif) produites par scripts/wallpaper-filter-one.sh, alimenté en continu
+/// par wallpaper-cache-watcher.sh. Mêmes noms de fichiers que les originaux
+/// (résolution par simple basename). Jamais utilisé pour parcourir/afficher
+/// (main.rs/thumbs.rs continuent de lire les originaux -- l'utilisateur doit
+/// reconnaître ses propres photos dans le carrousel), uniquement au moment
+/// d'appliquer un wallpaper au bureau (cf. apply_static/apply_dynamic).
+fn filtered_dir() -> PathBuf {
+    let home = std::env::var("HOME").expect("HOME non défini");
+    PathBuf::from(home).join(".cache/filtered_wallpapers")
 }
 
 /// Reproduit `if ! pidof awww-daemon; then awww-daemon & sleep 0.5; fi` de
@@ -76,10 +94,12 @@ pub fn last_static() -> Option<String> {
 
 /// Mode "Statique" -- équivalent de l'étape 21 de set_wallpaper.sh : stoppe
 /// le diaporama, écrit la playlist, applique via awww avec la même
-/// transition. `source_dir` est écrit dans la playlist (absent du format
+/// transition. `source` est écrit dans la playlist (absent du format
 /// historique du script bash -- cf. le patch correspondant dans
 /// restore_wallpaper.sh) pour que la restauration au boot sache d'où
-/// rejouer le wallpaper.
+/// rejouer le wallpaper -- c'est le dossier réellement appliqué (cache
+/// filtré si disponible, originaux sinon, cf. filtered_dir()), pas
+/// toujours `source_dir` tel que reçu.
 pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &str) {
     ensure_awww_daemon();
 
@@ -87,16 +107,29 @@ pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &s
         .args(["--user", "stop", "wallpaper-slideshow.service"])
         .status();
 
+    // Variante filtrée si le cache l'a déjà produite (cas normal : le
+    // watcher tourne en continu), sinon l'original tel quel -- une image
+    // ajoutée il y a deux secondes, ou dont l'extension échappe au filtre
+    // (regex sensible à la casse), ne doit pas se retrouver sans wallpaper
+    // du tout.
+    let filtered = filtered_dir();
+    let cached = filtered.join(wallpaper_name);
+    let (applied_dir, applied_path) = if cached.is_file() {
+        (filtered, cached)
+    } else {
+        (source_dir.to_path_buf(), wallpaper_path.to_path_buf())
+    };
+
     write_playlist(&json!({
         "mode": "static",
-        "source": source_dir.to_string_lossy(),
+        "source": applied_dir.to_string_lossy(),
         "walls": [wallpaper_name],
         "last_static": wallpaper_name,
     }));
 
     let _ = Command::new("awww")
         .arg("img")
-        .arg(wallpaper_path)
+        .arg(&applied_path)
         .args([
             "--transition-type",
             "wipe",
@@ -117,10 +150,23 @@ pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &s
 pub fn apply_dynamic(source_dir: &Path, duration: u32, walls: &[String]) {
     ensure_awww_daemon();
 
+    // Un seul `source` pour toute la playlist : wallpaper-slideshow.sh
+    // applique "$SOURCE/$img" pour chaque nom, il ne peut pas mélanger deux
+    // dossiers. On ne bascule sur le cache que si TOUTES les images de la
+    // sélection y sont déjà ; une seule manquante et on reste sur les
+    // originaux pour tout le lot, plutôt qu'un diaporama qui saute une image.
+    let filtered = filtered_dir();
+    let all_filtered = !walls.is_empty() && walls.iter().all(|name| filtered.join(name).is_file());
+    let playlist_source = if all_filtered {
+        filtered
+    } else {
+        source_dir.to_path_buf()
+    };
+
     let mut value = json!({
         "mode": "dynamic",
         "duration": duration,
-        "source": source_dir.to_string_lossy(),
+        "source": playlist_source.to_string_lossy(),
         "walls": walls,
     });
     if let Some(last_static) = last_static() {

@@ -1,3 +1,6 @@
+//! Découverte des fichiers wallpapers sur disque : résolution des dossiers
+//! source et listing filtré/trié, sans dépendance à l'état de l'UI.
+
 use std::path::{Path, PathBuf};
 
 /// Extensions reconnues -- mêmes que scripts/set_wallpaper.sh (jpg/jpeg/png/webp,
@@ -8,12 +11,40 @@ fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").expect("HOME non défini"))
 }
 
-/// Dossier "Original" -- même chemin que WALL_DIR dans set_wallpaper.sh
-/// (symlinké vers le dépôt par set_wallpapers.sh).
-pub fn originals_dir() -> PathBuf {
-    home().join("Images/Wallpapers")
+/// Fichier de config utilisateur listant le dossier des wallpapers
+/// originaux -- symlinké par install.sh depuis
+/// config/hyprland/prisme/wallpapers.conf, comme keymap.conf/style.css.
+fn config_path() -> PathBuf {
+    home().join(".config/prisme/wallpapers.conf")
 }
 
+/// Lit la première ligne non vide et non commentée (#) de wallpapers.conf
+/// -- un chemin absolu, ou préfixé par `~/`. Fichier absent/illisible/vide
+/// -> None, originals_dir() retombe alors sur le défaut ci-dessous. Même
+/// fichier lu par les scripts bash historiques (wallpaper-cache-
+/// watcher.sh, restore_wallpaper.sh, wallpaper-slideshow.sh,
+/// set_wallpaper.sh) pour rester agnostiques du même dossier configuré.
+fn configured_dir() -> Option<PathBuf> {
+    let content = std::fs::read_to_string(config_path()).ok()?;
+    let line = content
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty() && !l.starts_with('#'))?;
+    Some(match line.strip_prefix("~/") {
+        Some(rest) => home().join(rest),
+        None => PathBuf::from(line),
+    })
+}
+
+/// Dossier "Original" -- configurable via wallpapers.conf (cf.
+/// configured_dir()), sinon même chemin par défaut que WALL_DIR dans
+/// set_wallpaper.sh (symlinké vers le dépôt par set_wallpapers.sh).
+pub fn originals_dir() -> PathBuf {
+    configured_dir().unwrap_or_else(|| home().join("Images/Wallpapers"))
+}
+
+/// Une image wallpaper trouvée sur disque : chemin complet et nom de
+/// fichier (affiché dans l'UI, écrit tel quel dans la playlist JSON).
 #[derive(Clone, Debug)]
 pub struct Wallpaper {
     pub path: PathBuf,

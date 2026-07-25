@@ -1,5 +1,24 @@
 #!/usr/bin/env bash
+# =========================================================
+# set_wallpaper.sh — sélecteur de fond d'écran Rofi (statique ou
+# diaporama dynamique). Antérieur à Prisme (cf. prisme-src/), toujours
+# utilisé pour configurer le mode diaporama (durée, filtre, sélection
+# des images). Écrit l'état dans wallpaper-playlist.json ; c'est
+# restore_wallpaper.sh et wallpaper-slideshow.service qui l'appliquent.
+#
+# Machine à états pilotée par la variable `step` :
+#   1        choix du mode (Static/Dynamic)
+#   2-5      branche Dynamic : filtre -> durée -> sélection d'images -> écriture + (re)démarrage du service
+#   20-21    branche Static  : filtre -> sélection d'une image -> application immédiate
+# =========================================================
+# Dossier source configurable via ~/.config/prisme/wallpapers.conf, comme
+# dans Prisme et les autres scripts de ce pipeline.
 WALL_DIR="$HOME/Images/Wallpapers"
+WALLPAPERS_CONF="$HOME/.config/prisme/wallpapers.conf"
+if [[ -f "$WALLPAPERS_CONF" ]]; then
+    configured="$(grep -vE '^[[:space:]]*(#|$)' "$WALLPAPERS_CONF" | head -n1)"
+    [[ -n "$configured" ]] && WALL_DIR="${configured/#\~\//$HOME/}"
+fi
 CACHE_DIR="$HOME/.cache/filtered_wallpapers"
 RASI_THEME="$HOME/.config/rofi/wallpaper.rasi"
 RASI_MODE="$HOME/.config/rofi/wallpaper-mode.rasi"
@@ -26,6 +45,7 @@ CHOSEN=""
 
 while true; do
     case $step in
+        # Étape 1 : choix du mode, commune aux deux branches
         1)
             MODE=$(printf "Static\nDynamic" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -39,6 +59,7 @@ while true; do
             ;;
 
         # ── DYNAMIC ──────────────────────────────────────────────
+        # Étape 2 : filtre (originaux ou vignettes filtrées en cache)
         2)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -51,6 +72,7 @@ while true; do
             step=3
             ;;
 
+        # Étape 3 : durée d'affichage de chaque image (secondes)
         3)
             DURATION=$(rofi -dmenu \
                 -p "Duration (seconds)" \
@@ -64,6 +86,7 @@ while true; do
             step=4
             ;;
 
+        # Étape 4 : sélection multiple des images incluses dans le diaporama
         4)
             SRC_DIR="$WALL_DIR"
             [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
@@ -82,6 +105,8 @@ while true; do
             step=5
             ;;
 
+        # Étape 5 : écrit la playlist JSON (toutes les images du dossier si
+        # aucune sélection explicite) et (re)démarre le service de diaporama
         5)
             if [ -z "$CHOSEN" ]; then
                 SRC_DIR="$WALL_DIR"
@@ -106,6 +131,7 @@ with open('$PLAYLIST_FILE', 'w') as f:
             ;;
 
         # ── STATIC ───────────────────────────────────────────────
+        # Étape 20 : filtre (originaux ou vignettes filtrées en cache)
         20)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -118,6 +144,8 @@ with open('$PLAYLIST_FILE', 'w') as f:
             step=21
             ;;
 
+        # Étape 21 : sélection d'une image unique, application immédiate et
+        # arrêt du service de diaporama (les deux modes sont mutuellement exclusifs)
         21)
             SRC_DIR="$WALL_DIR"
             [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"

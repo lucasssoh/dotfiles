@@ -221,6 +221,12 @@ fi
 # (thème CSS) dans config/hyprland/prisme/, symlinkée plus bas comme les
 # autres dossiers. awww reste le backend d'application (inchangé) ; Prisme
 # ne remplace que l'UI de sélection (auparavant rofi).
+#
+# `cargo build --release` compile aussi wallpaper-filter (src/bin/), le
+# worker natif du cache "Filtered" (recadrage/extension intelligent,
+# remplace l'ancien wallpaper-filter-one.sh + ImageMagick) -- même crate,
+# mêmes dépendances (dont `image`, déjà utilisée pour les vignettes),
+# installé au même endroit.
 section "Building Prisme (wallpaper picker)"
 
 PRISME_BUILD="$HOME/.cache/prisme-build"
@@ -235,9 +241,10 @@ else
     if (cd "$PRISME_BUILD" && cargo build --release); then
         mkdir -p "$HOME/.local/bin"
         install -Dm755 "$PRISME_BUILD/target/release/prisme" "$HOME/.local/bin/prisme"
-        ok "Prisme built and installed to ~/.local/bin/prisme."
+        install -Dm755 "$PRISME_BUILD/target/release/wallpaper-filter" "$HOME/.local/bin/wallpaper-filter"
+        ok "Prisme and wallpaper-filter built and installed to ~/.local/bin/."
     else
-        warn "Prisme build failed — Super+W will fail to launch until this is fixed."
+        warn "Prisme build failed — Super+W will fail to launch, and the 'Filtered' wallpaper cache will stop updating, until this is fixed."
     fi
 fi
 
@@ -254,21 +261,19 @@ if [ "$DISTRO" != "debian" ]; then
     ok "Bluetooth enabled."
 fi
 
-# 2. GESTION DES SERVICES PERSOS (Le chaînon manquant !)
+# Services systemd --user personnalisés du repo (orbit.service, etc.)
 SYSTEMD_DST="$HOME/.config/systemd/user"
 mkdir -p "$SYSTEMD_DST"
 
 if [ -d "$REPO_DIR/systemd" ]; then
     info "Linking and enabling custom systemd services..."
-    
-    # On boucle sur tous les fichiers .service présents dans le dossier systemd du repo
+
+    # Symlink + enable chaque fichier .service trouvé dans systemd/
     find "$REPO_DIR/systemd" -type f -name "*.service" | while read -r service_file; do
         SERVICE_NAME=$(basename "$service_file")
-        
-        # On crée le lien symbolique dans ~/.config/systemd/user/
+
         safe_link "$service_file" "$SYSTEMD_DST/$SERVICE_NAME"
-        
-        # On force la recharge de systemd et l'activation propre du service
+
         systemctl --user daemon-reload
         systemctl --user enable "$SERVICE_NAME"
         ok "Service systemd activé : $SERVICE_NAME"
@@ -312,8 +317,7 @@ fi
 
 section "Linking configuration directories"
 
-# Define the folders to be linked as entire directories
-# Based on your ls -R output
+# Dossiers de config à symlinker intégralement dans ~/.config
 modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "hyprlock" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
@@ -376,18 +380,18 @@ RESTORE_SCRIPT="$REPO_DIR/scripts/restore_wallpaper.sh"
 STATE_FILE="$HOME/.cache/current_wallpaper"
 WALLPAPER_DIR="$HOME/Images/Wallpapers"
 
-# 1️⃣ Create wallpaper directory
+# 1. Create wallpaper directory
 mkdir -p "$WALLPAPER_DIR"
 
-# 2️⃣ Make scripts executable in the repo
+# 2. Make scripts executable in the repo
 chmod +x "$WP_SCRIPT" "$RESTORE_SCRIPT"
 
-# 3️⃣ Symlink to ~/.local/bin (Make sure this is in your $PATH)
+# 3. Symlink to ~/.local/bin (must be in $PATH for the desktop entry below)
 mkdir -p "$HOME/.local/bin"
 ln -sfn "$WP_SCRIPT" "$HOME/.local/bin/set_wallpaper"
 ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
 
-# 4️⃣ Create a .desktop file with ABSOLUTE PATH
+# 4. Desktop entry using the absolute path, so it works from any launcher
 mkdir -p "$HOME/.local/share/applications"
 cat <<EOF > "$HOME/.local/share/applications/set_wallpaper.desktop"
 [Desktop Entry]
@@ -414,7 +418,7 @@ else
     info "Not in Wayland. awww-daemon will start with Hyprland later."
 fi
 
-# 6️⃣ Handle State File & Initial Wallpaper
+# 5. Handle State File & Initial Wallpaper
 if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
     FIRST_WP=$(find "$WALLPAPER_DIR" -type f \( \
         -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" -o -name "*.webp" \
@@ -428,7 +432,7 @@ if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
     fi
 fi
 
-# 7️⃣ Apply wallpaper (awww version)
+# 6. Apply wallpaper (awww version)
 if [ -n "$WAYLAND_DISPLAY" ] && pgrep -x "awww-daemon" >/dev/null; then
     if [ -f "$STATE_FILE" ]; then
         CURRENT_WP=$(cat "$STATE_FILE")
