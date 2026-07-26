@@ -14,7 +14,7 @@ use std::process::{Command, Stdio};
 /// slideshow.service et slideshow-fullscreen-guard.sh continuent de lire ce
 /// même fichier sans modification (à part le champ `source`, cf. plus bas).
 fn playlist_path() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME non défini");
+    let home = std::env::var("HOME").expect("HOME not set");
     PathBuf::from(home).join(".config/hypr/wallpaper-playlist.json")
 }
 
@@ -26,7 +26,7 @@ fn playlist_path() -> PathBuf {
 /// reconnaître ses propres photos dans le carrousel), uniquement au moment
 /// d'appliquer un wallpaper au bureau (cf. apply_static/apply_dynamic).
 fn filtered_dir() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME non défini");
+    let home = std::env::var("HOME").expect("HOME not set");
     PathBuf::from(home).join(".cache/filtered_wallpapers")
 }
 
@@ -61,7 +61,7 @@ fn write_playlist(value: &serde_json::Value) {
         let _ = std::fs::create_dir_all(parent);
     }
     if let Err(e) = std::fs::write(&path, value.to_string()) {
-        eprintln!("[prisme] échec d'écriture de {path:?}: {e}");
+        eprintln!("[prisme] failed to write {path:?}: {e}");
     }
 }
 

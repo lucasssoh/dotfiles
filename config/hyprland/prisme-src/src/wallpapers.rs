@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 
 fn home() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").expect("HOME non défini"))
+    PathBuf::from(std::env::var("HOME").expect("HOME not set"))
 }
 
 /// Fichier de config utilisateur listant le dossier des wallpapers

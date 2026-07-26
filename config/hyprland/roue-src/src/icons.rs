@@ -12,48 +12,65 @@ use resvg::{tiny_skia, usvg};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::color;
+use crate::config::Segment;
+
 /// Résolution de rasterisation -- nettement plus grande que la taille
 /// d'affichage réelle (~30-45px, cf. wheel.rs) pour rester net une fois
 /// agrandie au survol (append_scaled_texture, filtre Trilinear).
 const RASTER_PX: u32 = 128;
 
 const COLOR_NORMAL: &str = "#f2f2f7";
-const COLOR_ACCENT: &str = "#4fefff";
 
 /// Une icône rasterisée dans les deux couleurs utiles -- le survol anime un
 /// fondu entre les deux (cf. wheel.rs) plutôt qu'une recoloration GPU par
-/// color-matrix, plus simple pour un si petit nombre d'icônes.
+/// color-matrix, plus simple pour un si petit nombre d'icônes. La variante
+/// "accent" est baked avec LA couleur du secteur (cf. `color::resolve`),
+/// pas une constante globale -- c'est ce qui permet à powerprofile.toml
+/// d'avoir un survol vert/jaune/cyan différent par secteur.
 pub struct IconPair {
     pub normal: gdk::Texture,
     pub accent: gdk::Texture,
 }
 
 fn icons_dir() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME non défini");
+    let home = std::env::var("HOME").expect("HOME not set");
     PathBuf::from(home).join(".config/roue/icons")
 }
 
-/// Charge et rasterise chaque fichier de `names` (dédupliqués) -- ignore
-/// silencieusement (message sur stderr) un fichier introuvable ou un SVG
-/// invalide : wheel.rs retombe alors sur le texte brut du secteur, une
-/// icône manquante ne doit pas empêcher le reste de la roue de s'afficher.
-pub fn load(names: impl Iterator<Item = String>) -> HashMap<String, IconPair> {
+/// Clé de cache d'un secteur -- fichier icône ET couleur d'accent résolue,
+/// pas le fichier seul : deux secteurs qui partagent le même fichier SVG
+/// mais une teinte différente doivent obtenir des textures "accent"
+/// distinctes. Utilisée à la fois ici (au chargement) et dans wheel.rs (au
+/// dessin), donc centralisée ici pour que les deux ne puissent pas diverger.
+pub fn cache_key(seg: &Segment) -> String {
+    format!("{}{}", seg.icon, color::resolve(seg.accent.as_deref()).hex)
+}
+
+/// Charge et rasterise l'icône de chaque secteur de `segments` (dédupliquée
+/// par `cache_key`) -- ignore silencieusement (message sur stderr) un
+/// fichier introuvable ou un SVG invalide : wheel.rs retombe alors sur le
+/// texte brut du secteur, une icône manquante ne doit pas empêcher le reste
+/// de la roue de s'afficher.
+pub fn load(segments: &[Segment]) -> HashMap<String, IconPair> {
     let dir = icons_dir();
     let mut cache = HashMap::new();
-    for name in names {
-        if cache.contains_key(&name) {
+    for seg in segments {
+        let key = cache_key(seg);
+        if cache.contains_key(&key) {
             continue;
         }
-        let path = dir.join(&name);
+        let path = dir.join(&seg.icon);
         let Ok(svg) = std::fs::read_to_string(&path) else {
-            eprintln!("[roue] icône introuvable : {path:?}");
+            eprintln!("[roue] icon not found: {path:?}");
             continue;
         };
-        match (rasterize(&svg, COLOR_NORMAL), rasterize(&svg, COLOR_ACCENT)) {
+        let accent_hex = color::resolve(seg.accent.as_deref()).hex;
+        match (rasterize(&svg, COLOR_NORMAL), rasterize(&svg, &accent_hex)) {
             (Some(normal), Some(accent)) => {
-                cache.insert(name, IconPair { normal, accent });
+                cache.insert(key, IconPair { normal, accent });
             }
-            _ => eprintln!("[roue] SVG invalide : {path:?}"),
+            _ => eprintln!("[roue] invalid SVG: {path:?}"),
         }
     }
     cache

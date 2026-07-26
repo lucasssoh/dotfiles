@@ -1,22 +1,26 @@
-# Roue "Profil d'énergie" — remplace waybar/scripts/rofi-performance.sh.
-# Mêmes actions que waybar/scripts/performance.sh (qui affiche le profil
-# actif dans waybar). `pkill -RTMIN+1 waybar` force ce module à se
-# rafraîchir immédiatement après le changement, au lieu d'attendre son
-# prochain interval (10s). Icônes : SVG Lucide dans roue/icons/, cf.
-# power.toml.
-title = "Profil d'énergie"
+# Roue "Power profile" — remplace waybar/scripts/rofi-performance.sh. Mêmes
+# actions que waybar/scripts/performance.sh (qui affiche le profil actif
+# dans waybar). `pkill -RTMIN+1 waybar` force ce module à se rafraîchir
+# immédiatement après le changement, au lieu d'attendre son prochain
+# interval (10s). Icônes : SVG Lucide dans roue/icons/, cf. power.toml.
+# `accent` (optionnel, cf. roue-src/src/color.rs) teinte le
+# secteur/icône/libellé au survol -- couleur nommée (cyan/blue/green/
+# yellow/red) ou code hex direct `#rrggbb` ; absent = cyan par défaut.
+title = "Power profile"
 
 [[segment]]
 icon = "zap.svg"
 label = "Performance"
 action = "powerprofilesctl set performance && pkill -RTMIN+1 waybar"
+accent = "yellow"
 
 [[segment]]
 icon = "scale.svg"
-label = "Équilibré"
+label = "Balanced"
 action = "powerprofilesctl set balanced && pkill -RTMIN+1 waybar"
 
 [[segment]]
 icon = "leaf.svg"
-label = "Économie d'énergie"
+label = "Power saver"
 action = "powerprofilesctl set power-saver && pkill -RTMIN+1 waybar"
+accent = "green"

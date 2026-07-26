@@ -21,7 +21,6 @@ hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fulls
 -- Chemin absolu obligatoire : les processus lancés par Hyprland n'héritent
 -- pas de ~/.local/bin dans leur PATH (cf. commit bbb8f61).
 hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
-hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh menu"))
 
 -- Roue d'alimentation, façon menu d'arme RPG (LB/L1) : l'appui ouvre et
 -- arme la sélection sur le secteur survolé, le relâchement (option
@@ -39,6 +38,16 @@ hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 -- Avant : aucun raccourci clavier, uniquement le clic sur le module waybar
 -- custom/performance (cf. waybar/config.jsonc).
 hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile"))
+
+-- Roue de disposition d'écrans -- même geste appui/relâchement, mais SA
+-- config n'est pas un fichier statique du dépôt comme les deux roues
+-- ci-dessus (roue/wheels/power.toml, powerprofile.toml) : elle dépend du
+-- matériel branché à cet instant (écran externe présent ou non, sa marque
+-- via l'EDID...), donc `display-layout.sh roue-gen` la régénère à CHAQUE
+-- appui juste avant que `roue display` ne s'ouvre (cf. sa doc et
+-- cmd_roue_gen dans scripts/display-layout.sh). Remplace l'ancien menu
+-- rofi (`display-layout.sh menu`, toujours dispo si besoin).
+hl.bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))

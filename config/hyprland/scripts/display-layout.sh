@@ -2,18 +2,30 @@
 set -euo pipefail
 
 # =========================================================
-# display-layout.sh — UI (menu rofi + module waybar) pour la
-# disposition d'écrans. Même pattern que set_wallpaper.sh /
-# hdr.sh : cette UI ne fait qu'écrire l'état JSON, c'est
-# scripts/workspace-manager.sh (le moteur) qui l'applique.
+# display-layout.sh — UI (roue + module waybar ; menu rofi conservé en
+# repli/référence) pour la disposition d'écrans. Même pattern que
+# set_wallpaper.sh / hdr.sh : cette UI ne fait qu'écrire l'état JSON,
+# c'est scripts/workspace-manager.sh (le moteur) qui l'applique.
 #
-#   display-layout.sh menu    -> menu rofi multi-étapes
-#   display-layout.sh status  -> JSON pour le module waybar
+#   display-layout.sh roue-gen -> régénère ~/.config/roue/wheels/display.toml
+#                                  (SUPER+O, cf. hypr/keybinds.lua) puis
+#                                  `roue display` affiche la roue
+#   display-layout.sh apply M  -> applique le mode M ("both"/"internal"/
+#                                  "external"), déclenché par un secteur de
+#                                  la roue générée ci-dessus
+#   display-layout.sh menu     -> ancien menu rofi multi-étapes (position +
+#                                  alignement compris), laissé en place
+#   display-layout.sh status   -> JSON pour le module waybar
 #
 # Résolution des rôles (interne/externe) dupliquée ici en version
 # minimale, en lecture seule, juste pour savoir quelles options
 # proposer/afficher — la logique d'application reste entièrement
 # dans workspace-manager.sh (source de vérité unique).
+#
+# La roue générée par roue-gen ne propose QUE le choix du mode (All /
+# interne / externe) -- position et alignement, réglables via l'ancien
+# menu rofi si besoin, ne sont pas redemandés à chaque fois (cf.
+# cmd_apply) : ils restent ceux déjà en mémoire dans display-layout.json.
 # =========================================================
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
@@ -113,6 +125,75 @@ with open('$STATE_FILE', 'w') as f:
 
 refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
 
+# Applique un mode directement (déclenché depuis un secteur de la roue,
+# cf. cmd_roue_gen) -- position/align ne sont PAS redemandés ici,
+# contrairement à cmd_menu : on réutilise tels quels ceux déjà en mémoire
+# (current_state, avec ses propres défauts si le fichier d'état est absent).
+# Choisir "All" à répétition ne doit pas réinitialiser une disposition déjà
+# réglée par l'utilisateur.
+cmd_apply() {
+    local new_mode="$1"
+    resolve_roles
+    current_state
+    write_state "$new_mode" "$position" "$align"
+    bash ~/.config/hypr/scripts/workspace-manager.sh
+    refresh_bar
+}
+
+# Génère ~/.config/roue/wheels/display.toml juste avant de lancer la roue
+# (cf. keybinds.lua) -- CETTE roue n'a pas de config figée dans le dépôt :
+# ses secteurs (quel écran externe, si un externe est même branché)
+# dépendent du matériel réellement détecté à cet instant, donc c'est ce
+# script -- la même logique de détection que cmd_menu (resolve_roles) --
+# qui écrit le TOML à chaque appui, pas un fichier statique. Fichier
+# gitignored (cf. .gitignore) : c'est un artefact runtime, pas de la config
+# versionnée, même statut que display-layout.json.
+cmd_roue_gen() {
+    resolve_roles
+
+    if [[ -z "$first_external" ]]; then
+        notify-send "Displays" "No external screen detected — only one screen active."
+        exit 1
+    fi
+
+    local dir="$HOME/.config/roue/wheels"
+    mkdir -p "$dir"
+    # Échappement TOML minimal -- les libellés viennent de l'EDID (nom de
+    # marque), jamais de saisie utilisateur, mais un guillemet littéral y
+    # casserait quand même le parsing sans ça.
+    local internal_esc="${internal_label//\"/\\\"}"
+    local external_esc="${external_label//\"/\\\"}"
+
+    # confirm = true partout -- changer la disposition d'écrans peut
+    # déplacer/couper la fenêtre active d'un bord à l'autre, pas juste
+    # rafraîchir un affichage : mieux vaut confirmer que défaire par
+    # accident. Pas de confirm_accent (cf. config.rs) : contrairement à
+    # power.toml, rien ici n'est destructeur -- cyan par défaut suffit,
+    # avec quand même la bordure du moyeu au survol de Confirm (gérée par
+    # wheel.rs indépendamment de la couleur).
+    cat > "$dir/display.toml" <<EOF
+title = "Displays"
+
+[[segment]]
+icon = "columns-2.svg"
+label = "All"
+action = "$HOME/.config/hypr/scripts/display-layout.sh apply both"
+confirm = true
+
+[[segment]]
+icon = "laptop.svg"
+label = "$internal_esc"
+action = "$HOME/.config/hypr/scripts/display-layout.sh apply internal"
+confirm = true
+
+[[segment]]
+icon = "monitor.svg"
+label = "$external_esc"
+action = "$HOME/.config/hypr/scripts/display-layout.sh apply external"
+confirm = true
+EOF
+}
+
 cmd_menu() {
     resolve_roles
     current_state
@@ -181,7 +262,9 @@ cmd_status() {
 }
 
 case "${1:-status}" in
-    menu)   cmd_menu ;;
-    status) cmd_status ;;
-    *)      echo "usage: $0 {menu|status}" >&2; exit 1 ;;
+    menu)     cmd_menu ;;
+    status)   cmd_status ;;
+    apply)    cmd_apply "$2" ;;
+    roue-gen) cmd_roue_gen ;;
+    *)        echo "usage: $0 {menu|status|apply MODE|roue-gen}" >&2; exit 1 ;;
 esac

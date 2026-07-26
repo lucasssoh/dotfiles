@@ -18,6 +18,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::Instant;
 
+use crate::color;
 use crate::config::Segment;
 use crate::icons::{self, IconPair};
 
@@ -54,6 +55,12 @@ const ICON_HOVER_GROW_PX: f64 = 6.0;
 const ICON_FONT_PX: f64 = 32.0;
 const HUB_ICON_SIZE_PX: f64 = 46.0;
 const HUB_LABEL_FONT_PX: f64 = 15.0;
+/// Index des secteurs synthétiques du sous-menu de confirmation (cf.
+/// `enter_confirm`) -- Annuler en premier (position par défaut, cf. sa doc),
+/// Confirmer en second.
+const CANCEL_INDEX: usize = 0;
+const CONFIRM_INDEX: usize = 1;
+const HUB_BORDER_WIDTH_PX: f32 = 3.0;
 
 mod imp {
     use super::*;
@@ -139,8 +146,16 @@ mod imp {
             let hovered = self.hovered.get();
             let hover_t = self.hover_anim.get() as f32;
 
+            let confirming = self.confirming.get();
+
             for (i, seg) in segments.iter().enumerate() {
                 let t = if i == hovered { hover_t } else { 0.0 };
+                // Teinte de CE secteur -- son champ TOML `accent` (cyan par
+                // défaut si absent, cf. color.rs), sauf le secteur
+                // "Confirmer" du sous-menu de confirmation qui force le
+                // rouge à la construction (cf. `enter_confirm`) plutôt que
+                // par un cas spécial ici : un seul mécanisme pour les deux.
+                let accent = color::resolve(seg.accent.as_deref()).rgb;
                 // Angles "purs" de la découpe, SANS rognage -- l'écart entre
                 // secteurs est désormais géré à largeur constante en pixels
                 // à l'intérieur de wedge_path (cf. sa doc), pas en rognant
@@ -160,7 +175,7 @@ mod imp {
 
                 snapshot.push_fill(&path, gsk::FillRule::Winding);
                 let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
-                snapshot.append_color(&wedge_color(t, open as f32), &full);
+                snapshot.append_color(&wedge_color(t, open as f32, accent), &full);
                 snapshot.pop();
 
                 if open <= 0.05 {
@@ -175,7 +190,7 @@ mod imp {
                 // Juste le logo dans le secteur -- le libellé texte ne
                 // s'affiche qu'au moyeu central (cf. plus bas), pas ici.
                 let size = ICON_SIZE_PX + t as f64 * ICON_HOVER_GROW_PX;
-                draw_icon(&widget, snapshot, &self.icons.borrow(), &seg.icon, px, py, size, t, open);
+                draw_icon(&widget, snapshot, &self.icons.borrow(), seg, px, py, size, t, open);
             }
 
             // Moyeu central -- affiche icône + label du secteur actuellement
@@ -192,6 +207,27 @@ mod imp {
                 snapshot.pop();
 
                 if let Some(seg) = segments.get(hovered) {
+                    let hub_accent = color::resolve(seg.accent.as_deref()).rgb;
+
+                    // Bordure colorée du moyeu -- uniquement dans le
+                    // sous-menu de confirmation, et uniquement quand le
+                    // survol est sur "Confirmer" (jamais "Annuler") :
+                    // reprend la teinte du secteur survolé (rouge par
+                    // construction, cf. `enter_confirm`), signal visuel
+                    // fort qu'un relâchement/clic là va exécuter une action
+                    // destructive (reboot, poweroff, ...), lisible même
+                    // sans regarder les secteurs eux-mêmes.
+                    let hub_danger = confirming && hovered == CONFIRM_INDEX;
+                    if hub_danger {
+                        let stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
+                        snapshot.push_stroke(&hub_path, &stroke);
+                        snapshot.append_color(
+                            &gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32),
+                            &full,
+                        );
+                        snapshot.pop();
+                    }
+
                     let mut hub_label_font = pango::FontDescription::new();
                     hub_label_font.set_absolute_size(HUB_LABEL_FONT_PX * pango::SCALE as f64);
                     let hub_label = widget.create_pango_layout(Some(&seg.label));
@@ -209,19 +245,14 @@ mod imp {
 
                     // Toujours en accent plein (t=1) -- c'est le secteur
                     // actuellement retenu, pas un survol animé de plus.
-                    draw_icon(
-                        &widget,
-                        snapshot,
-                        &self.icons.borrow(),
-                        &seg.icon,
-                        cx,
-                        icon_cy,
-                        HUB_ICON_SIZE_PX,
-                        1.0,
-                        open,
-                    );
+                    // Reprend automatiquement la teinte propre du secteur
+                    // (vert/jaune/cyan/rouge/...), même mécanisme que
+                    // l'anneau : aucun cas spécial ici.
+                    draw_icon(&widget, snapshot, &self.icons.borrow(), seg, cx, icon_cy, HUB_ICON_SIZE_PX, 1.0, open);
 
-                    let label_color = gdk::RGBA::new(0.949, 0.949, 0.969, open as f32);
+                    // Libellé du moyeu dans la même teinte que l'icône --
+                    // cohérent avec l'anneau plutôt qu'un blanc neutre fixe.
+                    let label_color = gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32);
                     snapshot.save();
                     snapshot.translate(&graphene::Point::new(
                         (cx - lw as f64 / 2.0) as f32,
@@ -271,33 +302,34 @@ mod imp {
 }
 
 /// Dessine le logo d'un secteur centré en `(cx, cy)`, carré de côté `size`
-/// -- texture SVG pré-rasterisée si `icon_key` en a une dans `icons` (cf.
-/// icons.rs), sinon repli en glyphe Pango brut (secteurs de confirmation
-/// Confirmer/Annuler, ou icône introuvable/invalide -- cf. `icons::load`).
-/// `t` anime un fondu vers la couleur accent au survol (0 = couleur
-/// normale, 1 = accent plein) ; `open` multiplie l'alpha (fondu à
-/// l'ouverture de la roue).
+/// -- texture SVG pré-rasterisée si `seg` en a une dans `icons` (cf.
+/// icons.rs, indexée par `icons::cache_key`), sinon repli en glyphe Pango
+/// brut (secteurs de confirmation Confirmer/Annuler, ou icône introuvable/
+/// invalide -- cf. `icons::load`). `t` anime un fondu vers la couleur
+/// accent DU SECTEUR au survol (0 = couleur normale, 1 = accent plein,
+/// cf. `color::resolve`) ; `open` multiplie l'alpha (fondu à l'ouverture).
 fn draw_icon(
     widget: &RoueWheel,
     snapshot: &gtk4::Snapshot,
     icons: &HashMap<String, IconPair>,
-    icon_key: &str,
+    seg: &Segment,
     cx: f64,
     cy: f64,
     size: f64,
     t: f32,
     open: f64,
 ) {
-    if let Some(pair) = icons.get(icon_key) {
+    if let Some(pair) = icons.get(&icons::cache_key(seg)) {
         let rect = graphene::Rect::new(
             (cx - size / 2.0) as f32,
             (cy - size / 2.0) as f32,
             size as f32,
             size as f32,
         );
-        // Texture "normale" en base, texture "accent" fondue par-dessus
-        // avec `t` -- crossfade entre deux rasters plutôt qu'une
-        // recoloration GPU par color-matrix (cf. icons.rs).
+        // Texture "normale" en base, texture "accent" (déjà baked dans LA
+        // couleur de ce secteur, cf. icons::load) fondue par-dessus avec
+        // `t` -- crossfade entre deux rasters plutôt qu'une recoloration
+        // GPU par color-matrix.
         draw_texture(snapshot, &pair.normal, &rect, open);
         if t > 0.001 {
             draw_texture(snapshot, &pair.accent, &rect, open * t as f64);
@@ -305,10 +337,14 @@ fn draw_icon(
         return;
     }
 
-    let color = text_color(t, open as f32);
+    // Repli texte -- secteurs Confirmer/Annuler synthétiques (pas de
+    // fichier SVG associé, cf. `enter_confirm`), ou icône introuvable/
+    // invalide (cf. `icons::load`).
+    let accent = color::resolve(seg.accent.as_deref()).rgb;
+    let color = text_color(t, open as f32, accent);
     let mut font = pango::FontDescription::new();
     font.set_absolute_size((ICON_FONT_PX + t as f64 * 4.0) * pango::SCALE as f64);
-    let layout = widget.create_pango_layout(Some(icon_key));
+    let layout = widget.create_pango_layout(Some(&seg.icon));
     layout.set_font_description(Some(&font));
     let (iw, ih) = layout.pixel_size();
     snapshot.save();
@@ -424,25 +460,30 @@ fn circle_path(cx: f64, cy: f64, r: f64) -> gsk::Path {
 }
 
 /// Couleur de remplissage d'un secteur -- interpole du gris neutre vers une
-/// teinte sombre proche de l'accent cyan (`#4fefff`) avec `t` (surlignage
-/// du survol), jamais l'accent plein : reste un fond de secteur, pas un
-/// bouton cyan. `open` multiplie l'alpha (fondu à l'ouverture).
-fn wedge_color(t: f32, open: f32) -> gdk::RGBA {
+/// teinte sombre teintée avec `accent` (la couleur RÉSOLUE de ce secteur,
+/// cf. `color::resolve` -- cyan par défaut, vert/jaune/rouge/... si le TOML
+/// le précise) avec `t` (surlignage du survol), jamais l'accent plein :
+/// reste un fond de secteur, pas un bouton plein couleur. `open` multiplie
+/// l'alpha (fondu à l'ouverture). `MIX` fixe la dose d'accent mélangée au
+/// gris de fond -- une formule générique plutôt qu'une constante par teinte,
+/// pour rester valable quelle que soit la couleur (cf. sa doc dans
+/// color.rs) : un nombre de couleurs non borné, pas juste cyan/rouge.
+fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
+    const MIX: f32 = 0.20;
     let base = (0.145_f32, 0.145, 0.153);
-    let accent = (0.157_f32, 0.286, 0.302);
+    let k = MIX * t;
     gdk::RGBA::new(
-        base.0 + (accent.0 - base.0) * t,
-        base.1 + (accent.1 - base.1) * t,
-        base.2 + (accent.2 - base.2) * t,
+        base.0 + (accent.0 - base.0) * k,
+        base.1 + (accent.1 - base.1) * k,
+        base.2 + (accent.2 - base.2) * k,
         (0.80 + 0.10 * t) * open,
     )
 }
 
-/// Couleur du texte/icône d'un secteur -- blanc cassé au repos, plein accent
-/// cyan une fois survolé (`t` -> 1).
-fn text_color(t: f32, open: f32) -> gdk::RGBA {
+/// Couleur du texte/icône d'un secteur -- blanc cassé au repos, plein
+/// `accent` (couleur résolue de ce secteur) une fois survolé (`t` -> 1).
+fn text_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     let base = (0.949_f32, 0.949, 0.969);
-    let accent = (0.310_f32, 0.937, 1.0);
     gdk::RGBA::new(
         base.0 + (accent.0 - base.0) * t,
         base.1 + (accent.1 - base.1) * t,
@@ -463,24 +504,16 @@ impl RoueWheel {
     /// d'animation (éventail à l'ouverture + surlignage du survol).
     pub fn new(segments: Vec<Segment>) -> Self {
         let wheel: Self = glib::Object::builder().build();
-        // hexpand/vexpand -- SANS ça, le Box parent (mount, un seul enfant
-        // sans expand) n'alloue à la roue que sa taille naturelle (520x520)
-        // tassée au début de l'axe vertical : halign/valign=Center n'ont
-        // alors rien à centrer DEDANS. Avec expand=true, la roue réclame
-        // tout l'espace laissé par le parent, et c'est CE surplus que
-        // halign/valign centrent -- c'est ce qui manquait pour que le bloc
-        // apparaisse au centre de l'écran plutôt que collé en haut.
-        wheel.set_hexpand(true);
-        wheel.set_vexpand(true);
-        wheel.set_halign(gtk4::Align::Center);
-        wheel.set_valign(gtk4::Align::Center);
+        // Pas de hexpand/vexpand/halign/valign ici -- le centrage du bloc
+        // roue+sidebar sur l'écran est géré par le Box racine dans main.rs
+        // (halign/valign=Center dessus, la roue garde juste sa taille fixe
+        // via measure()), pas par la roue elle-même.
 
         // Rasterisées une fois ici, à partir des seuls secteurs RACINE --
         // les secteurs synthétiques Confirmer/Annuler (cf. `enter_confirm`)
         // n'ont pas de fichier associé, `draw_icon` retombe sur du texte
         // brut pour eux.
-        let icon_names = segments.iter().map(|s| s.icon.clone());
-        *wheel.imp().icons.borrow_mut() = icons::load(icon_names);
+        *wheel.imp().icons.borrow_mut() = icons::load(&segments);
 
         *wheel.imp().root_segments.borrow_mut() = segments.clone();
         *wheel.imp().segments.borrow_mut() = segments;
@@ -570,7 +603,7 @@ impl RoueWheel {
         let moved = imp.moved.get();
 
         if imp.confirming.get() {
-            let confirmed = moved && imp.hovered.get() == 0;
+            let confirmed = moved && imp.hovered.get() == CONFIRM_INDEX;
             if confirmed {
                 let pending = imp.pending.borrow().clone();
                 self.exit_confirm();
@@ -627,13 +660,41 @@ impl RoueWheel {
 
     fn enter_confirm(&self, seg: Segment) {
         let imp = self.imp();
+        // Cloné AVANT de déplacer `seg` dans `pending` ci-dessous -- c'est
+        // le secteur RACINE qu'on est en train de confirmer qui porte cette
+        // teinte (cf. sa doc dans config.rs), pas un choix indépendant du
+        // sous-menu.
+        let confirm_accent = seg.confirm_accent.clone();
         imp.confirming.set(true);
         *imp.pending.borrow_mut() = Some(seg);
+        // Annuler en CANCEL_INDEX (0), Confirmer en CONFIRM_INDEX (1) --
+        // l'ordre du vec EST l'index, donc Annuler doit rester le premier
+        // élément : c'est la sélection par défaut du sous-menu (secteur 0),
+        // l'option la moins destructive si l'utilisateur n'a pas de souris.
+        // Confirmer reprend `confirm_accent` du secteur racine (cyan par
+        // défaut si absent, comme `accent` -- cf. color.rs) : ce n'est PLUS
+        // un rouge figé en dur, seuls les secteurs vraiment destructeurs
+        // (wheels/power.toml) le forcent explicitement. Annuler garde
+        // `None` (cyan par défaut), jamais la teinte du secteur confirmé.
         *imp.segments.borrow_mut() = vec![
-            Segment { icon: "✓".into(), label: "Confirmer".into(), action: String::new(), confirm: false },
-            Segment { icon: "✗".into(), label: "Annuler".into(), action: String::new(), confirm: false },
+            Segment {
+                icon: "✗".into(),
+                label: "Cancel".into(),
+                action: String::new(),
+                confirm: false,
+                accent: None,
+                confirm_accent: None,
+            },
+            Segment {
+                icon: "✓".into(),
+                label: "Confirm".into(),
+                action: String::new(),
+                confirm: false,
+                accent: confirm_accent,
+                confirm_accent: None,
+            },
         ];
-        imp.hovered.set(0);
+        imp.hovered.set(CANCEL_INDEX);
         imp.hover_anim.set(1.0);
         // Il faut viser À NOUVEAU dans ce sous-menu avant de pouvoir le
         // valider (cf. `activate_hovered`) -- le mouvement fait pour

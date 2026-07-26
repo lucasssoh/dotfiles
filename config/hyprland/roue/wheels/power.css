@@ -1,0 +1,9 @@
+/* Surcharge propre à la roue "power" -- chargée par-dessus style.css (règle
+   générale, commune à toutes les roues), cf. roue-src/src/theme.rs. Teinte
+   légèrement chaude, cohérente avec le rouge des confirmations critiques de
+   cette roue (reboot, poweroff...). */
+
+window,
+.background {
+    background-color: rgba(26, 18, 18, 0.95);
+}

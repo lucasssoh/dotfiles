@@ -31,7 +31,7 @@ const BLUR_SIGMA: f32 = 18.0;
 const UNIFORM_THRESHOLD: f64 = 0.045;
 
 fn home() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").expect("HOME non défini"))
+    PathBuf::from(std::env::var("HOME").expect("HOME not set"))
 }
 
 fn cache_dir() -> PathBuf {
@@ -284,9 +284,9 @@ fn main() {
     let _ = std::fs::create_dir_all(cache_dir());
     if result.save(&cached).is_ok() {
         let _ = Command::new("notify-send")
-            .arg("Wallpaper prêt")
+            .arg("Wallpaper ready")
             .arg(format!(
-                "{} adapté {target_w}x{target_h}",
+                "{} fitted {target_w}x{target_h}",
                 filename.to_string_lossy()
             ))
             .args(["--expire-time", "2000"])

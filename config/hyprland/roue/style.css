@@ -12,12 +12,18 @@
 
 window,
 .background {
-    background-color: rgba(20, 20, 20, 0.55);
+    background-color: rgba(0, 0, 0, 0.95);
 }
 
-.roue-footer {
-    border-top: 1px solid #505050;
-    padding: 10px 24px;
+/* rgba(20, 20, 22, 0.88) reprend exactement la couleur du moyeu central
+   (cf. HUB fill dans roue-src/src/wheel.rs), #505050 la bordure des modules
+   waybar (@overlay2, cf. waybar/style.css) -- panneau plutôt qu'un blur
+   plein écran (coût GPU permanent au repos, cf. discussion). */
+.roue-sidebar {
+    background-color: rgba(20, 20, 22, 0.88);
+    border: 1px solid #505050;
+    border-radius: 8px;
+    padding: 16px 22px;
 }
 
 .roue-title {

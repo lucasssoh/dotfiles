@@ -212,7 +212,7 @@
         "exec": "~/.config/hypr/scripts/display-layout.sh status",
         "return-type": "json",
         "interval": 5,
-        "on-click": "~/.config/hypr/scripts/display-layout.sh menu",
+        "on-click": "~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display",
         "signal": 4
     },
 

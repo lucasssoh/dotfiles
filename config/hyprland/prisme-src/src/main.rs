@@ -7,7 +7,6 @@
 mod apply;
 mod card;
 mod carousel;
-mod i18n;
 mod keymap;
 mod theme;
 mod thumbs;
@@ -27,6 +26,19 @@ const APP_ID: &str = "com.prisme.app";
 const DURATION_MIN: u32 = 5;
 const DURATION_MAX: u32 = 3600;
 const DURATION_STEP: u32 = 10;
+
+/// Chaînes d'interface -- anglais fixe (pas de détection de langue système,
+/// cf. keymap.rs pour le même choix côté raccourcis) plutôt que la
+/// détection de locale qu'il y avait ici auparavant : simplifie le code et
+/// reste cohérent avec le reste du dépôt (roue-src, scripts d'install).
+const MODE_STATIC: &str = "Static";
+const MODE_DYNAMIC: &str = "Slideshow";
+const FOOTER_HINT: &str = "Esc close · ← → h l navigate · ↓ j select · ↑ k deselect · Tab mode · Enter apply";
+
+/// Libellé du compteur de sélection dans la barre du bas.
+fn selected_count(n: usize) -> String {
+    format!("{n} selected")
+}
 
 /// Mode d'application du wallpaper choisi, cf. apply.rs : image fixe
 /// unique, ou diaporama tournant sur une sélection de plusieurs images.
@@ -68,8 +80,6 @@ fn build_ui(app: &Application) {
         return;
     }
 
-    let strings = i18n::load();
-
     let window = gtk4::ApplicationWindow::new(app);
     window.add_css_class("background");
 
@@ -109,7 +119,7 @@ fn build_ui(app: &Application) {
 
     let counter_label = gtk4::Label::builder()
         .css_classes(["prisme-hint"])
-        .label(strings.selected_count(0))
+        .label(selected_count(0))
         .build();
     header.append(&counter_label);
 
@@ -167,7 +177,7 @@ fn build_ui(app: &Application) {
     footer.append(&title);
 
     let hint_label = gtk4::Label::builder()
-        .label(strings.footer_hint)
+        .label(FOOTER_HINT)
         .css_classes(["prisme-hint"])
         .halign(gtk4::Align::Center)
         .hexpand(true)
@@ -175,7 +185,7 @@ fn build_ui(app: &Application) {
     footer.append(&hint_label);
 
     let mode_toggle = gtk4::ToggleButton::builder()
-        .label(strings.mode_static)
+        .label(MODE_STATIC)
         .css_classes(["prisme-mode-toggle"])
         .halign(gtk4::Align::End)
         .build();
@@ -204,7 +214,7 @@ fn build_ui(app: &Application) {
                     .filter_map(|i| c.card_at(i))
                     .filter(|card| card.is_selected())
                     .count();
-                counter_label.set_label(&strings.selected_count(n));
+                counter_label.set_label(&selected_count(n));
             }
         })
     };
@@ -309,7 +319,7 @@ fn build_ui(app: &Application) {
             });
         }
 
-        counter_label.set_label(&strings.selected_count(0));
+        counter_label.set_label(&selected_count(0));
         *current_carousel.borrow_mut() = Some(new_carousel);
     }
 
@@ -328,11 +338,7 @@ fn build_ui(app: &Application) {
             mode.set(next);
             let dynamic = next == Mode::Dynamic;
             mode_toggle.set_active(dynamic);
-            mode_toggle.set_label(if dynamic {
-                strings.mode_dynamic
-            } else {
-                strings.mode_static
-            });
+            mode_toggle.set_label(if dynamic { MODE_DYNAMIC } else { MODE_STATIC });
             header.set_visible(dynamic);
         })
     };

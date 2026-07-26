@@ -24,10 +24,26 @@ pub struct Segment {
     /// (cf. wheel.rs). Absent du TOML = false.
     #[serde(default)]
     pub confirm: bool,
+    /// Teinte affichée au survol de ce secteur (fond, icône, texte) --
+    /// couleur nommée (cf. color.rs) ou code hex `#rrggbb`. Absent du TOML =
+    /// cyan par défaut. C'est ce champ qui rend le jeu de couleurs
+    /// modulable roue par roue sans toucher au code Rust (ex.
+    /// wheels/powerprofile.toml : vert/jaune/cyan par secteur).
+    #[serde(default)]
+    pub accent: Option<String>,
+    /// Teinte du secteur "Confirm" du sous-menu affiché quand `confirm` vaut
+    /// true (cf. `RoueWheel::enter_confirm`) -- indépendant de `accent`
+    /// ci-dessus (qui ne concerne que CE secteur dans la roue racine) :
+    /// un secteur peut avoir un `accent` neutre mais un sous-menu de
+    /// confirmation rouge (ex. wheels/power.toml), ou l'inverse. Absent du
+    /// TOML = cyan par défaut, comme `accent` -- seuls les secteurs vraiment
+    /// destructeurs ont besoin de le forcer à "red".
+    #[serde(default)]
+    pub confirm_accent: Option<String>,
 }
 
 fn wheels_dir() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME non défini");
+    let home = std::env::var("HOME").expect("HOME not set");
     PathBuf::from(home).join(".config/roue/wheels")
 }
 
@@ -38,11 +54,11 @@ fn wheels_dir() -> PathBuf {
 pub fn load(name: &str) -> WheelConfig {
     let path = wheels_dir().join(format!("{name}.toml"));
     let content = std::fs::read_to_string(&path).unwrap_or_else(|e| {
-        eprintln!("[roue] impossible de lire {path:?}: {e}");
+        eprintln!("[roue] unable to read {path:?}: {e}");
         std::process::exit(1);
     });
     toml::from_str(&content).unwrap_or_else(|e| {
-        eprintln!("[roue] {path:?} invalide: {e}");
+        eprintln!("[roue] invalid {path:?}: {e}");
         std::process::exit(1);
     })
 }

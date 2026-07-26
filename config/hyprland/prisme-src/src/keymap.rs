@@ -84,7 +84,7 @@ fn parse(content: &str) -> HashMap<gdk::Key, Action> {
             continue;
         };
         let Some(action) = parse_action(name.trim()) else {
-            eprintln!("[prisme] keymap.conf: action inconnue '{}'", name.trim());
+            eprintln!("[prisme] keymap.conf: unknown action '{}'", name.trim());
             continue;
         };
         for key_name in keys.split(',') {
@@ -96,7 +96,7 @@ fn parse(content: &str) -> HashMap<gdk::Key, Action> {
                 Some(key) => {
                     map.insert(key, action);
                 }
-                None => eprintln!("[prisme] keymap.conf: touche inconnue '{key_name}'"),
+                None => eprintln!("[prisme] keymap.conf: unknown key '{key_name}'"),
             }
         }
     }

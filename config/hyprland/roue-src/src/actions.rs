@@ -15,6 +15,6 @@ pub fn run(action: &str) {
         .stderr(Stdio::null())
         .spawn()
     {
-        eprintln!("[roue] échec de lancement de {action:?}: {e}");
+        eprintln!("[roue] failed to launch {action:?}: {e}");
     }
 }

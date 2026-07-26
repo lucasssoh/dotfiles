@@ -242,7 +242,7 @@ impl Card {
     }
 
     pub fn wallpaper(&self) -> &Wallpaper {
-        self.imp().wallpaper.get().expect("wallpaper non initialisé")
+        self.imp().wallpaper.get().expect("wallpaper not initialized")
     }
 
     /// Reçu depuis thumbs.rs une fois la vignette décodée en arrière-plan.

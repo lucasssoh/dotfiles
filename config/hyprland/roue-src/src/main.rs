@@ -18,6 +18,7 @@
 //! câblage appui (`bind`) / relâchement (`bind ... { release = true }`).
 
 mod actions;
+mod color;
 mod config;
 mod icons;
 mod theme;
@@ -68,6 +69,18 @@ fn build_keymap() -> HashMap<gdk::Key, KeyAction> {
     m
 }
 
+/// Annule sans rien exécuter -- depuis un sous-menu de confirmation, revient
+/// juste à la roue racine ; sinon ferme la fenêtre. Point unique partagé par
+/// Échap et le clic droit (cf. leurs deux appelants) pour que les deux
+/// gestes restent garantis identiques.
+fn cancel(wheel: &RoueWheel, window: &ApplicationWindow) {
+    if wheel.is_confirming() {
+        wheel.cancel_confirm();
+    } else {
+        window.close();
+    }
+}
+
 /// État de l'unique fenêtre ouverte (au plus une, quel que soit le nom de
 /// roue) -- lu/écrit depuis `connect_command_line`, aussi bien pour la
 /// construction initiale que pour router `--commit`/`--cancel` d'une
@@ -88,7 +101,7 @@ fn main() -> glib::ExitCode {
     }
 
     let wheel_name = std::env::args().nth(1).unwrap_or_else(|| {
-        eprintln!("usage: roue <nom-de-roue> [--commit|--cancel]");
+        eprintln!("usage: roue <wheel-name> [--commit|--cancel]");
         std::process::exit(1);
     });
 
@@ -141,11 +154,7 @@ fn main() -> glib::ExitCode {
                         }
                     }
                     Some(false) => {
-                        if wheel.is_confirming() {
-                            wheel.cancel_confirm();
-                        } else {
-                            window.close();
-                        }
+                        cancel(&wheel, &window);
                     }
                     // Deuxième appui simple (pas notre relâchement) pendant
                     // que la roue est déjà ouverte -- ramène juste la
@@ -180,43 +189,67 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
         window.set_anchor(edge, true);
     }
     if let Some(display) = gtk4::gdk::Display::default() {
-        theme::load(&display);
+        theme::load(&display, wheel_name);
     }
 
+    // Bloc roue + panneau latéral centré comme un tout sur l'écran -- Box
+    // horizontal SANS hexpand/vexpand (contrairement à l'ancien layout
+    // vertical) : en enfant unique d'une fenêtre plein écran, il reçoit de
+    // toute façon le rectangle complet (comportement "bin" standard d'une
+    // GtkWindow), c'est son propre halign/valign=Center qui le positionne
+    // à SA taille naturelle (roue 520px + espacement + largeur du panneau)
+    // au milieu de ce rectangle, plutôt que de l'étirer.
     let root = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Vertical)
-        .hexpand(true)
-        .vexpand(true)
-        .build();
-
-    let wheel_mount = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Vertical)
-        .hexpand(true)
-        .vexpand(true)
-        .build();
-    let wheel = RoueWheel::new(cfg.segments);
-    wheel_mount.append(&wheel);
-    root.append(&wheel_mount);
-
-    let footer = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Horizontal)
-        .spacing(16)
-        .css_classes(["roue-footer"])
+        .spacing(28)
+        .halign(gtk4::Align::Center)
+        .valign(gtk4::Align::Center)
+        .build();
+
+    // Contrepoids invisible, MÊME largeur que le panneau (cf. size_group
+    // plus bas) -- sans lui, c'est le bloc [roue+panneau] dans son
+    // ENSEMBLE qui est centré, donc la roue elle-même se retrouve décalée
+    // à gauche du centre écran d'exactement la moitié de la largeur du
+    // panneau. Avec ce contrepoids du même côté opposé, la roue redevient
+    // le milieu géométrique du root, quelle que soit la largeur du panneau
+    // (donc quel que soit le texte -- "Power" vs "Power profile" n'ont pas
+    // la même largeur naturelle).
+    let counterweight = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    root.append(&counterweight);
+
+    let wheel = RoueWheel::new(cfg.segments);
+    root.append(&wheel);
+
+    // Panneau latéral -- titre + rappel des commandes, aligné sur le centre
+    // vertical de la roue (valign=Center) plutôt qu'en pied de page.
+    let sidebar = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Vertical)
+        .spacing(10)
+        .valign(gtk4::Align::Center)
+        .css_classes(["roue-sidebar"])
         .build();
     let title = gtk4::Label::builder()
         .label(&cfg.title)
         .css_classes(["roue-title"])
         .halign(gtk4::Align::Start)
         .build();
-    footer.append(&title);
+    sidebar.append(&title);
     let hint = gtk4::Label::builder()
-        .label("souris ou ←/→ : viser · Entrée/clic : valider · Échap : annuler")
+        .label("Mouse / ←→  aim\nEnter / click  confirm\nEsc / right-click  cancel")
         .css_classes(["roue-hint"])
-        .halign(gtk4::Align::Center)
-        .hexpand(true)
+        .halign(gtk4::Align::Start)
+        .justify(gtk4::Justification::Left)
         .build();
-    footer.append(&hint);
-    root.append(&footer);
+    sidebar.append(&hint);
+    root.append(&sidebar);
+
+    // Force le contrepoids à toujours rapporter la même largeur naturelle
+    // que le panneau (peu importe son contenu) -- c'est ce qui rend le
+    // centrage de la roue exact plutôt qu'une valeur en dur qui se
+    // désynchroniserait au moindre changement de titre/police.
+    let width_group = gtk4::SizeGroup::new(gtk4::SizeGroupMode::Horizontal);
+    width_group.add_widget(&counterweight);
+    width_group.add_widget(&sidebar);
 
     window.set_child(Some(&root));
 
@@ -243,9 +276,14 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     });
     window.add_controller(motion);
 
-    // Clic : même raisonnement, valide le secteur survolé depuis n'importe
-    // où sur l'écran plutôt que seulement en cliquant pile sur la roue.
+    // Clic gauche : même raisonnement que le survol, valide le secteur
+    // survolé depuis n'importe où sur l'écran plutôt que seulement en
+    // cliquant pile sur la roue. Restreint au bouton primaire -- SANS ça,
+    // GestureClick écoute tous les boutons par défaut (button=0), et le
+    // clic droit ci-dessous finirait aussi par valider avant même
+    // d'atteindre son propre contrôleur.
     let click = gtk4::GestureClick::new();
+    click.set_button(gdk::BUTTON_PRIMARY);
     let wheel_for_click = wheel.clone();
     let window_for_click = window.clone();
     click.connect_pressed(move |_, _, _, _| {
@@ -254,6 +292,18 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
         }
     });
     window.add_controller(click);
+
+    // Clic droit : équivalent souris d'Échap -- ferme la roue (ou revient à
+    // la roue racine depuis un sous-menu de confirmation) sans jamais rien
+    // valider, quel que soit le secteur survolé.
+    let right_click = gtk4::GestureClick::new();
+    right_click.set_button(gdk::BUTTON_SECONDARY);
+    let wheel_for_right_click = wheel.clone();
+    let window_for_right_click = window.clone();
+    right_click.connect_pressed(move |_, _, _, _| {
+        cancel(&wheel_for_right_click, &window_for_right_click);
+    });
+    window.add_controller(right_click);
 
     // Seul point où une action est réellement lancée -- jamais appelé pour
     // un secteur `confirm` tant qu'il n'a pas été validé une seconde fois
@@ -274,13 +324,7 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
             return glib::Propagation::Proceed;
         };
         match action {
-            KeyAction::Cancel => {
-                if wheel_for_key.is_confirming() {
-                    wheel_for_key.cancel_confirm();
-                } else {
-                    window_for_key.close();
-                }
-            }
+            KeyAction::Cancel => cancel(&wheel_for_key, &window_for_key),
             KeyAction::MoveLeft => wheel_for_key.move_hover(-1),
             KeyAction::MoveRight => wheel_for_key.move_hover(1),
             KeyAction::Activate => {

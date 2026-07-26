@@ -1,0 +1,8 @@
+/* Surcharge propre à la roue "powerprofile" -- chargée par-dessus style.css
+   (règle générale, commune à toutes les roues), cf. roue-src/src/theme.rs.
+   Teinte légèrement froide, aucune action destructive sur cette roue. */
+
+window,
+.background {
+    background-color: rgba(16, 20, 24, 0.95);
+}

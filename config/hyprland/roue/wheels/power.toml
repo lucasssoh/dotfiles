@@ -1,42 +1,53 @@
-# Roue "Alimentation" — remplace waybar/scripts/rofi-power.sh. Mêmes
-# actions que ce script ; les secteurs destructifs gardent `confirm = true`
-# pour repasser par un sous-menu Confirmer/Annuler avant d'agir (équivalent
-# de confirm.rasi, sur la même roue). Icônes : SVG Lucide/Tabler dans
-# roue/icons/ (rasterisées nativement, cf. roue-src/src/icons.rs), pas des
-# glyphes Nerd Font -- fichiers résolus depuis ~/.config/roue/icons/.
-title = "Alimentation"
+# Roue "Power" — remplace waybar/scripts/rofi-power.sh. Mêmes actions que
+# ce script ; les secteurs destructifs gardent `confirm = true` pour
+# repasser par un sous-menu Confirm/Cancel avant d'agir (équivalent de
+# confirm.rasi, sur la même roue), avec `confirm_accent = "red"` explicite
+# (cf. roue-src/src/config.rs) -- sans lui ce sous-menu serait cyan comme
+# n'importe quel autre (c'est le cas par défaut, cf. wheels/display.toml
+# généré par display-layout.sh : rien d'aussi grave qu'un reboot/poweroff
+# là-bas). Icônes : SVG Lucide/Tabler dans roue/icons/ (rasterisées
+# nativement, cf. roue-src/src/icons.rs), pas des glyphes Nerd Font --
+# fichiers résolus depuis ~/.config/roue/icons/. Labels en anglais (cf.
+# roue-src/src/main.rs) : pas de détection de langue système, on reste
+# cohérent avec le reste du dépôt plutôt que de la deviner.
+title = "Power"
 
 [[segment]]
 icon = "lock.svg"
-label = "Verrouiller"
+label = "Lock"
 action = "hyprlock"
 
 [[segment]]
 icon = "moon.svg"
-label = "Veille"
+label = "Sleep"
 action = "systemctl suspend"
 confirm = true
+confirm_accent = "red"
 
 [[segment]]
 icon = "bed.svg"
-label = "Hibernation"
+label = "Hibernate"
 action = "systemctl hibernate"
 confirm = true
+confirm_accent = "red"
 
 [[segment]]
 icon = "log-out.svg"
-label = "Déconnexion"
+label = "Log out"
 action = "loginctl terminate-user $USER"
 confirm = true
+confirm_accent = "red"
 
 [[segment]]
 icon = "refresh-cw.svg"
-label = "Redémarrer"
+label = "Restart"
 action = "systemctl reboot"
 confirm = true
+confirm_accent = "red"
 
 [[segment]]
 icon = "power.svg"
-label = "Éteindre"
+label = "Shut down"
 action = "systemctl poweroff"
 confirm = true
+confirm_accent = "red"
