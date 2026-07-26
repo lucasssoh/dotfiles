@@ -347,3 +347,26 @@ hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select)
 hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true })
 hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, stay_focused = true })
 hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, stay_focused = true })
+
+-- ============================================================
+-- GAMESCOPE — jeux lancés via gamescope (ex. CS2 en 4:3)
+-- ============================================================
+-- tile + fullscreen : force l'affichage plein écran, condition nécessaire
+-- à la capture correcte du curseur relatif (cf. bug connu de gamescope
+-- imbriqué qui laisse échapper le curseur si la fenêtre reste flottante).
+-- no_follow_mouse : même raison que pour Steam/Lutris ci-dessus — sans
+-- ça, le focus-follows-mouse peut faire perdre l'input au jeu si le
+-- curseur système sort de la zone au moment du lancement.
+-- no_blur/no_anim : évite tout recalcul de flou ou animation sur une
+-- fenêtre plein écran qui tourne déjà à pleine charge GPU.
+hl.window_rule({
+    match           = { class = "gamescope" },
+    tile            = true,
+    fullscreen      = true,
+    stay_focused    = true,
+    center          = true,
+    no_follow_mouse = true,
+    no_blur         = true,
+    no_anim         = true,
+    opacity         = "1.0 override",
+})
