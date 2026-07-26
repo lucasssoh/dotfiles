@@ -1,0 +1,21 @@
+[package]
+name = "roue"
+version = "0.1.0"
+edition = "2021"
+description = "Roue de sélection radiale native Wayland (GTK4 + layer-shell), façon menu d'arme RPG"
+license = "MIT"
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_14"] }
+gtk4-layer-shell = "0.4"
+resvg = "0.45.1"
+serde = { version = "1", features = ["derive"] }
+# Format de définition des roues (wheels/*.toml) -- déjà la convention du
+# repo pour de la config structurée (cf. orbit/theme.toml), plus adapté
+# qu'un format clé=valeur maison pour une liste de secteurs.
+toml = "0.8"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

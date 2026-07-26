@@ -1,0 +1,42 @@
+# Roue "Alimentation" — remplace waybar/scripts/rofi-power.sh. Mêmes
+# actions que ce script ; les secteurs destructifs gardent `confirm = true`
+# pour repasser par un sous-menu Confirmer/Annuler avant d'agir (équivalent
+# de confirm.rasi, sur la même roue). Icônes : SVG Lucide/Tabler dans
+# roue/icons/ (rasterisées nativement, cf. roue-src/src/icons.rs), pas des
+# glyphes Nerd Font -- fichiers résolus depuis ~/.config/roue/icons/.
+title = "Alimentation"
+
+[[segment]]
+icon = "lock.svg"
+label = "Verrouiller"
+action = "hyprlock"
+
+[[segment]]
+icon = "moon.svg"
+label = "Veille"
+action = "systemctl suspend"
+confirm = true
+
+[[segment]]
+icon = "bed.svg"
+label = "Hibernation"
+action = "systemctl hibernate"
+confirm = true
+
+[[segment]]
+icon = "log-out.svg"
+label = "Déconnexion"
+action = "loginctl terminate-user $USER"
+confirm = true
+
+[[segment]]
+icon = "refresh-cw.svg"
+label = "Redémarrer"
+action = "systemctl reboot"
+confirm = true
+
+[[segment]]
+icon = "power.svg"
+label = "Éteindre"
+action = "systemctl poweroff"
+confirm = true

@@ -249,6 +249,36 @@ else
 fi
 
 # ============================================================
+# ROUE (roue de sélection radiale, façon menu d'arme RPG)
+# ============================================================
+# Même logique que les blocs Orbit/Prisme ci-dessus : source vendorisée dans
+# ce dépôt (roue-src/), compilée à l'install, binaire unique dans
+# ~/.local/bin/roue. Remplace waybar/scripts/rofi-power.sh et
+# rofi-performance.sh -- un seul binaire pour toutes les roues, chacune
+# définie par un fichier TOML dans config/hyprland/roue/wheels/ (symlinké
+# plus bas comme les autres dossiers), pour pouvoir en ajouter d'autres plus
+# tard sans recompiler.
+section "Building Roue (radial selection wheel)"
+
+ROUE_BUILD="$HOME/.cache/roue-build"
+
+if ! command -v cargo &>/dev/null; then
+    warn "cargo not found — skipping Roue build. Install a Rust toolchain and re-run this script to get it."
+else
+    rm -rf "$ROUE_BUILD"
+    mkdir -p "$ROUE_BUILD"
+    cp -r "$REPO_DIR/roue-src/." "$ROUE_BUILD/"
+
+    if (cd "$ROUE_BUILD" && cargo build --release); then
+        mkdir -p "$HOME/.local/bin"
+        install -Dm755 "$ROUE_BUILD/target/release/roue" "$HOME/.local/bin/roue"
+        ok "Roue built and installed to ~/.local/bin/roue."
+    else
+        warn "Roue build failed — Super+Delete and the power profile menu will fail to launch until this is fixed."
+    fi
+fi
+
+# ============================================================
 # SYSTEMD USER SERVICES
 # ============================================================
 section "Enabling services"
@@ -276,10 +306,10 @@ if [ -d "$REPO_DIR/systemd" ]; then
 
         systemctl --user daemon-reload
         systemctl --user enable "$SERVICE_NAME"
-        ok "Service systemd activé : $SERVICE_NAME"
+        ok "Systemd service enabled: $SERVICE_NAME"
     done
 else
-    warn "Dossier 'systemd' introuvable dans le dépôt. Passage."
+    warn "No 'systemd' directory found in the repo, skipping."
 fi
 
 # ============================================================
@@ -311,14 +341,14 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,prisme,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,prisme,roue,hyprlock,scripts,khal}
     ok "Old configs removed"
 fi
 
 section "Linking configuration directories"
 
 # Dossiers de config à symlinker intégralement dans ~/.config
-modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "hyprlock" "scripts" "khal")
+modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then
@@ -465,15 +495,15 @@ info "(changes take effect immediately — it's symlinked)"
 # DONE
 # ============================================================
 echo ""
-echo -e "${GREEN}${BOLD}✅ Done!${RESET}"
+echo -e "${GREEN}${BOLD}Done.${RESET}"
 echo ""
 echo "  Key bindings:"
 echo "    Super + Enter     → WezTerm"
-echo "    Super + W         ->Wallpapers"
+echo "    Super + W         → Wallpapers"
 echo "    Super + Space     → App launcher (Rofi)"
-echo "    Super + E         → Thunar"
+echo "    Super + E         → Nemo"
 echo "    Super + B         → Firefox"
-echo "    Super + Esc         → Lock screen"
+echo "    Super + Esc       → Lock screen"
 echo "    Super + Q         → Close window"
 echo "    Super + Shift + M → Exit Hyprland"
 echo "    Super + Shift + R → Reload config"

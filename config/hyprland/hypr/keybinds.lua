@@ -23,7 +23,24 @@ hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fulls
 hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh menu"))
 
-hl.bind(mod .. "+ Delete",  hl.dsp.exec_cmd("~/.config/waybar/scripts/rofi-power.sh"))
+-- Roue d'alimentation, façon menu d'arme RPG (LB/L1) : l'appui ouvre et
+-- arme la sélection sur le secteur survolé, le relâchement (option
+-- `release`, équivalent du `bindr` hyprlang) valide immédiatement --
+-- maintenir + viser à la souris/aux flèches avant de relâcher permet un
+-- choix délibéré. Un tap rapide (relâchement avant d'avoir visé quoi que ce
+-- soit) N'exécute PAS le secteur par défaut : la roue l'interprète comme une
+-- annulation (cf. roue-src/src/wheel.rs::activate_hovered) -- sans ce
+-- garde-fou côté appli, tout appui bref déclenchait Verrouiller (premier
+-- secteur) au lieu de simplement (ne rien) afficher. Chemin absolu
+-- obligatoire, même raison que Prisme ci-dessus (commit bbb8f61).
+hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
+hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power --commit"), { release = true })
+
+-- Roue de profil d'énergie -- même geste appui/relâchement que ci-dessus.
+-- Avant : aucun raccourci clavier, uniquement le clic sur le module waybar
+-- custom/performance (cf. waybar/config.jsonc).
+hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile"))
+hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))

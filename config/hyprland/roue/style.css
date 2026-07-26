@@ -1,0 +1,32 @@
+/* Roue — thème, palette identique à waybar/style.css, orbit/theme.toml et
+   prisme/style.css. Recharge : relancer la roue (pas de daemon). */
+
+* {
+    font-family: "JetBrains Mono";
+}
+
+*:focus,
+*:focus-visible {
+    outline: none;
+}
+
+window,
+.background {
+    background-color: rgba(20, 20, 20, 0.55);
+}
+
+.roue-footer {
+    border-top: 1px solid #505050;
+    padding: 10px 24px;
+}
+
+.roue-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #f2f2f7;
+}
+
+.roue-hint {
+    color: #8e8e93;
+    font-size: 0.9em;
+}
