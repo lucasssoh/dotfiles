@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+GREEN="\e[32m"
+RESET="\e[0m"
+
+ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer mpv
 if command -v dnf &> /dev/null; then
     sudo dnf install -y mpv
@@ -25,4 +30,4 @@ safe_link() {
 
 safe_link "$DOTFILES_DIR/config/mpv/mpv.conf" ~/.config/mpv/mpv.conf
 
-echo "[OK] mpv configuré"
+ok "mpv configured."

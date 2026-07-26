@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer Neovim si besoin
 if ! command -v nvim &> /dev/null; then
-    echo "[INFO] Installation de Neovim..."
+    info "Installing Neovim..."
     if command -v dnf &> /dev/null; then
         sudo dnf install -y neovim
     elif command -v apt-get &> /dev/null; then
@@ -26,4 +33,4 @@ safe_link() {
 
 safe_link "$DOTFILES_DIR/config/nvim/init.lua" ~/.config/nvim/init.lua
 safe_link "$DOTFILES_DIR/config/nvim/lua" ~/.config/nvim/lua
-echo "[OK] Neovim configuré"
+ok "Neovim configured."

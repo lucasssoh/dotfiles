@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+GREEN="\e[32m"
+RESET="\e[0m"
+
+ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer fastfetch
 if command -v dnf &> /dev/null; then
     sudo dnf install -y fastfetch chafa
@@ -28,4 +33,4 @@ safe_link() {
 safe_link "$DOTFILES_DIR/config/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
 safe_link "$DOTFILES_DIR/config/fastfetch/rayponce.jpg" ~/.config/fastfetch/rayponce.jpg
 
-echo "[OK] Fastfetch configured"
+ok "Fastfetch configured."

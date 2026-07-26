@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. S'assurer que Flatpak est installé et que Flathub est activé
-echo "[INFO] Vérification de Flatpak..."
+info "Checking Flatpak..."
 if command -v dnf &> /dev/null; then
     sudo dnf install -y flatpak
 elif command -v pacman &> /dev/null; then
@@ -15,7 +22,7 @@ fi
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
 # 2. Installation de Zen Browser
-echo "[INFO] Installation de Zen Browser via Flatpak..."
+info "Installing Zen Browser via Flatpak..."
 # On utilise l'ID de l'application sur Flathub
 sudo flatpak install -y flathub io.github.zen_browser.zen
 
@@ -27,4 +34,4 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen
 sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen-browser
 
-echo "[OK] Zen Browser (Flatpak) installé."
+ok "Zen Browser (Flatpak) installed."

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+GREEN="\e[32m"
+RESET="\e[0m"
+
+ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer WezTerm
 if command -v dnf &> /dev/null; then
     sudo dnf copr enable wezfurlong/wezterm-nightly -y
@@ -31,4 +36,4 @@ safe_link() {
 safe_link "$DOTFILES_DIR/config/wezterm/wezterm.lua" ~/.wezterm.lua
 safe_link "$DOTFILES_DIR/config/wezterm/wezterm.lua" ~/.config/wezterm/wezterm.lua
 
-echo "[OK] WezTerm configuré"
+ok "WezTerm configured."

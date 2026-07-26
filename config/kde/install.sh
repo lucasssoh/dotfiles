@@ -73,5 +73,5 @@ info "Setting Reversal-dark icons..."
 /usr/bin/kwriteconfig6 --file kdeglobals --group Icons --key Theme Reversal-dark
 
 ok "KDE Setup complete."
-echo -e "\n${BOLD}Pour lancer KDE depuis le TTY :${RESET}"
+echo -e "\n${BOLD}To start KDE from the TTY:${RESET}"
 echo "dbus-run-session startplasma-wayland"

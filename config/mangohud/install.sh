@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-echo "[INFO] Installing MangoHud + GOverlay..."
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
+info "Installing MangoHud + GOverlay..."
 
 if command -v dnf &> /dev/null; then
     sudo dnf install -y mangohud goverlay
@@ -27,10 +34,10 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-echo "[INFO] Linking MangoHud config..."
+info "Linking MangoHud config..."
 safe_link \
     "$DOTFILES_DIR/config/mangohud/MangoHud.conf" \
     ~/.config/MangoHud/MangoHud.conf
 
-echo "[INFO] Done."
-echo "[NOTE] Re-login required for environment.d to take effect."
+ok "Done."
+info "Re-login required for environment.d to take effect."

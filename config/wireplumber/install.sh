@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 if ! command -v wireplumber &> /dev/null; then
-    echo "[INFO] Installing WirePlumber..."
+    info "Installing WirePlumber..."
     if command -v dnf &> /dev/null; then
         sudo dnf install -y wireplumber pipewire-utils
     elif command -v pacman &> /dev/null; then
@@ -24,7 +31,7 @@ safe_link() {
     local src=$1 dest=$2
     [ -L "$dest" ] || [ -f "$dest" ] && rm -rf "$dest"
     ln -s "$src" "$dest"
-    echo "[OK] $dest -> $src"
+    info "Linked: $dest -> $src"
 }
 
 safe_link "$SRC_DIR/10-bluetooth-policy.conf"  "$TARGET_DIR/10-bluetooth-policy.conf"
@@ -40,8 +47,8 @@ systemctl --user daemon-reload
 systemctl --user enable --now bt-audio-switch.service
 
 if systemctl --user is-active pipewire &> /dev/null; then
-    echo "[INFO] Restarting audio stack..."
+    info "Restarting audio stack..."
     systemctl --user restart wireplumber pipewire pipewire-pulse
 fi
 
-echo "[OK] WirePlumber configured"
+ok "WirePlumber configured."

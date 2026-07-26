@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+warn() { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+
 # --- 1. INSTALLATION DE GHOSTTY ---
 if command -v dnf &> /dev/null; then
-    echo "[INFO] Configuration du dépôt Terra pour Ghostty..."
+    info "Configuring the Terra repo for Ghostty..."
     # On installe terra-release. Si la version 43 n'est pas dispo, on pointe sur la 42.
 
     sudo dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
@@ -13,7 +22,7 @@ elif command -v pacman &> /dev/null; then
     sudo pacman -S --noconfirm ghostty
 elif command -v apt-get &> /dev/null; then
     # Ghostty est souvent en PPA ou nécessite de compiler sur Debian/Ubuntu
-    echo "[WARN] Ghostty nécessite souvent une compilation sur Debian-based. Installation via Flatpak recommandée."
+    warn "Ghostty often requires building from source on Debian-based systems. Installing via Flatpak instead."
     flatpak install -y flathub com.mitchellh.ghostty
 fi
 
@@ -29,7 +38,7 @@ safe_link() {
         rm -rf "$dest"
     fi
     ln -s "$src" "$dest"
-    echo "[LINK] $dest -> $src"
+    info "Linked: $dest -> $src"
 }
 
 # Lier le fichier de config Ghostty
@@ -37,7 +46,7 @@ safe_link() {
 if [ -f "$DOTFILES_DIR/config/ghostty/config" ]; then
     safe_link "$DOTFILES_DIR/config/ghostty/config" ~/.config/ghostty/config
 else
-    echo "[ERR] Fichier source introuvable dans $DOTFILES_DIR/config/ghostty/config"
+    warn "Source file not found: $DOTFILES_DIR/config/ghostty/config"
 fi
 
-echo "[OK] Ghostty installé et configuré avec succès"
+ok "Ghostty installed and configured successfully."

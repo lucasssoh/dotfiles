@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEST_DIR="$HOME/.config/ccnote"
 
-echo "[INFO] Configuration du workflow ccnote..."
+info "Setting up the ccnote workflow..."
 
 # 1. Création du dossier de destination dans ~/.config
 mkdir -p "$DEST_DIR"
@@ -26,7 +33,7 @@ safe_link "$DOTFILES_DIR/config/ccnote/ccnote.zsh" "$DEST_DIR/ccnote.zsh"
 # Rendre le script Python exécutable à sa source
 chmod +x "$DOTFILES_DIR/config/ccnote/ccnote.py"
 
-echo "[OK] Module ccnote installé dans $DEST_DIR"
+ok "ccnote module installed to $DEST_DIR"
 echo ""
-echo "Pour activer la commande, ajoute cette ligne à la fin de ton ~/.zshrc ou fichier de démarrage shell :"
+echo "To enable the command, add this line at the end of your ~/.zshrc or shell startup file:"
 echo "   source ~/.config/ccnote/ccnote.zsh"

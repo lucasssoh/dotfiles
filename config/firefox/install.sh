@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -e
 
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer Firefox si besoin
 if ! command -v firefox &> /dev/null; then
-    echo "[INFO] Installation de Firefox..."
+    info "Installing Firefox..."
     if command -v dnf &> /dev/null; then
         sudo dnf install -y firefox
     elif command -v apt-get &> /dev/null; then
@@ -30,4 +37,4 @@ sudo ln -sf "$DOTFILES_DIR/config/firefox/policies.json" /etc/firefox/policies/p
 mkdir -p ~/.config/environment.d
 safe_link "$DOTFILES_DIR/config/firefox/firefox.conf" ~/.config/environment.d/firefox.conf
 
-echo "[OK] Firefox configuré "
+ok "Firefox configured."

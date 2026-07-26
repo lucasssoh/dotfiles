@@ -104,4 +104,4 @@ done
 sudo systemctl enable greetd
 ok "greetd is now enabled."
 
-echo -e "\n${GREEN}${BOLD}✅ INSTALLATION COMPLETE${RESET}\n"
+echo -e "\n${GREEN}${BOLD}INSTALLATION COMPLETE${RESET}\n"

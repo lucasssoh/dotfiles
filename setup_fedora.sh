@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 set -e
-echo "[INFO] Mise à jour système..."
+
+BOLD="\e[1m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+warn() { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+
+info "Updating system..."
 sudo dnf upgrade -y
 # =========================
 # BASE SYSTEM (indispensable)
 # =========================
-echo "[INFO] Base system..."
+info "Base system..."
 sudo dnf install -y \
     bash \
     coreutils \
@@ -20,7 +31,7 @@ sudo dnf install -y \
 # =========================
 # RESEAU (wifi + ethernet)
 # =========================
-echo "[INFO] Réseau..."
+info "Network..."
 sudo dnf install -y \
     NetworkManager \
     NetworkManager-tui \
@@ -32,20 +43,20 @@ sudo dnf install -y \
 # =========================
 # BLUETOOTH
 # =========================
-echo "[INFO] Bluetooth..."
+info "Bluetooth..."
 sudo dnf install -y \
     bluez
- 
+
 # bluetuith — TUI Bluetooth via copr
-echo "[INFO] Installation de bluetuith via copr..."
+info "Installing bluetuith via copr..."
 sudo dnf copr enable -y lxdes/bluetuith
 sudo dnf install -y bluetuith
-echo "[OK] bluetuith installé."
+ok "bluetuith installed."
 
 # =========================
 # AUDIO (stack moderne)
 # =========================
-echo "[INFO] Audio..."
+info "Audio..."
 sudo dnf install -y \
     pipewire \
     pipewire-pulse \
@@ -55,7 +66,7 @@ sudo dnf install -y \
 # =========================
 # GPU / RENDERING (headless ready)
 # =========================
-echo "[INFO] Graphique (base)..."
+info "Graphics (base)..."
 sudo dnf install -y \
     mesa-dri-drivers \
     mesa-vulkan-drivers \
@@ -63,14 +74,14 @@ sudo dnf install -y \
 # =========================
 # INPUT DEVICES
 # =========================
-echo "[INFO] Input..."
+info "Input..."
 sudo dnf install -y \
     libinput \
     xkeyboard-config
 # =========================
 # STOCKAGE (USB / FS standards)
 # =========================
-echo "[INFO] Stockage..."
+info "Storage..."
 sudo dnf install -y \
     udisks2 \
     ntfs-3g \
@@ -79,7 +90,7 @@ sudo dnf install -y \
 # =========================
 # SYSTEM SERVICES / DBUS
 # =========================
-echo "[INFO] Services système..."
+info "System services..."
 sudo dnf install -y \
     dbus \
     dbus-broker \
@@ -87,14 +98,14 @@ sudo dnf install -y \
 # =========================
 # STANDARDS FREEDESKTOP (neutre)
 # =========================
-echo "[INFO] Standards..."
+info "Standards..."
 sudo dnf install -y \
     xdg-utils \
     xdg-user-dirs
 # =========================
 # GRAPHICAL LIBS (runtime minimal)
 # =========================
-echo "[INFO] Librairies graphiques de base..."
+info "Base graphical libraries..."
 sudo dnf install -y \
     xorg-x11-server-Xwayland \
     gtk3 \
@@ -110,7 +121,7 @@ sudo dnf install -y \
 # =========================
 # UTILITAIRES ESSENTIELS
 # =========================
-echo "[INFO] Utilitaires..."
+info "Utilities..."
 sudo dnf install -y \
     tar \
     gzip \
@@ -129,17 +140,17 @@ if [ ! -e /snap ]; then
     sudo ln -s /var/lib/snapd/snap /snap
 fi
 # Attendre que snap soit prêt
-echo "[INFO] Attente que snapd soit opérationnel..."
+info "Waiting for snapd to be operational..."
 sleep 5
 # Installer les snaps (exemple : pulsemixer)
-sudo snap install pulsemixer --classic || echo "[WARN] pulsemixer n'a pas pu être installé pour l'instant"
+sudo snap install pulsemixer --classic || warn "pulsemixer could not be installed for now."
 # =========================
 # ACTIVATION SERVICES
 # =========================
-echo "[INFO] Activation services..."
+info "Enabling services..."
 sudo systemctl enable --now NetworkManager
 sudo systemctl enable --now bluetooth
 sudo systemctl enable --now dbus-broker
 
 sudo loginctl enable-linger "$USER"
-echo "[OK] Base système Fedora prête ✔"
+ok "Base Fedora system ready."

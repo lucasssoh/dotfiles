@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+GREEN="\e[32m"
+RESET="\e[0m"
+
+ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer Kitty
 if command -v dnf &> /dev/null; then
     # Kitty est dans les dépôts officiels de Fedora, pas besoin de COPR
@@ -30,4 +35,4 @@ safe_link() {
 # Assure-toi que ton fichier kitty.conf est bien dans config/kitty/
 safe_link "$DOTFILES_DIR/config/kitty/kitty.conf" ~/.config/kitty/kitty.conf
 
-echo "[OK] Kitty configuré avec succès"
+ok "Kitty configured successfully."

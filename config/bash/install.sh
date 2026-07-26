@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-echo "[INFO] Installation des dépendances..."
+BLUE="\e[34m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
+info "Installing dependencies..."
 
 # =========================
 # PACKAGE MANAGER
@@ -23,7 +30,7 @@ fi
 # STARSHIP
 # =========================
 if ! command -v starship &> /dev/null; then
-    echo "[INFO] Installation de Starship..."
+    info "Installing Starship..."
     curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 
@@ -77,9 +84,9 @@ safe_link "$DOTFILES_DIR/config/bash/starship.toml" "$HOME/.config/starship.toml
 # =========================
 if command -v zsh &> /dev/null; then
     if [[ "$SHELL" != *"zsh" ]]; then
-        echo "[INFO] Changement du shell par défaut vers zsh..."
+        info "Switching default shell to zsh..."
         chsh -s "$(which zsh)"
     fi
 fi
 
-echo "[OK] Environnement shell configuré avec succès"
+ok "Shell environment configured successfully."

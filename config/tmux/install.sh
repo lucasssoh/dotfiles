@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+GREEN="\e[32m"
+RESET="\e[0m"
+
+ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+
 # 1. Installer Tmux
 if command -v dnf &> /dev/null; then
     sudo dnf install -y tmux wl-clipboard
@@ -26,4 +31,4 @@ safe_link() {
 # Tmux cherche sa config à la racine de ton home
 safe_link "$DOTFILES_DIR/config/tmux/.tmux.conf" ~/.tmux.conf
 
-echo "[OK] Tmux configuré"
+ok "Tmux configured."
