@@ -40,6 +40,18 @@ pub struct Segment {
     /// destructeurs ont besoin de le forcer à "red".
     #[serde(default)]
     pub confirm_accent: Option<String>,
+    /// Ce secteur représente l'état actuellement appliqué du système (ex. le
+    /// profil d'énergie en cours, cf. wheel.rs pour le rendu -- une bande
+    /// blanche sur le bord extérieur du secteur). Au plus UN secteur devrait
+    /// l'avoir ; s'il y en a plusieurs, le premier trouvé gagne (cf.
+    /// `RoueWheel::new`). Non pertinent pour une roue sans notion d'état
+    /// (ex. wheels/power.toml : verrouiller/éteindre ne sont pas des
+    /// "états") -- laisser absent partout dans ce cas, aucun changement de
+    /// rendu. Toujours régénéré par le script qui écrit le TOML juste avant
+    /// l'ouverture (ex. wheels/display.toml, jamais codé en dur : l'état
+    /// réel peut changer entre deux ouvertures).
+    #[serde(default)]
+    pub active: bool,
 }
 
 fn wheels_dir() -> PathBuf {

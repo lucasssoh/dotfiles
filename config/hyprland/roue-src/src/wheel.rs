@@ -61,6 +61,13 @@ const HUB_LABEL_FONT_PX: f64 = 15.0;
 const CANCEL_INDEX: usize = 0;
 const CONFIRM_INDEX: usize = 1;
 const HUB_BORDER_WIDTH_PX: f32 = 3.0;
+/// Bande blanche marquant le secteur "état actuel du système" (cf. champ
+/// TOML `active`, ex. le profil d'énergie en cours) -- tracée légèrement EN
+/// DEÇÀ du bord extérieur (ACTIVE_BAND_INSET_PX), pas pile dessus, pour
+/// rester visuellement DANS le secteur coloré plutôt qu'à cheval sur son
+/// anti-aliasing.
+const ACTIVE_BAND_WIDTH_PX: f32 = 4.0;
+const ACTIVE_BAND_INSET_PX: f64 = 7.0;
 
 mod imp {
     use super::*;
@@ -81,6 +88,15 @@ mod imp {
         /// (cf. `enter_confirm`) n'y figurent jamais, `snapshot()` retombe
         /// alors sur un rendu texte brut pour eux (cf. `draw_icon`).
         pub icons: RefCell<HashMap<String, IconPair>>,
+        /// Index (dans `root_segments`) du secteur marqué `active = true`
+        /// dans le TOML, s'il y en a un -- calculé une fois à la
+        /// construction (cf. `RoueWheel::new`), jamais recalculé ensuite
+        /// (une roue ne change pas d'état pendant qu'elle est affichée,
+        /// c'est justement pour ça que le script générateur la régénère à
+        /// CHAQUE ouverture, cf. wheels/powerprofile côté script). Ignoré
+        /// pendant une confirmation (`confirming`) : les secteurs affichés
+        /// sont alors Confirm/Cancel, pas les secteurs racine.
+        pub active_index: Cell<Option<usize>>,
         pub hovered: Cell<usize>,
         /// A-t-on visé au moins une fois (souris hors zone morte, flèche,
         /// chiffre) depuis l'ouverture de ce niveau de roue (racine ou
@@ -147,6 +163,8 @@ mod imp {
             let hover_t = self.hover_anim.get() as f32;
 
             let confirming = self.confirming.get();
+            // Ignoré pendant une confirmation -- cf. la doc du champ.
+            let active_index = if confirming { None } else { self.active_index.get() };
 
             for (i, seg) in segments.iter().enumerate() {
                 let t = if i == hovered { hover_t } else { 0.0 };
@@ -180,6 +198,20 @@ mod imp {
 
                 if open <= 0.05 {
                     continue;
+                }
+
+                // Bande d'état actuel -- visible même sans survol (contrairement
+                // au surlignage `t`), pour repérer l'état appliqué d'un coup
+                // d'oeil avant même de viser. Suit le même rayon EXTÉRIEUR que le
+                // secteur (donc son `boost` s'il est aussi survolé), juste
+                // légèrement en retrait (ACTIVE_BAND_INSET_PX).
+                if active_index == Some(i) {
+                    let band_radius = (outer_radius + boost - ACTIVE_BAND_INSET_PX).max(inner_radius + 1.0);
+                    let band_path = outer_arc_path(cx, cy, band_radius, angle_left, angle_right, WEDGE_GAP_PX * open);
+                    let stroke = gsk::Stroke::new(ACTIVE_BAND_WIDTH_PX);
+                    snapshot.push_stroke(&band_path, &stroke);
+                    snapshot.append_color(&gdk::RGBA::new(1.0, 1.0, 1.0, open as f32), &full);
+                    snapshot.pop();
                 }
 
                 let mid_angle = (angle_left + angle_right) / 2.0;
@@ -397,17 +429,6 @@ fn wedge_path(
 ) -> gsk::Path {
     let half_gap = (gap_px / 2.0).max(0.0);
 
-    // Angle et rayon EXACTS du point du rayon `theta` (longueur `r`) décalé
-    // perpendiculairement de `offset` (positif = vers les angles
-    // croissants) -- identité géométrique directe (triangle rectangle
-    // rayon/perpendiculaire), jamais un atan2(y,x) sur des coordonnées
-    // cartésiennes : ça évite tout repli d'angle à ±π, y compris pour les
-    // derniers secteurs dont `angle_right` dépasse 2π en valeur brute (cf.
-    // `base` dans snapshot()).
-    let offset_ray = |theta: f64, r: f64, offset: f64| -> (f64, f64) {
-        (theta + offset.atan2(r), r.hypot(offset))
-    };
-
     let (a_out_l, r_out_l) = offset_ray(angle_left, outer_r, half_gap);
     let (a_out_r, r_out_r) = offset_ray(angle_right, outer_r, -half_gap);
 
@@ -439,6 +460,44 @@ fn wedge_path(
         builder.line_to(cx as f32, cy as f32);
     }
     builder.close();
+    builder.to_path()
+}
+
+/// Angle et rayon EXACTS du point du rayon `theta` (longueur `r`) décalé
+/// perpendiculairement de `offset` (positif = vers les angles croissants) --
+/// identité géométrique directe (triangle rectangle rayon/perpendiculaire),
+/// jamais un atan2(y,x) sur des coordonnées cartésiennes : ça évite tout
+/// repli d'angle à ±π, y compris pour les derniers secteurs dont
+/// `angle_right` dépasse 2π en valeur brute (cf. `base` dans snapshot()).
+/// Partagé par `wedge_path` (bords du secteur) et `outer_arc_path` (bande
+/// d'état actif) -- les deux doivent rester alignés sur le même écart.
+fn offset_ray(theta: f64, r: f64, offset: f64) -> (f64, f64) {
+    (theta + offset.atan2(r), r.hypot(offset))
+}
+
+/// Simple arc (PAS un secteur fermé, contrairement à `wedge_path`) le long
+/// d'un cercle de rayon `radius`, décalé du même `gap_px` que les bords du
+/// secteur -- sert de tracé à la bande d'état actif (cf.
+/// ACTIVE_BAND_WIDTH_PX), pour qu'elle reste alignée sur les bords
+/// visibles du secteur plutôt que de les déborder.
+fn outer_arc_path(cx: f64, cy: f64, radius: f64, angle_left: f64, angle_right: f64, gap_px: f64) -> gsk::Path {
+    let half_gap = (gap_px / 2.0).max(0.0);
+    let (a_l, r_l) = offset_ray(angle_left, radius, half_gap);
+    let (a_r, r_r) = offset_ray(angle_right, radius, -half_gap);
+
+    let builder = gsk::PathBuilder::new();
+    for step in 0..=ARC_STEPS {
+        let t = step as f64 / ARC_STEPS as f64;
+        let a = a_l + (a_r - a_l) * t;
+        let r = r_l + (r_r - r_l) * t;
+        let x = cx + r * a.cos();
+        let y = cy + r * a.sin();
+        if step == 0 {
+            builder.move_to(x as f32, y as f32);
+        } else {
+            builder.line_to(x as f32, y as f32);
+        }
+    }
     builder.to_path()
 }
 
@@ -514,6 +573,11 @@ impl RoueWheel {
         // n'ont pas de fichier associé, `draw_icon` retombe sur du texte
         // brut pour eux.
         *wheel.imp().icons.borrow_mut() = icons::load(&segments);
+
+        // Au plus un secteur `active = true` -- calculé une seule fois ici
+        // (cf. la doc du champ dans imp::Wheel), avant que `segments` ne
+        // soit déplacé plus bas.
+        wheel.imp().active_index.set(segments.iter().position(|s| s.active));
 
         *wheel.imp().root_segments.borrow_mut() = segments.clone();
         *wheel.imp().segments.borrow_mut() = segments;
@@ -684,6 +748,7 @@ impl RoueWheel {
                 confirm: false,
                 accent: None,
                 confirm_accent: None,
+                active: false,
             },
             Segment {
                 icon: "✓".into(),
@@ -692,6 +757,7 @@ impl RoueWheel {
                 confirm: false,
                 accent: confirm_accent,
                 confirm_accent: None,
+                active: false,
             },
         ];
         imp.hovered.set(CANCEL_INDEX);

@@ -36,14 +36,20 @@ hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 
 -- Roue de profil d'énergie -- même geste appui/relâchement que ci-dessus.
 -- Avant : aucun raccourci clavier, uniquement le clic sur le module waybar
--- custom/performance (cf. waybar/config.jsonc).
-hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile"))
+-- custom/performance (cf. waybar/config.jsonc). Sa config n'est plus un
+-- fichier statique non plus depuis l'ajout de la bande d'état (cf.
+-- wheel.rs) : quel profil est actuellement appliqué vient de
+-- power-profiles-daemon, donc `performance.sh roue-gen` régénère
+-- wheels/powerprofile.toml à chaque appui, même principe que la roue
+-- d'écrans ci-dessous.
+hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"))
+hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 
--- Roue de disposition d'écrans -- même geste appui/relâchement, mais SA
--- config n'est pas un fichier statique du dépôt comme les deux roues
--- ci-dessus (roue/wheels/power.toml, powerprofile.toml) : elle dépend du
+-- Roue de disposition d'écrans -- même geste appui/relâchement, config
+-- régénérée à chaque appui comme powerprofile ci-dessus (jamais figée dans
+-- le dépôt, contrairement à roue/wheels/power.toml) : elle dépend du
 -- matériel branché à cet instant (écran externe présent ou non, sa marque
--- via l'EDID...), donc `display-layout.sh roue-gen` la régénère à CHAQUE
+-- via l'EDID...), donc `display-layout.sh roue-gen` la réécrit à CHAQUE
 -- appui juste avant que `roue display` ne s'ouvre (cf. sa doc et
 -- cmd_roue_gen dans scripts/display-layout.sh). Remplace l'ancien menu
 -- rofi (`display-layout.sh menu`, toujours dispo si besoin).

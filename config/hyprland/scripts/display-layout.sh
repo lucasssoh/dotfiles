@@ -150,6 +150,7 @@ cmd_apply() {
 # versionnée, même statut que display-layout.json.
 cmd_roue_gen() {
     resolve_roles
+    current_state
 
     if [[ -z "$first_external" ]]; then
         notify-send "Displays" "No external screen detected — only one screen active."
@@ -163,6 +164,18 @@ cmd_roue_gen() {
     # casserait quand même le parsing sans ça.
     local internal_esc="${internal_label//\"/\\\"}"
     local external_esc="${external_label//\"/\\\"}"
+
+    # Un seul secteur "active = true", celui qui correspond au $mode
+    # actuellement appliqué (cf. current_state) -- affiche la bande d'état
+    # sur la roue (cf. roue-src/src/wheel.rs). Recalculé à chaque appel :
+    # c'est justement pour ça que ce fichier est régénéré à chaque
+    # ouverture plutôt que figé, cf. la doc de cette fonction plus haut.
+    local active_all="" active_internal="" active_external=""
+    case "$mode" in
+        both)     active_all="active = true" ;;
+        internal) active_internal="active = true" ;;
+        external) active_external="active = true" ;;
+    esac
 
     # confirm = true partout -- changer la disposition d'écrans peut
     # déplacer/couper la fenêtre active d'un bord à l'autre, pas juste
@@ -179,18 +192,21 @@ icon = "columns-2.svg"
 label = "All"
 action = "$HOME/.config/hypr/scripts/display-layout.sh apply both"
 confirm = true
+$active_all
 
 [[segment]]
 icon = "laptop.svg"
 label = "$internal_esc"
 action = "$HOME/.config/hypr/scripts/display-layout.sh apply internal"
 confirm = true
+$active_internal
 
 [[segment]]
 icon = "monitor.svg"
 label = "$external_esc"
 action = "$HOME/.config/hypr/scripts/display-layout.sh apply external"
 confirm = true
+$active_external
 EOF
 }
 

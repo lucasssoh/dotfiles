@@ -240,7 +240,7 @@
         "exec": "~/.config/waybar/scripts/performance.sh",
         "return-type": "json",
         "interval": 10,
-        "on-click": "$HOME/.local/bin/roue powerprofile",
+        "on-click": "~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile",
         "signal": 1
     },
 
