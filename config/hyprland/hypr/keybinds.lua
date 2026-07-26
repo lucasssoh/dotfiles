@@ -34,13 +34,11 @@ hl.bind(mod .. "+ O",       hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layo
 -- secteur) au lieu de simplement (ne rien) afficher. Chemin absolu
 -- obligatoire, même raison que Prisme ci-dessus (commit bbb8f61).
 hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
-hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power --commit"), { release = true })
 
 -- Roue de profil d'énergie -- même geste appui/relâchement que ci-dessus.
 -- Avant : aucun raccourci clavier, uniquement le clic sur le module waybar
 -- custom/performance (cf. waybar/config.jsonc).
 hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile"))
-hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
