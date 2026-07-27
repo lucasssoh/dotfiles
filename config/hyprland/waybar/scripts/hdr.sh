@@ -14,8 +14,9 @@ set -euo pipefail
 # =========================================================
 
 # ---- Settings ------------------------------------------------
-SDRBRIGHTNESS="1.2"     # SDR content brightness while the screen is in HDR (1.0..2.0)
+SDRBRIGHTNESS="1.0"     # SDR content brightness while the screen is in HDR (1.0..2.0)
 SDRSATURATION="1.0"     # SDR content saturation in HDR
+SDR_WHITE_LUMINANCE="220"  # SDR white level inside the HDR container (Hyprland default: 80)
 WAYBAR_SIGNAL=3         # must match "signal" in config.jsonc
 RASI="$HOME/.config/rofi/theme.rasi"   # menu theme (adjust if needed)
 ICON=""               # screen glyph (nf-md-monitor)
@@ -72,38 +73,6 @@ hdr_capable() {
     [[ "$cap" == "1" ]]
 }
 
-# Real HDR luminance of the panel, read from the EDID (Desired content max
-# frame-average / min luminance) -- without this, Hyprland falls back to
-# generic defaults (sdr_max_luminance=80, sdr_min_luminance=0.2) that have
-# nothing to do with the screen's real capability -> flat/washed-out HDR.
-# Cached like hdr_capable (the EDID doesn't change). Prints "max min",
-# empty if unavailable -- apply() then falls back to cm="hdr" (current
-# behavior).
-hdr_luminance() {
-    local m="$1" cache="$CACHE_DIR/lum-$m" edid="" path max="" min=""
-    if [[ -f "$cache" ]]; then
-        cat "$cache"
-        return
-    fi
-    mkdir -p "$CACHE_DIR"
-    for path in /sys/class/drm/*-"$m"/edid; do
-        [[ -e "$path" ]] && { edid="$path"; break; }
-    done
-    if [[ -n "$edid" ]] && command -v edid-decode >/dev/null 2>&1; then
-        max=$(edid-decode "$edid" 2>/dev/null \
-            | sed -n 's/.*Desired content max frame-average luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
-        min=$(edid-decode "$edid" 2>/dev/null \
-            | sed -n 's/.*Desired content min luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
-        # sdr_max_luminance requires an integer on Hyprland's side: a float
-        # gets rejected with "integer type requires a bool or an integer".
-        if [[ -n "$max" ]]; then
-            max="${max%%.*}"
-        fi
-    fi
-    printf '%s %s' "$max" "$min" > "$cache"
-    printf '%s %s' "$max" "$min"
-}
-
 # Applies HDR or SDR while preserving the current mode/position/scale
 #
 # NB: this setup loads its config through a custom Lua binding (hl.*),
@@ -125,14 +94,14 @@ apply() {
     position="${x}x${y}"
 
     if [[ "$want" == "hdr" ]]; then
-        local lum max min cm="hdr" extra=""
-        lum="$(hdr_luminance "$m")"
-        max="${lum%% *}"; min="${lum##* }"
-        if [[ -n "$max" && -n "$min" ]]; then
-            cm="hdredid"
-            extra=", sdr_max_luminance = ${max}, sdr_min_luminance = ${min}"
-        fi
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"${cm}\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION}${extra} })"
+        # Both floors forced to literal 0 rather than the EDID-reported 0.041
+        # cd/m^2: min_luminance is the floor for native HDR content (games,
+        # HDR video), sdr_min_luminance only affects SDR windows composited
+        # into the HDR container. The EDID value visibly lifted blacks above
+        # what the panel can actually do (confirmed against a bare TTY
+        # framebuffer, which has no compositor/CM path to introduce a floor).
+        local extra=", sdr_max_luminance = ${SDR_WHITE_LUMINANCE}, sdr_min_luminance = 0, min_luminance = 0"
+        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"hdredid\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION}${extra} })"
     else
         hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 8, cm = \"auto\" })"
     fi

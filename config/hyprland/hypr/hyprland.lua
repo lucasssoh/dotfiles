@@ -235,6 +235,31 @@ hl.config({
     },
 })
 
+-- render:cm_auto_hdr = hdredid: fullscreen HDR apps (e.g. Proton games with
+-- PROTON_ENABLE_HDR) get the panel's real EDID gamut, not the full BT.2020
+-- primaries "hdr" advertises — the latter desaturates everything on
+-- displays (all of them) that don't actually cover BT.2020.
+--
+-- direct_scanout = auto: exclusive-fullscreen surfaces (games) go straight to
+-- the DRM plane instead of through the compositor's shader path, replacing
+-- what used to be render:cm_fs_passthrough (removed upstream, folded into
+-- direct_scanout — see hyprwm/Hyprland PR #13860).
+--
+-- debug:invalidate_fp16 = disable: works around the PR #13860 FP16 workbuffer
+-- invalidation glitch (dim screen / blur artifacts / oversaturated cursor
+-- under HDR). NOT the same knob as render:use_fp16, which controls whether
+-- the FP16 buffer is used at all — disabling that instead would remove the
+-- precision headroom HDR needs, making banding worse, not better.
+hl.config({
+    render = {
+        cm_auto_hdr    = 2, -- hdredid
+        direct_scanout = 2, -- auto
+    },
+    debug = {
+        invalidate_fp16 = 0, -- disable
+    },
+})
+
 -- Submodules: monitors/HDR, per-app rules, keyboard shortcuts
 require("monitors")
 require("windowrules")
