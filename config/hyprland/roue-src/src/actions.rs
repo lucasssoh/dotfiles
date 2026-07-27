@@ -1,11 +1,11 @@
-//! Exécution de l'action shell associée à un secteur validé.
+//! Runs the shell action associated with a confirmed sector.
 
 use std::process::{Command, Stdio};
 
-/// Lance `action` via un shell, détaché (jamais attendu) : la roue se ferme
-/// immédiatement après avoir validé un secteur, elle ne doit jamais bloquer
-/// sur `hyprlock`, `systemctl suspend`, etc. Même schéma que
-/// `apply::ensure_awww_daemon` dans Prisme (`Command::spawn` + stdio nulle).
+/// Launches `action` through a shell, detached (never awaited): the wheel
+/// closes immediately after confirming a sector, so it must never block on
+/// `hyprlock`, `systemctl suspend`, etc. Same pattern as
+/// `apply::ensure_awww_daemon` in Prisme (`Command::spawn` + null stdio).
 pub fn run(action: &str) {
     if let Err(e) = Command::new("sh")
         .arg("-c")

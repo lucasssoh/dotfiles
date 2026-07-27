@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # =========================================================
-# set_wallpaper.sh — sélecteur de fond d'écran Rofi (statique ou
-# diaporama dynamique). Antérieur à Prisme (cf. prisme-src/), toujours
-# utilisé pour configurer le mode diaporama (durée, filtre, sélection
-# des images). Écrit l'état dans wallpaper-playlist.json ; c'est
-# restore_wallpaper.sh et wallpaper-slideshow.service qui l'appliquent.
+# set_wallpaper.sh — Rofi wallpaper picker (static or dynamic slideshow).
+# Predates Prisme (see prisme-src/), still used to configure slideshow mode
+# (duration, filter, image selection). Writes the state to
+# wallpaper-playlist.json; it's restore_wallpaper.sh and
+# wallpaper-slideshow.service that apply it.
 #
-# Machine à états pilotée par la variable `step` :
-#   1        choix du mode (Static/Dynamic)
-#   2-5      branche Dynamic : filtre -> durée -> sélection d'images -> écriture + (re)démarrage du service
-#   20-21    branche Static  : filtre -> sélection d'une image -> application immédiate
+# State machine driven by the `step` variable:
+#   1        mode choice (Static/Dynamic)
+#   2-5      Dynamic branch: filter -> duration -> image selection -> write + (re)start the service
+#   20-21    Static branch:  filter -> single image selection -> immediate apply
 # =========================================================
-# Dossier source configurable via ~/.config/prisme/wallpapers.conf, comme
-# dans Prisme et les autres scripts de ce pipeline.
+# Source folder configurable via ~/.config/prisme/wallpapers.conf, like in
+# Prisme and the other scripts in this pipeline.
 WALL_DIR="$HOME/Images/Wallpapers"
 WALLPAPERS_CONF="$HOME/.config/prisme/wallpapers.conf"
 if [[ -f "$WALLPAPERS_CONF" ]]; then
@@ -45,7 +45,7 @@ CHOSEN=""
 
 while true; do
     case $step in
-        # Étape 1 : choix du mode, commune aux deux branches
+        # Step 1: mode choice, common to both branches
         1)
             MODE=$(printf "Static\nDynamic" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -59,7 +59,7 @@ while true; do
             ;;
 
         # ── DYNAMIC ──────────────────────────────────────────────
-        # Étape 2 : filtre (originaux ou vignettes filtrées en cache)
+        # Step 2: filter (originals or filtered thumbnails from cache)
         2)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -72,7 +72,7 @@ while true; do
             step=3
             ;;
 
-        # Étape 3 : durée d'affichage de chaque image (secondes)
+        # Step 3: display duration for each image (seconds)
         3)
             DURATION=$(rofi -dmenu \
                 -p "Duration (seconds)" \
@@ -86,7 +86,7 @@ while true; do
             step=4
             ;;
 
-        # Étape 4 : sélection multiple des images incluses dans le diaporama
+        # Step 4: multi-select the images included in the slideshow
         4)
             SRC_DIR="$WALL_DIR"
             [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
@@ -105,8 +105,8 @@ while true; do
             step=5
             ;;
 
-        # Étape 5 : écrit la playlist JSON (toutes les images du dossier si
-        # aucune sélection explicite) et (re)démarre le service de diaporama
+        # Step 5: writes the JSON playlist (all images in the folder if no
+        # explicit selection) and (re)starts the slideshow service
         5)
             if [ -z "$CHOSEN" ]; then
                 SRC_DIR="$WALL_DIR"
@@ -131,7 +131,7 @@ with open('$PLAYLIST_FILE', 'w') as f:
             ;;
 
         # ── STATIC ───────────────────────────────────────────────
-        # Étape 20 : filtre (originaux ou vignettes filtrées en cache)
+        # Step 20: filter (originals or filtered thumbnails from cache)
         20)
             FILTER=$(printf "Original\nFiltered" | rofi -dmenu \
                 -theme "$RASI_MODE" \
@@ -144,8 +144,8 @@ with open('$PLAYLIST_FILE', 'w') as f:
             step=21
             ;;
 
-        # Étape 21 : sélection d'une image unique, application immédiate et
-        # arrêt du service de diaporama (les deux modes sont mutuellement exclusifs)
+        # Step 21: single image selection, immediate apply, and stops the
+        # slideshow service (the two modes are mutually exclusive)
         21)
             SRC_DIR="$WALL_DIR"
             [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"

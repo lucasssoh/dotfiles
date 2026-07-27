@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Contenu de la fenêtre pin windowrule "dashboard-fastfetch" (cf. windowrules.lua).
+# Content of the pinned "dashboard-fastfetch" windowrule window (see windowrules.lua).
 fastfetch
-# fastfetch termine immédiatement une fois l'affichage fait ; on bloque
-# ici pour garder le terminal (et donc la fenêtre) ouvert indéfiniment.
+# fastfetch exits immediately once it's done rendering; we block here to
+# keep the terminal (and therefore the window) open indefinitely.
 read -r

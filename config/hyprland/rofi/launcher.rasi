@@ -1,5 +1,5 @@
-/* rofi/launcher.rasi — barre de recherche (drun / launcher, powermenu…).
- * Couleurs et style de sélection hérités de share.rasi ; structure seule ici. */
+/* rofi/launcher.rasi — search bar (drun / launcher, powermenu…).
+ * Colors and selection style inherited from share.rasi; layout only here. */
 @import "share"
 
 window {

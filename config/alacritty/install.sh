@@ -7,7 +7,7 @@ RESET="\e[0m"
 info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# Détection du gestionnaire pour installer Alacritty ici
+# Detect the package manager to install Alacritty with
 if command -v dnf &> /dev/null; then
     INSTALL="sudo dnf install -y"
 elif command -v pacman &> /dev/null; then
@@ -19,7 +19,7 @@ fi
 info "Installing Alacritty..."
 $INSTALL alacritty
 
-# Liens symboliques
+# Symlinks
 MODULE_DIR=$(pwd)
 mkdir -p ~/.config/alacritty
 ln -sf "$MODULE_DIR/alacritty.toml" ~/.config/alacritty/alacritty.toml

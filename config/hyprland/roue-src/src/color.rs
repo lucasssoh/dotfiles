@@ -1,17 +1,17 @@
-//! Résolution de la couleur d'accent d'un secteur (champ TOML optionnel
-//! `accent`, cf. config.rs) -- couleurs nommées connues ou code hex direct
-//! `#rrggbb`, repli sur le cyan historique si absent/inconnu. Point central
-//! pour que toute future roue puisse définir ses propres teintes par
-//! secteur juste via son fichier TOML, sans toucher au code Rust (cf.
-//! wheels/powerprofile.toml pour un exemple : vert/jaune/cyan).
+//! Resolves a sector's accent color (optional TOML field `accent`, see
+//! config.rs) -- known named colors or a direct `#rrggbb` hex code, falling
+//! back to the historical cyan if absent/unknown. Central place so any
+//! future wheel can define its own per-sector tints just through its TOML
+//! file, without touching the Rust code (see wheels/powerprofile.toml for
+//! an example: green/yellow/cyan).
 
 const DEFAULT_HEX: &str = "#4fefff";
 
-/// Couleur canonique résolue pour un secteur -- code hex (sert à rasteriser
-/// la variante "accent" de son icône SVG, cf. icons.rs) ET la même couleur
-/// décomposée en RGB `f32` (sert à teindre le remplissage du secteur et le
-/// texte, cf. wheel.rs). Les deux DOIVENT venir de la même résolution, sinon
-/// l'icône et le reste du secteur divergeraient légèrement de teinte.
+/// Canonical color resolved for a sector -- a hex code (used to rasterize
+/// the "accent" variant of its SVG icon, see icons.rs) AND the same color
+/// decomposed into `f32` RGB (used to tint the sector's fill and text, see
+/// wheel.rs). Both MUST come from the same resolution, otherwise the icon
+/// and the rest of the sector would drift slightly apart in tint.
 pub struct Accent {
     pub hex: String,
     pub rgb: (f32, f32, f32),
@@ -32,11 +32,11 @@ fn resolve_hex(accent: Option<&str>) -> String {
     named(&raw).unwrap_or(DEFAULT_HEX).to_string()
 }
 
-/// Palette de noms courts utilisables dans le TOML -- volontairement petite
-/// (les teintes qu'on utilise vraiment aujourd'hui : cyan par défaut,
-/// vert/jaune pour powerprofile, rouge pour le sous-menu de confirmation
-/// de power). Un code hex direct (`accent = "#34d399"`) reste toujours
-/// possible pour tout le reste, aucune roue future n'est limitée à ces noms.
+/// Palette of short names usable in the TOML -- deliberately small (the
+/// tints actually used today: cyan by default, green/yellow for
+/// powerprofile, red for power's confirmation sub-menu). A direct hex code
+/// (`accent = "#34d399"`) always remains possible for everything else, no
+/// future wheel is limited to these names.
 fn named(name: &str) -> Option<&'static str> {
     match name {
         "cyan" | "blue" | "default" => Some(DEFAULT_HEX),

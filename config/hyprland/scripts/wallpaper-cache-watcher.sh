@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # =========================================================
-# wallpaper-cache-watcher.sh — maintient à jour le cache d'images
-# "filtrées" (recadrées/étendues au format de l'écran actif, sans jamais
-# rogner l'axe qui porterait le sujet principal), appliqué automatiquement
-# par Prisme (prisme-src/src/apply.rs) quand il est disponible, et par le
-# mode "Filtered" de l'ancien set_wallpaper.sh. Lancé par l'autostart
-# Hyprland (hyprland.lua), tourne en continu.
+# wallpaper-cache-watcher.sh — keeps the "filtered" image cache up to date
+# (cropped/extended to the active screen's format, never cropping the axis
+# that would carry the main subject), applied automatically by Prisme
+# (prisme-src/src/apply.rs) when available, and by the old
+# set_wallpaper.sh's "Filtered" mode. Launched by Hyprland's autostart
+# (hyprland.lua), runs continuously.
 #
-# Le traitement par image lui-même (wallpaper-filter, ~/.local/bin/) est
-# natif -- binaire Rust compilé depuis prisme-src/src/bin/wallpaper-
-# filter.rs (même crate que Prisme, cf. install.sh), pas un script bash
-# qui rappellerait ImageMagick plusieurs fois par image. Ce script-ci ne
-# fait que l'orchestration : surveillance inotify, passe initiale
-# parallèle, marqueur de version de cache.
+# The per-image processing itself (wallpaper-filter, ~/.local/bin/) is
+# native -- a Rust binary built from prisme-src/src/bin/wallpaper-
+# filter.rs (same crate as Prisme, see install.sh), not a bash script
+# calling ImageMagick multiple times per image. This script only handles
+# orchestration: inotify watching, the initial parallel pass, the cache
+# version marker.
 # =========================================================
-# Dossier source configurable via ~/.config/prisme/wallpapers.conf (une
-# ligne, chemin absolu ou préfixé par ~/) -- même fichier lu par Prisme
-# (prisme-src/src/wallpapers.rs) et les autres scripts de ce pipeline,
-# pour n'avoir qu'un seul dossier à changer. Repli sur le défaut si le
-# fichier est absent, vide, ou ne contient que des commentaires.
+# Source folder configurable via ~/.config/prisme/wallpapers.conf (one
+# line, absolute path or prefixed with ~/) -- same file read by Prisme
+# (prisme-src/src/wallpapers.rs) and the other scripts in this pipeline,
+# so there's only one folder to change. Falls back to the default if the
+# file is absent, empty, or contains only comments.
 WALL_DIR="$HOME/Images/Wallpapers"
 WALLPAPERS_CONF="$HOME/.config/prisme/wallpapers.conf"
 if [[ -f "$WALLPAPERS_CONF" ]]; then
@@ -30,17 +30,16 @@ FILTER_BIN="$HOME/.local/bin/wallpaper-filter"
 
 mkdir -p "$CACHE_DIR"
 
-# Le test de fraîcheur de wallpaper-filter ne compare que les mtime
-# source/cache : il ne peut pas voir un changement d'ALGORITHME de filtre,
-# seulement un changement d'image source. Sans ce marqueur, les fichiers
-# déjà en cache garderaient indéfiniment le rendu de l'ancienne version du
-# filtre. À incrémenter à chaque changement du pipeline dans
-# prisme-src/src/bin/wallpaper-filter.rs -- purge ciblée (pas un `rm -rf`
-# du dossier entier) pour ne jamais toucher au marqueur lui-même ni sortir
-# de CACHE_DIR. Fait ici, avant la boucle parallèle ci-dessous, et nulle
-# part ailleurs : wallpaper-filter est lancé en parallèle (~30 instances
-# via `&` + `wait`), un test-et-purge par instance ferait courir un race
-# (l'une purgerait ce qu'une autre vient d'écrire).
+# wallpaper-filter's freshness check only compares source/cache mtimes: it
+# can't see a change in the filter ALGORITHM, only a change in the source
+# image. Without this marker, already-cached files would keep the old
+# filter version's render indefinitely. Bump this on every pipeline change
+# in prisme-src/src/bin/wallpaper-filter.rs -- targeted purge (not an
+# `rm -rf` of the whole folder) to never touch the marker itself or step
+# outside CACHE_DIR. Done here, before the parallel loop below, and nowhere
+# else: wallpaper-filter is launched in parallel (~30 instances via `&` +
+# `wait`), a test-and-purge per instance would create a race (one instance
+# would purge what another just wrote).
 FILTER_VERSION=4
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
@@ -50,7 +49,7 @@ if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
     printf '%s\n' "$FILTER_VERSION" > "$VERSION_FILE"
 fi
 
-# Passe initiale : génère le cache pour toutes les images déjà présentes
+# Initial pass: generates the cache for all images already present
 while IFS= read -r -d '' img; do
     "$FILTER_BIN" "$img" &
 done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
@@ -59,8 +58,8 @@ done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
 
 wait
 
-# Surveillance continue : régénère le cache dès qu'une image est ajoutée
-# ou modifiée dans le dossier de wallpapers
+# Continuous watching: regenerates the cache as soon as an image is added
+# or modified in the wallpapers folder
 inotifywait -m -e close_write,moved_to --format '%w%f' "$(readlink -f "$WALL_DIR")" | \
     while read -r filepath; do
         "$FILTER_BIN" "$filepath" &

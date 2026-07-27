@@ -12,18 +12,18 @@ switch_profile() {
 declare -A capture_ids
 
 pw-dump --monitor --no-colors 2>/dev/null | while IFS= read -r line; do
-    # Détecter un nouvel ID
+    # Detect a new ID
     if [[ "$line" =~ ^[[:space:]]*\"id\":[[:space:]]*([0-9]+) ]]; then
         current_id="${BASH_REMATCH[1]}"
     fi
 
-    # Si ce bloc contient Stream/Input/Audio (pas Internal)
+    # If this block contains Stream/Input/Audio (not Internal)
     if [[ "$line" =~ \"Stream/Input/Audio\" ]] && [[ ! "$line" =~ Internal ]]; then
         capture_ids[$current_id]=1
         switch_profile "headset-head-unit"
     fi
 
-    # Si un ID connu reçoit "info": null → stream terminé
+    # If a known ID receives "info": null → stream ended
     if [[ "$line" =~ \"info\":[[:space:]]*null ]] && [[ -n "${capture_ids[$current_id]}" ]]; then
         unset "capture_ids[$current_id]"
         if [ "${#capture_ids[@]}" -eq 0 ]; then

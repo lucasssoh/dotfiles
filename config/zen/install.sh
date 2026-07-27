@@ -8,7 +8,7 @@ RESET="\e[0m"
 info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. S'assurer que Flatpak est installé et que Flathub est activé
+# 1. Make sure Flatpak is installed and Flathub is enabled
 info "Checking Flatpak..."
 if command -v dnf &> /dev/null; then
     sudo dnf install -y flatpak
@@ -18,19 +18,19 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get update && sudo apt-get install -y flatpak
 fi
 
-# Ajouter le dépôt Flathub s'il n'existe pas
+# Add the Flathub remote if it doesn't already exist
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# 2. Installation de Zen Browser
+# 2. Install Zen Browser
 info "Installing Zen Browser via Flatpak..."
-# On utilise l'ID de l'application sur Flathub
+# Using the app's ID on Flathub
 sudo flatpak install -y flathub io.github.zen_browser.zen
 
-# 3. Intégration (Ta philosophie)
-# Optionnel : Créer un alias pour le lancer plus vite dans le terminal
+# 3. Integration (your philosophy)
+# Optional: create an alias to launch it faster from the terminal
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Symlinks pour lancer zen depuis le terminal et Hyprland
+# Symlinks to launch zen from the terminal and from Hyprland
 sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen
 sudo ln -sf /var/lib/flatpak/exports/bin/app.zen_browser.zen /usr/local/bin/zen-browser
 

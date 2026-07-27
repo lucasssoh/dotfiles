@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # =========================================================
-# pip-daemon.sh — mode "picture-in-picture" pour mpv et Satty.
+# pip-daemon.sh — "picture-in-picture" mode for mpv and Satty.
 #
-# Écoute le flux d'événements Hyprland : dès qu'une fenêtre de la liste
-# pip_classes perd le focus, elle est réduite et poussée dans le coin
-# bas-droit de l'écran ; dès qu'elle le reprend, elle est restaurée à sa
-# taille/position normales. Aucun autostart : lancé au besoin.
+# Listens to the Hyprland event stream: as soon as a window from the
+# pip_classes list loses focus, it's shrunk and pushed into the bottom-right
+# corner of the screen; as soon as it regains focus, it's restored to its
+# normal size/position. No autostart: launched as needed.
 # =========================================================
 
-# Attend jusqu'à 30s l'apparition du socket d'événements Hyprland (utile
-# si ce script démarre avant que la session Hyprland soit prête).
+# Waits up to 30s for the Hyprland event socket to appear (useful if this
+# script starts before the Hyprland session is ready).
 SOCKET=""
 for i in $(seq 1 30); do
     SOCKET=$(find /run/user/$(id -u)/hypr/ -name ".socket2.sock" 2>/dev/null | head -1)
@@ -18,17 +18,17 @@ for i in $(seq 1 30); do
 done
 [ -z "$SOCKET" ] && exit 1
 
-# Géométrie de la vignette PIP (coin bas-droit d'un écran 1920x1080)
+# PIP thumbnail geometry (bottom-right corner of a 1920x1080 screen)
 PIP_W=480
 PIP_H=270
 PIP_X=1420
 PIP_Y=780
 
-# Géométrie restaurée (centrée sur un écran 1920x1080)
+# Restored geometry (centered on a 1920x1080 screen)
 FULL_W=1280
 FULL_H=720
 
-# Classes de fenêtres concernées par le comportement PIP
+# Window classes affected by PIP behavior
 pip_classes=("mpv" "com.gabm.satty")
 
 is_pip_class() {
@@ -51,7 +51,7 @@ restore_window() {
     hyprctl dispatch resizewindowpixel "exact ${FULL_W} ${FULL_H},address:${addr}"
 }
 
-declare -A pip_state  # adresse de fenêtre -> 0 (taille normale) | 1 (réduite en PIP)
+declare -A pip_state  # window address -> 0 (normal size) | 1 (shrunk to PIP)
 
 socat -u UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
     EVENT=$(echo "$line" | cut -d'>' -f1)
@@ -66,17 +66,17 @@ w = json.load(sys.stdin)
 print(w.get('address', ''))
 " 2>/dev/null)
 
-            # Parcourt toutes les fenêtres pip actuellement ouvertes
+            # Walks through every currently open pip window
             while IFS=' ' read -r addr class; do
                 [ -z "$addr" ] && continue
                 if [ "$addr" = "$ACTIVE_ADDR" ]; then
-                    # Fenêtre active : restaurer si elle était réduite
+                    # Active window: restore it if it was shrunk
                     if [ "${pip_state[$addr]}" = "1" ]; then
                         restore_window "$addr"
                         pip_state[$addr]=0
                     fi
                 else
-                    # Fenêtre inactive : réduire si elle ne l'est pas déjà
+                    # Inactive window: shrink it if not already
                     if [ "${pip_state[$addr]}" != "1" ]; then
                         shrink_window "$addr"
                         pip_state[$addr]=1
@@ -92,8 +92,8 @@ for c in clients:
 ")
             ;;
         closewindow)
-            # Purge l'état pour éviter qu'une adresse fermée soit
-            # réutilisée par Hyprland et héritée par une autre fenêtre
+            # Clears the state to prevent a closed address from being
+            # reused by Hyprland and inherited by another window
             ADDR=$(echo "$DATA" | tr -d '[:space:]')
             unset "pip_state[$ADDR]"
             ;;

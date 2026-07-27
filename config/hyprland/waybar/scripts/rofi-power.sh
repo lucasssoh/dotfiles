@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =========================================================
-# rofi-power.sh — menu d'alimentation Rofi (verrouiller, veille,
-# hibernation, déconnexion, redémarrage, extinction), avec confirmation
-# pour toute action destructive ou perturbatrice.
+# rofi-power.sh — Rofi power menu (lock, sleep, hibernate, log out,
+# reboot, shutdown), with confirmation for any destructive or
+# disruptive action.
 # =========================================================
 
 set -euo pipefail
@@ -16,7 +16,7 @@ RASI_CONFIRM="$HOME/.config/rofi/confirm.rasi"
 # OPTIONS
 # =========================================================
 
-declare -A ACTIONS=(  # icône affichée -> action associée
+declare -A ACTIONS=(  # displayed icon -> associated action
     ["󰌾"]="lock"
     ["󰤄"]="suspend"
     ["󰒲"]="hibernate"

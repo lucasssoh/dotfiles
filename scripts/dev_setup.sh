@@ -7,40 +7,40 @@ NC='\033[0m'
 
 echo -e "${BLUE}=== Initialisation de l'environnement de dév (DNF5 / Fedora 43) ===${NC}"
 
-# 1. Outils système (C/C++ & Build tools)
+# 1. System tools (C/C++ & Build tools)
 echo -e "${GREEN}[1/6] Installation des outils système essentiels...${NC}"
-# Sous DNF5, on utilise "group install" ou on liste les composants
+# On DNF5, use "group install" or list the components individually
 sudo dnf install -y @development-tools @c-development
 sudo dnf install -y curl wget git cmake gcc-c++ gdb clang lldb libstdc++-devel
 
-# Libs pour Manim
+# Libs for Manim
 sudo dnf install -y fribidi-devel harfbuzz-devel pango-devel cairo-devel
 
 # 2. Python (System wide + venv)
 echo -e "${GREEN}[2/6] Configuration Python...${NC}"
 sudo dnf install -y python3 python3-pip python3-devel
-# On évite d'installer des packages pip en global sur Fedora 43 (PEP 668)
-# On privilégie l'utilisation de venv pour tes projets
+# Avoid installing pip packages globally on Fedora 43 (PEP 668)
+# Prefer using venv for your projects instead
 python3 -m pip install --user --upgrade pip 2>/dev/null || echo "Pip déjà à jour ou géré par le système."
 
 # 3. Java (LTS 21)
 echo -e "${GREEN}[3/6] Installation de Java (OpenJDK 21)...${NC}"
 sudo dnf install -y java-21-openjdk-devel
 
-# 4. NVM & Node 22 (LTS - Requis pour Gemini CLI)
+# 4. NVM & Node 22 (LTS - required for the Gemini CLI)
 echo -e "${GREEN}[4/6] Configuration de Node.js via NVM...${NC}"
 export NVM_DIR="$HOME/.nvm"
 
-# Installation de NVM si absent
+# Install NVM if missing
 if [ ! -d "$NVM_DIR" ]; then
     echo "Installation de NVM..."
     PROFILE=/dev/null curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 fi
 
-# Chargement impératif pour la suite du script
+# Must be loaded before the rest of the script can run
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# On force Node 22. Node 18 provoque des erreurs de dépendances (Engine) avec Gemini
+# Force Node 22 -- Node 18 causes dependency (Engine) errors with Gemini
 echo "Installation et activation de Node 22 (LTS)..."
 nvm install 22 --silent
 nvm alias default 22
@@ -49,11 +49,11 @@ nvm use default --delete-prefix --silent
 # 4.5. Google Gemini CLI
 echo -e "${GREEN}[4.5/6] Installation du Gemini CLI...${NC}"
 
-# 1. Nettoyage définitif du .npmrc (Évite les conflits NVM/Prefix)
+# 1. Permanently clean up .npmrc (avoids NVM/Prefix conflicts)
 [ -f "$HOME/.npmrc" ] && sed -i '/prefix=/d' "$HOME/.npmrc"
 
-# 2. Installation globale liée à la version Node active
-# On vérifie si gemini répond, sinon on installe
+# 2. Global install tied to the active Node version
+# Check whether gemini responds first, otherwise install it
 if ! command -v gemini &>/dev/null; then
     echo "Installation de @google/gemini-cli via npm..."
     npm install -g @google/gemini-cli
@@ -61,10 +61,10 @@ else
     echo "Gemini CLI déjà présent ($(node -v))."
 fi
 
-# 5. Docker (Installation DNF5 compatible)
+# 5. Docker (DNF5-compatible install)
 echo -e "${GREEN}[5/6] Configuration de Docker...${NC}"
 if ! command -v docker &> /dev/null; then
-    # Fedora 43 a parfois besoin de définir explicitement le repo
+    # Fedora 43 sometimes needs the repo defined explicitly
     sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
     sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     
@@ -75,9 +75,9 @@ else
     echo "Docker déjà présent."
 fi
 
-# 6. Outils Qualité & Clean Code
+# 6. Code quality / clean code tools
 echo -e "${GREEN}[6/6] Installation des linters (Black / Flake8)...${NC}"
-# Utilisation de pipx si possible pour isoler les outils CLI Python
+# Use pipx where possible to isolate Python CLI tools
 sudo dnf install -y pipx
 pipx ensurepath
 pipx install black 2>/dev/null || true

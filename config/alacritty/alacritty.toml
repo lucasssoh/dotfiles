@@ -7,19 +7,19 @@ import = [
 padding = { x = 12, y = 12 }
 dynamic_title = true
 
-# Opacité : 1.0 est opaque, 0.0 est invisible.
-# 0.85 à 0.90 est le "sweet spot" pour voir le flou derrière.
+# Opacity: 1.0 is opaque, 0.0 is invisible.
+# 0.85 to 0.90 is the sweet spot for seeing the blur behind it.
 opacity = 0.85
 
-# Permet au gestionnaire de fenêtres de flouter l'arrière-plan
-blur = true 
+# Lets the window manager blur the background
+blur = true
 
 [font]
-# On utilise JetBrainsMono Nerd Font (très lisible en gras)
+# Using JetBrainsMono Nerd Font (very readable in bold)
 normal = { family = "JetBrainsMono", style = "regular" }
 bold = { family = "JetBrainsMono", style = "Bold" }
 
-# Augmenter légèrement la taille aide aussi au rendu "Bold"
+# Bumping the size up slightly also helps with the "Bold" rendering
 size = 12
 
 [cursor]

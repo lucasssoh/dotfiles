@@ -1,5 +1,5 @@
-/* Roue — thème, palette identique à waybar/style.css, orbit/theme.toml et
-   prisme/style.css. Recharge : relancer la roue (pas de daemon). */
+/* Roue — theme, same palette as waybar/style.css, orbit/theme.toml, and
+   prisme/style.css. Reload: relaunch the wheel (no daemon). */
 
 * {
     font-family: "JetBrains Mono";
@@ -15,10 +15,10 @@ window,
     background-color: rgba(16, 20, 24, 0.95);
 }
 
-/* rgba(20, 20, 22, 0.88) reprend exactement la couleur du moyeu central
-   (cf. HUB fill dans roue-src/src/wheel.rs), #505050 la bordure des modules
-   waybar (@overlay2, cf. waybar/style.css) -- panneau plutôt qu'un blur
-   plein écran (coût GPU permanent au repos, cf. discussion). */
+/* rgba(20, 20, 22, 0.88) matches the center hub color exactly (see the HUB
+   fill in roue-src/src/wheel.rs), #505050 the waybar module border
+   (@overlay2, see waybar/style.css) -- a panel instead of a full-screen
+   blur (permanent GPU cost at idle, see earlier discussion). */
 .roue-sidebar {
     background-color: rgba(20, 20, 22, 0.88);
     border: 1px solid #505050;

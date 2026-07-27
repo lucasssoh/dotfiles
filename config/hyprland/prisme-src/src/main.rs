@@ -1,8 +1,8 @@
-//! Prisme — sélecteur de wallpaper natif Wayland (GTK4 + layer-shell),
-//! remplaçant l'ancien menu rofi (scripts/set_wallpaper.sh). Une seule
-//! fenêtre plein écran présente un carrousel de vignettes (carousel.rs,
-//! card.rs) ; le choix est appliqué via awww/systemd en réutilisant le
-//! même format d'état que les scripts bash historiques (apply.rs).
+//! Prisme — native Wayland wallpaper picker (GTK4 + layer-shell),
+//! replacing the old rofi menu (scripts/set_wallpaper.sh). A single
+//! fullscreen window presents a carousel of thumbnails (carousel.rs,
+//! card.rs); the choice is applied via awww/systemd, reusing the same
+//! state format as the historical bash scripts (apply.rs).
 
 mod apply;
 mod card;
@@ -17,46 +17,58 @@ use gtk4::prelude::*;
 use gtk4::{glib, Application};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 const APP_ID: &str = "com.prisme.app";
 
-/// Bornes de la durée du diaporama (secondes) réglable au scroll sur la
-/// puce d'en-tête -- cf. `duration_chip` dans `build_ui`.
+/// Bounds of the slideshow duration (seconds), adjustable by scrolling on
+/// the header chip -- see `duration_chip` in `build_ui`.
 const DURATION_MIN: u32 = 5;
 const DURATION_MAX: u32 = 3600;
 const DURATION_STEP: u32 = 10;
 
-/// Chaînes d'interface -- anglais fixe (pas de détection de langue système,
-/// cf. keymap.rs pour le même choix côté raccourcis) plutôt que la
-/// détection de locale qu'il y avait ici auparavant : simplifie le code et
-/// reste cohérent avec le reste du dépôt (roue-src, scripts d'install).
+/// Radius (in number of cards, on the ring) of the thumbnail window kept
+/// LOADED around the focus -- beyond it, the texture is freed (see
+/// `Card::clear_texture`), reloaded on demand if focus comes back to it
+/// (see `refresh_thumb_window` in `build_ui`). Chosen generously compared
+/// to what actually fits on screen (~13 cards on each side on a 2560px
+/// monitor, see `carousel.rs::visible_margin`) to leave headroom for fast
+/// scrolling without visible "pop-in", while still keeping the memory
+/// peak bounded (2×24+1 ≈ 49 thumbnails max in memory, versus the WHOLE
+/// collection before this rewrite -- hundreds for a large library).
+const THUMB_WINDOW_RADIUS: i64 = 24;
+
+/// Interface strings -- fixed English (no system language detection, see
+/// keymap.rs for the same choice on the shortcuts side) rather than the
+/// locale detection that used to live here: simplifies the code and stays
+/// consistent with the rest of the repo (roue-src, install scripts).
 const MODE_STATIC: &str = "Static";
 const MODE_DYNAMIC: &str = "Slideshow";
 const FOOTER_HINT: &str = "Esc close · ← → h l navigate · ↓ j select · ↑ k deselect · Tab mode · Enter apply";
 
-/// Libellé du compteur de sélection dans la barre du bas.
+/// Label for the selection counter in the bottom bar.
 fn selected_count(n: usize) -> String {
     format!("{n} selected")
 }
 
-/// Mode d'application du wallpaper choisi, cf. apply.rs : image fixe
-/// unique, ou diaporama tournant sur une sélection de plusieurs images.
+/// Mode used to apply the chosen wallpaper, see apply.rs: a single static
+/// image, or a slideshow cycling through a selection of several images.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Static,
     Dynamic,
 }
 
-/// Point d'entrée : force le rendu GPU puis délègue la construction de
-/// l'unique fenêtre à `build_ui` à chaque activation de la GApplication.
+/// Entry point: forces GPU rendering then delegates building the single
+/// window to `build_ui` on every GApplication activation.
 fn main() -> glib::ExitCode {
-    // Sans ça, GSK choisit ici un rendu logiciel de repli, invisible dans
-    // les logs sauf via GDK_DEBUG=opengl (aucune ligne EGL/GL n'apparaît) --
-    // mesuré à ~25-40fps en carrousel, décroissant, contre ~120fps+ (montée
-    // en charge continue vers le taux de rafraîchissement de l'écran, cf.
-    // carousel.rs) une fois le rendu GPU forcé. On respecte une valeur déjà
-    // définie par l'environnement (debug, autre machine, etc.).
+    // Without this, GSK falls back to software rendering here, invisible
+    // in the logs except via GDK_DEBUG=opengl (no EGL/GL line appears) --
+    // measured at ~25-40fps in the carousel, decreasing, versus ~120fps+
+    // (climbing steadily toward the screen's refresh rate, see
+    // carousel.rs) once GPU rendering is forced. Respects a value already
+    // set by the environment (debug, another machine, etc.).
     if std::env::var_os("GSK_RENDERER").is_none() {
         std::env::set_var("GSK_RENDERER", "opengl");
     }
@@ -66,15 +78,15 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
-/// Construit la fenêtre layer-shell plein écran, son carrousel de
-/// wallpapers, l'en-tête/pied de page, et branche les raccourcis clavier
-/// et le chargement asynchrone des vignettes.
+/// Builds the fullscreen layer-shell window, its wallpaper carousel,
+/// header/footer, and wires up keyboard shortcuts and asynchronous
+/// thumbnail loading.
 fn build_ui(app: &Application) {
-    // GApplication réactive l'instance déjà en cours plutôt que d'en
-    // relancer une nouvelle (ex. Super+W pressé deux fois avant que la
-    // première fenêtre soit fermée) -- sans cette garde, `connect_activate`
-    // rappellerait `build_ui` et empilerait une deuxième fenêtre/carrousel
-    // (donc une deuxième boucle d'animation) dans le même process.
+    // GApplication reactivates the already-running instance instead of
+    // launching a new one (e.g. Super+W pressed twice before the first
+    // window closes) -- without this guard, `connect_activate` would call
+    // `build_ui` again and stack a second window/carousel (hence a second
+    // animation loop) in the same process.
     if let Some(existing) = app.windows().first() {
         existing.present();
         return;
@@ -101,11 +113,10 @@ fn build_ui(app: &Application) {
         .vexpand(true)
         .build();
 
-    // ── En-tête : compteur de sélection + puce de durée -- diaporama
-    // seul, la barre entière est masquée en mode Statique (cf.
-    // `toggle_mode`). Titre et bouton de mode vivent dans le pied de page
-    // (cf. plus bas) : indépendants de cette barre, ils ne bougent jamais
-    // quand son contenu apparaît/disparaît.
+    // ── Header: selection counter + duration chip -- Dynamic mode only,
+    // the whole bar is hidden in Static mode (see `toggle_mode`). Title
+    // and mode button live in the footer (see below): independent of
+    // this bar, they never move when its content appears/disappears.
     let header = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Horizontal)
         .spacing(16)
@@ -113,7 +124,7 @@ fn build_ui(app: &Application) {
         .visible(false)
         .build();
 
-    // Pousse compteur + durée contre le bord droit.
+    // Pushes counter + duration against the right edge.
     let header_spacer = gtk4::Box::builder().hexpand(true).build();
     header.append(&header_spacer);
 
@@ -123,9 +134,9 @@ fn build_ui(app: &Application) {
         .build();
     header.append(&counter_label);
 
-    // Puce de durée -- pas de champ texte à cliquer/taper : molette dessus
-    // pour ajuster (même vocabulaire d'interaction que la molette du
-    // carrousel juste en dessous), le tout tient en une puce discrète.
+    // Duration chip -- no text field to click/type into: scroll on it to
+    // adjust (same interaction vocabulary as the carousel's scroll just
+    // below), all packed into a discreet chip.
     let duration = Rc::new(Cell::new(120u32));
     let duration_chip = gtk4::Label::builder()
         .css_classes(["prisme-duration-chip"])
@@ -152,7 +163,7 @@ fn build_ui(app: &Application) {
 
     root.append(&header);
 
-    // ── Point d'ancrage du carrousel ──────────────────────────────────
+    // ── Carousel mount point ───────────────────────────────────────────
     let carousel_mount = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .hexpand(true)
@@ -160,9 +171,9 @@ fn build_ui(app: &Application) {
         .build();
     root.append(&carousel_mount);
 
-    // ── Pied de page : titre à gauche, rappel clavier au centre, bouton
-    // de mode à droite -- tous les trois plaqués aux bords, indépendants
-    // du contenu de l'en-tête du dessus (cf. sa doc).
+    // ── Footer: title on the left, keyboard hint in the center, mode
+    // button on the right -- all three pinned to the edges, independent
+    // of the header's content above (see its doc).
     let footer = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Horizontal)
         .spacing(16)
@@ -189,11 +200,11 @@ fn build_ui(app: &Application) {
         .css_classes(["prisme-mode-toggle"])
         .halign(gtk4::Align::End)
         .build();
-    // Un GtkButton focusable intercepterait Entrée/Espace pour s'auto-
-    // activer (donc basculer le mode) avant même que notre
-    // EventControllerKey ne voie l'évènement -- c'est ce qui faisait dire
-    // "Entrée" alors qu'on voulait "activer la carte" : le bouton était le
-    // widget focus par défaut de la fenêtre et volait la touche.
+    // A focusable GtkButton would intercept Enter/Space to self-activate
+    // (thus toggling the mode) before our EventControllerKey ever saw the
+    // event -- this is what made "Enter" toggle the mode when the intent
+    // was "activate the card": the button was the window's default focus
+    // widget and stole the key.
     mode_toggle.set_can_focus(false);
     footer.append(&mode_toggle);
 
@@ -201,7 +212,7 @@ fn build_ui(app: &Application) {
 
     window.set_child(Some(&root));
 
-    // ── État partagé ────────────────────────────────────────────────
+    // ── Shared state ────────────────────────────────────────────────
     let mode = Rc::new(Cell::new(Mode::Static));
     let current_carousel: Rc<RefCell<Option<carousel::Carousel>>> = Rc::new(RefCell::new(None));
 
@@ -219,8 +230,8 @@ fn build_ui(app: &Application) {
         })
     };
 
-    // Construit le carrousel -- appelé une seule fois (plus de bascule de
-    // source à gérer, toujours Images/Wallpapers).
+    // Builds the carousel -- called once (no more source switching to
+    // handle, always Images/Wallpapers).
     {
         let carousel_mount = carousel_mount.clone();
         let current_carousel = current_carousel.clone();
@@ -235,38 +246,25 @@ fn build_ui(app: &Application) {
         let new_carousel = carousel::Carousel::new(cards);
         carousel_mount.append(&new_carousel);
 
-        // Ouvre directement sur le dernier fond appliqué en Statique
-        // (indépendant du mode courant -- passer en Diaporama ne doit pas
-        // faire perdre ce repère, cf. apply::last_static) plutôt que sur la
-        // première carte de la liste.
+        // Opens directly on the last wallpaper applied in Static mode
+        // (independent of the current mode -- switching to Dynamic must
+        // not lose this reference point, see apply::last_static) rather
+        // than the first card in the list.
         let initial_index = apply::last_static().and_then(|name| walls.iter().position(|w| w.name == name));
         if let Some(index) = initial_index {
             new_carousel.set_focus_index(index);
         }
 
-        // Vignettes en arrière-plan (thumbs.rs) -- ne bloque pas
-        // l'affichage sur le décodage de toute la collection. Chargées à
-        // partir de la carte initialement au focus et en éventail vers les
-        // deux côtés (même notion de distance que l'entrée en cascade, cf.
-        // carousel::ring_distance) : c'est elle qu'on regarde en premier,
-        // donc elle doit être la première à afficher sa vraie image plutôt
-        // que de suivre l'ordre alphabétique brut.
-        let focus_origin = initial_index.unwrap_or(0) as f64;
-        let len_f = walls.len() as f64;
-        let mut thumb_paths: Vec<(usize, std::path::PathBuf)> = walls
-            .iter()
-            .enumerate()
-            .map(|(i, w)| (i, w.path.clone()))
-            .collect();
-        thumb_paths.sort_by(|(i, _), (j, _)| {
-            let di = carousel::ring_distance(*i as f64, focus_origin, len_f);
-            let dj = carousel::ring_distance(*j as f64, focus_origin, len_f);
-            di.total_cmp(&dj)
-        });
-        let rx = thumbs::spawn_loader(thumb_paths);
+        // Thumbnails in the background (thumbs.rs) -- doesn't block
+        // display on decoding. Only the window around the focus (see
+        // THUMB_WINDOW_RADIUS) is requested, not the whole collection:
+        // `refresh_thumb_window` decides what to load/unload, called once
+        // here for the initial position then on every interactive focus
+        // change (see connect_target_changed below).
+        let (loader, thumb_rx) = thumbs::ThumbLoader::new();
         let carousel_for_thumbs = new_carousel.clone();
         glib::MainContext::default().spawn_local(async move {
-            while let Ok(result) = rx.recv().await {
+            while let Ok(result) = thumb_rx.recv().await {
                 if let Some(card) = carousel_for_thumbs.card_at(result.index) {
                     if let Some(tex) = result.texture {
                         card.set_texture(tex, result.orig_width, result.orig_height);
@@ -275,9 +273,71 @@ fn build_ui(app: &Application) {
             }
         });
 
-        // Entrée / clic sur la carte déjà focus : applique selon le mode
-        // courant, comme les étapes 5 (dynamique) et 21 (statique) de
-        // scripts/set_wallpaper.sh (cf. apply.rs).
+        // Indices currently loaded OR being decoded -- avoids
+        // re-requesting a card already in the window on every recompute,
+        // and serves as the list to walk to unload cards that fall out of
+        // it.
+        let loaded_thumbs: Rc<RefCell<HashSet<usize>>> = Rc::new(RefCell::new(HashSet::new()));
+
+        let refresh_thumb_window: Rc<dyn Fn(usize)> = {
+            let walls = walls.clone();
+            let carousel = new_carousel.clone();
+            let loaded_thumbs = loaded_thumbs.clone();
+            let loader = loader.clone();
+            Rc::new(move |focus: usize| {
+                let len = walls.len();
+                if len == 0 {
+                    return;
+                }
+                let len_f = len as f64;
+                // Sorted by distance to the focus (not just filtered) --
+                // the order of THIS vector is the order requests are sent
+                // in just below, hence the order thumbs.rs's WORKER_COUNT
+                // threads pick them up in: the focused card (and its
+                // closest neighbors) must appear first, not in an order
+                // dependent on a HashSet's hashing or the source folder's
+                // raw alphabetical sort.
+                let mut wanted_by_distance: Vec<usize> = (0..len)
+                    .filter(|&i| {
+                        carousel::ring_distance(i as f64, focus as f64, len_f)
+                            <= THUMB_WINDOW_RADIUS as f64
+                    })
+                    .collect();
+                wanted_by_distance.sort_by(|&a, &b| {
+                    let da = carousel::ring_distance(a as f64, focus as f64, len_f);
+                    let db = carousel::ring_distance(b as f64, focus as f64, len_f);
+                    da.total_cmp(&db)
+                });
+                let wanted: HashSet<usize> = wanted_by_distance.iter().copied().collect();
+
+                let mut loaded = loaded_thumbs.borrow_mut();
+                for &i in &wanted_by_distance {
+                    // `insert` returns true only if the index wasn't
+                    // already there -- neither loaded nor already queued.
+                    if loaded.insert(i) {
+                        loader.request(i, walls[i].path.clone());
+                    }
+                }
+                loaded.retain(|&i| {
+                    if wanted.contains(&i) {
+                        return true;
+                    }
+                    if let Some(card) = carousel.card_at(i) {
+                        card.clear_texture();
+                    }
+                    false
+                });
+            })
+        };
+        refresh_thumb_window(initial_index.unwrap_or(0));
+        {
+            let refresh_thumb_window = refresh_thumb_window.clone();
+            new_carousel.connect_target_changed(move |focus| refresh_thumb_window(focus));
+        }
+
+        // Enter / click on the already-focused card: applies according to
+        // the current mode, like steps 5 (dynamic) and 21 (static) of
+        // scripts/set_wallpaper.sh (see apply.rs).
         {
             let mode = mode.clone();
             let duration = duration.clone();
@@ -301,9 +361,9 @@ fn build_ui(app: &Application) {
                             .filter(|c| c.is_selected())
                             .map(|c| c.wallpaper().name.clone())
                             .collect();
-                        // Rien sélectionné -- diaporama sur toute la
-                        // source, comme le fallback de set_wallpaper.sh
-                        // quand $CHOSEN est vide.
+                        // Nothing selected -- slideshow over the whole
+                        // source, like set_wallpaper.sh's fallback when
+                        // $CHOSEN is empty.
                         let walls = if selected.is_empty() {
                             (0..carousel_for_activate.len())
                                 .filter_map(|i| carousel_for_activate.card_at(i))
@@ -323,8 +383,8 @@ fn build_ui(app: &Application) {
         *current_carousel.borrow_mut() = Some(new_carousel);
     }
 
-    // ── Bouton/Tab : bascule Statique ⇄ Diaporama -- juste un changement
-    // d'état + visibilité, jamais de rebuild (la source ne change pas) ───
+    // ── Button/Tab: toggles Static ⇄ Dynamic -- just a state + visibility
+    // change, never a rebuild (the source doesn't change) ───────────────
     let toggle_mode: Rc<dyn Fn()> = {
         let mode = mode.clone();
         let mode_toggle = mode_toggle.clone();
@@ -381,11 +441,11 @@ fn build_ui(app: &Application) {
                     if let Some(card) = c.card_at(idx) {
                         card.set_selected(true);
                     }
-                    // La sélection change la hauteur allouée à la carte
-                    // (cf. carousel.rs) -- il faut redemander un allocate
-                    // explicitement ici : le tick loop ne le fait plus tout
-                    // seul une fois posé (cf. sa doc), pour ne pas coûter
-                    // un relayout complet à chaque frame sans raison.
+                    // Selection changes the card's allocated height (see
+                    // carousel.rs) -- an allocate must be explicitly
+                    // requested here: the tick loop no longer does it on
+                    // its own once settled (see its doc), so as not to
+                    // cost a full relayout every frame for no reason.
                     c.queue_allocate();
                 }
                 update_counter();

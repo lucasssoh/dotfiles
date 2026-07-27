@@ -1,8 +1,8 @@
-# Orbit — palette, identique à waybar/style.css et rofi/share.rasi.
+# Orbit — palette, same as waybar/style.css and rofi/share.rasi.
 
-accent_primary   = "#4fefff"  # accent2 -- onglet actif, bordures "connecté", switch
-accent_secondary = "#4f9eff"  # accent  -- en-têtes de section
+accent_primary   = "#4fefff"  # accent2 -- active tab, "connected" borders, switch
+accent_secondary = "#4f9eff"  # accent  -- section headers
 background       = "#141414"  # background
 foreground       = "#f2f2f7"  # text
 destructive      = "#ff453a"  # urgent
-opacity           = 1.0        # panneau opaque -- comme waybar/swaync/rofi, pas d'effet "verre"
+opacity           = 1.0        # opaque panel -- like waybar/swaync/rofi, no "glass" effect

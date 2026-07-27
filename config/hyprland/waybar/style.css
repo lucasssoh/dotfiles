@@ -5,7 +5,7 @@
 @define-color background  #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
-@define-color overlay2    #505050; /* Nouvelle couleur vive bleu clair/blanc */
+@define-color overlay2    #505050; /* New bright light-blue/white color */
 @define-color text        #f2f2f7;
 @define-color accent      #4f9eff;
 @define-color accent2     #4fefff;
@@ -13,7 +13,7 @@
 @define-color play        #116611;
 
 /* =========================================================
-   GLOBAL & FACTORISATION DES STYLES
+   GLOBAL & SHARED STYLES
 ========================================================= */
 
 * {
@@ -31,7 +31,7 @@ window#waybar {
     padding: 0;
 }
 
-/* --- Couleur de fond globale pour tous les modules actifs --- */
+/* --- Global background color for all active modules --- */
 #custom-logo, #workspaces, #custom-gap, #window,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network,
 #bluetooth, #pulseaudio.output, #pulseaudio.input,
@@ -39,7 +39,7 @@ window#waybar {
     background: @background;
 }
 
-/* --- Uniquement les bordures Haut & Bas (2px @overlay2) --- */
+/* --- Top & bottom borders only (2px @overlay2) --- */
 #custom-logo, #workspaces, #custom-gap,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network,
 #bluetooth, #pulseaudio.output, #pulseaudio.input,
@@ -48,24 +48,24 @@ window#waybar {
     border-bottom: 2px solid @overlay2;
 }
 
-/* --- Bordures Haut & Bas pour Window et Mpris (@overlay) --- */
+/* --- Top & bottom borders for Window and Mpris (@overlay) --- */
 #window, #custom-apps {
     border-top: 2px solid @overlay;
     border-bottom: 2px solid @overlay;
 }
 
-/* --- FACTORISATION DES ARRONDIS (Border-Radius) --- */
-/* Extrémités gauches des blocs (Coins Gauches) */
+/* --- SHARED BORDER-RADIUS RULES --- */
+/* Left ends of blocks (left corners) */
 #custom-logo, #clock {
     border-radius: 4px 0 0 4px;
 }
 
-/* Extrémités droites des blocs (Coins Droits) */
+/* Right ends of blocks (right corners) */
 #custom-gap, #custom-power {
     border-radius: 0 4px 4px 0;
 }
 
-/* Blocs indépendants (Tous les coins arrondis) */
+/* Standalone blocks (all corners rounded) */
 #window{
     border-radius: 4px;
 }
@@ -85,7 +85,7 @@ window#waybar {
     padding-right: 4px;
 }
 
-/* Occupé mais pas actif (ni .active ni .empty) : couleur intermédiaire */
+/* Occupied but not active (neither .active nor .empty): intermediate color */
 #workspaces button {
     color: @text;
     padding: 0 4px;
@@ -93,12 +93,12 @@ window#waybar {
     border-radius: 2px;
 }
 
-/* Persistant vide : atténué */
+/* Empty persistent: dimmed */
 #workspaces button.empty {
     color: @muted;
 }
 
-/* Focus actuel : contraste fort, pastille pleine */
+/* Currently focused: strong contrast, solid pill */
 #workspaces button.active {
     color: @background;
     background: @accent2;
@@ -131,8 +131,8 @@ window#waybar.empty #window {
    CENTER MODULES
 ========================================================= */
 
-/* Juste une icône (indication qu'un son joue) -- titre/artiste et
-   contrôles complets sont dans swaync, pas ici. */
+/* Just an icon (indicating something is playing) -- title/artist and full
+   controls live in swaync, not here. */
 #mpris {
     background: transparent;
     color: @play;
@@ -164,43 +164,43 @@ window#waybar.empty #window {
 #custom-performance { padding: 0 10px; min-width: 20px; }
 
 #battery {
-    border-radius: 6px; /* Devient une pilule stylisée incrustée dans la ligne */
+    border-radius: 6px; /* Becomes a styled pill inset into the row */
     margin: 3px 6px;
     padding: 0 4px;
     min-width: 30px;
 }
 
-/* ── Groupe "écran" (display + scale + hdr) ──────────────
-   Les 3 modules forment un groupe visuel : encadré par une bordure
-   gauche (1er module) / droite (dernier). Icône devant : cf. plus bas
-   (GTK CSS ne supporte pas ::before sur ces widgets). */
+/* ── "Display" group (display + scale + hdr) ─────────────
+   The 3 modules form a visual group: framed by a left border (1st
+   module) / right border (last). Icon in front: see below (GTK CSS
+   doesn't support ::before on these widgets). */
 #custom-display { border-left: 2px solid @overlay2; }
 #custom-hdr     { border-right: 2px solid @overlay2; }
 
-/* ── Disposition d'écrans ─────────────────────────────── */
+/* ── Display layout ───────────────────────────────────── */
 #custom-display { padding: 0 10px; min-width: 20px; }
 #custom-display.display-both     { color: @text; }
-#custom-display.display-internal { color: @accent2; }  /* cyan : externe éteint */
-#custom-display.display-external { color: @accent2; }  /* cyan : interne éteint */
+#custom-display.display-internal { color: @accent2; }  /* cyan: external off */
+#custom-display.display-external { color: @accent2; }  /* cyan: internal off */
 
-/* ── Scale (par écran) ────────────────────────────────── */
+/* ── Scale (per screen) ───────────────────────────────── */
 #custom-scale { padding: 0 10px; min-width: 20px; color: @text; }
 
 /* ── HDR Toggle ───────────────────────────────────────── */
 #custom-hdr { padding: 0 10px; min-width: 20px; }
-#custom-hdr.hdr-on  { color: @accent2; }   /* cyan quand HDR actif */
+#custom-hdr.hdr-on  { color: @accent2; }   /* cyan when HDR active */
 #custom-hdr.hdr-off { color: @text; }
-#custom-hdr.hdr-na  { color: @muted; }      /* grisé : non compatible */
+#custom-hdr.hdr-na  { color: @muted; }      /* grayed out: not supported */
 /* ── Notifications (swaync) ───────────────────────────────── */
 #custom-notification { padding: 0 10px; min-width: 20px; }
 #custom-notification.notification,
 #custom-notification.dnd-notification,
 #custom-notification.inhibited-notification,
-#custom-notification.dnd-inhibited-notification { color: @accent2; }  /* notif en attente */
+#custom-notification.dnd-inhibited-notification { color: @accent2; }  /* notification pending */
 #custom-notification.dnd-none,
-#custom-notification.dnd-inhibited-none { color: @muted; }             /* DND actif, rien en attente */
+#custom-notification.dnd-inhibited-none { color: @muted; }             /* DND active, nothing pending */
 #custom-notification.none,
-#custom-notification.inhibited-none { color: @text; }                  /* rien en attente */
+#custom-notification.inhibited-none { color: @text; }                  /* nothing pending */
 
 #custom-power {
     color: rgb(255, 110, 110);

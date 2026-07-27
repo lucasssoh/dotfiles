@@ -6,9 +6,9 @@ RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer Kitty
+# 1. Install Kitty
 if command -v dnf &> /dev/null; then
-    # Kitty est dans les dépôts officiels de Fedora, pas besoin de COPR
+    # Kitty is in Fedora's official repos, no COPR needed
     sudo dnf install -y kitty
 elif command -v pacman &> /dev/null; then
     sudo pacman -S --noconfirm kitty
@@ -17,8 +17,8 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y kitty
 fi
 
-# 2. Liens symboliques
-# On récupère le chemin racine des dotfiles (2 niveaux au-dessus du script)
+# 2. Symlinks
+# Resolve the dotfiles root path (2 levels above this script)
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/kitty
 
@@ -31,8 +31,8 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-# Lier la config kitty.conf
-# Assure-toi que ton fichier kitty.conf est bien dans config/kitty/
+# Link the kitty.conf config
+# Make sure your kitty.conf file is in config/kitty/
 safe_link "$DOTFILES_DIR/config/kitty/kitty.conf" ~/.config/kitty/kitty.conf
 
 ok "Kitty configured successfully."

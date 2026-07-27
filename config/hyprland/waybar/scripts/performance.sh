@@ -1,14 +1,14 @@
 #!/bin/bash
 # =========================================================
-# performance.sh — module waybar affichant le profil d'alimentation
-# actif (performance/équilibré/économie), via power-profiles-daemon.
+# performance.sh — waybar module showing the active power profile
+# (performance/balanced/power-saver), via power-profiles-daemon.
 #
-#   performance.sh          -> JSON pour le module waybar (défaut, inchangé)
-#   performance.sh roue-gen -> régénère ~/.config/roue/wheels/powerprofile.toml
-#                               avec `active = true` sur le profil en cours,
-#                               juste avant que la roue ne s'ouvre (cf.
+#   performance.sh          -> JSON for the waybar module (default, unchanged)
+#   performance.sh roue-gen -> regenerates ~/.config/roue/wheels/powerprofile.toml
+#                               with `active = true` on the current profile,
+#                               right before the wheel opens (see
 #                               hypr/keybinds.lua, SUPER+SHIFT+Delete) --
-#                               même principe que display-layout.sh roue-gen.
+#                               same principle as display-layout.sh roue-gen.
 # =========================================================
 
 cmd_status() {
@@ -23,12 +23,12 @@ cmd_status() {
     echo "{\"text\": \"$icon\", \"tooltip\": \"Power profile: $label\\nClick: change\"}"
 }
 
-# L'état (quel profil est actif) vient de power-profiles-daemon, pas d'un
-# fichier figé du dépôt -- ce TOML n'a donc pas de version statique
-# versionnée (contrairement à power.toml), il est réécrit à chaque appui,
-# comme wheels/display.toml (cf. scripts/display-layout.sh::cmd_roue_gen).
-# `active = true` sur le secteur du profil courant affiche la bande d'état
-# sur la roue (cf. roue-src/src/wheel.rs).
+# The state (which profile is active) comes from power-profiles-daemon,
+# not a file frozen in the repo -- so this TOML has no versioned static
+# copy (unlike power.toml), it gets rewritten on every trigger, like
+# wheels/display.toml (see scripts/display-layout.sh::cmd_roue_gen).
+# `active = true` on the current profile's sector shows the state band
+# on the wheel (see roue-src/src/wheel.rs).
 cmd_roue_gen() {
     local profile active_performance="" active_balanced="" active_power_saver=""
     profile=$(powerprofilesctl get)

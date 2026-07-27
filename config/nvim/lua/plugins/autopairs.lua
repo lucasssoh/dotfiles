@@ -11,14 +11,14 @@ return {
                 lua = { "string" }, 
                 javascript = { "template_string" },
             },
-            -- On simplifie ici pour permettre la fermeture plus souvent
-            ignored_next_char = "[%w%.]", 
-            -- Force la fermeture même s'il y a des espaces après
-            enable_check_bracket_line = false, 
+            -- Simplified here to allow closing more often
+            ignored_next_char = "[%w%.]",
+            -- Force closing even if there are spaces after
+            enable_check_bracket_line = false,
         })
 
-        -- --- AJOUTER LES RÈGLES SPÉCIFIQUES ---
-        -- Cela force l'ajout de l'accolade même dans des conditions strictes
+        -- --- ADD SPECIFIC RULES ---
+        -- Forces the brace to be added even under strict conditions
         autopairs.add_rules({
           Rule("{ ", " }")
             :with_pair(function() return false end)
@@ -28,7 +28,7 @@ return {
             :use_key("}"),
         })
 
-        -- Intégration avec nvim-cmp (inchangé)
+        -- Integration with nvim-cmp (unchanged)
         local cmp_status, cmp = pcall(require, "cmp")
         if cmp_status then
             local cmp_autopairs = require("nvim-autopairs.completion.cmp")

@@ -1,14 +1,14 @@
-//! Widget `RoueWheel` : la roue de sélection radiale elle-même (dessin,
-//! survol souris/clavier, animation, confirmation). Générique sur la liste
-//! de secteurs reçue à la construction -- aucune connaissance de "power" ou
-//! "powerprofile" ici, c'est ce qui permet de réutiliser ce widget tel quel
-//! pour toute future roue (cf. config.rs).
+//! `RoueWheel` widget: the radial selection wheel itself (drawing,
+//! mouse/keyboard hover, animation, confirmation). Generic over the list
+//! of sectors received at construction -- no knowledge of "power" or
+//! "powerprofile" here, this is what allows this widget to be reused as-is
+//! for any future wheel (see config.rs).
 //!
-//! Dessiné entièrement en GSK (comme card.rs/carousel.rs dans Prisme) :
-//! chaque secteur est un polygone échantillonné le long de ses deux arcs
-//! (gsk::PathBuilder n'a pas de primitive d'arc dédiée dans cette version),
-//! rempli via push_fill/append_color, exactement la même technique que le
-//! parallélogramme de card.rs -- juste avec plus de points.
+//! Drawn entirely in GSK (like card.rs/carousel.rs in Prisme): each sector
+//! is a polygon sampled along its two arcs (gsk::PathBuilder has no
+//! dedicated arc primitive in this version), filled via
+//! push_fill/append_color, exactly the same technique as card.rs's
+//! parallelogram -- just with more points.
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -22,49 +22,49 @@ use crate::color;
 use crate::config::Segment;
 use crate::icons::{self, IconPair};
 
-/// Vitesse de convergence de l'interpolation exponentielle (ouverture en
-/// éventail + surlignage du secteur survolé) -- même valeur et même
-/// raisonnement que carousel.rs (~220ms pour converger à 95%, indépendant du
-/// taux de rafraîchissement grâce au dt réel du frame clock).
+/// Convergence speed of the exponential interpolation (fan-out opening +
+/// hovered sector highlight) -- same value and reasoning as carousel.rs
+/// (~220ms to converge at 95%, independent of refresh rate thanks to the
+/// frame clock's real dt).
 const EASE_RATE: f64 = 14.0;
 
 const WHEEL_SIZE_PX: i32 = 520;
 const OUTER_MARGIN_PX: f64 = 24.0;
-/// Moyeu plus généreux -- ce qui compacte d'autant la bande occupée par les
-/// secteurs entre lui et le bord extérieur (moins de "vide" radial dans
-/// chaque secteur, qui ne contient plus qu'un logo).
+/// A more generous hub -- which correspondingly compacts the band occupied
+/// by sectors between it and the outer edge (less radial "empty space" in
+/// each sector, which now only holds a logo).
 const INNER_RADIUS_RATIO: f64 = 0.56;
-/// Largeur totale (px, mesurée perpendiculairement au rayon de séparation)
-/// de l'écart entre deux secteurs -- PAS un angle constant : cf. `wedge_path`
-/// pour pourquoi (un angle constant fait converger les deux bords en pointe
-/// au centre, ce qu'on veut justement éviter).
+/// Total width (px, measured perpendicular to the separating radius) of
+/// the gap between two sectors -- NOT a constant angle: see `wedge_path`
+/// for why (a constant angle makes both edges converge to a point at the
+/// center, which is exactly what we want to avoid).
 const WEDGE_GAP_PX: f64 = 10.0;
 const HOVER_RADIUS_BOOST_PX: f64 = 12.0;
-/// Rayon (px) autour du centre où le survol souris est ignoré -- évite un
-/// angle qui saute de façon erratique quand le curseur passe tout près du
-/// centre (atan2(0,0) n'est pas défini de façon stable), même rôle qu'une
-/// zone morte de joystick analogique.
+/// Radius (px) around the center where mouse hover is ignored -- avoids an
+/// angle that jumps erratically when the cursor passes very close to the
+/// center (atan2(0,0) isn't stably defined), same role as an analog
+/// joystick's dead zone.
 const HOVER_DEADZONE_PX: f64 = 28.0;
 const ARC_STEPS: usize = 20;
-/// Taille d'affichage (px) du logo SVG dans un secteur -- grandit un peu
-/// avec `t` au survol, comme l'ancien rendu en glyphe. `ICON_FONT_PX` reste
-/// utilisée pour le repli en texte brut (cf. `draw_icon` dans snapshot()) --
-/// secteurs de confirmation, ou icône introuvable/invalide.
+/// Display size (px) of the SVG logo in a sector -- grows a bit with `t`
+/// on hover, like the old glyph rendering. `ICON_FONT_PX` remains used for
+/// the plain-text fallback (see `draw_icon` in snapshot()) -- confirmation
+/// sectors, or a missing/invalid icon.
 const ICON_SIZE_PX: f64 = 34.0;
 const ICON_HOVER_GROW_PX: f64 = 6.0;
 const ICON_FONT_PX: f64 = 32.0;
 const HUB_ICON_SIZE_PX: f64 = 46.0;
 const HUB_LABEL_FONT_PX: f64 = 15.0;
-/// Index des secteurs synthétiques du sous-menu de confirmation (cf.
-/// `enter_confirm`) -- Annuler en premier (position par défaut, cf. sa doc),
-/// Confirmer en second.
+/// Indices of the confirmation sub-menu's synthetic sectors (see
+/// `enter_confirm`) -- Cancel first (default position, see its doc),
+/// Confirm second.
 const CANCEL_INDEX: usize = 0;
 const CONFIRM_INDEX: usize = 1;
 const HUB_BORDER_WIDTH_PX: f32 = 3.0;
-/// Bande blanche marquant le secteur "état actuel du système" (cf. champ
-/// TOML `active`, ex. le profil d'énergie en cours) -- tracée légèrement EN
-/// DEÇÀ du bord extérieur (ACTIVE_BAND_INSET_PX), pas pile dessus, pour
-/// rester visuellement DANS le secteur coloré plutôt qu'à cheval sur son
+/// White band marking the "current system state" sector (see the TOML
+/// `active` field, e.g. the current power profile) -- drawn slightly
+/// INSIDE the outer edge (ACTIVE_BAND_INSET_PX), not right on it, to stay
+/// visually WITHIN the colored sector rather than straddling its
 /// anti-aliasing.
 const ACTIVE_BAND_WIDTH_PX: f32 = 4.0;
 const ACTIVE_BAND_INSET_PX: f64 = 7.0;
@@ -74,42 +74,42 @@ mod imp {
 
     #[derive(Default)]
     pub struct Wheel {
-        /// Secteurs de la roue racine, jamais modifiés après construction --
-        /// sert à revenir en arrière quand on quitte le sous-menu de
-        /// confirmation (cf. `Wheel::exit_confirm`).
+        /// Root wheel sectors, never modified after construction -- used to
+        /// go back when leaving the confirmation sub-menu (see
+        /// `Wheel::exit_confirm`).
         pub root_segments: RefCell<Vec<Segment>>,
-        /// Secteurs effectivement affichés/survolés -- identiques à
-        /// `root_segments`, sauf pendant une confirmation où ils valent
-        /// temporairement [Confirmer, Annuler].
+        /// Sectors actually displayed/hovered -- identical to
+        /// `root_segments`, except during a confirmation where they
+        /// temporarily hold [Confirm, Cancel].
         pub segments: RefCell<Vec<Segment>>,
-        /// Textures rasterisées une fois à la construction (cf.
-        /// `RoueWheel::new`), indexées par le champ `icon` des secteurs
-        /// RACINE uniquement -- les secteurs synthétiques Confirmer/Annuler
-        /// (cf. `enter_confirm`) n'y figurent jamais, `snapshot()` retombe
-        /// alors sur un rendu texte brut pour eux (cf. `draw_icon`).
+        /// Textures rasterized once at construction (see `RoueWheel::new`),
+        /// indexed by the `icon` field of ROOT sectors only -- the
+        /// synthetic Confirm/Cancel sectors (see `enter_confirm`) never
+        /// appear in it, `snapshot()` then falls back to plain text
+        /// rendering for them (see `draw_icon`).
         pub icons: RefCell<HashMap<String, IconPair>>,
-        /// Index (dans `root_segments`) du secteur marqué `active = true`
-        /// dans le TOML, s'il y en a un -- calculé une fois à la
-        /// construction (cf. `RoueWheel::new`), jamais recalculé ensuite
-        /// (une roue ne change pas d'état pendant qu'elle est affichée,
-        /// c'est justement pour ça que le script générateur la régénère à
-        /// CHAQUE ouverture, cf. wheels/powerprofile côté script). Ignoré
-        /// pendant une confirmation (`confirming`) : les secteurs affichés
-        /// sont alors Confirm/Cancel, pas les secteurs racine.
+        /// Index (in `root_segments`) of the sector marked `active = true`
+        /// in the TOML, if any -- computed once at construction (see
+        /// `RoueWheel::new`), never recomputed afterward (a wheel doesn't
+        /// change state while it's displayed, which is exactly why the
+        /// generator script regenerates it on EVERY opening, see
+        /// wheels/powerprofile on the script side). Ignored during a
+        /// confirmation (`confirming`): the displayed sectors are then
+        /// Confirm/Cancel, not the root sectors.
         pub active_index: Cell<Option<usize>>,
         pub hovered: Cell<usize>,
-        /// A-t-on visé au moins une fois (souris hors zone morte, flèche,
-        /// chiffre) depuis l'ouverture de ce niveau de roue (racine ou
-        /// sous-menu de confirmation) -- cf. `activate_hovered` : sans
-        /// mouvement, valider n'exécute JAMAIS le secteur par défaut
-        /// (index 0), ça annule à la place.
+        /// Has aiming happened at least once (mouse outside the dead zone,
+        /// arrow key, digit) since this wheel level opened (root or
+        /// confirmation sub-menu) -- see `activate_hovered`: without
+        /// movement, confirming NEVER runs the default sector (index 0),
+        /// it cancels instead.
         pub moved: Cell<bool>,
-        /// 0 = fermée, 1 = pleinement ouverte -- anime le rayon ET l'alpha
-        /// de tout ce qui est dessiné (effet d'éventail à l'ouverture).
+        /// 0 = closed, 1 = fully open -- animates BOTH the radius and the
+        /// alpha of everything drawn (fan-out effect on opening).
         pub open_progress: Cell<f64>,
-        /// 0 = secteur survolé pas encore mis en avant, 1 = surlignage
-        /// pleinement appliqué -- repart de 0 à chaque changement de
-        /// secteur survolé (cf. `set_hover_index`).
+        /// 0 = hovered sector not yet brought forward, 1 = highlight fully
+        /// applied -- resets to 0 on every hovered-sector change (see
+        /// `set_hover_index`).
         pub hover_anim: Cell<f64>,
         pub confirming: Cell<bool>,
         pub pending: RefCell<Option<Segment>>,
@@ -128,11 +128,11 @@ mod imp {
     impl ObjectImpl for Wheel {}
 
     impl WidgetImpl for Wheel {
-        // Taille fixe et constante (contrairement à Card/Carousel dans
-        // Prisme) : rien ici ne change la taille ALLOUÉE au widget d'une
-        // frame à l'autre, seul ce qui est dessiné dedans (rayon, alpha)
-        // s'anime -- measure() n'a donc pas besoin du contournement
-        // "(0,0,-1,-1)" utilisé là-bas pour éviter un queue_resize en boucle.
+        // Fixed, constant size (unlike Card/Carousel in Prisme): nothing
+        // here changes the size ALLOCATED to the widget from one frame to
+        // the next, only what's drawn inside it (radius, alpha) animates
+        // -- measure() therefore doesn't need the "(0,0,-1,-1)" workaround
+        // used there to avoid a queue_resize loop.
         fn measure(&self, _orientation: gtk4::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
             (WHEEL_SIZE_PX, WHEEL_SIZE_PX, -1, -1)
         }
@@ -163,21 +163,20 @@ mod imp {
             let hover_t = self.hover_anim.get() as f32;
 
             let confirming = self.confirming.get();
-            // Ignoré pendant une confirmation -- cf. la doc du champ.
+            // Ignored during a confirmation -- see the field's doc.
             let active_index = if confirming { None } else { self.active_index.get() };
 
             for (i, seg) in segments.iter().enumerate() {
                 let t = if i == hovered { hover_t } else { 0.0 };
-                // Teinte de CE secteur -- son champ TOML `accent` (cyan par
-                // défaut si absent, cf. color.rs), sauf le secteur
-                // "Confirmer" du sous-menu de confirmation qui force le
-                // rouge à la construction (cf. `enter_confirm`) plutôt que
-                // par un cas spécial ici : un seul mécanisme pour les deux.
+                // This sector's tint -- its TOML `accent` field (cyan by
+                // default if absent, see color.rs), except the "Confirm"
+                // sector of the confirmation sub-menu which forces red at
+                // construction time (see `enter_confirm`) rather than
+                // through a special case here: a single mechanism for both.
                 let accent = color::resolve(seg.accent.as_deref()).rgb;
-                // Angles "purs" de la découpe, SANS rognage -- l'écart entre
-                // secteurs est désormais géré à largeur constante en pixels
-                // à l'intérieur de wedge_path (cf. sa doc), pas en rognant
-                // ces angles.
+                // "Pure" cut angles, with NO trimming -- the gap between
+                // sectors is now handled at constant pixel width inside
+                // wedge_path (see its doc), not by trimming these angles.
                 let angle_left = base + i as f64 * angle_per;
                 let angle_right = base + (i + 1) as f64 * angle_per;
                 let boost = HOVER_RADIUS_BOOST_PX * t as f64 * open;
@@ -200,11 +199,11 @@ mod imp {
                     continue;
                 }
 
-                // Bande d'état actuel -- visible même sans survol (contrairement
-                // au surlignage `t`), pour repérer l'état appliqué d'un coup
-                // d'oeil avant même de viser. Suit le même rayon EXTÉRIEUR que le
-                // secteur (donc son `boost` s'il est aussi survolé), juste
-                // légèrement en retrait (ACTIVE_BAND_INSET_PX).
+                // Current-state band -- visible even without hover (unlike
+                // the `t` highlight), to spot the applied state at a
+                // glance even before aiming. Follows the same OUTER radius
+                // as the sector (so its `boost` too if it's also hovered),
+                // just slightly inset (ACTIVE_BAND_INSET_PX).
                 if active_index == Some(i) {
                     let band_radius = (outer_radius + boost - ACTIVE_BAND_INSET_PX).max(inner_radius + 1.0);
                     let band_path = outer_arc_path(cx, cy, band_radius, angle_left, angle_right, WEDGE_GAP_PX * open);
@@ -219,15 +218,15 @@ mod imp {
                 let px = cx + mid_radius * mid_angle.cos();
                 let py = cy + mid_radius * mid_angle.sin();
 
-                // Juste le logo dans le secteur -- le libellé texte ne
-                // s'affiche qu'au moyeu central (cf. plus bas), pas ici.
+                // Just the logo in the sector -- the text label is only
+                // shown in the central hub (see below), not here.
                 let size = ICON_SIZE_PX + t as f64 * ICON_HOVER_GROW_PX;
                 draw_icon(&widget, snapshot, &self.icons.borrow(), seg, px, py, size, t, open);
             }
 
-            // Moyeu central -- affiche icône + label du secteur actuellement
-            // survolé, lecture immédiate du choix en cours (comme le nom
-            // d'arme centré dans une roue de jeu).
+            // Central hub -- shows the icon + label of the currently
+            // hovered sector, an immediate readout of the current choice
+            // (like the weapon name centered in a game's wheel).
             if open > 0.02 {
                 let hub_path = circle_path(cx, cy, inner_radius);
                 snapshot.push_fill(&hub_path, gsk::FillRule::Winding);
@@ -241,14 +240,13 @@ mod imp {
                 if let Some(seg) = segments.get(hovered) {
                     let hub_accent = color::resolve(seg.accent.as_deref()).rgb;
 
-                    // Bordure colorée du moyeu -- uniquement dans le
-                    // sous-menu de confirmation, et uniquement quand le
-                    // survol est sur "Confirmer" (jamais "Annuler") :
-                    // reprend la teinte du secteur survolé (rouge par
-                    // construction, cf. `enter_confirm`), signal visuel
-                    // fort qu'un relâchement/clic là va exécuter une action
-                    // destructive (reboot, poweroff, ...), lisible même
-                    // sans regarder les secteurs eux-mêmes.
+                    // Colored hub border -- only in the confirmation
+                    // sub-menu, and only when hovering "Confirm" (never
+                    // "Cancel"): picks up the hovered sector's tint (red by
+                    // construction, see `enter_confirm`), a strong visual
+                    // signal that a release/click there will run a
+                    // destructive action (reboot, poweroff, ...), readable
+                    // even without looking at the sectors themselves.
                     let hub_danger = confirming && hovered == CONFIRM_INDEX;
                     if hub_danger {
                         let stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
@@ -266,24 +264,25 @@ mod imp {
                     hub_label.set_font_description(Some(&hub_label_font));
                     let (lw, lh) = hub_label.pixel_size();
 
-                    // Bloc icône+label vertical -- hauteur d'icône nominale
-                    // fixe pour la mise en page (HUB_ICON_SIZE_PX), que le
-                    // rendu réel soit une texture SVG ou (repli) un glyphe
-                    // Pango d'une taille légèrement différente : ça n'a pas
-                    // besoin d'être pixel-parfait pour un repli rare.
+                    // Vertical icon+label block -- fixed nominal icon
+                    // height for layout purposes (HUB_ICON_SIZE_PX),
+                    // whether the actual rendering is an SVG texture or
+                    // (fallback) a Pango glyph of a slightly different
+                    // size: it doesn't need to be pixel-perfect for a rare
+                    // fallback.
                     const GAP: f64 = 6.0;
                     let block_h = HUB_ICON_SIZE_PX + GAP + lh as f64;
                     let icon_cy = cy - block_h / 2.0 + HUB_ICON_SIZE_PX / 2.0;
 
-                    // Toujours en accent plein (t=1) -- c'est le secteur
-                    // actuellement retenu, pas un survol animé de plus.
-                    // Reprend automatiquement la teinte propre du secteur
-                    // (vert/jaune/cyan/rouge/...), même mécanisme que
-                    // l'anneau : aucun cas spécial ici.
+                    // Always at full accent (t=1) -- this is the currently
+                    // selected sector, not one more animated hover.
+                    // Automatically picks up the sector's own tint
+                    // (green/yellow/cyan/red/...), same mechanism as the
+                    // ring: no special case here.
                     draw_icon(&widget, snapshot, &self.icons.borrow(), seg, cx, icon_cy, HUB_ICON_SIZE_PX, 1.0, open);
 
-                    // Libellé du moyeu dans la même teinte que l'icône --
-                    // cohérent avec l'anneau plutôt qu'un blanc neutre fixe.
+                    // Hub label in the same tint as the icon -- consistent
+                    // with the ring rather than a fixed neutral white.
                     let label_color = gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32);
                     snapshot.save();
                     snapshot.translate(&graphene::Point::new(
@@ -313,8 +312,8 @@ mod imp {
             let ha = self.hover_anim.get();
             let op_moving = (1.0 - op).abs() > 0.0005;
             let ha_moving = (1.0 - ha).abs() > 0.0005;
-            // Rien à animer -- ne redemande pas de frame, comme
-            // carousel.rs::tick (coût quasi nul une fois stabilisé).
+            // Nothing to animate -- doesn't request another frame, like
+            // carousel.rs::tick (near-zero cost once stabilized).
             if !op_moving && !ha_moving {
                 return;
             }
@@ -333,13 +332,14 @@ mod imp {
     }
 }
 
-/// Dessine le logo d'un secteur centré en `(cx, cy)`, carré de côté `size`
-/// -- texture SVG pré-rasterisée si `seg` en a une dans `icons` (cf.
-/// icons.rs, indexée par `icons::cache_key`), sinon repli en glyphe Pango
-/// brut (secteurs de confirmation Confirmer/Annuler, ou icône introuvable/
-/// invalide -- cf. `icons::load`). `t` anime un fondu vers la couleur
-/// accent DU SECTEUR au survol (0 = couleur normale, 1 = accent plein,
-/// cf. `color::resolve`) ; `open` multiplie l'alpha (fondu à l'ouverture).
+/// Draws a sector's logo centered at `(cx, cy)`, a square of side `size`
+/// -- pre-rasterized SVG texture if `seg` has one in `icons` (see
+/// icons.rs, indexed by `icons::cache_key`), otherwise falls back to a
+/// plain Pango glyph (synthetic Confirm/Cancel sectors, or a
+/// missing/invalid icon -- see `icons::load`). `t` animates a crossfade
+/// toward the SECTOR'S accent color on hover (0 = normal color, 1 = full
+/// accent, see `color::resolve`); `open` multiplies the alpha (fade-in on
+/// opening).
 fn draw_icon(
     widget: &RoueWheel,
     snapshot: &gtk4::Snapshot,
@@ -358,10 +358,10 @@ fn draw_icon(
             size as f32,
             size as f32,
         );
-        // Texture "normale" en base, texture "accent" (déjà baked dans LA
-        // couleur de ce secteur, cf. icons::load) fondue par-dessus avec
-        // `t` -- crossfade entre deux rasters plutôt qu'une recoloration
-        // GPU par color-matrix.
+        // "Normal" texture as the base, "accent" texture (already baked in
+        // THIS sector's color, see icons::load) crossfaded on top with
+        // `t` -- crossfade between two rasters rather than a GPU
+        // color-matrix recolor.
         draw_texture(snapshot, &pair.normal, &rect, open);
         if t > 0.001 {
             draw_texture(snapshot, &pair.accent, &rect, open * t as f64);
@@ -369,9 +369,9 @@ fn draw_icon(
         return;
     }
 
-    // Repli texte -- secteurs Confirmer/Annuler synthétiques (pas de
-    // fichier SVG associé, cf. `enter_confirm`), ou icône introuvable/
-    // invalide (cf. `icons::load`).
+    // Text fallback -- synthetic Confirm/Cancel sectors (no associated SVG
+    // file, see `enter_confirm`), or a missing/invalid icon (see
+    // `icons::load`).
     let accent = color::resolve(seg.accent.as_deref()).rgb;
     let color = text_color(t, open as f32, accent);
     let mut font = pango::FontDescription::new();
@@ -401,23 +401,23 @@ fn draw_texture(snapshot: &gtk4::Snapshot, texture: &gdk::Texture, rect: &graphe
     }
 }
 
-/// Polygone échantillonné approximant un secteur d'anneau (arc extérieur,
-/// puis arc intérieur en sens inverse, ou un simple sommet au centre si
-/// `inner_r` est ~0) -- même technique que `parallelogram_path` dans
-/// card.rs (PathBuilder + move_to/line_to/close), avec un nombre de points
-/// fixe (`ARC_STEPS`) plutôt qu'une primitive d'arc dédiée.
+/// Sampled polygon approximating a ring sector (outer arc, then inner arc
+/// in reverse, or a plain vertex at the center if `inner_r` is ~0) -- same
+/// technique as `parallelogram_path` in card.rs (PathBuilder +
+/// move_to/line_to/close), with a fixed number of points (`ARC_STEPS`)
+/// rather than a dedicated arc primitive.
 ///
-/// `angle_left`/`angle_right` sont les angles PURS de la découpe (la ligne
-/// imaginaire qui part du centre, sans rognage) -- l'écart avec le secteur
-/// voisin n'est PAS créé en rognant ces angles (ce qui ferait converger les
-/// deux bords en pointe exactement au centre, formant un angle entre les
-/// deux découpes voisines -- le défaut signalé). Il est créé en décalant
-/// chaque bord PERPENDICULAIREMENT à sa propre ligne imaginaire, de
-/// `gap_px / 2` de chaque côté : les deux bords qui bornent un même écart
-/// restent alors des droites parallèles entre elles (parallèles à la ligne
-/// imaginaire du bord commun), quel que soit le rayon -- exactement le
-/// tracé "deux lignes parallèles à côté de la ligne imaginaire" demandé,
-/// plutôt que deux rayons qui se rejoignent au centre.
+/// `angle_left`/`angle_right` are the cut's PURE angles (the imaginary
+/// line starting from the center, with no trimming) -- the gap with the
+/// neighboring sector is NOT created by trimming these angles (which would
+/// make both edges converge to a point exactly at the center, forming an
+/// angle between the two neighboring cuts -- the reported flaw). It's
+/// created by offsetting each edge PERPENDICULAR to its own imaginary
+/// line, by `gap_px / 2` on each side: the two edges bounding a given gap
+/// then remain straight lines parallel to each other (parallel to the
+/// shared edge's imaginary line), whatever the radius -- exactly the "two
+/// parallel lines next to the imaginary line" layout that was asked for,
+/// rather than two radii that meet at the center.
 fn wedge_path(
     cx: f64,
     cy: f64,
@@ -463,23 +463,23 @@ fn wedge_path(
     builder.to_path()
 }
 
-/// Angle et rayon EXACTS du point du rayon `theta` (longueur `r`) décalé
-/// perpendiculairement de `offset` (positif = vers les angles croissants) --
-/// identité géométrique directe (triangle rectangle rayon/perpendiculaire),
-/// jamais un atan2(y,x) sur des coordonnées cartésiennes : ça évite tout
-/// repli d'angle à ±π, y compris pour les derniers secteurs dont
-/// `angle_right` dépasse 2π en valeur brute (cf. `base` dans snapshot()).
-/// Partagé par `wedge_path` (bords du secteur) et `outer_arc_path` (bande
-/// d'état actif) -- les deux doivent rester alignés sur le même écart.
+/// EXACT angle and radius of the point on ray `theta` (length `r`) offset
+/// perpendicularly by `offset` (positive = toward increasing angles) --
+/// direct geometric identity (right triangle radius/perpendicular), never
+/// an atan2(y,x) over cartesian coordinates: this avoids any angle wrap at
+/// ±π, including for the last sectors whose `angle_right` exceeds 2π in
+/// raw value (see `base` in snapshot()). Shared by `wedge_path` (sector
+/// edges) and `outer_arc_path` (active-state band) -- both must stay
+/// aligned on the same gap.
 fn offset_ray(theta: f64, r: f64, offset: f64) -> (f64, f64) {
     (theta + offset.atan2(r), r.hypot(offset))
 }
 
-/// Simple arc (PAS un secteur fermé, contrairement à `wedge_path`) le long
-/// d'un cercle de rayon `radius`, décalé du même `gap_px` que les bords du
-/// secteur -- sert de tracé à la bande d'état actif (cf.
-/// ACTIVE_BAND_WIDTH_PX), pour qu'elle reste alignée sur les bords
-/// visibles du secteur plutôt que de les déborder.
+/// Plain arc (NOT a closed sector, unlike `wedge_path`) along a circle of
+/// radius `radius`, offset by the same `gap_px` as the sector edges --
+/// used as the active-state band's path (see ACTIVE_BAND_WIDTH_PX), so it
+/// stays aligned with the sector's visible edges rather than overflowing
+/// past them.
 fn outer_arc_path(cx: f64, cy: f64, radius: f64, angle_left: f64, angle_right: f64, gap_px: f64) -> gsk::Path {
     let half_gap = (gap_px / 2.0).max(0.0);
     let (a_l, r_l) = offset_ray(angle_left, radius, half_gap);
@@ -518,15 +518,15 @@ fn circle_path(cx: f64, cy: f64, r: f64) -> gsk::Path {
     builder.to_path()
 }
 
-/// Couleur de remplissage d'un secteur -- interpole du gris neutre vers une
-/// teinte sombre teintée avec `accent` (la couleur RÉSOLUE de ce secteur,
-/// cf. `color::resolve` -- cyan par défaut, vert/jaune/rouge/... si le TOML
-/// le précise) avec `t` (surlignage du survol), jamais l'accent plein :
-/// reste un fond de secteur, pas un bouton plein couleur. `open` multiplie
-/// l'alpha (fondu à l'ouverture). `MIX` fixe la dose d'accent mélangée au
-/// gris de fond -- une formule générique plutôt qu'une constante par teinte,
-/// pour rester valable quelle que soit la couleur (cf. sa doc dans
-/// color.rs) : un nombre de couleurs non borné, pas juste cyan/rouge.
+/// A sector's fill color -- interpolates from neutral gray to a dark shade
+/// tinted with `accent` (this sector's RESOLVED color, see
+/// `color::resolve` -- cyan by default, green/yellow/red/... if the TOML
+/// specifies it) with `t` (hover highlight), never the full accent: stays
+/// a sector background, not a solid-color button. `open` multiplies the
+/// alpha (fade-in on opening). `MIX` sets the dose of accent blended into
+/// the background gray -- a generic formula rather than a per-tint
+/// constant, to stay valid whatever the color (see its doc in color.rs):
+/// an unbounded number of colors, not just cyan/red.
 fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     const MIX: f32 = 0.20;
     let base = (0.145_f32, 0.145, 0.153);
@@ -539,8 +539,8 @@ fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     )
 }
 
-/// Couleur du texte/icône d'un secteur -- blanc cassé au repos, plein
-/// `accent` (couleur résolue de ce secteur) une fois survolé (`t` -> 1).
+/// A sector's text/icon color -- off-white at rest, full `accent` (this
+/// sector's resolved color) once hovered (`t` -> 1).
 fn text_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     let base = (0.949_f32, 0.949, 0.969);
     gdk::RGBA::new(
@@ -552,31 +552,30 @@ fn text_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
 }
 
 glib::wrapper! {
-    /// Roue de sélection radiale générique -- toute la logique vit dans
-    /// `imp::Wheel` (pattern subclass GObject standard, comme Card/Carousel
-    /// dans Prisme).
+    /// Generic radial selection wheel -- all the logic lives in
+    /// `imp::Wheel` (standard GObject subclass pattern, like Card/Carousel
+    /// in Prisme).
     pub struct RoueWheel(ObjectSubclass<imp::Wheel>) @extends gtk4::Widget;
 }
 
 impl RoueWheel {
-    /// Construit la roue avec ses secteurs racine et démarre la boucle
-    /// d'animation (éventail à l'ouverture + surlignage du survol).
+    /// Builds the wheel with its root sectors and starts the animation
+    /// loop (fan-out on opening + hover highlight).
     pub fn new(segments: Vec<Segment>) -> Self {
         let wheel: Self = glib::Object::builder().build();
-        // Pas de hexpand/vexpand/halign/valign ici -- le centrage du bloc
-        // roue+sidebar sur l'écran est géré par le Box racine dans main.rs
-        // (halign/valign=Center dessus, la roue garde juste sa taille fixe
-        // via measure()), pas par la roue elle-même.
+        // No hexpand/vexpand/halign/valign here -- centering the
+        // wheel+sidebar block on screen is handled by the root Box in
+        // main.rs (halign/valign=Center on it, the wheel just keeps its
+        // fixed size via measure()), not by the wheel itself.
 
-        // Rasterisées une fois ici, à partir des seuls secteurs RACINE --
-        // les secteurs synthétiques Confirmer/Annuler (cf. `enter_confirm`)
-        // n'ont pas de fichier associé, `draw_icon` retombe sur du texte
-        // brut pour eux.
+        // Rasterized once here, from the ROOT sectors only -- the
+        // synthetic Confirm/Cancel sectors (see `enter_confirm`) have no
+        // associated file, `draw_icon` falls back to plain text for them.
         *wheel.imp().icons.borrow_mut() = icons::load(&segments);
 
-        // Au plus un secteur `active = true` -- calculé une seule fois ici
-        // (cf. la doc du champ dans imp::Wheel), avant que `segments` ne
-        // soit déplacé plus bas.
+        // At most one `active = true` sector -- computed once here (see
+        // the field's doc in imp::Wheel), before `segments` gets moved
+        // below.
         wheel.imp().active_index.set(segments.iter().position(|s| s.active));
 
         *wheel.imp().root_segments.borrow_mut() = segments.clone();
@@ -593,10 +592,11 @@ impl RoueWheel {
         wheel
     }
 
-    /// Change le secteur survolé vers celui pointé par `(x, y)` (coordonnées
-    /// relatives au widget, ex. depuis un EventControllerMotion) -- calcule
-    /// l'angle du point par rapport au centre, comme un stick analogique.
-    /// Ignoré si le point est trop proche du centre (cf. HOVER_DEADZONE_PX).
+    /// Changes the hovered sector to the one pointed at by `(x, y)`
+    /// (coordinates relative to the widget, e.g. from an
+    /// EventControllerMotion) -- computes the point's angle relative to
+    /// the center, like an analog stick. Ignored if the point is too close
+    /// to the center (see HOVER_DEADZONE_PX).
     pub fn hover_from_point(&self, x: f64, y: f64) {
         let w = self.width() as f64;
         let h = self.height() as f64;
@@ -620,7 +620,7 @@ impl RoueWheel {
         self.set_hover_index(index);
     }
 
-    /// Déplace le survol de `delta` secteurs (navigation clavier).
+    /// Moves the hover by `delta` sectors (keyboard navigation).
     pub fn move_hover(&self, delta: i32) {
         let n = self.imp().segments.borrow().len();
         if n == 0 {
@@ -631,17 +631,17 @@ impl RoueWheel {
         self.set_hover_index(next);
     }
 
-    /// Survole directement le secteur `index` (accès direct au clavier par
-    /// chiffre, ou calcul d'angle depuis la souris).
+    /// Hovers sector `index` directly (direct keyboard access by digit, or
+    /// angle computed from the mouse).
     pub fn set_hover_index(&self, index: usize) {
         let n = self.imp().segments.borrow().len();
         if n == 0 || index >= n {
             return;
         }
-        // Marqué même si `index` égale déjà le survol courant (ex. viser
-        // délibérément le secteur 0, qui est aussi la valeur par défaut) --
-        // cf. `activate_hovered` : c'est un vrai geste de visée qui doit
-        // compter, pas seulement un CHANGEMENT d'indice.
+        // Marked even if `index` already equals the current hover (e.g.
+        // deliberately aiming at sector 0, which is also the default
+        // value) -- see `activate_hovered`: this is a real aiming gesture
+        // that must count, not just an index CHANGE.
         self.imp().moved.set(true);
         if self.imp().hovered.get() != index {
             self.imp().hovered.set(index);
@@ -650,18 +650,18 @@ impl RoueWheel {
         }
     }
 
-    /// Valide le secteur actuellement survolé. Retourne `true` si
-    /// l'appelant doit fermer la fenêtre maintenant (action lancée, ou
-    /// annulation), `false` si la roue doit rester ouverte (bascule sur/
-    /// depuis le sous-menu Confirmer/Annuler).
+    /// Confirms the currently hovered sector. Returns `true` if the caller
+    /// should close the window now (action launched, or cancellation),
+    /// `false` if the wheel should stay open (switching to/from the
+    /// Confirm/Cancel sub-menu).
     ///
-    /// Si aucune visée n'a eu lieu depuis l'ouverture de ce niveau (racine
-    /// ou sous-menu -- cf. `moved`), valider équivaut à annuler plutôt qu'à
-    /// choisir le secteur par défaut (index 0) : sans ce garde-fou, un
-    /// simple tap de la touche qui ouvre la roue (appui+relâchement quasi
-    /// immédiat, souris pas encore repositionnée) exécutait TOUJOURS le
-    /// premier secteur -- Verrouiller pour la roue power, donc un
-    /// verrouillage d'écran à chaque appui bref au lieu d'afficher la roue.
+    /// If no aiming has happened since this level opened (root or
+    /// sub-menu -- see `moved`), confirming is equivalent to canceling
+    /// rather than picking the default sector (index 0): without this
+    /// guard, a simple tap of the key that opens the wheel (near-immediate
+    /// press+release, mouse not yet repositioned) would ALWAYS run the
+    /// first sector -- Lock for the power wheel, so a screen lock on every
+    /// brief tap instead of simply showing the wheel.
     pub fn activate_hovered(&self) -> bool {
         let imp = self.imp();
         let moved = imp.moved.get();
@@ -678,9 +678,9 @@ impl RoueWheel {
                 }
                 true
             } else {
-                // Annuler explicite, OU aucun mouvement dans le sous-menu --
-                // dans les deux cas retour à la roue racine sans agir,
-                // jamais une confirmation par défaut.
+                // Explicit Cancel, OR no movement in the sub-menu -- in
+                // both cases return to the root wheel without acting,
+                // never a default confirmation.
                 self.exit_confirm();
                 false
             }
@@ -707,39 +707,39 @@ impl RoueWheel {
         self.imp().confirming.get()
     }
 
-    /// Revient à la roue racine depuis le sous-menu de confirmation (Échap),
-    /// sans rien exécuter. Ne fait rien si on n'est pas en confirmation --
-    /// c'est alors à l'appelant (main.rs) de fermer la fenêtre à la place.
+    /// Returns to the root wheel from the confirmation sub-menu (Escape),
+    /// without running anything. Does nothing if not currently confirming
+    /// -- it's then up to the caller (main.rs) to close the window
+    /// instead.
     pub fn cancel_confirm(&self) {
         if self.imp().confirming.get() {
             self.exit_confirm();
         }
     }
 
-    /// Appelé uniquement quand une action définitive doit s'exécuter :
-    /// jamais pour un secteur `confirm` tant qu'il n'a pas été confirmé.
+    /// Called only when a final action must run: never for a `confirm`
+    /// sector until it has been confirmed.
     pub fn connect_commit(&self, f: impl Fn(&Segment) + 'static) {
         *self.imp().commit_cb.borrow_mut() = Some(Box::new(f));
     }
 
     fn enter_confirm(&self, seg: Segment) {
         let imp = self.imp();
-        // Cloné AVANT de déplacer `seg` dans `pending` ci-dessous -- c'est
-        // le secteur RACINE qu'on est en train de confirmer qui porte cette
-        // teinte (cf. sa doc dans config.rs), pas un choix indépendant du
-        // sous-menu.
+        // Cloned BEFORE moving `seg` into `pending` below -- it's the ROOT
+        // sector currently being confirmed that carries this tint (see its
+        // doc in config.rs), not a choice independent from the sub-menu.
         let confirm_accent = seg.confirm_accent.clone();
         imp.confirming.set(true);
         *imp.pending.borrow_mut() = Some(seg);
-        // Annuler en CANCEL_INDEX (0), Confirmer en CONFIRM_INDEX (1) --
-        // l'ordre du vec EST l'index, donc Annuler doit rester le premier
-        // élément : c'est la sélection par défaut du sous-menu (secteur 0),
-        // l'option la moins destructive si l'utilisateur n'a pas de souris.
-        // Confirmer reprend `confirm_accent` du secteur racine (cyan par
-        // défaut si absent, comme `accent` -- cf. color.rs) : ce n'est PLUS
-        // un rouge figé en dur, seuls les secteurs vraiment destructeurs
-        // (wheels/power.toml) le forcent explicitement. Annuler garde
-        // `None` (cyan par défaut), jamais la teinte du secteur confirmé.
+        // Cancel at CANCEL_INDEX (0), Confirm at CONFIRM_INDEX (1) -- the
+        // vec's order IS the index, so Cancel must stay the first element:
+        // it's the sub-menu's default selection (sector 0), the least
+        // destructive option if the user has no mouse. Confirm picks up
+        // `confirm_accent` from the root sector (cyan by default if
+        // absent, like `accent` -- see color.rs): this is NO LONGER a
+        // hardcoded red, only genuinely destructive sectors
+        // (wheels/power.toml) force it explicitly. Cancel keeps `None`
+        // (cyan by default), never the confirmed sector's tint.
         *imp.segments.borrow_mut() = vec![
             Segment {
                 icon: "✗".into(),

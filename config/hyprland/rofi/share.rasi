@@ -1,12 +1,12 @@
 /* ~/.config/rofi/share.rasi
  *
- * Palette + widgets de base COMMUNS À TOUS LES MENUS ROFI DU SYSTÈME.
- * Reprend exactement les couleurs de waybar (style.css) pour que barre et
- * menus forment un seul et même langage visuel : même fond, même texte,
- * même surbrillance cyan (celle du workspace actif / HDR-on / etc.).
- * Chaque thème-feuille (theme, common, wallpaper, launcher, …) importe ce
- * fichier et ne doit plus redéfinir de couleurs, seulement sa structure
- * (largeur, colonnes, lignes). */
+ * Palette + base widgets SHARED BY ALL ROFI MENUS IN THE SYSTEM.
+ * Reuses waybar's colors (style.css) exactly, so the bar and menus form a
+ * single, consistent visual language: same background, same text, same
+ * cyan highlight (the one used for the active workspace / HDR-on / etc.).
+ * Every leaf theme (theme, common, wallpaper, launcher, …) imports this
+ * file and should never redefine colors, only its own structure (width,
+ * columns, lines). */
 
 * {
   border:  0;
@@ -14,20 +14,20 @@
   padding: 0;
   spacing: 0;
 
-  /* --- Palette système (= waybar/style.css) --- */
-  bg:      #141414;    /* background -> Fond principal (= waybar) */
-  bg-alt:  #1e1e20;    /* surface    -> Remplissage inputbar/éléments (= waybar) */
+  /* --- System palette (= waybar/style.css) --- */
+  bg:      #141414;    /* background -> Main background (= waybar) */
+  bg-alt:  #1e1e20;    /* surface    -> Inputbar/element fill (= waybar) */
 
-  fg:      #8e8e93;    /* subtle     -> Texte non sélectionné / placeholder */
-  fg-alt:  #f2f2f7;    /* text       -> Texte focalisé / principal (= waybar) */
-  muted:   #48484a;    /* muted      -> Secondaire atténué (= waybar) */
+  fg:      #8e8e93;    /* subtle     -> Unselected text / placeholder */
+  fg-alt:  #f2f2f7;    /* text       -> Focused / main text (= waybar) */
+  muted:   #48484a;    /* muted      -> Dimmed secondary text (= waybar) */
 
-  border-color-base: #505050; /* overlay2 -> bordure fenêtre (= waybar) */
-  blue:    #4f9eff;    /* accent bleu -> prompts / titres (= waybar) */
-  urgent:  #ff453a;    /* urgent     -> Erreurs/Urgent (Rouge) */
-  active:  #4fefff;    /* accent cyan -> surbrillance système (= waybar) */
+  border-color-base: #505050; /* overlay2 -> window border (= waybar) */
+  blue:    #4f9eff;    /* blue accent -> prompts / titles (= waybar) */
+  urgent:  #ff453a;    /* urgent     -> Errors/Urgent (red) */
+  active:  #4fefff;    /* cyan accent -> system highlight (= waybar) */
 
-  /* --- Variables Agnostiques --- */
+  /* --- Agnostic variables --- */
   selected:         @active;
   background-color: @bg;
   text-color:       @fg;
@@ -103,9 +103,9 @@ window {
     background-color:            @bg;
 }
 
-/* ── Widgets de base : disposition/couleurs communes à TOUS les menus ──
-   Les thèmes-feuilles n'overrident que colonnes/lignes/largeur, jamais
-   les couleurs ni le style de sélection définis ici. */
+/* ── Base widgets: layout/colors shared by ALL menus ──
+   Leaf themes only override columns/rows/width, never the colors or the
+   selection style defined here. */
 
 mainbox {
     background-color: transparent;
@@ -158,8 +158,8 @@ element-text {
     horizontal-align:    0.0;
 }
 
-/* ── Sélection : recette unique pour tout le système ──
-   Fond teinté ~10% cyan + barre verticale accent à gauche + texte cyan. */
+/* ── Selection: single recipe for the whole system ──
+   ~10% cyan-tinted background + left accent bar + cyan text. */
 element selected {
     background-color: #4fefff1a;
     border:            0px 0px 0px 2px;
@@ -167,10 +167,10 @@ element selected {
     text-color:         @active;
 }
 
-/* ── Titre ("message") : pour les menus SANS barre de recherche
-   (grilles à choix fixe : power/performance/confirm/wallpaper-mode/…).
-   Ces menus n'ont pas d'inputbar, donc -p n'a nulle part où s'afficher ;
-   les scripts y passent le titre via -mesg à la place. */
+/* ── Title ("message"): for menus WITHOUT a search bar
+   (fixed-choice grids: power/performance/confirm/wallpaper-mode/…).
+   These menus have no inputbar, so -p has nowhere to render; the scripts
+   pass the title through -mesg instead. */
 message {
     enabled:           true;
     padding:            10px;

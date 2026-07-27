@@ -1,10 +1,10 @@
-//! Rasterisation des icônes SVG (Lucide/Tabler, cf.
-//! config/hyprland/roue/icons/) en textures GTK -- rendu natif Rust
-//! (resvg/tiny-skia), pas de dépendance au loader SVG de gdk-pixbuf : absent
-//! par défaut sur cette machine (Fedora ne fournit plus
-//! libpixbufloader-svg.so, vérifié en cherchant le fichier dans
-//! /usr/lib64/gdk-pixbuf-2.0/), donc `Pixbuf::from_file` sur un SVG y
-//! échouerait silencieusement à l'exécution.
+//! Rasterizes SVG icons (Lucide/Tabler, see
+//! config/hyprland/roue/icons/) into GTK textures -- native Rust rendering
+//! (resvg/tiny-skia), no dependency on gdk-pixbuf's SVG loader: absent by
+//! default on this machine (Fedora no longer ships
+//! libpixbufloader-svg.so, checked by looking for the file under
+//! /usr/lib64/gdk-pixbuf-2.0/), so `Pixbuf::from_file` on an SVG would fail
+//! silently at runtime there.
 
 use gtk4::prelude::*;
 use gtk4::{gdk, glib};
@@ -15,19 +15,19 @@ use std::path::PathBuf;
 use crate::color;
 use crate::config::Segment;
 
-/// Résolution de rasterisation -- nettement plus grande que la taille
-/// d'affichage réelle (~30-45px, cf. wheel.rs) pour rester net une fois
-/// agrandie au survol (append_scaled_texture, filtre Trilinear).
+/// Rasterization resolution -- noticeably larger than the actual display
+/// size (~30-45px, see wheel.rs) to stay crisp once enlarged on hover
+/// (append_scaled_texture, Trilinear filter).
 const RASTER_PX: u32 = 128;
 
 const COLOR_NORMAL: &str = "#f2f2f7";
 
-/// Une icône rasterisée dans les deux couleurs utiles -- le survol anime un
-/// fondu entre les deux (cf. wheel.rs) plutôt qu'une recoloration GPU par
-/// color-matrix, plus simple pour un si petit nombre d'icônes. La variante
-/// "accent" est baked avec LA couleur du secteur (cf. `color::resolve`),
-/// pas une constante globale -- c'est ce qui permet à powerprofile.toml
-/// d'avoir un survol vert/jaune/cyan différent par secteur.
+/// An icon rasterized in the two colors that matter -- hover animates a
+/// crossfade between the two (see wheel.rs) rather than a GPU color-matrix
+/// recolor, simpler for such a small number of icons. The "accent" variant
+/// is baked with THE sector's color (see `color::resolve`), not a global
+/// constant -- that's what lets powerprofile.toml have a different
+/// green/yellow/cyan hover per sector.
 pub struct IconPair {
     pub normal: gdk::Texture,
     pub accent: gdk::Texture,
@@ -38,20 +38,19 @@ fn icons_dir() -> PathBuf {
     PathBuf::from(home).join(".config/roue/icons")
 }
 
-/// Clé de cache d'un secteur -- fichier icône ET couleur d'accent résolue,
-/// pas le fichier seul : deux secteurs qui partagent le même fichier SVG
-/// mais une teinte différente doivent obtenir des textures "accent"
-/// distinctes. Utilisée à la fois ici (au chargement) et dans wheel.rs (au
-/// dessin), donc centralisée ici pour que les deux ne puissent pas diverger.
+/// A sector's cache key -- icon file AND resolved accent color, not the
+/// file alone: two sectors sharing the same SVG file but a different tint
+/// must get distinct "accent" textures. Used both here (at load time) and
+/// in wheel.rs (at draw time), so centralized here so the two can't drift
+/// apart.
 pub fn cache_key(seg: &Segment) -> String {
     format!("{}{}", seg.icon, color::resolve(seg.accent.as_deref()).hex)
 }
 
-/// Charge et rasterise l'icône de chaque secteur de `segments` (dédupliquée
-/// par `cache_key`) -- ignore silencieusement (message sur stderr) un
-/// fichier introuvable ou un SVG invalide : wheel.rs retombe alors sur le
-/// texte brut du secteur, une icône manquante ne doit pas empêcher le reste
-/// de la roue de s'afficher.
+/// Loads and rasterizes the icon of each sector in `segments` (deduplicated
+/// by `cache_key`) -- silently ignores (stderr message) a missing file or
+/// an invalid SVG: wheel.rs then falls back to the sector's plain text, a
+/// missing icon must not prevent the rest of the wheel from displaying.
 pub fn load(segments: &[Segment]) -> HashMap<String, IconPair> {
     let dir = icons_dir();
     let mut cache = HashMap::new();
@@ -76,9 +75,9 @@ pub fn load(segments: &[Segment]) -> HashMap<String, IconPair> {
     cache
 }
 
-/// Rasterise `svg_source` (avec `currentColor` remplacé par `color` --
-/// toutes nos icônes Lucide/Tabler l'utilisent pour le trait) en une
-/// texture RASTER_PX x RASTER_PX.
+/// Rasterizes `svg_source` (with `currentColor` replaced by `color` -- all
+/// our Lucide/Tabler icons use it for the stroke) into a RASTER_PX x
+/// RASTER_PX texture.
 fn rasterize(svg_source: &str, color: &str) -> Option<gdk::Texture> {
     let recolored = svg_source.replace("currentColor", color);
     let opt = usvg::Options::default();

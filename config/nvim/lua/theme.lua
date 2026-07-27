@@ -122,7 +122,7 @@ end, {
     end,
 })
 
--- Démarrage : charge le thème + bg sauvegardés
+-- Startup: load the saved theme + bg
 local saved_name, saved_bg = load_saved_theme()
 
 vim.api.nvim_create_autocmd("VimEnter", {

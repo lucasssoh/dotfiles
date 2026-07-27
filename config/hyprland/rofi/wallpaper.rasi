@@ -1,5 +1,5 @@
-/* ~/.config/rofi/wallpaper.rasi — grille d'icônes wallpaper.
- * Couleurs et style de sélection hérités de share.rasi ; structure seule ici. */
+/* ~/.config/rofi/wallpaper.rasi — wallpaper icon grid.
+ * Colors and selection style inherited from share.rasi; layout only here. */
 @import "share.rasi"
 
 configuration {

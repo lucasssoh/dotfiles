@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =========================================================
-# workspace-dashboard.sh — affiche les widgets fastfetch/horloge
-# (cf. dashboard-fastfetch.sh, dashboard-clock.sh, et leurs windowrules
-# dans hypr/windowrules.lua) sur un workspace vide, et les masque dès
-# qu'une vraie fenêtre (non flottante, non-dashboard) y apparaît.
-# Réagit en direct aux événements Hyprland du workspace actif. Lancé
-# en service systemd --user (cf. systemd/workspace-dashboard.service).
+# workspace-dashboard.sh — shows the fastfetch/clock widgets (see
+# dashboard-fastfetch.sh, dashboard-clock.sh, and their windowrules in
+# hypr/windowrules.lua) on an empty workspace, and hides them as soon as a
+# real window (non-floating, non-dashboard) appears there. Reacts live to
+# Hyprland events on the active workspace. Launched as a systemd --user
+# service (see systemd/workspace-dashboard.service).
 # =========================================================
 
 SOCKET=""
@@ -17,12 +17,12 @@ done
 
 [ -z "$SOCKET" ] && exit 1
 
-LOCK="/tmp/dashboard-lock"  # empêche deux lancements concurrents du dashboard
+LOCK="/tmp/dashboard-lock"  # prevents two concurrent dashboard launches
 
 launch_dashboard() {
     [ -f "$LOCK" ] && return
 
-    # Déjà affiché : rien à faire
+    # Already shown: nothing to do
     pgrep -f "dashboard-fastfetch" >/dev/null && return
 
     touch "$LOCK"
@@ -45,8 +45,8 @@ hide_dashboard() {
     pkill -f "dashboard-clock" 2>/dev/null
 }
 
-# "Vraie" fenêtre = tuilée et non-dashboard ; sert à décider si le
-# dashboard doit céder la place ou rester affiché sur ce workspace
+# "Real" window = tiled and non-dashboard; used to decide whether the
+# dashboard should give way or stay shown on this workspace
 workspace_has_real_windows() {
     local ws=$1
 
@@ -81,12 +81,12 @@ print(json.load(sys.stdin)['id'])
     fi
 }
 
-# État initial (au lancement du service, avant tout événement)
+# Initial state (at service launch, before any event)
 update_dashboard
 
-# Réévalue l'état du dashboard à chaque événement pouvant changer le
-# contenu du workspace actif. Le sleep laisse le temps à `hyprctl clients`
-# de refléter le changement avant d'être interrogé.
+# Re-evaluates the dashboard's state on every event that could change the
+# active workspace's content. The sleep gives `hyprctl clients` time to
+# reflect the change before being queried.
 socat UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
     EVENT=$(echo "$line" | cut -d'>' -f1)
 

@@ -1,13 +1,13 @@
-//! Raccourcis clavier configurables de Prisme : fichier texte optionnel
-//! (`~/.config/prisme/keymap.conf`) mappant des noms d'action vers des
-//! touches GDK, avec un fallback intégré si le fichier est absent.
+//! Prisme's configurable keyboard shortcuts: optional text file
+//! (`~/.config/prisme/keymap.conf`) mapping action names to GDK keys, with
+//! a built-in fallback if the file is absent.
 
 use gtk4::gdk;
 use std::collections::HashMap;
 
-/// Actions déclenchables au clavier -- le fichier externe ne mappe QUE vers
-/// ces noms (jamais directement vers une touche codée en dur), pour que le
-/// reste du programme n'ait jamais à connaître un nom de touche brut.
+/// Actions triggerable from the keyboard -- the external file ONLY maps
+/// onto these names (never directly onto a hardcoded key), so the rest of
+/// the program never has to know a raw key name.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Action {
     Close,
@@ -19,15 +19,15 @@ pub enum Action {
     Deselect,
 }
 
-/// Config par défaut, recopiée en dur plutôt qu'`include_str!` du fichier
-/// externe (config/hyprland/prisme/keymap.conf) : ce dernier vit HORS de
-/// prisme-src/, qu'install.sh copie seul dans ~/.cache/prisme-build/ avant
-/// `cargo build` -- un chemin relatif s'y résout dans le vide (même
-/// problème que le CSS de secours, cf. theme.rs). Le vrai fichier, éditable
-/// sans recompiler, reste config/hyprland/prisme/keymap.conf (symlinké vers
-/// ~/.config/prisme/ par install.sh, dans le même dossier que style.css) :
-/// cette constante n'est qu'un filet de secours si ce fichier est absent ou
-/// illisible.
+/// Default config, hardcoded here rather than `include_str!`-ed from the
+/// external file (config/hyprland/prisme/keymap.conf): the latter lives
+/// OUTSIDE prisme-src/, which install.sh copies alone into
+/// ~/.cache/prisme-build/ before `cargo build` -- a relative path there
+/// resolves to nothing (same problem as the fallback CSS, see theme.rs).
+/// The real file, editable without recompiling, stays
+/// config/hyprland/prisme/keymap.conf (symlinked to ~/.config/prisme/ by
+/// install.sh, in the same folder as style.css): this constant is only a
+/// safety net for when that file is absent or unreadable.
 const FALLBACK: &str = "\
 close = Escape
 move_left = Left, h, H
@@ -38,14 +38,14 @@ select = Down, j, J
 deselect = Up, k, K
 ";
 
-/// Table résolue touche GDK -> action, prête à interroger depuis le
-/// gestionnaire d'événements clavier.
+/// Resolved GDK key -> action table, ready to query from the keyboard
+/// event handler.
 pub struct Keymap(HashMap<gdk::Key, Action>);
 
 impl Keymap {
-    /// Charge ~/.config/prisme/keymap.conf s'il existe, sinon la config par
-    /// défaut ci-dessus. Rechargé à chaque lancement (pas de daemon Prisme,
-    /// éditer le fichier suffit).
+    /// Loads ~/.config/prisme/keymap.conf if it exists, otherwise the
+    /// default config above. Reloaded on every launch (no Prisme daemon,
+    /// editing the file is enough).
     pub fn load() -> Self {
         let content = user_path()
             .and_then(|p| std::fs::read_to_string(p).ok())
@@ -53,26 +53,25 @@ impl Keymap {
         Self(parse(&content))
     }
 
-    /// Action associée à une touche, s'il y en a une.
+    /// Action associated with a key, if any.
     pub fn action(&self, key: gdk::Key) -> Option<Action> {
         self.0.get(&key).copied()
     }
 }
 
-/// Emplacement du fichier de config utilisateur, symlinké par install.sh.
+/// Location of the user config file, symlinked by install.sh.
 fn user_path() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
     Some(std::path::PathBuf::from(home).join(".config/prisme/keymap.conf"))
 }
 
-/// Format : une ligne par action, `nom = touche1, touche2, ...`. `#` en
-/// début de ligne (après espaces) commente. Les noms de touches suivent la
-/// convention X11/GDK (`gdk_keyval_from_name` -- Escape, Return, KP_Enter,
-/// Left, Right, Up, Down, Tab, space, h, H, ...), pas de table de
-/// correspondance maison à maintenir. Une ligne ou une touche invalide est
-/// ignorée (avec un message sur stderr) plutôt que de faire échouer tout le
-/// fichier -- une faute de frappe ne doit pas priver l'utilisateur de
-/// toutes les autres touches.
+/// Format: one line per action, `name = key1, key2, ...`. A `#` at the
+/// start of a line (after whitespace) comments it out. Key names follow
+/// the X11/GDK convention (`gdk_keyval_from_name` -- Escape, Return,
+/// KP_Enter, Left, Right, Up, Down, Tab, space, h, H, ...), no homemade
+/// lookup table to maintain. An invalid line or key is ignored (with a
+/// message on stderr) rather than failing the whole file -- a typo
+/// shouldn't cost the user every other key.
 fn parse(content: &str) -> HashMap<gdk::Key, Action> {
     let mut map = HashMap::new();
     for line in content.lines() {
@@ -103,8 +102,8 @@ fn parse(content: &str) -> HashMap<gdk::Key, Action> {
     map
 }
 
-/// Convertit un nom d'action textuel (côté gauche du `=` dans keymap.conf)
-/// en variante d'`Action`.
+/// Converts a textual action name (left side of `=` in keymap.conf) into
+/// an `Action` variant.
 fn parse_action(name: &str) -> Option<Action> {
     Some(match name {
         "close" => Action::Close,

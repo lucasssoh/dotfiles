@@ -1,7 +1,7 @@
-/* Surcharge propre à la roue "power" -- chargée par-dessus style.css (règle
-   générale, commune à toutes les roues), cf. roue-src/src/theme.rs. Teinte
-   légèrement chaude, cohérente avec le rouge des confirmations critiques de
-   cette roue (reboot, poweroff...). */
+/* Override specific to the "power" wheel -- loaded on top of style.css
+   (the general rule, shared by all wheels), see roue-src/src/theme.rs.
+   Slightly warm tint, consistent with the red used for this wheel's
+   critical confirmations (reboot, poweroff...). */
 
 window,
 .background {

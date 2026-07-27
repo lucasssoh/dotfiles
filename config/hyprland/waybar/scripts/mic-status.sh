@@ -1,15 +1,15 @@
 #!/bin/bash
 # =========================================================
-# mic-status.sh — module waybar indiquant si le micro par défaut est
-# actif ou coupé, via WirePlumber (wpctl).
+# mic-status.sh — waybar module showing whether the default mic is
+# active or muted, via WirePlumber (wpctl).
 # =========================================================
 
 STATUS=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@)
 
 if [[ $STATUS == *"[MUTED]"* ]]; then
-    # Icône micro barré / mute
+    # Muted / crossed-out mic icon
     echo "{\"text\": \"󰍭\", \"class\": \"muted\"}"
 else
-    # Icône micro actif
+    # Active mic icon
     echo "{\"text\": \"󰍬\", \"class\": \"active\"}"
 fi

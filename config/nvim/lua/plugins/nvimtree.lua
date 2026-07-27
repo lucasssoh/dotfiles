@@ -9,11 +9,11 @@ return {
                 return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
             end
 
-            -- Appliquer les raccourcis par défaut
+            -- Apply the default keymaps
             api.config.mappings.default_on_attach(bufnr)
 
-            -- Configurer TAB pour ouvrir le fichier ou dossier (comme Entrée)
-            -- On écrase le mapping "Preview" par défaut
+            -- Set TAB to open the file or folder (like Enter)
+            -- Overrides the default "Preview" mapping
             vim.keymap.set('n', '<Tab>', api.node.open.edit, opts('Open'))
         end
 
@@ -22,13 +22,13 @@ return {
             filesystem_watchers = { enable = true },
             
             -- =================================================================
-            -- CONFIGURATION REQUUISE POUR L'ISOLATION CCNOTE
+            -- REQUIRED CONFIGURATION FOR CCNOTE ISOLATION
             -- =================================================================
-            sync_root_with_cwd = true, -- Aligne la racine de l'arbre sur le dossier du terminal
-            respect_buf_cwd = true,    -- Force nvim-tree à respecter le dossier de lancement
+            sync_root_with_cwd = true, -- Aligns the tree root with the terminal's folder
+            respect_buf_cwd = true,    -- Forces nvim-tree to respect the launch folder
             update_focused_file = {
                 enable = true,
-                update_root = true,    -- Change la racine si tu navigues ailleurs
+                update_root = true,    -- Changes the root if you navigate elsewhere
             },
             -- =================================================================
 

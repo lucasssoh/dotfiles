@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # =========================================================
-# swaync-toggle.sh — bascule le panneau swaync, en fermant d'abord Orbit
-# s'il est ouvert -- les deux occupent le même coin (haut-droit) et ne
-# doivent jamais être ouverts en même temps.
+# swaync-toggle.sh — toggles the swaync panel, first closing Orbit if
+# it's open -- both occupy the same corner (top-right) and must never
+# be open at the same time.
 # =========================================================
 
-# ~/.local/bin (où install.sh place orbit) n'est pas dans le PATH des
-# processus lancés par Hyprland -- seul le profil zsh l'ajoute.
+# ~/.local/bin (where install.sh puts orbit) isn't in the PATH of
+# processes launched by Hyprland -- only the zsh profile adds it.
 export PATH="$HOME/.local/bin:$PATH"
 
 orbit hide >/dev/null 2>&1 || true

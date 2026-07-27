@@ -1,9 +1,9 @@
 #!/bin/bash
 # =========================================================
-# monitor.sh — rechargement à chaud de Waybar : redémarre le process
-# dès que config.jsonc ou style.css est modifié, pour itérer sur le
-# thème/la config sans avoir à relancer manuellement. Outil de
-# développement, pas lancé par l'autostart de session.
+# monitor.sh — hot-reload for Waybar: restarts the process as soon as
+# config.jsonc or style.css changes, to iterate on the theme/config
+# without manually relaunching. Development tool, not started by the
+# session autostart.
 # =========================================================
 exec > /tmp/waybar_monitor.log 2>&1
 
@@ -15,5 +15,5 @@ CONFIG_FILES=(
 while true; do
     pkill -x waybar; sleep 0.5; waybar &
     inotifywait -e close_write -e moved_to "${CONFIG_FILES[@]}" 2>/dev/null
-    echo "[$(date '+%H:%M:%S')] Changement détecté, rechargement..."
+    echo "[$(date '+%H:%M:%S')] Change detected, reloading..."
 done

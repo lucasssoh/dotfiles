@@ -95,8 +95,8 @@ if [ "$DISTRO" = "fedora" ]; then
         # Hyprland ecosystem
         dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
-        # (SwayNotificationCenter remplace dunst comme démon de notifications
-        # actif ; dunst reste installé/dispo en fallback, non démarré)
+        # (SwayNotificationCenter replaces dunst as the active notification
+        # daemon; dunst stays installed/available as a fallback, not started)
         waybar dunst SwayNotificationCenter rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
@@ -120,8 +120,8 @@ if [ "$DISTRO" = "fedora" ]; then
         bc jq curl git lm_sensors unzip socat
         # Qt theming
         qt5ct qt6ct
-        # Orbit (WiFi/Bluetooth/VPN manager) build deps -- pas de paquet Fedora,
-        # compilé depuis les sources plus bas dans ce script
+        # Orbit (WiFi/Bluetooth/VPN manager) build deps -- no Fedora package,
+        # built from source further down in this script
         rust cargo gtk4-devel gtk4-layer-shell-devel NetworkManager-libnm-devel bluez-libs-devel
     )
 
@@ -183,16 +183,16 @@ $PKG_INSTALL "${PKGS[@]}"
 ok "Packages installed."
 
 # ============================================================
-# ORBIT (WiFi/Bluetooth/VPN manager, natif Wayland)
+# ORBIT (native Wayland WiFi/Bluetooth/VPN manager)
 # ============================================================
-# Pas de paquet Fedora/Debian -- compilé depuis les sources. Le code source
-# (modifié : logo/titre retirés, toggle intelligent, troncature des noms
-# trop longs -- cf. orbit-vendor/README.md pour le détail) est VENDORISÉ
-# directement dans ce repo (orbit-vendor/) plutôt que cloné depuis GitHub à
-# chaque install -- Orbit est un projet solo-dev à faible activité ; si son
-# repo disparaît un jour, notre install ne doit pas en dépendre. Binaire
-# installé dans ~/.local/bin (pas besoin de sudo), config dans
-# config/hyprland/orbit/ (symlinkée plus bas comme les autres dossiers).
+# No Fedora/Debian package -- built from source. The source code (modified:
+# logo/title removed, smart toggle, truncation of overly long names -- see
+# orbit-vendor/README.md for details) is VENDORED directly in this repo
+# (orbit-vendor/) rather than cloned from GitHub on every install -- Orbit
+# is a low-activity solo-dev project; if its repo disappears one day, our
+# install shouldn't depend on it. Binary installed to ~/.local/bin (no sudo
+# needed), config in config/hyprland/orbit/ (symlinked further down like
+# the other directories).
 section "Building Orbit (WiFi/Bluetooth manager)"
 
 ORBIT_BUILD="$HOME/.cache/orbit-build"
@@ -214,19 +214,19 @@ else
 fi
 
 # ============================================================
-# PRISME (wallpaper picker natif Wayland)
+# PRISME (native Wayland wallpaper picker)
 # ============================================================
-# Même logique que le bloc Orbit ci-dessus : source vendorisée dans ce dépôt
-# (prisme-src/), compilée à l'install, binaire dans ~/.local/bin. Config
-# (thème CSS) dans config/hyprland/prisme/, symlinkée plus bas comme les
-# autres dossiers. awww reste le backend d'application (inchangé) ; Prisme
-# ne remplace que l'UI de sélection (auparavant rofi).
+# Same logic as the Orbit block above: source vendored in this repo
+# (prisme-src/), built at install time, binary in ~/.local/bin. Config (CSS
+# theme) in config/hyprland/prisme/, symlinked further down like the other
+# directories. awww stays the application backend (unchanged); Prisme only
+# replaces the selection UI (previously rofi).
 #
-# `cargo build --release` compile aussi wallpaper-filter (src/bin/), le
-# worker natif du cache "Filtered" (recadrage/extension intelligent,
-# remplace l'ancien wallpaper-filter-one.sh + ImageMagick) -- même crate,
-# mêmes dépendances (dont `image`, déjà utilisée pour les vignettes),
-# installé au même endroit.
+# `cargo build --release` also builds wallpaper-filter (src/bin/), the
+# native worker for the "Filtered" cache (smart crop/extend, replaces the
+# old wallpaper-filter-one.sh + ImageMagick) -- same crate, same
+# dependencies (including `image`, already used for the thumbnails),
+# installed to the same place.
 section "Building Prisme (wallpaper picker)"
 
 PRISME_BUILD="$HOME/.cache/prisme-build"
@@ -249,15 +249,14 @@ else
 fi
 
 # ============================================================
-# ROUE (roue de sélection radiale, façon menu d'arme RPG)
+# ROUE (RPG weapon-menu-style radial selection wheel)
 # ============================================================
-# Même logique que les blocs Orbit/Prisme ci-dessus : source vendorisée dans
-# ce dépôt (roue-src/), compilée à l'install, binaire unique dans
-# ~/.local/bin/roue. Remplace waybar/scripts/rofi-power.sh et
-# rofi-performance.sh -- un seul binaire pour toutes les roues, chacune
-# définie par un fichier TOML dans config/hyprland/roue/wheels/ (symlinké
-# plus bas comme les autres dossiers), pour pouvoir en ajouter d'autres plus
-# tard sans recompiler.
+# Same logic as the Orbit/Prisme blocks above: source vendored in this repo
+# (roue-src/), built at install time, single binary in ~/.local/bin/roue.
+# Replaces waybar/scripts/rofi-power.sh and rofi-performance.sh -- one
+# binary for all wheels, each defined by a TOML file in
+# config/hyprland/roue/wheels/ (symlinked further down like the other
+# directories), so more can be added later without recompiling.
 section "Building Roue (radial selection wheel)"
 
 ROUE_BUILD="$HOME/.cache/roue-build"
@@ -291,14 +290,14 @@ if [ "$DISTRO" != "debian" ]; then
     ok "Bluetooth enabled."
 fi
 
-# Services systemd --user personnalisés du repo (orbit.service, etc.)
+# Custom systemd --user services from the repo (orbit.service, etc.)
 SYSTEMD_DST="$HOME/.config/systemd/user"
 mkdir -p "$SYSTEMD_DST"
 
 if [ -d "$REPO_DIR/systemd" ]; then
     info "Linking and enabling custom systemd services..."
 
-    # Symlink + enable chaque fichier .service trouvé dans systemd/
+    # Symlink + enable each .service file found under systemd/
     find "$REPO_DIR/systemd" -type f -name "*.service" | while read -r service_file; do
         SERVICE_NAME=$(basename "$service_file")
 
@@ -347,7 +346,7 @@ fi
 
 section "Linking configuration directories"
 
-# Dossiers de config à symlinker intégralement dans ~/.config
+# Config directories to fully symlink into ~/.config
 modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
@@ -358,7 +357,7 @@ for mod in "${modules[@]}"; do
         warn "Source directory $mod not found in repo, skipping."
     fi
 done
-# ── Scripts hypr ─────────────────────────────────────────────
+# ── Hypr scripts ─────────────────────────────────────────────
 section "Linking hypr scripts"
 
 SCRIPTS_SRC="$REPO_DIR/scripts"

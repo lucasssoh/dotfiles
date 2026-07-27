@@ -1,21 +1,20 @@
-//! Roue — sélecteur radial générique natif Wayland (GTK4 + layer-shell),
-//! façon menu d'arme RPG (appui = ouvre, relâchement ou clic/Entrée =
-//! valide). Remplace les menus rofi-power.sh/rofi-performance.sh, sur le
-//! même principe que Prisme pour le sélecteur de wallpaper.
+//! Roue — generic native Wayland radial selector (GTK4 + layer-shell), RPG
+//! weapon-menu style (press = opens, release or click/Enter = confirms).
+//! Replaces the rofi-power.sh/rofi-performance.sh menus, on the same
+//! principle as Prisme for the wallpaper selector.
 //!
-//! Un seul binaire pour toutes les roues : `roue <nom>` charge sa
-//! définition depuis `~/.config/roue/wheels/<nom>.toml` (cf. config.rs).
-//! Ajouter une nouvelle roue plus tard ne demande donc aucun changement de
-//! code ici, juste un nouveau fichier TOML et un déclencheur (raccourci,
-//! clic waybar...).
+//! A single binary for all wheels: `roue <name>` loads its definition from
+//! `~/.config/roue/wheels/<name>.toml` (see config.rs). Adding a new wheel
+//! later therefore requires no code change here, just a new TOML file and
+//! a trigger (shortcut, waybar click...).
 //!
-//! Le geste "maintien = LB/L1" n'a pas besoin d'IPC maison : `roue <nom>
-//! --commit`/`--cancel` est une deuxième invocation du MÊME binaire, routée
-//! vers l'instance déjà ouverte par le mécanisme natif de GApplication
-//! (activation D-Bus par application-id, avec ApplicationFlags::
-//! HANDLES_COMMAND_LINE pour recevoir les arguments de cette deuxième
-//! invocation dans le process primaire). Voir keybinds.lua pour le
-//! câblage appui (`bind`) / relâchement (`bind ... { release = true }`).
+//! The "hold = LB/L1" gesture needs no homemade IPC: `roue <name>
+//! --commit`/`--cancel` is a second invocation of the SAME binary, routed
+//! to the already-open instance through GApplication's native mechanism
+//! (D-Bus activation by application-id, with ApplicationFlags::
+//! HANDLES_COMMAND_LINE to receive this second invocation's arguments in
+//! the primary process). See keybinds.lua for the press (`bind`) /
+//! release (`bind ... { release = true }`) wiring.
 
 mod actions;
 mod color;
@@ -35,9 +34,9 @@ use std::rc::Rc;
 
 use wheel::RoueWheel;
 
-/// Actions clavier de la roue -- jeu de touches fixe (pas de fichier
-/// keymap.conf séparé comme dans Prisme : une seule roue, une interaction
-/// volontairement simple, pas besoin d'être reconfigurable par fichier ici).
+/// Wheel keyboard actions -- fixed keyset (no separate keymap.conf file
+/// like in Prisme: a single wheel, a deliberately simple interaction, no
+/// need for it to be file-reconfigurable here).
 #[derive(Clone, Copy)]
 enum KeyAction {
     Cancel,
@@ -47,9 +46,9 @@ enum KeyAction {
     Select(usize),
 }
 
-/// Résout les noms de touches (convention X11/GDK, cf.
-/// prisme-src/src/keymap.rs) en actions -- `gdk::Key::from_name` plutôt que
-/// de deviner les identifiants d'enum Rust générés pour les touches chiffres.
+/// Resolves key names (X11/GDK convention, see prisme-src/src/keymap.rs)
+/// into actions -- `gdk::Key::from_name` rather than guessing the
+/// generated Rust enum identifiers for digit keys.
 fn build_keymap() -> HashMap<gdk::Key, KeyAction> {
     let mut m = HashMap::new();
     let mut bind = |names: &[&str], action: KeyAction| {
@@ -69,10 +68,10 @@ fn build_keymap() -> HashMap<gdk::Key, KeyAction> {
     m
 }
 
-/// Annule sans rien exécuter -- depuis un sous-menu de confirmation, revient
-/// juste à la roue racine ; sinon ferme la fenêtre. Point unique partagé par
-/// Échap et le clic droit (cf. leurs deux appelants) pour que les deux
-/// gestes restent garantis identiques.
+/// Cancels without running anything -- from a confirmation sub-menu, just
+/// returns to the root wheel; otherwise closes the window. Single shared
+/// entry point for Escape and right-click (see their two call sites) so
+/// both gestures are guaranteed to stay identical.
 fn cancel(wheel: &RoueWheel, window: &ApplicationWindow) {
     if wheel.is_confirming() {
         wheel.cancel_confirm();
@@ -81,21 +80,20 @@ fn cancel(wheel: &RoueWheel, window: &ApplicationWindow) {
     }
 }
 
-/// État de l'unique fenêtre ouverte (au plus une, quel que soit le nom de
-/// roue) -- lu/écrit depuis `connect_command_line`, aussi bien pour la
-/// construction initiale que pour router `--commit`/`--cancel` d'une
-/// invocation secondaire.
+/// State of the single open window (at most one, whatever the wheel name)
+/// -- read/written from `connect_command_line`, both for the initial build
+/// and to route `--commit`/`--cancel` from a secondary invocation.
 type State = Rc<RefCell<Option<(ApplicationWindow, RoueWheel)>>>;
 
 fn main() -> glib::ExitCode {
-    // Contrairement à Prisme (qui force "opengl" -- carrousel de ~25 photos
-    // haute résolution, le logiciel y décrochait franchement) : la roue ne
-    // dessine que quelques polygones plats et une poignée de petites
-    // textures d'icônes, un contenu bien trop simple pour justifier le coût
-    // mémoire d'un contexte GL -- mesuré à ~182 Mo de RSS stabilisé en
-    // "opengl" contre ~68 Mo en "cairo" (logiciel), sans différence de
-    // fluidité perceptible vu la faible complexité de la scène. On respecte
-    // une valeur déjà définie par l'environnement (debug, autre machine...).
+    // Unlike Prisme (which forces "opengl" -- a carousel of ~25 high-res
+    // photos, software rendering clearly choked there): the wheel only
+    // draws a few flat polygons and a handful of small icon textures,
+    // content far too simple to justify a GL context's memory cost --
+    // measured at ~182 MB of stabilized RSS on "opengl" versus ~68 MB on
+    // "cairo" (software), with no perceptible smoothness difference given
+    // the scene's low complexity. Respects a value already set by the
+    // environment (debug, another machine...).
     if std::env::var_os("GSK_RENDERER").is_none() {
         std::env::set_var("GSK_RENDERER", "cairo");
     }
@@ -105,10 +103,11 @@ fn main() -> glib::ExitCode {
         std::process::exit(1);
     });
 
-    // Un application-id par roue (pas un seul "com.roue.app" partagé) :
-    // `roue power --commit` doit être routé vers l'instance `roue power`
-    // déjà ouverte, jamais vers une roue `powerprofile` qui tournerait en
-    // même temps -- chacune est un process GApplication indépendant.
+    // One application-id per wheel (not a single shared "com.roue.app"):
+    // `roue power --commit` must be routed to the already-open `roue
+    // power` instance, never to a `powerprofile` wheel that might be
+    // running at the same time -- each is an independent GApplication
+    // process.
     let app_id = format!("com.roue.{wheel_name}");
     let app = Application::new(Some(&app_id), ApplicationFlags::HANDLES_COMMAND_LINE);
 
@@ -117,10 +116,10 @@ fn main() -> glib::ExitCode {
     {
         let state = state.clone();
         app.connect_command_line(move |app, cmdline| {
-            // `cmdline.arguments()` donne les arguments de CETTE invocation
-            // précise (la primaire à l'ouverture, ou celle forwardée par
-            // D-Bus depuis une invocation secondaire pendant que la roue est
-            // déjà ouverte) -- jamais un mélange des deux.
+            // `cmdline.arguments()` gives the arguments of THIS exact
+            // invocation (the primary one at opening, or the one forwarded
+            // by D-Bus from a secondary invocation while the wheel is
+            // already open) -- never a mix of the two.
             let args: Vec<String> = cmdline
                 .arguments()
                 .into_iter()
@@ -132,22 +131,21 @@ fn main() -> glib::ExitCode {
                 _ => None,
             });
 
-            // Cloné hors du RefCell (Ref/RefMut sur des wrapper GObject,
-            // donc juste un refcount de plus) avant de brancher : sinon le
-            // Ref emprunté par `state.borrow()` reste vivant jusqu'à la fin
-            // du if/else (y compris dans la branche `else`, qui elle a
-            // besoin d'emprunter `state` en écriture via build_ui) --
-            // panique `already borrowed` sinon, vérifié en lançant le
-            // binaire en conditions réelles.
+            // Cloned out of the RefCell (Ref/RefMut over GObject wrappers,
+            // so just one more refcount) before branching: otherwise the
+            // Ref borrowed by `state.borrow()` stays alive until the end
+            // of the if/else (including the `else` branch, which needs to
+            // borrow `state` mutably via build_ui) -- `already borrowed`
+            // panic otherwise, confirmed by running the binary under real
+            // conditions.
             let existing = state.borrow().clone();
             if let Some((window, wheel)) = existing {
                 match control {
-                    // Relâchement de touche (bindr) : valide le secteur
-                    // survolé (ou annule, si rien n'a été visé -- cf.
-                    // wheel.rs::activate_hovered). Si c'était un secteur
-                    // `confirm`, ça bascule juste sur Confirmer/Annuler (la
-                    // fenêtre reste ouverte, activate_hovered renvoie
-                    // false).
+                    // Key release (bindr): confirms the hovered sector (or
+                    // cancels, if nothing was aimed at -- see
+                    // wheel.rs::activate_hovered). If it was a `confirm`
+                    // sector, this just switches to Confirm/Cancel (the
+                    // window stays open, activate_hovered returns false).
                     Some(true) => {
                         if wheel.activate_hovered() {
                             window.close();
@@ -156,9 +154,9 @@ fn main() -> glib::ExitCode {
                     Some(false) => {
                         cancel(&wheel, &window);
                     }
-                    // Deuxième appui simple (pas notre relâchement) pendant
-                    // que la roue est déjà ouverte -- ramène juste la
-                    // fenêtre au premier plan (comme Prisme, cf. sa doc).
+                    // A second plain press (not our release) while the
+                    // wheel is already open -- just brings the window back
+                    // to the foreground (like Prisme, see its doc).
                     None => window.present(),
                 }
             } else {
@@ -171,8 +169,8 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
-/// Construit la fenêtre layer-shell plein écran et la roue, puis branche
-/// souris/clavier. Appelé une seule fois par process (garde dans
+/// Builds the fullscreen layer-shell window and the wheel, then wires up
+/// mouse/keyboard. Called once per process (guard in
 /// `connect_command_line`).
 fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     let cfg = config::load(wheel_name);
@@ -192,13 +190,13 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
         theme::load(&display, wheel_name);
     }
 
-    // Bloc roue + panneau latéral centré comme un tout sur l'écran -- Box
-    // horizontal SANS hexpand/vexpand (contrairement à l'ancien layout
-    // vertical) : en enfant unique d'une fenêtre plein écran, il reçoit de
-    // toute façon le rectangle complet (comportement "bin" standard d'une
-    // GtkWindow), c'est son propre halign/valign=Center qui le positionne
-    // à SA taille naturelle (roue 520px + espacement + largeur du panneau)
-    // au milieu de ce rectangle, plutôt que de l'étirer.
+    // Wheel + side panel block centered as a whole on screen -- horizontal
+    // Box WITHOUT hexpand/vexpand (unlike the old vertical layout): as the
+    // sole child of a fullscreen window, it gets the full rectangle
+    // regardless (standard GtkWindow "bin" behavior), it's its own
+    // halign/valign=Center that positions it at ITS natural size (520px
+    // wheel + spacing + panel width) in the middle of that rectangle,
+    // rather than stretching it.
     let root = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Horizontal)
         .spacing(28)
@@ -206,22 +204,21 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
         .valign(gtk4::Align::Center)
         .build();
 
-    // Contrepoids invisible, MÊME largeur que le panneau (cf. size_group
-    // plus bas) -- sans lui, c'est le bloc [roue+panneau] dans son
-    // ENSEMBLE qui est centré, donc la roue elle-même se retrouve décalée
-    // à gauche du centre écran d'exactement la moitié de la largeur du
-    // panneau. Avec ce contrepoids du même côté opposé, la roue redevient
-    // le milieu géométrique du root, quelle que soit la largeur du panneau
-    // (donc quel que soit le texte -- "Power" vs "Power profile" n'ont pas
-    // la même largeur naturelle).
+    // Invisible counterweight, SAME width as the panel (see size_group
+    // below) -- without it, it's the [wheel+panel] block AS A WHOLE that
+    // gets centered, so the wheel itself ends up shifted left of screen
+    // center by exactly half the panel's width. With this counterweight on
+    // the opposite side, the wheel becomes the root's geometric middle
+    // again, whatever the panel's width (so whatever the text -- "Power"
+    // vs "Power profile" don't have the same natural width).
     let counterweight = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     root.append(&counterweight);
 
     let wheel = RoueWheel::new(cfg.segments);
     root.append(&wheel);
 
-    // Panneau latéral -- titre + rappel des commandes, aligné sur le centre
-    // vertical de la roue (valign=Center) plutôt qu'en pied de page.
+    // Side panel -- title + command reminder, aligned on the wheel's
+    // vertical center (valign=Center) rather than as a footer.
     let sidebar = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .spacing(10)
@@ -243,28 +240,27 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     sidebar.append(&hint);
     root.append(&sidebar);
 
-    // Force le contrepoids à toujours rapporter la même largeur naturelle
-    // que le panneau (peu importe son contenu) -- c'est ce qui rend le
-    // centrage de la roue exact plutôt qu'une valeur en dur qui se
-    // désynchroniserait au moindre changement de titre/police.
+    // Forces the counterweight to always report the same natural width as
+    // the panel (whatever its content) -- this is what makes the wheel's
+    // centering exact instead of a hardcoded value that would drift out of
+    // sync at the slightest title/font change.
     let width_group = gtk4::SizeGroup::new(gtk4::SizeGroupMode::Horizontal);
     width_group.add_widget(&counterweight);
     width_group.add_widget(&sidebar);
 
     window.set_child(Some(&root));
 
-    // Survol souris : attaché à la FENÊTRE entière (pas juste au widget de
-    // la roue) -- viser ne doit pas obliger à garder le curseur dans le
-    // petit disque de la roue à l'écran, seul l'ANGLE depuis son centre
-    // compte (cf. wheel.rs::hover_from_point, qui ignore déjà la distance
-    // une fois hors zone morte). Un aller-retour vers le bord de l'écran
-    // reste donc "viser tout droit dans cette direction", comme un stick
-    // analogique dont on pousserait le curseur au-delà de sa course.
-    // Coordonnées reçues relatives à `window` (widget auquel le contrôleur
-    // est attaché) -- traduites vers le repère de `wheel` (son propre
-    // coin haut-gauche) avant l'appel, seul repère que hover_from_point
-    // connaît ; rien d'autre ne change, la zone morte et le calcul d'angle
-    // restent identiques.
+    // Mouse hover: attached to the WHOLE WINDOW (not just the wheel
+    // widget) -- aiming must not require keeping the cursor inside the
+    // wheel's small on-screen disc, only the ANGLE from its center matters
+    // (see wheel.rs::hover_from_point, which already ignores distance once
+    // past the dead zone). A trip toward the edge of the screen therefore
+    // still reads as "aim straight in that direction," like an analog
+    // stick pushed past its own range. Coordinates received relative to
+    // `window` (the widget the controller is attached to) -- translated
+    // into `wheel`'s frame (its own top-left corner) before the call, the
+    // only frame hover_from_point knows; nothing else changes, the dead
+    // zone and angle calculation stay identical.
     let motion = gtk4::EventControllerMotion::new();
     let wheel_for_motion = wheel.clone();
     let window_for_motion = window.clone();
@@ -276,12 +272,12 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     });
     window.add_controller(motion);
 
-    // Clic gauche : même raisonnement que le survol, valide le secteur
-    // survolé depuis n'importe où sur l'écran plutôt que seulement en
-    // cliquant pile sur la roue. Restreint au bouton primaire -- SANS ça,
-    // GestureClick écoute tous les boutons par défaut (button=0), et le
-    // clic droit ci-dessous finirait aussi par valider avant même
-    // d'atteindre son propre contrôleur.
+    // Left click: same reasoning as hover, confirms the hovered sector
+    // from anywhere on screen rather than only by clicking right on the
+    // wheel. Restricted to the primary button -- WITHOUT this,
+    // GestureClick listens to every button by default (button=0), and the
+    // right-click below would also end up confirming before even reaching
+    // its own controller.
     let click = gtk4::GestureClick::new();
     click.set_button(gdk::BUTTON_PRIMARY);
     let wheel_for_click = wheel.clone();
@@ -293,9 +289,9 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     });
     window.add_controller(click);
 
-    // Clic droit : équivalent souris d'Échap -- ferme la roue (ou revient à
-    // la roue racine depuis un sous-menu de confirmation) sans jamais rien
-    // valider, quel que soit le secteur survolé.
+    // Right click: mouse equivalent of Escape -- closes the wheel (or
+    // returns to the root wheel from a confirmation sub-menu) without ever
+    // confirming anything, whatever sector is hovered.
     let right_click = gtk4::GestureClick::new();
     right_click.set_button(gdk::BUTTON_SECONDARY);
     let wheel_for_right_click = wheel.clone();
@@ -305,12 +301,12 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     });
     window.add_controller(right_click);
 
-    // Seul point où une action est réellement lancée -- jamais appelé pour
-    // un secteur `confirm` tant qu'il n'a pas été validé une seconde fois
-    // (cf. wheel.rs::activate_hovered). La fermeture de fenêtre est gérée
-    // par chaque appelant d'activate_hovered() via sa valeur de retour, pas
-    // ici -- ce callback ne fait que le côté effet de bord (lancer
-    // l'action), jamais la gestion du cycle de vie de la fenêtre.
+    // Only place where an action is actually launched -- never called for
+    // a `confirm` sector until it has been confirmed a second time (see
+    // wheel.rs::activate_hovered). Closing the window is handled by each
+    // caller of activate_hovered() through its return value, not here --
+    // this callback only does the side-effect part (launching the
+    // action), never the window's lifecycle management.
     wheel.connect_commit(move |seg| {
         actions::run(&seg.action);
     });

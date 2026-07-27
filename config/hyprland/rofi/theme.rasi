@@ -1,8 +1,8 @@
 @import "share"
 
-/* theme.rasi — menus "liste avec recherche" (hdr, scale, wifi, mic,
- * password, launcher…). Couleurs et style de sélection hérités de
- * share.rasi ; ce fichier ne pose que la structure (largeur, lignes). */
+/* theme.rasi — "list with search" menus (hdr, scale, wifi, mic,
+ * password, launcher…). Colors and selection style inherited from
+ * share.rasi; this file only sets the structure (width, lines). */
 
 window {
   transparency: "real";

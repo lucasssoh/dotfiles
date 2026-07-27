@@ -8,7 +8,7 @@ RESET="\e[0m"
 info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer Neovim si besoin
+# 1. Install Neovim if needed
 if ! command -v nvim &> /dev/null; then
     info "Installing Neovim..."
     if command -v dnf &> /dev/null; then
@@ -18,7 +18,7 @@ if ! command -v nvim &> /dev/null; then
     fi
 fi
 
-# 2. Liens symboliques
+# 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/nvim
 

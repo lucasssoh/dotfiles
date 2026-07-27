@@ -1,7 +1,7 @@
-/* wallpaper-mode.rasi — menu compact 2 colonnes (mode wallpaper, position
- * externe, alignement, disposition d'écrans…). Couleurs/sélection héritées
- * de share.rasi ; structure seule ici. Pas d'inputbar (choix fixes,
- * -no-custom) -> le titre passe par le widget "message" (-mesg côté script). */
+/* wallpaper-mode.rasi — compact 2-column menu (wallpaper mode, external
+ * position, alignment, display layout…). Colors/selection inherited from
+ * share.rasi; layout only here. No inputbar (fixed choices, -no-custom)
+ * -> the title goes through the "message" widget (-mesg on the script side). */
 @import "share.rasi"
 
 window {

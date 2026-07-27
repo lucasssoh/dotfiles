@@ -1,10 +1,10 @@
-// Copie modifiée de src/ui/header.rs d'Orbit (upstream: LifeOfATitan/orbit,
-// version basée sur v2.4.13, mai 2026) -- installée par-dessus le fichier
-// upstream avant compilation (cf. install.sh). Seul changement : logo +
-// titre "Orbit" retirés (pas de branding dans les popups système, cohérence
-// avec le reste de la barre). Si une mise à jour d'Orbit échoue à se
-// comporter comme prévu, comparer ce fichier à la version upstream actuelle
-// de src/ui/header.rs -- le reste de la structure doit rester identique.
+// Modified copy of Orbit's src/ui/header.rs (upstream: LifeOfATitan/orbit,
+// version based on v2.4.13, May 2026) -- installed over the upstream file
+// before compilation (see install.sh). Only change: logo + "Orbit" title
+// removed (no branding in system popups, consistent with the rest of the
+// bar). If an Orbit update fails to behave as expected, compare this file
+// to the current upstream version of src/ui/header.rs -- the rest of the
+// structure should stay identical.
 
 use gtk4::prelude::*;
 use gtk4::{self as gtk, Orientation};
@@ -37,8 +37,8 @@ impl Header {
             .spacing(12)
             .build();
 
-        // Pas de logo/titre -- juste un espaceur pour garder power_box et
-        // wired_button alignés à droite comme dans l'original.
+        // No logo/title -- just a spacer to keep power_box and
+        // wired_button aligned right like in the original.
         let spacer = gtk::Box::builder()
             .hexpand(true)
             .build();

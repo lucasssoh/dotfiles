@@ -1,9 +1,9 @@
 -- ============================================================
--- keybinds.lua — Raccourcis clavier (disposition AZERTY)
+-- keybinds.lua — Keyboard shortcuts (AZERTY layout)
 -- ============================================================
--- Chargé en dernier par hyprland.lua. Les symboles de touches (ampersand,
--- eacute, ...) correspondent aux caractères produits par la rangée de
--- chiffres en AZERTY, pas aux touches physiques 1-10.
+-- Loaded last by hyprland.lua. Key symbols (ampersand, eacute, ...)
+-- correspond to the characters produced by the number row on AZERTY, not
+-- to physical keys 1-10.
 -- ============================================================
 
 local mod = "SUPER"
@@ -18,52 +18,51 @@ hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
 hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
 hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
--- Chemin absolu obligatoire : les processus lancés par Hyprland n'héritent
--- pas de ~/.local/bin dans leur PATH (cf. commit bbb8f61).
+-- Absolute path required: processes launched by Hyprland don't inherit
+-- ~/.local/bin in their PATH (see commit bbb8f61).
 hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 
--- Roue d'alimentation, façon menu d'arme RPG (LB/L1) : l'appui ouvre et
--- arme la sélection sur le secteur survolé, le relâchement (option
--- `release`, équivalent du `bindr` hyprlang) valide immédiatement --
--- maintenir + viser à la souris/aux flèches avant de relâcher permet un
--- choix délibéré. Un tap rapide (relâchement avant d'avoir visé quoi que ce
--- soit) N'exécute PAS le secteur par défaut : la roue l'interprète comme une
--- annulation (cf. roue-src/src/wheel.rs::activate_hovered) -- sans ce
--- garde-fou côté appli, tout appui bref déclenchait Verrouiller (premier
--- secteur) au lieu de simplement (ne rien) afficher. Chemin absolu
--- obligatoire, même raison que Prisme ci-dessus (commit bbb8f61).
+-- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
+-- the selection on the hovered sector, releasing (the `release` option,
+-- equivalent to hyprlang's `bindr`) confirms immediately -- holding +
+-- aiming with the mouse/arrows before releasing allows a deliberate
+-- choice. A quick tap (release before aiming at anything) does NOT
+-- execute the default sector: the wheel treats it as a cancel (see
+-- roue-src/src/wheel.rs::activate_hovered) -- without this app-side
+-- guard, any brief press would trigger Lock (first sector) instead of
+-- just showing the wheel. Absolute path required, same reason as Prisme
+-- above (commit bbb8f61).
 hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 
--- Roue de profil d'énergie -- même geste appui/relâchement que ci-dessus.
--- Avant : aucun raccourci clavier, uniquement le clic sur le module waybar
--- custom/performance (cf. waybar/config.jsonc). Sa config n'est plus un
--- fichier statique non plus depuis l'ajout de la bande d'état (cf.
--- wheel.rs) : quel profil est actuellement appliqué vient de
--- power-profiles-daemon, donc `performance.sh roue-gen` régénère
--- wheels/powerprofile.toml à chaque appui, même principe que la roue
--- d'écrans ci-dessous.
+-- Power profile wheel -- same press/release gesture as above. Before:
+-- no keyboard shortcut, only the click on the waybar module
+-- custom/performance (see waybar/config.jsonc). Its config is no longer a
+-- static file either since the state band was added (see wheel.rs): which
+-- profile is currently applied comes from power-profiles-daemon, so
+-- `performance.sh roue-gen` regenerates wheels/powerprofile.toml on every
+-- press, same principle as the display wheel below.
 hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"))
 hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 
--- Roue de disposition d'écrans -- même geste appui/relâchement, config
--- régénérée à chaque appui comme powerprofile ci-dessus (jamais figée dans
--- le dépôt, contrairement à roue/wheels/power.toml) : elle dépend du
--- matériel branché à cet instant (écran externe présent ou non, sa marque
--- via l'EDID...), donc `display-layout.sh roue-gen` la réécrit à CHAQUE
--- appui juste avant que `roue display` ne s'ouvre (cf. sa doc et
--- cmd_roue_gen dans scripts/display-layout.sh). Remplace l'ancien menu
--- rofi (`display-layout.sh menu`, toujours dispo si besoin).
+-- Display layout wheel -- same press/release gesture, config regenerated
+-- on every press like powerprofile above (never fixed in the repo, unlike
+-- roue/wheels/power.toml): it depends on the hardware currently plugged
+-- in (external screen present or not, its brand via EDID...), so
+-- `display-layout.sh roue-gen` rewrites it on EVERY press right before
+-- `roue display` opens (see its doc and cmd_roue_gen in
+-- scripts/display-layout.sh). Replaces the old rofi menu
+-- (`display-layout.sh menu`, still available if needed).
 hl.bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
 hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
 
 -- ============================================================
--- FENÊTRES
+-- WINDOWS
 -- ============================================================
--- close (et non kill) : ferme uniquement la fenêtre/tuile visée. kill
--- tue le processus entier — pour une appli multi-fenêtres (Firefox...),
--- ça fermerait toutes ses fenêtres au lieu de la seule fenêtre active.
+-- close (not kill): closes only the targeted window/tile. kill terminates
+-- the whole process -- for a multi-window app (Firefox...), that would
+-- close all of its windows instead of just the active one.
 hl.bind(mod .. "+ Q", function()
     local w = hl.get_active_window()
     if w ~= nil then
@@ -77,20 +76,20 @@ hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())
 --[[ hl.bind(mod .. "+ T",           hl.dsp.window.toggle_split()) ]]
 hl.bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
 
--- Déplacement du focus entre fenêtres (hjkl)
+-- Move focus between windows (hjkl)
 hl.bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }))
 hl.bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }))
 hl.bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }))
 hl.bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }))
 
--- Déplacement de la fenêtre active dans la direction indiquée
+-- Move the active window in the given direction
 hl.bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }))
 hl.bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }))
 hl.bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }))
 hl.bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }))
 
--- Submap de redimensionnement : SUPER+R entre dans "resize", hjkl
--- redimensionne par pas de 5px, Escape/Entrée en sort.
+-- Resize submap: SUPER+R enters "resize", hjkl resizes in 5px steps,
+-- Escape/Enter exits it.
 hl.bind(mod .. "+ R", hl.dsp.submap("resize"))
 hl.define_submap("resize", function()
     hl.bind("+ H",      hl.dsp.window.resize({ x = -5, y = 0,  relative = true }), { repeating = true })
@@ -102,11 +101,10 @@ hl.define_submap("resize", function()
 end)
 
 -- ============================================================
--- WORKSPACES — rangée de chiffres en disposition AZERTY
+-- WORKSPACES — number row in AZERTY layout
 -- ============================================================
--- Table de correspondance touche AZERTY → numéro de workspace (1-10),
--- car les touches physiques 1-10 produisent des symboles non numériques
--- en AZERTY (&, é, ", ', etc.).
+-- AZERTY key -> workspace number (1-10) mapping table, since physical
+-- keys 1-10 produce non-numeric symbols on AZERTY (&, é, ", ', etc.).
 local ws_keys = {
     { key = "ampersand",  n = 1  },
     { key = "eacute",     n = 2  },
@@ -121,38 +119,38 @@ local ws_keys = {
 }
 
 for _, ws in ipairs(ws_keys) do
-    -- SUPER+touche : bascule le focus vers le workspace n
+    -- SUPER+key: switches focus to workspace n
     hl.bind(mod .. "+ " .. ws.key, hl.dsp.focus({ workspace = tostring(ws.n) }))
 
-    -- SUPER+SHIFT+touche : déplace la fenêtre active vers le workspace n
+    -- SUPER+SHIFT+key: moves the active window to workspace n
     hl.bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
 end
 
--- Molette souris : navigue entre workspaces relatifs au moniteur sous le
--- curseur (m-1/m+1), sans jamais sauter sur l'écran voisin contrairement
--- à un simple offset global (e-1/e+1).
+-- Mouse wheel: navigates between workspaces relative to the monitor under
+-- the cursor (m-1/m+1), never jumping to the neighboring screen unlike a
+-- plain global offset (e-1/e+1).
 hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "m-1" }))
 hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "m+1" }))
 
--- Compacte les workspaces occupés vers le début de leur plage, par moniteur
+-- Compacts occupied workspaces toward the start of their range, per monitor
 hl.bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
 
--- Scratchpad (workspace spécial "magic")
+-- Scratchpad (special "magic" workspace)
 hl.bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
 
--- Déplacement/redimensionnement de fenêtre à la souris (boutons 8/9)
+-- Move/resize window with the mouse (buttons 8/9)
 hl.bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
 -- ============================================================
--- SYSTÈME & MÉDIA
+-- SYSTEM & MEDIA
 -- ============================================================
 hl.bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
 hl.bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
 
--- Volume, micro et rétroéclairage : touches multimédia, sans modificateur
+-- Volume, mic and backlight: media keys, no modifier
 hl.bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
 hl.bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { repeating = true })
 hl.bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })

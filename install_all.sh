@@ -15,7 +15,7 @@ err()     { echo -e "${RED}[ ERR]${RESET}  $*"; exit 1; }
 section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 
 # -----------------------------
-# Détection du gestionnaire de paquets
+# Package manager detection
 # -----------------------------
 if command -v dnf &> /dev/null; then
     PKGMGR="sudo dnf install -y"
@@ -28,19 +28,19 @@ else
 fi
 
 # -----------------------------
-# Installer les bases
+# Install base packages
 # -----------------------------
 section "Base packages"
 info "Installing base packages (git, curl, ImageMagick)..."
 $PKGMGR git curl ImageMagick
 
 # -----------------------------
-# Installer pip
+# Install pip
 # -----------------------------
 info "Installing pip..."
 if command -v python3 &> /dev/null; then
     if command -v dnf &> /dev/null; then
-        # Sur Fedora, on prend aussi python3-devel pour plus de sécurité avec pip
+        # On Fedora, also grab python3-devel for extra safety with pip
         sudo dnf install -y python3-pip python3-devel
     elif command -v pacman &> /dev/null; then
         sudo pacman -S --noconfirm python-pip
@@ -52,12 +52,12 @@ else
 fi
 
 # -----------------------------
-# Définir le dossier racine
+# Set the root directory
 # -----------------------------
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # -----------------------------
-# Lancer chaque module
+# Run each module
 # -----------------------------
 section "Modules"
 MODULES=(fonts bash tmux wezterm nvim wireplumber mangohud nemo)
@@ -73,7 +73,7 @@ for module in "${MODULES[@]}"; do
 done
 
 # -----------------------------
-# Installer Hyprland en dernier
+# Install Hyprland last
 # -----------------------------
 HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
 if [ -d "$HYPR_PATH" ]; then
@@ -83,21 +83,21 @@ if [ -d "$HYPR_PATH" ]; then
 fi
 
 # -----------------------------
-# Installer KDE Plasma
+# Install KDE Plasma
 # -----------------------------
-# On change HYPR_MODULE par KDE_MODULE
+# Swap HYPR_MODULE for KDE_MODULE
 KDE_MODULE="kde"
 KDE_PATH="$DOTFILES_DIR/config/$KDE_MODULE"
 
 if [ -d "$KDE_PATH" ]; then
     info "Running KDE Plasma 6 module..."
     chmod +x "$KDE_PATH/install.sh"
-    # L'appel au script kde/install.sh s'occupera du --allowerasing
+    # The call to kde/install.sh will handle --allowerasing
     "$KDE_PATH/install.sh"
 else
     warn "KDE module not found at $KDE_PATH"
 fi
 # -----------------------------
-# Terminé
+# Done
 # -----------------------------
 ok "Global installation complete."

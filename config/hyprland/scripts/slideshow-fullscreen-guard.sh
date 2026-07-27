@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =========================================================
-# slideshow-fullscreen-guard.sh — met en pause le diaporama de fond
-# d'écran (awww) pendant qu'une fenêtre est en plein écran, pour éviter
-# les à-coups de rendu derrière une vidéo ou un jeu. Lancé en service
-# systemd --user (cf. systemd/slideshow-fullscreen-guard.service).
+# slideshow-fullscreen-guard.sh — pauses the wallpaper slideshow (awww)
+# while a window is fullscreen, to avoid render stutter behind a video or
+# a game. Launched as a systemd --user service (see
+# systemd/slideshow-fullscreen-guard.service).
 # =========================================================
 
 SOCKET=""

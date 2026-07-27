@@ -6,7 +6,7 @@ RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer Tmux
+# 1. Install Tmux
 if command -v dnf &> /dev/null; then
     sudo dnf install -y tmux wl-clipboard
 elif command -v pacman &> /dev/null; then
@@ -16,7 +16,7 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y tmux wl-clipboard
 fi
 
-# 2. Liens symboliques
+# 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 safe_link() {
@@ -28,7 +28,7 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-# Tmux cherche sa config à la racine de ton home
+# Tmux looks for its config at the root of your home directory
 safe_link "$DOTFILES_DIR/config/tmux/.tmux.conf" ~/.tmux.conf
 
 ok "Tmux configured."

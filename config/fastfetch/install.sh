@@ -6,7 +6,7 @@ RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer fastfetch
+# 1. Install fastfetch
 if command -v dnf &> /dev/null; then
     sudo dnf install -y fastfetch chafa
 elif command -v pacman &> /dev/null; then
@@ -16,7 +16,7 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y fastfetch chafa
 fi
 
-# 2. Liens symboliques
+# 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/fastfetch
 
@@ -29,7 +29,7 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-# Lier la config JSONC et l'image
+# Link the JSONC config and the image
 safe_link "$DOTFILES_DIR/config/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
 safe_link "$DOTFILES_DIR/config/fastfetch/rayponce.jpg" ~/.config/fastfetch/rayponce.jpg
 

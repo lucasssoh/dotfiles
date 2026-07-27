@@ -1,11 +1,12 @@
-//! Chargement du thème CSS de Roue : fallback intégré au binaire, surchargé
-//! par le fichier utilisateur si présent. Même mécanisme que
-//! prisme-src/src/theme.rs (voir sa doc pour le détail du raisonnement).
+//! Loads Roue's CSS theme: fallback built into the binary, overridden by
+//! the user file if present. Same mechanism as prisme-src/src/theme.rs
+//! (see its doc for the full reasoning).
 
-/// Palette de secours, identique à waybar/style.css, orbit/theme.toml et
-/// prisme/style.css -- recopiée ici en dur pour la même raison que dans
-/// Prisme : `config/hyprland/roue/style.css` vit hors de `roue-src/`,
-/// qu'install.sh copie seul dans `~/.cache/roue-build/` avant `cargo build`.
+/// Fallback palette, identical to waybar/style.css, orbit/theme.toml, and
+/// prisme/style.css -- copied here as a hardcoded string for the same
+/// reason as in Prisme: `config/hyprland/roue/style.css` lives outside
+/// `roue-src/`, which install.sh copies alone into `~/.cache/roue-build/`
+/// before `cargo build`.
 const FALLBACK_CSS: &str = r#"
 * {
     font-family: "JetBrains Mono";
@@ -21,10 +22,10 @@ window,
     background-color: rgba(20, 20, 20, 0.95);
 }
 
-/* rgba(20, 20, 22, 0.88) reprend exactement la couleur du moyeu central
-   (cf. HUB fill dans roue-src/src/wheel.rs), #505050 la bordure des modules
-   waybar (@overlay2, cf. waybar/style.css) -- panneau plutôt qu'un blur
-   plein écran (coût GPU permanent au repos, cf. discussion). */
+/* rgba(20, 20, 22, 0.88) exactly matches the hub's fill color (see the HUB
+   fill in roue-src/src/wheel.rs), #505050 the waybar modules' border
+   (@overlay2, see waybar/style.css) -- a panel rather than a full-screen
+   blur (permanent GPU cost at rest, see discussion). */
 .roue-sidebar {
     background-color: rgba(20, 20, 22, 0.88);
     border: 1px solid #505050;
@@ -44,17 +45,17 @@ window,
 }
 "#;
 
-/// Charge le CSS en 3 couches, chacune par-dessus la précédente à la MÊME
-/// priorité (STYLE_PROVIDER_PRIORITY_USER) -- à priorité égale, GTK fait
-/// gagner le dernier provider ajouté sur les propriétés en conflit, donc
-/// l'ordre d'appel ci-dessous EST la règle de cascade :
-///   1. fallback intégré au binaire -- l'app reste utilisable même en
-///      lancement direct hors install.sh (cargo run).
-///   2. `roue/style.css` -- règle générale, commune à toutes les roues
-///      (symlinké par install.sh vers ~/.config/roue/).
-///   3. `roue/wheels/<wheel_name>.css`, optionnel -- surcharge propre à
-///      CETTE roue (ex. couleur de fond différente pour power vs
-///      powerprofile), absent = la règle générale s'applique telle quelle.
+/// Loads CSS in 3 layers, each one on top of the previous at the SAME
+/// priority (STYLE_PROVIDER_PRIORITY_USER) -- at equal priority, GTK lets
+/// the last-added provider win on conflicting properties, so the call
+/// order below IS the cascade rule:
+///   1. fallback built into the binary -- the app stays usable even when
+///      launched directly outside install.sh (cargo run).
+///   2. `roue/style.css` -- general rule, shared by all wheels (symlinked
+///      by install.sh into ~/.config/roue/).
+///   3. `roue/wheels/<wheel_name>.css`, optional -- override specific to
+///      THIS wheel (e.g. a different background color for power vs
+///      powerprofile), absent = the general rule applies as-is.
 pub fn load(display: &gtk4::gdk::Display, wheel_name: &str) {
     let fallback = gtk4::CssProvider::new();
     fallback.load_from_string(FALLBACK_CSS);

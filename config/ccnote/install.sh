@@ -13,10 +13,10 @@ DEST_DIR="$HOME/.config/ccnote"
 
 info "Setting up the ccnote workflow..."
 
-# 1. Création du dossier de destination dans ~/.config
+# 1. Create the destination folder under ~/.config
 mkdir -p "$DEST_DIR"
 
-# Fonction pour lier proprement
+# Helper to link cleanly
 safe_link() {
     local src=$1
     local dest=$2
@@ -26,11 +26,11 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-# 2. Liens symboliques du script Python et de la config Zsh
+# 2. Symlink the Python script and the Zsh config
 safe_link "$DOTFILES_DIR/config/ccnote/ccnote.py" "$DEST_DIR/ccnote.py"
 safe_link "$DOTFILES_DIR/config/ccnote/ccnote.zsh" "$DEST_DIR/ccnote.zsh"
 
-# Rendre le script Python exécutable à sa source
+# Make the Python script executable at its source
 chmod +x "$DOTFILES_DIR/config/ccnote/ccnote.py"
 
 ok "ccnote module installed to $DEST_DIR"

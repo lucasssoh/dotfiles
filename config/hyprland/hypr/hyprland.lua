@@ -1,15 +1,15 @@
 -- ============================================================
--- hyprland.lua — Point d'entrée de la configuration Hyprland
+-- hyprland.lua — Entry point of the Hyprland configuration
 -- ============================================================
--- Charge la palette, les variables d'environnement, l'autostart, puis
--- les sous-modules (monitors / windowrules / keybinds) en fin de fichier.
+-- Loads the palette, environment variables, autostart, then the
+-- submodules (monitors / windowrules / keybinds) at the end of the file.
 -- ============================================================
 
 -- ============================================================
 -- ENVIRONMENT
 -- ============================================================
--- Variables nécessaires pour un fonctionnement Wayland cohérent entre
--- toolkits (Qt, GTK, SDL, Clutter) et applications historiquement X11.
+-- Variables needed for consistent Wayland behavior across toolkits
+-- (Qt, GTK, SDL, Clutter) and historically X11 applications.
 hl.env("XCURSOR_SIZE",          "24")
 hl.env("XCURSOR_THEME",         "breeze_cursors")
 hl.env("QT_QPA_PLATFORM",       "wayland")
@@ -28,79 +28,94 @@ hl.env("MOZ_ENABLE_WAYLAND",    "1")
 local colors = require("colors")
 
 -- ============================================================
--- AUTOSTART (syntaxe événementielle Lua, Hyprland 0.55+)
+-- AUTOSTART (Lua event syntax, Hyprland 0.55+)
 -- ============================================================
 hl.on("hyprland.start", function()
-    -- Propage les variables de session vers D-Bus/systemd : requis pour
-    -- que les portails XDG (partage d'écran, sélecteur de fichiers...)
-    -- fonctionnent correctement sous Wayland.
+    -- Propagates session variables to D-Bus/systemd: required for XDG
+    -- portals (screen sharing, file picker...) to work correctly under
+    -- Wayland.
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
 
-    -- Importe la session dans systemd --user : requis par les services
-    -- déclarés WantedBy=graphical-session.target pour démarrer.
+    -- Imports the session into systemd --user: required for services
+    -- declared WantedBy=graphical-session.target to start.
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    -- NB : `systemctl --user start graphical-session.target` ne suffit pas
-    -- sur cette session : la target a RefuseManualStart=yes (cf.
-    -- /usr/lib/systemd/user/graphical-session.target) et loginctl ne
-    -- classe pas cette session comme "graphique" (Type=unspecified /
-    -- Class=manager), donc la target ne s'active jamais automatiquement.
-    -- Conséquence : tout service WantedBy=graphical-session.target (ex.
-    -- orbit.service) doit être démarré explicitement ci-dessous plutôt
-    -- que de compter sur l'activation de la target.
+    -- NB: `systemctl --user start graphical-session.target` isn't enough
+    -- on this session: the target has RefuseManualStart=yes (see
+    -- /usr/lib/systemd/user/graphical-session.target) and loginctl doesn't
+    -- classify this session as "graphical" (Type=unspecified /
+    -- Class=manager), so the target never activates automatically.
+    -- Consequence: every WantedBy=graphical-session.target service (e.g.
+    -- orbit.service) must be started explicitly below instead of relying
+    -- on the target's activation.
+    --
+    -- xdg-desktop-portal.service is hit even worse: its unit has an
+    -- outright `Requisite=graphical-session.target` (not just
+    -- WantedBy=), so even an explicit `systemctl --user start` refuses it
+    -- as long as the target isn't active (see
+    -- /usr/lib/systemd/user/xdg-desktop-portal.service). Observed symptom:
+    -- every GTK/GDK call to XDG portals fails with "Could not activate
+    -- remote peer 'org.freedesktop.portal.Desktop': startup job failed",
+    -- and some GTK4 file pickers (e.g. satty's "Save as") that depend on
+    -- it to list some folders fail with a display error. Workaround:
+    -- launch the binary directly (like the other daemons in this block),
+    -- simply bypassing the blocked systemd service -- it registers itself
+    -- on the D-Bus at startup, no need for service activation.
+    hl.exec_cmd("/usr/libexec/xdg-desktop-portal")
 
-    -- Services et daemons de session
+    -- Session services and daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
     hl.exec_cmd("waybar")
-    -- swaync remplace dunst comme centre de notifications (historique,
-    -- toggles, contrôles mpris). Les deux revendiquent le même nom D-Bus
-    -- org.freedesktop.Notifications et ne peuvent pas cohabiter — dunst
-    -- n'est donc plus lancé, mais sa config reste dans le repo en secours.
+    -- swaync replaces dunst as the notification center (history, toggles,
+    -- mpris controls). Both claim the same D-Bus name
+    -- org.freedesktop.Notifications and can't coexist -- dunst is
+    -- therefore no longer started, but its config stays in the repo as a
+    -- fallback.
     hl.exec_cmd("swaync")
-    -- hypridle désactivé sur cette machine (config présente et valide,
-    -- cf. hypridle.conf, mais non activée). Décommenter pour réactiver.
+    -- hypridle disabled on this machine (config present and valid, see
+    -- hypridle.conf, but not enabled). Uncomment to re-enable.
     -- hl.exec_cmd("hypridle")
-    -- Restaure le fond d'écran de la session précédente puis surveille
-    -- le cache de vignettes en arrière-plan.
+    -- Restores the previous session's wallpaper, then watches the
+    -- thumbnail cache in the background.
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
-    -- Historique du presse-papier
+    -- Clipboard history
     hl.exec_cmd("wl-paste --watch cliphist store")
-    -- Démon D-Bus Nemo, pour l'intégration "Ouvrir l'emplacement" des
-    -- autres applications (gestionnaire de fichiers toujours disponible).
+    -- Nemo D-Bus daemon, for other applications' "Open location"
+    -- integration (file manager always available).
     hl.exec_cmd("nemo --no-desktop --gapplication-service")
 
-    -- Workspaces fixes 1-10, posés à l'exécution via hyprctl eval — non
-    -- persistés dans un fichier Lua, donc à rejouer à chaque démarrage
-    -- (et sur config.reloaded / monitor.added / monitor.removed ci-dessous).
+    -- Fixed workspaces 1-10, set at runtime via hyprctl eval -- not
+    -- persisted in a Lua file, so they must be replayed on every startup
+    -- (and on config.reloaded / monitor.added / monitor.removed below).
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 
-    -- Gestionnaire WiFi/Bluetooth/VPN natif Wayland (remplace le détour
-    -- par gnome-control-center), compilé depuis les sources vendorisées
-    -- par install.sh (cf. orbit-vendor/). Le raccourci waybar `orbit
-    -- toggle` réutilise ce daemon plutôt que d'en relancer un par clic.
-    -- Démarré ici via un service systemd --user (cf. systemd/orbit.service,
-    -- ExecStartPre sleep 3 + Restart=on-failure) plutôt que directement :
-    -- le client GTK4/layer-shell peut échouer à s'initialiser trop tôt
-    -- dans la séquence de démarrage, et le service gère le délai et le
-    -- redémarrage automatique. Démarré explicitement ici et non via
-    -- WantedBy=graphical-session.target, pour la même raison que ci-dessus
-    -- (cette target ne s'active jamais seule sur cette session).
+    -- Native Wayland WiFi/Bluetooth/VPN manager (replaces the
+    -- gnome-control-center detour), built from the sources vendored by
+    -- install.sh (see orbit-vendor/). The waybar `orbit toggle` shortcut
+    -- reuses this daemon instead of relaunching one per click. Started
+    -- here via a systemd --user service (see systemd/orbit.service,
+    -- ExecStartPre sleep 3 + Restart=on-failure) rather than directly:
+    -- the GTK4/layer-shell client can fail to initialize too early in the
+    -- startup sequence, and the service handles the delay and automatic
+    -- restart. Started explicitly here rather than via
+    -- WantedBy=graphical-session.target, for the same reason as above
+    -- (this target never activates on its own on this session).
     hl.exec_cmd("systemctl --user start orbit.service")
-    -- Ferme Orbit sur clic extérieur (comme swaync) : GTK/gtk4-layer-shell
-    -- ne notifie jamais une surface layer-shell de sa perte de focus, donc
-    -- ce comportement s'appuie sur les événements Hyprland à la place.
+    -- Closes Orbit on an outside click (like swaync): GTK/gtk4-layer-shell
+    -- never notifies a layer-shell surface that it lost focus, so this
+    -- behavior relies on Hyprland events instead.
     hl.exec_cmd("bash ~/.config/hypr/scripts/orbit-autoclose.sh")
 end)
 
--- Un `hyprctl reload` recharge les fichiers Lua statiques et efface les
--- règles posées à l'exécution (workspace_rule, tuning moniteur) — on les
--- rejoue ici pour que les 10 workspaces fixes survivent à un reload.
+-- A `hyprctl reload` reloads the static Lua files and clears rules set at
+-- runtime (workspace_rule, monitor tuning) -- replayed here so the 10
+-- fixed workspaces survive a reload.
 hl.on("config.reloaded", function()
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 end)
 
--- Écran externe branché ou débranché : réassigne les workspaces 1-10 par
--- rôle (interne/externe) sans nécessiter de hyprctl reload.
+-- External monitor plugged or unplugged: reassigns workspaces 1-10 by
+-- role (internal/external) without needing a hyprctl reload.
 hl.on("monitor.added", function()
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 end)
@@ -129,7 +144,7 @@ hl.config({
     },
 })
 
--- Swipe horizontal 3 doigts pour naviguer entre workspaces (trackpad)
+-- 3-finger horizontal swipe to navigate between workspaces (trackpad)
 hl.gesture({
     fingers = 3,
     direction = "horizontal",
@@ -145,7 +160,7 @@ hl.config({
         gaps_out         = 8,
         border_size      = 2,
         col = {
-            -- Dégradé animé pour la bordure de la fenêtre active
+            -- Animated gradient for the active window's border
             active_border = {
                 colors = {
                     "rgba(89DCEBFF)",
@@ -191,7 +206,7 @@ hl.config({
 })
 
 -- ============================================================
--- CURVES — courbes de Bézier réutilisées par les animations ci-dessous
+-- CURVES — Bézier curves reused by the animations below
 -- ============================================================
 hl.curve("smooth", { type = "bezier", points = { {0.05, 0.9}, {0.1, 1.05} } })
 hl.curve("linear", { type = "bezier", points = { {0.0, 0.0}, {1.0, 1.0} } })
@@ -202,7 +217,7 @@ hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
 -- ============================================================
 hl.animation({ leaf = "windows", enabled = true, speed = 4, bezier = "smooth", style = "slide" })
 
--- Fondu (ouverture/fermeture, changement d'opacité)
+-- Fade (open/close, opacity change)
 hl.animation({ leaf = "fade", enabled = true, speed = 4, bezier = "smooth" })
 
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "snap", style = "slide" })
@@ -220,7 +235,7 @@ hl.config({
     },
 })
 
--- Sous-modules : moniteurs/HDR, règles par application, raccourcis clavier
+-- Submodules: monitors/HDR, per-app rules, keyboard shortcuts
 require("monitors")
 require("windowrules")
 require("keybinds")

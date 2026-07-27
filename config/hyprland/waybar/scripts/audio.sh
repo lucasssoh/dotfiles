@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# pactl traduit ses labels selon la locale (ex: "Nom"/"Description" en
-# français) -- on force le C pour un parsing stable, indépendant de la
-# langue système.
+# pactl translates its labels according to locale (e.g. "Name"/"Description"
+# in French) -- forcing C locale here for stable parsing, independent of
+# the system language.
 export LC_ALL=C
 
 # =========================================================
-# audio.sh — sélecteur de périphérique audio (remplace wiremix)
+# audio.sh — audio device picker (replaces wiremix)
 #
-#   audio.sh output   -> choisir le périphérique de sortie par défaut
-#   audio.sh input     -> choisir le périphérique d'entrée par défaut
+#   audio.sh output   -> choose the default output device
+#   audio.sh input     -> choose the default input device
 #
-# Backend pactl (pipewire-pulse). Le volume/mute restent gérés
-# ailleurs (wpctl via les raccourcis clavier et le clic sur le module) ;
-# ce script ne fait QUE le choix du périphérique par défaut.
+# pactl backend (pipewire-pulse). Volume/mute stay handled elsewhere
+# (wpctl via keyboard shortcuts and clicking the module); this script
+# ONLY picks the default device.
 # =========================================================
 
 RASI="$HOME/.config/rofi/theme.rasi"
@@ -49,12 +49,12 @@ icon_for() {
     esac
 }
 
-declare -A NAME_OF  # ligne affichée dans rofi -> nom pactl du périphérique
+declare -A NAME_OF  # row shown in rofi -> pactl device name
 ROWS=()
 
-# Remplit ROWS/NAME_OF en variables globales plutôt que de renvoyer un
-# résultat via $(...) : cf. wifi.sh pour la raison (un subshell perdrait
-# les tableaux associatifs remplis à l'intérieur).
+# Fills ROWS/NAME_OF as global variables instead of returning a result via
+# $(...): see wifi.sh for why (a subshell would lose the associative
+# arrays populated inside it).
 build_rows() {
     ROWS=()
     NAME_OF=()
@@ -64,8 +64,8 @@ build_rows() {
 
     while IFS= read -r name; do
         [[ -z "$name" ]] && continue
-        # Les sources ".monitor" sont le retour de chaque sortie audio, pas
-        # de vrais micros -- sans ce filtre elles polluent le choix d'entrée.
+        # ".monitor" sources are the loopback of each audio output, not real
+        # mics -- without this filter they'd clutter the input picker.
         [[ "$KIND" == "input" && "$name" == *.monitor ]] && continue
         desc=$(pactl list "$PACTL_KIND" \
             | awk -v n="$name" '

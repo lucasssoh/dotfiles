@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # =========================================================
-# wallpaper-slideshow.sh — boucle infinie de diaporama de fond d'écran.
-# Lit la playlist (durée, source, liste d'images) écrite par
-# set_wallpaper.sh/Prisme, mélange l'ordre à chaque cycle complet, et
-# applique chaque image via awww. Lancé en service systemd --user
-# (cf. systemd/wallpaper-slideshow.service), démarré/arrêté par
-# restore_wallpaper.sh et slideshow-fullscreen-guard.sh selon le mode
-# et l'état plein écran.
+# wallpaper-slideshow.sh — infinite wallpaper slideshow loop. Reads the
+# playlist (duration, source, image list) written by
+# set_wallpaper.sh/Prisme, shuffles the order on every full cycle, and
+# applies each image via awww. Launched as a systemd --user service (see
+# systemd/wallpaper-slideshow.service), started/stopped by
+# restore_wallpaper.sh and slideshow-fullscreen-guard.sh depending on mode
+# and fullscreen state.
 # =========================================================
 
-# Dossier source configurable via ~/.config/prisme/wallpapers.conf --
-# n'intervient qu'en repli, cf. plus bas (le "source" de la playlist
-# suffit dans l'immense majorité des cas).
+# Source folder configurable via ~/.config/prisme/wallpapers.conf -- only
+# used as a fallback, see below (the playlist's "source" is enough in the
+# vast majority of cases).
 WALL_DIR="$HOME/Images/Wallpapers"
 WALLPAPERS_CONF="$HOME/.config/prisme/wallpapers.conf"
 if [[ -f "$WALLPAPERS_CONF" ]]; then
@@ -34,7 +34,7 @@ apply_wall() {
         --transition-duration 1
 }
 
-# Mélange de Fisher-Yates : évite de rejouer la playlist dans le même ordre
+# Fisher-Yates shuffle: avoids replaying the playlist in the same order
 shuffle() {
     local arr=("$@")
     local n=${#arr[@]}
@@ -47,8 +47,8 @@ shuffle() {
     printf '%s\n' "${arr[@]}"
 }
 
-# Playlist trouvée : charge durée/source/images depuis le JSON. Sinon,
-# repli sur toutes les images de WALL_DIR avec une durée par défaut.
+# Playlist found: loads duration/source/images from the JSON. Otherwise,
+# falls back to every image in WALL_DIR with a default duration.
 if [ -f "$PLAYLIST_FILE" ]; then
     DURATION=$(python3 -c "
 import json
@@ -78,7 +78,7 @@ fi
 
 [ ${#walls[@]} -eq 0 ] && exit 1
 
-# Boucle infinie : un ordre mélangé par cycle complet de la playlist
+# Infinite loop: a freshly shuffled order per full playlist cycle
 while true; do
     mapfile -t shuffled < <(shuffle "${walls[@]}")
     for img in "${shuffled[@]}"; do

@@ -2,20 +2,18 @@
 set -euo pipefail
 
 # =========================================================
-# compact-workspaces.sh — retasse les workspaces occupés vers le
-# début de leur plage, PAR MONITEUR (jamais de mélange interne/
-# externe : chaque moniteur ne compacte que dans ses propres
-# workspaces, tels qu'assignés par workspace-manager.sh).
+# compact-workspaces.sh — packs occupied workspaces toward the start of
+# their range, PER MONITOR (never mixing internal/external: each monitor
+# only compacts within its own workspaces, as assigned by
+# workspace-manager.sh).
 #
-# Ex (interne 1-7) : 2, 3, 6 occupés -> compactés en 1, 2, 3.
+# E.g. (internal 1-7): 2, 3, 6 occupied -> compacted into 1, 2, 3.
 #
-# Déclenchement MANUEL uniquement (bind clavier) : ce build
-# d'Hyprland expose une API Lua (hl.dsp.window.move) qui ne propose
-# pas d'équivalent silencieux de movetoworkspacesilent — tout
-# déplacement fait sauter l'écran sur le workspace cible. Le script
-# referme la boucle en refocusant chaque moniteur sur son contenu
-# d'origine (renuméroté si besoin) une fois tous les déplacements
-# terminés.
+# MANUAL trigger only (keybind): this Hyprland build exposes a Lua API
+# (hl.dsp.window.move) that offers no silent equivalent to
+# movetoworkspacesilent — every move makes the screen jump to the target
+# workspace. The script closes the loop by refocusing each monitor on its
+# original content (renumbered if needed) once all moves are done.
 # =========================================================
 
 rules_json="$(hyprctl workspacerules -j)"
@@ -36,7 +34,7 @@ refocus() {
 
 mapfile -t monitor_names < <(jq -r '.[].name' <<<"$monitors_json")
 
-declare -A restore_focus  # moniteur -> workspace à refocus en fin de script
+declare -A restore_focus  # monitor -> workspace to refocus at the end of the script
 
 for mon in "${monitor_names[@]}"; do
     mapfile -t slots < <(jq -r --arg m "$mon" \
@@ -48,8 +46,8 @@ for mon in "${monitor_names[@]}"; do
     active_ws="$(jq -r --arg m "$mon" '.[] | select(.name==$m) | .activeWorkspace.id // empty' <<<"$monitors_json")"
     [[ -n "$active_ws" ]] && restore_focus["$mon"]="$active_ws"
 
-    # workspaces occupés (fenêtres réelles, hors dashboard vide) parmi les
-    # slots de ce moniteur, dans l'ordre ascendant des slots
+    # Occupied workspaces (real windows, excluding the empty dashboard)
+    # among this monitor's slots, in ascending slot order
     mapfile -t occ < <(jq -r --argjson slots "$slots_json" '
         ([.[] | select(.class | ascii_downcase | contains("dashboard") | not) | .workspace.id] | unique) as $busy
         | $slots[] | select(. as $s | $busy | index($s))
@@ -73,9 +71,9 @@ for mon in "${monitor_names[@]}"; do
     done
 done
 
-# Refocus chaque moniteur sur son contenu d'origine (renuméroté si déplacé).
-# Le moniteur qui avait le focus clavier au départ est refocusé en dernier,
-# pour le lui restituer.
+# Refocuses each monitor on its original content (renumbered if moved).
+# The monitor that had keyboard focus initially is refocused last, to give
+# it back to it.
 for mon in "${monitor_names[@]}"; do
     [[ "$mon" == "$focused_monitor" ]] && continue
     [[ -n "${restore_focus[$mon]:-}" ]] && refocus "${restore_focus[$mon]}"

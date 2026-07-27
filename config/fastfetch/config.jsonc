@@ -5,7 +5,7 @@
         "width": 35,
         "type":"chafa",
         "chafa": {
-            "symbols": "ascii" // Force l'usage de caractères ASCII classiques
+            "symbols": "ascii" // Force the use of classic ASCII characters
         },
         "height": 15,
         "padding": {

@@ -2,24 +2,23 @@
 set -euo pipefail
 
 # =========================================================
-# hdr.sh — bascule SDR/HDR par écran pour Hyprland + Waybar
+# hdr.sh — per-screen SDR/HDR toggle for Hyprland + Waybar
 #
-#   hdr.sh status   -> JSON pour le module waybar (écran DE CETTE barre)
-#   hdr.sh toggle    -> bascule l'écran sous le curseur (barre cliquée)
-#   hdr.sh menu      -> menu rofi (écrans compatibles HDR uniquement)
+#   hdr.sh status   -> JSON for the waybar module (THIS bar's screen)
+#   hdr.sh toggle    -> toggles the screen under the cursor (bar that was clicked)
+#   hdr.sh menu      -> rofi menu (HDR-capable screens only)
 #
-# En mode "par écran", chaque instance de Waybar affiche et contrôle
-# SON propre écran (via WAYBAR_OUTPUT_NAME côté affichage, et la position
-# du curseur côté clic — WAYBAR_OUTPUT_NAME n'est pas fiable dans les
-# gestionnaires de clic).
+# In "per-screen" mode, each Waybar instance displays and controls ITS
+# OWN screen (via WAYBAR_OUTPUT_NAME for display, and cursor position
+# for clicks — WAYBAR_OUTPUT_NAME isn't reliable in click handlers).
 # =========================================================
 
-# ---- Réglages ------------------------------------------------
-SDRBRIGHTNESS="1.2"     # luminosité du contenu SDR quand l'écran est en HDR (1.0..2.0)
-SDRSATURATION="1.0"     # saturation du contenu SDR en HDR
-WAYBAR_SIGNAL=3         # doit correspondre à "signal" dans config.jsonc
-RASI="$HOME/.config/rofi/theme.rasi"   # thème du menu (adapte si besoin)
-ICON=""               # glyphe écran (nf-md-monitor)
+# ---- Settings ------------------------------------------------
+SDRBRIGHTNESS="1.2"     # SDR content brightness while the screen is in HDR (1.0..2.0)
+SDRSATURATION="1.0"     # SDR content saturation in HDR
+WAYBAR_SIGNAL=3         # must match "signal" in config.jsonc
+RASI="$HOME/.config/rofi/theme.rasi"   # menu theme (adjust if needed)
+ICON=""               # screen glyph (nf-md-monitor)
 
 CACHE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hdr-toggle"
 
@@ -29,7 +28,7 @@ focused() {
     hyprctl monitors -j | jq -r '.[] | select(.focused==true) | .name'
 }
 
-# Écran situé sous le curseur (= barre que l'on vient de cliquer)
+# Screen located under the cursor (= the bar that was just clicked)
 monitor_at_cursor() {
     local pos cx cy
     pos=$(hyprctl cursorpos 2>/dev/null | tr -d ' ') || return 1
@@ -42,7 +41,7 @@ monitor_at_cursor() {
         ) | .name' | head -n1
 }
 
-# Vrai si l'écran est actuellement en HDR (pipeline 10-bit actif)
+# True if the screen is currently in HDR (10-bit pipeline active)
 is_hdr() {
     local m="$1" fmt
     fmt=$(hyprctl monitors -j | jq -r --arg m "$m" \
@@ -50,8 +49,8 @@ is_hdr() {
     [[ "$fmt" == *2101010* ]]
 }
 
-# Support HDR déclaré dans l'EDID — mis en cache (l'EDID ne change pas).
-# edid-decode absent / EDID introuvable -> on considère compatible (on ne bloque pas).
+# HDR support as declared in the EDID — cached (the EDID doesn't change).
+# edid-decode missing / EDID not found -> treated as capable (we don't block).
 hdr_capable() {
     local m="$1" cache="$CACHE_DIR/cap-$m" edid="" path cap=1
     if [[ -f "$cache" ]]; then
@@ -73,12 +72,13 @@ hdr_capable() {
     [[ "$cap" == "1" ]]
 }
 
-# Luminance HDR réelle du panneau, lue dans l'EDID (Desired content max
-# frame-average / min luminance) -- sans ça, Hyprland retombe sur des défauts
-# génériques (sdr_max_luminance=80, sdr_min_luminance=0.2) qui n'ont aucun
-# rapport avec la vraie capacité de l'écran -> HDR plat/délavé. Mis en cache
-# comme hdr_capable (l'EDID ne change pas). Imprime "max min", vide si
-# indisponible -- apply() retombe alors sur cm="hdr" (comportement actuel).
+# Real HDR luminance of the panel, read from the EDID (Desired content max
+# frame-average / min luminance) -- without this, Hyprland falls back to
+# generic defaults (sdr_max_luminance=80, sdr_min_luminance=0.2) that have
+# nothing to do with the screen's real capability -> flat/washed-out HDR.
+# Cached like hdr_capable (the EDID doesn't change). Prints "max min",
+# empty if unavailable -- apply() then falls back to cm="hdr" (current
+# behavior).
 hdr_luminance() {
     local m="$1" cache="$CACHE_DIR/lum-$m" edid="" path max="" min=""
     if [[ -f "$cache" ]]; then
@@ -94,8 +94,8 @@ hdr_luminance() {
             | sed -n 's/.*Desired content max frame-average luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
         min=$(edid-decode "$edid" 2>/dev/null \
             | sed -n 's/.*Desired content min luminance:.*(\([0-9.]*\) cd\/m\^2).*/\1/p' | head -n1)
-        # sdr_max_luminance exige un entier côté Hyprland : un float est
-        # rejeté avec "integer type requires a bool or an integer".
+        # sdr_max_luminance requires an integer on Hyprland's side: a float
+        # gets rejected with "integer type requires a bool or an integer".
         if [[ -n "$max" ]]; then
             max="${max%%.*}"
         fi
@@ -104,12 +104,13 @@ hdr_luminance() {
     printf '%s %s' "$max" "$min"
 }
 
-# Applique HDR ou SDR en préservant mode/position/scale courants
+# Applies HDR or SDR while preserving the current mode/position/scale
 #
-# NB : ce setup charge sa config via un binding Lua custom (hl.*), qui bascule
-# Hyprland sur un parser "non-legacy" où `hyprctl keyword` est refusé
-# ("keyword can't work with non-legacy parsers. Use eval."). On pilote donc
-# via `hyprctl eval '<lua hl.*>'` (même pattern que scripts/workspace-manager.sh).
+# NB: this setup loads its config through a custom Lua binding (hl.*),
+# which switches Hyprland to a "non-legacy" parser where `hyprctl keyword`
+# is rejected ("keyword can't work with non-legacy parsers. Use eval.").
+# We drive it via `hyprctl eval '<lua hl.*>'` instead (same pattern as
+# scripts/workspace-manager.sh).
 apply() {
     local m="$1" want="$2" j w h rr x y scale mode position
     j=$(hyprctl monitors -j | jq -r --arg m "$m" '.[] | select(.name==$m)')
@@ -119,7 +120,7 @@ apply() {
     x=$(jq -r '.x'            <<<"$j")
     y=$(jq -r '.y'            <<<"$j")
     scale=$(jq -r '.scale'    <<<"$j")
-    rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # locale FR = virgule décimale, casse le format "W x H@RR"
+    rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # FR locale = decimal comma, breaks the "W x H@RR" format
     mode="${w}x${h}@${rr}"
     position="${x}x${y}"
 
@@ -139,10 +140,10 @@ apply() {
 
 refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
 
-# ---- Sous-commandes ------------------------------------------
+# ---- Subcommands ------------------------------------------
 
 cmd_status() {
-    # L'écran de CETTE barre ; repli sur le focus si lancé à la main
+    # THIS bar's screen; falls back to the focused one if run by hand
     local m="${WAYBAR_OUTPUT_NAME:-$(focused)}"
     if [[ -z "$m" ]]; then
         printf '{"text":"%s","class":"hdr-na","tooltip":"No display"}\n' "$ICON"
@@ -158,7 +159,7 @@ cmd_status() {
 }
 
 cmd_toggle() {
-    # L'écran sous le curseur = la barre cliquée ; repli sur le focus
+    # The screen under the cursor = the bar that was clicked; falls back to focused
     local m; m=$(monitor_at_cursor) || true
     [[ -z "$m" ]] && m=$(focused)
     [[ -z "$m" ]] && exit 0

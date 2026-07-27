@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # =========================================================
-# screenshot-region.sh — capture d'une zone sélectionnée -> presse-papier
+# screenshot-region.sh — capture of a selected region -> clipboard
 #
-# Isolé dans son propre script (plutôt qu'inliné) pour le bouton "Capture"
-# de swaync/config.json : swaync exécute ses commandes via
-# `/bin/sh -c "<cmd>"`, donc tout guillemet double dans la commande doit
-# être échappé pour ne pas casser ce wrapping -- un script évite le
-# problème entièrement. Même pipeline que le raccourci SUPER+SHIFT+S
+# Split into its own script (rather than inlined) for the "Capture"
+# button in swaync/config.json: swaync runs its commands via
+# `/bin/sh -c "<cmd>"`, so any double quote in the command would need
+# escaping to not break that wrapping -- a script avoids the problem
+# entirely. Same pipeline as the SUPER+SHIFT+S shortcut
 # (hypr/keybinds.lua).
 # =========================================================
 

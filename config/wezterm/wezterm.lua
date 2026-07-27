@@ -3,7 +3,7 @@ local config = wezterm.config_builder()
 local act = wezterm.action
 
 -- =========================
--- POLICE
+-- FONT
 -- =========================
 config.font = wezterm.font_with_fallback({
   {
@@ -19,7 +19,7 @@ config.freetype_load_target = "Light"
 config.automatically_reload_config = true
 
 -- =========================
--- APPARENCE
+-- APPEARANCE
 -- =========================
 config.window_background_opacity = 0.90
 config.macos_window_background_blur = 0
@@ -37,7 +37,7 @@ config.inactive_pane_hsb = {
 }
 
 -- =========================
--- COULEURS
+-- COLORS
 -- =========================
 config.colors = {
   foreground = "#f8f8f2",
@@ -45,7 +45,7 @@ config.colors = {
   cursor_bg = "#ffffff",
   selection_fg = "#f8f8f2",
   selection_bg = "#484e54",
-  -- Séparateur vert = indicateur visuel du pane actif
+  -- Green separator = visual indicator of the active pane
   split = "#605b51",
   ansi = {
     "#232629", "#b0151a", "#028902", "#ffb400",
@@ -81,7 +81,7 @@ config.colors = {
 }
 
 -- =========================
--- RACCOURCIS
+-- SHORTCUTS
 -- =========================
 config.disable_default_key_bindings = true
 config.keys = {

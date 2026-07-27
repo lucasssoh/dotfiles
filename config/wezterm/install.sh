@@ -6,7 +6,7 @@ RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer WezTerm
+# 1. Install WezTerm
 if command -v dnf &> /dev/null; then
     sudo dnf copr enable wezfurlong/wezterm-nightly -y
     sudo dnf install -y wezterm
@@ -19,7 +19,7 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y wezterm
 fi
 
-# 2. Liens symboliques
+# 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/wezterm
 
@@ -32,7 +32,7 @@ safe_link() {
     ln -s "$src" "$dest"
 }
 
-# Lier la config
+# Link the config
 safe_link "$DOTFILES_DIR/config/wezterm/wezterm.lua" ~/.wezterm.lua
 safe_link "$DOTFILES_DIR/config/wezterm/wezterm.lua" ~/.config/wezterm/wezterm.lua
 

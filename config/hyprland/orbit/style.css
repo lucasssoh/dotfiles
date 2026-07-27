@@ -1,34 +1,33 @@
-/* Orbit — police + aplat complet, pour matcher waybar/swaync/rofi :
-   pas d'ombre/glow, coins et bordures identiques à swaync (.control-center),
-   padding plus généreux.
+/* Orbit — font + flat look, to match waybar/swaync/rofi: no shadow/glow,
+   corners and borders identical to swaync's (.control-center), more
+   generous padding.
 
-   Chargé par-dessus le CSS généré depuis theme.toml, à la même priorité
-   (STYLE_PROVIDER_PRIORITY_USER) mais après -- donc pour gagner sur une
-   règle du CSS généré il faut une spécificité de sélecteur ÉGALE ou
-   supérieure (pas besoin de !important, qui n'est de toute façon PAS
-   supporté par le parseur CSS de GTK4 pour la plupart des propriétés ici
-   -- testé en live : "!important" sur box-shadow/text-shadow/
-   background-image/border-radius/outline produit une erreur de parsing
-   "Junk at end of value" et la règle entière est ignorée. Chaque sélecteur
-   ci-dessous reprend donc EXACTEMENT les classes du CSS généré (cf.
-   Theme::generate_css dans le code d'Orbit) pour égaler sa spécificité.
+   Loaded on top of the CSS generated from theme.toml, at the same
+   priority (STYLE_PROVIDER_PRIORITY_USER) but after -- so beating a rule
+   from the generated CSS needs an EQUAL or higher selector specificity (no
+   need for !important, which isn't supported by GTK4's CSS parser for
+   most of the properties here anyway -- tested live: "!important" on
+   box-shadow/text-shadow/background-image/border-radius/outline produces
+   a "Junk at end of value" parse error and the whole rule gets dropped.
+   Each selector below therefore reuses the EXACT classes from the
+   generated CSS (see Theme::generate_css in Orbit's code) to match its
+   specificity.
 
-   Recharge à chaud : `orbit reload-theme` (pas besoin de relancer le daemon).
+   Hot reload: `orbit reload-theme` (no need to restart the daemon).
 */
 
 * {
     font-family: "JetBrains Mono";
 }
 
-/* Anneau de focus par défaut de GTK/Adwaita -- à une priorité plus basse
-   (thème système) que ce fichier, donc pas besoin de matcher sa spécificité
-   pour le neutraliser. */
+/* GTK/Adwaita's default focus ring -- at a lower priority (system theme)
+   than this file, so no need to match its specificity to neutralize it. */
 *:focus,
 *:focus-visible {
     outline: none;
 }
 
-/* ── Panneau : mêmes coins/bordure que swaync .control-center ──────── */
+/* ── Panel: same corners/border as swaync's .control-center ─────────── */
 window,
 .background,
 .orbit-panel {
@@ -42,8 +41,8 @@ window,
     padding: 14px;
 }
 
-/* En-tête / pied de page : pas de fond distinct (comme les widgets swaync,
-   qui n'ont pas non plus de fond propre) -- juste un séparateur fin. */
+/* Header / footer: no separate background (like swaync's widgets, which
+   don't have their own background either) -- just a thin separator. */
 .orbit-header {
     background-color: transparent;
     background-image: none;
@@ -60,7 +59,7 @@ window,
     padding: 20px 24px;
 }
 
-/* ── Cartes réseau / appareil : coins + padding, sans glow ──────────── */
+/* ── Network / device cards: corners + padding, no glow ──────────────── */
 .orbit-network-row,
 .orbit-device-row,
 .orbit-saved-network-row {
@@ -102,10 +101,10 @@ window,
     color: #f2f2f7;
 }
 
-/* ── Boutons : coins alignés sur le reste du système (plus de forme
-   "pilule" 9999px), padding plus généreux, pas de glow au survol. Le
-   switch WiFi/BT garde sa forme pilule -- convention normale pour un
-   toggle (comme le switch DND de swaync). ── */
+/* ── Buttons: corners aligned with the rest of the system (no more 9999px
+   "pill" shape), more generous padding, no glow on hover. The WiFi/BT
+   switch keeps its pill shape -- normal convention for a toggle (like
+   swaync's DND switch). ── */
 .orbit-button,
 .orbit-button.primary,
 .orbit-button.destructive {
@@ -114,11 +113,11 @@ window,
     padding: 10px 20px;
 }
 
-/* Survol = bordure grise neutre, jamais cyan -- le cyan reste réservé à
-   l'état "actif/sélectionné" (onglet actif, réseau connecté, switch on).
-   Avant : le survol des boutons normaux (Disconnect/Details/Scan...) et des
-   onglets passait en cyan plein, soit la MÊME couleur que la sélection --
-   on ne pouvait plus distinguer "en train de survoler" de "sélectionné". */
+/* Hover = neutral gray border, never cyan -- cyan stays reserved for the
+   "active/selected" state (active tab, connected network, switch on).
+   Before: hovering normal buttons (Disconnect/Details/Scan...) and tabs
+   turned solid cyan, the SAME color as selection -- "currently hovering"
+   and "selected" became impossible to tell apart. */
 .orbit-button:hover {
     border-radius: 8px;
     padding: 10px 20px;
@@ -143,9 +142,9 @@ window,
     color: #f2f2f7;
 }
 
-/* Bouton Ethernet : sans ça, son padding+bordure de bouton générique le
-   rend plus haut que le switch WiFi (44x24px) à côté duquel il vit -->
-   décalage visuel dans la ligne des toggles. Aligné à la même hauteur. */
+/* Ethernet button: without this, its generic button padding+border makes
+   it taller than the WiFi switch (44x24px) it sits next to --> visual
+   misalignment in the toggle row. Aligned to the same height. */
 .orbit-wired-button {
     border: none;
     background-color: transparent;
@@ -183,7 +182,7 @@ window,
     box-shadow: none;
 }
 
-/* ── Overlays (détails / mot de passe / erreur / filaire) ────────────── */
+/* ── Overlays (details / password / error / wired) ───────────────────── */
 .orbit-details-overlay,
 .orbit-password-overlay,
 .orbit-error-overlay,

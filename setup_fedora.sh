@@ -14,7 +14,7 @@ warn() { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
 info "Updating system..."
 sudo dnf upgrade -y
 # =========================
-# BASE SYSTEM (indispensable)
+# BASE SYSTEM (essential)
 # =========================
 info "Base system..."
 sudo dnf install -y \
@@ -29,7 +29,7 @@ sudo dnf install -y \
     which \
     file
 # =========================
-# RESEAU (wifi + ethernet)
+# NETWORK (wifi + ethernet)
 # =========================
 info "Network..."
 sudo dnf install -y \
@@ -47,14 +47,14 @@ info "Bluetooth..."
 sudo dnf install -y \
     bluez
 
-# bluetuith — TUI Bluetooth via copr
+# bluetuith — Bluetooth TUI via copr
 info "Installing bluetuith via copr..."
 sudo dnf copr enable -y lxdes/bluetuith
 sudo dnf install -y bluetuith
 ok "bluetuith installed."
 
 # =========================
-# AUDIO (stack moderne)
+# AUDIO (modern stack)
 # =========================
 info "Audio..."
 sudo dnf install -y \
@@ -79,7 +79,7 @@ sudo dnf install -y \
     libinput \
     xkeyboard-config
 # =========================
-# STOCKAGE (USB / FS standards)
+# STORAGE (USB / standard filesystems)
 # =========================
 info "Storage..."
 sudo dnf install -y \
@@ -96,7 +96,7 @@ sudo dnf install -y \
     dbus-broker \
     polkit
 # =========================
-# STANDARDS FREEDESKTOP (neutre)
+# FREEDESKTOP STANDARDS (neutral)
 # =========================
 info "Standards..."
 sudo dnf install -y \
@@ -119,7 +119,7 @@ sudo dnf install -y \
     libXext \
     libXrender
 # =========================
-# UTILITAIRES ESSENTIELS
+# ESSENTIAL UTILITIES
 # =========================
 info "Utilities..."
 sudo dnf install -y \
@@ -133,19 +133,19 @@ sudo dnf install -y \
     rsync \
     nano \
     snapd
-# Activer le socket snapd
+# Enable the snapd socket
 sudo systemctl enable --now snapd.socket
-# Créer le lien classique /snap si nécessaire
+# Create the classic /snap symlink if needed
 if [ ! -e /snap ]; then
     sudo ln -s /var/lib/snapd/snap /snap
 fi
-# Attendre que snap soit prêt
+# Wait for snap to be ready
 info "Waiting for snapd to be operational..."
 sleep 5
-# Installer les snaps (exemple : pulsemixer)
+# Install snaps (example: pulsemixer)
 sudo snap install pulsemixer --classic || warn "pulsemixer could not be installed for now."
 # =========================
-# ACTIVATION SERVICES
+# ENABLE SERVICES
 # =========================
 info "Enabling services..."
 sudo systemctl enable --now NetworkManager

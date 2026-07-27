@@ -1,17 +1,18 @@
-//! Chargement du thème CSS de Prisme : fallback intégré au binaire,
-//! surchargé par le fichier utilisateur si présent.
+//! Loads Prisme's CSS theme: fallback built into the binary, overridden by
+//! the user file if present.
 
-/// Palette de secours, identique à waybar/style.css et orbit/theme.toml --
-/// utilisée si ~/.config/prisme/style.css n'existe pas encore (avant
-/// install.sh, ou en lançant le binaire directement depuis prisme-src/ pour
-/// développer). Recopiée ici en dur plutôt qu'`include_str!` du fichier
-/// externe (config/hyprland/prisme/style.css) : ce dernier vit HORS de
-/// prisme-src/, qu'install.sh copie seul dans ~/.cache/prisme-build/ avant
-/// `cargo build` (même schéma que le vendoring d'Orbit) -- un chemin relatif
-/// `../../prisme/style.css` s'y résout dans le vide. Le vrai thème,
-/// éditable sans recompiler, reste `config/hyprland/prisme/style.css`
-/// (symlinké vers ~/.config/prisme/ par install.sh) : cette constante n'a
-/// besoin d'être qu'un filet de secours correct, pas la source de vérité.
+/// Fallback palette, identical to waybar/style.css and orbit/theme.toml --
+/// used if ~/.config/prisme/style.css doesn't exist yet (before
+/// install.sh, or running the binary directly from prisme-src/ during
+/// development). Copied here as a hardcoded string rather than
+/// `include_str!`-ed from the external file (config/hyprland/prisme/
+/// style.css): the latter lives OUTSIDE prisme-src/, which install.sh
+/// copies alone into ~/.cache/prisme-build/ before `cargo build` (same
+/// scheme as Orbit's vendoring) -- a relative path `../../prisme/
+/// style.css` resolves to nothing there. The real theme, editable without
+/// recompiling, stays `config/hyprland/prisme/style.css` (symlinked to
+/// ~/.config/prisme/ by install.sh): this constant only needs to be a
+/// correct safety net, not the source of truth.
 const FALLBACK_CSS: &str = r#"
 * {
     font-family: "JetBrains Mono";
@@ -79,15 +80,15 @@ window,
 }
 "#;
 
-/// Charge le CSS externe (symlinké par install.sh depuis config/hyprland/prisme/
-/// vers ~/.config/prisme/, même convention qu'Orbit) par-dessus un fallback
-/// intégré au binaire -- l'app reste utilisable même en lancement direct hors
-/// install.sh (cargo run).
+/// Loads the external CSS (symlinked by install.sh from
+/// config/hyprland/prisme/ to ~/.config/prisme/, same convention as Orbit)
+/// on top of a fallback built into the binary -- the app stays usable even
+/// launched directly outside install.sh (cargo run).
 ///
-/// Priorité STYLE_PROVIDER_PRIORITY_USER pour les deux (comme Orbit) : le
-/// thème système (Adwaita) est appliqué à une priorité inférieure et sinon
-/// gagnerait sur nos règles de fond (le fond restait transparent -- vérifié
-/// en live via capture d'écran avant ce fix).
+/// STYLE_PROVIDER_PRIORITY_USER for both (like Orbit): the system theme
+/// (Adwaita) is applied at a lower priority and would otherwise win over
+/// our background rules (the background stayed transparent -- checked live
+/// via screenshot before this fix).
 pub fn load(display: &gtk4::gdk::Display) {
     let fallback = gtk4::CssProvider::new();
     fallback.load_from_string(FALLBACK_CSS);
@@ -110,7 +111,7 @@ pub fn load(display: &gtk4::gdk::Display) {
     }
 }
 
-/// Emplacement du CSS utilisateur, symlinké par install.sh depuis
+/// Location of the user CSS, symlinked by install.sh from
 /// config/hyprland/prisme/style.css.
 fn user_style_path() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;

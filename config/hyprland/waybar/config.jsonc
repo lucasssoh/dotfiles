@@ -67,7 +67,7 @@
 
     // --- Gap -----------------------------------------------------
     "custom/gap": {
-        "format": " " // <-- Modifié ici (vide pour être invisible, sert uniquement de bordure droite)
+        "format": " " // <-- Modified here (empty to stay invisible, only serves as a right border)
     },
 
     // ── Active Window ────────────────────────────────────────────
@@ -85,8 +85,8 @@
     // ============================================================
 
     // ── Media ────────────────────────────────────────────────────
-    // Juste une indication qu'un son joue -- titre/artiste et contrôles
-    // complets sont dans swaync (widget mpris du centre de notifications).
+    // Just an indicator that something is playing -- full title/artist and
+    // controls live in swaync (mpris widget in the notification center).
     "mpris": {
         "format": "{player_icon}",
         "format-paused": "{player_icon}",
@@ -144,7 +144,7 @@
         "format-wifi": "{icon}  {bandwidthDownOctets:4}",
         "format-ethernet": "󰈀  {bandwidthDownOctets:4}",
 
-        // Affichage fixe quand rien n'est connecté
+        // Fixed display when nothing is connected
         "format-disconnected": "󰤭  ----o/s",
         "format-disabled": "󰤭  ----o/s",
 
@@ -154,7 +154,7 @@
 
         "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
 
-        // Force une longueur minimale pour éviter que la barre bouge
+        // Forces a minimum length so the bar doesn't shift
         "min-length": 10,
         "fixed-width": true
     },
@@ -195,19 +195,19 @@
         "format-source": "󰍬 {volume}%",
         "format-source-muted": "󰍭 ---",
 
-        // Le mute reste sur XF86AudioMicMute (clavier) ; le clic ouvre
-        // le choix du micro par défaut (clic droit = pavucontrol avancé)
+        // Mute stays on XF86AudioMicMute (keyboard); clicking opens the
+        // default mic picker (right-click = advanced pavucontrol)
         "on-click": "~/.config/waybar/scripts/audio.sh input",
         "on-click-right": "pavucontrol",
 
-        // Gestion du volume du micro
+        // Mic volume control
         "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%+",
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-",
 
         "scroll-step": 5
     },
 
-    // ── Disposition d'écrans ────────────────────────────────────
+    // ── Display layout ────────────────────────────────────
     "custom/display": {
         "exec": "~/.config/hypr/scripts/display-layout.sh status",
         "return-type": "json",
@@ -216,7 +216,7 @@
         "signal": 4
     },
 
-    // ── Scale (mise à l'échelle, par écran) ─────────────────────
+    // ── Scale (per-screen scaling) ─────────────────────
     "custom/scale": {
         "exec": "~/.config/waybar/scripts/scale.sh status",
         "return-type": "json",
@@ -254,9 +254,9 @@
     },
 
     // ── Notifications (swaync) ──────────────────────────────────
-    // Format waybar officiel de swaync (README upstream) : "alt" (défini
-    // par swaync-client -swb) sert à la fois de clé format-icons ET de
-    // classe CSS -> cf. #custom-notification.* dans style.css.
+    // Official swaync waybar format (upstream README): "alt" (set by
+    // swaync-client -swb) serves both as the format-icons key AND the
+    // CSS class -> see #custom-notification.* in style.css.
     "custom/notification": {
         "tooltip": true,
         "format": "{icon}",

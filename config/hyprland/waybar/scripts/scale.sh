@@ -2,38 +2,37 @@
 set -euo pipefail
 
 # =========================================================
-# scale.sh — bascule le scale (mise à l'échelle) par écran pour
-# Hyprland + Waybar, même pattern "par écran" que hdr.sh : chaque
-# instance de Waybar affiche SON écran, le clic cible l'écran SOUS
-# LE CURSEUR (barre cliquée) — WAYBAR_OUTPUT_NAME n'est pas fiable
-# dans les gestionnaires de clic.
+# scale.sh — toggles per-screen scaling for Hyprland + Waybar, same
+# "per-screen" pattern as hdr.sh: each Waybar instance shows ITS screen,
+# a click targets the screen UNDER THE CURSOR (the bar that was
+# clicked) — WAYBAR_OUTPUT_NAME isn't reliable in click handlers.
 #
-#   scale.sh status  -> JSON pour le module waybar (écran DE CETTE barre)
-#   scale.sh menu    -> menu rofi des scales "propres" pour l'écran cliqué
+#   scale.sh status  -> JSON for the waybar module (THIS bar's screen)
+#   scale.sh menu    -> rofi menu of "clean" scales for the clicked screen
 #
-# Les valeurs proposées ne sont JAMAIS une liste fixe codée en dur : elles
-# sont recalculées par écran, à partir de sa résolution native, en ne
-# gardant que les paliers de la grille standard (quarts, 100%..300%, comme
-# GNOME) qui donnent une résolution LOGIQUE ENTIÈRE en largeur ET en
-# hauteur pour CETTE résolution précise — donc jamais de valeur "moche"
-# (floue/sous-pixel). Ça correspond à ce qu'Hyprland impose déjà de facto :
-# sur un écran 2560x1440, une demande scale=1.2 est silencieusement
-# arrondie à 1.25, seul palier propre proche pour cette largeur
-# (2560/1.25=2048, entier ; 2560/1.2=2133.33, pas entier).
+# The offered values are NEVER a fixed hardcoded list: they're recomputed
+# per screen, from its native resolution, keeping only the steps of the
+# standard grid (quarters, 100%..300%, like GNOME) that yield a WHOLE
+# logical resolution in both width AND height for THAT exact resolution
+# — so never an "ugly" value (blurry/sub-pixel). This matches what
+# Hyprland already enforces de facto: on a 2560x1440 screen, a
+# scale=1.2 request gets silently rounded to 1.25, the only nearby clean
+# step for this width (2560/1.25=2048, whole; 2560/1.2=2133.33, not
+# whole).
 #
-# N'applique rien directement : écrit le scale choisi par RÔLE (jamais par
-# nom de connecteur, cf. scripts/workspace-manager.sh) dans l'état
-# persistant, puis rappelle ce moteur unique — même pattern que
-# scripts/display-layout.sh (état + moteur, pas de logique dupliquée).
+# Applies nothing directly: writes the chosen scale by ROLE (never by
+# connector name, see scripts/workspace-manager.sh) to the persistent
+# state, then calls back into that single engine — same pattern as
+# scripts/display-layout.sh (state + engine, no duplicated logic).
 # =========================================================
 
 STATE_FILE="$HOME/.config/hypr/scale.json"
 RASI="$HOME/.config/rofi/theme.rasi"
 WAYBAR_SIGNAL=5
 
-# Grille standard de paliers "propres" (quarts, 100% à 300%) + leur écriture
-# décimale exacte -- jamais générée via printf/awk (aucun risque de bug de
-# locale décimale, cf. session : LC_NUMERIC=fr_FR casse `printf '%.2f'`).
+# Standard grid of "clean" steps (quarters, 100% to 300%) + their exact
+# decimal spelling -- never generated via printf/awk (no risk of a decimal
+# locale bug, see: LC_NUMERIC=fr_FR breaks `printf '%.2f'`).
 PCTS=(100 125 150 175 200 225 250 275 300)
 declare -A PCT_DECIMAL=(
     [100]="1" [125]="1.25" [150]="1.5" [175]="1.75" [200]="2"
@@ -44,7 +43,7 @@ focused() {
     hyprctl monitors -j | jq -r '.[] | select(.focused==true) | .name'
 }
 
-# Écran situé sous le curseur (= barre que l'on vient de cliquer)
+# Screen located under the cursor (= the bar that was just clicked)
 monitor_at_cursor() {
     local pos cx cy
     pos=$(hyprctl cursorpos 2>/dev/null | tr -d ' ') || return 1
@@ -57,14 +56,14 @@ monitor_at_cursor() {
         ) | .name' | head -n1
 }
 
-# Rôle par nom d'écran -- jamais l'inverse (même détection que
-# scripts/workspace-manager.sh : interne = eDP*/LVDS*/DSI*).
+# Role from screen name -- never the reverse (same detection as
+# scripts/workspace-manager.sh: internal = eDP*/LVDS*/DSI*).
 role_of() {
     local m="$1"
     if [[ "$m" =~ ^(eDP|LVDS|DSI) ]]; then echo "internal"; else echo "external"; fi
 }
 
-# Paliers propres (résolution logique entière en W et H) pour un écran donné.
+# Clean steps (whole logical resolution in W and H) for a given screen.
 clean_pcts_for() {
     local m="$1" w h pct
     w=$(hyprctl monitors -j | jq -r --arg m "$m" '.[] | select(.name==$m) | .width')

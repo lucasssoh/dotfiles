@@ -6,7 +6,7 @@ RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
-# 1. Installer mpv
+# 1. Install mpv
 if command -v dnf &> /dev/null; then
     sudo dnf install -y mpv
 elif command -v pacman &> /dev/null; then
@@ -15,7 +15,7 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y mpv
 fi
 
-# 2. Liens symboliques
+# 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/mpv
 

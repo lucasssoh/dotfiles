@@ -1,9 +1,8 @@
-//! Widget "carte" du carrousel : une vignette de wallpaper dessinée en
-//! parallélogramme (effet "italique"), dont le focus, la révélation et la
-//! sélection sont pilotés par carousel.rs. Rendu entièrement en GSK
-//! (snapshot) plutôt qu'en Cairo pour rester fluide sur une surface
-//! layer-shell — voir la note sur `measure` plus bas pour la contrainte
-//! de taille la plus importante du fichier.
+//! Carousel "card" widget: a wallpaper thumbnail drawn as a parallelogram
+//! ("italic" effect), whose focus, reveal, and selection are driven by
+//! carousel.rs. Rendered entirely in GSK (snapshot) rather than Cairo to
+//! stay smooth on a layer-shell surface — see the note on `measure` below
+//! for the file's most important sizing constraint.
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -14,9 +13,9 @@ use std::path::Path;
 
 use crate::wallpapers::Wallpaper;
 
-/// Nom de fichier brut -> libellé lisible pour l'étiquette de la carte :
-/// extension retirée, tirets et underscores traités comme des espaces,
-/// tout en majuscules. Ex : "oleksandr-kozachenko-hands-study-5.jpg" ->
+/// Raw filename -> readable label for the card's caption: extension
+/// stripped, dashes and underscores treated as spaces, all uppercase. E.g.
+/// "oleksandr-kozachenko-hands-study-5.jpg" ->
 /// "OLEKSANDR KOZACHENKO HANDS STUDY 5".
 fn display_name(filename: &str) -> String {
     let stem = Path::new(filename)
@@ -26,13 +25,12 @@ fn display_name(filename: &str) -> String {
     stem.replace(['-', '_'], " ").to_uppercase()
 }
 
-/// Pente de l'angle "italique" en fraction de la hauteur de la carte (pas
-/// un nombre de pixels fixe) -- la hauteur varie avec le focus et la
-/// sélection (cf. carousel.rs), donc un décalage en px constant donnerait
-/// un angle VISUELLEMENT différent selon la taille de la carte (une carte
-/// courte semble plus penchée qu'une carte haute pour le même décalage en
-/// px). En le dérivant de la hauteur, toutes les cartes gardent exactement
-/// la même pente, quelle que soit leur taille du moment.
+/// Slope of the "italic" angle as a fraction of the card's height (not a
+/// fixed pixel count) -- height varies with focus and selection (see
+/// carousel.rs), so a constant px offset would give a VISUALLY different
+/// angle depending on card size (a short card looks more slanted than a
+/// tall one for the same px offset). Deriving it from height keeps every
+/// card at exactly the same slope, whatever its current size.
 pub const SKEW_RATIO: f64 = 0.1;
 
 pub const WIDTH_UNFOCUSED: f64 = 180.0;
@@ -40,9 +38,9 @@ pub const WIDTH_FOCUSED: f64 = 520.0;
 pub const HEIGHT_UNFOCUSED: f64 = 320.0;
 pub const HEIGHT_FOCUSED: f64 = 460.0;
 
-/// Décalage horizontal (px) de la pente pour une carte de taille (w,h) --
-/// centralisé ici, réutilisé par `carousel.rs` pour calculer l'espacement
-/// entre cartes (cf. sa doc), afin que les deux restent en accord.
+/// Horizontal offset (px) of the slope for a card of size (w,h) --
+/// centralized here, reused by `carousel.rs` to compute spacing between
+/// cards (see its doc), so the two stay in agreement.
 pub fn skew_for(w: f64, h: f64) -> f64 {
     (h * SKEW_RATIO).min(w * 0.3)
 }
@@ -53,9 +51,9 @@ mod imp {
     #[derive(Default)]
     pub struct Card {
         pub texture: RefCell<Option<gdk::Texture>>,
-        /// Dimensions du fichier source (pas de la texture réduite), pour
-        /// l'étiquette -- ex. "3840×2160" même si la vignette affichée est
-        /// plus petite.
+        /// Dimensions of the source file (not the downscaled texture), for
+        /// the caption -- e.g. "3840×2160" even though the displayed
+        /// thumbnail is smaller.
         pub orig_dims: Cell<(i32, i32)>,
         pub focus: Cell<f64>,
         pub reveal: Cell<f64>,
@@ -73,12 +71,11 @@ mod imp {
     impl ObjectImpl for Card {}
 
     impl WidgetImpl for Card {
-        // La taille est entièrement pilotée par le carrousel (via
-        // `size_allocate` sur ce widget) -- aucune préférence de taille
-        // propre, sinon chaque changement de focus déclencherait un
-        // `queue_resize` remontant jusqu'à la fenêtre à 180 fois par
-        // seconde (c'est exactement ce qui gonflait la surface layer-shell
-        // avant cette réécriture).
+        // Size is entirely driven by the carousel (via `size_allocate` on
+        // this widget) -- no size preference of its own, otherwise every
+        // focus change would trigger a `queue_resize` bubbling up to the
+        // window 180 times a second (that's exactly what was inflating the
+        // layer-shell surface before this rewrite).
         fn measure(&self, _orientation: gtk4::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
             (0, 0, -1, -1)
         }
@@ -95,15 +92,15 @@ mod imp {
             let skew = skew_for(w, h);
             let path = parallelogram_path(w, h, skew);
 
-            // Remplissage clippé au parallélogramme -- équivalent GPU du
-            // clip Cairo + paint de l'ancienne implémentation.
+            // Fill clipped to the parallelogram -- GPU equivalent of the
+            // old implementation's Cairo clip + paint.
             snapshot.push_fill(&path, gsk::FillRule::Winding);
             match &*self.texture.borrow() {
                 Some(tex) => {
                     let tw = tex.width() as f64;
                     let th = tex.height() as f64;
-                    // "cover" : le plus grand des deux ratios remplit toute
-                    // la boîte, quitte à rogner.
+                    // "cover": the larger of the two ratios fills the
+                    // whole box, cropping if needed.
                     let scale = (w / tw).max(h / th).max(0.0001);
                     let dw = tw * scale;
                     let dh = th * scale;
@@ -113,7 +110,7 @@ mod imp {
                         graphene::Rect::new(dx as f32, dy as f32, dw as f32, dh as f32);
                     snapshot.append_scaled_texture(tex, gsk::ScalingFilter::Trilinear, &bounds);
 
-                    // Cartes non focus assombries.
+                    // Non-focused cards are dimmed.
                     let dim = (1.0 - self.focus.get()) * 0.55;
                     if dim > 0.001 {
                         let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
@@ -121,7 +118,7 @@ mod imp {
                     }
                 }
                 None => {
-                    // Vignette pas encore chargée -- aplat neutre.
+                    // Thumbnail not loaded yet -- neutral flat fill.
                     let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
                     snapshot
                         .append_color(&gdk::RGBA::new(0.11, 0.11, 0.12, 1.0), &full);
@@ -129,21 +126,21 @@ mod imp {
             }
             snapshot.pop();
 
-            // Pas de contour -- le focus et la sélection se lisent déjà à
-            // la taille/luminosité (focus) et à la hauteur (sélection, cf.
-            // carousel.rs), une bordure en plus n'apportait rien.
+            // No outline -- focus and selection already read clearly from
+            // size/brightness (focus) and height (selection, see
+            // carousel.rs), an extra border added nothing.
             let focus = self.focus.get();
 
-            // Nom + dimensions -- apparition progressive avec le focus au
-            // lieu du seuil binaire de l'ancienne version DrawingArea.
+            // Name + dimensions -- fades in progressively with focus
+            // instead of the old DrawingArea version's binary threshold.
             if focus > 0.15 {
                 let alpha = (((focus - 0.15) / 0.45) as f32).clamp(0.0, 1.0);
                 if let Some(wallpaper) = self.wallpaper.get() {
-                    // Padding et tailles de police volontairement compacts
-                    // (étiquette discrète, pas un bandeau d'infos) --
-                    // mesurés via pixel_size() plutôt que des décalages
-                    // devinés, pour que le bandeau colle exactement au
-                    // contenu réel quelle que soit la police système.
+                    // Padding and font sizes deliberately compact (a
+                    // discreet caption, not an info banner) -- measured via
+                    // pixel_size() rather than guessed offsets, so the band
+                    // hugs the actual content exactly regardless of the
+                    // system font.
                     const PAD_X: f64 = 10.0;
                     const PAD_TOP: f64 = 5.0;
                     const PAD_BOTTOM: f64 = 5.0;
@@ -151,19 +148,19 @@ mod imp {
                     const NAME_FONT_PX: f64 = 13.0;
                     const DIMS_FONT_PX: f64 = 11.0;
 
-                    // Ancré à droite plutôt qu'à gauche : le coin bas-droit
-                    // du parallélogramme est plus ouvert (angle obtus) que
-                    // le bas-gauche (angle aigu, cf. skewed_slice_path) --
-                    // le texte respire mieux du côté large.
+                    // Anchored right rather than left: the parallelogram's
+                    // bottom-right corner is more open (obtuse angle) than
+                    // the bottom-left (acute angle, see skewed_slice_path)
+                    // -- text has more room to breathe on the wide side.
                     //
-                    // La largeur retire `skew` en plus du padding : le bord
-                    // droit de la carte n'est vertical qu'à x=w tout en haut
-                    // (y=0) ; il recule jusqu'à x=w-skew en bas (y=h, cf.
-                    // skewed_slice_path). Une boîte de texte droite (non
-                    // penchée) alignée à droite doit donc viser ce point le
-                    // plus reculé -- sinon le texte déborde du côté oblique
-                    // de la carte près du bas du bandeau, là où l'écart entre
-                    // "w" et le bord réel est le plus grand.
+                    // Width subtracts `skew` on top of the padding: the
+                    // card's right edge is only vertical at x=w at the very
+                    // top (y=0); it recedes to x=w-skew at the bottom (y=h,
+                    // see skewed_slice_path). A straight (non-slanted) text
+                    // box aligned right must therefore target that furthest
+                    // point -- otherwise the text overflows past the card's
+                    // slanted side near the bottom of the band, where the
+                    // gap between "w" and the real edge is largest.
                     let mut name_font = pango::FontDescription::new();
                     name_font.set_absolute_size(NAME_FONT_PX * pango::SCALE as f64);
                     let name_layout = widget.create_pango_layout(Some(&display_name(&wallpaper.name)));
@@ -185,16 +182,16 @@ mod imp {
                     });
                     let dims_h = dims_layout.as_ref().map_or(0.0, |l| l.pixel_size().1 as f64);
 
-                    // Bandeau noir derrière le texte, dimensionné pile sur
-                    // le contenu mesuré ci-dessus. Découpé en tranche du
-                    // MÊME parallélogramme que la carte (cf.
-                    // skewed_slice_path) plutôt qu'un rectangle droit --
-                    // ses côtés suivent donc la pente des bords de la
-                    // carte au lieu de couper à angle droit dedans. Léger
-                    // débord (1px) au-delà du bord réel de chaque côté :
-                    // sans lui, l'anti-aliasing du GPU sur cette arête et
-                    // celle -- légèrement différente -- du clip de l'image
-                    // laissaient un mince liseré non couvert.
+                    // Black band behind the text, sized exactly to the
+                    // content measured above. Cut as a slice of the SAME
+                    // parallelogram as the card (see skewed_slice_path)
+                    // rather than a straight rectangle -- so its sides
+                    // follow the card's edge slope instead of cutting
+                    // through it at a right angle. Slight bleed (1px)
+                    // beyond the real edge on each side: without it, GPU
+                    // anti-aliasing on this edge and the image clip's
+                    // -- slightly different -- edge left a thin uncovered
+                    // sliver.
                     let content_h = name_h + if dims_layout.is_some() { LINE_GAP + dims_h } else { 0.0 };
                     let band_top = (h - (PAD_TOP + content_h + PAD_BOTTOM)).max(0.0);
                     let band_path = skewed_slice_path(w, h, skew, band_top, h, 1.0);
@@ -225,15 +222,15 @@ mod imp {
 }
 
 glib::wrapper! {
-    /// Widget public exposé au reste du programme ; toute la logique vit
-    /// dans `imp::Card` (pattern subclass GObject standard de gtk4-rs).
+    /// Public widget exposed to the rest of the program; all the logic
+    /// lives in `imp::Card` (standard gtk4-rs GObject subclass pattern).
     pub struct Card(ObjectSubclass<imp::Card>) @extends gtk4::Widget;
 }
 
 impl Card {
-    /// Construit une carte pour ce wallpaper. La vignette n'est pas encore
-    /// chargée : `set_texture` est appelée plus tard, une fois le décodage
-    /// terminé côté thumbs.rs.
+    /// Builds a card for this wallpaper. The thumbnail isn't loaded yet:
+    /// `set_texture` is called later, once decoding finishes on the
+    /// thumbs.rs side.
     pub fn new(wallpaper: Wallpaper) -> Self {
         let card: Self = glib::Object::builder().build();
         let _ = card.imp().wallpaper.set(wallpaper);
@@ -245,27 +242,40 @@ impl Card {
         self.imp().wallpaper.get().expect("wallpaper not initialized")
     }
 
-    /// Reçu depuis thumbs.rs une fois la vignette décodée en arrière-plan.
+    /// Received from thumbs.rs once the thumbnail has decoded in the
+    /// background.
     pub fn set_texture(&self, texture: gdk::Texture, orig_width: i32, orig_height: i32) {
         self.imp().orig_dims.set((orig_width, orig_height));
         *self.imp().texture.borrow_mut() = Some(texture);
         self.queue_draw();
     }
 
-    /// t ∈ [0,1] -- 0 = carte au repos, 1 = carte au focus. Pilote la
-    /// luminosité et l'apparition des labels ; la taille est dérivée de la
-    /// même valeur par le carrousel (cf. `carousel.rs`), pas stockée ici.
+    /// Frees the texture of a card that fell out of the loading window
+    /// (see main.rs) -- falls back to the neutral "not loaded yet" flat
+    /// fill (see `snapshot()`), reloaded on demand if focus comes back to
+    /// it. `orig_dims` reset to zero too: without that, the info band
+    /// would still show the unloaded image's dimensions under a flat fill
+    /// that no longer shows anything.
+    pub fn clear_texture(&self) {
+        *self.imp().texture.borrow_mut() = None;
+        self.imp().orig_dims.set((0, 0));
+        self.queue_draw();
+    }
+
+    /// t ∈ [0,1] -- 0 = resting card, 1 = focused card. Drives brightness
+    /// and label appearance; size is derived from the same value by the
+    /// carousel (see `carousel.rs`), not stored here.
     pub fn set_focus(&self, t: f64) {
         self.imp().focus.set(t.clamp(0.0, 1.0));
         self.queue_draw();
     }
 
-    /// Valeur de focus courante, cf. `set_focus`.
+    /// Current focus value, see `set_focus`.
     pub fn focus(&self) -> f64 {
         self.imp().focus.get()
     }
 
-    /// t ∈ [0,1] -- animation d'entrée en cascade au lancement.
+    /// t ∈ [0,1] -- cascade entrance animation at launch.
     pub fn set_reveal(&self, t: f64) {
         let t = t.clamp(0.0, 1.0);
         self.imp().reveal.set(t);
@@ -273,9 +283,9 @@ impl Card {
         self.queue_draw();
     }
 
-    /// Marque la carte comme incluse dans la sélection multiple (mode
-    /// Diaporama). N'affecte que l'état interne : c'est carousel.rs qui
-    /// traduit la sélection en changement de hauteur/apparence.
+    /// Marks the card as included in the multi-selection (Dynamic mode).
+    /// Only affects internal state: it's carousel.rs that translates
+    /// selection into a height/appearance change.
     pub fn set_selected(&self, selected: bool) {
         self.imp().selected.set(selected);
         self.queue_draw();
@@ -286,22 +296,22 @@ impl Card {
     }
 }
 
-/// Construit le contour du parallélogramme "italique" de la carte, penché
-/// de `skew` pixels vers la droite en haut.
+/// Builds the outline of the card's "italic" parallelogram, slanted by
+/// `skew` pixels to the right at the top.
 fn parallelogram_path(w: f64, h: f64, skew: f64) -> gsk::Path {
     skewed_slice_path(w, h, skew, 0.0, h, 0.0)
 }
 
-/// Contour d'une tranche horizontale du même parallélogramme, entre
-/// `y_top` et `y_bottom` (0.0 et h avec bleed=0.0 donnent
-/// parallelogram_path ci-dessus). Sert à découper le bandeau d'étiquette
-/// avec exactement la même pente que les côtés de la carte, plutôt qu'un
-/// rectangle droit qui trancherait dedans à angle droit. `bleed` élargit
-/// le tracé de `bleed` px de chaque côté (gauche/droite uniquement) --
-/// utile pour le bandeau, dont les bords doivent légèrement déborder au-
-/// delà du bord réel de la carte pour ne pas laisser un liseré non couvert
-/// par l'anti-aliasing du GPU sur les deux arêtes obliques. `h` non nul
-/// garanti par l'appelant (snapshot() retourne plus tôt si h <= 0.0).
+/// Outline of a horizontal slice of the same parallelogram, between
+/// `y_top` and `y_bottom` (0.0 and h with bleed=0.0 give
+/// parallelogram_path above). Used to cut the caption band with exactly
+/// the same slope as the card's sides, rather than a straight rectangle
+/// that would slice through it at a right angle. `bleed` widens the
+/// outline by `bleed` px on each side (left/right only) -- useful for the
+/// band, whose edges need to bleed slightly past the card's real edge so
+/// as not to leave a sliver uncovered by GPU anti-aliasing on the two
+/// slanted edges. `h` non-zero is guaranteed by the caller (snapshot()
+/// returns early if h <= 0.0).
 fn skewed_slice_path(w: f64, h: f64, skew: f64, y_top: f64, y_bottom: f64, bleed: f64) -> gsk::Path {
     let x_left = |y: f64| skew * (1.0 - y / h) - bleed;
     let x_right = |y: f64| w - skew * (y / h) + bleed;

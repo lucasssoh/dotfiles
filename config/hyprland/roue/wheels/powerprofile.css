@@ -1,4 +1,5 @@
-/* Surcharge propre à la roue "powerprofile" -- chargée par-dessus style.css
-   (règle générale, commune à toutes les roues), cf. roue-src/src/theme.rs.
-   Teinte légèrement froide, aucune action destructive sur cette roue. */
+/* Override specific to the "powerprofile" wheel -- loaded on top of
+   style.css (the general rule, shared by all wheels), see
+   roue-src/src/theme.rs. Slightly cool tint, no destructive action on this
+   wheel. */
 

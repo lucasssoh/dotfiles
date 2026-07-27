@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # =========================================================
-# toggle-night-mode.sh — bascule le filtre de température de couleur
-# hyprsunset. L'état (activé/désactivé) est déduit de la seule présence
-# du fichier STATE_FILE, pas d'un contenu à lire.
+# toggle-night-mode.sh — toggles hyprsunset's color temperature filter.
+# The state (enabled/disabled) is inferred purely from the presence of
+# STATE_FILE, no content to read.
 # =========================================================
 
 STATE_FILE="$HOME/.cache/hypr-night-mode"
 
 # =========================================================
-# Activation : lance hyprsunset avec une teinte chaude
+# Enable: launches hyprsunset with a warm tint
 # =========================================================
 if [ ! -f "$STATE_FILE" ]; then
-    # Température chaude (4900K)
+    # Warm temperature (4900K)
     hyprsunset --temperature 4900 &
 
     touch "$STATE_FILE"
     notify-send "Night mode" "Enabled"
 
 # =========================================================
-# Désactivation : tue hyprsunset, retour à la température native
+# Disable: kills hyprsunset, back to native temperature
 # =========================================================
 else
     pkill hyprsunset

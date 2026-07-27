@@ -1,8 +1,8 @@
 /* =========================================================
    SWAYNC — style.css
-   Palette identique à waybar/style.css et rofi/share.rasi, pour que le
-   centre de contrôle s'intègre au même langage visuel que le reste du
-   système (fond sombre, accent cyan, bordures fines, JetBrains Mono).
+   Same palette as waybar/style.css and rofi/share.rasi, so the control
+   center fits the same visual language as the rest of the system (dark
+   background, cyan accent, thin borders, JetBrains Mono).
 ========================================================= */
 
 @define-color background #141414;
@@ -19,12 +19,12 @@
     font-size: 13px;
 }
 
-/* ── Fenêtres (notifications flottantes + panneau) ──────────── */
+/* ── Windows (floating notifications + panel) ─────────────────── */
 window, .blank-window, .floating-notifications {
     background: transparent;
 }
 
-/* ── Notification individuelle ──────────────────────────────── */
+/* ── Individual notification ───────────────────────────────────── */
 .notification-row {
     padding: 4px;
     background: transparent;
@@ -62,7 +62,7 @@ window, .blank-window, .floating-notifications {
     color: @background;
 }
 
-/* ── Panneau (centre de contrôle) ─────────────────────────────── */
+/* ── Panel (control center) ────────────────────────────────────── */
 .control-center {
     background: @background;
     border: 1px solid @overlay2;
@@ -74,7 +74,7 @@ window, .blank-window, .floating-notifications {
     padding: 8px 12px;
 }
 
-/* Titre + bouton "Tout effacer" */
+/* Title + "Clear all" button */
 .widget-title > label {
     color: @text;
     font-weight: bold;
@@ -93,7 +93,7 @@ window, .blank-window, .floating-notifications {
     color: @accent2;
 }
 
-/* Ne pas déranger */
+/* Do not disturb */
 .widget-dnd {
     color: @text;
 }
@@ -112,11 +112,10 @@ window, .blank-window, .floating-notifications {
     border-radius: 999px;
 }
 
-/* Média (mpris) -- le thème par défaut de swaync dessine la pochette
-   d'album floutée en fond (.mpris-background) avec un voile semi-transparent
-   par-dessus (.mpris-overlay) + une ombre portée sur la carte et la
-   pochette : on neutralise tout ça pour garder un aplat uni comme le reste
-   du système. */
+/* Media (mpris) -- swaync's default theme draws a blurred album cover as
+   the background (.mpris-background) with a semi-transparent veil on top
+   (.mpris-overlay) plus a drop shadow on the card and cover: all of that
+   is neutralized here to keep a flat look like the rest of the system. */
 .widget-mpris, .widget-mpris-player {
     background: @surface;
     border-radius: 8px;
@@ -127,10 +126,10 @@ window, .blank-window, .floating-notifications {
     box-shadow: none;
 }
 
-/* .mpris-background est un vrai widget GtkPicture (la pochette d'album),
-   pas un fond CSS -- "background: transparent" n'a aucun effet dessus, il
-   faut le rendre invisible via opacity pour révéler l'aplat @surface du
-   parent. */
+/* .mpris-background is an actual GtkPicture widget (the album cover), not
+   a CSS background -- "background: transparent" has no effect on it, it
+   has to be made invisible via opacity to reveal the parent's flat
+   @surface fill. */
 .widget-mpris .widget-mpris-player .mpris-background {
     opacity: 0;
 }
@@ -161,7 +160,7 @@ window, .blank-window, .floating-notifications {
     color: @muted;
 }
 
-/* Grille de boutons (WiFi / Bluetooth / Nuit / Capture) */
+/* Button grid (WiFi / Bluetooth / Night / Screenshot) */
 .widget-buttons-grid flowboxchild > button {
     background: @surface;
     color: @text;

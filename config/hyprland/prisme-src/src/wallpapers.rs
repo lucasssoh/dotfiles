@@ -1,29 +1,29 @@
-//! Découverte des fichiers wallpapers sur disque : résolution des dossiers
-//! source et listing filtré/trié, sans dépendance à l'état de l'UI.
+//! Discovery of wallpaper files on disk: resolving the source directory
+//! and a filtered/sorted listing, with no dependency on UI state.
 
 use std::path::{Path, PathBuf};
 
-/// Extensions reconnues -- mêmes que scripts/set_wallpaper.sh (jpg/jpeg/png/webp,
-/// insensible à la casse).
+/// Recognized extensions -- same as scripts/set_wallpaper.sh
+/// (jpg/jpeg/png/webp, case-insensitive).
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 
 fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").expect("HOME not set"))
 }
 
-/// Fichier de config utilisateur listant le dossier des wallpapers
-/// originaux -- symlinké par install.sh depuis
-/// config/hyprland/prisme/wallpapers.conf, comme keymap.conf/style.css.
+/// User config file listing the original wallpapers directory --
+/// symlinked by install.sh from config/hyprland/prisme/wallpapers.conf,
+/// like keymap.conf/style.css.
 fn config_path() -> PathBuf {
     home().join(".config/prisme/wallpapers.conf")
 }
 
-/// Lit la première ligne non vide et non commentée (#) de wallpapers.conf
-/// -- un chemin absolu, ou préfixé par `~/`. Fichier absent/illisible/vide
-/// -> None, originals_dir() retombe alors sur le défaut ci-dessous. Même
-/// fichier lu par les scripts bash historiques (wallpaper-cache-
+/// Reads the first non-empty, non-commented (#) line of wallpapers.conf --
+/// an absolute path, or one prefixed with `~/`. File absent/unreadable/
+/// empty -> None, originals_dir() then falls back to the default below.
+/// Same file read by the historical bash scripts (wallpaper-cache-
 /// watcher.sh, restore_wallpaper.sh, wallpaper-slideshow.sh,
-/// set_wallpaper.sh) pour rester agnostiques du même dossier configuré.
+/// set_wallpaper.sh) to stay agnostic of the same configured directory.
 fn configured_dir() -> Option<PathBuf> {
     let content = std::fs::read_to_string(config_path()).ok()?;
     let line = content
@@ -36,15 +36,15 @@ fn configured_dir() -> Option<PathBuf> {
     })
 }
 
-/// Dossier "Original" -- configurable via wallpapers.conf (cf.
-/// configured_dir()), sinon même chemin par défaut que WALL_DIR dans
-/// set_wallpaper.sh (symlinké vers le dépôt par set_wallpapers.sh).
+/// "Original" directory -- configurable via wallpapers.conf (see
+/// configured_dir()), otherwise the same default path as WALL_DIR in
+/// set_wallpaper.sh (symlinked to the repo by set_wallpapers.sh).
 pub fn originals_dir() -> PathBuf {
     configured_dir().unwrap_or_else(|| home().join("Images/Wallpapers"))
 }
 
-/// Une image wallpaper trouvée sur disque : chemin complet et nom de
-/// fichier (affiché dans l'UI, écrit tel quel dans la playlist JSON).
+/// A wallpaper image found on disk: full path and filename (shown in the
+/// UI, written as-is into the JSON playlist).
 #[derive(Clone, Debug)]
 pub struct Wallpaper {
     pub path: PathBuf,
@@ -58,9 +58,9 @@ fn has_known_extension(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Liste les wallpapers d'un dossier, triés par nom -- même tri que
-/// `for img in "$SRC_DIR"/*` dans set_wallpaper.sh (ordre alphabétique du
-/// glob shell).
+/// Lists a directory's wallpapers, sorted by name -- same sort as
+/// `for img in "$SRC_DIR"/*` in set_wallpaper.sh (alphabetical shell glob
+/// order).
 pub fn scan(dir: &Path) -> Vec<Wallpaper> {
     let mut entries: Vec<Wallpaper> = match std::fs::read_dir(dir) {
         Ok(read_dir) => read_dir

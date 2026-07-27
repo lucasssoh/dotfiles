@@ -3,7 +3,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
 
     config = function()
-        -- Nom du dossier courant
+        -- Current folder name
         local function get_current_folder()
             local cwd = vim.fn.getcwd()
             return "  " .. vim.fn.fnamemodify(cwd, ":t")
@@ -14,13 +14,13 @@ return {
                 theme = "auto",
                 globalstatus = true,
 
-                -- Séparateurs internes arrondis
+                -- Rounded internal separators
                 component_separators = {
                     left = "",
                     right = "",
                 },
 
-                -- Bordures uniquement vers l’intérieur
+                -- Borders only facing inward
                 section_separators = {
                     left = "",
                     right = "",

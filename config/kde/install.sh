@@ -16,20 +16,20 @@ ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 
 # ============================================================
-# PACKAGES MINIMAUX (Plasma 6)
+# MINIMAL PACKAGES (Plasma 6)
 # ============================================================
 section "Installing Minimal KDE Plasma"
 
 PKGS=(
     # Core Desktop
     plasma-desktop kscreen kinfocenter systemsettings
-    # Utilitaires système essentiels
-    plasma-nm plasma-pa plasma-systemmonitor bluedevil 
-    power-profiles-daemon kde-gtk-config breeze-gtk 
+    # Essential system utilities
+    plasma-nm plasma-pa plasma-systemmonitor bluedevil
+    power-profiles-daemon kde-gtk-config breeze-gtk
     kscreenlocker xdg-desktop-portal-kde
-    # Thémage & Effets
+    # Theming & effects
     kvantum qt5-qtstyleplugins qt6-qtstyleplugins
-    # Fonts de base (si non installées par ton module fonts)
+    # Base fonts (in case your fonts module didn't install them)
     google-noto-sans-fonts google-noto-emoji-fonts
 )
 
@@ -52,7 +52,7 @@ if [ ! -d "$HOME/.local/share/icons/Reversal" ]; then
     ok "Reversal icons installed."
 fi
 
-# Orchis Theme (Pour Plasma et Kvantum)
+# Orchis Theme (for Plasma and Kvantum)
 if [ ! -d "$HOME/.local/share/aurorae/themes/Orchis" ]; then
     info "Downloading Orchis Theme..."
     git clone https://github.com/vinceliuice/Orchis-kde.git $TEMP_DIR/orchis
@@ -61,13 +61,13 @@ if [ ! -d "$HOME/.local/share/aurorae/themes/Orchis" ]; then
 fi
 
 # ============================================================
-# CONFIGURATION AUTOMATIQUE
+# AUTOMATIC CONFIGURATION
 # ============================================================
 section "Applying minimal config"
 
-# Appliquer le thème de couleur et les icônes via CLI
+# Apply the color scheme and icons via CLI
 plasma-apply-colorscheme OrchisDark || true
-plasma-apply-cursortheme Bibata-Modern-Classic || true # Optionnel si tu les as
+plasma-apply-cursortheme Bibata-Modern-Classic || true # Optional, only if you have it
 
 info "Setting Reversal-dark icons..."
 /usr/bin/kwriteconfig6 --file kdeglobals --group Icons --key Theme Reversal-dark

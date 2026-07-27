@@ -1,8 +1,8 @@
 @import                         "share"
 
-/* common.rasi — base des menus "grille de boutons" (performance/power/confirm).
- * Couleurs, sélection et style du titre ("message") hérités de share.rasi ;
- * ce fichier ne pose que la disposition (grille, espacements). */
+/* common.rasi — base for "button grid" menus (performance/power/confirm).
+ * Colors, selection, and title ("message") style inherited from
+ * share.rasi; this file only sets the layout (grid, spacing). */
 
 configuration {
     show-icons:                 false;

@@ -1,9 +1,9 @@
 -- ============================================================
--- colors.lua — Palette de couleurs centrale
+-- colors.lua — Central color palette
 -- ============================================================
--- Source unique de vérité pour la palette Hyprland. Valeurs au format
--- 0xAARRGGBB attendu par Hyprland. Chargé par hyprland.lua via
--- require("colors") et consommé par hl.config() (bordures, décorations).
+-- Single source of truth for the Hyprland palette. Values in the
+-- 0xAARRGGBB format expected by Hyprland. Loaded by hyprland.lua via
+-- require("colors") and consumed by hl.config() (borders, decorations).
 -- ============================================================
 
 return {
@@ -13,19 +13,18 @@ return {
     muted      = "0xff636366",
     subtle     = "0xff8e8e93",
     text       = "0xffe5e5ea",
-    accent     = "0xff6b9fff",   -- Accent primaire (bleu)
-    accent2    = "0xffd0ffff",   -- Accent secondaire (cyan clair)
-    accent3    = "0xffc8823c",   -- Accent tertiaire (orange renard)
+    accent     = "0xff6b9fff",   -- Primary accent (blue)
+    accent2    = "0xffd0ffff",   -- Secondary accent (light cyan)
+    accent3    = "0xffc8823c",   -- Tertiary accent (fox orange)
     urgent     = "0xffff453a",
     warning    = "0xffffd60a",
     success    = "0xff30d158"
 }
 
 -- ============================================================
--- Miroir CSS (#RRGGBB) pour Waybar / Rofi / Dunst
--- Ces outils ne peuvent pas faire require() sur un fichier Lua : toute
--- modification de palette doit être reportée manuellement dans
--- waybar/style.css et rofi/launcher.rasi.
+-- CSS mirror (#RRGGBB) for Waybar / Rofi / Dunst
+-- These tools can't require() a Lua file: any palette change must be
+-- ported by hand into waybar/style.css and rofi/launcher.rasi.
 -- ============================================================
 -- background:  #1c1c1e
 -- surface:     #2c2c2e

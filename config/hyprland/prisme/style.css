@@ -1,5 +1,5 @@
-/* Prisme — thème, palette identique à waybar/style.css et orbit/theme.toml.
-   Recharge : relancer prisme (pas de daemon, contrairement à Orbit). */
+/* Prisme — theme, same palette as waybar/style.css and orbit/theme.toml.
+   Reload: relaunch prisme (no daemon, unlike Orbit). */
 
 * {
     font-family: "JetBrains Mono";

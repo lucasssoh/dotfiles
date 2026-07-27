@@ -1,33 +1,33 @@
-//! wallpaper-filter <image> — recompose une image pour remplir exactement
-//! la résolution de l'écran actif, sans jamais recadrer l'axe qui
-//! porterait le sujet principal (hauteur en paysage, largeur en portrait)
-//! -- cet axe "sûr" n'est que mis à l'échelle, jamais rogné. Seul l'axe
-//! restant ("libre") est ensuite ajusté : recadré s'il est trop grand,
-//! ou étendu (fond flouté -- couleur dominante des 4 coins si l'image a
-//! un fond quasi uni, sinon l'image entière étirée -- fondu en dégradé
-//! sur les bords) s'il est trop court. Réécriture native de l'ancien
-//! wallpaper-filter-one.sh (ImageMagick) : même algorithme, mais tout le
-//! décodage/traitement reste en mémoire dans un seul process plutôt que
-//! de rappeler `magick` cinq fois par image avec un aller-retour
-//! encodage/décodage à chaque étape.
+//! wallpaper-filter <image> — recomposes an image to exactly fill the
+//! active screen's resolution, without ever cropping the axis that would
+//! carry the main subject (height in landscape, width in portrait) -- this
+//! "safe" axis is only scaled, never cropped. Only the remaining ("free")
+//! axis is then adjusted: cropped if too large, or extended (blurred
+//! background -- dominant color of the 4 corners if the image has a
+//! near-uniform background, otherwise the whole image stretched -- with a
+//! gradient fade on the edges) if too short. Native rewrite of the old
+//! wallpaper-filter-one.sh (ImageMagick): same algorithm, but all
+//! decoding/processing stays in memory in a single process rather than
+//! calling `magick` five times per image with an encode/decode round trip
+//! at every step.
 //!
-//! Appelé par scripts/wallpaper-cache-watcher.sh pour chaque image
-//! ajoutée/modifiée (celui-ci gère la surveillance inotify, la passe
-//! initiale parallèle, et le marqueur FILTER_VERSION -- cf. ce script
-//! pour la version à incrémenter si l'algorithme ci-dessous change).
+//! Called by scripts/wallpaper-cache-watcher.sh for every added/modified
+//! image (that script handles inotify watching, the initial parallel
+//! pass, and the FILTER_VERSION marker -- see it for the version to bump
+//! if the algorithm below changes).
 
 use image::{imageops::FilterType, DynamicImage, GenericImageView, Rgb, RgbImage};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
-/// Sigma du flou gaussien du fond -- calibré à l'œil pour un rendu proche
-/// de l'ancien `-blur 0x40` ImageMagick.
+/// Sigma of the background's Gaussian blur -- eyeballed to match the old
+/// ImageMagick `-blur 0x40` look.
 const BLUR_SIGMA: f32 = 18.0;
-/// Écart-type (0..1, moyenné sur les 3 canaux) en dessous duquel les 4
-/// coins de l'image sont considérés comme un fond uni -- calibré sur la
-/// collection de fonds d'écran de ce dépôt (mêmes images que le seuil
-/// équivalent de l'ancienne version ImageMagick).
+/// Standard deviation (0..1, averaged over the 3 channels) below which the
+/// image's 4 corners are considered a uniform background -- calibrated on
+/// this repo's wallpaper collection (same images as the old ImageMagick
+/// version's equivalent threshold).
 const UNIFORM_THRESHOLD: f64 = 0.045;
 
 fn home() -> PathBuf {
@@ -45,8 +45,8 @@ fn has_known_extension(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Cache déjà à jour (fichier présent, mtime >= celui de la source) ->
-/// rien à faire. Même contrat que le test bash historique.
+/// Cache already up to date (file present, mtime >= the source's) ->
+/// nothing to do. Same contract as the historical bash test.
 fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
     let (Ok(src_meta), Ok(cached_meta)) = (std::fs::metadata(src), std::fs::metadata(cached))
     else {
@@ -58,11 +58,11 @@ fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
     cached_time >= src_time
 }
 
-/// Résolution cible : écran interne si actif, sinon 1er écran actif (via
-/// `hyprctl monitors -j`, jamais `monitors all -j` -- on veut l'écran qui
-/// affiche réellement des pixels maintenant, cf. wallpaper-filter-one.sh
-/// historique). Repli 1920x1080 hors session Hyprland ou si hyprctl/la
-/// sortie JSON sont inutilisables.
+/// Target resolution: internal screen if active, otherwise the 1st active
+/// screen (via `hyprctl monitors -j`, never `monitors all -j` -- we want
+/// the screen that's actually displaying pixels right now, see the
+/// historical wallpaper-filter-one.sh). Falls back to 1920x1080 outside a
+/// Hyprland session or if hyprctl/its JSON output are unusable.
 fn target_resolution() -> (u32, u32) {
     const DEFAULT: (u32, u32) = (1920, 1080);
     let Ok(output) = Command::new("hyprctl").args(["monitors", "-j"]).output() else {
@@ -94,9 +94,9 @@ fn target_resolution() -> (u32, u32) {
     }
 }
 
-/// Dimensions de l'image mise à l'échelle sur l'axe sûr uniquement --
-/// même règle de trois entière que l'ancienne version bash, pour
-/// atterrir exactement sur `target_h` (paysage) ou `target_w` (portrait).
+/// Dimensions of the image scaled on the safe axis only -- same integer
+/// rule-of-three as the old bash version, to land exactly on `target_h`
+/// (landscape) or `target_w` (portrait).
 fn fit_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32, landscape: bool) -> (u32, u32) {
     if landscape {
         let fit_w = ((src_w as u64 * target_h as u64 + src_h as u64 / 2) / src_h as u64) as u32;
@@ -107,9 +107,9 @@ fn fit_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32, landscape: boo
     }
 }
 
-/// Dimensions couvrant tout le canevas cible (comme `-resize WxH^`) --
-/// jamais plus petit que la cible sur aucun axe, quitte à arrondir au
-/// pixel supérieur.
+/// Dimensions covering the whole target canvas (like `-resize WxH^`) --
+/// never smaller than the target on either axis, rounding up to the next
+/// pixel if needed.
 fn cover_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32) -> (u32, u32) {
     let scale = (target_w as f64 / src_w as f64).max(target_h as f64 / src_h as f64);
     let cover_w = ((src_w as f64 * scale).ceil() as u32).max(target_w);
@@ -117,8 +117,8 @@ fn cover_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32) -> (u32, u32
     (cover_w, cover_h)
 }
 
-/// Recadre `img` (déjà mis à l'échelle à cover_w x cover_h) au centre sur
-/// exactement target_w x target_h.
+/// Center-crops `img` (already scaled to cover_w x cover_h) down to
+/// exactly target_w x target_h.
 fn center_crop(img: &DynamicImage, target_w: u32, target_h: u32) -> DynamicImage {
     let (w, h) = img.dimensions();
     let x = w.saturating_sub(target_w) / 2;
@@ -126,11 +126,11 @@ fn center_crop(img: &DynamicImage, target_w: u32, target_h: u32) -> DynamicImage
     img.crop_imm(x, y, target_w.min(w), target_h.min(h))
 }
 
-/// Couleur moyenne des 4 coins si leur écart-type combiné (bruit propre à
-/// chaque coin ET différence de teinte d'un coin à l'autre) est sous
-/// UNIFORM_THRESHOLD -- même principe que l'ancienne version bash, mais
-/// mesuré directement sur les pixels décodés plutôt qu'en rappelant
-/// `magick`. Taille d'échantillon en % de la plus petite dimension.
+/// Average color of the 4 corners if their combined standard deviation
+/// (noise within each corner AND hue difference between corners) is below
+/// UNIFORM_THRESHOLD -- same principle as the old bash version, but
+/// measured directly on the decoded pixels rather than calling `magick`
+/// again. Sample size as a % of the smallest dimension.
 fn uniform_corner_color(img: &DynamicImage) -> Option<Rgb<u8>> {
     let (w, h) = img.dimensions();
     let cs = (w.min(h) * 6 / 100).clamp(24, 200).min(w).min(h);
@@ -169,12 +169,12 @@ fn uniform_corner_color(img: &DynamicImage) -> Option<Rgb<u8>> {
     (combined_std < UNIFORM_THRESHOLD).then_some(Rgb(mean))
 }
 
-/// Fond flouté derrière l'image nette : couleur dominante des 4 coins si
-/// détectée quasi unie (évite que les couleurs du sujet ne "bavent" dans
-/// l'étirement), sinon l'image entière mise à l'échelle pour couvrir tout
-/// le canevas puis recadrée au centre. Le flou s'applique dans les deux
-/// cas -- sur un aplat déjà uni il ne fait que diluer un éventuel bruit
-/// résiduel de l'échantillon.
+/// Blurred background behind the sharp image: dominant color of the 4
+/// corners if detected as near-uniform (avoids the subject's colors
+/// "bleeding" into the stretch), otherwise the whole image scaled to
+/// cover the whole canvas then center-cropped. The blur applies in both
+/// cases -- on an already-uniform fill it just dilutes any residual noise
+/// from the sample.
 fn build_background(img: &DynamicImage, target_w: u32, target_h: u32) -> RgbImage {
     let base = match uniform_corner_color(img) {
         Some(color) => RgbImage::from_pixel(target_w, target_h, color),
@@ -187,11 +187,11 @@ fn build_background(img: &DynamicImage, target_w: u32, target_h: u32) -> RgbImag
     image::imageops::blur(&base, BLUR_SIGMA)
 }
 
-/// Poids de fondu (0..255) pour un pixel à `pos` sur un axe de longueur
-/// `len` : 0 au bord (dans les `feather` premiers/derniers pixels),
-/// rampe linéaire jusqu'à 255 à `feather` px du bord, plateau opaque au
-/// centre. Un seul axe compte -- l'axe sûr n'a jamais besoin de fondu,
-/// il correspond déjà exactement au bord du canevas.
+/// Fade weight (0..255) for a pixel at `pos` on an axis of length `len`:
+/// 0 at the edge (within the first/last `feather` pixels), linear ramp up
+/// to 255 at `feather` px from the edge, opaque plateau in the middle.
+/// Only one axis matters -- the safe axis never needs a fade, it already
+/// matches the canvas edge exactly.
 fn edge_weight(pos: u32, len: u32, feather: u32) -> u8 {
     if feather == 0 || len == 0 {
         return 255;
@@ -205,8 +205,8 @@ fn edge_weight(pos: u32, len: u32, feather: u32) -> u8 {
     }
 }
 
-/// Compose l'image nette (`fit`, fondue sur son axe libre) au centre du
-/// fond flouté (`bg`, déjà à target_w x target_h).
+/// Composes the sharp image (`fit`, faded on its free axis) at the center
+/// of the blurred background (`bg`, already at target_w x target_h).
 fn compose(bg: RgbImage, fit: &RgbImage, target_w: u32, target_h: u32, landscape: bool) -> RgbImage {
     let (fit_w, fit_h) = fit.dimensions();
     let feather = if landscape { fit_w / 8 } else { fit_h / 8 };
@@ -263,8 +263,8 @@ fn main() {
     let (target_w, target_h) = target_resolution();
     let landscape = target_w >= target_h;
 
-    // Axe sûr + décision recadrage/extension (multiplication croisée en
-    // entiers -- pas de flottant, pas d'ambiguïté d'arrondi).
+    // Safe axis + crop/extend decision (cross multiplication in
+    // integers -- no floats, no rounding ambiguity).
     let crop_mode = if landscape {
         src_w as u64 * target_h as u64 >= target_w as u64 * src_h as u64
     } else {
