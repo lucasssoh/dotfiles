@@ -3,6 +3,16 @@
     "SearchEngines": {
       "Default": "Google"
     },
-    "DontCheckDefaultBrowser": true
+    "DontCheckDefaultBrowser": true,
+    "Preferences": {
+      "gfx.color_management.hdr": {
+        "Value": true,
+        "Status": "default"
+      }
+    },
+    "Homepage": {
+      "URL": "https://www.google.com",
+      "StartPage": "homepage"
+    }
   }
 }

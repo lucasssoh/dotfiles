@@ -11,7 +11,6 @@
 @define-color accent2     #4fefff;
 @define-color muted       #48484a;
 @define-color play        #116611;
-@define-color danger      rgb(255, 110, 110); /* named: was inlined only on #custom-power */
 
 /* =========================================================
    GLOBAL & SHARED STYLES
@@ -33,7 +32,7 @@ window#waybar {
 }
 
 /* --- Global background color for all active modules --- */
-#workspaces, #custom-gap, #window,
+#custom-logo, #workspaces, #custom-gap, #window,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network,
 #bluetooth, #pulseaudio.output, #pulseaudio.input,
 #custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power{
@@ -41,7 +40,7 @@ window#waybar {
 }
 
 /* --- Top & bottom borders only (2px @overlay2) --- */
-#workspaces, #custom-gap,
+#custom-logo, #workspaces, #custom-gap,
 #clock, #cpu, #temperature, #custom-fan, #memory, #network,
 #bluetooth, #pulseaudio.output, #pulseaudio.input,
 #custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power {
@@ -56,12 +55,12 @@ window#waybar {
 }
 
 /* --- SHARED BORDER-RADIUS RULES --- */
-/* Left ends of blocks (left corners): first module of each dalle */
-#clock, #cpu {
+/* Left ends of blocks (left corners) */
+#custom-logo, #clock {
     border-radius: 4px 0 0 4px;
 }
 
-/* Right ends of blocks (right corners): last module of each dalle */
+/* Right ends of blocks (right corners) */
 #custom-gap, #custom-power {
     border-radius: 0 4px 4px 0;
 }
@@ -71,29 +70,13 @@ window#waybar {
     border-radius: 4px;
 }
 
-/* --- Group separators inside the right dalle ---------------------
-   [cpu temp fan ram] | [network bt out in] | [display scale hdr
-   performance] | [battery notification power]. A thin @muted line
-   marks the end of each logical group instead of the old ad-hoc
-   2px @overlay2 border around the display/hdr trio. */
-#memory, #pulseaudio.input, #custom-performance {
-    border-right: 1px solid @muted;
-}
-
-/* Left dalle: single separator between the clock and the workspaces
-   group. */
-#clock {
-    border-right: 1px solid @muted;
-}
-
 
 /* =========================================================
    LEFT MODULES
 ========================================================= */
 
-/* ── Clock ─────────────────────────────────────────────── */
-#clock {
-    padding: 0 10px;
+#custom-logo {
+    padding: 0 10px 0 10px;
 }
 
 /* ── Workspaces ────────────────────────────────────────── */
@@ -126,15 +109,6 @@ window#waybar {
     padding-right: 1px;
 }
 
-/* Living in modules-left, right after the workspaces/gap dalle: waybar's
-   CenterBox centers independently of the left/right boxes and can
-   overlap or collide with them at some resolutions/scales (100% on
-   1920x1080, 125%...). A linear box (left, like right) never has that
-   problem. Kept as two distinct floating elements (not merged into one
-   pill) so they don't visually fuse. Window comes first (primary
-   content, right after the workspaces group), mpris is just a small
-   "now playing" badge riding right after it. */
-
 /* ── Active Window ─────────────────────────────────────── */
 
 #window {
@@ -152,12 +126,17 @@ window#waybar.empty #window {
     border: none;
 }
 
+
+/* =========================================================
+   CENTER MODULES
+========================================================= */
+
 /* Just an icon (indicating something is playing) -- title/artist and full
    controls live in swaync, not here. */
 #mpris {
     background: transparent;
     color: @play;
-    margin: 0 12px 0 6px;
+    margin: 0 12px;
     opacity: 0.8;
     padding: 0 12px;
     min-width: 0;
@@ -173,27 +152,30 @@ window#waybar.empty #window {
 ========================================================= */
 
 #custom-apps { padding: 0 10px; min-width: 20px; }
-
-/* ── Metrics group (cpu / temp / fan / ram) ───────────────
-   Width is fixed by "min-length" (characters) in config.jsonc, not by
-   CSS min-width, so digit-count changes never shift the bar. */
-#cpu { padding: 0 10px 0 12px; }
-#temperature { padding: 0 7px; }
-#custom-fan { padding: 0 7px; }
-#memory { padding: 0 7px; }
-
-/* Load/temp gone critical: only palier, reuses the existing red
-   (no new color, palette unchanged). */
-#cpu.critical, #memory.critical, #temperature.critical { color: @danger; }
-
+#clock { padding: 0 10px; min-width: 140px; }
+#cpu { padding: 0 10px 0 12px; min-width: 165px; }
+#temperature { padding: 0 0 0 10px; min-width: 85px; }
+#custom-fan { padding: 0 15px 0 0; min-width: 85px; }
+#memory { padding: 0 10px; min-width: 105px; }
 #network { padding: 0 10px; min-width: 100px; }
 #bluetooth { padding: 0 10px; min-width: 60px; }
 #pulseaudio.output { padding: 0 10px; min-width: 60px; }
 #pulseaudio.input { padding: 0 10px; min-width: 60px; }
 #custom-performance { padding: 0 10px; min-width: 20px; }
 
-/* Flattened into the dalle (was a separately-inset pill). */
-#battery { padding: 0 10px; }
+#battery {
+    border-radius: 6px; /* Becomes a styled pill inset into the row */
+    margin: 3px 6px;
+    padding: 0 4px;
+    min-width: 30px;
+}
+
+/* ── "Display" group (display + scale + hdr) ─────────────
+   The 3 modules form a visual group: framed by a left border (1st
+   module) / right border (last). Icon in front: see below (GTK CSS
+   doesn't support ::before on these widgets). */
+#custom-display { border-left: 2px solid @overlay2; }
+#custom-hdr     { border-right: 2px solid @overlay2; }
 
 /* ── Display layout ───────────────────────────────────── */
 #custom-display { padding: 0 10px; min-width: 20px; }
@@ -221,7 +203,7 @@ window#waybar.empty #window {
 #custom-notification.inhibited-none { color: @text; }                  /* nothing pending */
 
 #custom-power {
-    color: @danger;
+    color: rgb(255, 110, 110);
     padding: 0 10px 0 12px;
     min-width: 5px;
 }

@@ -16,15 +16,19 @@
     // ============================================================
 
     "modules-left": [
-        "clock",
+        "custom/logo",
         "hyprland/workspaces",
         "custom/gap",
-        "hyprland/window",
+        "hyprland/window"
+    ],
+
+    "modules-center": [
         "mpris"
     ],
 
     "modules-right": [
         "custom/apps",
+        "clock",
         "cpu",
         "temperature",
         "custom/fan",
@@ -46,11 +50,13 @@
     // LEFT MODULES
     // ============================================================
 
-    // -- Clock ------------------------------------------------------
-    "clock": {
-        "format": "{:%H:%M}",
-        "tooltip-format": "<big>{:%A, %d %B %Y - %H:%M}</big>"
+    //--- lock waybar ---------------------------------------------
+    "custom/logo": {
+        "format": "",
+        "tooltip": false
     },
+    
+
 
     // ── Workspaces ───────────────────────────────────────────────
     "hyprland/workspaces": {
@@ -68,11 +74,15 @@
     "hyprland/window": {
         "format": "<span foreground='#4fefff'>{initialTitle}</span> <span foreground='#48484a'>·</span> <span foreground='#f2f2f7'>{title}</span>",
         "format-empty": "",
-        "max-length": 45,
+        "max-length": 35,
         "separate-outputs": true,
         "offscreen-css": true,
         "justify": "center"
     },
+
+    // ============================================================
+    // CENTER MODULES
+    // ============================================================
 
     // ── Media ────────────────────────────────────────────────────
     // Just an indicator that something is playing -- full title/artist and
@@ -89,7 +99,6 @@
         "tooltip-format": "{title} · {artist}"
     },
 
-
     // ============================================================
     // RIGHT MODULES
     // ============================================================
@@ -101,36 +110,31 @@
         "tooltip": false
     },
 
+    // ── Clock ────────────────────────────────────────────────────
+    "clock": {
+        "format": "{:%d/%m/%y  %H:%M}",
+        "tooltip-format": "<big>{:%A, %d %B %Y - %H:%M}</big>"
+    },
+
     // ── CPU ──────────────────────────────────────────────────────
     "cpu": {
-        "format": "  {usage:>3} {max_frequency:.1f}",
-        "min-length": 10,
-        "states": {
-            "critical": 90
-        }
+        "format": "  cpu {usage:02}% - {max_frequency:.2f}Ghz"
     },
 
     // ── Temperature ──────────────────────────────────────────────
     "temperature": {
-        "format": "󰔏 {temperatureC:>3}",
-        "min-length": 5,
-        "critical-threshold": 85
+        "format": "󰔏 tmp {temperatureC}°"
     },
 
     // ── Fans ─────────────────────────────────────────────────────
     "custom/fan": {
         "exec": "~/.config/waybar/scripts/fan.sh",
-        "interval": 10,
-        "min-length": 6
+        "interval": 10
     },
 
     // ── Memory ───────────────────────────────────────────────────
     "memory": {
-        "format": "󰘚 {used:0.1f}G",
-        "min-length": 6,
-        "states": {
-            "critical": 90
-        }
+        "format": "󰘚  ram {percentage:02}%"
     },
 
     // ── Network ──────────────────────────────────────────────────
@@ -151,7 +155,8 @@
         "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
 
         // Forces a minimum length so the bar doesn't shift
-        "min-length": 10
+        "min-length": 10,
+        "fixed-width": true
     },
 
     // ── Bluetooth ────────────────────────────────────────────────
