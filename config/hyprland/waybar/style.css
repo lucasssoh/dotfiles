@@ -32,64 +32,87 @@ window#waybar {
     padding: 0;
 }
 
-/* --- Global background color for all active modules --- */
-#workspaces, #custom-gap, #window,
-#clock, #cpu, #temperature, #custom-fan, #memory, #network,
-#bluetooth, #pulseaudio.output, #pulseaudio.input,
-#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power{
+/* --- Global background color for the plain (neutral) dalle modules --- */
+#custom-notification, #workspaces, #window, #mpris,
+#clock, #cpu, #temperature, #custom-fan, #memory,
+#custom-display, #custom-hdr, #battery {
     background: @background;
 }
 
+/* --- Capsules that stand apart from the neutral dalle: power profile +
+   power (merged into one highlighted block) and connectivity (its own
+   distinct tier). The only two groups that keep rounded corners --
+   everything else in the bar is flat/square now. --- */
+#custom-performance, #custom-power {
+    background: @surface;
+}
+
+#network, #bluetooth, #pulseaudio.output, #pulseaudio.input {
+    background: @overlay;
+}
+
 /* --- Top & bottom borders only (2px @overlay2) --- */
-#workspaces, #custom-gap,
-#clock, #cpu, #temperature, #custom-fan, #memory, #network,
-#bluetooth, #pulseaudio.output, #pulseaudio.input,
-#custom-display, #custom-scale, #custom-hdr, #custom-performance, #battery, #custom-notification, #custom-power {
+#custom-notification, #workspaces, #mpris,
+#clock, #cpu, #temperature, #custom-fan, #memory,
+#custom-display, #custom-hdr, #battery {
     border-top: 2px solid @overlay2;
     border-bottom: 2px solid @overlay2;
 }
 
-/* --- Top & bottom borders for Window and Mpris (@overlay) --- */
-#window, #custom-apps {
+/* --- Top & bottom borders for floating/detached blocks (@overlay):
+   window, apps, power profile + power, connectivity --- */
+#window, #custom-apps, #custom-performance, #custom-power,
+#network, #bluetooth, #pulseaudio.output, #pulseaudio.input {
     border-top: 2px solid @overlay;
     border-bottom: 2px solid @overlay;
 }
 
-/* --- SHARED BORDER-RADIUS RULES --- */
-/* Left ends of blocks (left corners): first module of each dalle */
-#clock, #cpu {
+/* --- SHARED BORDER-RADIUS RULES ---------------------------------
+   Small 4px rounding on every block's own outer corners (matches the
+   glued groups below: middle modules of a block stay flat, only its
+   first/last module carries the corner). */
+/* Left corners: first module of a multi-module block */
+#custom-notification, #cpu, #custom-display, #network, #custom-performance {
     border-radius: 4px 0 0 4px;
 }
 
-/* Right ends of blocks (right corners): last module of each dalle */
-#custom-gap, #custom-power {
+/* Right corners: last module of a multi-module block */
+#workspaces, #memory, #custom-hdr, #pulseaudio.input, #custom-power {
     border-radius: 0 4px 4px 0;
 }
 
-/* Standalone blocks (all corners rounded) */
-#window{
+/* Standalone single-module blocks: all four corners rounded */
+#window, #mpris, #custom-apps, #battery {
     border-radius: 4px;
 }
 
-/* --- Group separators inside the right dalle ---------------------
-   [cpu temp fan ram] | [network bt out in] | [display scale hdr
-   performance] | [battery notification power]. A thin @muted line
-   marks the end of each logical group instead of the old ad-hoc
-   2px @overlay2 border around the display/hdr trio. */
-#memory, #pulseaudio.input, #custom-performance {
-    border-right: 1px solid @muted;
-}
-
-/* Left dalle: single separator between the clock and the workspaces
-   group. */
-#clock {
-    border-right: 1px solid @muted;
+/* --- Small gap only BETWEEN blocks, never inside one -- each block's
+   modules stay glued (0 margin, shared background) and only the last
+   module of a block gets the gap to the next one:
+   [notification+clock+workspaces] | [window]   (mpris lives alone in
+   modules-center, no neighbor to gap against)
+   [metrics: cpu/temp/fan/ram] | [display: display/hdr]
+   | [connectivity] | [battery] | [power profile+power] --- */
+#workspaces, #memory {
+    margin-right: 3px;
 }
 
 
 /* =========================================================
    LEFT MODULES
 ========================================================= */
+
+/* ── Notifications (swaync) — now the bar's leftmost module (popup
+   anchor moved to match: swaync/config.json positionX: "left"). --- */
+#custom-notification { padding: 0 10px; min-width: 20px; }
+#custom-notification.notification,
+#custom-notification.dnd-notification,
+#custom-notification.inhibited-notification,
+#custom-notification.dnd-inhibited-notification { color: @accent2; }  /* notification pending */
+#custom-notification.dnd-none,
+#custom-notification.dnd-inhibited-none { color: @muted; }             /* DND active, nothing pending */
+#custom-notification.none,
+#custom-notification.inhibited-none { color: @text; }                  /* nothing pending */
 
 /* ── Clock ─────────────────────────────────────────────── */
 #clock {
@@ -107,7 +130,6 @@ window#waybar {
     color: @text;
     padding: 0 4px;
     min-width: 16px;
-    border-radius: 2px;
 }
 
 /* Empty persistent: dimmed */
@@ -121,19 +143,6 @@ window#waybar {
     background: @accent2;
     padding: 0 7px;
 }
-
-#custom-gap {
-    padding-right: 1px;
-}
-
-/* Living in modules-left, right after the workspaces/gap dalle: waybar's
-   CenterBox centers independently of the left/right boxes and can
-   overlap or collide with them at some resolutions/scales (100% on
-   1920x1080, 125%...). A linear box (left, like right) never has that
-   problem. Kept as two distinct floating elements (not merged into one
-   pill) so they don't visually fuse. Window comes first (primary
-   content, right after the workspaces group), mpris is just a small
-   "now playing" badge riding right after it. */
 
 /* ── Active Window ─────────────────────────────────────── */
 
@@ -152,13 +161,19 @@ window#waybar.empty #window {
     border: none;
 }
 
+
+/* =========================================================
+   CENTER MODULES
+========================================================= */
+
 /* Just an icon (indicating something is playing) -- title/artist and full
-   controls live in swaync, not here. */
+   controls live in swaync, not here. Alone in modules-center, so it now
+   gets a real background/border/radius (see shared rules above) instead
+   of the old transparent icon-only treatment it needed when it sat
+   right next to #window. */
 #mpris {
-    background: transparent;
     color: @play;
-    margin: 0 12px 0 6px;
-    opacity: 0.8;
+    opacity: 0.9;
     padding: 0 12px;
     min-width: 0;
     transition: all 0.2s ease;
@@ -180,58 +195,58 @@ window#waybar.empty #window {
 #cpu { padding: 0 10px 0 12px; }
 #temperature { padding: 0 7px; }
 #custom-fan { padding: 0 7px; }
-#memory { padding: 0 7px; }
+#memory { padding: 0 10px 0 7px; }
 
 /* Load/temp gone critical: only palier, reuses the existing red
    (no new color, palette unchanged). */
 #cpu.critical, #memory.critical, #temperature.critical { color: @danger; }
 
-#network { padding: 0 10px; min-width: 100px; }
-#bluetooth { padding: 0 10px; min-width: 60px; }
-#pulseaudio.output { padding: 0 10px; min-width: 60px; }
-#pulseaudio.input { padding: 0 10px; min-width: 60px; }
-#custom-performance { padding: 0 10px; min-width: 20px; }
-
-/* Flattened into the dalle (was a separately-inset pill). */
-#battery { padding: 0 10px; }
-
 /* ── Display layout ───────────────────────────────────── */
-#custom-display { padding: 0 10px; min-width: 20px; }
+#custom-display { padding: 0 12px 0 10px; min-width: 20px; }
 #custom-display.display-both     { color: @text; }
 #custom-display.display-internal { color: @accent2; }  /* cyan: external off */
 #custom-display.display-external { color: @accent2; }  /* cyan: internal off */
 
-/* ── Scale (per screen) ───────────────────────────────── */
-#custom-scale { padding: 0 10px; min-width: 20px; color: @text; }
-
 /* ── HDR Toggle ───────────────────────────────────────── */
-#custom-hdr { padding: 0 10px; min-width: 20px; }
+#custom-hdr { padding: 0 10px 0 12px; min-width: 20px; }
 #custom-hdr.hdr-on  { color: @accent2; }   /* cyan when HDR active */
 #custom-hdr.hdr-off { color: @text; }
 #custom-hdr.hdr-na  { color: @muted; }      /* grayed out: not supported */
-/* ── Notifications (swaync) ───────────────────────────────── */
-#custom-notification { padding: 0 10px; min-width: 20px; }
-#custom-notification.notification,
-#custom-notification.dnd-notification,
-#custom-notification.inhibited-notification,
-#custom-notification.dnd-inhibited-notification { color: @accent2; }  /* notification pending */
-#custom-notification.dnd-none,
-#custom-notification.dnd-inhibited-none { color: @muted; }             /* DND active, nothing pending */
-#custom-notification.none,
-#custom-notification.inhibited-none { color: @text; }                  /* nothing pending */
+
+/* ── Connectivity (wifi / bt / audio out / audio in) — its own capsule:
+   distinct @overlay background + full rounding at both ends (see
+   shared rules above), detached by a small gap instead of blending
+   into the plain dalle like the rest of the right side. */
+#network { padding: 0 12px 0 10px; min-width: 100px; margin-left: 3px; }
+#bluetooth { padding: 0 10px; min-width: 20px; }
+#pulseaudio.output { padding: 0 10px; min-width: 60px; }
+#pulseaudio.input { padding: 0 10px 0 10px; min-width: 60px; margin-right: 3px; }
+
+/* Flattened into the dalle (was a separately-inset pill). */
+#battery { padding: 0 10px 0 12px; }
+
+/* ── Power profile + Power — merged into one highlighted block (surface
+   bg, rounded only at its outer two ends, no gap between them) so it
+   reads as a single "system control" capsule instead of two loose
+   icons. Icon+color both carry the profile state (see
+   scripts/performance.sh). --- */
+#custom-performance { padding: 0 10px; margin-left: 3px; min-width: 20px; }
+#custom-performance.performance { color: @danger; }   /* flame: full power */
+#custom-performance.balanced    { color: @accent2; }  /* balance scale */
+#custom-performance.power-saver { color: @play; }     /* battery+: eco */
 
 #custom-power {
     color: @danger;
-    padding: 0 10px 0 12px;
+    padding: 0 12px 0 10px;
     min-width: 5px;
 }
 
 #custom-apps {
     background: @surface;
-    border-radius: 4px;
     opacity: 0.8;
     color: @text;
     padding: 1px 12px;
-    margin: 1px 6px;
+    margin: 1px 3px;
     letter-spacing: 4px;
 }
+

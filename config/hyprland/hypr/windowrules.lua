@@ -197,6 +197,33 @@ hl.window_rule({
 -- })
 
 -- ============================================================
+-- HDR TONE MAPPING — Brave & mpv already do their own HDR tone
+-- mapping/passthrough (Brave via wp_color_manager_v1, mpv via
+-- gpu-next + target-colorspace-hint-mode=source in mpv.conf), so
+-- Hyprland's own compositor-side tonemap only needs to step in for
+-- content whose mastering peak exceeds the panel's real peak
+-- (1037 cd/m^2 on DP-9, see hdr.sh's MAX_LUMINANCE/MAX_AVG_LUMINANCE).
+--
+-- Values (src/desktop/rule/windowRule/WindowRule.cpp): "off" = no
+-- compositor tonemap at all (full passthrough — highlights above the
+-- panel's peak just clip on the panel itself, closest to what a plain
+-- fullscreen present on Windows does); "on" (default when unset) =
+-- Hyprland's own knee-based tonemap, which on this panel compresses
+-- everything above ~518 cd/m^2 (see the HDR plan doc) — this is the
+-- most likely reason HDR looked "correct but not as punchy" as
+-- Windows; "clamp" = hard-clip at the panel's peak instead of a soft
+-- knee. Starting with "off" as the first A/B step; if highlights blow
+-- out or clip ugly instead of rolling off, try "clamp" next.
+hl.window_rule({
+    match   = { class = "brave-browser" },
+    tonemap = "off",
+})
+hl.window_rule({
+    match   = { class = "mpv" },
+    tonemap = "off",
+})
+
+-- ============================================================
 -- NEMO — main window tiled, everything else floats
 -- ============================================================
 -- 1. Main window: title ending in " — Gestionnaire de fichiers" (FR)

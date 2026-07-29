@@ -30,11 +30,6 @@ set -euo pipefail
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
 RASI="$HOME/.config/rofi/wallpaper-mode.rasi"
-# nf-md-monitor -- GTK/waybar doesn't support the ::before CSS selector
-# ("Invalid name of pseudo-class"), so the "display" group's icon
-# (display+scale+hdr) is injected here, at the start of the trio's 1st
-# module.
-ICON="󰍹"
 WAYBAR_SIGNAL=4
 
 # Internal panel connector read from DRM rather than via `hyprctl
@@ -258,11 +253,15 @@ cmd_status() {
     resolve_roles
     current_state
 
-    local label tooltip
+    # Icon carries the state now (was a fixed nf-md-monitor + "all"/"int"/
+    # "ext" text label): laptop-only, monitor-only, or both-screens split.
+    # GTK/waybar doesn't support ::before, so this is a plain state pick,
+    # not an injected prefix.
+    local icon tooltip
     case "$mode" in
-        internal) label="int" ;;
-        external) label="ext" ;;
-        *)        label="all" ;;
+        internal) icon="󰌢" ;;  # nf-md-laptop
+        external) icon="󰍹" ;;  # nf-md-monitor
+        *)        icon="󰍺" ;;  # nf-md-monitor_multiple (both)
     esac
 
     if [[ "$mode" == "both" && -z "$first_external" ]]; then
@@ -270,10 +269,10 @@ cmd_status() {
     elif [[ "$mode" == "both" ]]; then
         tooltip="Both screens · ${position} · ${align}\\nClick: change layout"
     else
-        tooltip="${label} · Click: change layout"
+        tooltip="${mode} · Click: change layout"
     fi
 
-    printf '{"text":"%s %s","class":"display-%s","tooltip":"%s"}\n' "$ICON" "$label" "$mode" "$tooltip"
+    printf '{"text":"%s","class":"display-%s","tooltip":"%s"}\n' "$icon" "$mode" "$tooltip"
 }
 
 case "${1:-status}" in

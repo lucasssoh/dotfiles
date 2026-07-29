@@ -17,6 +17,19 @@ set -euo pipefail
 SDRBRIGHTNESS="1.0"     # SDR content brightness while the screen is in HDR (1.0..2.0)
 SDRSATURATION="1.0"     # SDR content saturation in HDR
 SDR_WHITE_LUMINANCE="220"  # SDR white level inside the HDR container (Hyprland default: 80)
+
+# HDR headroom sent to clients (monitorv2 min_luminance / max_luminance /
+# max_avg_luminance -- see src/config/lua/bindings/LuaBindingsConfigRules.cpp
+# in Hyprland's source). Empty = fall back to the EDID-reported value (this
+# panel: min 0.041, max 1037, max_avg 872 cd/m^2). Hyprland's own HDR white
+# reference is hardcoded at 203 cd/m^2 (HDR_REF_LUMINANCE), so these are the
+# direct equivalent of the three numbers Windows' "HDR Calibration" app
+# measures (min black level / max full-screen / max small-highlight) --
+# raising MAX_LUMINANCE above the EDID's reported peak increases the
+# perceived punch of highlights (more headroom above the 203 nit reference),
+# at the cost of the panel itself clipping anything past its real peak.
+MAX_LUMINANCE=""        # cd/m^2, empty = EDID (this panel: 1037)
+MAX_AVG_LUMINANCE=""    # cd/m^2, empty = EDID (this panel: 872)
 WAYBAR_SIGNAL=3         # must match "signal" in config.jsonc
 RASI="$HOME/.config/rofi/theme.rasi"   # menu theme (adjust if needed)
 ICON=""               # screen glyph (nf-md-monitor)
@@ -101,6 +114,8 @@ apply() {
         # what the panel can actually do (confirmed against a bare TTY
         # framebuffer, which has no compositor/CM path to introduce a floor).
         local extra=", sdr_max_luminance = ${SDR_WHITE_LUMINANCE}, sdr_min_luminance = 0, min_luminance = 0"
+        [[ -n "$MAX_LUMINANCE" ]]     && extra+=", max_luminance = ${MAX_LUMINANCE}"
+        [[ -n "$MAX_AVG_LUMINANCE" ]] && extra+=", max_avg_luminance = ${MAX_AVG_LUMINANCE}"
         hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"hdredid\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION}${extra} })"
     else
         hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 8, cm = \"auto\" })"
@@ -108,6 +123,42 @@ apply() {
 }
 
 refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
+
+# Prints what's actually configured/negotiated for HDR, to compare against
+# what Windows does before tuning anything. The "ColorManagement min/max/cll/
+# fall" line (what actually gets sent to the panel per-frame) only appears in
+# Hyprland's log when debug:disable_logs = false and only at Log::TRACE
+# level -- if it's missing below, that line isn't being emitted at the
+# current log level, not that HDR is inactive.
+cmd_debug() {
+    local m="${1:-$(focused)}"
+    [[ -z "$m" ]] && { echo "no monitor" >&2; exit 1; }
+
+    echo "== hyprctl monitor state ($m) =="
+    hyprctl monitors -j | jq -r --arg m "$m" \
+        '.[] | select(.name==$m) | {currentFormat, colorManagementPreset, sdrBrightness, sdrSaturation, sdrMinLuminance, sdrMaxLuminance}'
+
+    echo
+    echo "== EDID HDR static metadata =="
+    local edid
+    for edid in /sys/class/drm/*-"$m"/edid; do
+        [[ -e "$edid" ]] || continue
+        if command -v edid-decode >/dev/null 2>&1; then
+            edid-decode "$edid" 2>/dev/null | grep -iA4 "HDR Static Metadata Data Block"
+        fi
+        break
+    done
+
+    echo
+    echo "== last ColorManagement line(s) sent to the panel (hyprland.log, TRACE) =="
+    local log
+    log=$(ls -t "${XDG_RUNTIME_DIR:-/tmp}"/hypr/*/hyprland.log 2>/dev/null | head -n1)
+    if [[ -z "$log" ]]; then
+        echo "no hyprland.log found"
+    else
+        grep "ColorManagement min" "$log" | tail -n5 || echo "(no match -- enable debug:disable_logs = false to see this)"
+    fi
+}
 
 # ---- Subcommands ------------------------------------------
 
@@ -169,5 +220,6 @@ case "${1:-status}" in
     status) cmd_status ;;
     toggle) cmd_toggle ;;
     menu)   cmd_menu ;;
-    *)      echo "usage: $0 {status|toggle|menu}" >&2; exit 1 ;;
+    debug)  cmd_debug "${2:-}" ;;
+    *)      echo "usage: $0 {status|toggle|menu|debug [monitor]}" >&2; exit 1 ;;
 esac

@@ -5,7 +5,7 @@
     },
     "DontCheckDefaultBrowser": true,
     "Preferences": {
-      "gfx.color_management.hdr": {
+      "gfx.wayland.hdr": {
         "Value": true,
         "Status": "default"
       }

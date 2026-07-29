@@ -42,7 +42,6 @@ set -euo pipefail
 # =========================================================
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
-SCALE_STATE_FILE="$HOME/.config/hypr/scale.json"
 
 # ---- Desired layout (persistent state, defaults if absent/invalid) ----
 layout_mode="both"
@@ -55,18 +54,6 @@ if [[ -f "$STATE_FILE" ]]; then
     if [[ "$v" =~ ^(external-left|external-right)$ ]]; then layout_position="$v"; fi
     v="$(jq -r '.align // empty'    "$STATE_FILE" 2>/dev/null || true)"
     if [[ "$v" =~ ^(center|top|bottom)$ ]]; then layout_align="$v"; fi
-fi
-
-# ---- Desired scale by role (persistent state, defaults if absent/invalid) ----
-# Written by waybar/scripts/scale.sh (per-screen module, see hdr.sh). Always
-# BY ROLE, never by connector name -- same guarantees as above.
-INT_SCALE="1"
-EXT_SCALE="1.25"
-if [[ -f "$SCALE_STATE_FILE" ]]; then
-    v="$(jq -r '.internal // empty' "$SCALE_STATE_FILE" 2>/dev/null || true)"
-    if [[ -n "$v" ]]; then INT_SCALE="$v"; fi
-    v="$(jq -r '.external // empty' "$SCALE_STATE_FILE" 2>/dev/null || true)"
-    if [[ -n "$v" ]]; then EXT_SCALE="$v"; fi
 fi
 
 # ---- All connected monitors, including disabled ones ----------------
@@ -145,21 +132,22 @@ best_refresh() {
     ' <<<"$mons_json" | sort -rn | head -1
 }
 
-# ---- Position / alignment (logical coordinates = pixels ÷ scale) -----
-# The internal screen is at INT_SCALE, the external one at EXT_SCALE — the
-# same values that will be applied further down.
+# ---- Position / alignment (logical coordinates) -----------------------
+# Scale is fixed at 1 (100%) on every screen -- see the hl.monitor() calls
+# below -- so logical coordinates are just the physical pixel sizes,
+# no per-role division needed.
 int_w=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
 int_h=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .height' <<<"$mons_json")
-int_lw=$(jq -n --argjson w "$int_w" --argjson s "$INT_SCALE" '($w / $s) | floor')
-int_lh=$(jq -n --argjson h "$int_h" --argjson s "$INT_SCALE" '($h / $s) | floor')
+int_lw=$int_w
+int_lh=$int_h
 int_x=0
 int_y=0
 
 if [[ -n "$first_external" ]]; then
     ext_w=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
     ext_h=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .height' <<<"$mons_json")
-    ext_lw=$(jq -n --argjson w "$ext_w" --argjson s "$EXT_SCALE" '($w / $s) | floor')
-    ext_lh=$(jq -n --argjson h "$ext_h" --argjson s "$EXT_SCALE" '($h / $s) | floor')
+    ext_lw=$ext_w
+    ext_lh=$ext_h
     ext_x=0
     ext_y=0
 fi
@@ -184,7 +172,7 @@ if [[ "$active_internal" == true ]]; then
     best_rr="$(best_refresh "$internal")"
     int_mode="preferred"
     [[ -n "$best_rr" ]] && int_mode="${int_w}x${int_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = ${INT_SCALE} })" >/dev/null
+    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = 1 })" >/dev/null
 fi
 
 # ---- Applies the external screen (if active): max refresh, always SDR -------
@@ -197,7 +185,7 @@ if [[ "$active_external" == true ]]; then
     best_rr="$(best_refresh "$first_external")"
     ext_mode="preferred"
     [[ -n "$best_rr" ]] && ext_mode="${ext_w}x${ext_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = ${EXT_SCALE}, bitdepth = 8, cm = \"auto\" })" >/dev/null
+    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = 1, bitdepth = 8, cm = \"auto\" })" >/dev/null
 fi
 
 # ---- Turns off the unwanted screen, AFTER activating the others ----------

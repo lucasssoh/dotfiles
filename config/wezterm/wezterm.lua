@@ -21,7 +21,7 @@ config.automatically_reload_config = true
 -- =========================
 -- APPEARANCE
 -- =========================
-config.window_background_opacity = 0.90
+config.window_background_opacity = 0.99
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }

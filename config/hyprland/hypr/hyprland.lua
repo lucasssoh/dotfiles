@@ -65,6 +65,9 @@ hl.on("hyprland.start", function()
     -- Session services and daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
     hl.exec_cmd("waybar")
+    -- Auto-reloads waybar on config.jsonc/style.css edits (inotify, no
+    -- polling) -- see waybar/scripts/watch-reload.sh.
+    hl.exec_cmd("bash ~/.config/waybar/scripts/watch-reload.sh")
     -- swaync replaces dunst as the notification center (history, toggles,
     -- mpris controls). Both claim the same D-Bus name
     -- org.freedesktop.Notifications and can't coexist -- dunst is
@@ -156,9 +159,9 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 4,
-        gaps_out         = 8,
-        border_size      = 2,
+        gaps_in          = 3,
+        gaps_out         = 6,
+        border_size      = 1,
         col = {
             -- Animated gradient for the active window's border
             active_border = {
@@ -182,7 +185,7 @@ hl.config({
 -- ============================================================
 hl.config({
     decoration = {
-        rounding = 4,
+        rounding = 0,
         blur = {
             enabled           = false,
             size              = 6,
@@ -229,8 +232,27 @@ hl.config({
     dwindle = {
         force_split = 0,
 
+        -- smart_split = false: with it enabled, the split axis AND the side
+        -- both came from which of the parent's four diagonal triangles the
+        -- cursor sat in -- the tile's aspect ratio was never consulted, so on
+        -- a 2560x1440 screen two windows would just as easily end up stacked
+        -- (2560x720 each, long and thin) as side by side. Disabled, dwindle
+        -- falls back to its default: the axis comes from the aspect ratio
+        -- (see split_width_multiplier below) and only the SIDE still follows
+        -- the mouse, which is the behaviour we actually want.
+        smart_split = false,
+
+        -- Split side by side when width * multiplier > height, top/bottom
+        -- otherwise. 1.0 is the neutral threshold and the optimum for keeping
+        -- tiles close to square: on 2560x1440 the first split gives two
+        -- 1280x1440 columns, each of which then splits into 1280x720 rows.
+        -- Raising it (1.4+) biases toward narrow vertical columns.
+        split_width_multiplier = 1.0,
+
+        -- Axis frozen at creation time: closing or resizing a neighbour never
+        -- silently re-orients an existing container. SUPER+T flips one by hand
+        -- (see keybinds.lua) -- that override only holds because this is true.
         preserve_split = true,
-        smart_split    = true,
         smart_resizing = true,
     },
 })

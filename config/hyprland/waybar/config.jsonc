@@ -6,9 +6,9 @@
     "layer": "top",
     "position": "top",
     "height": 24,
-    "margin-top": 8,
-    "margin-left": 8,
-    "margin-right": 8,
+    "margin-top": 6,
+    "margin-left": 6,
+    "margin-right": 6,
     "spacing": 0,
 
     // ============================================================
@@ -16,10 +16,13 @@
     // ============================================================
 
     "modules-left": [
+        "custom/notification",
         "clock",
         "hyprland/workspaces",
-        "custom/gap",
-        "hyprland/window",
+        "hyprland/window"
+    ],
+
+    "modules-center": [
         "mpris"
     ],
 
@@ -29,16 +32,14 @@
         "temperature",
         "custom/fan",
         "memory",
+        "custom/display",
+        "custom/hdr",
         "network",
         "bluetooth",
         "pulseaudio#output",
         "pulseaudio#input",
-        "custom/display",
-        "custom/scale",
-        "custom/hdr",
-        "custom/performance",
         "battery",
-        "custom/notification",
+        "custom/performance",
         "custom/power"
     ],
 
@@ -59,11 +60,6 @@
         "disable-scroll-wraparound": true
     },
 
-    // --- Gap -----------------------------------------------------
-    "custom/gap": {
-        "format": " " // <-- Modified here (empty to stay invisible, only serves as a right border)
-    },
-
     // ── Active Window ────────────────────────────────────────────
     "hyprland/window": {
         "format": "<span foreground='#4fefff'>{initialTitle}</span> <span foreground='#48484a'>·</span> <span foreground='#f2f2f7'>{title}</span>",
@@ -74,12 +70,27 @@
         "justify": "center"
     },
 
+    // ============================================================
+    // CENTER MODULES
+    // ============================================================
+
     // ── Media ────────────────────────────────────────────────────
     // Just an indicator that something is playing -- full title/artist and
     // controls live in swaync (mpris widget in the notification center).
+    // Alone in modules-center: waybar's CenterBox centers it independently
+    // of modules-left/-right, no collision risk now that the bar is
+    // compact even at 1080p (was moved out of center early on for exactly
+    // that reason -- see git history).
     "mpris": {
-        "format": "{player_icon}",
-        "format-paused": "{player_icon}",
+        // Static truncation (native, no scroll -- see conversation: a
+        // marquee needs a fast poll loop even while idle, not worth the
+        // battery cost). "…" ellipsis on overflow, same pixel budget just
+        // freed up elsewhere (scale module removed, metrics compacted).
+        "format": "{player_icon}  {title}",
+        "format-paused": "{player_icon}  {title}",
+        "title-len": 28,
+        "ellipsis": "…",
+        "max-length": 32,
         "player-icons": {
             "spotify": "󰓇",
             "firefox": "󰗃",
@@ -209,15 +220,6 @@
         "interval": 5,
         "on-click": "~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display",
         "signal": 4
-    },
-
-    // ── Scale (per-screen scaling) ─────────────────────
-    "custom/scale": {
-        "exec": "~/.config/waybar/scripts/scale.sh status",
-        "return-type": "json",
-        "interval": 5,
-        "on-click": "~/.config/waybar/scripts/scale.sh menu",
-        "signal": 5
     },
 
     // ── HDR Toggle ───────────────────────────────────────────────

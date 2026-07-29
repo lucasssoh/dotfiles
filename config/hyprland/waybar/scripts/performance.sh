@@ -14,13 +14,20 @@
 cmd_status() {
     local profile icon label
     profile=$(powerprofilesctl get)
+    # Icons chosen to read at a glance, distinct from the metrics group's
+    # gauge/leaf glyphs: flame (intensity), balance scale (matches the
+    # roue wheel's scale.svg for this same profile), battery-with-plus
+    # (headroom saved, clearer than the previous ambiguous leaf).
     case "$profile" in
-        performance) icon="";  label="Performance" ;;
-        balanced)    icon="󰾅"; label="Balanced" ;;
-        power-saver) icon="󰌪"; label="Power Saver" ;;
+        performance) icon="󰈸"; label="Performance" ;;
+        balanced)    icon="󰗑"; label="Balanced" ;;
+        power-saver) icon="󰂏"; label="Power Saver" ;;
         *)           icon="󰈐"; label="Unknown" ;;
     esac
-    echo "{\"text\": \"$icon\", \"tooltip\": \"Power profile: $label\\nClick: change\"}"
+    # "class" (= profile name) drives the highlight color in style.css
+    # (#custom-performance.performance/.balanced/.power-saver) -- same
+    # pattern as custom/display and custom/notification below.
+    echo "{\"text\": \"$icon\", \"class\": \"$profile\", \"tooltip\": \"Power profile: $label\\nClick: change\"}"
 }
 
 # The state (which profile is active) comes from power-profiles-daemon,

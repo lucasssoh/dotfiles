@@ -73,7 +73,12 @@ end)
 hl.bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
 hl.bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
 hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())
---[[ hl.bind(mod .. "+ T",           hl.dsp.window.toggle_split()) ]]
+-- Flips the active split's axis by hand (raw dwindle layoutmsg "togglesplit"
+-- -- there's no hl.dsp.window.toggle_split(), this is the passthrough for
+-- layout-specific messages). Needed now that smart_split is off and the axis
+-- is picked from aspect ratio + preserve_split (see hyprland.lua): this is
+-- the manual escape hatch for the rare case the ratio picks the wrong one.
+hl.bind(mod .. "+ T",           hl.dsp.layout("togglesplit"))
 hl.bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
 
 -- Move focus between windows (hjkl)
