@@ -10,7 +10,7 @@
 @define-color accent      #4f9eff;
 @define-color accent2     #4fefff;
 @define-color muted       #48484a;
-@define-color play        #116611;
+@define-color play        #237823;
 @define-color danger      rgb(255, 110, 110); /* named: was inlined only on #custom-power */
 
 /* =========================================================
@@ -82,7 +82,7 @@ window#waybar {
 }
 
 /* Standalone single-module blocks: all four corners rounded */
-#window, #mpris, #custom-apps, #battery {
+#window, #custom-apps, #battery {
     border-radius: 4px;
 }
 
@@ -167,15 +167,17 @@ window#waybar.empty #window {
 ========================================================= */
 
 /* Just an icon (indicating something is playing) -- title/artist and full
-   controls live in swaync, not here. Alone in modules-center, so it now
-   gets a real background/border/radius (see shared rules above) instead
-   of the old transparent icon-only treatment it needed when it sat
-   right next to #window. */
+   controls live in swaync, not here. Alone in modules-center, back with
+   the rest of the bar. Fully rounded (a true pill, not the 4px corner
+   used elsewhere) so it reads as its own distinct "now playing" badge --
+   9999px clamps to a perfect half-height radius regardless of content
+   width. */
 #mpris {
     color: @play;
-    opacity: 0.9;
-    padding: 0 12px;
+    opacity: 1;
+    padding: 0 14px;
     min-width: 0;
+    border-radius: 9999px;
     transition: all 0.2s ease;
 }
 

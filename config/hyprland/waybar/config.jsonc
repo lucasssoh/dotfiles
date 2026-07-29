@@ -77,15 +77,10 @@
     // ── Media ────────────────────────────────────────────────────
     // Just an indicator that something is playing -- full title/artist and
     // controls live in swaync (mpris widget in the notification center).
-    // Alone in modules-center: waybar's CenterBox centers it independently
-    // of modules-left/-right, no collision risk now that the bar is
-    // compact even at 1080p (was moved out of center early on for exactly
-    // that reason -- see git history).
     "mpris": {
-        // Static truncation (native, no scroll -- see conversation: a
-        // marquee needs a fast poll loop even while idle, not worth the
-        // battery cost). "…" ellipsis on overflow, same pixel budget just
-        // freed up elsewhere (scale module removed, metrics compacted).
+        // Static truncation (native, no scroll -- a marquee needs a fast
+        // poll loop even while idle, not worth the battery cost). "…"
+        // ellipsis on overflow.
         "format": "{player_icon}  {title}",
         "format-paused": "{player_icon}  {title}",
         "title-len": 28,
@@ -99,7 +94,6 @@
         },
         "tooltip-format": "{title} · {artist}"
     },
-
 
     // ============================================================
     // RIGHT MODULES
