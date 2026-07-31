@@ -16,7 +16,8 @@ set -euo pipefail
 # ---- Settings ------------------------------------------------
 SDRBRIGHTNESS="1.0"     # SDR content brightness while the screen is in HDR (1.0..2.0)
 SDRSATURATION="1.0"     # SDR content saturation in HDR
-SDR_WHITE_LUMINANCE="220"  # SDR white level inside the HDR container (Hyprland default: 80)
+SDR_WHITE_LUMINANCE="203"  # SDR white level inside the HDR container (ITU-R BT.2408 diffuse
+                            # white, matches Hyprland's own fixed HDR_REF_LUMINANCE; default: 80)
 
 # HDR headroom sent to clients (monitorv2 min_luminance / max_luminance /
 # max_avg_luminance -- see src/config/lua/bindings/LuaBindingsConfigRules.cpp
