@@ -64,10 +64,12 @@ hl.on("hyprland.start", function()
 
     -- Session services and daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-    hl.exec_cmd("waybar")
-    -- Auto-reloads waybar on config.jsonc/style.css edits (inotify, no
-    -- polling) -- see waybar/scripts/watch-reload.sh.
-    hl.exec_cmd("bash ~/.config/waybar/scripts/watch-reload.sh")
+    -- quickshell replaces waybar as the bar (see quickshell/bar/) --
+    -- config.jsonc/style.css stay in the repo as a fallback, same
+    -- pattern as dunst below, just not started:
+    --   hl.exec_cmd("waybar")
+    --   hl.exec_cmd("bash ~/.config/waybar/scripts/watch-reload.sh")
+    hl.exec_cmd("quickshell -c bar")
     -- swaync replaces dunst as the notification center (history, toggles,
     -- mpris controls). Both claim the same D-Bus name
     -- org.freedesktop.Notifications and can't coexist -- dunst is

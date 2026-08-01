@@ -90,14 +90,20 @@ $PKG_UPDATE
 
 if [ "$DISTRO" = "fedora" ]; then
     sudo dnf copr enable -y lionheartp/Hyprland 2>/dev/null || true
+    # Quickshell -- the actual bar (see quickshell/bar/), waybar/config.jsonc
+    # is no longer started but stays installed/in the repo as a fallback,
+    # same "kept but not started" pattern as dunst below.
+    sudo dnf copr enable -y errornointernet/quickshell 2>/dev/null || true
 
     PKGS=(
         # Hyprland ecosystem
         dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
         # (SwayNotificationCenter replaces dunst as the active notification
-        # daemon; dunst stays installed/available as a fallback, not started)
-        waybar dunst SwayNotificationCenter rofi-wayland khal hyprsunset
+        # daemon; dunst stays installed/available as a fallback, not started.
+        # quickshell replaces waybar as the active bar the same way -- waybar
+        # stays installed/available as a fallback, not started either)
+        quickshell waybar dunst SwayNotificationCenter rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -110,7 +116,7 @@ if [ "$DISTRO" = "fedora" ]; then
         wl-clipboard cliphist
         # Icons / theme
         papirus-icon-theme gnome-themes-extra gtk-murrine-engine adwaita-cursor-theme
-        # Fonts (Nerd Fonts for Waybar icons)
+        # Fonts (Nerd Fonts for the bar/waybar icons)
         google-noto-sans-fonts google-noto-emoji-fonts jetbrains-mono-fonts-all
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
         polkit xdg-user-dirs brightnessctl playerctl
@@ -130,7 +136,9 @@ elif [ "$DISTRO" = "arch" ]; then
         # Hyprland ecosystem
         dbus hyprland hyprlock hyprpaper hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
-        waybar dunst swaync rofi-wayland khal hyprsunset
+        # quickshell is the active bar (see quickshell/bar/); waybar stays
+        # installed as a fallback, not started -- same pattern as dunst
+        quickshell waybar dunst swaync rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -160,6 +168,7 @@ elif [ "$DISTRO" = "arch" ]; then
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
     warn "swaync (SwayNotificationCenter) is often not packaged in apt — install manually if 'swaync' isn't found."
+    warn "quickshell (the active bar, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
     warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     PKGS=(
         dbus dbus-x11 hyprland hyprpaper
@@ -340,14 +349,14 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,rofi,dunst,swaync,orbit,prisme,roue,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,dunst,swaync,orbit,prisme,roue,hyprlock,scripts,khal}
     ok "Old configs removed"
 fi
 
 section "Linking configuration directories"
 
 # Config directories to fully symlink into ~/.config
-modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal")
+modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

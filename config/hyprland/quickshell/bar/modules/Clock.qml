@@ -1,0 +1,24 @@
+import QtQuick
+import Quickshell
+
+// Native port of waybar's `clock` module (format {:%H:%M}).
+
+Item {
+    id: root
+    implicitWidth: label.implicitWidth + 20
+    implicitHeight: 24
+
+    SystemClock {
+        id: clock
+        precision: SystemClock.Minutes
+    }
+
+    Text {
+        id: label
+        anchors.centerIn: parent
+        text: Qt.formatDateTime(clock.date, "HH:mm")
+        color: "#f2f2f7"
+        font.family: "JetBrains Mono"
+        font.pixelSize: 13
+    }
+}
