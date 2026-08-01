@@ -1,14 +1,15 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import "modules" as Modules
 
 // ============================================================
 // BAR — Quickshell port of waybar/config.jsonc + waybar/style.css.
 //
-// STATUS: INACTIVE, same as quickshell/dashboard/. Waybar keeps running
-// exactly as it does today; nothing here is wired into install.sh or
-// hyprland.lua.
+// STATUS: ACTIVE (see install.sh, hypr/hyprland.lua). waybar/ is kept
+// installed and in the repo as a fallback, not started -- quickshell/
+// dashboard/ is the one still inactive, on purpose.
 //
 // v3: visual grouping matches waybar/style.css's actual color/border/
 // radius rules (see modules/Block.qml) -- colors below are copied
@@ -43,6 +44,24 @@ ShellRoot {
     // a simple "last active window on monitor X" the same way it does
     // monitorFor() -- would need to be derived from the monitor's
     // activeWorkspace's toplevels, not done here.
+
+    // External nudge for the "hl.dispatch-routed actions don't emit
+    // Hyprland IPC events" problem (see Hdr.qml's header comment) --
+    // scripts/compact-workspaces.sh (SUPER+C) moves windows between
+    // workspaces via hl.dsp.window.move(), which left this bar showing
+    // stale workspace occupancy until something else happened to
+    // refresh it. One handler, not per-screen: Hyprland.refresh*() are
+    // global singleton calls, calling them once updates every bar
+    // instance's view at once. `qs -c bar ipc call bar
+    // refreshWorkspaces` from any external script reaches this.
+    IpcHandler {
+        target: "bar"
+        function refreshWorkspaces(): void {
+            Hyprland.refreshWorkspaces();
+            Hyprland.refreshToplevels();
+        }
+    }
+
     Variants {
         model: Quickshell.screens
 
@@ -52,7 +71,14 @@ ShellRoot {
             screen: modelData
 
             focusable: false
-            exclusiveZone: 30
+            // Was 30 (implicitHeight + margins.top), which apparently
+            // double-counted the margin -- exclusiveZone is measured
+            // relative to the anchors margins already offset from, not
+            // from the raw screen edge on top of that. Just the panel's
+            // own height. If this overshoots/undershoots, report the
+            // actual pixel gap and it can be tuned precisely instead of
+            // guessed again.
+            exclusiveZone: 24
             aboveWindows: true
             color: "transparent"
 

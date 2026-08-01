@@ -79,3 +79,13 @@ for mon in "${monitor_names[@]}"; do
     [[ -n "${restore_focus[$mon]:-}" ]] && refocus "${restore_focus[$mon]}"
 done
 [[ -n "${restore_focus[$focused_monitor]:-}" ]] && refocus "${restore_focus[$focused_monitor]}"
+
+# The hl.dsp.window.move()/hl.dsp.focus() calls above (via move_window/
+# refocus) don't emit anything on Hyprland's normal IPC event socket --
+# same "non-legacy parser" quirk noted throughout this repo (hdr.sh,
+# quickshell/bar/modules/Hdr.qml) -- so Quickshell's own workspace/
+# toplevel cache goes stale after a compact: it keeps showing windows in
+# their pre-compact slots until something else happens to refresh it.
+# Nudge it directly. Silently a no-op if quickshell isn't running/
+# installed (still using waybar, or between sessions).
+qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 || true

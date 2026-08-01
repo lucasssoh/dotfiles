@@ -187,7 +187,7 @@ hl.config({
 -- ============================================================
 hl.config({
     decoration = {
-        rounding = 0,
+        rounding = 3,
         blur = {
             enabled           = false,
             size              = 6,
