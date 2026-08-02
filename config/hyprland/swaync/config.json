@@ -8,7 +8,7 @@
     "control-center-margin-top": 8,
     "control-center-margin-bottom": 8,
     "control-center-margin-right": 8,
-    "control-center-margin-left": 8,
+    "control-center-margin-left": 3,
     "control-center-width": 380,
     "control-center-height": 600,
     "notification-window-width": 340,

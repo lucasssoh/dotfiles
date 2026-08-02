@@ -121,6 +121,8 @@ Item {
         Behavior on color { ColorAnimation { duration: 200 } }
 
         Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
             anchors.centerIn: parent
             text: "hdr"
             color: (root.hdrActive && root.hdrCapable) ? "#141414" : "#f2f2f7"

@@ -20,6 +20,8 @@ Item {
     visible: root.node !== null
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: root.muted ? "󰍭 ---" : "󰍬 " + Math.round(root.volume * 100) + "%"

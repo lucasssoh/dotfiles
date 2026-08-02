@@ -14,6 +14,8 @@ Item {
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: Qt.formatDateTime(clock.date, "HH:mm")

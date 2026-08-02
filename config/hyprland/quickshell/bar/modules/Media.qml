@@ -57,6 +57,8 @@ Item {
     // scroller's per-copy math (below) can size off the same measurement
     // without depending on any one particular Repeater-generated copy.
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: titleMeasure
         text: root.titleText
         font.family: "JetBrains Mono"
@@ -91,9 +93,9 @@ Item {
         height: 24
         anchors.centerIn: parent
         radius: 999
-        color: "#141414"
+        color: "#000000"
         border.width: 1
-        border.color: "#505050"
+        border.color: root.playing ? "#237823" : "#ffffff"
         clip: true
         // waybar/style.css: #mpris.paused { opacity: 0.6 } fades the
         // WHOLE element (background/border/text together), not just the
@@ -126,16 +128,18 @@ Item {
                 width: 12
                 height: 12
                 radius: 6
-                color: root.playing ? "#237823" : "#48484a"
+                color: root.playing ? "#237823" : "#8e8e93"
 
                 Text {
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
                     anchors.centerIn: parent
                     // Music note instead of a play triangle -- same glyph
                     // config.jsonc's own player-icons already use as the
                     // generic/default player icon, so it's a known-good
                     // codepoint in this environment.
                     text: root.playing ? "󰎈" : "󰏤"
-                    color: "#141414"
+                    color: "#000000"
                     font.pixelSize: 8
                 }
             }
@@ -172,13 +176,15 @@ Item {
                     Repeater {
                         model: viewport.copyCount
                         delegate: Text {
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
                             text: root.titleText
                             // Paused-state fade lives on the whole `pill`
                             // above (matches waybar's #mpris.paused rule,
                             // which faded the element, not just this
                             // color) -- an opacity here too would double
                             // it up.
-                            color: root.playing ? "#237823" : "#48484a"
+                            color: root.playing ? "#237823" : "#ffffff"
                             font.family: "JetBrains Mono"
                             font.pixelSize: 13
                             rightPadding: viewport.gap  // each copy carries its own trailing gap

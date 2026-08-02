@@ -55,6 +55,15 @@ const ICON_HOVER_GROW_PX: f64 = 6.0;
 const ICON_FONT_PX: f64 = 32.0;
 const HUB_ICON_SIZE_PX: f64 = 46.0;
 const HUB_LABEL_FONT_PX: f64 = 15.0;
+/// Wrap width for the hub label -- device/monitor descriptions (e.g. "Ryzen
+/// HD Audio Controller Stéréo analogique") can run well past the hub's own
+/// diameter (2 * INNER_RADIUS_RATIO * max_radius, ~264px at the 520px wheel
+/// size) as a single line. Comfortably inside that: verified with
+/// `pango-view` at the same font/width/wrap settings, a label this long
+/// wraps to 3 lines ~83px tall, pushing the outermost line ~67px off
+/// center -- the hub circle (radius ~132px) is still ~227px wide there,
+/// well clear of this 190px wrap width.
+const HUB_LABEL_MAX_WIDTH_PX: f64 = 190.0;
 /// Indices of the confirmation sub-menu's synthetic sectors (see
 /// `enter_confirm`) -- Cancel first (default position, see its doc),
 /// Confirm second.
@@ -262,7 +271,28 @@ mod imp {
                     hub_label_font.set_absolute_size(HUB_LABEL_FONT_PX * pango::SCALE as f64);
                     let hub_label = widget.create_pango_layout(Some(&seg.label));
                     hub_label.set_font_description(Some(&hub_label_font));
-                    let (lw, lh) = hub_label.pixel_size();
+                    // Long device descriptions wrap instead of overflowing
+                    // past the hub circle (see HUB_LABEL_MAX_WIDTH_PX) --
+                    // WordChar so a single unbreakable long word still wraps
+                    // rather than blowing out the width. Center alignment
+                    // keeps shorter wrapped lines centered under longer
+                    // ones instead of ragged-left.
+                    hub_label.set_width((HUB_LABEL_MAX_WIDTH_PX * pango::SCALE as f64) as i32);
+                    hub_label.set_wrap(pango::WrapMode::WordChar);
+                    hub_label.set_alignment(pango::Alignment::Center);
+                    // pixel_size() only returns the tight ink width, NOT
+                    // HUB_LABEL_MAX_WIDTH_PX -- for anything narrower than
+                    // the wrap box (e.g. "Power" at ~46px in a 190px box)
+                    // it silently drops the alignment's internal x-offset
+                    // (confirmed via PyGObject: get_pixel_extents() reports
+                    // logical_rect.x=72 for "Power" there, which
+                    // pixel_size() has no way to surface). Centering on
+                    // that tight width instead of the box put most labels
+                    // visibly off-center. Fix: center the BOX (the actual
+                    // wrap width) on `cx` -- the layout's own center
+                    // alignment then centers the ink within that box,
+                    // wherever it happens to sit.
+                    let (_, lh) = hub_label.pixel_size();
 
                     // Vertical icon+label block -- fixed nominal icon
                     // height for layout purposes (HUB_ICON_SIZE_PX),
@@ -286,7 +316,7 @@ mod imp {
                     let label_color = gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32);
                     snapshot.save();
                     snapshot.translate(&graphene::Point::new(
-                        (cx - lw as f64 / 2.0) as f32,
+                        (cx - HUB_LABEL_MAX_WIDTH_PX / 2.0) as f32,
                         (cy - block_h / 2.0 + HUB_ICON_SIZE_PX + GAP) as f32,
                     ));
                     snapshot.append_layout(&hub_label, &label_color);

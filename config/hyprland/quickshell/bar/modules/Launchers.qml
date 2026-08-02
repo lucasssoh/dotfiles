@@ -97,6 +97,8 @@ Item {
                 color: "#2c2c2e"
 
                 Text {
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
                     anchors.centerIn: parent
                     visible: chip.modelData.image === ""
                     text: chip.modelData.icon

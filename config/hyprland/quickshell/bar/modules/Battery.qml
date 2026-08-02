@@ -23,6 +23,8 @@ Item {
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: root.present

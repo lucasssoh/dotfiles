@@ -41,22 +41,29 @@ Item {
         id: chip
         visible: root.hasWindow
         anchors.left: parent.left
-        // Just enough to clear the wrapping Block's own border (1px) --
-        // any more and it's a visible gap again, any less (0) and the
-        // chip's fill paints straight over the border since children
-        // aren't inset from a parent's border area automatically.
-        anchors.leftMargin: 1
+        // 1px is just enough to clear the wrapping Block's own border --
+        // below that the chip's fill paints straight over the border
+        // since children aren't inset from a parent's border area
+        // automatically. The extra few px on top of that are a
+        // deliberate small gap/offset, not the minimum-clearance value.
+        anchors.leftMargin: 4
         anchors.verticalCenter: parent.verticalCenter
-        width: appLabel.implicitWidth + 16
+        width: appLabel.implicitWidth + 22
         height: 18
         radius: 2   // same corner rounding as the active workspace pill, not a full pill/stadium shape
-        color: "#1f98ab"   // style.css "accent" (the blue one, not accent2)
+        // Same ghost-ring treatment as the active workspace pill now,
+        // instead of a solid accent fill -- see Workspaces.qml.
+        color: "#2c2c2e"
+        border.width: 1
+        border.color: "#4fefff"
 
         Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
             id: appLabel
             anchors.centerIn: parent
             text: root.appName
-            color: "#141414"
+            color: "#4fefff"
             font.family: "JetBrains Mono"
             font.pixelSize: 13
             font.bold: true
@@ -64,6 +71,8 @@ Item {
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: titleLabel
         text: root.windowTitle
         visible: root.hasWindow

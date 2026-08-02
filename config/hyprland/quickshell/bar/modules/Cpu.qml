@@ -70,6 +70,8 @@ Item {
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: "  " + String(root.usage).padStart(3, " ") + " " + root.maxGhz.toFixed(1)

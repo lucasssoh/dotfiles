@@ -34,6 +34,8 @@ Item {
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         // waybar format: "󰔏 {temperatureC:>3}" -- right-padded to 3 chars

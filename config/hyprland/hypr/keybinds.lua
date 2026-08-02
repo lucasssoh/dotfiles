@@ -53,7 +53,11 @@ hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerpr
 -- scripts/display-layout.sh). Replaces the old rofi menu
 -- (`display-layout.sh menu`, still available if needed).
 hl.bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
-hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
+-- Zen/focus mode: was `pkill -SIGUSR1 waybar` (waybar's built-in
+-- "toggle all bars" signal). quickshell has no such signal, so this
+-- calls its own IPC handler instead (see quickshell/bar/shell.qml's
+-- `zenMode` property / toggleZen()).
+hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"))
 hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
 hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
 

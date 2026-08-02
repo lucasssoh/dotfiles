@@ -94,6 +94,8 @@ Item {
     Component.onCompleted: if (root.interval === 0) root.poll();
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: root.classIcons[root.moduleClass] !== undefined

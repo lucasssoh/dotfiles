@@ -53,6 +53,16 @@ Item {
                 id: pill
                 required property var modelData
 
+                // Three distinct states, not two: active (current on this
+                // monitor), occupied (has windows but not focused right
+                // now), empty. The ghost ring (accent2 border + subtle
+                // fill) marks the ONE that matters most -- active -- and
+                // occupied stays a plain bold number, no decoration: two
+                // tiers of emphasis, not two things that both look
+                // "highlighted".
+                readonly property bool occupied: !modelData.active
+                    && modelData.lastIpcObject && modelData.lastIpcObject.windows > 0
+
                 // `active` = current workspace on ITS OWN monitor;
                 // `focused` = that AND the monitor is also the globally
                 // focused one. Using `focused` here would mean a bar on
@@ -64,21 +74,22 @@ Item {
                 height: 18
                 anchors.verticalCenter: parent.verticalCenter
                 radius: 2
-                color: modelData.active ? "#4fefff" : "transparent"
+                color: modelData.active ? "#2c2c2e" : "transparent"
+                border.width: modelData.active ? 1 : 0
+                border.color: "#4fefff"
 
                 Text {
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
                     anchors.centerIn: parent
                     text: modelData.id
-                    // waybar/style.css: .active -> @background text on an
-                    // @accent2 pill; occupied (not active) -> @text; empty ->
-                    // @muted. "occupied" = lastIpcObject.windows > 0 (no
-                    // direct HyprlandWorkspace property for window count).
-                    color: pill.modelData.active
-                        ? "#141414"
-                        : ((pill.modelData.lastIpcObject && pill.modelData.lastIpcObject.windows > 0)
-                            ? "#f2f2f7" : "#48484a")
+                    // active -> accent2 text inside the ring, bold; occupied
+                    // (not active) -> plain bright text, no weight; empty
+                    // -> muted, no weight.
+                    color: pill.modelData.active ? "#4fefff" : (pill.occupied ? "#f2f2f7" : "#48484a")
                     font.family: "JetBrains Mono"
                     font.pixelSize: 12
+                    font.bold: pill.modelData.active
                 }
 
                 MouseArea {

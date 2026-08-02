@@ -126,6 +126,8 @@ fi
     }
 
     Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
         text: root.kind === "none" ? (root.icon() + "  ----o/s") : (root.icon() + "  " + root.formatRate(root.rateBps))

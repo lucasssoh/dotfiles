@@ -31,6 +31,18 @@ import "modules" as Modules
 // ============================================================
 
 ShellRoot {
+    id: shell
+
+    // Zen/focus mode (was SUPER+Z -> `pkill -SIGUSR1 waybar`, waybar's
+    // built-in "hide all bars" signal). No such signal exists for
+    // quickshell, so it's just a shared bool flipped over IPC -- every
+    // per-screen PanelWindow below binds its own `visible` to it, one
+    // toggle hides/shows all of them at once. Unmapping the layer-shell
+    // surface this way (not just an opacity/height animation) also frees
+    // its exclusiveZone reservation, same as waybar hiding did -- tiled
+    // windows actually reclaim the space instead of leaving a dead gap.
+    property bool zenMode: false
+
     // One bar per currently-connected screen, automatically -- Quickshell
     // creates/destroys instances as monitors plug/unplug, no manual
     // single/dual-output branching needed. Workspaces and HDR are
@@ -60,6 +72,9 @@ ShellRoot {
             Hyprland.refreshWorkspaces();
             Hyprland.refreshToplevels();
         }
+        function toggleZen(): void {
+            shell.zenMode = !shell.zenMode;
+        }
     }
 
     Variants {
@@ -71,6 +86,7 @@ ShellRoot {
             screen: modelData
 
             focusable: false
+            visible: !shell.zenMode
             // Was 30 (implicitHeight + margins.top), which apparently
             // double-counted the margin -- exclusiveZone is measured
             // relative to the anchors margins already offset from, not
@@ -134,10 +150,11 @@ ShellRoot {
                 // opacity 0.9 matches waybar/style.css's #window rule (the
                 // whole element, not just its text)
                 Modules.Block {
+                    id: windowBlock
                     color: "#141414"
                     borderColor: "#2c2c2e"
                     opacity: 0.9
-                    Modules.ActiveWindow {}
+                    Modules.ActiveWindow { id: activeWindow }
                 }
             }
 
@@ -147,20 +164,31 @@ ShellRoot {
             //
             // Real anti-collision, not a fixed nudge: centered within
             // whatever space is actually free between `left`'s right edge
-            // and `right`'s left edge, tracked live off their real widths.
-            // As `right` grows (more Launchers chips, a longer window
-            // title, etc.) this shifts left to compensate on its own, and
-            // the same in reverse if `left` grows. Clamped so it can never
-            // go negative or push past `right`'s edge if the free gap gets
-            // smaller than mpris's own width (both sides fully loaded) --
-            // it'll sit flush against `left` rather than overlap either row.
+            // and `right`'s left edge. Only `right` (Launchers, no cap --
+            // more running apps can grow it arbitrarily) drives the
+            // TARGET center reactively though: `left`'s live width is
+            // used for the safety clamp (never actually overlap it), but
+            // for the ideal/target position, ActiveWindow's own live
+            // width is substituted with its known maxWidth (see
+            // ActiveWindow.qml) whenever a window is shown. Window titles
+            // change constantly (focus switches, page loads...) and
+            // ActiveWindow is already clamped there, so reacting to its
+            // LIVE width just made mpris visibly jitter left/right on
+            // every title change for no real layout reason -- Launchers
+            // has no such cap to substitute, so it has no such fixed
+            // stand-in and stays fully live, same as before. Since
+            // idealFreeStart assumes window is always at its widest, it's
+            // always >= the real freeStart, so this can't by itself cause
+            // an overlap with the real window chip.
             Modules.Media {
                 id: media
                 anchors.verticalCenter: parent.verticalCenter
                 x: {
                     const freeStart = left.width;
                     const freeEnd = bar.width - right.width;
-                    const ideal = freeStart + (freeEnd - freeStart - media.width) / 2;
+                    const windowMax = activeWindow.hasWindow ? activeWindow.maxWidth : 0;
+                    const idealFreeStart = left.width - windowBlock.width + windowMax;
+                    const ideal = idealFreeStart + (freeEnd - idealFreeStart - media.width) / 2;
                     return Math.max(freeStart, Math.min(ideal, freeEnd - media.width));
                 }
             }
@@ -239,10 +267,13 @@ ShellRoot {
                     Modules.Battery {}
                 }
 
-                // Block: performance profile + power (glued, @surface/@overlay)
+                // Block: performance profile + power (glued) -- same
+                // background/border as the rest of the neutral dalle
+                // (workspaces, metrics, battery...) now, dropping the old
+                // @surface/@overlay distinct tier.
                 Modules.Block {
-                    color: "#1e1e20"
-                    borderColor: "#2c2c2e"
+                    color: "#141414"
+                    borderColor: "#505050"
 
                     Modules.Performance {}
 

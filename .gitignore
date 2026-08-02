@@ -7,3 +7,4 @@ config/hyprland/prisme-src/target/
 config/hyprland/roue-src/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml
+config/hyprland/roue/wheels/audio-output.toml
