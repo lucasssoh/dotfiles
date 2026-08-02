@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import "../theme"
 
 // Native port of waybar's `memory` module. Timer + direct /proc/meminfo
 // read via FileView -- no free/awk subprocess.
@@ -41,14 +42,26 @@ Item {
         onTriggered: root.sample()
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    Row {
         id: label
         anchors.centerIn: parent
-        text: "󰘚 " + root.usedGB.toFixed(1) + "G"
-        color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: "󰘚"
+            color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.usedGB.toFixed(1) + "G"
+            color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 }

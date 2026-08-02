@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import "../theme"
 
 // Native port of waybar's `pulseaudio#output`. Zero exec, zero poll for
 // volume/mute: Pipewire.defaultAudioSink is a live DBus/pipewire-backed
@@ -73,18 +74,34 @@ Item {
     implicitHeight: 24
     visible: root.node !== null
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    readonly property string iconGlyph: root.muted ? "󰖁"
+        : (root.isHeadphone ? "󰋋" : root.isHdmi ? "󰡁" : "󰕾")
+    readonly property string volumeText: root.muted ? "" : Math.round(root.volume * 100) + "%"
+
+    // No color rule for #pulseaudio.output in waybar/style.css -- only
+    // the glyph changes on mute, color stays plain text.
+    Row {
         id: label
         anchors.centerIn: parent
-        text: root.muted ? "󰖁 "
-            : (root.isHeadphone ? "󰋋 " : root.isHdmi ? "󰡁 " : "󰕾 ") + Math.round(root.volume * 100) + "%"
-        // No color rule for #pulseaudio.output in waybar/style.css --
-        // only the glyph changes on mute, color stays plain text.
-        color: "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.iconGlyph
+            color: "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.volumeText
+            visible: root.volumeText !== ""
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 
     MouseArea {

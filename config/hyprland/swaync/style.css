@@ -2,9 +2,10 @@
    SWAYNC — style.css
    Same palette as waybar/style.css and rofi/share.rasi, so the control
    center fits the same visual language as the rest of the system (dark
-   background, cyan accent, thin borders, JetBrains Mono).
+   background, cyan accent, thin borders).
 ========================================================= */
 
+@import url("../theme/fonts.css");
 @define-color background #141414;
 @define-color surface     #1e1e20;
 @define-color overlay     #2c2c2e;
@@ -15,7 +16,6 @@
 @define-color urgent      #ff453a;
 
 * {
-    font-family: "JetBrains Mono";
     font-size: 13px;
 }
 
@@ -28,6 +28,19 @@ window, .blank-window, .floating-notifications {
 .notification-row {
     padding: 4px;
     background: transparent;
+}
+
+/* Upstream's default style.css (/etc/xdg/swaync/style.css, still loaded
+   underneath ours -- cssPriority is "user", not "user-only") sets
+   `.notification-background { padding: 6px 12px; }` -- combined with
+   `.notification-row`'s own 4px above, popups sat 16px off the left
+   screen edge, well past the 6px `gaps_out` every tiled window and the
+   Quickshell bar itself use (see hypr/hyprland.lua, quickshell/bar/
+   shell.qml's margins). Left-only override to line the popup back up
+   with that edge; top/right/bottom keep upstream's spacing since
+   nothing else complained about those. */
+.notification-row .notification-background {
+    padding-left: 6px;
 }
 
 .notification {

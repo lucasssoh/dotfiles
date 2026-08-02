@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Hyprland
+import "../theme"
 
 // Native port of waybar's `hyprland/window` module -- shows both halves
 // of its original format ("{initialTitle} · {title}"): app name + what's
@@ -31,11 +32,31 @@ Item {
 
     readonly property int maxWidth: 380
 
+    // titleMeasure, not titleLabel.implicitWidth, drives this: titleLabel
+    // is anchored right to `parent.right` (root itself), and root's own
+    // `width` defaults to `implicitWidth` since nothing sets it
+    // explicitly -- reading the constrained/elided titleLabel back into
+    // implicitWidth closed a real loop (implicitWidth -> width ->
+    // titleLabel.width via the anchor -> elided layout recompute ->
+    // titleLabel.implicitWidth -> implicitWidth), harmless in practice
+    // but logged a "Binding loop detected" warning once at startup.
+    // titleMeasure is a free-standing, invisible, unconstrained Text (same
+    // technique Media.qml's own titleMeasure uses) -- its implicitWidth
+    // reflects the title's natural width only, never root's own width, so
+    // there's nothing left to feed back into.
     implicitWidth: root.hasWindow
-        ? Math.min(Math.max(chip.width + titleLabel.implicitWidth + 26, 120), maxWidth)
+        ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 26, 120), maxWidth)
         : 0
     implicitHeight: 24
     clip: true
+
+    Text {
+        id: titleMeasure
+        text: root.windowTitle
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        visible: false
+    }
 
     Rectangle {
         id: chip
@@ -64,7 +85,7 @@ Item {
             anchors.centerIn: parent
             text: root.appName
             color: "#4fefff"
-            font.family: "JetBrains Mono"
+            font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
         }
@@ -77,7 +98,7 @@ Item {
         text: root.windowTitle
         visible: root.hasWindow
         color: "#f2f2f7"
-        font.family: "JetBrains Mono"
+        font.family: Fonts.ui
         font.pixelSize: 13
         anchors.left: chip.right
         anchors.leftMargin: 10

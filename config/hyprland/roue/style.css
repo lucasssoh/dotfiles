@@ -1,9 +1,7 @@
 /* Roue — theme, same palette as waybar/style.css, orbit/theme.toml, and
    prisme/style.css. Reload: relaunch the wheel (no daemon). */
 
-* {
-    font-family: "JetBrains Mono";
-}
+@import url("../theme/fonts.css");
 
 *:focus,
 *:focus-visible {

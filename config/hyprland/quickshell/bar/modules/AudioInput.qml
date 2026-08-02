@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Pipewire
+import "../theme"
 
 // Native port of waybar's `pulseaudio#input` (mic). See AudioOutput.qml.
 
@@ -19,16 +20,31 @@ Item {
     implicitHeight: 24
     visible: root.node !== null
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    readonly property string iconGlyph: root.muted ? "󰍭" : "󰍬"
+    readonly property string volumeText: root.muted ? "---" : Math.round(root.volume * 100) + "%"
+
+    // No color rule for #pulseaudio.input in waybar/style.css either.
+    Row {
         id: label
         anchors.centerIn: parent
-        text: root.muted ? "󰍭 ---" : "󰍬 " + Math.round(root.volume * 100) + "%"
-        // No color rule for #pulseaudio.input in waybar/style.css either.
-        color: "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.iconGlyph
+            color: "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.volumeText
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 
     MouseArea {

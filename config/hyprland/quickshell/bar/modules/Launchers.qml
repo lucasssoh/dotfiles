@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../theme"
 
 // Native replacement for waybar/scripts/apps.sh: instead of a pgrep-based
 // script producing a flat icon string, this reads Hyprland.toplevels
@@ -103,6 +104,7 @@ Item {
                     visible: chip.modelData.image === ""
                     text: chip.modelData.icon
                     color: "#f2f2f7"
+                    font.family: Fonts.icon
                     font.pixelSize: 12
                 }
 

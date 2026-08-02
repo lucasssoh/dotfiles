@@ -37,10 +37,10 @@
         "title": {
             "text": "Notifications",
             "clear-all-button": true,
-            "button-text": "Tout effacer"
+            "button-text": "Clear all"
         },
         "dnd": {
-            "text": "Ne pas déranger"
+            "text": "Do not disturb"
         },
         "mpris": {
             "show-album-art": "when-available",

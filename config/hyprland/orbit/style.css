@@ -16,9 +16,7 @@
    Hot reload: `orbit reload-theme` (no need to restart the daemon).
 */
 
-* {
-    font-family: "JetBrains Mono";
-}
+@import url("../theme/fonts.css");
 
 /* GTK/Adwaita's default focus ring -- at a lower priority (system theme)
    than this file, so no need to match its specificity to neutralize it. */

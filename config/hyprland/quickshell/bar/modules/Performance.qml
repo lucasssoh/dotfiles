@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.UPower
+import "../theme"
 
 // Native port of waybar/scripts/performance.sh's *status* display.
 // Zero exec, zero poll: PowerProfiles.profile is DBus-signal-backed
@@ -38,7 +39,7 @@ Item {
         anchors.centerIn: parent
         text: root.iconFor(PowerProfiles.profile)
         color: root.colorFor(PowerProfiles.profile)
-        font.family: "JetBrains Mono"
+        font.family: Fonts.icon
         font.pixelSize: 13
     }
 

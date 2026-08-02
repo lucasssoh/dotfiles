@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../theme"
 
 // Native-ish ports of waybar's `network` module, but showing download
 // throughput instead of the SSID/interface name (per request). Two
@@ -125,15 +126,27 @@ fi
         return "󰤭";
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    Row {
         id: label
         anchors.centerIn: parent
-        text: root.kind === "none" ? (root.icon() + "  ----o/s") : (root.icon() + "  " + root.formatRate(root.rateBps))
-        color: "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.icon()
+            color: "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.kind === "none" ? "----o/s" : root.formatRate(root.rateBps)
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 
     MouseArea {

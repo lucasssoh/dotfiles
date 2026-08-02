@@ -356,7 +356,7 @@ fi
 section "Linking configuration directories"
 
 # Config directories to fully symlink into ~/.config
-modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal")
+modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

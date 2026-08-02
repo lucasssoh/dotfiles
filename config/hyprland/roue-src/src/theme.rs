@@ -9,7 +9,7 @@
 /// before `cargo build`.
 const FALLBACK_CSS: &str = r#"
 * {
-    font-family: "JetBrains Mono";
+    font-family: "Inter";
 }
 
 *:focus,

@@ -1,9 +1,7 @@
 /* Prisme — theme, same palette as waybar/style.css and orbit/theme.toml.
    Reload: relaunch prisme (no daemon, unlike Orbit). */
 
-* {
-    font-family: "JetBrains Mono";
-}
+@import url("../theme/fonts.css");
 
 *:focus,
 *:focus-visible {

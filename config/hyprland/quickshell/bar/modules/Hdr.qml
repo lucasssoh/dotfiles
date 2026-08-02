@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import "../theme"
 
 // Native-ish port of waybar/scripts/hdr.sh's *status* display: no exec
 // at all to read state -- Hyprland.refreshMonitors() re-syncs over the
@@ -126,7 +127,7 @@ Item {
             anchors.centerIn: parent
             text: "hdr"
             color: (root.hdrActive && root.hdrCapable) ? "#141414" : "#f2f2f7"
-            font.family: "JetBrains Mono"
+            font.family: Fonts.ui
             font.pixelSize: 11
             font.bold: true
             Behavior on color { ColorAnimation { duration: 200 } }

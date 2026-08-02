@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../theme"
 
 // ============================================================
 // Event-driven counterpart to ScriptModule.qml: no Timer at all. A
@@ -90,6 +91,11 @@ Item {
         if (!root.watchIsData && root.queryCommand.length > 0) query.running = true;
     }
 
+    // Fonts.icon: every current instantiation of this component (just the
+    // notification module today, see shell.qml) only ever shows an icon
+    // glyph here, never mixed with prose -- a future instance that needs
+    // real text alongside would need its own Text/Row split, same as e.g.
+    // Bluetooth.qml.
     Text {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
@@ -98,7 +104,7 @@ Item {
         text: root.classIcons[root.moduleClass] !== undefined
             ? root.classIcons[root.moduleClass] : root.text
         color: root.classColors[root.moduleClass] || "#f2f2f7"
-        font.family: "JetBrains Mono"
+        font.family: Fonts.icon
         font.pixelSize: 13
     }
 

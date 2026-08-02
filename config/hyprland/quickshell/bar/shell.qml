@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "modules" as Modules
+import "theme"
 
 // ============================================================
 // BAR — Quickshell port of waybar/config.jsonc + waybar/style.css.
@@ -162,24 +163,28 @@ ShellRoot {
             // Not wrapped in Block -- Media.qml draws its own pill so it
             // can control the open/close stretch animation directly.
             //
-            // Real anti-collision, not a fixed nudge: centered within
-            // whatever space is actually free between `left`'s right edge
-            // and `right`'s left edge. Only `right` (Launchers, no cap --
-            // more running apps can grow it arbitrarily) drives the
-            // TARGET center reactively though: `left`'s live width is
-            // used for the safety clamp (never actually overlap it), but
-            // for the ideal/target position, ActiveWindow's own live
-            // width is substituted with its known maxWidth (see
-            // ActiveWindow.qml) whenever a window is shown. Window titles
-            // change constantly (focus switches, page loads...) and
-            // ActiveWindow is already clamped there, so reacting to its
-            // LIVE width just made mpris visibly jitter left/right on
-            // every title change for no real layout reason -- Launchers
-            // has no such cap to substitute, so it has no such fixed
-            // stand-in and stays fully live, same as before. Since
-            // idealFreeStart assumes window is always at its widest, it's
-            // always >= the real freeStart, so this can't by itself cause
-            // an overlap with the real window chip.
+            // Real anti-collision, not a fixed nudge: target is the
+            // BAR's true horizontal center, not the midpoint of whatever
+            // happens to be free between `left` and `right` -- `left` and
+            // `right`'s total content widths aren't equal (right, with
+            // launchers/cpu/connectivity/etc, generally runs wider), so
+            // centering in "the free gap" alone always left mpris sitting
+            // noticeably left of the bar's actual center. `right`'s live
+            // width still drives this reactively (no cap exists on it --
+            // more running apps can grow it arbitrarily). For the safety
+            // floor, ActiveWindow's own live width is substituted with
+            // its known maxWidth (see ActiveWindow.qml) whenever a window
+            // is shown: window titles change constantly (focus switches,
+            // page loads...) and ActiveWindow is already clamped there,
+            // so reacting to its LIVE width just made mpris visibly
+            // jitter left/right on every title change for no real layout
+            // reason. Since safeStart assumes the window chip is always
+            // at its widest, it's always >= the real freeStart, so
+            // flooring the bar-center target at safeStart can't by itself
+            // cause an overlap with the real window chip -- and the
+            // final clamp against the live freeStart/freeEnd still
+            // guarantees no overlap with either side right now, same as
+            // before.
             Modules.Media {
                 id: media
                 anchors.verticalCenter: parent.verticalCenter
@@ -187,8 +192,9 @@ ShellRoot {
                     const freeStart = left.width;
                     const freeEnd = bar.width - right.width;
                     const windowMax = activeWindow.hasWindow ? activeWindow.maxWidth : 0;
-                    const idealFreeStart = left.width - windowBlock.width + windowMax;
-                    const ideal = idealFreeStart + (freeEnd - idealFreeStart - media.width) / 2;
+                    const safeStart = left.width - windowBlock.width + windowMax;
+                    const barCenter = (bar.width - media.width) / 2;
+                    const ideal = Math.max(barCenter, safeStart);
                     return Math.max(freeStart, Math.min(ideal, freeEnd - media.width));
                 }
             }
@@ -249,15 +255,20 @@ ShellRoot {
                     Modules.Hdr { monitor: Hyprland.monitorFor(bar.screen) }
                 }
 
-                // Block: network + bluetooth + audio out + audio in (glued, @overlay)
+                // Block: audio out + audio in + bluetooth + network (glued,
+                // @overlay). Network last on purpose -- its rate text is
+                // the one value in this block that visibly swings in
+                // width (B/s -> K/s -> M/s), so it sits at the block's
+                // free right edge instead of in the middle, where its
+                // resizing would shove every module after it left/right.
                 Modules.Block {
                     color: "#2c2c2e"
                     borderColor: "#2c2c2e"
 
-                    Modules.Network {}
-                    Modules.Bluetooth {}
                     Modules.AudioOutput {}
                     Modules.AudioInput {}
+                    Modules.Bluetooth {}
+                    Modules.Network {}
                 }
 
                 // Block: battery (standalone)
@@ -286,7 +297,7 @@ ShellRoot {
                             anchors.centerIn: parent
                             text: "⏻"
                             color: "#ff6e6e"
-                            font.family: "JetBrains Mono"
+                            font.family: Fonts.icon
                             font.pixelSize: 13
                         }
 

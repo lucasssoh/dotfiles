@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import "../theme"
 
 // Native port of waybar/scripts/fan.sh. The hwmon path needs a glob
 // (fan1_input under hwmon0, hwmon1, ... -- the number isn't stable
@@ -53,14 +54,26 @@ Item {
         onTriggered: root.sample()
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    Row {
         id: label
         anchors.centerIn: parent
-        text: "󰈐 " + root.rpm
-        color: "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: "󰈐"
+            color: "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.rpm
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 }

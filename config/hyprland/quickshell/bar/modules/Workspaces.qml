@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../theme"
 
 // Native port of waybar's `hyprland/workspaces` module. No exec, no
 // poll: Hyprland.workspaces is a live model kept in sync over the
@@ -87,7 +88,7 @@ Item {
                     // (not active) -> plain bright text, no weight; empty
                     // -> muted, no weight.
                     color: pill.modelData.active ? "#4fefff" : (pill.occupied ? "#f2f2f7" : "#48484a")
-                    font.family: "JetBrains Mono"
+                    font.family: Fonts.ui
                     font.pixelSize: 12
                     font.bold: pill.modelData.active
                 }

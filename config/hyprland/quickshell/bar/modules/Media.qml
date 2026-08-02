@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Services.Mpris
+import "../theme"
 
 // Native port of waybar's `mpris` module -- no exec, no poll:
 // Mpris.players is a live DBus-backed model. Same colors/shape as
@@ -61,7 +62,7 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         id: titleMeasure
         text: root.titleText
-        font.family: "JetBrains Mono"
+        font.family: Fonts.ui
         font.pixelSize: 13
         visible: false
     }
@@ -140,6 +141,7 @@ Item {
                     // codepoint in this environment.
                     text: root.playing ? "󰎈" : "󰏤"
                     color: "#000000"
+                    font.family: Fonts.icon
                     font.pixelSize: 8
                 }
             }
@@ -185,7 +187,7 @@ Item {
                             // color) -- an opacity here too would double
                             // it up.
                             color: root.playing ? "#237823" : "#ffffff"
-                            font.family: "JetBrains Mono"
+                            font.family: Fonts.ui
                             font.pixelSize: 13
                             rightPadding: viewport.gap  // each copy carries its own trailing gap
                         }

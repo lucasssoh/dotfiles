@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../theme"
 
 // ============================================================
 // Generic port of waybar's `custom/*` module contract: waybar's own
@@ -93,6 +94,10 @@ Item {
 
     Component.onCompleted: if (root.interval === 0) root.poll();
 
+    // Fonts.icon: the one current instantiation (display-layout status,
+    // see shell.qml) only ever shows an icon glyph here, never mixed with
+    // prose -- a future instance that needs real text alongside would
+    // need its own Text/Row split, same as e.g. Bluetooth.qml.
     Text {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
@@ -102,7 +107,7 @@ Item {
             ? root.classIcons[root.moduleClass] : root.text
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         opacity: root.textOpacity
-        font.family: "JetBrains Mono"
+        font.family: Fonts.icon
         font.pixelSize: 13
         font.letterSpacing: root.letterSpacing
     }

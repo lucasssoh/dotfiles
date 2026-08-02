@@ -15,7 +15,7 @@
 /// correct safety net, not the source of truth.
 const FALLBACK_CSS: &str = r#"
 * {
-    font-family: "JetBrains Mono";
+    font-family: "Inter";
 }
 
 *:focus,

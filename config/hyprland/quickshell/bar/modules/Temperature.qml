@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import "../theme"
 
 // Native port of waybar's `temperature` module. Timer + direct sysfs
 // read via FileView, no subprocess. Same simplification as the original
@@ -33,15 +34,27 @@ Item {
         onTriggered: root.sample()
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    Row {
         id: label
         anchors.centerIn: parent
-        // waybar format: "󰔏 {temperatureC:>3}" -- right-padded to 3 chars
-        text: "󰔏 " + String(root.celsius).padStart(3, " ")
-        color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: "󰔏"
+            color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: String(root.celsius).padStart(3, " ")
+            color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 }

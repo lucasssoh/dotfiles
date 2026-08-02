@@ -1,0 +1,29 @@
+/* ============================================================
+   Central font definition -- single source of truth for the UI font
+   shared by Fuzzel, Quickshell, Roue, and Prisme. Change `ui` here and
+   Roue/Prisme pick it up on next launch with no rebuild (this file is
+   @import-ed live, not baked into the binary -- see roue-src/prisme-src
+   theme.rs, both already load their real CSS at runtime).
+
+   Quickshell and Fuzzel can't @import a CSS file (QML/ini have no such
+   mechanism), so they each keep their own copy of the same value --
+   quickshell/bar/theme/Fonts.qml and config/fuzzel/fuzzel.ini's `font=`
+   line, both commented to point back here. Same "one value, a few
+   hand-kept copies across incompatible syntaxes" convention already used
+   for the shared color palette (see quickshell/bar/shell.qml's header
+   comment) -- keep all of them in sync by hand when this changes.
+
+   `mono` stays JetBrains Mono, for anywhere fixed-width digits actually
+   matter (fast-changing numeric readouts) -- swap the selector below to
+   target only those spots if/when something in Roue or Prisme needs it;
+   right now neither app has any such spot, so this file doesn't apply
+   `mono` to anything by default.
+   ============================================================ */
+
+* {
+    font-family: "Inter";
+}
+
+.mono-text {
+    font-family: "JetBrains Mono";
+}

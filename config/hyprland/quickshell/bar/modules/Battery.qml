@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Services.UPower
+import "../theme"
 
 // Native port of waybar's `battery` module. Zero exec, zero poll:
 // UPower.displayDevice is DBus-signal-backed. Collapses to nothing on
@@ -22,18 +23,29 @@ Item {
         return icons[Math.min(p, 9)];
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    // No critical/low-battery color in the original waybar/style.css
+    // #battery rule -- always plain text, matched exactly here.
+    Row {
         id: label
         anchors.centerIn: parent
-        text: root.present
-            ? root.icon() + " " + Math.round(root.device.percentage) + "%"
-            : ""
-        // No critical/low-battery color in the original waybar/style.css
-        // #battery rule -- always plain text, matched exactly here.
-        color: "#f2f2f7"
-        font.family: "JetBrains Mono"
-        font.pixelSize: 13
+        spacing: 4
+        visible: root.present
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.present ? root.icon() : ""
+            color: "#f2f2f7"
+            font.family: Fonts.icon
+            font.pixelSize: 13
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.present ? Math.round(root.device.percentage) + "%" : ""
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
     }
 }
