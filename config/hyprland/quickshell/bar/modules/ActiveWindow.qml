@@ -21,7 +21,43 @@ import "../theme"
 Item {
     id: root
 
-    readonly property var toplevel: Hyprland.activeToplevel
+    // Which Hyprland monitor this specific bar instance is showing --
+    // passed in from shell.qml as Hyprland.monitorFor(bar.screen), same
+    // as Workspaces.qml/Hdr.qml. Needed here for the same reason: on a
+    // multi-monitor setup, `Hyprland.focusedWorkspace` tracks the
+    // workspace of the compositor's globally ACTIVE WINDOW, not "whatever
+    // workspace this monitor is currently displaying" -- switching THIS
+    // monitor to an empty workspace while another monitor still holds
+    // real keyboard focus elsewhere left `focusedWorkspace` pointing at
+    // that other, non-empty workspace, so the old focusedWorkspace-based
+    // check still showed a stale title here. `monitor.activeWorkspace` is
+    // the correct, per-monitor "what's shown right here" property.
+    property var monitor: Hyprland.focusedMonitor
+
+    // Hyprland.activeToplevel doesn't reset to null just because you
+    // switched to an empty workspace -- it's the last-activated window
+    // compositor-wide, and nothing un-activates it when there's nowhere
+    // new to activate. Gating on this monitor's own active workspace's
+    // toplevels (same live, event-driven model used for the workspace
+    // pills' own occupied check -- see Workspaces.qml) catches that case.
+    // Floating toplevels (dashboard-fastfetch/dashboard-clock, `no_focus`
+    // pinned widgets -- see hypr/windowrules.lua's DASHBOARD block) don't
+    // count as "real" content, same convention compact-workspaces.sh and
+    // workspace-dashboard.sh already use (excluding floating/dashboard
+    // windows from "is this workspace occupied") -- otherwise this bar
+    // kept showing that widget's own title/class as if it were the
+    // active window.
+    readonly property var monitorWs: root.monitor ? root.monitor.activeWorkspace : null
+    readonly property bool monitorWsHasRealWindow: {
+        if (!root.monitorWs || !root.monitorWs.toplevels) return false;
+        const tls = root.monitorWs.toplevels.values;
+        for (let i = 0; i < tls.length; i++) {
+            const ipc = tls[i].lastIpcObject;
+            if (!ipc || !ipc.floating) return true;
+        }
+        return false;
+    }
+    readonly property var toplevel: root.monitorWsHasRealWindow ? Hyprland.activeToplevel : null
     readonly property bool hasWindow: root.toplevel !== null
     readonly property string appName: {
         if (!root.toplevel) return "";

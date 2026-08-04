@@ -61,8 +61,27 @@ Item {
                 // occupied stays a plain bold number, no decoration: two
                 // tiers of emphasis, not two things that both look
                 // "highlighted".
+                //
+                // `toplevels` (this workspace's own live window list, kept
+                // in sync via wlr-foreign-toplevel-management -- a Wayland
+                // protocol event stream, entirely separate from Hyprland's
+                // own IPC socket) is the primary signal, not
+                // `lastIpcObject.windows`: that field is just whatever
+                // `hyprctl workspaces -j` last reported wholesale, and in
+                // practice it was observed to stay stuck at its
+                // Quickshell-startup value -- a window opened on workspace
+                // 2 well after the bar started kept showing 2 as empty,
+                // even right after an explicit Hyprland.refreshWorkspaces()
+                // call. `lastIpcObject.windows` is kept as a second,
+                // OR'd check rather than dropped outright -- cheap safety
+                // net in case toplevels ever comes up empty for some
+                // window type (e.g. one that doesn't map to a
+                // foreign-toplevel handle).
                 readonly property bool occupied: !modelData.active
-                    && modelData.lastIpcObject && modelData.lastIpcObject.windows > 0
+                    && (
+                        (modelData.toplevels && modelData.toplevels.values.length > 0)
+                        || (modelData.lastIpcObject && modelData.lastIpcObject.windows > 0)
+                    )
 
                 // `active` = current workspace on ITS OWN monitor;
                 // `focused` = that AND the monitor is also the globally

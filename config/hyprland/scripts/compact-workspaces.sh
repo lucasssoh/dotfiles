@@ -35,6 +35,7 @@ refocus() {
 mapfile -t monitor_names < <(jq -r '.[].name' <<<"$monitors_json")
 
 declare -A restore_focus  # monitor -> workspace to refocus at the end of the script
+declare -A moved          # monitor -> non-empty iff a window actually moved on it
 
 for mon in "${monitor_names[@]}"; do
     mapfile -t slots < <(jq -r --arg m "$mon" \
@@ -65,20 +66,31 @@ for mon in "${monitor_names[@]}"; do
             '.[] | select(.workspace.id==$ws and (.class | ascii_downcase | contains("dashboard") | not)) | .address' \
             <<<"$clients_json")
 
+        moved["$mon"]=1
         if [[ "${restore_focus[$mon]:-}" == "$old" ]]; then
             restore_focus["$mon"]="$new"
         fi
     done
 done
 
-# Refocuses each monitor on its original content (renumbered if moved).
-# The monitor that had keyboard focus initially is refocused last, to give
-# it back to it.
+# Refocuses each monitor whose content actually got renumbered, back onto
+# it (a move forces Hyprland to jump the screen to the destination
+# workspace as a side effect -- see header comment). Monitors where
+# nothing moved are left alone: unconditionally refocusing every monitor
+# here, even ones that were already fully packed, was itself dispatching
+# `hl.dsp.focus({workspace=<already-active>})` on them for no reason --
+# which reasserts focus onto that workspace's *last-focused* window, not
+# necessarily whichever window/pane you actually had selected right then.
+# That's what made SUPER+C feel like it was still "doing something"
+# (windows/focus visibly resettling) even when there was nothing left to
+# compact. The monitor that had keyboard focus initially is refocused
+# last, to give it back to it.
 for mon in "${monitor_names[@]}"; do
+    [[ -z "${moved[$mon]:-}" ]] && continue
     [[ "$mon" == "$focused_monitor" ]] && continue
     [[ -n "${restore_focus[$mon]:-}" ]] && refocus "${restore_focus[$mon]}"
 done
-[[ -n "${restore_focus[$focused_monitor]:-}" ]] && refocus "${restore_focus[$focused_monitor]}"
+[[ -n "${moved[$focused_monitor]:-}" && -n "${restore_focus[$focused_monitor]:-}" ]] && refocus "${restore_focus[$focused_monitor]}"
 
 # The hl.dsp.window.move()/hl.dsp.focus() calls above (via move_window/
 # refocus) don't emit anything on Hyprland's normal IPC event socket --

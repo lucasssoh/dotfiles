@@ -250,6 +250,30 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
 
     window.set_child(Some(&root));
 
+    // Clears the shared state the moment the window actually closes
+    // (whatever closed it -- Escape, right-click, a confirmed selection,
+    // or `--cancel`/`--commit` routed in from a second invocation, see
+    // the handlers below and in connect_command_line). Without this,
+    // `state` kept its Some((window, wheel)) forever after the first use:
+    // a later invocation arriving before the process has fully torn down
+    // (e.g. a quick re-click, or the GApplication D-Bus name taking a
+    // moment to release) would hit the `existing = Some(...)` branch in
+    // connect_command_line and just `.present()` the OLD, already-closed
+    // window instead of rebuilding via build_ui() -- which is the only
+    // place that re-reads the wheel's TOML. For the audio-output wheel
+    // specifically, that TOML is regenerated fresh on every open (see
+    // audio.sh's roue-gen), so presenting the stale window meant showing
+    // a stale device list -- e.g. a sink that only just appeared, or
+    // whose default status just changed -- until enough opens/closes
+    // happened to line up with the process actually exiting in between.
+    {
+        let state_for_close = state.clone();
+        window.connect_close_request(move |_| {
+            *state_for_close.borrow_mut() = None;
+            glib::Propagation::Proceed
+        });
+    }
+
     // Mouse hover: attached to the WHOLE WINDOW (not just the wheel
     // widget) -- aiming must not require keeping the cursor inside the
     // wheel's small on-screen disc, only the ANGLE from its center matters

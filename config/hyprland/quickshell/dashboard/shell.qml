@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 
 // ============================================================
@@ -9,42 +10,32 @@ import Quickshell.Hyprland
 // clock + system-info panel on an empty workspace, hides as soon as a
 // real (tiled) window appears — same behaviour as the old system, but
 // as native layer-shell overlays instead of two wezterm windows tricked
-// into looking like widgets.
+// into looking like widgets. Fully native now, no terminal involved at
+// all: SysInfoPanel.qml gets its fields from `fastfetch --format json`
+// (structured data, not the ANSI-art frame), including the logo, which
+// is the same rayponce.jpg fastfetch's own config points at, redrawn
+// blocky via QML's own Image downsampling instead of chafa.
 //
-// STATUS: INACTIVE. Nothing in this file runs until "TO ACTIVATE"
-// below is done. The old bash+wezterm dashboard (systemd --user
-// service) is still what's live today.
+// STATUS: manually verified working (`quickshell -c dashboard`, panels
+// correctly show/hide on real vs. empty workspaces, resource use is
+// ~140MB RSS / ~0% idle CPU) -- NOT yet autostarted or wired as the
+// default (the old bash+wezterm systemd service is still what runs at
+// login). See "TO ACTIVATE" below for that last step, whenever wanted.
 //
-// API surface used here was checked against the live docs at
-// https://quickshell.org/docs/v0.3.0/ (PanelWindow, Quickshell.Io
-// Process/StdioCollector, Quickshell.Hyprland, SystemClock) before
-// writing — not from memory. Still, this has never been run against a
-// real Quickshell binary (not installed on this machine at the time
-// of writing) — treat the very first launch as a smoke test, `qs -c
-// dashboard` prints QML errors to stderr if a property name has moved
-// between versions.
+// Toggle without killing the process: `scripts/dashboard-toggle.sh`
+// flips the `enabled` gate below over IPC (`qs -c dashboard ipc call
+// dashboard toggle`) and notifies via notify-send/swaync -- the process
+// itself (and its empty-workspace tracking) keeps running either way,
+// so toggling is instant and never re-pays the startup cost above.
 //
 // ------------------------------------------------------------
-// TO ACTIVATE:
+// TO ACTIVATE (autostart + retire the old system):
 //
-// 1. Install Quickshell (Fedora — COPR maintained by errornointernet):
-//      sudo dnf copr enable errornointernet/quickshell
-//      sudo dnf install quickshell
+// 1. Autostart it -- add to hypr/hyprland.lua, next to the other
+//    hl.exec_cmd(...) autostart lines:
+//      hl.exec_cmd("quickshell -c dashboard")
 //
-// 2. Symlink this config into ~/.config/quickshell — add "quickshell"
-//    to the `modules` array in install.sh (~line 350):
-//      modules=("hypr" "waybar" "rofi" "dunst" "swaync" "orbit"
-//                "prisme" "roue" "hyprlock" "scripts" "khal" "quickshell")
-//    then re-run install.sh (or just symlink by hand:
-//      ln -s "$(pwd)/quickshell" ~/.config/quickshell)
-//
-// 3. Test it manually first, without touching autostart:
-//      quickshell -c dashboard
-//    Switch to an empty workspace — panels should appear bottom-right
-//    (clock) and top-left (system info). Open any tiled window — both
-//    should disappear. Ctrl-C to stop.
-//
-// 4. Retire the OLD dashboard (systemd --user service):
+// 2. Retire the OLD dashboard (systemd --user service):
 //      systemctl --user disable --now workspace-dashboard.service
 //    Then either delete systemd/workspace-dashboard.service from the
 //    repo, or install.sh will silently re-enable it on your next
@@ -54,10 +45,6 @@ import Quickshell.Hyprland
 //    fastfetch.sh, and the "DASHBOARD" windowrule block in
 //    hypr/windowrules.lua (~line 147-175) — harmless if left, since
 //    with the service disabled those window classes just never spawn.
-//
-// 5. Autostart the new one — add to hypr/hyprland.lua, next to the
-//    other hl.exec_cmd(...) autostart lines:
-//      hl.exec_cmd("quickshell -c dashboard")
 // ------------------------------------------------------------
 
 ShellRoot {
@@ -68,6 +55,33 @@ ShellRoot {
     // source of truth, single Hyprland listener, instead of one
     // pkill/spawn cycle per widget like the old script.
     property bool workspaceEmpty: false
+
+    // Manual on/off gate, independent of workspaceEmpty -- lets the
+    // process stay running permanently (so it's never paying its own
+    // startup cost, and the empty-workspace tracking never has a gap)
+    // while still being toggleable on demand via `scripts/dashboard-
+    // toggle.sh` (SUPER+? or run by hand), same "IPC call flips a
+    // property, no process restart" pattern as shell.qml/bar's
+    // toggleZen. Starts true: whether that matches what you want at
+    // login depends on whether this ends up autostarted (see "TO
+    // ACTIVATE" above) -- toggle it once if not.
+    property bool enabled: true
+
+    onEnabledChanged: {
+        notifyProc.command = ["notify-send", "-a", "Dashboard", "-i",
+            "preferences-desktop-screensaver", "Dashboard",
+            root.enabled ? "Enabled" : "Disabled"];
+        notifyProc.running = true;
+    }
+
+    Process { id: notifyProc }
+
+    IpcHandler {
+        target: "dashboard"
+        function toggle(): void {
+            root.enabled = !root.enabled;
+        }
+    }
 
     function refresh() {
         const ws = Hyprland.focusedWorkspace;
@@ -92,7 +106,40 @@ ShellRoot {
         workspaceEmpty = true;
     }
 
-    Component.onCompleted: refresh()
+    // Hyprland.toplevels/.workspaces are async over IPC -- on a fresh
+    // launch, this fires before the initial `hyprctl clients/workspaces`
+    // round-trip has actually landed (Hyprland.focusedWorkspace still
+    // null, or toplevels still empty), so the very first refresh() sees
+    // a workspace that only LOOKS empty and both panels show up right
+    // away even when they shouldn't. Explicit refreshToplevels() first
+    // (same nudge used elsewhere in this repo for Hyprland's own
+    // "hl.dispatch doesn't emit IPC events" quirk -- see shell.qml/bar's
+    // IpcHandler) plus a short deferred re-check once the socket's
+    // initial data has actually had time to arrive.
+    Component.onCompleted: {
+        Hyprland.refreshWorkspaces();
+        Hyprland.refreshToplevels();
+        refresh();
+    }
+    // A single deferred re-check wasn't enough in practice -- how long
+    // Hyprland.focusedWorkspace/toplevels take to reflect reality after
+    // startup varies (observed anywhere from under a second to several
+    // seconds, seemingly depending on how much else the socket has to
+    // replay), and refresh() derives its answer entirely from those two
+    // properties. Retrying on a short repeating tick for the first few
+    // seconds catches it whenever it actually lands, without polling
+    // forever -- steady-state updates still come from onRawEvent below.
+    Timer {
+        interval: 400
+        running: true
+        repeat: true
+        property int ticks: 0
+        onTriggered: {
+            root.refresh();
+            ticks++;
+            if (ticks >= 12) running = false;   // ~5s of retries, then stop
+        }
+    }
 
     // Hyprland.workspaces/toplevels are live bindings, but re-deriving
     // "is this workspace empty" is a loop, not a single property — so
@@ -104,10 +151,10 @@ ShellRoot {
     }
 
     ClockPanel {
-        visible: root.workspaceEmpty
+        visible: root.enabled && root.workspaceEmpty
     }
 
     SysInfoPanel {
-        visible: root.workspaceEmpty
+        visible: root.enabled && root.workspaceEmpty
     }
 }

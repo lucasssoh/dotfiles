@@ -177,13 +177,19 @@ hl.window_rule({
 -- ============================================================
 -- SCREENSHOT — Satty annotation tool
 -- ============================================================
+-- stay_focused removed: it doesn't just protect satty from losing focus,
+-- it actively blocks any other window (including satty's own "Save As"
+-- portal dialog, class=xdg-desktop-portal-gtk, see below) from acquiring
+-- focus while satty is focused. That's why the save dialog opened but
+-- input kept going back to satty instead of the dialog. The portal dialog
+-- rule already has its own stay_focused + no_follow_mouse, which is what
+-- should hold focus once it opens.
 hl.window_rule({
-    match        = { class = "com.gabm.satty" },
-    float        = true,
-    size         = "1200 780",
-    center       = true,
-    stay_focused = true,
-    no_anim      = true,
+    match   = { class = "com.gabm.satty" },
+    float   = true,
+    size    = "1200 780",
+    center  = true,
+    no_anim = true,
 })
 
 -- -- ============================================================
@@ -239,11 +245,19 @@ hl.window_rule({
 
 -- 2. Everything else (dialogs, properties, transfers, File-Roller
 --    extraction): inverse match of the rule above
+-- stay_focused/no_follow_mouse: same reason as Steam/Lutris/gamescope
+-- below -- without no_follow_mouse, focus-follows-mouse (input.follow_mouse
+-- = 1) hands focus back to whatever window sits under the cursor the
+-- moment it isn't strictly over this dialog (e.g. a dropdown/breadcrumb
+-- popup rendered outside the tracked window geometry), which is what was
+-- causing this dialog to lose focus mid-navigation and on confirm/cancel.
 hl.window_rule({
-    match  = { class = "nemo", title = "^(?!.* — (Gestionnaire de fichiers|File Manager))" },
-    float  = true,
-    center = true,
-    size   = "850 550",
+    match           = { class = "nemo", title = "^(?!.* — (Gestionnaire de fichiers|File Manager))" },
+    float           = true,
+    center          = true,
+    size            = "850 550",
+    stay_focused    = true,
+    no_follow_mouse = true,
 })
 hl.window_rule({
     match  = { class = "file-roller" },
@@ -368,10 +382,17 @@ hl.window_rule({
 -- ============================================================
 -- Generic safety net: targets any open/save dialog launched by Nemo or a
 -- browser, whatever the toolkit.
-hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select)" }, float = true, center = true, stay_focused = true })
-hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true })
-hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, stay_focused = true })
-hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, stay_focused = true })
+-- no_follow_mouse added on every rule here for the same reason as
+-- Steam/Lutris/gamescope further down: stay_focused alone doesn't stop
+-- focus-follows-mouse (input.follow_mouse = 1) from handing focus back to
+-- the window under the cursor as soon as it drifts off this dialog's
+-- tracked geometry (dropdowns/breadcrumb popups, or just navigating near
+-- the edge) -- that was causing these dialogs to lose focus while
+-- navigating and on confirm/cancel.
+hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select)" }, float = true, center = true, stay_focused = true, no_follow_mouse = true })
+hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true, stay_focused = true, no_follow_mouse = true })
+hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, stay_focused = true, no_follow_mouse = true })
+hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, stay_focused = true, no_follow_mouse = true })
 
 -- ============================================================
 -- GAMESCOPE — games launched via gamescope (e.g. CS2 in 4:3)

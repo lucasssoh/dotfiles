@@ -50,13 +50,14 @@ ShellRoot {
     // per-monitor correct too: Hyprland.monitorFor(bar.screen) bridges
     // Quickshell's screen object to the matching HyprlandMonitor, passed
     // down so each bar reads its OWN screen instead of whichever monitor
-    // happens to be globally focused (see modules/Workspaces.qml and
-    // modules/Hdr.qml's `monitor` property). ActiveWindow.qml is NOT
-    // per-monitor -- it still shows Hyprland.activeToplevel (the
-    // globally focused window everywhere), since Hyprland doesn't expose
-    // a simple "last active window on monitor X" the same way it does
-    // monitorFor() -- would need to be derived from the monitor's
-    // activeWorkspace's toplevels, not done here.
+    // happens to be globally focused (see modules/Workspaces.qml,
+    // modules/Hdr.qml, and modules/ActiveWindow.qml's `monitor`
+    // property). ActiveWindow still shows Hyprland.activeToplevel's
+    // TITLE (Hyprland doesn't expose a separate "last active window on
+    // monitor X" the way it does monitorFor()), but whether to show
+    // anything at all is now gated on THIS monitor's own activeWorkspace
+    // having a real (non-floating) toplevel -- see its own header
+    // comment for why the naive global-focus check wasn't enough.
 
     // External nudge for the "hl.dispatch-routed actions don't emit
     // Hyprland IPC events" problem (see Hdr.qml's header comment) --
@@ -75,6 +76,25 @@ ShellRoot {
         }
         function toggleZen(): void {
             shell.zenMode = !shell.zenMode;
+        }
+    }
+
+    // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
+    // refresh (see its header comment), applied here for the same reason:
+    // workspace-manager.sh and compact-workspaces.sh both nudge
+    // refreshWorkspaces explicitly now, covering the two KNOWN sources of
+    // "pill shows stale occupancy/highlight" (hl.* actions dispatched via
+    // `hyprctl eval`, which don't emit IPC events -- see those scripts).
+    // This catches whatever's left over: any other script/wheel action
+    // using the same eval path that forgets the nudge, or plain event
+    // ordering hiccups. `Hyprland.refreshWorkspaces()`/`refreshToplevels()`
+    // just re-sync over the already-open IPC socket (no exec, no poll of
+    // an external process) -- cheap enough to run on every raw event.
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            Hyprland.refreshWorkspaces();
+            Hyprland.refreshToplevels();
         }
     }
 
@@ -155,7 +175,7 @@ ShellRoot {
                     color: "#141414"
                     borderColor: "#2c2c2e"
                     opacity: 0.9
-                    Modules.ActiveWindow { id: activeWindow }
+                    Modules.ActiveWindow { id: activeWindow; monitor: Hyprland.monitorFor(bar.screen) }
                 }
             }
 

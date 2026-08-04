@@ -217,3 +217,20 @@ apply_workspace_rule() {
 
 for i in 1 2 3 4 5 6 7; do apply_workspace_rule "$i" "$int_target"; done
 for i in 8 9 10;         do apply_workspace_rule "$i" "$ext_target"; done
+
+# ---- Nudges Quickshell's workspace/monitor cache -----------------------
+# Same quirk as compact-workspaces.sh (see its own comment on this exact
+# line): hl.workspace_rule()/hl.monitor(), driven via `hyprctl eval`, don't
+# emit anything on Hyprland's normal IPC event socket. Quickshell's
+# Hyprland.workspaces model DOES receive the real monitor.added/
+# monitor.removed events that trigger this script in the first place (see
+# hypr/hyprland.lua), but not the workspace-monitor reassignment that
+# follows -- so a bar sitting on a monitor that just changed role (e.g.
+# workspace 8 moving from the now-unplugged external screen back onto the
+# internal one) kept showing that workspace's pill on the wrong bar, or
+# not highlighting it at all, until something else forced a resync. This
+# is exactly the "need SUPER+C to make multi-monitor sort itself out"
+# symptom -- compact-workspaces.sh's own refreshWorkspaces call was
+# fixing it as an unrelated side effect. Silently a no-op if quickshell
+# isn't running/installed (still using waybar, or between sessions).
+qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 || true

@@ -8,6 +8,10 @@
       "gfx.wayland.hdr": {
         "Value": true,
         "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.showSearch": {
+        "Value": false,
+        "Status": "default"
       }
     },
     "Homepage": {
