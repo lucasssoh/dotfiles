@@ -83,6 +83,11 @@ hl.on("hyprland.start", function()
     -- thumbnail cache in the background.
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
+    -- Forces the combo jack back to the headset mic port -- wireplumber
+    -- otherwise picks the internal mic on every boot (higher static
+    -- priority, no jack-sensing on either port). See the script for the
+    -- full story.
+    hl.exec_cmd("bash ~/.config/hypr/scripts/restore-mic-port.sh")
     -- Clipboard history
     hl.exec_cmd("wl-paste --watch cliphist store")
     -- Nemo D-Bus daemon, for other applications' "Open location"

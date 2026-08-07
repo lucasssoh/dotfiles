@@ -9,16 +9,18 @@ export LC_ALL=C
 # =========================================================
 # audio.sh — audio device picker (replaces wiremix)
 #
-#   audio.sh output   -> rofi menu, choose the default output device
-#   audio.sh input     -> rofi menu, choose the default input device
-#   audio.sh roue-gen  -> regenerates ~/.config/roue/wheels/audio-output.toml
-#                          (one sector per sink, `active = true` on the
-#                          current default), right before the wheel opens
-#                          -- same principle as display-layout.sh roue-gen
-#                          / performance.sh roue-gen. Output only: no
-#                          input wheel, the rofi menu above still covers
-#                          that (see AudioOutput.qml / AudioInput.qml for
-#                          the two different click handlers).
+#   audio.sh output         -> rofi menu, choose the default output device
+#   audio.sh input           -> rofi menu, choose the default input device
+#   audio.sh roue-gen        -> regenerates ~/.config/roue/wheels/audio-output.toml
+#   audio.sh roue-gen-input  -> regenerates ~/.config/roue/wheels/audio-input.toml
+#                          (one sector per sink/source, `active = true` on
+#                          the current default), right before the wheel
+#                          opens -- same principle as display-layout.sh
+#                          roue-gen / performance.sh roue-gen. Both wheels
+#                          share the exact same generator (cmd_roue_gen
+#                          below, parametrized by kind); the rofi menus
+#                          above stay as the right-click .../keyboard-free
+#                          fallback (see AudioOutput.qml / AudioInput.qml).
 #
 # pactl backend (pipewire-pulse). Volume/mute stay handled elsewhere
 # (wpctl via keyboard shortcuts and clicking the module); this script
@@ -41,24 +43,41 @@ icon_for() {
 }
 
 # Roue-only classification (icon_for above still drives the rofi menu's
-# Nerd Font glyphs, untouched): resolves a device's (description, bus,
-# form-factor, active-port-type) tuple -- see build_rows -- to a roue icon
-# file (roue/icons/, Lucide SVGs -- see roue-src/src/icons.rs). Two
-# independent axes, not just "what kind of transducer": bluetooth vs wired
-# changes the icon too (headphones-bluetooth.svg / volume-2-bluetooth.svg,
-# a headphones/speaker glyph with a small bluetooth badge -- see those
-# files), so e.g. wired headphones and a bluetooth headset don't render
-# identically. Headphone detection prefers the PipeWire-reported port type
-# ("Headphones"/"Headset", from the sink's *currently active* port -- a
-# combo jack reports "Speaker" or "Headphones" depending on what's plugged
-# in right now) or device.form_factor, falling back to the description
-# regex only when neither PipeWire property is present (e.g. HDMI/pro
-# multichannel sinks expose no Ports section at all).
+# Nerd Font glyphs, untouched): resolves a device's (kind, description,
+# bus, form-factor, active-port-type) tuple -- see build_rows -- to a roue
+# icon file (roue/icons/, Lucide SVGs -- see roue-src/src/icons.rs).
+#
+# For kind=output, two independent axes matter, not just "what kind of
+# transducer": bluetooth vs wired changes the icon too (headphones-
+# bluetooth.svg / volume-2-bluetooth.svg, a headphones/speaker glyph with
+# a small bluetooth badge -- see those files), so e.g. wired headphones
+# and a bluetooth headset don't render identically. Headphone detection
+# prefers the PipeWire-reported port type ("Headphones"/"Headset", from
+# the sink's *currently active* port -- a combo jack reports "Speaker" or
+# "Headphones" depending on what's plugged in right now) or
+# device.form_factor, falling back to the description regex only when
+# neither PipeWire property is present (e.g. HDMI/pro multichannel sinks
+# expose no Ports section at all).
+#
+# For kind=input there is no headphone/speaker axis (a source is either a
+# mic or it isn't) -- only bluetooth vs wired changes the glyph
+# (mic-bluetooth.svg / mic.svg). Note this can't distinguish the
+# analog-input-internal-mic vs analog-input-headset-mic *ports* of a
+# single combo-jack source (pactl exposes one Source object with several
+# Ports, only one active at a time -- see cmd_roue_gen/build_rows, which
+# only ever see the currently active one): the wheel picks between
+# *devices*, port-level routing on a shared jack still needs `pactl
+# set-source-port` by hand.
 icon_svg_for() {
-    local desc="$1" bus="$2" formfactor="$3" porttype="$4"
+    local kind="$1" desc="$2" bus="$3" formfactor="$4" porttype="$5"
     local is_bt=0 is_headphone=0
 
     [[ "$bus" == "bluetooth" ]] && is_bt=1
+
+    if [[ "$kind" == "input" ]]; then
+        [[ "$is_bt" == 1 ]] && printf 'mic-bluetooth.svg' || printf 'mic.svg'
+        return
+    fi
 
     case "$porttype" in Headphones|Headset) is_headphone=1 ;; esac
     case "$formfactor" in headphone|headset) is_headphone=1 ;; esac
@@ -223,19 +242,34 @@ cmd_menu() {
     fi
 }
 
-# The state (which sink is default) comes from pipewire-pulse, not a file
-# frozen in the repo -- so this TOML has no versioned static copy, it gets
-# rewritten on every trigger, like wheels/display.toml (see
+# The state (which sink/source is default) comes from pipewire-pulse, not
+# a file frozen in the repo -- so this TOML has no versioned static copy,
+# it gets rewritten on every trigger, like wheels/display.toml (see
 # display-layout.sh::cmd_roue_gen) and wheels/powerprofile.toml (see
 # performance.sh::cmd_roue_gen). `active = true` on the current default
-# sink's sector shows the state band on the wheel (see roue-src/src/wheel.rs).
-# Each sector's action calls pactl directly (no wrapper subcommand needed
-# here, same as powerprofile.toml's `powerprofilesctl set ...`).
+# device's sector shows the state band on the wheel (see
+# roue-src/src/wheel.rs). Each sector's action calls pactl directly (no
+# wrapper subcommand needed here, same as powerprofile.toml's
+# `powerprofilesctl set ...`). Shared by both wheels -- $1 picks
+# sinks/output vs sources/input, everything else (row building, icon
+# resolution, TOML escaping) is identical.
 cmd_roue_gen() {
-    build_rows "sinks" "get-default-sink" "output"
+    local kind="$1" pactl_kind default_cmd set_cmd title file
+    case "$kind" in
+        output)
+            pactl_kind="sinks"; default_cmd="get-default-sink"
+            set_cmd="set-default-sink"; title="Audio output"; file="audio-output.toml"
+            ;;
+        input)
+            pactl_kind="sources"; default_cmd="get-default-source"
+            set_cmd="set-default-source"; title="Audio input"; file="audio-input.toml"
+            ;;
+    esac
+
+    build_rows "$pactl_kind" "$default_cmd" "$kind"
 
     if [[ ${#ROWS[@]} -eq 0 ]]; then
-        notify-send "Audio output" "No device detected"
+        notify-send "$title" "No device detected"
         exit 1
     fi
 
@@ -243,12 +277,12 @@ cmd_roue_gen() {
     mkdir -p "$dir"
 
     {
-        echo 'title = "Audio output"'
+        printf 'title = "%s"\n' "$title"
         local row name desc icon esc active
         for row in "${ROWS[@]}"; do
             name="${NAME_OF[$row]}"
             desc="${DESC_OF[$row]}"
-            icon=$(icon_svg_for "$desc" "${BUS_OF[$row]}" "${FORMFACTOR_OF[$row]}" "${PORTTYPE_OF[$row]}")
+            icon=$(icon_svg_for "$kind" "$desc" "${BUS_OF[$row]}" "${FORMFACTOR_OF[$row]}" "${PORTTYPE_OF[$row]}")
             # Minimal TOML escaping -- descriptions come from PipeWire/ALSA
             # metadata, never user input, but a literal quote would still
             # break parsing without this (see display-layout.sh roue-gen).
@@ -256,14 +290,15 @@ cmd_roue_gen() {
             active=""
             [[ "$name" == "$DEFAULT_NAME" ]] && active="active = true"
 
-            printf '\n[[segment]]\nicon = "%s"\nlabel = "%s"\naction = "pactl set-default-sink '\''%s'\''"\n%s\n' \
-                "$icon" "$esc" "$name" "$active"
+            printf '\n[[segment]]\nicon = "%s"\nlabel = "%s"\naction = "pactl %s '\''%s'\''"\n%s\n' \
+                "$icon" "$esc" "$set_cmd" "$name" "$active"
         done
-    } > "$dir/audio-output.toml"
+    } > "$dir/$file"
 }
 
 case "${1:-output}" in
-    output|input) cmd_menu "$1" ;;
-    roue-gen)      cmd_roue_gen ;;
-    *)             echo "usage: $0 {output|input|roue-gen}" >&2; exit 1 ;;
+    output|input)    cmd_menu "$1" ;;
+    roue-gen)        cmd_roue_gen output ;;
+    roue-gen-input)  cmd_roue_gen input ;;
+    *)               echo "usage: $0 {output|input|roue-gen|roue-gen-input}" >&2; exit 1 ;;
 esac

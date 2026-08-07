@@ -4,6 +4,10 @@ import Quickshell.Services.Pipewire
 import "../theme"
 
 // Native port of waybar's `pulseaudio#input` (mic). See AudioOutput.qml.
+// Left click regenerates and opens the "audio-input" roue wheel
+// (audio.sh roue-gen-input, one sector per source -- see
+// waybar/scripts/audio.sh), same pattern as AudioOutput.qml's
+// audio-output wheel.
 
 Item {
     id: root
@@ -52,7 +56,8 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
             if (mouse.button === Qt.LeftButton)
-                Quickshell.execDetached(["bash", "-c", "$HOME/.config/waybar/scripts/audio.sh input"]);
+                Quickshell.execDetached(["bash", "-c",
+                    "$HOME/.config/waybar/scripts/audio.sh roue-gen-input && $HOME/.local/bin/roue audio-input"]);
             else
                 Quickshell.execDetached(["pavucontrol"]);
         }
