@@ -32,7 +32,7 @@ config.use_fancy_tab_bar = false
 -- PANE FOCUS VISUAL
 -- =========================
 config.inactive_pane_hsb = {
-  saturation = 1.0,
+  saturation = 0.5,
   brightness = 1.0,
 }
 
