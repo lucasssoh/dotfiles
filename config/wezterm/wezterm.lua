@@ -21,7 +21,7 @@ config.automatically_reload_config = true
 -- =========================
 -- APPEARANCE
 -- =========================
-config.window_background_opacity = 0.99
+config.window_background_opacity = 1
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
@@ -32,7 +32,7 @@ config.use_fancy_tab_bar = false
 -- PANE FOCUS VISUAL
 -- =========================
 config.inactive_pane_hsb = {
-  saturation = 0.5,
+  saturation = 0.2,
   brightness = 1.0,
 }
 
@@ -41,7 +41,7 @@ config.inactive_pane_hsb = {
 -- =========================
 config.colors = {
   foreground = "#f8f8f2",
-  background = "#000b12",
+  background = "#000201",
   cursor_bg = "#ffffff",
   selection_fg = "#f8f8f2",
   selection_bg = "#484e54",
