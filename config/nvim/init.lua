@@ -37,6 +37,11 @@ vim.opt.listchars = {
 require("keymaps")
 
 -- =======================
+-- FLOATING WINDOWS
+-- =======================
+require("float")
+
+-- =======================
 -- PLUGINS (LAZY.NVIM)
 -- =======================
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"

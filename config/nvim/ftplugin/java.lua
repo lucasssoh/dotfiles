@@ -20,7 +20,7 @@ local workspace_dir = "/home/lucas/.cache/jdtls/workspace/" .. project_name
 local config = {
     cmd = {
         "jdtls",
-        "-javaagent:" .. lombok_path,
+        "--jvm-arg=-javaagent:" .. lombok_path,
         "-data", workspace_dir,
     },
     root_dir = root_dir,

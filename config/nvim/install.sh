@@ -33,4 +33,5 @@ safe_link() {
 
 safe_link "$DOTFILES_DIR/config/nvim/init.lua" ~/.config/nvim/init.lua
 safe_link "$DOTFILES_DIR/config/nvim/lua" ~/.config/nvim/lua
+safe_link "$DOTFILES_DIR/config/nvim/ftplugin" ~/.config/nvim/ftplugin
 ok "Neovim configured."
