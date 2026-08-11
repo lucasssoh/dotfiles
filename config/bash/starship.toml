@@ -23,6 +23,18 @@ $character
 """
 
 add_newline = true
+palette = "custom"
+
+# =========================
+# PALETTE
+# =========================
+[palettes.custom]
+orange = "#ffb400"
+red    = "#b0151a"
+green  = "#028902"
+blue   = "#0082c9"
+purple = "#6d61a1"
+cyan   = "#008b8b"
 # =========================
 # OS
 # =========================
@@ -67,7 +79,7 @@ symbol = ""
 format = "[ $symbol $branch ](bold white)"
 
 [git_status]
-format = "[ $all_status$ahead_behind ](bold red)"
+format = "[$all_status$ahead_behind ](bold red)"
 
 # =========================
 # LANGAGES
@@ -79,10 +91,10 @@ format = "[ py $version ](yellow)"
 format = "[ node $version ](green)"
 
 [java]
-format = "[ java $version ](red)"
+format = "[ java $version ](orange)"
 
 [rust]
-format = "[ rs $version ](red)"
+format = "[ rs $version ](brown)"
 
 [golang]
 format = "[ go $version ](cyan)"
