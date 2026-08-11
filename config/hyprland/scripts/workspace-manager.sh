@@ -42,6 +42,7 @@ set -euo pipefail
 # =========================================================
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
+SCALE_FILE="$HOME/.config/hypr/scale.json"
 
 # ---- Desired layout (persistent state, defaults if absent/invalid) ----
 layout_mode="both"
@@ -54,6 +55,18 @@ if [[ -f "$STATE_FILE" ]]; then
     if [[ "$v" =~ ^(external-left|external-right)$ ]]; then layout_position="$v"; fi
     v="$(jq -r '.align // empty'    "$STATE_FILE" 2>/dev/null || true)"
     if [[ "$v" =~ ^(center|top|bottom)$ ]]; then layout_align="$v"; fi
+fi
+
+# ---- Desired per-screen scale (persistent state, defaults if absent/invalid) ----
+# { "internal": "1", "external": "1.25" } -- written by hand for now, no
+# menu/dispatcher wired to this file yet.
+int_scale="1"
+ext_scale="1"
+if [[ -f "$SCALE_FILE" ]]; then
+    v="$(jq -r '.internal // empty' "$SCALE_FILE" 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then int_scale="$v"; fi
+    v="$(jq -r '.external // empty' "$SCALE_FILE" 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then ext_scale="$v"; fi
 fi
 
 # ---- All connected monitors, including disabled ones ----------------
@@ -172,7 +185,7 @@ if [[ "$active_internal" == true ]]; then
     best_rr="$(best_refresh "$internal")"
     int_mode="preferred"
     [[ -n "$best_rr" ]] && int_mode="${int_w}x${int_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = 1 })" >/dev/null
+    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = $int_scale })" >/dev/null
 fi
 
 # ---- Applies the external screen (if active): max refresh, always SDR -------
@@ -185,7 +198,7 @@ if [[ "$active_external" == true ]]; then
     best_rr="$(best_refresh "$first_external")"
     ext_mode="preferred"
     [[ -n "$best_rr" ]] && ext_mode="${ext_w}x${ext_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = 1, bitdepth = 8, cm = \"auto\" })" >/dev/null
+    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = $ext_scale, bitdepth = 8, cm = \"auto\" })" >/dev/null
 fi
 
 # ---- Turns off the unwanted screen, AFTER activating the others ----------
