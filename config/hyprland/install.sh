@@ -343,6 +343,30 @@ else
         warn "https://www.nerdfonts.com/font-downloads"
     fi
 fi
+
+# ============================================================
+# WEZTERM FONT (GoogleSansCode Nerd Font Mono)
+# ============================================================
+section "Checking WezTerm font"
+
+if fc-list | grep -qi "GoogleSansCode Nerd Font Mono"; then
+    ok "GoogleSansCode Nerd Font Mono already installed."
+else
+    info "Downloading GoogleSansCode Nerd Font Mono (config/wezterm/wezterm.lua's config.font)..."
+    mkdir -p ~/.local/share/fonts/GoogleSansCode
+    FONT_URL="https://github.com/E-Vertin/GoogleSansCode-NerdFont/releases/download/v7.000/GoogleSansCode-NFM-v7.000.tar.xz"
+    if command -v curl &>/dev/null; then
+        curl -fLo /tmp/GoogleSansCode-NFM.tar.xz "$FONT_URL" \
+        && tar -xf /tmp/GoogleSansCode-NFM.tar.xz -C ~/.local/share/fonts/GoogleSansCode/ \
+        && fc-cache -f ~/.local/share/fonts \
+        && ok "GoogleSansCode Nerd Font Mono installed." \
+        || warn "Font download failed. Install manually: https://github.com/E-Vertin/GoogleSansCode-NerdFont/releases"
+    else
+        warn "curl not available. Install GoogleSansCode Nerd Font Mono manually:"
+        warn "https://github.com/E-Vertin/GoogleSansCode-NerdFont/releases"
+    fi
+fi
+
 # ============================================================
 # SYMLINK CONFIG
 # ============================================================

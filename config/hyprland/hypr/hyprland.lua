@@ -176,18 +176,18 @@ hl.config({
     general = {
         gaps_in          = 3,
         gaps_out         = 6,
-        border_size      = 1,
+        border_size      = 2,
         col = {
             -- Animated gradient for the active window's border
             active_border = {
                 colors = {
                     "rgba(89DCEBFF)",
-                    "rgba(336699FF)",
+                    "rgba(FFFFFFFF)",
                     "rgba(89DCEBFF)",
                 },
                 angle = 45,
             },
-            inactive_border = "rgba(595959aa)",
+            inactive_border = "rgba(0, 0, 0, 0)",
 
         },
         layout           = "dwindle",
@@ -210,15 +210,15 @@ hl.config({
             ignore_opacity    = false,
         },
         shadow = {
-            enabled       = false,
+            enabled       = true,
             range         = 24,
             render_power  = 4,
             color         = "rgba(0,0,0,0.55)",
             color_inactive= "rgba(0,0,0,0)",
         },
-        inactive_opacity = 0.98,
+        inactive_opacity = 1,
         active_opacity   = 1,
-        dim_inactive     = true,
+        dim_inactive     = false,
         dim_strength     = 0.35,
     },
 })

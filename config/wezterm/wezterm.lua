@@ -7,7 +7,7 @@ local act = wezterm.action
 -- =========================
 config.font = wezterm.font_with_fallback({
   {
-    family = 'Iosevka NF',
+    family = 'GoogleSansCode Nerd Font Mono',
     weight = 'Regular',
   },
 })
@@ -32,7 +32,7 @@ config.use_fancy_tab_bar = false
 -- PANE FOCUS VISUAL
 -- =========================
 config.inactive_pane_hsb = {
-  saturation = 0.2,
+  saturation = 0.9,
   brightness = 1.0,
 }
 
@@ -119,6 +119,26 @@ config.keys = {
   -- Wezterm copy
   -- =========================
   { key = "Escape", mods = "CTRL",action = act.ActivateCopyMode,},
+  -- =========================
+  -- Font zoom (Ctrl+0 to reset, mirrors browser/VSCode convention)
+  -- =========================
+  { key = '0', mods = 'CTRL', action = act.ResetFontSize },
+}
+
+-- Ctrl+Scroll to zoom font size — not bound by default in wezterm.
+-- mouse_bindings extends the builtin mouse bindings (click/drag select,
+-- right-click paste, ...) rather than replacing them, so this is additive.
+config.mouse_bindings = {
+  {
+    event = { Down = { streak = 1, button = { WheelUp = 1 } } },
+    mods = 'CTRL',
+    action = act.IncreaseFontSize,
+  },
+  {
+    event = { Down = { streak = 1, button = { WheelDown = 1 } } },
+    mods = 'CTRL',
+    action = act.DecreaseFontSize,
+  },
 }
 
 wezterm.on('format-tab-title', function(tab, panes, tabs, hover, max_width)

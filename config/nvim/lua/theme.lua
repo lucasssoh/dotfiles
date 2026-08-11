@@ -55,6 +55,10 @@ local function apply_bg(bg)
 end
 
 local function apply_theme(name, bg)
+    -- Set before colorscheme() so a theme's colors/*.lua can branch on
+    -- vim.o.background (used by coucou's dark/light palette switch).
+    vim.o.background = (bg == "light") and "light" or "dark"
+
     local ok, err = pcall(vim.cmd.colorscheme, name)
     if not ok then
         print("Error applying theme: " .. err)
@@ -77,15 +81,19 @@ vim.api.nvim_create_user_command("SetTheme", function(opts)
     local name = nil
 
     for _, arg in ipairs(vim.split(opts.args, "%s+")) do
-        local val = arg:match("^%-%-bg=(.+)$")
-        if val then
-            if val ~= "black" and val ~= "transparent" and val ~= "default" then
-                print("Unknown bg: " .. val .. " (available: black, transparent, default)")
-                return
-            end
-            bg = val
+        if arg == "--light" then
+            bg = "light"
         else
-            name = arg
+            local val = arg:match("^%-%-bg=(.+)$")
+            if val then
+                if val ~= "black" and val ~= "transparent" and val ~= "light" and val ~= "default" then
+                    print("Unknown bg: " .. val .. " (available: black, transparent, light, default)")
+                    return
+                end
+                bg = val
+            else
+                name = arg
+            end
         end
     end
 
@@ -107,14 +115,14 @@ end, {
     nargs = "+",
     complete = function(arglead, cmdline, cursorpos)
         if arglead:match("^%-%-bg") then
-            return { "--bg=black", "--bg=transparent", "--bg=default" }
+            return { "--bg=black", "--bg=transparent", "--bg=light", "--bg=default" }
         end
 
-        if cmdline:match("%-%-bg=%S+") then
+        if cmdline:match("%-%-bg=%S+") or cmdline:match("%-%-light%s") then
             return vim.tbl_keys(themes)
         end
 
-        local results = { "--bg=black", "--bg=transparent", "--bg=default" }
+        local results = { "--bg=black", "--bg=transparent", "--bg=light", "--bg=default", "--light" }
         for name in pairs(themes) do
             table.insert(results, name)
         end
@@ -124,6 +132,12 @@ end, {
 
 -- Startup: load the saved theme + bg
 local saved_name, saved_bg = load_saved_theme()
+
+-- Set before the active theme's colorscheme() runs below (lazy.nvim's
+-- config() for the priority=1000 spec fires synchronously inside
+-- require("lazy").setup(), which happens after this module returns —
+-- so this assignment lands in time for colors/*.lua to see it).
+vim.o.background = (saved_bg == "light") and "light" or "dark"
 
 vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
