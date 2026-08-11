@@ -94,6 +94,14 @@ hl.on("hyprland.start", function()
     -- integration (file manager always available).
     hl.exec_cmd("nemo --no-desktop --gapplication-service")
 
+    -- Arranges new floating windows into per-context rows (a window and
+    -- whatever it spawns afterwards, detected by focus) instead of
+    -- letting them stack dead center. A lone window still lands exactly
+    -- centered. Small dialogs (confirm/cancel, save-as, system prompts
+    -- -- typically already `center = true` in windowrules.lua) are left
+    -- untouched. See the script header for the full algorithm.
+    hl.exec_cmd("python3 ~/.config/hypr/scripts/float-smart-place.py")
+
     -- Fixed workspaces 1-10, set at runtime via hyprctl eval -- not
     -- persisted in a Lua file, so they must be replayed on every startup
     -- (and on config.reloaded / monitor.added / monitor.removed below).
