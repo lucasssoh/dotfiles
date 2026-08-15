@@ -59,9 +59,28 @@ Item {
     }
     readonly property var toplevel: root.monitorWsHasRealWindow ? Hyprland.activeToplevel : null
     readonly property bool hasWindow: root.toplevel !== null
+
+    // Chromium-based browsers (Brave included) already have the active
+    // tab's title set as the window title by the time Hyprland captures
+    // its mapping-time `initialTitle` snapshot -- unlike most other apps,
+    // which still show a generic placeholder at that point (e.g. "kitty"
+    // before the shell sets a title). So for Brave, `initialTitle` isn't
+    // "Brave", it's whatever the first tab happened to be, frozen there
+    // for the window's whole lifetime and never updated on tab switches.
+    // `class` is what's actually stable/generic here, so known browser
+    // classes get a friendly name derived from it instead of trusting
+    // initialTitle.
+    readonly property var browserDisplayNames: ({
+        "brave-browser": "Brave",
+        "firefox": "Firefox",
+        "chromium": "Chromium",
+        "google-chrome": "Chrome",
+    })
     readonly property string appName: {
         if (!root.toplevel) return "";
         const ipc = root.toplevel.lastIpcObject;
+        const cls = ipc && ipc.class ? ipc.class : "";
+        if (cls && root.browserDisplayNames[cls]) return root.browserDisplayNames[cls];
         return (ipc && ipc.initialTitle) ? ipc.initialTitle : "";
     }
     readonly property string windowTitle: root.toplevel ? root.toplevel.title : ""
