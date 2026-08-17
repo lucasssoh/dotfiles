@@ -34,5 +34,30 @@ return {
             ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd"},
             handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
         })
+
+        -- =========================================================
+        -- JAVA WARMUP
+        -- Start jdtls as soon as a Java project folder is opened, instead
+        -- of waiting for a .java file to be opened by hand. jdtls indexes
+        -- and diagnoses the whole workspace on startup, so this is what
+        -- makes nvim-tree's diagnostic icons (lua/plugins/nvimtree.lua)
+        -- show errors/warnings on files nobody has opened yet.
+        -- =========================================================
+        vim.api.nvim_create_autocmd("VimEnter", {
+            once = true,
+            callback = function()
+                local cwd = vim.fn.getcwd()
+                -- fake filename so find_root's ":p:h" resolves back to cwd itself
+                local root_dir = require("lsp.java").find_root(cwd .. "/x")
+                if not root_dir then
+                    return
+                end
+                local java_file = vim.fn.globpath(root_dir, "**/*.java", false, true)[1]
+                if not java_file then
+                    return
+                end
+                require("lsp.java").start(vim.fn.bufadd(java_file))
+            end,
+        })
     end,
 }

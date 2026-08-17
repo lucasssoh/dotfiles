@@ -34,12 +34,18 @@ return {
 
             renderer = {
                 root_folder_label = false,
+                -- No diagnostic icon/sign — just underline the file/folder
+                -- name text (not its devicon) in the matching Diagnostic*
+                -- colour (see coucou's DiagnosticUnderline* groups). Same
+                -- convention as the rest of the setup, zero added width.
+                highlight_diagnostics = "name",
                 icons = {
                     show = {
                         git = true,
                         file = true,
                         folder = true,
                         folder_arrow = true,
+                        diagnostics = false,
                     },
                     glyphs = {
                         git = {
@@ -58,6 +64,20 @@ return {
                 enable = true,
                 ignore = false,
                 show_on_dirs = true,
+            },
+            -- LSP diagnostics propagated up to parent folders, so an
+            -- error/warning is visible in the tree without opening every
+            -- file. Needs a language server that has already published
+            -- diagnostics for that file — see the jdtls warmup autocmd in
+            -- lua/lsp/mason.lua.
+            diagnostics = {
+                enable = true,
+                show_on_dirs = true,
+                show_on_open_dirs = true,
+                severity = {
+                    min = vim.diagnostic.severity.HINT,
+                    max = vim.diagnostic.severity.ERROR,
+                },
             },
         })
     end,

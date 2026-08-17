@@ -30,12 +30,18 @@ as the context count changes), but nothing stops a window from being
 dragged in between -- Hyprland's normal drag/resize keeps working, this
 daemon just never fights it outside of an open/close event.
 
-Exemption rule (size threshold, no extra list to maintain):
-  Windows smaller than SMALL_W x SMALL_H (confirm/cancel, error, save-as,
-  and other small dialogs) are left exactly where Hyprland/windowrules.lua
-  put them -- usually centered via an explicit `center = true` rule
-  (system dialogs, xdg-desktop-portal, etc.). They never join a row and
-  are never repositioned by this daemon.
+Exemption rules (size thresholds, no extra list to maintain):
+  - Windows smaller than SMALL_W x SMALL_H (confirm/cancel, error, save-as,
+    and other small dialogs) are left exactly where Hyprland/windowrules.lua
+    put them -- usually centered via an explicit `center = true` rule
+    (system dialogs, xdg-desktop-portal, etc.). They never join a row and
+    are never repositioned by this daemon.
+  - Windows using LARGE_FRACTION or more of the work area in either
+    dimension (a windowed game, or any other big main-app window) are
+    force-centered once and then never tracked either -- this is what
+    keeps a windowed game "toujours centré" and immune to being shoved
+    around later by some unrelated dialog's reflow(). No per-game class
+    list to maintain: any window that's simply big enough qualifies.
 
 Safety guard: pinned windows (e.g. the PiP video window from
 pip-daemon.sh) and fullscreen floats are never tracked -- pinning is a
@@ -55,6 +61,10 @@ import time
 # Tunables
 # ---------------------------------------------------------------------------
 SMALL_W, SMALL_H = 450, 350   # below this size -> a fixed dialog, never tracked
+LARGE_FRACTION = 0.7          # width or height above this fraction of the work area -> a
+                               # game/main-app window: force-centered once, never tracked
+                               # (see handle_new -- this is what keeps windowed games out
+                               # of the context-row system entirely, "toujours centré")
 WIN_MARGIN = 12                # gap between windows on the same context line (px)
 LINE_MARGIN = 10               # gap between wrapped lines of the same context (px)
 CONTEXT_MARGIN = 30            # gap between different contexts/rows (px)
@@ -155,6 +165,22 @@ def handle_new(address):
     workspace_id = client["workspace"]["id"]
     if monitor_id < 0 or workspace_id < 0:
         return  # no monitor yet / special workspace -> don't touch
+
+    monitors = {m["id"]: m for m in hyprctl_json("monitors")}
+    monitor = monitors.get(monitor_id)
+    if monitor is None:
+        return
+    ax0, ay0, ax1, ay1 = work_area(monitor)
+
+    if w >= LARGE_FRACTION * (ax1 - ax0) or h >= LARGE_FRACTION * (ay1 - ay0):
+        # A windowed game (or any other big main-app window) -- always
+        # centered, never dragged into a row, and never touched again by
+        # someone else's reflow(). No app-specific class list to maintain.
+        x = max((ax0 + ax1) / 2 - w / 2, ax0)
+        y = max((ay0 + ay1) / 2 - h / 2, ay0)
+        log("large window, force-centering", address, "at", (int(x), int(y)))
+        move_window(address, int(x), int(y))
+        return
 
     row = find_row(last_focused_address)
     if row is not None:
