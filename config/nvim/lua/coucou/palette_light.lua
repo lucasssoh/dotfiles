@@ -18,6 +18,12 @@ return {
     cyan        = "#0e8a97", -- darkened take on the dark theme's cyan accent
     cyan_light  = "#1c9dab", -- lighter secondary teal
     blue        = "#1f6fd6", -- darkened take on the dark theme's blue accent
+    -- Darkened rofi accent, kept apart from `blue` above (see palette.lua:
+    -- the dark-theme `blue` was later recalibrated for syntax and drifted
+    -- toward cyan, but this light `blue` never was — so the two already
+    -- sit at nearly the same hue here; pushed darker/more saturated so
+    -- azure still reads as distinct next to it).
+    azure       = "#0b4fb0",
     green       = "#1f9d57", -- darkened take on the dark theme's green
     green_dim   = "#1a7a44", -- media/power-saver equivalent
     yellow      = "#8a7328", -- dark khaki/sand instead of pale sand

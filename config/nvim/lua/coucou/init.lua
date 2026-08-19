@@ -281,11 +281,36 @@ function M.set_plugin_groups(p)
     hl("NvimTreeIndentMarker",    { fg = p.muted })
     hl("NvimTreeWinSeparator",    { fg = p.border, bg = p.bg })
     hl("NvimTreeCursorLine",      { bg = p.surface })
-    hl("NvimTreeGitDirty",        { fg = p.yellow })
-    hl("NvimTreeGitNew",          { fg = p.green })
-    hl("NvimTreeGitDeleted",      { fg = p.red_soft })
-    hl("NvimTreeGitStaged",       { fg = p.green })
-    hl("NvimTreeGitMerge",        { fg = p.yellow })
+    -- Git status: plain +/-/?/! signs in the gutter (see
+    -- lua/plugins/nvimtree.lua), and the matching file/folder name text
+    -- coloured via `highlight_git = "name"` — fg only, no background
+    -- anywhere. One explicit colour per status, only "ignored" is grey —
+    -- "untracked" gets its own colour now, it's not the same thing.
+    -- "deleted" intentionally has no distinct colour (p.text = same as
+    -- normal text) rather than red, matching this theme's rule that red
+    -- is reserved for diagnostics/errors only.
+    -- Picked to avoid colliding with what those hues already mean
+    -- elsewhere: p.blue is folder icons + every keyword (would make
+    -- "added" read as just another folder), p.cyan_light is the
+    -- "opened file" indicator + several syntax captures — using them
+    -- here made git status blend into the rest of the UI instead of
+    -- standing out. p.azure exists specifically for this: a genuinely
+    -- saturated blue not reused anywhere else in the theme.
+    -- NB: the real "...Icon" group names are set directly rather than
+    -- the short legacy aliases (NvimTreeGitDirty etc.) — nvim-tree only
+    -- auto-links the legacy alias the *first* time its own appearance
+    -- bootstrap runs, which happens before this colorscheme is applied,
+    -- so relying on it silently keeps nvim-tree's own default colour.
+    -- The name-text groups (NvimTreeGitFile/FolderXxxHL) default-link to
+    -- these Icon groups, so setting these alone keeps icon and name text
+    -- in sync automatically — never colour them separately.
+    hl("NvimTreeGitStagedIcon",   { fg = p.azure })   -- added / staged
+    hl("NvimTreeGitDirtyIcon",    { fg = p.yellow })  -- modified (matches BufferLineModified)
+    hl("NvimTreeGitDeletedIcon",  { fg = p.text })    -- deleted: no colour, "rien"
+    hl("NvimTreeGitMergeIcon",    { fg = p.red })     -- conflict: still an error state
+    hl("NvimTreeGitRenamedIcon",  { fg = p.azure })   -- a rename is only ever a staged op
+    hl("NvimTreeGitNewIcon",      { fg = p.green })   -- untracked / new file
+    hl("NvimTreeGitIgnoredIcon",  { fg = p.muted })   -- the only grey one
 
     -- indent-blankline
     hl("IblIndent",    { fg = p.overlay })
