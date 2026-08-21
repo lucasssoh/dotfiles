@@ -116,6 +116,8 @@ if [ "$DISTRO" = "fedora" ]; then
         wl-clipboard cliphist
         # Icons / theme
         papirus-icon-theme gnome-themes-extra gtk-murrine-engine adwaita-cursor-theme
+        # Comix Cursors build deps (see "Building Comix Cursors" section below)
+        librsvg2-tools xcursorgen
         # Fonts (Nerd Fonts for the bar/waybar icons)
         google-noto-sans-fonts google-noto-emoji-fonts jetbrains-mono-fonts-all
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
@@ -151,6 +153,8 @@ elif [ "$DISTRO" = "arch" ]; then
         wl-clipboard cliphist
         # Icons / cursors
         papirus-icon-theme bibata-cursor-theme
+        # Comix Cursors build deps (see "Building Comix Cursors" section below)
+        librsvg xorg-xcursorgen
         # Fonts
         noto-fonts noto-fonts-emoji ttf-jetbrains-mono-nerd
         # System deps
@@ -170,6 +174,7 @@ elif [ "$DISTRO" = "debian" ]; then
     warn "swaync (SwayNotificationCenter) is often not packaged in apt — install manually if 'swaync' isn't found."
     warn "quickshell (the active bar, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
     warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
+    warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
     PKGS=(
         dbus dbus-x11 hyprland hyprpaper
         waybar dunst rofi khal hyprsunset
@@ -182,6 +187,8 @@ elif [ "$DISTRO" = "debian" ]; then
         brightnessctl playerctl
         satty grim slurp
         papirus-icon-theme
+        # Comix Cursors build deps (see "Building Comix Cursors" section below)
+        librsvg2-bin x11-apps
         fonts-noto fonts-noto-color-emoji
         bc jq curl git lm-sensors unzip socat
         qt5ct
@@ -283,6 +290,40 @@ else
         ok "Roue built and installed to ~/.local/bin/roue."
     else
         warn "Roue build failed — Super+Delete and the power profile menu will fail to launch until this is fixed."
+    fi
+fi
+
+# ============================================================
+# COMIX CURSORS (comic-style cursor theme)
+# ============================================================
+# No distro package -- built from the upstream SVG sources with
+# rsvg-convert + xcursorgen (installed above). Not vendored like
+# Orbit/Prisme/Roue since this is a purely cosmetic asset pack, not
+# something the desktop depends on functionally: if upstream ever
+# disappears, re-running this script without network just skips the
+# build and hypr/hyprland.lua's XCURSOR_THEME falls back to whatever
+# theme is already on disk (or a stock one if never built before).
+# "White" = white gloves / black outline, the classic Mickey Mouse
+# look; hypr/hyprland.lua sets XCURSOR_THEME to ComixCursors-White.
+section "Building Comix Cursors (comic-style cursor theme)"
+
+COMIX_BUILD="$HOME/.cache/comixcursors-build"
+COMIX_THEME_NAME="White"   # Other variants: Black, Blue, Green, Orange, Red
+
+if ! command -v rsvg-convert &>/dev/null || ! command -v xcursorgen &>/dev/null; then
+    warn "rsvg-convert/xcursorgen not found — skipping Comix Cursors build."
+elif [ -d "$HOME/.icons/ComixCursors-$COMIX_THEME_NAME" ]; then
+    info "Comix Cursors ($COMIX_THEME_NAME) already installed, skipping."
+else
+    rm -rf "$COMIX_BUILD"
+    if git clone --depth 1 https://gitlab.com/limitland/comixcursors.git "$COMIX_BUILD" 2>/dev/null; then
+        if (cd "$COMIX_BUILD" && MULTISIZE=true THEMENAME="$COMIX_THEME_NAME" ./bin/build-cursors && make && make install); then
+            ok "Comix Cursors ($COMIX_THEME_NAME) installed to ~/.icons/ComixCursors-$COMIX_THEME_NAME."
+        else
+            warn "Comix Cursors build failed — falling back to whatever cursor theme is already installed."
+        fi
+    else
+        warn "Could not clone Comix Cursors (no network?) — skipping."
     fi
 fi
 

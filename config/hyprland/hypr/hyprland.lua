@@ -10,8 +10,8 @@
 -- ============================================================
 -- Variables needed for consistent Wayland behavior across toolkits
 -- (Qt, GTK, SDL, Clutter) and historically X11 applications.
-hl.env("XCURSOR_SIZE",          "24")
-hl.env("XCURSOR_THEME",         "breeze_cursors")
+hl.env("XCURSOR_SIZE",          "48")
+hl.env("XCURSOR_THEME",         "ComixCursors-White")
 hl.env("QT_QPA_PLATFORM",       "wayland")
 hl.env("QT_QPA_PLATFORMTHEME",  "qt6ct")
 hl.env("GDK_BACKEND",           "wayland,x11")
