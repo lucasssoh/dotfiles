@@ -1,6 +1,14 @@
-/* Orbit — font + flat look, to match waybar/swaync/rofi: no shadow/glow,
-   corners and borders identical to swaync's (.control-center), more
-   generous padding.
+/* Orbit — font + flat look, matching the quickshell bar's "verre givré" /
+   no-border pass (see quickshell/bar/shell.qml's header comment): no
+   shadow/glow, no decorative border anywhere (the panel reads purely from
+   its own opaque fill contrast, same as every bar block), bigger rounded
+   corners (16px panel/cards/buttons, 10px nested tabs -- was a flat 8px
+   everywhere, matching swaync). Real transparency now too (theme.toml's
+   opacity: 0.90, was 1.0) -- conservative next to the bar's own ~45%
+   pills since this panel holds actual readable content. Text legibility
+   over an arbitrary wallpaper is handled by real compositor blur behind
+   the panel (see hypr/windowrules.lua's layerrule for Orbit), not a
+   text-shadow/outline hack -- tried that first, looked bad, reverted.
 
    Loaded on top of the CSS generated from theme.toml, at the same
    priority (STYLE_PROVIDER_PRIORITY_USER) but after -- so beating a rule
@@ -29,30 +37,37 @@
 window,
 .background,
 .orbit-panel {
-    border-radius: 8px;
+    border-radius: 16px;
     box-shadow: none;
     background-image: none;
 }
 
 .orbit-panel {
-    border: 1px solid #505050;
+    /* No border, on purpose -- see the file header. Was 1px solid #505050. */
+    border: none;
     padding: 14px;
 }
 
-/* Header / footer: no separate background (like swaync's widgets, which
-   don't have their own background either) -- just a thin separator. */
+/* Header / footer: no separate background AND no separator border any
+   more (was 1px solid #505050 on the footer) -- the bar doesn't outline
+   its own internal groupings either, just spacing. */
 .orbit-header {
     background-color: transparent;
     background-image: none;
-    border-radius: 8px 8px 0 0;
+    /* Was still leaking through from the generated CSS (1px solid accent
+       @ 30% alpha) -- the footer already had this override, the header
+       didn't. This is the line separating the network/BT/wifi/VPN tabs
+       area from the toggle switch row, asked to remove. */
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
     margin: -14px -14px 8px -14px;
     padding: 14px 14px 10px 14px;
 }
 
 .orbit-footer {
     background-color: transparent;
-    border-top: 1px solid #505050;
-    border-radius: 0 0 8px 8px;
+    border-top: none;
+    border-radius: 0 0 16px 16px;
     margin: 8px -14px -14px -14px;
     padding: 20px 24px;
 }
@@ -61,7 +76,7 @@ window,
 .orbit-network-row,
 .orbit-device-row,
 .orbit-saved-network-row {
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 14px 16px;
     margin: 6px 4px;
 }
@@ -107,17 +122,18 @@ window,
 .orbit-button.primary,
 .orbit-button.destructive {
     box-shadow: none;
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 10px 20px;
 }
 
-/* Hover = neutral gray border, never cyan -- cyan stays reserved for the
+/* Hover = neutral gray, never the accent -- the accent (@accent_color,
+   #a8b4c4, same platinum token the bar uses) stays reserved for the
    "active/selected" state (active tab, connected network, switch on).
    Before: hovering normal buttons (Disconnect/Details/Scan...) and tabs
-   turned solid cyan, the SAME color as selection -- "currently hovering"
+   turned solid accent, the SAME color as selection -- "currently hovering"
    and "selected" became impossible to tell apart. */
 .orbit-button:hover {
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 10px 20px;
     box-shadow: none;
     background-color: rgba(255, 255, 255, 0.08);
@@ -125,7 +141,7 @@ window,
 }
 
 .orbit-button.primary:hover {
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 10px 20px;
     box-shadow: none;
     background-color: rgba(255, 255, 255, 0.08);
@@ -133,7 +149,7 @@ window,
 }
 
 .orbit-button.destructive:hover {
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 10px 20px;
     box-shadow: none;
     background-color: @destructive_color;
@@ -152,7 +168,7 @@ window,
 }
 
 .orbit-wired-button:hover {
-    color: cyan;
+    color: @accent_color;
     background-color: transparent;
     border: none;
     padding: 4px;
@@ -162,21 +178,21 @@ window,
 }
 
 .orbit-tab-bar {
-    border-radius: 8px;
+    border-radius: 16px;
 }
 
 .orbit-tab {
-    border-radius: 6px;
+    border-radius: 10px;
 }
 
 .orbit-tab:hover {
-    border-radius: 6px;
+    border-radius: 10px;
     background-color: rgba(255, 255, 255, 0.06);
     color: #f2f2f7;
 }
 
 .orbit-tab.active {
-    border-radius: 6px;
+    border-radius: 10px;
     box-shadow: none;
 }
 
@@ -185,7 +201,7 @@ window,
 .orbit-password-overlay,
 .orbit-error-overlay,
 .orbit-wired-overlay {
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 24px;
     box-shadow: none;
 }

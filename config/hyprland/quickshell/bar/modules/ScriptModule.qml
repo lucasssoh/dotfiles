@@ -26,7 +26,7 @@ Item {
     property bool json: true            // parse stdout as {text,class,tooltip} vs raw text
     property var clickCommand: []       // left-click, fire-and-forget
     property var rightClickCommand: []  // right-click, fire-and-forget
-    property var classColors: ({})      // {"hdr-on": "#4fefff", ...} -- mirrors
+    property var classColors: ({})      // {"hdr-on": "#a8b4c4", ...} -- mirrors
                                          // the #custom-hdr.hdr-on {color: ...}
                                          // class selectors in waybar/style.css
     property var classIcons: ({})       // {"notification": "", ...} -- for

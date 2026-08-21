@@ -46,6 +46,12 @@ const HOVER_RADIUS_BOOST_PX: f64 = 12.0;
 /// joystick's dead zone.
 const HOVER_DEADZONE_PX: f64 = 28.0;
 const ARC_STEPS: usize = 20;
+/// Corner radius for the 4 sharp vertices of each wedge (where a straight
+/// radial-ish edge meets the outer/inner arc) -- "tout arrondir", no
+/// pointed corners anywhere, asked for. See `round_corner`.
+const WEDGE_CORNER_RADIUS: f64 = 10.0;
+/// Points sampled per rounded corner -- see `round_corner`.
+const CORNER_STEPS: usize = 8;
 /// Display size (px) of the SVG logo in a sector -- grows a bit with `t`
 /// on hover, like the old glyph rendering. `ICON_FONT_PX` remains used for
 /// the plain-text fallback (see `draw_icon` in snapshot()) -- confirmation
@@ -461,36 +467,135 @@ fn wedge_path(
 
     let (a_out_l, r_out_l) = offset_ray(angle_left, outer_r, half_gap);
     let (a_out_r, r_out_r) = offset_ray(angle_right, outer_r, -half_gap);
+    let pt = |a: f64, r: f64| (cx + r * a.cos(), cy + r * a.sin());
 
-    let builder = gsk::PathBuilder::new();
-    for step in 0..=ARC_STEPS {
-        let t = step as f64 / ARC_STEPS as f64;
-        let a = a_out_l + (a_out_r - a_out_l) * t;
-        let r = r_out_l + (r_out_r - r_out_l) * t;
-        let x = cx + r * a.cos();
-        let y = cy + r * a.sin();
-        if step == 0 {
-            builder.move_to(x as f32, y as f32);
-        } else {
-            builder.line_to(x as f32, y as f32);
-        }
-    }
-    if inner_r > half_gap + 1.0 {
-        let (a_in_l, r_in_l) = offset_ray(angle_left, inner_r, half_gap);
-        let (a_in_r, r_in_r) = offset_ray(angle_right, inner_r, -half_gap);
-        for step in 0..=ARC_STEPS {
+    let outer: Vec<(f64, f64)> = (0..=ARC_STEPS)
+        .map(|step| {
             let t = step as f64 / ARC_STEPS as f64;
-            let a = a_in_r + (a_in_l - a_in_r) * t;
-            let r = r_in_r + (r_in_l - r_in_r) * t;
-            let x = cx + r * a.cos();
-            let y = cy + r * a.sin();
-            builder.line_to(x as f32, y as f32);
+            pt(a_out_l + (a_out_r - a_out_l) * t, r_out_l + (r_out_r - r_out_l) * t)
+        })
+        .collect();
+
+    let has_hub_gap = inner_r > half_gap + 1.0;
+    let builder = gsk::PathBuilder::new();
+
+    if !has_hub_gap {
+        // No real hub gap -- falls back to the original sharp tip at dead
+        // center, same as before. Rounding a single "corner" that's
+        // really just a point wouldn't read as anything but a smaller,
+        // still-pointed tip, so this case is left alone.
+        for (i, &(x, y)) in outer.iter().enumerate() {
+            if i == 0 {
+                builder.move_to(x as f32, y as f32);
+            } else {
+                builder.line_to(x as f32, y as f32);
+            }
         }
-    } else {
         builder.line_to(cx as f32, cy as f32);
+        builder.close();
+        return builder.to_path();
     }
+
+    let (a_in_l, r_in_l) = offset_ray(angle_left, inner_r, half_gap);
+    let (a_in_r, r_in_r) = offset_ray(angle_right, inner_r, -half_gap);
+    let inner: Vec<(f64, f64)> = (0..=ARC_STEPS)
+        .map(|step| {
+            let t = step as f64 / ARC_STEPS as f64;
+            pt(a_in_r + (a_in_l - a_in_r) * t, r_in_r + (r_in_l - r_in_r) * t)
+        })
+        .collect();
+
+    // The 4 sharp vertices, each rounded off using the already-sampled
+    // point one step into its adjacent arc (a close enough tangent
+    // approximation at ARC_STEPS resolution) or the opposite vertex
+    // across a straight edge -- see round_corner's own doc.
+    let outer_left = outer[0];
+    let outer_right = outer[ARC_STEPS];
+    let inner_right = inner[0];
+    let inner_left = inner[ARC_STEPS];
+
+    let emit = |points: Vec<(f64, f64)>, started: &mut bool| {
+        for (x, y) in points {
+            if *started {
+                builder.line_to(x as f32, y as f32);
+            } else {
+                builder.move_to(x as f32, y as f32);
+                *started = true;
+            }
+        }
+    };
+
+    let mut started = false;
+    emit(
+        round_corner(inner_left, outer_left, outer[1], WEDGE_CORNER_RADIUS, CORNER_STEPS),
+        &mut started,
+    );
+    // Middle of the outer arc, corners already sampled at both ends above.
+    for &(x, y) in &outer[1..ARC_STEPS] {
+        builder.line_to(x as f32, y as f32);
+    }
+    emit(
+        round_corner(outer[ARC_STEPS - 1], outer_right, inner_right, WEDGE_CORNER_RADIUS, CORNER_STEPS),
+        &mut started,
+    );
+    emit(
+        round_corner(outer_right, inner_right, inner[1], WEDGE_CORNER_RADIUS, CORNER_STEPS),
+        &mut started,
+    );
+    for &(x, y) in &inner[1..ARC_STEPS] {
+        builder.line_to(x as f32, y as f32);
+    }
+    emit(
+        round_corner(inner[ARC_STEPS - 1], inner_left, outer_left, WEDGE_CORNER_RADIUS, CORNER_STEPS),
+        &mut started,
+    );
+    // close() draws the untouched middle portion of the left edge, from
+    // the last point above (near inner_left, on the left edge) back to
+    // the very first point (near outer_left, on the same left edge) --
+    // same principle as every other straight run between two rounded
+    // corners here, just implicit via close() instead of an explicit loop.
     builder.close();
     builder.to_path()
+}
+
+/// Replaces a sharp polygon corner with a small rounded fillet, using a
+/// quadratic Bézier (the original vertex as control point) between two
+/// points backed off along the adjacent edges -- not a true circular arc:
+/// much simpler to get right than computing a tangent-fillet center, and
+/// at this radius the visual difference is imperceptible. `radius` is
+/// clamped to at most half of either adjacent edge's length, so short
+/// edges never produce overlapping/self-intersecting fillets.
+fn round_corner(
+    prev: (f64, f64),
+    corner: (f64, f64),
+    next: (f64, f64),
+    radius: f64,
+    steps: usize,
+) -> Vec<(f64, f64)> {
+    let d_prev = ((corner.0 - prev.0).powi(2) + (corner.1 - prev.1).powi(2)).sqrt();
+    let d_next = ((next.0 - corner.0).powi(2) + (next.1 - corner.1).powi(2)).sqrt();
+    let r = radius.min(d_prev * 0.5).min(d_next * 0.5).max(0.0);
+    if r < 0.5 || d_prev < 0.001 || d_next < 0.001 {
+        return vec![corner];
+    }
+    let a = (
+        corner.0 + (prev.0 - corner.0) / d_prev * r,
+        corner.1 + (prev.1 - corner.1) / d_prev * r,
+    );
+    let b = (
+        corner.0 + (next.0 - corner.0) / d_next * r,
+        corner.1 + (next.1 - corner.1) / d_next * r,
+    );
+    (0..=steps)
+        .map(|i| {
+            let t = i as f64 / steps as f64;
+            let mt = 1.0 - t;
+            (
+                mt * mt * a.0 + 2.0 * mt * t * corner.0 + t * t * b.0,
+                mt * mt * a.1 + 2.0 * mt * t * corner.1 + t * t * b.1,
+            )
+        })
+        .collect()
 }
 
 /// EXACT angle and radius of the point on ray `theta` (length `r`) offset

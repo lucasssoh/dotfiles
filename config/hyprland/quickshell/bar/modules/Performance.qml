@@ -29,7 +29,7 @@ Item {
     function colorFor(p) {
         if (p === PowerProfile.Performance) return "#ff6e6e";
         if (p === PowerProfile.PowerSaver) return "#237823";
-        return "#4fefff";
+        return "#a8b4c4";
     }
 
     Text {

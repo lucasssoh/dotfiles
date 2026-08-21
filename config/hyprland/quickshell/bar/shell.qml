@@ -17,9 +17,56 @@ import "theme"
 // verbatim from its @define-color block, not colors.lua (the two have
 // drifted apart over time; style.css is the source of truth for what
 // the bar itself looks like).
-//   background #141414  surface #1e1e20  overlay #2c2c2e
+//   background #0c0c0e  surface #1e1e20  overlay #34383f
 //   overlay2   #505050  text    #f2f2f7  muted   #48484a
 //   accent2    #4fefff  play    #237823  danger  #ff6e6e
+//
+// "Verre givré" pass (see hypr/hyprland.lua general.col.active_border):
+// the neon accent2 #4fefff is replaced everywhere in this bar by #a8b4c4
+// -- a blue desaturated almost to platinum/silver, the SAME token used
+// in the Hyprland active-border gradient -- so the border around the
+// focused window and the bar's own active-state color are literally one
+// shared token now.
+//
+// No-border pass, right after: every block/chip/pill border (the glass
+// rim this bar briefly had, and the accent "ghost ring" on the
+// workspace pill / window chip) is gone. In its place, the two neutral
+// tiers used for module fills were pushed further apart -- background
+// #141414 -> #0c0c0e (deeper black), overlay #2c2c2e -> #34383f (a
+// clearer graphite/platinum gray, same #a8b4c4 hue family, just darker
+// and less saturated) -- so each block still reads as its own shape
+// purely from fill contrast, no outline needed. text/muted/play/danger
+// are unchanged.
+//
+// Merge passes, one after another, ending in a single bar: first the 2
+// left pills (notif/clock/workspaces, window) collapsed into 1 and the 5
+// right pills (cpu/temp/fan/mem, display/hdr, audio/bt/network, battery,
+// perf/power) collapsed into 1; then those merged into ONE Block for the
+// whole bar (see "── ONE BAR ──" below) -- not 3 zones anchored
+// independently to the screen, one shape anchored by its OWN
+// horizontalCenter to the screen's, so any content change anywhere in it
+// shifts both edges outward symmetrically. 6px spacer Items mark what
+// used to be separate pills, so former clusters still read as distinct
+// groups without a border anywhere (audio/bt/network briefly had its own
+// #34383f contrast tint here too, since removed -- see the METRICS/TOOLS
+// pills below, where the notification bell and running-apps launchers
+// ended up living instead of in this main bar). Media (mpris, far left)
+// and ActiveWindow (far right,
+// moved there from next to notif/clock/workspaces -- its context reads
+// better toward the outside edge) are "les seuls vrais élargisseurs", the
+// two modules whose width genuinely swings a lot, so it's mostly their
+// growth that's visible -- but literally anything in the bar growing has
+// the same two-sided effect. ActiveWindow and the workspace pill also
+// animate their own width changes (Behavior on implicitWidth/width)
+// instead of snapping; everything downstream of them follows for free
+// through the normal width-binding chain, no extra Behavior needed
+// anywhere else. Network's rate text is deliberately excluded from all of
+// this (re-measures every 2s, see Network.qml) -- animating it would mean
+// near-continuous relayout of the entire bar instead of an occasional
+// smooth resize. No more custom position math anywhere either (the old
+// mpris anti-collision x: calculation is gone entirely) -- a single Block
+// lays out its own children left-to-right with no overlap by
+// construction.
 //
 // mpris is the one deliberate departure from "match waybar exactly":
 // GTK-CSS couldn't animate a width open/close in any interesting way,
@@ -108,148 +155,194 @@ ShellRoot {
 
             focusable: false
             visible: !shell.zenMode
-            // Was 30 (implicitHeight + margins.top), which apparently
-            // double-counted the margin -- exclusiveZone is measured
-            // relative to the anchors margins already offset from, not
-            // from the raw screen edge on top of that. Just the panel's
-            // own height. If this overshoots/undershoots, report the
-            // actual pixel gap and it can be tuned precisely instead of
-            // guessed again.
+            // exclusiveZone stays at the main bar's own height (24), not
+            // the window's full implicitHeight below (30) -- the metrics
+            // pill's extra 6px is purely decorative floating space, not
+            // reserved from tiled windows (same reasoning the corner-flare
+            // experiment used, before it got reverted for a different
+            // reason: the pixel math itself was fine).
             exclusiveZone: 24
             aboveWindows: true
             color: "transparent"
 
             anchors { top: true; left: true; right: true }
-            margins { top: 6; left: 6; right: 6 }
-            implicitHeight: 24
+            // Content is now a single centered island (see "── ONE BAR ──"
+            // below), not 3 zones spanning the full width, so left/right
+            // margins rarely matter in practice any more --
+            // kept at 0 anyway (harmless, and still correct if content
+            // ever does grow wide enough to reach an actual screen edge).
+            // top: 0 still matters always -- the main bar stays flush
+            // against the screen's top edge regardless of horizontal
+            // content (its Block's top corners are unconditionally square,
+            // see Block.qml's flushTop -- squareLeft/squareRight there are
+            // unused now but kept for the same "still correct if it ever
+            // reaches an edge" reason).
+            margins { top: 0; left: 0; right: 0 }
+            // 24 (main bar) + 3 (metrics/tools pills' own top gap) -- the
+            // window itself has to be this tall or those pills (see below)
+            // would get clipped by the surface's own bounds. The main
+            // bar's Row stays flush at y:0 regardless (anchors.top), only
+            // metrics/tools use the extra space.
+            implicitHeight: 27
 
-            // ── LEFT ──────────────────────────────────────────
-            Row {
-                id: left
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+            // ── ONE BAR ───────────────────────────────────────
+            // A single Block, not 3 separate pills glued near each other
+            // -- one shape, one background, anchored by its own
+            // horizontalCenter to the screen's, so ANY content change
+            // anywhere inside it shifts BOTH edges outward symmetrically
+            // (width grows -> left edge moves left by half, right edge
+            // moves right by half, center point never moves). ActiveWindow
+            // and Media (mpris) -- "les seuls vrais élargisseurs", the two
+            // modules whose width genuinely swings a lot -- sit at the two
+            // ends, so it's mostly their growth that's visible, but
+            // literally anything in here growing has the same two-sided
+            // effect, not just those two. Former cluster boundaries (what
+            // used to be up to 7 separate pills) are now just 6px spacer
+            // Items -- distinct groups WITHOUT a border anywhere.
+            Modules.Block {
+                anchors.horizontalCenter: parent.horizontalCenter
+                // top, not verticalCenter -- the window is now taller
+                // (implicitHeight: 27, see above) to fit the separate
+                // metrics/tools pills, and this keeps the main bar flush
+                // at y:0 regardless of that extra height.
+                anchors.top: parent.top
+                // 24 -> 27: the metrics/tools pills sit only 3px above
+                // where tiled windows start, but the island (unchanged at
+                // 24) had a full 6px gap there -- asked for, so all 3
+                // pills now end at the same y (27) and read as one
+                // consistent proximity to whatever's below, not the island
+                // floating further from it than its neighbours. Row inside
+                // Block.qml stays vertically centered in the extra 3px,
+                // not stuck to the top.
+                height: 27
+                color: "#0c0c0e"
 
-                // Block: notification + clock + workspaces (glued)
-                Modules.Block {
-                    color: "#141414"
-                    borderColor: "#505050"
+                // Far-left end -- 0 width (and thus 0 space) whenever no
+                // player is active (see Media.qml's implicitWidth:
+                // pill.width).
+                Modules.Media { id: media }
 
-                    Modules.StreamModule {
-                        watchCommand: ["swaync-client", "--subscribe-waybar"]
-                        watchIsData: true
-                        minWidth: 40
-                        clickCommand: ["bash", "-c", "$HOME/.config/waybar/scripts/swaync-toggle.sh"]
-                        rightClickCommand: ["swaync-client", "-d", "-sw"]
-                        classIcons: ({
-                            "notification": "󱅫",
-                            "none": "󰂜",
-                            "dnd-notification": "󰂠",
-                            "dnd-none": "󰪓",
-                            "inhibited-notification": "󰂛",
-                            "inhibited-none": "󰪑",
-                            "dnd-inhibited-notification": "󰂛",
-                            "dnd-inhibited-none": "󰪑"
-                        })
-                        classColors: ({
-                            "notification": "#4fefff",
-                            "dnd-notification": "#4fefff",
-                            "inhibited-notification": "#4fefff",
-                            "dnd-inhibited-notification": "#4fefff",
-                            "dnd-none": "#48484a",
-                            "dnd-inhibited-none": "#48484a",
-                            "none": "#f2f2f7",
-                            "inhibited-none": "#f2f2f7"
-                        })
-                    }
+                Item { width: 6; height: 1 }
 
-                    Modules.Clock {}
-                    Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
-                }
+                Modules.Clock {}
+                Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
 
-                // Block: window (standalone, own @overlay border)
-                // opacity 0.9 matches waybar/style.css's #window rule (the
-                // whole element, not just its text)
-                Modules.Block {
-                    id: windowBlock
-                    color: "#141414"
-                    borderColor: "#2c2c2e"
+                Item { width: 6; height: 1 }
+
+                // Far-right end -- moved here from the far-left (was next
+                // to notif/clock/workspaces originally), asked for: window
+                // context reads better toward the outside edge. opacity
+                // 0.9 matches waybar/style.css's old #window rule (the
+                // whole element, not just its text).
+                Modules.ActiveWindow {
+                    id: activeWindow
                     opacity: 0.9
-                    Modules.ActiveWindow { id: activeWindow; monitor: Hyprland.monitorFor(bar.screen) }
+                    monitor: Hyprland.monitorFor(bar.screen)
                 }
             }
 
-            // ── CENTER ────────────────────────────────────────
-            // Not wrapped in Block -- Media.qml draws its own pill so it
-            // can control the open/close stretch animation directly.
-            //
-            // Real anti-collision, not a fixed nudge: target is the
-            // BAR's true horizontal center, not the midpoint of whatever
-            // happens to be free between `left` and `right` -- `left` and
-            // `right`'s total content widths aren't equal (right, with
-            // launchers/cpu/connectivity/etc, generally runs wider), so
-            // centering in "the free gap" alone always left mpris sitting
-            // noticeably left of the bar's actual center. `right`'s live
-            // width still drives this reactively (no cap exists on it --
-            // more running apps can grow it arbitrarily). For the safety
-            // floor, ActiveWindow's own live width is substituted with
-            // its known maxWidth (see ActiveWindow.qml) whenever a window
-            // is shown: window titles change constantly (focus switches,
-            // page loads...) and ActiveWindow is already clamped there,
-            // so reacting to its LIVE width just made mpris visibly
-            // jitter left/right on every title change for no real layout
-            // reason. Since safeStart assumes the window chip is always
-            // at its widest, it's always >= the real freeStart, so
-            // flooring the bar-center target at safeStart can't by itself
-            // cause an overlap with the real window chip -- and the
-            // final clamp against the live freeStart/freeEnd still
-            // guarantees no overlap with either side right now, same as
-            // before.
-            Modules.Media {
-                id: media
-                anchors.verticalCenter: parent.verticalCenter
-                x: {
-                    const freeStart = left.width;
-                    const freeEnd = bar.width - right.width;
-                    const windowMax = activeWindow.hasWindow ? activeWindow.maxWidth : 0;
-                    const safeStart = left.width - windowBlock.width + windowMax;
-                    const barCenter = (bar.width - media.width) / 2;
-                    const ideal = Math.max(barCenter, safeStart);
-                    return Math.max(freeStart, Math.min(ideal, freeEnd - media.width));
+            // ── METRICS (separate from the main bar, top-left) ─
+            // Pulled out entirely, asked for -- "le moins élégant, mais
+            // j'en ai besoin": cpu/temp/fan/mem/battery, the actual numeric
+            // hardware readouts. Split from "tools" below (display/hdr/
+            // connectivity -- status indicators, not really "metrics") and
+            // put on the opposite side, asked for. Floats on its own
+            // instead, the way mpris used to float independently before
+            // any of this session's changes: NOT flush against the top
+            // edge (3px gap -- was 6, halved to sit closer to the main
+            // bar's own top, asked for; flushTop: false so its top corners
+            // are rounded like every other side -- see Block.qml), NOT
+            // flush against the left edge either (6px gap), and an
+            // almost-transparent fill (#0c0c0e at ~45% alpha) instead of
+            // the main bar's solid one, so it reads as a lightweight
+            // overlay, not another equally-weighted bar.
+            Modules.Block {
+                id: metrics
+                anchors.top: parent.top
+                anchors.topMargin: 3
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                flushTop: false
+                color: "#730c0c0e"
+
+                // Notification bell, moved here from the main bar's far
+                // left (was next to Media), asked for.
+                Modules.StreamModule {
+                    watchCommand: ["swaync-client", "--subscribe-waybar"]
+                    watchIsData: true
+                    minWidth: 40
+                    clickCommand: ["bash", "-c", "$HOME/.config/waybar/scripts/swaync-toggle.sh"]
+                    rightClickCommand: ["swaync-client", "-d", "-sw"]
+                    classIcons: ({
+                        "notification": "󱅫",
+                        "none": "󰂜",
+                        "dnd-notification": "󰂠",
+                        "dnd-none": "󰪓",
+                        "inhibited-notification": "󰂛",
+                        "inhibited-none": "󰪑",
+                        "dnd-inhibited-notification": "󰂛",
+                        "dnd-inhibited-none": "󰪑"
+                    })
+                    classColors: ({
+                        "notification": "#a8b4c4",
+                        "dnd-notification": "#a8b4c4",
+                        "inhibited-notification": "#a8b4c4",
+                        "dnd-inhibited-notification": "#a8b4c4",
+                        "dnd-none": "#48484a",
+                        "dnd-inhibited-none": "#48484a",
+                        "none": "#f2f2f7",
+                        "inhibited-none": "#f2f2f7"
+                    })
                 }
+
+                Item { width: 6; height: 1 }
+
+                Modules.Cpu {}
+                Modules.Temperature {}
+                Modules.Fan {}
+                Modules.Memory {}
+
+                Item { width: 6; height: 1 }
+
+                Modules.Battery {}
             }
 
-            // ── RIGHT ─────────────────────────────────────────
-            Row {
-                id: right
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+            // ── LAUNCHERS (separate from the main bar, right of metrics) ──
+            // Pulled back OUT of the tools pill into its own block, asked
+            // for -- same floating treatment as METRICS/TOOLS. Position
+            // asked for precisely: right of metrics, left of mpris --
+            // anchored to METRICS's own right edge (id: metrics above), a
+            // static position, NOT the island's left edge (tried that
+            // first, moves every time mpris shows/hides -- asked to keep
+            // it fixed relative to the left block instead).
+            Modules.Block {
+                anchors.top: parent.top
+                anchors.topMargin: 3
+                anchors.left: metrics.right
+                anchors.leftMargin: 6
+                flushTop: false
+                color: "#730c0c0e"
 
-                // Running apps -- native, clickable-per-app, see
-                // modules/Launchers.qml. No wrapping Block: each chip already
-                // has its own background (radius:4, @overlay), a shared
-                // block background behind them all would just be a second,
-                // redundant layer. opacity 0.8 still matches waybar/
-                // style.css's #custom-apps rule, applied directly here now.
+                // Animated (see Launchers.qml's Behavior on implicitWidth)
+                // even though an app opening/closing only shifts this
+                // pill a little.
                 Modules.Launchers {
                     opacity: 0.8
                 }
+            }
 
-                // Block: cpu + temperature + fan + memory (glued)
-                Modules.Block {
-                    color: "#141414"
-                    borderColor: "#505050"
-                    Modules.Cpu {}
-                    Modules.Temperature {}
-                    Modules.Fan {}
-                    Modules.Memory {}
-                }
-
-                // Block: display layout + HDR (glued)
-                Modules.Block {
-                    color: "#141414"
-                    borderColor: "#505050"
+            // ── TOOLS (separate from the main bar, top-right) ──
+            // display/hdr/connectivity/perf/power -- status/toggle
+            // indicators, split from METRICS. Same floating treatment
+            // (3px top gap, 6px right gap, rounded corners, translucent
+            // fill).
+            Modules.Block {
+                anchors.top: parent.top
+                anchors.topMargin: 3
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                flushTop: false
+                color: "#730c0c0e"
 
                     Modules.ScriptModule {
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
@@ -267,45 +360,35 @@ ShellRoot {
                             "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"]
                         classColors: ({
                             "display-both": "#f2f2f7",
-                            "display-internal": "#4fefff",
-                            "display-external": "#4fefff"
+                            "display-internal": "#a8b4c4",
+                            "display-external": "#a8b4c4"
                         })
                     }
 
                     Modules.Hdr { monitor: Hyprland.monitorFor(bar.screen) }
-                }
 
-                // Block: audio out + audio in + bluetooth + network (glued,
-                // @overlay). Network last on purpose -- its rate text is
-                // the one value in this block that visibly swings in
-                // width (B/s -> K/s -> M/s), so it sits at the block's
-                // free right edge instead of in the middle, where its
-                // resizing would shove every module after it left/right.
-                Modules.Block {
-                    color: "#2c2c2e"
-                    borderColor: "#2c2c2e"
+                    Item { width: 6; height: 1 }
 
-                    Modules.AudioOutput {}
-                    Modules.AudioInput {}
-                    Modules.Bluetooth {}
-                    Modules.Network {}
-                }
+                    // Network's rate text re-measures its digit count every
+                    // 2s (see Network.qml's Timer) -- deliberately NOT
+                    // width-animated, so a rate-text change still just
+                    // snaps this pill's width instantly instead of
+                    // triggering a smooth (but then near-continuous)
+                    // resize. No more #34383f contrast background behind
+                    // these 4 -- asked for, sits directly on the pill's own
+                    // translucent fill now, same as everything else in it.
+                    Row {
+                        Modules.AudioOutput {}
+                        Modules.AudioInput {}
+                        Modules.Bluetooth {}
+                        Modules.Network {}
+                    }
 
-                // Block: battery (standalone)
-                Modules.Block {
-                    color: "#141414"
-                    borderColor: "#505050"
-                    Modules.Battery {}
-                }
+                    Item { width: 6; height: 1 }
 
-                // Block: performance profile + power (glued) -- same
-                // background/border as the rest of the neutral dalle
-                // (workspaces, metrics, battery...) now, dropping the old
-                // @surface/@overlay distinct tier.
-                Modules.Block {
-                    color: "#141414"
-                    borderColor: "#505050"
-
+                    // Performance profile + power, moved here from the main
+                    // bar (were next to notif/clock/workspaces), asked for:
+                    // now sit right of connectivity in this pill instead.
                     Modules.Performance {}
 
                     Item {
@@ -315,7 +398,10 @@ ShellRoot {
                         Text {
                             id: powerLabel
                             anchors.centerIn: parent
-                            text: "⏻"
+                            // 󰍃 (md-logout, "exit door") instead of ⏻ (power
+                            // symbol) -- asked for. Same red, just a different
+                            // glyph in it.
+                            text: "󰍃"
                             color: "#ff6e6e"
                             font.family: Fonts.icon
                             font.pixelSize: 13
@@ -327,7 +413,6 @@ ShellRoot {
                         }
                     }
                 }
-            }
         }
     }
 }

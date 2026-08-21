@@ -77,8 +77,8 @@ Item {
     // already-full-size pill". Since a pill's straight middle has no
     // rounding at all, that only showed rounded corners right at the
     // very start/end of the animation. Now the pill animates its OWN
-    // width, so radius:999 keeps producing a proper full-pill shape
-    // (rounded both ends) at every size along the way, not just the
+    // width, so a large bottom radius keeps producing a proper rounded
+    // shape (both bottom ends) at every size along the way, not just the
     // final one.
     implicitWidth: pill.width
     implicitHeight: 24
@@ -93,14 +93,26 @@ Item {
         width: root.active ? root.openWidth : 0
         height: 24
         anchors.centerIn: parent
-        radius: 999
+        // Top-square/bottom-rounded, same treatment as Block.qml -- the
+        // bar sits flush against the screen's own top edge now (see
+        // shell.qml's PanelWindow margins.top: 0), so this pill's top
+        // stays flush too instead of showing a rounded notch under the
+        // screen edge. 999 still clamps to the max valid radius (height/2
+        // = 12) at any width, same "large enough" trick as the old
+        // uniform radius:999.
+        topLeftRadius: 0
+        topRightRadius: 0
+        bottomLeftRadius: 999
+        bottomRightRadius: 999
         color: "#000000"
-        border.width: 1
-        border.color: root.playing ? "#237823" : "#ffffff"
         clip: true
+        // No border (see the no-border pass in shell.qml's header
+        // comment) -- playing state now shows only through the disc's
+        // fill and this opacity dip, not an extra ring around the pill.
+        //
         // waybar/style.css: #mpris.paused { opacity: 0.6 } fades the
-        // WHOLE element (background/border/text together), not just the
-        // text color -- root's own opacity above is already spoken for
+        // WHOLE element (background/text together), not just the text
+        // color -- root's own opacity above is already spoken for
         // (open/close fade), so this lives on the pill itself instead.
         opacity: root.playing ? 1.0 : 0.6
         Behavior on opacity { NumberAnimation { duration: 200 } }

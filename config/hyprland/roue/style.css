@@ -14,14 +14,23 @@ window,
 }
 
 /* rgba(20, 20, 22, 0.88) matches the center hub color exactly (see the HUB
-   fill in roue-src/src/wheel.rs), #505050 the waybar module border
-   (@overlay2, see waybar/style.css) -- a panel instead of a full-screen
-   blur (permanent GPU cost at idle, see earlier discussion). */
+   fill in roue-src/src/wheel.rs) -- a panel instead of a full-screen blur
+   (permanent GPU cost at idle, see earlier discussion).
+
+   "Verre givré" pass: the flat #505050 outline is replaced by a translucent
+   white glass rim + inset highlight (light catching the top edge) + a soft
+   drop shadow, matching the same treatment as the Hyprland active-window
+   border (see hypr/hyprland.lua general.col.active_border). Rounding bumped
+   8 -> 14 -> 22px (more pronounced corners, asked for) to read as a
+   curved glass panel rather than a sharp card. */
 .roue-sidebar {
     background-color: rgba(20, 20, 22, 0.88);
-    border: 1px solid #505050;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 22px;
     padding: 16px 22px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 .roue-title {

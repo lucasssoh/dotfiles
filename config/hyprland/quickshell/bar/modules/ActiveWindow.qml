@@ -13,7 +13,7 @@ import "../theme"
 //
 // Style: app name sits in a rounded accent "chip" floating on the left
 // (like the workspace pill / HDR badge -- 18px tall inset in the 24px
-// block). Corner radius matches the active workspace pill exactly (4px)
+// block). Corner radius matches the active workspace pill exactly (6px)
 // -- rounded corners on an otherwise-rectangular chip, not a fully
 // rounded pill/stadium shape. The title continues immediately after it
 // on the block's own plain background, no gap, no border between them.
@@ -102,6 +102,16 @@ Item {
     implicitWidth: root.hasWindow
         ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 26, 120), maxWidth)
         : 0
+    // Animated width change, asked for -- title length changes (focus
+    // switch, page/tab title update) now widen/narrow this chip smoothly
+    // instead of snapping, same duration/curve as Media.qml's own pill.
+    // Merged into the left Block now (see shell.qml), so the block and
+    // everything after it in that Row follows along for free through the
+    // normal implicitWidth binding chain -- no separate Behavior needed
+    // anywhere else for this to look smooth.
+    Behavior on implicitWidth {
+        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    }
     implicitHeight: 24
     clip: true
 
@@ -117,21 +127,18 @@ Item {
         id: chip
         visible: root.hasWindow
         anchors.left: parent.left
-        // 1px is just enough to clear the wrapping Block's own border --
-        // below that the chip's fill paints straight over the border
-        // since children aren't inset from a parent's border area
-        // automatically. The extra few px on top of that are a
-        // deliberate small gap/offset, not the minimum-clearance value.
+        // Small deliberate gap/offset from the block's left edge, purely
+        // for breathing room (Block has no border to clear any more).
         anchors.leftMargin: 4
         anchors.verticalCenter: parent.verticalCenter
         width: appLabel.implicitWidth + 22
         height: 18
-        radius: 2   // same corner rounding as the active workspace pill, not a full pill/stadium shape
-        // Same ghost-ring treatment as the active workspace pill now,
-        // instead of a solid accent fill -- see Workspaces.qml.
-        color: "#2c2c2e"
-        border.width: 1
-        border.color: "#4fefff"
+        radius: 6   // same corner rounding as the active workspace pill (2 -> 6, more pronounced, still not a full pill/stadium shape)
+        // No border (see the no-border pass in shell.qml's header
+        // comment) -- the graphite-platinum fill against the block's
+        // darker background, plus the accent-colored label below, is
+        // enough to read as a chip on its own.
+        color: "#34383f"
 
         Text {
             renderType: Text.NativeRendering
@@ -139,7 +146,7 @@ Item {
             id: appLabel
             anchors.centerIn: parent
             text: root.appName
-            color: "#4fefff"
+            color: "#a8b4c4"
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true

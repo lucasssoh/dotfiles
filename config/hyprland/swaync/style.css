@@ -1,19 +1,24 @@
 /* =========================================================
    SWAYNC — style.css
-   Same palette as waybar/style.css and rofi/share.rasi, so the control
-   center fits the same visual language as the rest of the system (dark
-   background, cyan accent, thin borders).
+   Matching the quickshell bar's "verre givré" / no-border pass (see
+   quickshell/bar/shell.qml's header comment) and Orbit's own equivalent
+   (orbit/style.css): the old neon #4fefff accent and #505050 borders are
+   gone, one platinum-desaturated accent + no decorative border anywhere,
+   bigger rounded corners, and a real (conservative) glass background.
+   Text legibility over an arbitrary wallpaper is handled by real
+   compositor blur behind the panel (see hypr/windowrules.lua's layerrule
+   for swaync), not a text-shadow/outline hack -- tried that first,
+   looked bad, reverted.
 ========================================================= */
 
 @import url("../theme/fonts.css");
-@define-color background #141414;
+@define-color background #0c0c0e;
 @define-color surface     #1e1e20;
-@define-color overlay     #2c2c2e;
-@define-color overlay2    #505050;
+@define-color overlay     #34383f;
 @define-color text        #f2f2f7;
-@define-color accent2     #4fefff;
+@define-color accent2     #a8b4c4;
 @define-color muted       #48484a;
-@define-color urgent      #ff453a;
+@define-color urgent      #ff6e6e;
 
 * {
     font-size: 13px;
@@ -30,6 +35,16 @@ window, .blank-window, .floating-notifications {
     background: transparent;
 }
 
+/* Upstream's default style.css sets `.notification-row:focus { background:
+   var(--noti-bg-focus); }` -- rgba(68,68,68,0.6), a visibly lighter gray
+   patch. The control-center auto-focuses the newest notification row (for
+   keyboard nav), so that one row always stood out with this mismatched
+   fill on top of the translucent `.notification` background below it.
+   Neutralized to match the row's own unfocused background above. */
+.notification-row:focus {
+    background: transparent;
+}
+
 /* Upstream's default style.css (/etc/xdg/swaync/style.css, still loaded
    underneath ours -- cssPriority is "user", not "user-only") sets
    `.notification-background { padding: 6px 12px; }` -- combined with
@@ -43,19 +58,26 @@ window, .blank-window, .floating-notifications {
     padding-left: 6px;
 }
 
+/* No outline border any more (was 1px solid @overlay2) -- translucent
+   fill instead, same conservative ~90% glass level as Orbit's panel
+   (orbit/theme.toml). Severity (low/normal/critical) now reads from
+   background tint + a left accent stripe on critical only, rather than a
+   full outline colored per state -- kept, unlike a purely decorative
+   border, because it's real functional signal (same principle as Orbit's
+   overlay borders, deliberately left alone there too). */
 .notification {
-    background: @background;
-    border: 1px solid @overlay2;
-    border-radius: 8px;
+    background: rgba(12, 12, 14, 0.90);
+    border: none;
+    border-radius: 14px;
     color: @text;
     padding: 4px;
 }
 
-.notification.low      { border-color: @overlay; }
-.notification.normal   { border-color: @overlay2; }
+.notification.low      { opacity: 0.85; }
+.notification.normal   { }
 .notification.critical {
-    border-color: @urgent;
-    background: #1c1c1e;
+    background: rgba(255, 110, 110, 0.14);
+    border-left: 3px solid @urgent;
 }
 
 .notification-group.collapsed.not-expanded {
@@ -77,9 +99,9 @@ window, .blank-window, .floating-notifications {
 
 /* ── Panel (control center) ────────────────────────────────────── */
 .control-center {
-    background: @background;
-    border: 1px solid @overlay2;
-    border-radius: 8px;
+    background: rgba(12, 12, 14, 0.90);
+    border: none;
+    border-radius: 16px;
     color: @text;
 }
 
@@ -97,7 +119,7 @@ window, .blank-window, .floating-notifications {
 .widget-title > button {
     background: @surface;
     color: @text;
-    border-radius: 6px;
+    border-radius: 10px;
     padding: 4px 10px;
 }
 
@@ -131,7 +153,7 @@ window, .blank-window, .floating-notifications {
    is neutralized here to keep a flat look like the rest of the system. */
 .widget-mpris, .widget-mpris-player {
     background: @surface;
-    border-radius: 8px;
+    border-radius: 14px;
     color: @text;
 }
 
@@ -177,7 +199,7 @@ window, .blank-window, .floating-notifications {
 .widget-buttons-grid flowboxchild > button {
     background: @surface;
     color: @text;
-    border-radius: 8px;
+    border-radius: 12px;
     min-width: 48px;
     min-height: 48px;
     font-size: 18px;

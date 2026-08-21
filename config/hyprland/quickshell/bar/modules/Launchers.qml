@@ -76,6 +76,12 @@ Item {
     }
 
     implicitWidth: row.implicitWidth
+    // Animated width change, asked for -- even a single chip appearing/
+    // disappearing (app opened/closed) now shifts this pill smoothly
+    // instead of snapping. Same duration/curve as ActiveWindow.qml's own.
+    Behavior on implicitWidth {
+        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    }
     implicitHeight: 24
     visible: root.matches.length > 0
 
@@ -94,8 +100,12 @@ Item {
                 width: 22
                 height: 22   // was 18 -- more vertical padding around the icon inside the chip
                 anchors.verticalCenter: parent.verticalCenter
-                radius: 4
-                color: "#2c2c2e"
+                radius: 8   // 4 -> 8, matches Block.qml's more pronounced rounding (kept for the hit target's shape, not visible any more)
+                // No fill any more -- redundant now that Launchers lives
+                // inside the tools pill (see shell.qml), which already has
+                // its own background. Was #34383f, back when each chip sat
+                // directly on the bar with no wrapping Block behind it.
+                color: "transparent"
 
                 Text {
                     renderType: Text.NativeRendering

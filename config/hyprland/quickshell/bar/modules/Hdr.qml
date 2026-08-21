@@ -35,10 +35,10 @@ import "../theme"
 // limitation the original had before this rewrite, just narrower now.
 //
 // Compact badge instead of a sliding switch: static "hdr" label,
-// background flips from neutral to accent2 when active. 4px radius
-// matches Block.qml's own corner rounding -- this reads as a flat tag
-// that belongs to the block's styling, not a separately-rounded pill
-// competing with it.
+// background flips from neutral to accent when active. 6px radius
+// matches every other 18px-tall pill in this bar (workspace pill,
+// ActiveWindow's app chip) -- one shared corner treatment for anything
+// at that height, distinct from Block.qml's own (taller, 24px) radius.
 
 Item {
     id: root
@@ -114,11 +114,11 @@ Item {
         anchors.centerIn: parent
         width: 35
         height: 18
-        radius: 2
+        radius: 6   // 2 -> 6, matches the workspace pill/window chip rounding
         // Not capable -> always the "off" look, capability isn't
         // something a click can fix so there's no reason to ever tint
         // it as active.
-        color: (root.hdrActive && root.hdrCapable) ? "#4fefff" : "#2c2c2e"
+        color: (root.hdrActive && root.hdrCapable) ? "#a8b4c4" : "#34383f"
         Behavior on color { ColorAnimation { duration: 200 } }
 
         Text {
@@ -126,7 +126,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             anchors.centerIn: parent
             text: "hdr"
-            color: (root.hdrActive && root.hdrCapable) ? "#141414" : "#f2f2f7"
+            color: (root.hdrActive && root.hdrCapable) ? "#0c0c0e" : "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 11
             font.bold: true

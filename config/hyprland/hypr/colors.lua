@@ -13,7 +13,7 @@ return {
     muted      = "0xff636366",
     subtle     = "0xff8e8e93",
     text       = "0xffe5e5ea",
-    accent     = "0xff6b9fff",   -- Primary accent (blue)
+    accent     = "0xffa8b4c4",   -- Primary accent (desaturated blue / platinum)
     accent2    = "0xffd0ffff",   -- Secondary accent (light cyan)
     accent3    = "0xffc8823c",   -- Tertiary accent (fox orange)
     urgent     = "0xffff453a",
@@ -32,7 +32,7 @@ return {
 -- muted:       #636366
 -- subtle:      #8e8e93
 -- text:        #e5e5ea
--- accent:      #6b9fff
+-- accent:      #a8b4c4
 -- accent2:     #d0ffff
 -- accent3:     #c8823c
 -- urgent:      #ff453a

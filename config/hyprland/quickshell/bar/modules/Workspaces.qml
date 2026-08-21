@@ -28,7 +28,7 @@ Item {
     // else.
     // +8 right padding only (Row itself stays left-aligned at x:0) --
     // without it the last workspace number sits flush against the
-    // block's own right border.
+    // block's own right edge.
     implicitWidth: row.implicitWidth + 8
     implicitHeight: 24
 
@@ -56,10 +56,11 @@ Item {
 
                 // Three distinct states, not two: active (current on this
                 // monitor), occupied (has windows but not focused right
-                // now), empty. The ghost ring (accent2 border + subtle
-                // fill) marks the ONE that matters most -- active -- and
-                // occupied stays a plain bold number, no decoration: two
-                // tiers of emphasis, not two things that both look
+                // now), empty. The active fill (no border, see the
+                // no-border pass in shell.qml's header comment) + bold
+                // accent text marks the ONE that matters most -- active --
+                // and occupied stays a plain bold number, no decoration:
+                // two tiers of emphasis, not two things that both look
                 // "highlighted".
                 //
                 // `toplevels` (this workspace's own live window list, kept
@@ -91,22 +92,27 @@ Item {
                 // one on that screen -- `active` is the per-monitor-
                 // correct one.
                 width: modelData.active ? 24 : 18
+                // Animated width change, asked for -- the pill visibly
+                // growing/shrinking on focus switch instead of snapping.
+                // Rare event (only on workspace change), so this is a
+                // one-off ~150ms burst, not a recurring cost.
+                Behavior on width {
+                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
                 height: 18
                 anchors.verticalCenter: parent.verticalCenter
-                radius: 2
-                color: modelData.active ? "#2c2c2e" : "transparent"
-                border.width: modelData.active ? 1 : 0
-                border.color: "#4fefff"
+                radius: 6   // 2 -> 6, more pronounced corners (still short of a full pill at 9)
+                color: modelData.active ? "#34383f" : "transparent"
 
                 Text {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     anchors.centerIn: parent
                     text: modelData.id
-                    // active -> accent2 text inside the ring, bold; occupied
+                    // active -> accent text inside the ring, bold; occupied
                     // (not active) -> plain bright text, no weight; empty
                     // -> muted, no weight.
-                    color: pill.modelData.active ? "#4fefff" : (pill.occupied ? "#f2f2f7" : "#48484a")
+                    color: pill.modelData.active ? "#a8b4c4" : (pill.occupied ? "#f2f2f7" : "#48484a")
                     font.family: Fonts.ui
                     font.pixelSize: 12
                     font.bold: pill.modelData.active

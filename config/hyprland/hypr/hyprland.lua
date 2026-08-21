@@ -174,19 +174,36 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 3,
-        gaps_out         = 6,
+        gaps_in          = 1,
+        -- 0 on right/left so tiled windows sit flush against the screen's
+        -- left/right edges, same as the quickshell bar itself (see
+        -- quickshell/bar/shell.qml's PanelWindow margins: 0). Top/bottom
+        -- unchanged at 6. (css_gap wants a table with top/right/bottom/
+        -- left fields on this build, not a CSS-shorthand string -- that
+        -- was tried first and rejected: "css_gap type requires an integer
+        -- or a table with optional 'top','right','bottom','left' fields".)
+        gaps_out         = { top = 8, right = 8, bottom = 6, left = 8 },
         border_size      = 2,
         col = {
-            -- Animated gradient for the active window's border
+            -- "Verre givré": a static (non-pulsing) diagonal gradient meant
+            -- to read as light catching a glass edge rather than an RGB/gamer
+            -- strip -- previously a fully-saturated cyan/white/cyan gradient.
+            -- Same accent as colors.lua's `accent` (#a8b4c4) -- desaturated
+            -- almost to platinum/silver (was a saturated #6b9fff blue),
+            -- toward translucent white on both ends instead of a hard color.
             active_border = {
                 colors = {
-                    "rgba(89DCEBFF)",
-                    "rgba(FFFFFFFF)",
-                    "rgba(89DCEBFF)",
+                    "rgba(FFFFFF59)",  -- glass highlight, white ~35% alpha
+                    "rgba(A8B4C48C)",  -- accent, platinum-desaturated, ~55% alpha
+                    "rgba(FFFFFF26)",  -- glass falloff, white ~15% alpha
                 },
                 angle = 45,
             },
+            -- Fully transparent, deliberately: the active-window glass
+            -- border is the ONLY visual cue for focus -- no dimming, no
+            -- opacity drop on inactive windows (inactive_opacity/dim_inactive
+            -- below are both off), so an inactive rim would just compete
+            -- with that single signal instead of reinforcing it.
             inactive_border = "rgba(0, 0, 0, 0)",
 
         },
@@ -200,9 +217,33 @@ hl.config({
 -- ============================================================
 hl.config({
     decoration = {
-        rounding = 3,
+        -- 3 -> 10: softer, more premium silhouette -- the glass border
+        -- gradient above needs generous rounding to read as a curved edge
+        -- rather than a thin outline on square corners.
+        rounding = 10,
+        -- Enabled, unlike this file's history: the earlier "not worth the
+        -- regression risk" reasoning was specifically about the BAR --
+        -- always on screen, aboveWindows, composited over fullscreen HDR
+        -- content continuously for the whole session. This global switch
+        -- alone doesn't blur anything by default though (no window/layer
+        -- opts in just because this is true) -- actual blur only happens
+        -- where explicitly requested:
+        --   - layerrule blur for orbit/swaync-notification-window/
+        --     swaync-control-center (see windowrules.lua) -- small,
+        --     on-demand panels, visible for seconds at a time, not the
+        --     whole session, so nowhere near the bar's cost profile.
+        --   - windows with an opacity override below 1.0 (Thunar, Nemo,
+        --     Pavucontrol -- see windowrules.lua) pick up a blurred
+        --     backdrop as a side effect of already being translucent.
+        --     Minor and arguably a nice bonus, not a new risk on its own.
+        -- Layer surfaces need an explicit layerrule to opt in at all, so
+        -- the bar (quickshell layer) is safe by simply never getting one,
+        -- not by an explicit opt-out. Real windows are the opt-out case:
+        -- gamescope and the Rockstar Games Launcher already carry an
+        -- explicit no_blur in windowrules.lua, set well before this was
+        -- ever turned on, for exactly this kind of situation.
         blur = {
-            enabled           = false,
+            enabled           = true,
             size              = 6,
             passes            = 3,
             new_optimizations = true,
@@ -214,6 +255,9 @@ hl.config({
             range         = 24,
             render_power  = 4,
             color         = "rgba(0,0,0,0.55)",
+            -- Back to none, same reasoning as inactive_border above: no
+            -- per-window treatment on unfocused windows at all, so the
+            -- active glass border stays the one unambiguous focus cue.
             color_inactive= "rgba(0,0,0,0)",
         },
         inactive_opacity = 1,

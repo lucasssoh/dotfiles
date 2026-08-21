@@ -38,6 +38,56 @@ pub const WIDTH_FOCUSED: f64 = 520.0;
 pub const HEIGHT_UNFOCUSED: f64 = 320.0;
 pub const HEIGHT_FOCUSED: f64 = 460.0;
 
+/// Corner radius for the card's own rounded parallelogram (and the
+/// caption band cut to match it) -- "tout arrondir", no pointed corners
+/// anywhere, asked for. See `round_corner` for how a sharp vertex becomes
+/// this.
+const CARD_CORNER_RADIUS: f64 = 16.0;
+/// Points sampled per rounded corner -- see `round_corner`.
+const CORNER_STEPS: usize = 8;
+
+/// Replaces a sharp polygon corner with a small rounded fillet, using a
+/// quadratic Bézier (the original vertex as control point) between two
+/// points backed off along the adjacent edges -- not a true circular arc:
+/// much simpler to get right than computing a tangent-fillet center, and
+/// at this radius the visual difference is imperceptible. `radius` is
+/// clamped to at most half of either adjacent edge's length, so short
+/// edges never produce overlapping/self-intersecting fillets (and
+/// `radius <= 0` degenerates to just the original sharp corner, i.e. the
+/// pre-rounding behavior).
+fn round_corner(
+    prev: (f64, f64),
+    corner: (f64, f64),
+    next: (f64, f64),
+    radius: f64,
+    steps: usize,
+) -> Vec<(f64, f64)> {
+    let d_prev = ((corner.0 - prev.0).powi(2) + (corner.1 - prev.1).powi(2)).sqrt();
+    let d_next = ((next.0 - corner.0).powi(2) + (next.1 - corner.1).powi(2)).sqrt();
+    let r = radius.min(d_prev * 0.5).min(d_next * 0.5).max(0.0);
+    if r < 0.5 || d_prev < 0.001 || d_next < 0.001 {
+        return vec![corner];
+    }
+    let a = (
+        corner.0 + (prev.0 - corner.0) / d_prev * r,
+        corner.1 + (prev.1 - corner.1) / d_prev * r,
+    );
+    let b = (
+        corner.0 + (next.0 - corner.0) / d_next * r,
+        corner.1 + (next.1 - corner.1) / d_next * r,
+    );
+    (0..=steps)
+        .map(|i| {
+            let t = i as f64 / steps as f64;
+            let mt = 1.0 - t;
+            (
+                mt * mt * a.0 + 2.0 * mt * t * corner.0 + t * t * b.0,
+                mt * mt * a.1 + 2.0 * mt * t * corner.1 + t * t * b.1,
+            )
+        })
+        .collect()
+}
+
 /// Horizontal offset (px) of the slope for a card of size (w,h) --
 /// centralized here, reused by `carousel.rs` to compute spacing between
 /// cards (see its doc), so the two stay in agreement.
@@ -194,7 +244,7 @@ mod imp {
                     // sliver.
                     let content_h = name_h + if dims_layout.is_some() { LINE_GAP + dims_h } else { 0.0 };
                     let band_top = (h - (PAD_TOP + content_h + PAD_BOTTOM)).max(0.0);
-                    let band_path = skewed_slice_path(w, h, skew, band_top, h, 1.0);
+                    let band_path = skewed_slice_path(w, h, skew, band_top, h, 1.0, CARD_CORNER_RADIUS);
                     snapshot.push_fill(&band_path, gsk::FillRule::Winding);
                     let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
                     snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.8 * alpha), &full);
@@ -297,9 +347,10 @@ impl Card {
 }
 
 /// Builds the outline of the card's "italic" parallelogram, slanted by
-/// `skew` pixels to the right at the top.
+/// `skew` pixels to the right at the top -- corners rounded by
+/// CARD_CORNER_RADIUS, no pointed corners.
 fn parallelogram_path(w: f64, h: f64, skew: f64) -> gsk::Path {
-    skewed_slice_path(w, h, skew, 0.0, h, 0.0)
+    skewed_slice_path(w, h, skew, 0.0, h, 0.0, CARD_CORNER_RADIUS)
 }
 
 /// Outline of a horizontal slice of the same parallelogram, between
@@ -310,16 +361,40 @@ fn parallelogram_path(w: f64, h: f64, skew: f64) -> gsk::Path {
 /// outline by `bleed` px on each side (left/right only) -- useful for the
 /// band, whose edges need to bleed slightly past the card's real edge so
 /// as not to leave a sliver uncovered by GPU anti-aliasing on the two
-/// slanted edges. `h` non-zero is guaranteed by the caller (snapshot()
-/// returns early if h <= 0.0).
-fn skewed_slice_path(w: f64, h: f64, skew: f64, y_top: f64, y_bottom: f64, bleed: f64) -> gsk::Path {
+/// slanted edges. `radius` rounds all 4 corners (see `round_corner`) --
+/// the band uses the SAME radius as the card outline itself when it cuts
+/// through the card's own bottom corners, otherwise a sharp band corner
+/// would visibly poke out past the now-rounded card silhouette behind it.
+/// `h` non-zero is guaranteed by the caller (snapshot() returns early if
+/// h <= 0.0).
+fn skewed_slice_path(
+    w: f64,
+    h: f64,
+    skew: f64,
+    y_top: f64,
+    y_bottom: f64,
+    bleed: f64,
+    radius: f64,
+) -> gsk::Path {
     let x_left = |y: f64| skew * (1.0 - y / h) - bleed;
     let x_right = |y: f64| w - skew * (y / h) + bleed;
+    let tl = (x_left(y_top), y_top);
+    let tr = (x_right(y_top), y_top);
+    let br = (x_right(y_bottom), y_bottom);
+    let bl = (x_left(y_bottom), y_bottom);
+
     let builder = gsk::PathBuilder::new();
-    builder.move_to(x_left(y_top) as f32, y_top as f32);
-    builder.line_to(x_right(y_top) as f32, y_top as f32);
-    builder.line_to(x_right(y_bottom) as f32, y_bottom as f32);
-    builder.line_to(x_left(y_bottom) as f32, y_bottom as f32);
+    let mut started = false;
+    for (prev, corner, next) in [(bl, tl, tr), (tl, tr, br), (tr, br, bl), (br, bl, tl)] {
+        for (x, y) in round_corner(prev, corner, next, radius, CORNER_STEPS) {
+            if started {
+                builder.line_to(x as f32, y as f32);
+            } else {
+                builder.move_to(x as f32, y as f32);
+                started = true;
+            }
+        }
+    }
     builder.close();
     builder.to_path()
 }

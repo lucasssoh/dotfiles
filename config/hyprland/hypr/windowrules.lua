@@ -416,3 +416,36 @@ hl.window_rule({
     no_anim         = true,
     opacity         = "1.0 override",
 })
+
+-- ============================================================
+-- LAYER BLUR — Orbit / swaync
+-- ============================================================
+-- Real compositor blur behind these specific layer-shell surfaces, not a
+-- global effect (see hyprland.lua's decoration.blur.enabled comment for
+-- the full reasoning): small, on-demand panels, visible for seconds at a
+-- time, unlike the always-on bar (quickshell layer, deliberately left
+-- with no rule here -- opts out simply by omission, layers don't get
+-- blur unless a rule says so). Namespaces confirmed live via
+-- `hyprctl layers -j` while each was open, not guessed:
+--   orbit                         -- the WiFi/BT/VPN panel itself
+--   swaync-control-center         -- the panel that opens on bell click
+-- swaync-notification-window (popup toasts) deliberately left WITHOUT a
+-- rule -- blur asked for only on the control-center block, not the
+-- popups.
+--
+-- xray + ignore_alpha on swaync-control-center only: its layer surface is
+-- actually the FULL screen (2560x1416, confirmed via `hyprctl layers -j`
+-- while open -- swaync sizes it that way for its own click-catching
+-- area), even though the visible panel is just a small block in the
+-- top-left corner. Plain blur=true pre-renders the blurred backdrop for
+-- the surface's whole bounding box regardless of its actual per-pixel
+-- transparency -- observed live as the ENTIRE screen going blurry, not
+-- just that block. xray alone wasn't enough (tested); adding
+-- ignore_alpha (threshold below which a pixel is treated as fully
+-- transparent and skipped) is what actually confined the blur to the
+-- genuinely-opaque panel area, confirmed live -- the rest of the
+-- oversized surface stays crisp. Orbit doesn't need either -- its own
+-- surface is already sized to just the visible panel (428x538, same
+-- source).
+hl.layer_rule({ match = { namespace = "orbit" },                blur = true })
+hl.layer_rule({ match = { namespace = "swaync-control-center" }, blur = true, xray = true, ignore_alpha = 0.5 })
