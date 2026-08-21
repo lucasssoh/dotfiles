@@ -102,9 +102,9 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 radius: 8   // 4 -> 8, matches Block.qml's more pronounced rounding (kept for the hit target's shape, not visible any more)
                 // No fill any more -- redundant now that Launchers lives
-                // inside the tools pill (see shell.qml), which already has
-                // its own background. Was #34383f, back when each chip sat
-                // directly on the bar with no wrapping Block behind it.
+                // inside the metrics pill (see shell.qml), which already
+                // has its own background. Was #34383f, back when each chip
+                // sat directly on the bar with no wrapping Block behind it.
                 color: "transparent"
 
                 Text {

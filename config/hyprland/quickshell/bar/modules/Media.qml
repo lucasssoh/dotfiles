@@ -67,9 +67,26 @@ Item {
         visible: false
     }
 
+    Text {
+        id: placeholderMeasure
+        text: root.placeholderText
+        font.family: Fonts.ui
+        font.pixelSize: 12
+        visible: false
+    }
+
     // +24 over the old figure: room for the static play/pause icon and
     // its gap to the viewport, on top of the viewport's own padding.
     readonly property real openWidth: Math.max(viewportWidth + 34 + 24, 84)
+
+    // Placeholder text/width when no player is active -- asked for: this
+    // side of the bar collapsing to 0 while ActiveWindow (the module
+    // symmetric to this one across the fixed centerRow -- see shell.qml's
+    // ONE BAR) still had real content made the bar visibly lopsided, and
+    // vice versa. Not meant to look "full", just enough to keep both
+    // sides roughly balanced when only one of the two is actually active.
+    readonly property string placeholderText: "No media"
+    readonly property real placeholderWidth: Math.max(placeholderMeasure.implicitWidth + 24, 84)
 
     // root's own size just tracks the pill's (below) -- previously root
     // animated its width while clipping a pill drawn at a FIXED
@@ -83,14 +100,15 @@ Item {
     implicitWidth: pill.width
     implicitHeight: 24
 
-    opacity: root.active ? 1 : 0
-    Behavior on opacity {
-        NumberAnimation { duration: 260 }
-    }
+    // Always visible now -- was `root.active ? 1 : 0` (fully hidden with
+    // nothing playing). The pill itself still draws a real placeholder
+    // (below) when inactive, so hiding the whole Item on top of that
+    // would just make the placeholder invisible too.
+    opacity: 1
 
     Rectangle {
         id: pill
-        width: root.active ? root.openWidth : 0
+        width: root.active ? root.openWidth : root.placeholderWidth
         height: 24
         anchors.centerIn: parent
         // Top-square/bottom-rounded, same treatment as Block.qml -- the
@@ -104,7 +122,12 @@ Item {
         topRightRadius: 0
         bottomLeftRadius: 999
         bottomRightRadius: 999
-        color: "#000000"
+        // Was #000000, its own separate black box -- asked for: removed
+        // in favor of blending straight into the ONE BAR block's own
+        // #0c0c0e fill behind it (shell.qml), same treatment every other
+        // module in that block already gets (none of them draw their own
+        // background any more, see Block.qml's header comment).
+        color: "transparent"
         clip: true
         // No border (see the no-border pass in shell.qml's header
         // comment) -- playing state now shows only through the disc's
@@ -112,16 +135,28 @@ Item {
         //
         // waybar/style.css: #mpris.paused { opacity: 0.6 } fades the
         // WHOLE element (background/text together), not just the text
-        // color -- root's own opacity above is already spoken for
-        // (open/close fade), so this lives on the pill itself instead.
-        opacity: root.playing ? 1.0 : 0.6
+        // color. Third tier (0.35) for the placeholder state -- dimmer
+        // still, reads as "nothing here" rather than "paused".
+        opacity: root.playing ? 1.0 : (root.active ? 0.6 : 0.35)
         Behavior on opacity { NumberAnimation { duration: 200 } }
 
         Behavior on width {
             NumberAnimation { duration: 380; easing.type: Easing.OutCubic }
         }
 
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            visible: !root.active
+            anchors.centerIn: parent
+            text: root.placeholderText
+            color: "#636366"   // colors.lua "muted" -- same token Hdr.qml/ActiveWindow.qml's own placeholder use
+            font.family: Fonts.ui
+            font.pixelSize: 12
+        }
+
         Row {
+            visible: root.active
             // Left-anchored instead of centered -- centerIn was adding
             // an equal gap on both sides (openWidth is wider than the
             // Row's natural content), leaving the disc floating away
@@ -135,13 +170,19 @@ Item {
             // reflects current state (play glyph while playing, pause
             // glyph while paused), never moves. Filled disc: the state
             // color becomes the disc's fill instead of the glyph's,
-            // glyph itself flips to the pill's own background color.
+            // glyph itself flips to the disc's own bg color. Was a green/
+            // grey pair (#237823/#8e8e93) with a small 12px disc -- didn't
+            // match anything else in the bar (no green anywhere else) and
+            // read as thin. Now the same accent/muted pair every other
+            // "active" indicator in this bar uses (Workspaces.qml's
+            // active pill, ActiveWindow.qml's chip text -- both
+            // #a8b4c4), bigger disc + glyph to read as bolder.
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 12
-                height: 12
-                radius: 6
-                color: root.playing ? "#237823" : "#8e8e93"
+                width: 16
+                height: 16
+                radius: 8
+                color: root.playing ? "#a8b4c4" : "#636366"
 
                 Text {
                     renderType: Text.NativeRendering
@@ -152,9 +193,10 @@ Item {
                     // generic/default player icon, so it's a known-good
                     // codepoint in this environment.
                     text: root.playing ? "󰎈" : "󰏤"
-                    color: "#000000"
+                    color: "#0c0c0e"
                     font.family: Fonts.icon
-                    font.pixelSize: 8
+                    font.pixelSize: 10
+                    font.bold: true
                 }
             }
 

@@ -85,7 +85,12 @@ Item {
     }
     readonly property string windowTitle: root.toplevel ? root.toplevel.title : ""
 
-    readonly property int maxWidth: 380
+    // 380 -> 258: matches Media.qml's own hard cap -- its `openWidth` is
+    // max(viewportWidth + 34 + 24, 84) with viewportWidth clamped to
+    // maxViewport (200), so 200 + 58 = 258 is the widest mpris' pill ever
+    // gets. Asked for: window and mpris (the two "outward growers" in
+    // shell.qml's ONE BAR layout) now cap out at the same width.
+    readonly property int maxWidth: 258
 
     // titleMeasure, not titleLabel.implicitWidth, drives this: titleLabel
     // is anchored right to `parent.right` (root itself), and root's own
@@ -99,9 +104,17 @@ Item {
     // technique Media.qml's own titleMeasure uses) -- its implicitWidth
     // reflects the title's natural width only, never root's own width, so
     // there's nothing left to feed back into.
+    // Placeholder text/width when there's no active window -- asked for:
+    // leaving this at 0 while Media (mpris, the module symmetric to this
+    // one across the fixed centerRow -- see shell.qml's ONE BAR) had
+    // real content made the bar visibly lopsided, and vice versa. Not
+    // meant to look "full", just enough to keep both sides roughly
+    // balanced when only one of the two is actually active.
+    readonly property string placeholderText: "Super + Space"
+
     implicitWidth: root.hasWindow
         ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 26, 120), maxWidth)
-        : 0
+        : Math.max(placeholderMeasure.implicitWidth + 24, 90)
     // Animated width change, asked for -- title length changes (focus
     // switch, page/tab title update) now widen/narrow this chip smoothly
     // instead of snapping, same duration/curve as Media.qml's own pill.
@@ -121,6 +134,25 @@ Item {
         font.family: Fonts.ui
         font.pixelSize: 13
         visible: false
+    }
+
+    Text {
+        id: placeholderMeasure
+        text: root.placeholderText
+        font.family: Fonts.ui
+        font.pixelSize: 12
+        visible: false
+    }
+
+    Text {
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        visible: !root.hasWindow
+        anchors.centerIn: parent
+        text: root.placeholderText
+        color: "#636366"   // colors.lua "muted" -- same token Hdr.qml uses for its own greyed-out state
+        font.family: Fonts.ui
+        font.pixelSize: 12
     }
 
     Rectangle {

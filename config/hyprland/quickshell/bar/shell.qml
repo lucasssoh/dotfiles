@@ -186,58 +186,100 @@ ShellRoot {
             implicitHeight: 27
 
             // ── ONE BAR ───────────────────────────────────────
-            // A single Block, not 3 separate pills glued near each other
-            // -- one shape, one background, anchored by its own
-            // horizontalCenter to the screen's, so ANY content change
-            // anywhere inside it shifts BOTH edges outward symmetrically
-            // (width grows -> left edge moves left by half, right edge
-            // moves right by half, center point never moves). ActiveWindow
-            // and Media (mpris) -- "les seuls vrais élargisseurs", the two
-            // modules whose width genuinely swings a lot -- sit at the two
-            // ends, so it's mostly their growth that's visible, but
-            // literally anything in here growing has the same two-sided
-            // effect, not just those two. Former cluster boundaries (what
-            // used to be up to 7 separate pills) are now just 6px spacer
-            // Items -- distinct groups WITHOUT a border anywhere.
-            Modules.Block {
-                anchors.horizontalCenter: parent.horizontalCenter
-                // top, not verticalCenter -- the window is now taller
-                // (implicitHeight: 27, see above) to fit the separate
-                // metrics/tools pills, and this keeps the main bar flush
-                // at y:0 regardless of that extra height.
+            // Clock + Workspaces sit dead center of the screen and never
+            // move -- ActiveWindow and Media (mpris) grow OUTWARD away
+            // from that fixed center point, asked for. The previous
+            // approach (a single Row inside one Block, horizontalCenter-
+            // anchored) kept the BLOCK's own center fixed, but Clock/
+            // Workspaces still visibly shifted whenever ActiveWindow --
+            // to their left in that Row -- changed width, since Row lays
+            // everything out sequentially from its left edge. Now
+            // centerRow is anchored straight to the screen's
+            // horizontalCenter and nothing else in here can move it;
+            // leftGroup/rightGroup are anchored OFF centerRow's own edges
+            // (not off each other, not off a screen edge), so their
+            // growth only ever extends away from the center, never
+            // toward it. The background (still Modules.Block, for its
+            // shared corner-radius/color logic) has no content of its
+            // own any more -- its x/width are bound straight to
+            // leftGroup/rightGroup's actual on-screen extents instead of
+            // Block's usual Row-implicitWidth auto-sizing, so the one
+            // visible pill still reads as a single shape spanning
+            // window ⟷ mpris with clock/workspaces floating, unmoving,
+            // in the middle of it.
+            Item {
+                id: barRow
                 anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
                 // 24 -> 27: the metrics/tools pills sit only 3px above
                 // where tiled windows start, but the island (unchanged at
                 // 24) had a full 6px gap there -- asked for, so all 3
                 // pills now end at the same y (27) and read as one
                 // consistent proximity to whatever's below, not the island
-                // floating further from it than its neighbours. Row inside
-                // Block.qml stays vertically centered in the extra 3px,
-                // not stuck to the top.
+                // floating further from it than its neighbours.
                 height: 27
-                color: "#0c0c0e"
 
-                // Far-left end -- 0 width (and thus 0 space) whenever no
-                // player is active (see Media.qml's implicitWidth:
-                // pill.width).
-                Modules.Media { id: media }
+                Row {
+                    id: centerRow
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 0
+                    Modules.Clock {}
+                    Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
+                }
 
-                Item { width: 6; height: 1 }
+                // ActiveWindow -- right edge anchored to centerRow's left
+                // edge (fixed 6px gap), so growth only ever extends the
+                // LEFT edge further left. opacity 0.9 matches waybar/
+                // style.css's old #window rule (the whole element, not
+                // just its text).
+                Item {
+                    id: leftGroup
+                    implicitWidth: activeWindow.implicitWidth
+                    height: 24
+                    anchors.right: centerRow.left
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
 
-                Modules.Clock {}
-                Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
+                    Modules.ActiveWindow {
+                        id: activeWindow
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        opacity: 0.9
+                        monitor: Hyprland.monitorFor(bar.screen)
+                    }
+                }
 
-                Item { width: 6; height: 1 }
+                // Media (mpris) -- mirror of leftGroup: left edge anchored
+                // to centerRow's right edge, so growth only ever extends
+                // the RIGHT edge further right.
+                Item {
+                    id: rightGroup
+                    implicitWidth: media.implicitWidth
+                    height: 24
+                    anchors.left: centerRow.right
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
 
-                // Far-right end -- moved here from the far-left (was next
-                // to notif/clock/workspaces originally), asked for: window
-                // context reads better toward the outside edge. opacity
-                // 0.9 matches waybar/style.css's old #window rule (the
-                // whole element, not just its text).
-                Modules.ActiveWindow {
-                    id: activeWindow
-                    opacity: 0.9
-                    monitor: Hyprland.monitorFor(bar.screen)
+                    Modules.Media {
+                        id: media
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // The one visible pill -- see header comment above. z: -1
+                // keeps it painted behind leftGroup/centerRow/rightGroup
+                // even though it's declared last (default stacking order
+                // in an Item is declaration order).
+                Modules.Block {
+                    z: -1
+                    anchors.top: parent.top
+                    height: 27
+                    x: leftGroup.x
+                    width: rightGroup.x + rightGroup.width - leftGroup.x
+                    color: "#0c0c0e"
                 }
             }
 
@@ -305,27 +347,16 @@ ShellRoot {
                 Item { width: 6; height: 1 }
 
                 Modules.Battery {}
-            }
 
-            // ── LAUNCHERS (separate from the main bar, right of metrics) ──
-            // Pulled back OUT of the tools pill into its own block, asked
-            // for -- same floating treatment as METRICS/TOOLS. Position
-            // asked for precisely: right of metrics, left of mpris --
-            // anchored to METRICS's own right edge (id: metrics above), a
-            // static position, NOT the island's left edge (tried that
-            // first, moves every time mpris shows/hides -- asked to keep
-            // it fixed relative to the left block instead).
-            Modules.Block {
-                anchors.top: parent.top
-                anchors.topMargin: 3
-                anchors.left: metrics.right
-                anchors.leftMargin: 6
-                flushTop: false
-                color: "#730c0c0e"
+                // Launchers, folded back IN here -- asked for, "plus
+                // régulier": used to be its own separate floating block
+                // anchored off metrics.right (a static gap, not the
+                // island's dynamic left edge -- that part's still true,
+                // it's just literally inside metrics now instead of
+                // merely positioned relative to it). One less pill on
+                // screen, same content.
+                Item { width: 6; height: 1 }
 
-                // Animated (see Launchers.qml's Behavior on implicitWidth)
-                // even though an app opening/closing only shifts this
-                // pill a little.
                 Modules.Launchers {
                     opacity: 0.8
                 }
@@ -392,19 +423,21 @@ ShellRoot {
                     Modules.Performance {}
 
                     Item {
-                        implicitWidth: Math.max(powerLabel.implicitWidth + 12, 28)
+                        implicitWidth: 28
                         implicitHeight: 24
 
-                        Text {
-                            id: powerLabel
+                        // Plain filled dot instead of a glyph (was 󰍃, before
+                        // that ⏻) -- asked for: "un point dense, un petit
+                        // disque plein". A real Rectangle/radius circle
+                        // renders as a crisp, consistently dense disc at any
+                        // size, where a font glyph's weight/shape varies
+                        // with hinting. Same red as before.
+                        Rectangle {
                             anchors.centerIn: parent
-                            // 󰍃 (md-logout, "exit door") instead of ⏻ (power
-                            // symbol) -- asked for. Same red, just a different
-                            // glyph in it.
-                            text: "󰍃"
+                            width: 8
+                            height: 8
+                            radius: width / 2
                             color: "#ff6e6e"
-                            font.family: Fonts.icon
-                            font.pixelSize: 13
                         }
 
                         MouseArea {
