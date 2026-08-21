@@ -305,6 +305,8 @@ fi
 # theme is already on disk (or a stock one if never built before).
 # "White" = white gloves / black outline, the classic Mickey Mouse
 # look; hypr/hyprland.lua sets XCURSOR_THEME to ComixCursors-White.
+# CURSORTRANS is patched to 0 below (upstream default is 0.3, a
+# semi-transparent glove) -- fully opaque looks better at large sizes.
 section "Building Comix Cursors (comic-style cursor theme)"
 
 COMIX_BUILD="$HOME/.cache/comixcursors-build"
@@ -317,6 +319,7 @@ elif [ -d "$HOME/.icons/ComixCursors-$COMIX_THEME_NAME" ]; then
 else
     rm -rf "$COMIX_BUILD"
     if git clone --depth 1 https://gitlab.com/limitland/comixcursors.git "$COMIX_BUILD" 2>/dev/null; then
+        sed -i 's/^CURSORTRANS=.*/CURSORTRANS=0/' "$COMIX_BUILD/ComixCursorsConfigs/$COMIX_THEME_NAME.CONFIG"
         if (cd "$COMIX_BUILD" && MULTISIZE=true THEMENAME="$COMIX_THEME_NAME" ./bin/build-cursors && make && make install); then
             ok "Comix Cursors ($COMIX_THEME_NAME) installed to ~/.icons/ComixCursors-$COMIX_THEME_NAME."
         else
