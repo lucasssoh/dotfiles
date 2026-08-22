@@ -112,7 +112,7 @@ while true; do
                 SRC_DIR="$WALL_DIR"
                 [ "$FILTER" = "Filtered" ] && SRC_DIR="$CACHE_DIR"
                 mapfile -t walls < <(find "$SRC_DIR" -maxdepth 1 \
-                    -iregex '.*\.\(jpg\|jpeg\|png\|webp\)' -printf '%f\n')
+                    -iregex '.*\.\(jpg\|jpeg\|png\|webp\|jxl\)' -printf '%f\n')
             else
                 mapfile -t walls <<< "$CHOSEN"
             fi

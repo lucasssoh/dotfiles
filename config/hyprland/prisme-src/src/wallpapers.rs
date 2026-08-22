@@ -4,8 +4,11 @@
 use std::path::{Path, PathBuf};
 
 /// Recognized extensions -- same as scripts/set_wallpaper.sh
-/// (jpg/jpeg/png/webp, case-insensitive).
-const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
+/// (jpg/jpeg/png/webp, case-insensitive), plus jxl (JPEG XL -- GNOME's
+/// default wallpapers ship in that format; decoded by thumbs.rs/
+/// wallpaper-filter.rs via jxl-oxide, the `image` crate has no native
+/// support for it).
+const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "jxl"];
 
 fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").expect("HOME not set"))

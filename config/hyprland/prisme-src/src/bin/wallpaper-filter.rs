@@ -1,28 +1,38 @@
 //! wallpaper-filter <image> — recomposes an image to exactly fill the
-//! active screen's resolution, without ever cropping the axis that would
-//! carry the main subject (height in landscape, width in portrait) -- this
-//! "safe" axis is only scaled, never cropped. Only the remaining ("free")
-//! axis is then adjusted: cropped if too large, or extended (blurred
-//! background -- dominant color of the 4 corners if the image has a
-//! near-uniform background, otherwise the whole image stretched, darkened
-//! further when it covers a large share of the canvas to disguise it as a
-//! duplicate of the sharp subject -- with a gradient fade on the edges) if
-//! too short. Native rewrite of the old
-//! wallpaper-filter-one.sh (ImageMagick): same algorithm, but all
-//! decoding/processing stays in memory in a single process rather than
-//! calling `magick` five times per image with an encode/decode round trip
-//! at every step.
+//! active screen's resolution. Two modes, picked per-file (see
+//! `is_fill_mode`):
+//!
+//! - "safe" (default): never crops the axis that would carry the main
+//!   subject (height in landscape, width in portrait) -- that axis is only
+//!   scaled. Only the remaining ("free") axis is adjusted: cropped if too
+//!   large, or extended (blurred background -- dominant color of the 4
+//!   corners if the image has a near-uniform background, otherwise the
+//!   whole image stretched, darkened further when it covers a large share
+//!   of the canvas to disguise it as a duplicate of the sharp subject --
+//!   with a gradient fade on the edges) if too short. Meant for images with
+//!   a subject that must stay fully visible (portraits, character art).
+//! - "fill": plain cover + center-crop, no safe axis, no blur, no
+//!   background compositing -- both axes are cropped as needed to fill the
+//!   canvas exactly. Meant for abstract/pattern art and landscape photos,
+//!   where cropping doesn't lose anything worth protecting and a fake
+//!   blurred backdrop would only be a distraction.
+//!
+//! Native rewrite of the old wallpaper-filter-one.sh (ImageMagick): same
+//! algorithm, but all decoding/processing stays in memory in a single
+//! process rather than calling `magick` five times per image with an
+//! encode/decode round trip at every step -- JPEG XL sources included
+//! (jxl-oxide, pure Rust, no `magick`/`djxl` subprocess).
 //!
 //! Called by scripts/wallpaper-cache-watcher.sh for every added/modified
 //! image (that script handles inotify watching, the initial parallel
 //! pass, and the FILTER_VERSION marker -- see it for the version to bump
 //! if the algorithm below changes).
 
-use image::{imageops::FilterType, DynamicImage, GenericImageView, Rgb, RgbImage};
+use image::{imageops::FilterType, DynamicImage, GenericImageView, Rgb, RgbImage, RgbaImage};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
+const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "jxl"];
 /// Sigma of the background's Gaussian blur -- bumped from the old
 /// ImageMagick `-blur 0x40` look (18.0) to better disguise the "cover +
 /// crop" background as a duplicate of the sharp subject on portrait
@@ -86,6 +96,77 @@ fn has_known_extension(path: &Path) -> bool {
         .and_then(|e| e.to_str())
         .map(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
         .unwrap_or(false)
+}
+
+/// Decodes a JPEG XL file into an in-memory `DynamicImage` -- jxl-oxide
+/// only exposes an interleaved-sample stream (`Render::stream`), not an
+/// `image`-crate buffer directly, so this copies through a flat `Vec<u8>`
+/// first. 1/3/4-channel sources (grayscale/RGB/RGBA, covering everything
+/// GNOME's backgrounds ship as) are supported; anything else (e.g. CMYK)
+/// is treated as a decode failure like a corrupt file would be.
+fn decode_jxl(path: &Path) -> Option<DynamicImage> {
+    let image = jxl_oxide::JxlImage::builder().open(path).ok()?;
+    let render = image.render_frame(0).ok()?;
+    let mut stream = render.stream();
+    let (w, h, channels) = (stream.width(), stream.height(), stream.channels());
+    let mut buf = vec![0u8; (w as usize) * (h as usize) * (channels as usize)];
+    stream.write_to_buffer(&mut buf);
+    match channels {
+        1 => image::GrayImage::from_raw(w, h, buf).map(DynamicImage::ImageLuma8),
+        3 => RgbImage::from_raw(w, h, buf).map(DynamicImage::ImageRgb8),
+        4 => RgbaImage::from_raw(w, h, buf).map(DynamicImage::ImageRgba8),
+        _ => None,
+    }
+}
+
+/// Opens any supported image, JPEG XL included -- the `image` crate itself
+/// has no JXL support, so that extension is routed to jxl-oxide instead.
+fn open_image(path: &Path) -> Option<DynamicImage> {
+    let is_jxl = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("jxl"));
+    if is_jxl {
+        decode_jxl(path)
+    } else {
+        image::open(path).ok()
+    }
+}
+
+/// User config file listing filename glob patterns (one per line, `#`
+/// comments, blank lines ignored) that should use "fill" mode (plain
+/// cover + center-crop, no blur) instead of the default "safe" mode --
+/// see the module doc comment. Only a single `*` wildcard per pattern is
+/// supported (prefix/suffix/exact match), which is enough for the
+/// prefix-based naming this repo's wallpapers use (`gnome-*`, `macos-*`).
+/// Symlinked by install.sh like wallpapers.conf and wallpapers-extra.conf.
+fn fill_mode_conf_path() -> PathBuf {
+    home().join(".config/prisme/wallpaper-fill-mode.conf")
+}
+
+fn glob_match(pattern: &str, name: &str) -> bool {
+    match pattern.split_once('*') {
+        None => pattern == name,
+        Some((prefix, suffix)) => {
+            name.len() >= prefix.len() + suffix.len()
+                && name.starts_with(prefix)
+                && name.ends_with(suffix)
+        }
+    }
+}
+
+/// Whether `filename` should use "fill" mode, per wallpaper-fill-mode.conf.
+/// Missing/empty file -> nothing uses fill mode (every image keeps the
+/// current "safe" behavior, unaffected by this feature until opted in).
+fn is_fill_mode(filename: &str) -> bool {
+    let Ok(content) = std::fs::read_to_string(fill_mode_conf_path()) else {
+        return false;
+    };
+    content
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .any(|pattern| glob_match(pattern, filename))
 }
 
 /// Cache already up to date (file present, mtime >= the source's) ->
@@ -304,38 +385,54 @@ fn main() {
         return;
     }
 
-    let Ok(img) = image::open(&img_path) else {
+    let Some(img) = open_image(&img_path) else {
         return;
     };
     let (src_w, src_h) = img.dimensions();
     let (target_w, target_h) = target_resolution();
     let landscape = target_w >= target_h;
 
-    // Safe axis + crop/extend decision (cross multiplication in
-    // integers -- no floats, no rounding ambiguity).
-    let crop_mode = if landscape {
-        src_w as u64 * target_h as u64 >= target_w as u64 * src_h as u64
+    let result = if is_fill_mode(&filename.to_string_lossy()) {
+        // Fill mode: plain cover + center-crop, no safe axis, no
+        // background -- see the module doc comment.
+        let (cover_w, cover_h) = cover_dims(src_w, src_h, target_w, target_h);
+        let covered = img.resize_exact(cover_w, cover_h, FilterType::Lanczos3);
+        center_crop(&covered, target_w, target_h).to_rgb8()
     } else {
-        src_h as u64 * target_w as u64 >= target_h as u64 * src_w as u64
-    };
-
-    let (fit_w, fit_h) = fit_dims(src_w, src_h, target_w, target_h, landscape);
-    let result = if crop_mode {
-        let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3);
-        center_crop(&fit, target_w, target_h).to_rgb8()
-    } else {
-        let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3).to_rgb8();
-        let extension_ratio = if landscape {
-            1.0 - (fit_w as f64 / target_w as f64)
+        // Safe axis + crop/extend decision (cross multiplication in
+        // integers -- no floats, no rounding ambiguity).
+        let crop_mode = if landscape {
+            src_w as u64 * target_h as u64 >= target_w as u64 * src_h as u64
         } else {
-            1.0 - (fit_h as f64 / target_h as f64)
+            src_h as u64 * target_w as u64 >= target_h as u64 * src_w as u64
         };
-        let bg = build_background(&img, target_w, target_h, extension_ratio);
-        compose(bg, &fit, target_w, target_h, landscape)
+
+        let (fit_w, fit_h) = fit_dims(src_w, src_h, target_w, target_h, landscape);
+        if crop_mode {
+            let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3);
+            center_crop(&fit, target_w, target_h).to_rgb8()
+        } else {
+            let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3).to_rgb8();
+            let extension_ratio = if landscape {
+                1.0 - (fit_w as f64 / target_w as f64)
+            } else {
+                1.0 - (fit_h as f64 / target_h as f64)
+            };
+            let bg = build_background(&img, target_w, target_h, extension_ratio);
+            compose(bg, &fit, target_w, target_h, landscape)
+        }
     };
 
     let _ = std::fs::create_dir_all(cache_dir());
-    if result.save(&cached).is_ok() {
+    // Always JPEG-encoded regardless of the source's/cached path's own
+    // extension (kept identical to the original -- apply.rs and
+    // wallpaper-slideshow.sh resolve the cache by plain basename, so it
+    // can't change): `.save()` would instead pick an encoder from that
+    // extension, which fails outright for "jxl" (not a supported *write*
+    // format here, decode-only via jxl-oxide). awww/the `image` crate on
+    // the reading end sniff content rather than trust the extension, so a
+    // JPEG-content ".jxl" cache file opens the same as any other.
+    if result.save_with_format(&cached, image::ImageFormat::Jpeg).is_ok() {
         let _ = Command::new("notify-send")
             .arg("Wallpaper ready")
             .arg(format!(

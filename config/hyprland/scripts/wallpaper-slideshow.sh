@@ -73,7 +73,7 @@ else
     DURATION=120
     SOURCE="$WALL_DIR"
     mapfile -t walls < <(find "$WALL_DIR" -maxdepth 1 \
-        -iregex '.*\.\(jpg\|jpeg\|png\|webp\)' -printf '%f\n')
+        -iregex '.*\.\(jpg\|jpeg\|png\|webp\|jxl\)' -printf '%f\n')
 fi
 
 [ ${#walls[@]} -eq 0 ] && exit 1

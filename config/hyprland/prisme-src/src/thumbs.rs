@@ -7,7 +7,8 @@ use gtk4::gdk::{self, MemoryFormat, MemoryTexture};
 use gtk4::glib;
 use gtk4::prelude::*;
 use image::imageops::FilterType;
-use std::path::PathBuf;
+use image::DynamicImage;
+use std::path::{Path, PathBuf};
 
 /// Height shared by all thumbnails -- only card width animates (see
 /// card.rs), height stays fixed.
@@ -127,10 +128,34 @@ impl ThumbLoader {
     }
 }
 
+/// Decodes a JPEG XL file -- the `image` crate has no JXL support, so
+/// GNOME's default wallpapers (shipped as .jxl) need jxl-oxide instead.
+/// Same approach as wallpaper-filter.rs's decode_jxl (duplicated rather
+/// than shared: this crate has no lib.rs, wallpaper-filter.rs is a
+/// separate `bin/` target with no access to this file's private items).
+fn decode_jxl(path: &Path) -> Option<DynamicImage> {
+    let image = jxl_oxide::JxlImage::builder().open(path).ok()?;
+    let render = image.render_frame(0).ok()?;
+    let mut stream = render.stream();
+    let (w, h, channels) = (stream.width(), stream.height(), stream.channels());
+    let mut buf = vec![0u8; (w as usize) * (h as usize) * (channels as usize)];
+    stream.write_to_buffer(&mut buf);
+    match channels {
+        1 => image::GrayImage::from_raw(w, h, buf).map(DynamicImage::ImageLuma8),
+        3 => image::RgbImage::from_raw(w, h, buf).map(DynamicImage::ImageRgb8),
+        4 => image::RgbaImage::from_raw(w, h, buf).map(DynamicImage::ImageRgba8),
+        _ => None,
+    }
+}
+
 /// Decodes the image and resizes it to `CARD_HEIGHT`, keeping the
 /// original dimensions for the display ratio calculation (see card.rs).
 fn decode_and_scale(path: &std::path::Path) -> Option<DecodedImage> {
-    let img = image::open(path).ok()?;
+    let is_jxl = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("jxl"));
+    let img = if is_jxl { decode_jxl(path)? } else { image::open(path).ok()? };
     let (orig_width, orig_height) = (img.width() as i32, img.height() as i32);
     // `resize` scales while preserving the ratio to fit within the given
     // box -- a generous width leaves height as the only limiting factor.
