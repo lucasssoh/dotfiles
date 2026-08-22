@@ -308,11 +308,18 @@ mod imp {
                     // even without looking at the sectors themselves.
                     let hub_danger = confirming && hovered == CONFIRM_INDEX;
                     if hub_danger {
+                        // Same glass treatment as the grey rim underneath
+                        // (which this paints over) and the wedge fills,
+                        // just tinted from the accent instead of grey --
+                        // "glass lit red", not a flat red ring.
                         let stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
                         snapshot.push_stroke(&hub_path, &stroke);
-                        snapshot.append_color(
-                            &gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32),
+                        let base = gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32);
+                        snapshot.append_linear_gradient(
                             &full,
+                            &graphene::Point::new((cx - inner_radius) as f32, (cy - inner_radius) as f32),
+                            &graphene::Point::new((cx + inner_radius) as f32, (cy + inner_radius) as f32),
+                            &glass_stops(base),
                         );
                         snapshot.pop();
                     }
@@ -718,15 +725,16 @@ fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     )
 }
 
-/// Same material as HUB_GLASS_STOPS/the CSS gradient border, but as a
-/// sector's FILL rather than a rim: a sheen across the wedge's face
-/// (brighter toward the shared light source, darker away from it)
-/// instead of `wedge_color`'s flat matte tone -- asked for explicitly:
-/// the wedges' background, not their (already-glass) hub/window/sidebar
-/// borders. `wedge_color` itself untouched -- still used here as the
-/// gradient's midpoint, so hover/accent/fade-in math isn't duplicated.
-fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorStop; 3] {
-    let base = wedge_color(t, open, accent);
+/// Turns any flat `base` color into the same "glass" sheen used
+/// throughout this file: brighter toward the shared top-left light
+/// source, darker away from it, `base` itself as the midpoint. Generic
+/// over the color on purpose -- unlike HUB_GLASS_STOPS (a fixed grey
+/// ramp, for the rim that's always visible regardless of what's
+/// selected), this derives the gradient from whatever color is actually
+/// in play: a wedge's own accent (wedge_glass_stops below) or the
+/// confirmation hub's danger-red border (see its call site) -- "glass
+/// tinted red" rather than red painted flat, or grey painted over red.
+fn glass_stops(base: gdk::RGBA) -> [gsk::ColorStop; 3] {
     let lighten = |c: f32, amt: f32| c + (1.0 - c) * amt;
     let darken = |c: f32, amt: f32| c * (1.0 - amt);
     let hi = gdk::RGBA::new(
@@ -742,6 +750,16 @@ fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorS
         base.alpha(),
     );
     [gsk::ColorStop::new(0.0, hi), gsk::ColorStop::new(0.5, base), gsk::ColorStop::new(1.0, lo)]
+}
+
+/// Same material as glass_stops, but as a sector's FILL rather than a
+/// rim: a sheen across the wedge's face instead of `wedge_color`'s flat
+/// matte tone -- asked for explicitly: the wedges' background, not their
+/// (already-glass) hub/window/sidebar borders. `wedge_color` itself
+/// untouched -- still used here as the gradient's midpoint, so
+/// hover/accent/fade-in math isn't duplicated.
+fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorStop; 3] {
+    glass_stops(wedge_color(t, open, accent))
 }
 
 /// A sector's text/icon color -- off-white at rest, full `accent` (this
