@@ -10,64 +10,39 @@ import "../theme"
 // onExited re-polling immediately, so at least "I just used the picker"
 // feels instant instead of waiting out the interval.
 //
-// Battery %: BlueZ only populates "Battery Percentage: 0x.. (NN%)" in
-// `bluetoothctl info` once a device with battery reporting is actually
-// connected -- format assumed from BlueZ convention, not verified live
-// (no device was connected while writing this).
+// Icon-only, no battery % (asked for, to save space) -- was showing
+// BlueZ's connected-device battery reading next to the glyph.
 
 Item {
     id: root
 
-    property string icon: ""
-    property string batteryText: ""
+    property string state: "off"   // "off" | "on" | "connected"
 
-    // 70 (matched the other audio modules' floor) assumed a battery %
-    // was usually showing next to the icon -- in practice batteryText is
-    // empty almost all the time (BlueZ only reports it for a connected
-    // device that supports battery reporting), so that floor was mostly
-    // just dead reserved space. Just enough padding around the icon
-    // alone now (same idea as ScriptModule's icon-only 30 floor).
-    //
-    // Asymmetric on purpose (10 left, 4 right) instead of the usual
-    // centered/symmetric padding every other module uses: this block's
-    // order is now audio out/in, bluetooth, network (see shell.qml) --
-    // network's rate text is the one value here that visibly changes
-    // width, so it keeps its own full breathing room on the block's free
-    // right edge, and the tightening asked for between bluetooth and it
-    // comes out of bluetooth's right side specifically, not network's.
-    implicitWidth: Math.max(label.implicitWidth + 14, 24)
+    // Icon-only now (battery % dropped -- asked for, to save space):
+    // same narrow floor as Performance.qml's own icon-only module.
+    implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
 
     function poll() { if (!proc.running) proc.running = true; }
 
     Process {
         id: proc
-        // "icon|batteryText" -- the icon glyph and the battery % need
-        // separate Text items now (see Fonts.qml's `icon` vs `ui`), so
-        // this prints them delimited instead of one pre-joined string,
-        // split back apart client-side below.
+        // No more battery-percentage lookup (bluetoothctl info + a
+        // second awk pass) -- dropped along with the UI that displayed
+        // it, not just hidden: one less subprocess call per poll.
         command: ["bash", "-c", `
 p=$(bluetoothctl show 2>/dev/null | awk -F': ' '/Powered/ {print $2}')
 dev=$(bluetoothctl devices Connected 2>/dev/null | awk '{print $2; exit}')
 if [ "$p" != "yes" ]; then
-    printf '󰂲|'
+    printf 'off'
 elif [ -n "$dev" ]; then
-    batt=$(bluetoothctl info "$dev" 2>/dev/null | awk -F'[()]' '/Battery Percentage/ {print $2}' | tr -d '%')
-    if [ -n "$batt" ]; then
-        printf '󰂱|%s%%' "$batt"
-    else
-        printf '󰂱|'
-    fi
+    printf 'connected'
 else
-    printf '󰂯|'
+    printf 'on'
 fi
 `]
         stdout: StdioCollector {
-            onStreamFinished: {
-                const parts = this.text.trim().split("|");
-                root.icon = parts[0] || "";
-                root.batteryText = parts[1] || "";
-            }
+            onStreamFinished: root.state = this.text.trim() || "off"
         }
     }
 
@@ -79,30 +54,35 @@ fi
         onTriggered: root.poll()
     }
 
-    Row {
-        id: label
-        anchors.left: parent.left
-        anchors.leftMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
+    // Point 4 (HIG "clarity": color carries state, not decoration) --
+    // radio powered OFF is the one state here that's genuinely inactive
+    // (vs. "on but nothing connected", which is still available/
+    // actionable and stays full-bright). Same muted token Network.qml's
+    // own "none" state now uses.
+    readonly property bool poweredOff: root.state === "off"
 
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: root.icon
-            color: "#f2f2f7"
-            font.family: Fonts.icon
-            font.pixelSize: 13
-        }
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: root.batteryText
-            visible: root.batteryText !== ""
-            color: "#f2f2f7"
-            font.family: Fonts.ui
-            font.pixelSize: 13
-        }
+    // Phosphor actually ships distinct glyphs per state here (checked
+    // after being asked, not assumed the first time around) --
+    // ph-bluetooth-slash / ph-bluetooth / ph-bluetooth-connected. Back to
+    // real shape-per-state (like the old Nerd Font version had), on top
+    // of the color distinction, rather than one shape doing all the work.
+    function icon() {
+        if (root.state === "off") return "";
+        if (root.state === "connected") return "";
+        return "";
+    }
+
+    // Point 4 (HIG "clarity") still applies to color on top of the shape
+    // change -- off stays muted, matching Network.qml's own "none" token.
+    Text {
+        id: iconText
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        anchors.centerIn: parent
+        text: root.icon()
+        color: root.poweredOff ? "#636366" : "#f2f2f7"
+        font.family: Fonts.iconPhosphor
+        font.pixelSize: 15
     }
 
     Process {

@@ -118,8 +118,8 @@ Item {
         // screen edge. 999 still clamps to the max valid radius (height/2
         // = 12) at any width, same "large enough" trick as the old
         // uniform radius:999.
-        topLeftRadius: 0
-        topRightRadius: 0
+        topLeftRadius: 999
+        topRightRadius: 999
         bottomLeftRadius: 999
         bottomRightRadius: 999
         // Was #000000, its own separate black box -- asked for: removed
@@ -164,40 +164,29 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 6   // bumped up now the disc is smaller -- more breathing room around it
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: 4
 
-            // Static, deliberately OUTSIDE viewport's clip/scroller --
-            // reflects current state (play glyph while playing, pause
-            // glyph while paused), never moves. Filled disc: the state
-            // color becomes the disc's fill instead of the glyph's,
-            // glyph itself flips to the disc's own bg color. Was a green/
-            // grey pair (#237823/#8e8e93) with a small 12px disc -- didn't
-            // match anything else in the bar (no green anywhere else) and
-            // read as thin. Now the same accent/muted pair every other
-            // "active" indicator in this bar uses (Workspaces.qml's
-            // active pill, ActiveWindow.qml's chip text -- both
-            // #a8b4c4), bigger disc + glyph to read as bolder.
-            Rectangle {
+            // No more filled disc behind the glyph -- asked for, plain
+            // like every other icon in the bar. State now reads through
+            // the glyph's own color (same accent/muted pair the disc used
+            // to use for its fill: #a8b4c4 playing, #636366 muted) instead
+            // of a dark glyph on a colored circle.
+            Text {
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
                 anchors.verticalCenter: parent.verticalCenter
-                width: 16
-                height: 16
-                radius: 8
-                color: root.playing ? "#a8b4c4" : "#636366"
-
-                Text {
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    anchors.centerIn: parent
-                    // Music note instead of a play triangle -- same glyph
-                    // config.jsonc's own player-icons already use as the
-                    // generic/default player icon, so it's a known-good
-                    // codepoint in this environment.
-                    text: root.playing ? "󰎈" : "󰏤"
-                    color: "#0c0c0e"
-                    font.family: Fonts.icon
-                    font.pixelSize: 10
-                    font.bold: true
-                }
+                // Music note instead of a play triangle -- same glyph
+                // config.jsonc's own player-icons already use as the
+                // generic/default player icon, so it's a known-good
+                // codepoint in this environment.
+                text: root.playing ? "" : ""   // ph-music-notes / ph-pause
+                // Exact match to the scrolling title's own color below
+                // (#237823/#ffffff), not just a similar accent pair --
+                // asked for, so the icon reads as part of the same text
+                // rather than its own separate color choice.
+                color: root.playing ? "#237823" : "#ffffff"
+                font.family: Fonts.iconPhosphor
+                font.pixelSize: 14
             }
 
             Item {

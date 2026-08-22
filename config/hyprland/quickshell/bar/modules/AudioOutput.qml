@@ -70,12 +70,15 @@ Item {
         objects: root.node ? [root.node] : []
     }
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 65)
+    implicitWidth: Math.max(label.implicitWidth + 20, 64)   // 65 -> 64, point 6: 4pt grid
     implicitHeight: 24
     visible: root.node !== null
 
-    readonly property string iconGlyph: root.muted ? "󰖁"
-        : (root.isHeadphone ? "󰋋" : root.isHdmi ? "󰡁" : "󰕾")
+    // ph-speaker-x / ph-headphones / ph-monitor (no dedicated "hdmi"
+    // glyph in Phosphor -- monitor/display is the closest stand-in for
+    // "audio routed to the screen's own output") / ph-speaker-high
+    readonly property string iconGlyph: root.muted ? ""
+        : (root.isHeadphone ? "" : root.isHdmi ? "" : "")
     readonly property string volumeText: root.muted ? "" : Math.round(root.volume * 100) + "%"
 
     // No color rule for #pulseaudio.output in waybar/style.css -- only
@@ -85,22 +88,28 @@ Item {
         anchors.centerIn: parent
         spacing: 4
 
+        // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
+        // what measured aligned for Phosphor -- see Temperature.qml's
+        // comment for the full reasoning/history.
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
             text: root.iconGlyph
             color: "#f2f2f7"
-            font.family: Fonts.icon
-            font.pixelSize: 13
+            font.family: Fonts.iconPhosphor
+            font.pixelSize: 14
         }
         Text {
+            id: valueLabel
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
             text: root.volumeText
             visible: root.volumeText !== ""
             color: "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 13
+            font.pixelSize: 12
         }
     }
 

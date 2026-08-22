@@ -11,7 +11,7 @@ Item {
     property real usedGB: 0
     property int usedPct: 0
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 70)
+    implicitWidth: Math.max(label.implicitWidth + 20, 72)   // 70 -> 72, point 6: 4pt grid
     implicitHeight: 24
 
     FileView {
@@ -47,21 +47,27 @@ Item {
         anchors.centerIn: parent
         spacing: 4
 
+        // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
+        // what measured aligned for Phosphor -- see Temperature.qml's
+        // comment for the full reasoning/history.
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "󰘚"
+            anchors.verticalCenter: parent.verticalCenter
+            text: ""   // ph-memory
             color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
-            font.family: Fonts.icon
-            font.pixelSize: 13
+            font.family: Fonts.iconPhosphor
+            font.pixelSize: 14
         }
         Text {
+            id: valueLabel
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
             text: root.usedGB.toFixed(1) + "G"
             color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 13
+            font.pixelSize: 12
         }
     }
 }

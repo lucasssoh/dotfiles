@@ -120,6 +120,12 @@ if [ "$DISTRO" = "fedora" ]; then
         librsvg2-tools xcursorgen
         # Fonts (Nerd Fonts for the bar/waybar icons)
         google-noto-sans-fonts google-noto-emoji-fonts jetbrains-mono-fonts-all
+        # Font Awesome 6 (Free + Brands) -- quickshell/bar's Launchers.qml
+        # (Steam/Discord logos) and Fonts.qml's iconSolid/iconBrand.
+        # Straight Fedora repo package (verified: `dnf repoquery
+        # --installed --qf '%{from_repo}'` on this machine reports plain
+        # "fedora", no copr needed).
+        fontawesome-6-free-fonts fontawesome-6-brands-fonts
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
         polkit xdg-user-dirs brightnessctl playerctl
         # Screenshots
@@ -197,6 +203,24 @@ fi
 
 $PKG_INSTALL "${PKGS[@]}"
 ok "Packages installed."
+
+# Font Awesome 6 -- quickshell/bar's Launchers.qml (Steam/Discord logos)
+# and Fonts.qml's iconSolid/iconBrand. Fedora's fontawesome-6-free-fonts/
+# fontawesome-6-brands-fonts are already in the main PKGS array above
+# (verified: plain "fedora" repo, no copr). Kept OUT of Arch's PKGS array
+# on purpose and installed here instead, isolated: ttf-font-awesome is
+# the standard `extra` repo package as of writing but wasn't verified on
+# an actual Arch install (this machine is Fedora) -- `pacman -S` aborts
+# the WHOLE command on one unknown package name (unlike dnf's
+# --skip-unavailable), so a wrong guess here must not be able to take the
+# rest of PKGS down with it. Debian/Ubuntu: no attempt -- FA6 generally
+# isn't packaged there yet, get it from https://fontawesome.com/download.
+if [ "$DISTRO" = "arch" ]; then
+    sudo pacman -S --noconfirm --needed ttf-font-awesome \
+        || warn "ttf-font-awesome install failed/not found -- get Font Awesome 6 manually: https://fontawesome.com/download (Steam/Discord icons and some bar glyphs need it)."
+elif [ "$DISTRO" = "debian" ]; then
+    warn "Font Awesome 6 isn't reliably packaged for Debian/Ubuntu yet -- install manually if Launchers.qml's Steam/Discord icons or other bar glyphs come up blank: https://fontawesome.com/download"
+fi
 
 # ============================================================
 # ORBIT (native Wayland WiFi/Bluetooth/VPN manager)
@@ -409,6 +433,47 @@ else
         warn "curl not available. Install GoogleSansCode Nerd Font Mono manually:"
         warn "https://github.com/E-Vertin/GoogleSansCode-NerdFont/releases"
     fi
+fi
+
+# ============================================================
+# PHOSPHOR ICONS (quickshell bar icons -- Fonts.qml's iconPhosphor)
+# ============================================================
+# MIT-licensed (verified via its own LICENSE file), not packaged by any
+# distro -- pulled from the official @phosphor-icons/web npm package the
+# same way it was first installed for this bar (see quickshell/bar/
+# theme/Fonts.qml's own header comment for why Phosphor over Font
+# Awesome/Nerd Fonts/SF Symbols). 6 separate TTFs (thin/light/regular/
+# bold/fill/duotone), each its OWN font family, not one variable font
+# with a weight axis -- copied flat into ~/.local/share/fonts, no
+# subfolder, matching how they were installed originally.
+section "Checking Phosphor Icons font"
+
+if fc-list | grep -qi "Phosphor"; then
+    ok "Phosphor Icons already installed."
+elif ! command -v curl &>/dev/null || ! command -v jq &>/dev/null; then
+    warn "curl/jq not available. Install Phosphor Icons manually:"
+    warn "https://github.com/phosphor-icons/web"
+else
+    info "Downloading Phosphor Icons (@phosphor-icons/web, latest)..."
+    PHOSPHOR_TMP="$(mktemp -d)"
+    PHOSPHOR_VERSION="$(curl -fsL https://registry.npmjs.org/@phosphor-icons/web \
+        | jq -r '."dist-tags".latest')"
+
+    if [ -n "$PHOSPHOR_VERSION" ] && [ "$PHOSPHOR_VERSION" != "null" ] \
+        && curl -fLo "$PHOSPHOR_TMP/phosphor.tgz" \
+            "https://registry.npmjs.org/@phosphor-icons/web/-/web-${PHOSPHOR_VERSION}.tgz" \
+        && tar -xzf "$PHOSPHOR_TMP/phosphor.tgz" -C "$PHOSPHOR_TMP"; then
+        mkdir -p ~/.local/share/fonts
+        for weight_dir in thin light regular bold fill duotone; do
+            find "$PHOSPHOR_TMP/package/src/$weight_dir" -maxdepth 1 -name "*.ttf" \
+                -exec cp {} ~/.local/share/fonts/ \;
+        done
+        fc-cache -f ~/.local/share/fonts
+        ok "Phosphor Icons ($PHOSPHOR_VERSION) installed."
+    else
+        warn "Phosphor Icons download failed. Install manually: https://github.com/phosphor-icons/web"
+    fi
+    rm -rf "$PHOSPHOR_TMP"
 fi
 
 # ============================================================

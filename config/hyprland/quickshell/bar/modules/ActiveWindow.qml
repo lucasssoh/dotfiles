@@ -117,7 +117,7 @@ Item {
     // pad) = 30.
     implicitWidth: root.hasWindow
         ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 30, 120), maxWidth)
-        : Math.max(placeholderMeasure.implicitWidth + 24, 90)
+        : Math.max(placeholderMeasure.implicitWidth + 24, 92)   // 90 -> 92, point 6: 4pt grid
     // Animated width change, asked for -- title length changes (focus
     // switch, page/tab title update) now widen/narrow this chip smoothly
     // instead of snapping, same duration/curve as Media.qml's own pill.

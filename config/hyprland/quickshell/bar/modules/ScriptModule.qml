@@ -108,7 +108,7 @@ Item {
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         opacity: root.textOpacity
         font.family: Fonts.icon
-        font.pixelSize: 13
+        font.pixelSize: 14
         font.letterSpacing: root.letterSpacing
     }
 

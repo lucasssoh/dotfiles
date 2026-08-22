@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -110,6 +109,13 @@ Item {
         onExited: root.refresh()
     }
 
+    // Final call after the whole material exploration (metal, porcelain,
+    // frosted glass, etc. -- see git history): back to something plain
+    // and legible. Inactive (SDR, or not HDR-capable at all) is an
+    // outline only, transparent fill -- reads as an available toggle,
+    // not a filled/pressed one. Active is a solid white fill -- the one
+    // state that should actually pop, "HDR is ON right now" gets the
+    // loudest treatment instead of the subtlest.
     Rectangle {
         id: badge
         anchors.centerIn: parent
@@ -117,109 +123,45 @@ Item {
         height: 18
         radius: 6   // 2 -> 6, matches the workspace pill/window chip rounding
         clip: true
-        // Base/off fill -- same muted grey for both "not capable" and
-        // "capable but currently SDR", unchanged from before. The active
-        // state no longer tints THIS rectangle at all -- see the rainbow
-        // overlay below.
-        color: "#34383f"
-
-        // Diagonal grey wash instead of a flat accent fill when HDR is
-        // actually active on THIS screen, asked for (a rainbow pass came
-        // first, then got toned all the way down to grayscale -- same
-        // "signifier, not a flat UI accent" instinct, just monochrome
-        // now). Plain Rectangle.gradient only does horizontal/vertical --
-        // Shape+ShapePath's LinearGradient takes real x1/y1/x2/y2 points,
-        // which is what an actual diagonal needs. PathRectangle (not a
-        // plain rectangular path) carries its own radius, matching
-        // badge's -- same reason the rainbow pass needed `radius:
-        // parent.radius` on its overlay: `clip: true` above only clips to
-        // badge's bounding RECT, not its rounded silhouette, so an
-        // unrounded fill here would square the corners off again. Faded
-        // in/out via opacity, not visible:, so it crossfades instead of
-        // snapping in.
-        // Material tried a few times now (see git history: brushed cyan
-        // metal, glossy porcelain) -- frosted glass this round. What
-        // actually reads as "frosted" rather than "polished": no crisp
-        // specular streak (a sharp highlight band implies a hard
-        // reflective surface, the opposite of a diffusing one) -- the 4
-        // stops stay close together, cool, and pale instead of swinging
-        // dark<->bright. The Shape itself also backs off full opacity
-        // (0.82, not 1) when active, so a sliver of badge's own dark base
-        // fill still shows through underneath -- a real translucency cue,
-        // not just a lighter color.
-        Shape {
-            anchors.fill: parent
-            antialiasing: true
-            opacity: (root.hdrActive && root.hdrCapable) ? 0.82 : 0
-            Behavior on opacity { NumberAnimation { duration: 250 } }
-
-            ShapePath {
-                strokeWidth: -1
-                fillGradient: LinearGradient {
-                    x1: 0; y1: 0
-                    x2: badge.width; y2: badge.height
-                    GradientStop { position: 0.0;  color: "#d4dfe0" }
-                    GradientStop { position: 0.45; color: "#eef4f4" }
-                    GradientStop { position: 0.6;  color: "#c2ced0" }
-                    GradientStop { position: 1.0;  color: "#dde6e7" }
-                }
-                PathRectangle {
-                    x: 0; y: 0
-                    width: badge.width; height: badge.height
-                    radius: badge.radius
-                }
-            }
-        }
+        // #f2f2f7 (full text-white) read too harsh here -- toned down a
+        // step, still clearly "lit up" next to the transparent/outline
+        // inactive state without being the brightest thing in the bar.
+        color: (root.hdrActive && root.hdrCapable) ? "#d1d1d6" : "transparent"
+        border.width: (root.hdrActive && root.hdrCapable) ? 0 : 1
+        border.color: "#636366"   // colors.lua "muted" -- same token the old diagonal strike used
+        Behavior on color { ColorAnimation { duration: 200 } }
 
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.centerIn: parent
             text: "hdr"
-            // Off state: flat light text, unchanged. Active state: cool
-            // slate grey (matches the frosted glass's own cool undertone)
-            // -- dark enough to hold up against every stop above without
-            // going full black, which would look too solid against
-            // something meant to read as translucent.
-            color: (root.hdrActive && root.hdrCapable) ? "#3a4547" : "#f2f2f7"
+            // Dark text on the white active fill, light text against the
+            // transparent/bar-background inactive state -- same swap
+            // logic as before, simpler colors either side of it now.
+            color: (root.hdrActive && root.hdrCapable) ? "#0c0c0e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 11
+            font.pixelSize: 12
             font.bold: true
             Behavior on color { ColorAnimation { duration: 200 } }
         }
 
         // Diagonal strike across the badge when this screen's EDID
-        // doesn't advertise HDR support at all.
+        // doesn't advertise HDR support at all. Full corner-to-corner
+        // Pythagorean length used to overshoot the rounded corners --
+        // `clip: true` above only clips to badge's bounding RECTANGLE,
+        // not its rounded silhouette (same gotcha hit earlier on this
+        // exact badge's old material passes), so the strike's own square
+        // ends poked out past the curve instead of stopping at it.
+        // Scaled down instead of clipped properly -- asked for, simpler
+        // than a second rounded mask just for a 1px line.
         Rectangle {
             visible: !root.hdrCapable
             anchors.centerIn: parent
-            width: Math.sqrt(badge.width * badge.width + badge.height * badge.height)
+            width: Math.sqrt(badge.width * badge.width + badge.height * badge.height) * 0.82
             height: 1
-            color: "#636366"   // colors.lua "muted" -- greyed out instead of full white
+            color: "#636366"   // colors.lua "muted"
             rotation: Math.atan2(badge.height, badge.width) * 180 / Math.PI
-        }
-
-        // Thin white outline -- only for the active sheen state (asked
-        // for: removed again in SDR and "not capable", where there's no
-        // jagged Shape curve underneath to clean up in the first place,
-        // just badge's own natively-antialiased radius). The sheen
-        // Shape's rounded corners (drawn via PathRectangle, not
-        // Rectangle's own native radius) came out visibly jaggier than
-        // the rest of this bar's curves -- `antialiasing: true` on the
-        // Shape above helps some, but a crisp Rectangle-drawn ring on top
-        // (Rectangle's own radius IS natively antialiased) is what
-        // actually cleans the edge up. Declared LAST so it paints over
-        // the sheen underneath.
-        Rectangle {
-            anchors.fill: parent
-            radius: badge.radius
-            color: "transparent"
-            border.width: (root.hdrActive && root.hdrCapable) ? 1 : 0
-            // Always the sheen gradient's own leftmost stop (position 0.0
-            // above), so the ring reads as part of the same surface
-            // instead of a distinct color choice -- follows it through
-            // every material tried here.
-            border.color: "#d4dfe0"
         }
     }
 

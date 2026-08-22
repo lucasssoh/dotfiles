@@ -3,17 +3,17 @@ import Quickshell
 import Quickshell.Io
 import "../theme"
 
-// Native-ish ports of waybar's `network` module, but showing download
-// throughput instead of the SSID/interface name (per request). Two
-// different mechanisms combined:
-//  - WHICH interface is active (wifi/ethernet/none): event-driven, a
-//    persistent `nmcli monitor` watcher triggers a cheap one-shot
-//    re-query only when connectivity actually changes -- same pattern
-//    as the old network StreamModule.
-//  - the actual byte-rate: structurally has to be a Timer (no kernel
-//    event for "N bytes were transferred"), but zero subprocess -- a
-//    delta between two direct /sys/class/net/<iface>/statistics/
-//    rx_bytes reads via FileView, same category as Cpu.qml/Memory.qml.
+// Native-ish port of waybar's `network` module -- connection-type icon
+// only now (ethernet/wifi/none). Used to also show the download rate in
+// the same pill; that half moved to Traffic.qml in METRICS (asked for),
+// leaving this "simple and stable" like Bluetooth.qml's own icon-only
+// module became once its battery % was dropped.
+//
+// WHICH interface is active: event-driven, a persistent `nmcli monitor`
+// watcher triggers a cheap one-shot re-query only when connectivity
+// actually changes -- same pattern as the old network StreamModule.
+// Own detect Process, not shared with Traffic.qml's -- see that file's
+// header comment for why.
 
 Item {
     id: root
@@ -21,12 +21,10 @@ Item {
     property string iface: ""
     property string kind: "none"   // "wifi" | "ethernet" | "none"
     property int wifiSignal: 0     // 0-100, only meaningful when kind === "wifi"
-    property real prevBytes: -1
-    property real rateBps: 0
 
-    // Widest realistic case: "  999.9M/s" -- rate string length swings a
-    // lot more than the others (B/s -> K/s -> M/s), give it more room.
-    implicitWidth: Math.max(label.implicitWidth + 20, 110)
+    // Icon-only, same narrow floor as Bluetooth.qml/Performance.qml's
+    // own icon-only modules.
+    implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
 
     Process {
@@ -58,10 +56,6 @@ fi
             onStreamFinished: {
                 try {
                     const obj = JSON.parse(this.text.trim());
-                    if (obj.iface !== root.iface) {
-                        root.prevBytes = -1;   // new interface -> discard the old delta baseline
-                        rxFile.path = obj.iface !== "" ? "/sys/class/net/" + obj.iface + "/statistics/rx_bytes" : "";
-                    }
                     root.kind = obj.kind;
                     root.iface = obj.iface;
                     root.wifiSignal = obj.signal || 0;
@@ -83,70 +77,36 @@ fi
         onTriggered: if (!detect.running) detect.running = true
     }
 
-    FileView {
-        id: rxFile
-        blockLoading: true
-    }
-
-    function sample() {
-        if (root.iface === "") { root.rateBps = 0; return; }
-        rxFile.reload();
-        const v = parseInt(rxFile.text().trim());
-        if (isNaN(v)) return;
-        if (root.prevBytes >= 0) root.rateBps = Math.max(0, (v - root.prevBytes) / 2);
-        root.prevBytes = v;
-    }
-
-    Timer {
-        interval: 2000
-        running: true
-        repeat: true
-        onTriggered: root.sample()
-    }
-
-    function formatRate(bps) {
-        if (bps < 1024) return bps.toFixed(0) + "B/s";
-        if (bps < 1024 * 1024) return (bps / 1024).toFixed(1) + "K/s";
-        return (bps / 1024 / 1024).toFixed(1) + "M/s";
-    }
-
+    // ph-plugs-connected (no dedicated "ethernet" glyph in Phosphor,
+    // this is the closest -- a physically plugged-in connection) / ph-
+    // wifi-low/medium/high / ph-wifi-slash. Phosphor only ships 3 wifi-
+    // strength tiers, not waybar's original 5 -- same kind of coarsening
+    // already accepted on Battery's 10 -> 5 tiers earlier.
     function icon() {
-        if (root.kind === "ethernet") return "󰈀";
+        if (root.kind === "ethernet") return "";
         if (root.kind === "wifi") {
-            // waybar/config.jsonc's own 5-level format-icons array, same
-            // weak -> strong order, picked by signal % instead of by
-            // waybar's own internal signalStrength binding.
             const s = root.wifiSignal;
-            if (s < 20) return "󰤯";
-            if (s < 40) return "󰤟";
-            if (s < 60) return "󰤢";
-            if (s < 80) return "󰤥";
-            return "󰤨";
+            if (s < 33) return "";
+            if (s < 66) return "";
+            return "";
         }
-        return "󰤭";
+        return "";
     }
 
-    Row {
-        id: label
+    // Point 4 (HIG "clarity": color carries state, not decoration) --
+    // "none" is a real inactive state (no interface at all), same muted
+    // token ActiveWindow/Media/Hdr already use for their own "nothing
+    // here" placeholders. Single centered Text, no paired value any
+    // more -- no Row/alignment fix needed.
+    Text {
+        id: iconText
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
         anchors.centerIn: parent
-        spacing: 4
-
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: root.icon()
-            color: "#f2f2f7"
-            font.family: Fonts.icon
-            font.pixelSize: 13
-        }
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: root.kind === "none" ? "----o/s" : root.formatRate(root.rateBps)
-            color: "#f2f2f7"
-            font.family: Fonts.ui
-            font.pixelSize: 13
-        }
+        text: root.icon()
+        color: root.kind === "none" ? "#636366" : "#f2f2f7"
+        font.family: Fonts.iconPhosphor
+        font.pixelSize: 15
     }
 
     MouseArea {

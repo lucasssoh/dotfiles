@@ -29,9 +29,9 @@ Item {
     // balanced, so the two read as "more/less of the same thing" rather
     // than unrelated symbols. Eco gets its own real leaf glyph.
     function iconFor(p) {
-        if (p === PowerProfile.Performance) return "󱐋󱐋";
-        if (p === PowerProfile.PowerSaver) return "󰌪";
-        return "󱐋";
+        if (p === PowerProfile.Performance) return "";
+        if (p === PowerProfile.PowerSaver) return "";
+        return "";
     }
 
     function colorFor(p) {
@@ -40,6 +40,8 @@ Item {
         return "#f2f2f7";
     }
 
+    // ph-lightning / ph-leaf. Single Text, no adjacent differently-
+    // sized text to pair against -- no alignment fix needed here.
     Text {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
@@ -47,8 +49,8 @@ Item {
         anchors.centerIn: parent
         text: root.iconFor(PowerProfiles.profile)
         color: root.colorFor(PowerProfiles.profile)
-        font.family: Fonts.icon
-        font.pixelSize: 13
+        font.family: Fonts.iconPhosphor
+        font.pixelSize: 14
     }
 
     MouseArea {

@@ -27,4 +27,36 @@ QtObject {
     readonly property string ui: "Inter"
     readonly property string mono: "JetBrains Mono"
     readonly property string icon: "JetBrainsMono Nerd Font"
+
+    // Font Awesome 6 Free/Brands -- first icon-font POC (still used for
+    // `iconSolid`/`iconBrand` wherever nothing below has taken over yet).
+    // `iconSolid` needs `font.weight: Font.Black` alongside it -- Font
+    // Awesome 6 Free ships Regular (400, outline) and Solid (900, filled)
+    // as the SAME family name, disambiguated by weight/style, not a
+    // separate family string (verified via `fc-match`). `iconBrand` is a
+    // genuinely separate family ("Font Awesome 6 Brands") -- product/
+    // protocol logos (bluetooth, steam, discord) live there, not in Free.
+    readonly property string iconSolid: "Font Awesome 6 Free"
+    readonly property string iconBrand: "Font Awesome 6 Brands"
+
+    // Phosphor -- second POC, now applied on Bluetooth/Temperature/Fan/
+    // Battery in place of Font Awesome there (same root motivation: ONE
+    // coherent family instead of Nerd Font's multi-project patchwork).
+    // Tried instead of the real SF Symbols: Apple's own license
+    // explicitly restricts SF Symbols to apps built FOR Apple platforms,
+    // so it can't legally go in a Linux/Hyprland bar -- Phosphor is MIT-
+    // licensed and, unlike Font Awesome, actually ships SF Symbols'
+    // core idea: several DISTINCT weights of the same glyph set (thin/
+    // light/regular/bold/fill/duotone) instead of a fixed
+    // outline-or-filled split. Downloaded from the official
+    // @phosphor-icons/web npm package (MIT, verified via its own
+    // LICENSE file), installed to ~/.local/share/fonts.
+    // Each weight is its OWN family/file (not one variable font with a
+    // weight axis, unlike the Font Awesome Regular/Solid trick above) --
+    // `fc-list` confirms this, so each needs its own `Fonts.` entry
+    // rather than a shared name + `font.weight`. `iconPhosphor` is the
+    // Regular weight specifically, chosen to track Inter's own default
+    // (400) body weight -- the same "icon weight should track the type
+    // weight next to it" idea SF Symbols itself is built around.
+    readonly property string iconPhosphor: "Phosphor"
 }

@@ -39,12 +39,29 @@ Item {
         function onRawEvent(event) { root.refresh(); }
     }
 
+    // fa-brands steam / fa-brands discord -- kept on Font Awesome
+    // Brands rather than moved to Phosphor: Phosphor is a generic UI
+    // icon set with no product/protocol logos at all (checked -- no
+    // "steam"/"discord" entries), so a real brand mark still needs the
+    // one font actually built for that job. Lutris/Heroic stay real SVG
+    // assets either way (no font has those logos).
+    // `yOffset`: heroic.svg's shield tapers to a point at the bottom --
+    // its path bounding box is measured PERFECTLY centered in the 24x24
+    // viewBox (checked directly, not eyeballed), yet it still visibly
+    // read as sitting low next to the others. That's an optical-
+    // centering issue, not a real one: a shape whose "mass" is
+    // concentrated toward one end (same idea as the icon-font optical-
+    // size passes earlier) needs a small manual nudge to look centered
+    // -- the mathematical center isn't the same thing as the perceived
+    // one.
     readonly property var knownApps: [
-        { pattern: /steam/i, icon: "󰓓" },
+        { pattern: /steam/i, icon: "" },
         { pattern: /lutris/i, image: "../assets/lutris.svg" },
-        { pattern: /heroic/i, image: "../assets/heroic.svg" },
-        { pattern: /discord/i, icon: "󰙯" },
-        { pattern: /vesktop/i, icon: "󰙯" }
+        // -2 -> -1: the icon itself shrank (14 -> 11px) since this was
+        // tuned, so the same raw offset overshot -- asked for.
+        { pattern: /heroic/i, image: "../assets/heroic.svg", yOffset: -1 },
+        { pattern: /discord/i, icon: "" },
+        { pattern: /vesktop/i, icon: "" }
     ]
 
     // One chip per known app type (not per window -- if an app has
@@ -66,6 +83,7 @@ Item {
                     out.push({
                         icon: knownApps[k].icon || "",
                         image: knownApps[k].image || "",
+                        yOffset: knownApps[k].yOffset || 0,
                         address: t.address
                     });
                     break;
@@ -114,16 +132,28 @@ Item {
                     visible: chip.modelData.image === ""
                     text: chip.modelData.icon
                     color: "#f2f2f7"
-                    font.family: Fonts.icon
-                    font.pixelSize: 12
+                    font.family: Fonts.iconBrand
+                    font.pixelSize: 11   // 13 -> 11, asked for
                 }
 
                 Image {
                     anchors.centerIn: parent
+                    // yOffset -- see knownApps' own comment: heroic.svg is
+                    // mathematically centered in its viewBox but still
+                    // reads as sitting low (optical centering, not a real
+                    // offset), corrected per-icon rather than guessed here.
+                    anchors.verticalCenterOffset: chip.modelData.yOffset
                     visible: chip.modelData.image !== ""
                     source: chip.modelData.image
-                    width: 14
-                    height: 14
+                    width: 11    // 14 -> 11, same reduction as the Text glyph
+                    height: 11
+                    // Rasterize straight at the target size instead of
+                    // scaling down from the SVG's native resolution --
+                    // crisper for a thin-stroke shape like heroic's shield
+                    // outline than the blurrier default scaling path.
+                    // Tried first as a fix for the droop above, on its own
+                    // it wasn't enough (kept anyway, strictly better).
+                    sourceSize: Qt.size(width, height)
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                 }

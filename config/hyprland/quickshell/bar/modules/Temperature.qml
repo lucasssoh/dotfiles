@@ -11,7 +11,7 @@ Item {
 
     property int celsius: 0
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 50)
+    implicitWidth: Math.max(label.implicitWidth + 20, 52)   // 50 -> 52, point 6: 4pt grid
     implicitHeight: 24
 
     FileView {
@@ -39,22 +39,37 @@ Item {
         anchors.centerIn: parent
         spacing: 4
 
+        // History on this Row's alignment: per-glyph size bumps, plain
+        // top-alignment (Row's default), and anchors.baseline were each
+        // right for a DIFFERENT icon font, not universally -- Nerd Font +
+        // Inter happened to sit close enough at y:0; Font Awesome (drawn
+        // like a letter, sitting ON the baseline) needed
+        // anchors.baseline; Phosphor's glyphs are drawn floating,
+        // vertically centered in their own line box rather than sitting
+        // on the baseline -- box-centering (anchors.verticalCenter, both
+        // items) is what actually measures aligned for THIS font, tested
+        // pixel-precise against baseline-anchoring before picking it.
+        // Moral: there's no one correct anchor mode across icon fonts,
+        // has to be re-checked (screenshot, not assumed) per swap.
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "󰔏"
+            anchors.verticalCenter: parent.verticalCenter
+            text: ""   // ph-thermometer
             color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
-            font.family: Fonts.icon
-            font.pixelSize: 13
+            font.family: Fonts.iconPhosphor
+            font.pixelSize: 14
         }
         // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars
         Text {
+            id: valueLabel
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
             text: String(root.celsius).padStart(3, " ")
             color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 13
+            font.pixelSize: 12
         }
     }
 }

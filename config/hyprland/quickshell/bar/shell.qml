@@ -255,9 +255,12 @@ ShellRoot {
                     }
                 }
 
-                // Media (mpris) -- mirror of leftGroup: left edge anchored
-                // to centerRow's right edge, so growth only ever extends
-                // the RIGHT edge further right.
+                // Media (mpris) -- back to its own chained group, no
+                // Launchers inside any more (asked for: pulled back out
+                // into its own separate floating island, see below,
+                // rather than grouped in here). Mirror of leftGroup: left
+                // edge anchored to centerRow's right edge, so growth only
+                // ever extends the RIGHT edge further right.
                 Item {
                     id: rightGroup
                     implicitWidth: media.implicitWidth
@@ -323,15 +326,24 @@ ShellRoot {
                     minWidth: 40
                     clickCommand: ["bash", "-c", "$HOME/.config/waybar/scripts/swaync-toggle.sh"]
                     rightClickCommand: ["swaync-client", "-d", "-sw"]
+                    // ph-bell-ringing / ph-bell / ph-bell-z (Phosphor's "sleeping
+                    // bell" -- an actual semantic match for do-not-disturb,
+                    // better than reusing a plain bell) / ph-bell-slash
+                    // (inhibited = notifications actively blocked, distinct
+                    // from dnd's "quieted"). Phosphor has no compound "dnd +
+                    // inhibited" glyph the way the old Nerd Font set did --
+                    // both dnd-inhibited variants fall back to bell-slash,
+                    // same shape as plain inhibited; classColors below still
+                    // carries the has-notification distinction.
                     classIcons: ({
-                        "notification": "󱅫",
-                        "none": "󰂜",
-                        "dnd-notification": "󰂠",
-                        "dnd-none": "󰪓",
-                        "inhibited-notification": "󰂛",
-                        "inhibited-none": "󰪑",
-                        "dnd-inhibited-notification": "󰂛",
-                        "dnd-inhibited-none": "󰪑"
+                        "notification": "",
+                        "none": "",
+                        "dnd-notification": "",
+                        "dnd-none": "",
+                        "inhibited-notification": "",
+                        "inhibited-none": "",
+                        "dnd-inhibited-notification": "",
+                        "dnd-inhibited-none": ""
                     })
                     classColors: ({
                         "notification": "#a8b4c4",
@@ -351,19 +363,32 @@ ShellRoot {
                 Modules.Temperature {}
                 Modules.Fan {}
                 Modules.Memory {}
+                // Moved here from Network.qml in TOOLS (asked for) --
+                // the download-rate half of what used to be one combined
+                // wifi/rate module, now grouped with METRICS' other
+                // continuously-updating stats instead.
+                Modules.Traffic {}
 
                 Item { width: 6; height: 1 }
 
                 Modules.Battery {}
+            }
 
-                // Launchers, folded back IN here -- asked for, "plus
-                // régulier": used to be its own separate floating block
-                // anchored off metrics.right (a static gap, not the
-                // island's dynamic left edge -- that part's still true,
-                // it's just literally inside metrics now instead of
-                // merely positioned relative to it). One less pill on
-                // screen, same content.
-                Item { width: 6; height: 1 }
+            // Launchers -- its own separate floating island (asked for:
+            // out of the central island entirely, and placed in front of
+            // TOOLS rather than trailing the island). Right edge anchored
+            // to TOOLS' own left edge (needs `id: tools` below) instead
+            // of chasing the island's dynamic width -- sits at a stable
+            // position relative to the screen's right edge, same as
+            // METRICS/TOOLS themselves, rather than sliding around
+            // whenever ActiveWindow/Media/workspaces resize.
+            Modules.Block {
+                anchors.top: parent.top
+                anchors.topMargin: 3
+                anchors.right: tools.left
+                anchors.rightMargin: 6
+                flushTop: false
+                color: "#730c0c0e"
 
                 Modules.Launchers {
                     opacity: 0.8
@@ -376,12 +401,24 @@ ShellRoot {
             // (3px top gap, 6px right gap, rounded corners, translucent
             // fill).
             Modules.Block {
+                id: tools
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 flushTop: false
                 color: "#730c0c0e"
+
+                    // Left/right breathing room -- asked for, left
+                    // especially (Block.qml's own Row has zero built-in
+                    // padding, content starts flush at x:0, and
+                    // ScriptModule's own centering math wasn't enough to
+                    // clear the pill's rounded left edge on its own).
+                    Item { width: 4; height: 1 }
+
+                    // Hdr before the display-layout status now (asked
+                    // for) -- was the other way around.
+                    Modules.Hdr { monitor: Hyprland.monitorFor(bar.screen) }
 
                     Modules.ScriptModule {
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
@@ -403,8 +440,6 @@ ShellRoot {
                             "display-external": "#a8b4c4"
                         })
                     }
-
-                    Modules.Hdr { monitor: Hyprland.monitorFor(bar.screen) }
 
                     Item { width: 6; height: 1 }
 
@@ -453,6 +488,8 @@ ShellRoot {
                             onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.local/bin/roue power"])
                         }
                     }
+
+                    Item { width: 2; height: 1 }
                 }
         }
     }
