@@ -227,7 +227,18 @@ mod imp {
 
                 snapshot.push_fill(&path, gsk::FillRule::Winding);
                 let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
-                snapshot.append_color(&wedge_color(t, open as f32, accent), &full);
+                // Glass sheen instead of a flat fill -- see
+                // wedge_glass_stops. Same top-left -> bottom-right light
+                // direction as the hub's rim, anchored to the WHOLE wheel
+                // (not each wedge's own bounds) so every sector reads as
+                // lit by the same single source rather than each having
+                // its own independent glow.
+                snapshot.append_linear_gradient(
+                    &full,
+                    &graphene::Point::new((cx - outer_radius) as f32, (cy - outer_radius) as f32),
+                    &graphene::Point::new((cx + outer_radius) as f32, (cy + outer_radius) as f32),
+                    &wedge_glass_stops(t, open as f32, accent),
+                );
                 snapshot.pop();
 
                 if open <= 0.05 {
@@ -705,6 +716,32 @@ fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
         base.2 + (accent.2 - base.2) * k,
         (0.80 + 0.10 * t) * open,
     )
+}
+
+/// Same material as HUB_GLASS_STOPS/the CSS gradient border, but as a
+/// sector's FILL rather than a rim: a sheen across the wedge's face
+/// (brighter toward the shared light source, darker away from it)
+/// instead of `wedge_color`'s flat matte tone -- asked for explicitly:
+/// the wedges' background, not their (already-glass) hub/window/sidebar
+/// borders. `wedge_color` itself untouched -- still used here as the
+/// gradient's midpoint, so hover/accent/fade-in math isn't duplicated.
+fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorStop; 3] {
+    let base = wedge_color(t, open, accent);
+    let lighten = |c: f32, amt: f32| c + (1.0 - c) * amt;
+    let darken = |c: f32, amt: f32| c * (1.0 - amt);
+    let hi = gdk::RGBA::new(
+        lighten(base.red(), 0.30),
+        lighten(base.green(), 0.30),
+        lighten(base.blue(), 0.30),
+        base.alpha(),
+    );
+    let lo = gdk::RGBA::new(
+        darken(base.red(), 0.30),
+        darken(base.green(), 0.30),
+        darken(base.blue(), 0.30),
+        base.alpha(),
+    );
+    [gsk::ColorStop::new(0.0, hi), gsk::ColorStop::new(0.5, base), gsk::ColorStop::new(1.0, lo)]
 }
 
 /// A sector's text/icon color -- off-white at rest, full `accent` (this
