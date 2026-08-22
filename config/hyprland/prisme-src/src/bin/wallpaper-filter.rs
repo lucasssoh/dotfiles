@@ -23,10 +23,14 @@
 //! encode/decode round trip at every step -- JPEG XL sources included
 //! (jxl-oxide, pure Rust, no `magick`/`djxl` subprocess).
 //!
+//! Also maintains a second, much smaller cache (~/.cache/wallpaper_thumbs)
+//! read by Prisme's carousel (thumbs.rs) instead of decoding the
+//! full-resolution original on every launch -- see THUMB_HEIGHT.
+//!
 //! Called by scripts/wallpaper-cache-watcher.sh for every added/modified
-//! image (that script handles inotify watching, the initial parallel
-//! pass, and the FILTER_VERSION marker -- see it for the version to bump
-//! if the algorithm below changes).
+//! image (that script handles inotify watching, the sequential pass over
+//! all wallpapers, and the FILTER_VERSION marker -- see it for the
+//! version to bump if the algorithm below changes).
 
 use image::{imageops::FilterType, DynamicImage, GenericImageView, Rgb, RgbImage, RgbaImage};
 use std::path::{Path, PathBuf};
@@ -89,6 +93,23 @@ fn home() -> PathBuf {
 
 fn cache_dir() -> PathBuf {
     home().join(".cache/filtered_wallpapers")
+}
+
+/// Thumbnail cache, read by Prisme's carousel (thumbs.rs) instead of
+/// decoding full-resolution originals on every launch -- see THUMB_HEIGHT.
+fn thumb_cache_dir() -> PathBuf {
+    home().join(".cache/wallpaper_thumbs")
+}
+
+/// Thumbnail height -- 2x thumbs.rs's CARD_HEIGHT (460), enough margin for
+/// hidpi/zoom without the source's full resolution (up to 7680x4320 in
+/// this collection). `.thumb.jpg` suffix (never just the original
+/// filename) so a same-stem, different-extension collision between two
+/// merged wallpaper sources can never overwrite the wrong entry.
+const THUMB_HEIGHT: u32 = 920;
+
+fn thumb_cache_path(filename: &std::ffi::OsStr) -> PathBuf {
+    thumb_cache_dir().join(format!("{}.thumb.jpg", filename.to_string_lossy()))
 }
 
 fn has_known_extension(path: &Path) -> bool {
@@ -381,13 +402,30 @@ fn main() {
         return;
     };
     let cached = cache_dir().join(filename);
-    if cache_is_fresh(&img_path, &cached) {
+    let thumb_cached = thumb_cache_path(filename);
+    let screen_fresh = cache_is_fresh(&img_path, &cached);
+    let thumb_fresh = cache_is_fresh(&img_path, &thumb_cached);
+    if screen_fresh && thumb_fresh {
         return;
     }
 
     let Some(img) = open_image(&img_path) else {
         return;
     };
+
+    if !thumb_fresh {
+        // Reuses this same decode -- no second pass over the original.
+        // Aspect ratio preserved (only `height` is capped): thumbs.rs
+        // needs it intact to size each card.
+        let thumb = img.resize(8192, THUMB_HEIGHT, FilterType::Triangle);
+        let _ = std::fs::create_dir_all(thumb_cache_dir());
+        let _ = thumb.save_with_format(&thumb_cached, image::ImageFormat::Jpeg);
+    }
+
+    if screen_fresh {
+        return;
+    }
+
     let (src_w, src_h) = img.dimensions();
     let (target_w, target_h) = target_resolution();
     let landscape = target_w >= target_h;

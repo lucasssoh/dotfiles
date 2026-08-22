@@ -2,6 +2,11 @@
 //! (CPU-heavy) runs on dedicated threads off the GTK loop; only the final
 //! GObject texture construction goes back to the main thread, as GTK
 //! requires.
+//!
+//! Reads wallpaper-filter.rs's small pre-made thumbnail cache
+//! (~/.cache/wallpaper_thumbs) rather than decoding each full-resolution
+//! original (up to 8K in this collection) on every launch -- falls back
+//! to that full decode only when no fresh thumbnail exists yet.
 
 use gtk4::gdk::{self, MemoryFormat, MemoryTexture};
 use gtk4::glib;
@@ -128,6 +133,10 @@ impl ThumbLoader {
     }
 }
 
+fn is_jxl(path: &Path) -> bool {
+    path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("jxl"))
+}
+
 /// Decodes a JPEG XL file -- the `image` crate has no JXL support, so
 /// GNOME's default wallpapers (shipped as .jxl) need jxl-oxide instead.
 /// Same approach as wallpaper-filter.rs's decode_jxl (duplicated rather
@@ -148,15 +157,64 @@ fn decode_jxl(path: &Path) -> Option<DynamicImage> {
     }
 }
 
-/// Decodes the image and resizes it to `CARD_HEIGHT`, keeping the
-/// original dimensions for the display ratio calculation (see card.rs).
+/// True resolution shown on the card (see card.rs's `dims_layout`) --
+/// header-only, no pixel decode: `JxlImage::builder().open()` parses the
+/// container/header but doesn't render a frame, and `ImageReader` reads
+/// just enough of jpg/png/webp to report dimensions. Cheap even on an 8K
+/// source, unlike decoding it fully just to read `.width()`/`.height()`.
+fn read_dimensions(path: &Path) -> Option<(u32, u32)> {
+    if is_jxl(path) {
+        let image = jxl_oxide::JxlImage::builder().open(path).ok()?;
+        Some((image.width(), image.height()))
+    } else {
+        image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.into_dimensions().ok()
+    }
+}
+
+/// Cache already up to date (file present, mtime >= the source's) -- same
+/// check as wallpaper-filter.rs's cache_is_fresh (duplicated, see
+/// decode_jxl above for why).
+fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
+    let (Ok(src_meta), Ok(cached_meta)) = (std::fs::metadata(src), std::fs::metadata(cached))
+    else {
+        return false;
+    };
+    let (Ok(src_time), Ok(cached_time)) = (src_meta.modified(), cached_meta.modified()) else {
+        return false;
+    };
+    cached_time >= src_time
+}
+
+/// wallpaper-filter.rs's thumbnail cache for `path`, if it's had the
+/// chance to build one yet (wallpaper-cache-watcher.sh, running
+/// continuously, processes new/changed wallpapers on its own -- this
+/// isn't triggered from here). See its THUMB_HEIGHT/thumb_cache_path for
+/// the matching write side.
+fn thumb_cache_path(path: &Path) -> Option<PathBuf> {
+    let filename = path.file_name()?;
+    let home = std::env::var("HOME").ok()?;
+    Some(PathBuf::from(home).join(".cache/wallpaper_thumbs").join(format!("{}.thumb.jpg", filename.to_string_lossy())))
+}
+
+/// Decodes the image and resizes it to `CARD_HEIGHT`, keeping the true
+/// original dimensions for display (see card.rs). Reads the small
+/// pre-made thumbnail (~1/10th the bytes of an 8K original, and never
+/// needs jxl-oxide since wallpaper-filter.rs always writes it as JPEG)
+/// when one is fresh, instead of decoding the full-resolution source on
+/// every launch -- that fallback still exists (a brand new wallpaper
+/// wallpaper-cache-watcher.sh hasn't reached yet, or wallpapers used
+/// outside this repo's pipeline entirely) so the carousel never shows a
+/// blank card, just a slower first load for that one.
 fn decode_and_scale(path: &std::path::Path) -> Option<DecodedImage> {
-    let is_jxl = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| e.eq_ignore_ascii_case("jxl"));
-    let img = if is_jxl { decode_jxl(path)? } else { image::open(path).ok()? };
-    let (orig_width, orig_height) = (img.width() as i32, img.height() as i32);
+    let (orig_width, orig_height) = read_dimensions(path)?;
+
+    let thumb_path = thumb_cache_path(path).filter(|t| cache_is_fresh(path, t));
+    let img = match thumb_path.and_then(|t| image::open(t).ok()) {
+        Some(img) => img,
+        None if is_jxl(path) => decode_jxl(path)?,
+        None => image::open(path).ok()?,
+    };
+
     // `resize` scales while preserving the ratio to fit within the given
     // box -- a generous width leaves height as the only limiting factor.
     let resized = img.resize(8192, CARD_HEIGHT as u32, FilterType::Triangle);
@@ -166,7 +224,7 @@ fn decode_and_scale(path: &std::path::Path) -> Option<DecodedImage> {
         rgba: rgba.into_raw(),
         width: width as i32,
         height: height as i32,
-        orig_width,
-        orig_height,
+        orig_width: orig_width as i32,
+        orig_height: orig_height as i32,
     })
 }
