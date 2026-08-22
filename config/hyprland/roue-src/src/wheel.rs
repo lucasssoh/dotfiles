@@ -319,7 +319,7 @@ mod imp {
                             &full,
                             &graphene::Point::new((cx - inner_radius) as f32, (cy - inner_radius) as f32),
                             &graphene::Point::new((cx + inner_radius) as f32, (cy + inner_radius) as f32),
-                            &glass_stops(base),
+                            &glass_stops(base, ACCENT_GLASS_CONTRAST),
                         );
                         snapshot.pop();
                     }
@@ -725,28 +725,41 @@ fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
     )
 }
 
+/// Contrast (0..1, how far `glass_stops` pushes toward white/black at
+/// each end) for a wedge's own fill -- subtle, so the sheen reads as a
+/// curved surface rather than competing with the hover/accent tint
+/// itself for attention.
+const WEDGE_GLASS_CONTRAST: f32 = 0.30;
+/// Contrast for the confirmation hub's danger border (see its call
+/// site): higher than WEDGE_GLASS_CONTRAST -- a thin 3px ring has far
+/// less area than a wedge to sell "glass" with, and needs to visibly
+/// read as such over the grey rim it paints over, not just a slightly
+/// duller flat accent.
+const ACCENT_GLASS_CONTRAST: f32 = 0.55;
+
 /// Turns any flat `base` color into the same "glass" sheen used
 /// throughout this file: brighter toward the shared top-left light
 /// source, darker away from it, `base` itself as the midpoint. Generic
-/// over the color on purpose -- unlike HUB_GLASS_STOPS (a fixed grey
-/// ramp, for the rim that's always visible regardless of what's
-/// selected), this derives the gradient from whatever color is actually
-/// in play: a wedge's own accent (wedge_glass_stops below) or the
-/// confirmation hub's danger-red border (see its call site) -- "glass
-/// tinted red" rather than red painted flat, or grey painted over red.
-fn glass_stops(base: gdk::RGBA) -> [gsk::ColorStop; 3] {
+/// over both the color and the contrast amount on purpose -- unlike
+/// HUB_GLASS_STOPS (a fixed grey ramp, for the rim that's always visible
+/// regardless of what's selected), this derives the gradient from
+/// whatever color is actually in play: a wedge's own accent
+/// (wedge_glass_stops below) or the confirmation hub's danger-red border
+/// (see its call site) -- "glass tinted red" rather than red painted
+/// flat, or grey painted over red.
+fn glass_stops(base: gdk::RGBA, contrast: f32) -> [gsk::ColorStop; 3] {
     let lighten = |c: f32, amt: f32| c + (1.0 - c) * amt;
     let darken = |c: f32, amt: f32| c * (1.0 - amt);
     let hi = gdk::RGBA::new(
-        lighten(base.red(), 0.30),
-        lighten(base.green(), 0.30),
-        lighten(base.blue(), 0.30),
+        lighten(base.red(), contrast),
+        lighten(base.green(), contrast),
+        lighten(base.blue(), contrast),
         base.alpha(),
     );
     let lo = gdk::RGBA::new(
-        darken(base.red(), 0.30),
-        darken(base.green(), 0.30),
-        darken(base.blue(), 0.30),
+        darken(base.red(), contrast),
+        darken(base.green(), contrast),
+        darken(base.blue(), contrast),
         base.alpha(),
     );
     [gsk::ColorStop::new(0.0, hi), gsk::ColorStop::new(0.5, base), gsk::ColorStop::new(1.0, lo)]
@@ -759,7 +772,7 @@ fn glass_stops(base: gdk::RGBA) -> [gsk::ColorStop; 3] {
 /// untouched -- still used here as the gradient's midpoint, so
 /// hover/accent/fade-in math isn't duplicated.
 fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorStop; 3] {
-    glass_stops(wedge_color(t, open, accent))
+    glass_stops(wedge_color(t, open, accent), WEDGE_GLASS_CONTRAST)
 }
 
 /// A sector's text/icon color -- off-white at rest, full `accent` (this
