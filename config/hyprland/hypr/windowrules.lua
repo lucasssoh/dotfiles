@@ -418,7 +418,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- LAYER BLUR — Orbit / swaync
+-- LAYER BLUR — Orbit / swaync / Roue
 -- ============================================================
 -- Real compositor blur behind these specific layer-shell surfaces, not a
 -- global effect (see hyprland.lua's decoration.blur.enabled comment for
@@ -449,3 +449,11 @@ hl.window_rule({
 -- source).
 hl.layer_rule({ match = { namespace = "orbit" },                blur = true })
 hl.layer_rule({ match = { namespace = "swaync-control-center" }, blur = true, xray = true, ignore_alpha = 0.5 })
+-- Roue: anchored to all 4 edges (see roue-src/src/main.rs), so it's in
+-- the same "oversized surface" situation as swaync-control-center above,
+-- not orbit -- same xray + ignore_alpha treatment, needed for the exact
+-- same reason (confirmed live: without it the whole screen blurs, not
+-- just the wheel + sidebar). On-demand, shown for seconds at a time, same
+-- cost profile as the two rules above -- see hyprland.lua's
+-- decoration.blur.enabled comment.
+hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xray = true, ignore_alpha = 0.5 })

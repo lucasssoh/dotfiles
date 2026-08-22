@@ -76,6 +76,26 @@ const HUB_LABEL_MAX_WIDTH_PX: f64 = 190.0;
 const CANCEL_INDEX: usize = 0;
 const CONFIRM_INDEX: usize = 1;
 const HUB_BORDER_WIDTH_PX: f32 = 3.0;
+/// Same "glass" rim as Hyprland's active-window border (hypr/hyprland.lua
+/// -- a single light source top-left, fading through the bar's own
+/// text/subtle/muted/overlay/background tokens down to near-invisible
+/// bottom-right). Copied verbatim (same 5 hex colors/alphas, same
+/// top-left -> bottom-right direction) rather than re-derived, so the
+/// hub reads as the same "curved glass surface" material as every window
+/// in this setup -- deliberately monochrome for the same reason: color
+/// here would read as decoration, not as a lit edge.
+fn hub_glass_stops(alpha_mult: f32) -> [gsk::ColorStop; 5] {
+    let stop = |offset: f32, r: f32, g: f32, b: f32, a: f32| {
+        gsk::ColorStop::new(offset, gdk::RGBA::new(r, g, b, a * alpha_mult))
+    };
+    [
+        stop(0.00, 0.898, 0.898, 0.918, 0.749), // text,      ~75% -- highlight tip
+        stop(0.25, 0.557, 0.557, 0.576, 0.451), // subtle,    ~45% -- shoulder
+        stop(0.50, 0.388, 0.388, 0.400, 0.278), // muted,     ~28% -- terminator
+        stop(0.75, 0.227, 0.227, 0.235, 0.149), // overlay,   ~15% -- entering shadow
+        stop(1.00, 0.110, 0.110, 0.118, 0.059), // background,~6%  -- deep shadow
+    ]
+}
 /// White band marking the "current system state" sector (see the TOML
 /// `active` field, e.g. the current power profile) -- drawn slightly
 /// INSIDE the outer edge (ACTIVE_BAND_INSET_PX), not right on it, to stay
@@ -249,6 +269,19 @@ mod imp {
                 snapshot.append_color(
                     &gdk::RGBA::new(0.078, 0.078, 0.086, (0.88 * open) as f32),
                     &full,
+                );
+                snapshot.pop();
+
+                // "Glass" rim -- see HUB_GLASS_STOPS. Drawn on every open
+                // wheel (not just while confirming, unlike the colored
+                // danger stroke below, which paints over it when active).
+                let glass_stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
+                snapshot.push_stroke(&hub_path, &glass_stroke);
+                snapshot.append_linear_gradient(
+                    &full,
+                    &graphene::Point::new((cx - inner_radius) as f32, (cy - inner_radius) as f32),
+                    &graphene::Point::new((cx + inner_radius) as f32, (cy + inner_radius) as f32),
+                    &hub_glass_stops(open as f32),
                 );
                 snapshot.pop();
 
