@@ -7,7 +7,7 @@ set -euo pipefail
 # only compacts within its own workspaces, as assigned by
 # workspace-manager.sh).
 #
-# E.g. (internal 1-7): 2, 3, 6 occupied -> compacted into 1, 2, 3.
+# E.g. (main screen, 1-5): 2, 3, 4 occupied -> compacted into 1, 2, 3.
 #
 # MANUAL trigger only (keybind): this Hyprland build exposes a Lua API
 # (hl.dsp.window.move) that offers no silent equivalent to

@@ -135,11 +135,15 @@ for _, ws in ipairs(ws_keys) do
     hl.bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
 end
 
--- Mouse wheel: navigates between workspaces relative to the monitor under
--- the cursor (m-1/m+1), never jumping to the neighboring screen unlike a
--- plain global offset (e-1/e+1).
-hl.bind(mod .. "+ mouse_down", hl.dsp.focus({ workspace = "m-1" }))
-hl.bind(mod .. "+ mouse_up",   hl.dsp.focus({ workspace = "m+1" }))
+-- Mouse wheel: navigates between workspaces on the monitor under the
+-- cursor, never jumping to the neighboring screen. Routed through a
+-- script (not the raw "m-1"/"m+1" selector) so it stays strictly bounded
+-- to this monitor's own assigned range (1-5 or 6-10 -- see
+-- workspace-manager.sh) instead of spilling into an unbound, unreachable
+-- workspace 11+ once it runs past the last one that already exists here
+-- (see scroll-workspace.sh's own header comment for the bug this fixes).
+hl.bind(mod .. "+ mouse_down", hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh prev"))
+hl.bind(mod .. "+ mouse_up",   hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh next"))
 
 -- Compacts occupied workspaces toward the start of their range, per monitor
 hl.bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))

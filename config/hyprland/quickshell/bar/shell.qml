@@ -178,12 +178,12 @@ ShellRoot {
             // unused now but kept for the same "still correct if it ever
             // reaches an edge" reason).
             margins { top: 0; left: 0; right: 0 }
-            // 24 (main bar) + 3 (metrics/tools pills' own top gap) -- the
-            // window itself has to be this tall or those pills (see below)
-            // would get clipped by the surface's own bounds. The main
-            // bar's Row stays flush at y:0 regardless (anchors.top), only
-            // metrics/tools use the extra space.
-            implicitHeight: 27
+            // Has to stay >= the island's own height (below) and >= metrics/
+            // tools' own bottom extent (3 top gap + their content, ~27) or
+            // whichever pill is taller gets clipped by the surface's own
+            // bounds. The main bar's Row stays flush at y:0 regardless
+            // (anchors.top), only metrics/tools use the extra space.
+            implicitHeight: 31
 
             // ── ONE BAR ───────────────────────────────────────
             // Clock + Workspaces sit dead center of the screen and never
@@ -212,13 +212,17 @@ ShellRoot {
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                // 24 -> 27: the metrics/tools pills sit only 3px above
-                // where tiled windows start, but the island (unchanged at
-                // 24) had a full 6px gap there -- asked for, so all 3
-                // pills now end at the same y (27) and read as one
-                // consistent proximity to whatever's below, not the island
-                // floating further from it than its neighbours.
-                height: 27
+                // 24 -> 27 -> 31: first pass matched metrics/tools' own
+                // bottom edge (27); this one grows past it on purpose --
+                // asked for, "presque toucher les fenêtres du dessous" --
+                // exclusiveZone (below, unchanged at 24) is what actually
+                // reserves space from tiled windows, not this height, so
+                // growing it further is purely visual (aboveWindows paints
+                // over the extra few px, gaps_out.top still leaves a sliver
+                // before real window content). metrics/tools deliberately
+                // NOT touched -- they stay their own size, just now sit
+                // shorter than the island instead of matching it exactly.
+                height: 31
 
                 Row {
                     id: centerRow
@@ -276,7 +280,11 @@ ShellRoot {
                 Modules.Block {
                     z: -1
                     anchors.top: parent.top
-                    height: 27
+                    height: 31
+                    // 10 -> 14, asked for -- bottom corners only (flushTop
+                    // still squares the top ones off against the screen
+                    // edge, unaffected).
+                    cornerRadius: 14
                     x: leftGroup.x
                     width: rightGroup.x + rightGroup.width - leftGroup.x
                     color: "#0c0c0e"

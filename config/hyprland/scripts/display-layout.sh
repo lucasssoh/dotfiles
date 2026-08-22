@@ -99,7 +99,7 @@ resolve_roles() {
 }
 
 current_state() {
-    mode="both"; position="external-left"; align="center"
+    mode="both"; position="external-left"; align="center"; main="internal"
     if [[ -f "$STATE_FILE" ]]; then
         local v
         v="$(jq -r '.mode // empty'     "$STATE_FILE" 2>/dev/null || true)"
@@ -108,6 +108,8 @@ current_state() {
         if [[ "$v" =~ ^(external-left|external-right)$ ]]; then position="$v"; fi
         v="$(jq -r '.align // empty'    "$STATE_FILE" 2>/dev/null || true)"
         if [[ "$v" =~ ^(center|top|bottom)$ ]]; then align="$v"; fi
+        v="$(jq -r '.main // empty'     "$STATE_FILE" 2>/dev/null || true)"
+        if [[ "$v" =~ ^(internal|external)$ ]]; then main="$v"; fi
     fi
 }
 
@@ -115,8 +117,22 @@ write_state() {
     python3 -c "
 import json
 with open('$STATE_FILE', 'w') as f:
-    json.dump({'mode': '$1', 'position': '$2', 'align': '$3'}, f)
+    json.dump({'mode': '$1', 'position': '$2', 'align': '$3', 'main': '$4'}, f)
 "
+}
+
+# Which screen counts as "main" (see workspace-manager.sh's header comment
+# for why this matters: it decides who keeps workspaces 1-5 once both
+# screens are back). Auto-tracked, not a separate menu entry: picking a
+# SOLO mode (internal/external) makes that screen main going forward --
+# picking "both" just reuses whatever main already was, unchanged.
+resolve_main() {
+    local requested_mode="$1" current_main="$2"
+    if [[ "$requested_mode" == "internal" || "$requested_mode" == "external" ]]; then
+        echo "$requested_mode"
+    else
+        echo "$current_main"
+    fi
 }
 
 refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
@@ -130,7 +146,9 @@ cmd_apply() {
     local new_mode="$1"
     resolve_roles
     current_state
-    write_state "$new_mode" "$position" "$align"
+    local new_main
+    new_main="$(resolve_main "$new_mode" "$main")"
+    write_state "$new_mode" "$position" "$align" "$new_main"
     bash ~/.config/hypr/scripts/workspace-manager.sh
     refresh_bar
 }
@@ -244,7 +262,9 @@ cmd_menu() {
         esac
     fi
 
-    write_state "$new_mode" "$new_position" "$new_align"
+    local new_main
+    new_main="$(resolve_main "$new_mode" "$main")"
+    write_state "$new_mode" "$new_position" "$new_align" "$new_main"
     bash ~/.config/hypr/scripts/workspace-manager.sh
     refresh_bar
 }

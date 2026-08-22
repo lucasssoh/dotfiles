@@ -112,8 +112,11 @@ Item {
     // balanced when only one of the two is actually active.
     readonly property string placeholderText: "Super + Space"
 
+    // +30, not +26 any more -- tracks chip's own leftMargin bump below
+    // (4 -> 8): 8 (chip left) + 10 (chip->title gap) + 12 (title right
+    // pad) = 30.
     implicitWidth: root.hasWindow
-        ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 26, 120), maxWidth)
+        ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 30, 120), maxWidth)
         : Math.max(placeholderMeasure.implicitWidth + 24, 90)
     // Animated width change, asked for -- title length changes (focus
     // switch, page/tab title update) now widen/narrow this chip smoothly
@@ -159,9 +162,11 @@ Item {
         id: chip
         visible: root.hasWindow
         anchors.left: parent.left
-        // Small deliberate gap/offset from the block's left edge, purely
-        // for breathing room (Block has no border to clear any more).
-        anchors.leftMargin: 4
+        // Deliberate gap/offset from the block's left edge, purely for
+        // breathing room (Block has no border to clear any more). 4 -> 8,
+        // asked for -- also keeps the chip clear of the pill's now-bigger
+        // bottom-left corner radius (see shell.qml's island Block).
+        anchors.leftMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         width: appLabel.implicitWidth + 22
         height: 18

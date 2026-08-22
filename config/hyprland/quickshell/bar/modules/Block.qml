@@ -30,15 +30,21 @@ Rectangle {
     // gets normal rounded top corners like every other side, since it's
     // not actually touching that edge.
     property bool flushTop: true
+    // Overridable per instance (e.g. the main bar's own island Block in
+    // shell.qml, asked for a bit more roundness than every other pill).
+    // Named cornerRadius, not radius, to avoid shadowing Rectangle's own
+    // built-in `radius` property (unused here -- this component always
+    // sets the 4 per-corner radii individually instead, see below).
+    property real cornerRadius: 10
 
     implicitWidth: row.implicitWidth
     implicitHeight: 24
     // 4 -> 10 (still short of a full pill -- 12 at this 24px height).
     // Per-corner radius properties need Qt 6.7+ (this machine: Qt 6.11).
-    topLeftRadius: flushTop ? 0 : 10
-    topRightRadius: flushTop ? 0 : 10
-    bottomLeftRadius: squareLeft ? 0 : 10
-    bottomRightRadius: squareRight ? 0 : 10
+    topLeftRadius: flushTop ? 0 : cornerRadius
+    topRightRadius: flushTop ? 0 : cornerRadius
+    bottomLeftRadius: squareLeft ? 0 : cornerRadius
+    bottomRightRadius: squareRight ? 0 : cornerRadius
     // Defensive: a child that doesn't center/size itself exactly right
     // (square corners against these rounded ones, or a background a
     // pixel taller than 24) would otherwise visibly poke past the
