@@ -86,27 +86,28 @@ sync_merged_dir
 # filter version's render indefinitely. Bump this on every pipeline change
 # in prisme-src/src/bin/wallpaper-filter.rs -- targeted purge (not an
 # `rm -rf` of the whole folder) to never touch the marker itself or step
-# outside CACHE_DIR. Done here, before the parallel loop below, and nowhere
-# else: wallpaper-filter is launched in parallel (~30 instances via `&` +
-# `wait`), a test-and-purge per instance would create a race (one instance
-# would purge what another just wrote).
-FILTER_VERSION=5
+# outside CACHE_DIR.
+FILTER_VERSION=6
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
     find "$CACHE_DIR" -maxdepth 1 -type f \
-        \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
+        \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
         -delete
     printf '%s\n' "$FILTER_VERSION" > "$VERSION_FILE"
 fi
 
-# Initial pass: generates the cache for all images already present
+# Initial pass: generates the cache for all images already present, one
+# at a time -- NOT in parallel. Each call briefly holds a full-resolution
+# source decode plus several derived buffers (cover/blur/composite) in
+# RAM; with ~80+ wallpapers including 8K photos, launching all of them at
+# once (the previous `&` + a single trailing `wait`) was enough to
+# saturate RAM and freeze the machine. Sequential is slower end to end but
+# every instance's peak memory is released before the next one starts.
 while IFS= read -r -d '' img; do
-    "$FILTER_BIN" "$img" &
+    "$FILTER_BIN" "$img"
 done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
-    \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
+    \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
     -print0)
-
-wait
 
 # Continuous watching: watches the two SOURCE folders (not WALL_DIR --
 # nothing should be dropped there directly, it's fully generated) for
@@ -125,11 +126,11 @@ if [[ ${#watch_dirs[@]} -gt 0 ]]; then
     inotifywait -m -e close_write,moved_to,delete,moved_from --format '%e' "${watch_dirs[@]}" | \
         while read -r _event; do
             sync_merged_dir
+            # Same one-at-a-time rule as the initial pass above.
             while IFS= read -r -d '' img; do
-                "$FILTER_BIN" "$img" &
+                "$FILTER_BIN" "$img"
             done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
-                \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
+                \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
                 -print0)
-            wait
         done
 fi
