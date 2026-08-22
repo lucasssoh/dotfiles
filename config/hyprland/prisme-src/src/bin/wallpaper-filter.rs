@@ -4,8 +4,10 @@
 //! "safe" axis is only scaled, never cropped. Only the remaining ("free")
 //! axis is then adjusted: cropped if too large, or extended (blurred
 //! background -- dominant color of the 4 corners if the image has a
-//! near-uniform background, otherwise the whole image stretched -- with a
-//! gradient fade on the edges) if too short. Native rewrite of the old
+//! near-uniform background, otherwise the whole image stretched, darkened
+//! further when it covers a large share of the canvas to disguise it as a
+//! duplicate of the sharp subject -- with a gradient fade on the edges) if
+//! too short. Native rewrite of the old
 //! wallpaper-filter-one.sh (ImageMagick): same algorithm, but all
 //! decoding/processing stays in memory in a single process rather than
 //! calling `magick` five times per image with an encode/decode round trip
@@ -21,14 +23,55 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
-/// Sigma of the background's Gaussian blur -- eyeballed to match the old
-/// ImageMagick `-blur 0x40` look.
-const BLUR_SIGMA: f32 = 18.0;
+/// Sigma of the background's Gaussian blur -- bumped from the old
+/// ImageMagick `-blur 0x40` look (18.0) to better disguise the "cover +
+/// crop" background as a duplicate of the sharp subject on portrait
+/// sources under a landscape target (see EXTENSION_VEIL_* below).
+const BLUR_SIGMA: f32 = 30.0;
 /// Standard deviation (0..1, averaged over the 3 channels) below which the
-/// image's 4 corners are considered a uniform background -- calibrated on
-/// this repo's wallpaper collection (same images as the old ImageMagick
-/// version's equivalent threshold).
-const UNIFORM_THRESHOLD: f64 = 0.045;
+/// image's 4 corners are considered a uniform background. Deliberately
+/// tight: a looser threshold (0.045, the original ImageMagick-equivalent
+/// value) also caught dark/vignetted cinematic scenes with real detail,
+/// filling their background with a flat, unblurred color band instead of
+/// extending the scene (no texture survives blurring an already-flat
+/// fill). Only true flat-color sources (posters, solid backgrounds)
+/// should land here now.
+const UNIFORM_THRESHOLD: f64 = 0.015;
+/// Extension ratio (free axis: how much of it isn't covered by the sharp
+/// "fit" image) above which the background starts getting darkened -- see
+/// `veil_alpha`. Below this, the fit image dominates the canvas enough
+/// that a duplicated/rescaled background isn't distracting.
+const EXTENSION_VEIL_START: f64 = 0.3;
+/// Darkening applied to the background at EXTENSION_VEIL_START (ramps up
+/// to EXTENSION_VEIL_MAX_ALPHA as the ratio approaches 1.0). Keeps a
+/// portrait source's duplicated background from reading as an obvious
+/// second copy of the subject, without going full letterbox-black.
+const EXTENSION_VEIL_MIN_ALPHA: f32 = 0.15;
+const EXTENSION_VEIL_MAX_ALPHA: f32 = 0.45;
+
+/// How much darkening to apply to the background, given how much of the
+/// free axis it has to cover on its own (0 = fit image fills the canvas,
+/// 1 = fit image contributes nothing to that axis).
+fn veil_alpha(extension_ratio: f64) -> f32 {
+    if extension_ratio <= EXTENSION_VEIL_START {
+        return 0.0;
+    }
+    let t = ((extension_ratio - EXTENSION_VEIL_START) / (1.0 - EXTENSION_VEIL_START)).min(1.0);
+    EXTENSION_VEIL_MIN_ALPHA + (t as f32) * (EXTENSION_VEIL_MAX_ALPHA - EXTENSION_VEIL_MIN_ALPHA)
+}
+
+/// Darkens `img` in place by blending every pixel toward black by `alpha`
+/// (0 = no change, 1 = fully black).
+fn apply_dark_veil(img: &mut RgbImage, alpha: f32) {
+    if alpha <= 0.0 {
+        return;
+    }
+    for p in img.pixels_mut() {
+        for c in p.0.iter_mut() {
+            *c = (*c as f32 * (1.0 - alpha)).round() as u8;
+        }
+    }
+}
 
 fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").expect("HOME not set"))
@@ -174,8 +217,11 @@ fn uniform_corner_color(img: &DynamicImage) -> Option<Rgb<u8>> {
 /// "bleeding" into the stretch), otherwise the whole image scaled to
 /// cover the whole canvas then center-cropped. The blur applies in both
 /// cases -- on an already-uniform fill it just dilutes any residual noise
-/// from the sample.
-fn build_background(img: &DynamicImage, target_w: u32, target_h: u32) -> RgbImage {
+/// from the sample. `extension_ratio` (how much of the free axis the fit
+/// image leaves uncovered) darkens the result further out -- see
+/// `veil_alpha` -- to keep a "cover + crop" background from reading as an
+/// obvious duplicate of the sharp subject on portrait sources.
+fn build_background(img: &DynamicImage, target_w: u32, target_h: u32, extension_ratio: f64) -> RgbImage {
     let base = match uniform_corner_color(img) {
         Some(color) => RgbImage::from_pixel(target_w, target_h, color),
         None => {
@@ -184,7 +230,9 @@ fn build_background(img: &DynamicImage, target_w: u32, target_h: u32) -> RgbImag
             center_crop(&covered, target_w, target_h).to_rgb8()
         }
     };
-    image::imageops::blur(&base, BLUR_SIGMA)
+    let mut blurred = image::imageops::blur(&base, BLUR_SIGMA);
+    apply_dark_veil(&mut blurred, veil_alpha(extension_ratio));
+    blurred
 }
 
 /// Fade weight (0..255) for a pixel at `pos` on an axis of length `len`:
@@ -277,7 +325,12 @@ fn main() {
         center_crop(&fit, target_w, target_h).to_rgb8()
     } else {
         let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3).to_rgb8();
-        let bg = build_background(&img, target_w, target_h);
+        let extension_ratio = if landscape {
+            1.0 - (fit_w as f64 / target_w as f64)
+        } else {
+            1.0 - (fit_h as f64 / target_h as f64)
+        };
+        let bg = build_background(&img, target_w, target_h, extension_ratio);
         compose(bg, &fit, target_w, target_h, landscape)
     };
 

@@ -40,7 +40,7 @@ mkdir -p "$CACHE_DIR"
 # else: wallpaper-filter is launched in parallel (~30 instances via `&` +
 # `wait`), a test-and-purge per instance would create a race (one instance
 # would purge what another just wrote).
-FILTER_VERSION=4
+FILTER_VERSION=5
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
     find "$CACHE_DIR" -maxdepth 1 -type f \
