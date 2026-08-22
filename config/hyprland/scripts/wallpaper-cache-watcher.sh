@@ -35,6 +35,7 @@ if [[ -f "$WALLPAPERS_CONF" ]]; then
     [[ -n "$configured" ]] && WALL_DIR="${configured/#\~\//$HOME/}"
 fi
 CACHE_DIR="$HOME/.cache/filtered_wallpapers"
+THUMB_CACHE_DIR="$HOME/.cache/wallpaper_thumbs"
 FILTER_BIN="$HOME/.local/bin/wallpaper-filter"
 
 # The repo's own wallpapers/ -- resolved from this script's real path
@@ -84,15 +85,17 @@ sync_merged_dir
 # can't see a change in the filter ALGORITHM, only a change in the source
 # image. Without this marker, already-cached files would keep the old
 # filter version's render indefinitely. Bump this on every pipeline change
-# in prisme-src/src/bin/wallpaper-filter.rs -- targeted purge (not an
-# `rm -rf` of the whole folder) to never touch the marker itself or step
-# outside CACHE_DIR.
-FILTER_VERSION=6
+# in prisme-src/src/bin/wallpaper-filter.rs (screen-fit cache AND
+# thumbnail cache -- same binary, same version, purged together) --
+# targeted purge (not an `rm -rf` of the whole folder) to never touch the
+# marker itself or step outside these two cache dirs.
+FILTER_VERSION=7
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
     find "$CACHE_DIR" -maxdepth 1 -type f \
         \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
         -delete
+    find "$THUMB_CACHE_DIR" -maxdepth 1 -type f -iname "*.thumb.jpg" -delete
     printf '%s\n' "$FILTER_VERSION" > "$VERSION_FILE"
 fi
 

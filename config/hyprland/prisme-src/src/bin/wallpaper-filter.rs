@@ -32,11 +32,29 @@
 //! all wallpapers, and the FILTER_VERSION marker -- see it for the
 //! version to bump if the algorithm below changes).
 
-use image::{imageops::FilterType, DynamicImage, GenericImageView, Rgb, RgbImage, RgbaImage};
+use image::codecs::jpeg::JpegEncoder;
+use image::{imageops::FilterType, DynamicImage, ExtendedColorType, GenericImageView, ImageEncoder, Rgb, RgbImage, RgbaImage};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "jxl"];
+/// `image`'s own encoder defaults to 75 (`JpegEncoder::new`) when asked to
+/// save as JPEG without a quality specified (`save_with_format`, what this
+/// used to call) -- visibly soft for a full-screen wallpaper. Applies to
+/// both caches this file writes (screen-fit + thumbnail).
+const JPEG_QUALITY: u8 = 95;
+
+/// Saves `rgb` as a JPEG at JPEG_QUALITY, regardless of `path`'s own
+/// extension (see the call site for why that can be something other than
+/// ".jpg"/".jpeg").
+fn save_jpeg(rgb: &RgbImage, path: &Path) -> bool {
+    let Ok(file) = std::fs::File::create(path) else {
+        return false;
+    };
+    JpegEncoder::new_with_quality(file, JPEG_QUALITY)
+        .write_image(rgb.as_raw(), rgb.width(), rgb.height(), ExtendedColorType::Rgb8)
+        .is_ok()
+}
 /// Sigma of the background's Gaussian blur -- bumped from the old
 /// ImageMagick `-blur 0x40` look (18.0) to better disguise the "cover +
 /// crop" background as a duplicate of the sharp subject on portrait
@@ -417,9 +435,9 @@ fn main() {
         // Reuses this same decode -- no second pass over the original.
         // Aspect ratio preserved (only `height` is capped): thumbs.rs
         // needs it intact to size each card.
-        let thumb = img.resize(8192, THUMB_HEIGHT, FilterType::Triangle);
+        let thumb = img.resize(8192, THUMB_HEIGHT, FilterType::Triangle).to_rgb8();
         let _ = std::fs::create_dir_all(thumb_cache_dir());
-        let _ = thumb.save_with_format(&thumb_cached, image::ImageFormat::Jpeg);
+        save_jpeg(&thumb, &thumb_cached);
     }
 
     if screen_fresh {
@@ -462,15 +480,16 @@ fn main() {
     };
 
     let _ = std::fs::create_dir_all(cache_dir());
-    // Always JPEG-encoded regardless of the source's/cached path's own
-    // extension (kept identical to the original -- apply.rs and
-    // wallpaper-slideshow.sh resolve the cache by plain basename, so it
-    // can't change): `.save()` would instead pick an encoder from that
-    // extension, which fails outright for "jxl" (not a supported *write*
-    // format here, decode-only via jxl-oxide). awww/the `image` crate on
-    // the reading end sniff content rather than trust the extension, so a
-    // JPEG-content ".jxl" cache file opens the same as any other.
-    if result.save_with_format(&cached, image::ImageFormat::Jpeg).is_ok() {
+    // Always JPEG-encoded (at JPEG_QUALITY, see save_jpeg) regardless of
+    // the source's/cached path's own extension (kept identical to the
+    // original -- apply.rs and wallpaper-slideshow.sh resolve the cache by
+    // plain basename, so it can't change): `.save()` would instead pick an
+    // encoder from that extension, which fails outright for "jxl" (not a
+    // supported *write* format here, decode-only via jxl-oxide). awww/the
+    // `image` crate on the reading end sniff content rather than trust the
+    // extension, so a JPEG-content ".jxl" cache file opens the same as any
+    // other.
+    if save_jpeg(&result, &cached) {
         let _ = Command::new("notify-send")
             .arg("Wallpaper ready")
             .arg(format!(
