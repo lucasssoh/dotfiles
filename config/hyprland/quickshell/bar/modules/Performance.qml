@@ -20,16 +20,24 @@ Item {
     implicitWidth: Math.max(label.implicitWidth + 12, 32)
     implicitHeight: 24
 
+    // Asked for: a glyph per profile that actually reads as its own
+    // state instead of 3 unrelated icons (was a flame, a low-battery
+    // glyph, and a plain circle). Same bolt glyph (md-lightning_bolt) for
+    // both performance and balanced -- doubled up (two glyphs in one
+    // Text, not a real "double bolt" icon -- Material Design Icons
+    // doesn't have one) + yellow for performance, single + white for
+    // balanced, so the two read as "more/less of the same thing" rather
+    // than unrelated symbols. Eco gets its own real leaf glyph.
     function iconFor(p) {
-        if (p === PowerProfile.Performance) return "󰈸";
-        if (p === PowerProfile.PowerSaver) return "󰂏";
-        return "󰗑";
+        if (p === PowerProfile.Performance) return "󱐋󱐋";
+        if (p === PowerProfile.PowerSaver) return "󰌪";
+        return "󱐋";
     }
 
     function colorFor(p) {
-        if (p === PowerProfile.Performance) return "#ff6e6e";
-        if (p === PowerProfile.PowerSaver) return "#237823";
-        return "#a8b4c4";
+        if (p === PowerProfile.Performance) return "#ffcc00";
+        if (p === PowerProfile.PowerSaver) return "#237823";   // colors.lua "play" token -- same green Media.qml's own playing-state disc uses
+        return "#f2f2f7";
     }
 
     Text {
