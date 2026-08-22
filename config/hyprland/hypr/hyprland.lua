@@ -185,17 +185,33 @@ hl.config({
         gaps_out         = { top = 8, right = 8, bottom = 6, left = 8 },
         border_size      = 2,
         col = {
-            -- "Verre givré": a static (non-pulsing) diagonal gradient meant
-            -- to read as light catching a glass edge rather than an RGB/gamer
-            -- strip -- previously a fully-saturated cyan/white/cyan gradient.
-            -- Same accent as colors.lua's `accent` (#a8b4c4) -- desaturated
-            -- almost to platinum/silver (was a saturated #6b9fff blue),
-            -- toward translucent white on both ends instead of a hard color.
+            -- Convex/"bombé" bevel, not a flat colored strip: a single
+            -- light source top-left, the border reading as a rounded,
+            -- slightly domed edge catching that light rather than a flat
+            -- ring. No shape change involved (still rounding=10,
+            -- border_size=2 below -- squircle geometry was already looked
+            -- at and shelved for cost, see git history) -- purely a 5-stop
+            -- greyscale ramp doing the work: bright highlight where the
+            -- curve is closest to the light, fading through the bar's own
+            -- text/subtle/muted/overlay/background tokens (colors.lua) down
+            -- to near-invisible where the curve rolls away into shadow.
+            -- Deliberately monochrome (no accent hue any more) -- color
+            -- would read as decoration, grey/white/transparent alone is
+            -- what actually sells "curved surface, lit from one side".
+            --
+            -- Angle convention verified against Hyprland's own gradient
+            -- shader (progress = y*sin(angle) + x*(1-sin(angle)), 0<=angle
+            -- <=90 branch), not assumed: at angle=45 progress=0 (first
+            -- color below) sits at the top-left corner, progress=1 (last
+            -- color) at bottom-right -- confirmed empirically too (grim
+            -- crops of all 4 corners before touching this).
             active_border = {
                 colors = {
-                    "rgba(FFFFFF59)",  -- glass highlight, white ~35% alpha
-                    "rgba(A8B4C48C)",  -- accent, platinum-desaturated, ~55% alpha
-                    "rgba(FFFFFF26)",  -- glass falloff, white ~15% alpha
+                    "rgba(E5E5EABF)",  -- text, ~75% alpha -- the highlight tip, top-left
+                    "rgba(8E8E9373)",  -- subtle, ~45% alpha -- shoulder of the curve
+                    "rgba(63636647)",  -- muted,  ~28% alpha -- the curve's terminator/mid-tone
+                    "rgba(3A3A3C26)",  -- overlay, ~15% alpha -- entering shadow
+                    "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
                 },
                 angle = 45,
             },
