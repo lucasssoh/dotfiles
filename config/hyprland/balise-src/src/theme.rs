@@ -92,6 +92,311 @@ window,
     color: #8e8e93;
     font-size: 0.9em;
 }
+
+/* Rows, buttons, lists, switches, overlays -- kept in sync with
+   config/hyprland/balise/style.css (the real source of truth, see this
+   file's own header comment for why this fallback exists at all).
+   Gradient fills in the panel's own 135deg light direction, real
+   glass-bordered rows/overlays for the active network and password/error
+   dialogs, 10px rounded-rect buttons -- matching Roue's "verre" quality
+   rather than Orbit's flat 9999px-pill generated theme. */
+
+.balise-search-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 2px;
+}
+
+.balise-search-entry {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #f2f2f7;
+    font-size: 12px;
+}
+
+.balise-search-entry > text {
+    caret-color: #a8b4c4;
+}
+
+.balise-section-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #8e8e93;
+    font-weight: 700;
+    padding: 14px 12px 4px 12px;
+}
+
+.balise-placeholder {
+    color: #f2f2f7;
+    opacity: 0.5;
+    font-size: 13px;
+    font-style: italic;
+    padding: 32px 16px;
+}
+
+.balise-network-row,
+.balise-saved-network-row {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin: 4px 6px;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+        border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.balise-network-row:hover,
+.balise-saved-network-row:hover {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
+    border-color: #a8b4c4;
+}
+
+.balise-network-row.connected,
+.balise-saved-network-row.active {
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    background-image:
+        linear-gradient(135deg, rgba(168, 180, 196, 0.22), rgba(168, 180, 196, 0.10)),
+        linear-gradient(
+            135deg,
+            rgba(232, 236, 240, 0.65) 0%,
+            rgba(168, 180, 196, 0.35) 50%,
+            rgba(60, 64, 70, 0.12) 100%
+        );
+    background-clip: padding-box, border-box;
+}
+
+.balise-network-row.focused,
+.balise-saved-network-row.focused {
+    border-color: #a8b4c4;
+    box-shadow: 0 0 0 2px rgba(168, 180, 196, 0.3);
+}
+
+.balise-ssid {
+    font-weight: 700;
+    font-size: 13px;
+    color: #f2f2f7;
+}
+
+.balise-status {
+    font-size: 11px;
+    color: #f2f2f7;
+    opacity: 0.6;
+}
+
+.balise-status-accent {
+    color: #a8b4c4;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.balise-signal-icon,
+.balise-detail-label {
+    color: #f2f2f7;
+    opacity: 0.5;
+}
+
+.balise-icon-accent {
+    color: #a8b4c4;
+}
+
+.balise-signal-bar-active {
+    background-color: #f2f2f7;
+    opacity: 0.7;
+    border-radius: 1px;
+}
+
+.balise-signal-bar-active-accent {
+    background-color: #a8b4c4;
+    border-radius: 1px;
+}
+
+.balise-signal-bar-inactive {
+    background-color: #f2f2f7;
+    opacity: 0.15;
+    border-radius: 1px;
+}
+
+.balise-signal-bars-pad {
+    padding: 2px;
+}
+
+.balise-icon-container {
+    background-color: rgba(168, 180, 196, 0.3);
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.balise-working-indicator {
+    opacity: 0.8;
+}
+
+.balise-button {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+    color: #f2f2f7;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: none;
+    min-height: 0;
+    min-width: 0;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.balise-button:hover {
+    background-image: linear-gradient(135deg, #c2cbd6, #a8b4c4);
+    border-color: #a8b4c4;
+    color: #1c1c1e;
+}
+
+.balise-button.primary {
+    background-image: linear-gradient(135deg, #c2cbd6, #a8b4c4);
+    color: #1c1c1e;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 12px rgba(168, 180, 196, 0.3);
+}
+
+.balise-button.primary label {
+    color: #1c1c1e;
+}
+
+.balise-button.primary:hover {
+    background-image: linear-gradient(135deg, #cfd6de, #b8c2d0);
+    color: #1c1c1e;
+}
+
+.balise-button.destructive {
+    background-image: linear-gradient(135deg, #ff9a9a, #ff6e6e);
+    color: #ffffff;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 12px rgba(255, 110, 110, 0.3);
+}
+
+.balise-button.destructive:hover {
+    background-image: linear-gradient(135deg, #ffaeae, #ff8a8a);
+    color: #ffffff;
+}
+
+window switch.balise-toggle-switch,
+window switch.balise-toggle-switch:not(:backdrop),
+window switch.balise-toggle-switch trough,
+window switch.balise-toggle-switch:not(:backdrop) trough {
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    border-radius: 9999px;
+    min-width: 40px;
+    min-height: 22px;
+}
+
+window switch.balise-toggle-switch:checked,
+window switch.balise-toggle-switch:checked:not(:backdrop),
+window switch.balise-toggle-switch:checked:hover,
+window switch.balise-toggle-switch:checked trough,
+window switch.balise-toggle-switch:checked:not(:backdrop) trough {
+    background-color: #a8b4c4;
+    background-image: none;
+    border-color: #a8b4c4;
+    box-shadow: none;
+}
+
+window switch.balise-toggle-switch slider {
+    background-color: #ffffff;
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    min-width: 16px;
+    min-height: 16px;
+    margin: 3px;
+}
+
+window switch.balise-toggle-switch:checked slider,
+window switch.balise-toggle-switch:checked:not(:backdrop) slider {
+    background-color: #1c1c1e;
+}
+
+entry,
+password-entry {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f2f2f7;
+    border-radius: 12px;
+    padding: 8px 12px;
+    min-height: 18px;
+}
+
+password-entry > text {
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+entry:focus,
+password-entry:focus {
+    border-color: #a8b4c4;
+    box-shadow: 0 0 0 1px #a8b4c4;
+}
+
+.balise-password-overlay {
+    border: 1.5px solid transparent;
+    border-radius: 16px;
+    background-image:
+        linear-gradient(rgba(12, 12, 14, 0.99), rgba(12, 12, 14, 0.99)),
+        linear-gradient(
+            135deg,
+            rgba(232, 236, 240, 0.7) 0%,
+            rgba(168, 180, 196, 0.4) 50%,
+            rgba(60, 64, 70, 0.15) 100%
+        );
+    background-clip: padding-box, border-box;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    color: #f2f2f7;
+    margin: 12px;
+    padding: 16px;
+}
+
+.balise-password-overlay label {
+    color: #f2f2f7;
+}
+
+.balise-error-text-small {
+    color: #ff6e6e;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.balise-error-overlay {
+    border: 1.5px solid transparent;
+    border-radius: 16px;
+    background-image:
+        linear-gradient(rgba(12, 12, 14, 0.99), rgba(12, 12, 14, 0.99)),
+        linear-gradient(
+            135deg,
+            rgba(255, 190, 190, 0.7) 0%,
+            rgba(255, 110, 110, 0.4) 50%,
+            rgba(90, 40, 40, 0.15) 100%
+        );
+    background-clip: padding-box, border-box;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    color: #f2f2f7;
+    margin: 12px;
+    padding: 16px;
+}
+
+.balise-error-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #ff6e6e;
+}
+
+.balise-error-text {
+    color: #f2f2f7;
+    font-size: 12px;
+}
 "#;
 
 /// Loads the external CSS (symlinked by install.sh from
