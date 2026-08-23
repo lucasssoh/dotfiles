@@ -40,6 +40,15 @@ window,
     border-radius: 16px;
     box-shadow: none;
     background-image: none;
+    /* window carries GTK's built-in ".background" class, which paints an
+       opaque themed rectangle behind everything -- invisible as long as
+       the whole surface got blurred (that rectangle just read as more
+       blurred backdrop), but a plain flat square once that blur was
+       removed (see hypr/windowrules.lua), poking out past .orbit-panel's
+       own rounded corners. Made fully transparent here so only
+       .orbit-panel's own rounded fill (below) is ever visible -- nothing
+       left to show a second, square-edged "layer" behind it. */
+    background-color: transparent;
 }
 
 /* Border: the SAME "curved glass" treatment as Hyprland's active-window
