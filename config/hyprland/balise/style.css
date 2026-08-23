@@ -54,21 +54,29 @@ window,
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
-/* Real compositor blur behind Balise again (third pass -- see
-   hypr/windowrules.lua's header comment), paired THIS time with a
-   lighter, more translucent fill instead of Orbit's near-opaque 0.96/
-   0.97: rgb(40,40,45) is a genuine mid-gray rather than near-black, at
-   0.72 opacity so the blur actually shows through the glass instead of
-   being masked by an almost-solid layer sitting on top of it -- that
-   was the point of the previous two attempts reading as "dull/dark"
-   rather than "glass".
+/* No compositor blur behind Balise (added and removed three times this
+   session -- see hypr/windowrules.lua's header comment; settled on never
+   reinstating it). The "glass" read is built from color alone here: a
+   gradient fill instead of the previous flat rgba(40,40,45,0.72), same
+   135deg direction as the outer border, lighter/bluer at the top-left
+   fading to a plain darker gray at the bottom-right -- mimics a light
+   source hitting a glass pane rather than a uniform tinted pane. Alpha
+   stays in a tight 0.88-0.92 band throughout (not varied alongside the
+   color) so no part of the panel looks more see-through than another --
+   with no blur to soften it, an uneven bleed-through of whatever's
+   behind would read as a flaw, not glass.
 
    margin: 1.5px matches swaync's .control-center border width (this
    session's earlier 3px read as heavier than the rest of the system's
    glass panels). border-radius 14.5px (16 - 1.5) keeps the inner corner
    concentric with the outer one. */
 .balise-panel-inner {
-    background-color: rgba(40, 40, 45, 0.72);
+    background: linear-gradient(
+        135deg,
+        rgba(60, 62, 70, 0.88) 0%,
+        rgba(42, 43, 49, 0.9) 45%,
+        rgba(26, 26, 30, 0.92) 100%
+    );
     border-radius: 14.5px;
     margin: 1.5px;
     /* Global padding: more breathing room between the border and the
@@ -324,14 +332,16 @@ window,
     color: #ffffff;
 }
 
-/* Power toggle switch */
+/* Power toggle switch -- glass, same language as the buttons/panel:
+   gradient fills (135deg) instead of flat colors, translucent even when
+   checked (was a solid #a8b4c4) so it reads as the same material as
+   everything else instead of a plain colored pill. */
 window switch.balise-toggle-switch,
 window switch.balise-toggle-switch:not(:backdrop),
 window switch.balise-toggle-switch trough,
 window switch.balise-toggle-switch:not(:backdrop) trough {
-    background-color: rgba(255, 255, 255, 0.12);
-    background-image: none;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+    border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow: none;
     border-radius: 9999px;
     min-width: 40px;
@@ -343,14 +353,17 @@ window switch.balise-toggle-switch:checked:not(:backdrop),
 window switch.balise-toggle-switch:checked:hover,
 window switch.balise-toggle-switch:checked trough,
 window switch.balise-toggle-switch:checked:not(:backdrop) trough {
-    background-color: #a8b4c4;
-    background-image: none;
-    border-color: #a8b4c4;
+    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.6), rgba(168, 180, 196, 0.4));
+    border-color: rgba(255, 255, 255, 0.4);
     box-shadow: none;
 }
 
+/* Slider stays a light "glass pebble" in both states -- a gradient
+   instead of flat white, with a soft edge instead of the plain white ->
+   dark-flip the solid-fill version needed for contrast. */
 window switch.balise-toggle-switch slider {
-    background-color: #ffffff;
+    background-image: linear-gradient(135deg, #ffffff, #d8dce2);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 9999px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     min-width: 16px;
@@ -360,7 +373,7 @@ window switch.balise-toggle-switch slider {
 
 window switch.balise-toggle-switch:checked slider,
 window switch.balise-toggle-switch:checked:not(:backdrop) slider {
-    background-color: #1c1c1e;
+    background-image: linear-gradient(135deg, #ffffff, #c2cbd6);
 }
 
 /* Text entries (password entry, hidden-SSID entry) */

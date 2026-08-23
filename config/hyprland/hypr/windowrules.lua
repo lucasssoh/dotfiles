@@ -418,7 +418,7 @@ hl.window_rule({
 })
 
 -- ============================================================
--- LAYER BLUR — swaync / Roue / Balise
+-- LAYER BLUR — swaync / Roue
 -- ============================================================
 -- Real compositor blur behind these specific layer-shell surfaces, not a
 -- global effect (see hyprland.lua's decoration.blur.enabled comment for
@@ -428,17 +428,14 @@ hl.window_rule({
 -- blur unless a rule says so). Namespaces confirmed live via
 -- `hyprctl layers -j` while each was open, not guessed:
 --   swaync-control-center         -- the panel that opens on bell click
---   balise                        -- the WiFi/Bluetooth/Ethernet panel
 -- swaync-notification-window (popup toasts) deliberately left WITHOUT a
 -- rule -- blur asked for only on the control-center block, not the
--- popups. Orbit (the panel Balise is replacing) had a rule here too,
--- removed on request and never reinstated -- its glass material stays
--- CSS-only. Balise's own blur rule has been added and removed twice
--- already this session (a flat near-opaque fill made the blur read as
--- dull/dark both times) -- this third pass pairs it with a lighter,
--- more translucent fill (see balise/style.css's .balise-panel-inner)
--- specifically so the blur has something to show through instead of
--- being masked by a near-opaque layer on top of it.
+-- popups. Orbit and Balise (the WiFi/BT/VPN panel and its first-party
+-- replacement) both cycled through a blur rule here more than once and
+-- settled on NOT having one -- for Balise specifically, the "glass" read
+-- is now built entirely from color/gradient in balise/style.css (a
+-- gradient fill on .balise-panel-inner instead of a flat one, alongside
+-- the border/button treatment already there), not compositor blur.
 --
 -- xray + ignore_alpha on swaync-control-center only: its layer surface is
 -- actually the FULL screen (2560x1416, confirmed via `hyprctl layers -j`
@@ -461,8 +458,3 @@ hl.layer_rule({ match = { namespace = "swaync-control-center" }, blur = true, xr
 -- cost profile as the two rules above -- see hyprland.lua's
 -- decoration.blur.enabled comment.
 hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xray = true, ignore_alpha = 0.5 })
--- Balise: a small anchored corner panel (360x480, confirmed via
--- `hyprctl layers -j` while open), same situation Orbit was originally in
--- -- no xray/ignore_alpha needed, its surface already matches the
--- visible panel.
-hl.layer_rule({ match = { namespace = "balise" },               blur = true })
