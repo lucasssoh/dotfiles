@@ -17,9 +17,11 @@ import "../theme"
 Item {
     id: root
 
-    // "off": no ethernet device on this machine at all.
-    // "on": device present, but no cable / not the active connection.
-    // "connected": device present and actively carrying an IP.
+    // "off": no cable plugged in (NetworkManager's own "unavailable" --
+    // no carrier), or no ethernet device/unmanaged at all.
+    // "on": cable plugged in, device ready ("disconnected" -- NM's real
+    // state once carrier is present but nothing's activated on it yet).
+    // "connected": actively carrying an IP.
     property string state: "off"
 
     // Icon-only, same narrow floor as Bluetooth.qml/Network.qml.
@@ -30,14 +32,20 @@ Item {
 
     Process {
         id: proc
+        // Best-across-all-ethernet-devices, not "first line" -- a
+        // machine can have more than one ethernet-type row (a real NIC
+        // plus e.g. docker's veth/unmanaged interfaces), and nmcli's own
+        // listing order isn't guaranteed to put the real NIC first.
+        // "connected" beats "disconnected" (cable in, idle) beats
+        // everything else (unavailable/unmanaged/absent -> "off").
         command: ["bash", "-c", `
-line=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null | awk -F: '$2=="ethernet" {print; exit}')
-if [ -z "$line" ]; then
-    printf 'off'
-elif [ "$(printf '%s' "$line" | cut -d: -f3)" = "connected" ]; then
+lines=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null | awk -F: '$2=="ethernet"')
+if printf '%s\\n' "$lines" | grep -q ':connected$'; then
     printf 'connected'
-else
+elif printf '%s\\n' "$lines" | grep -q ':disconnected$'; then
     printf 'on'
+else
+    printf 'off'
 fi
 `]
         stdout: StdioCollector {
