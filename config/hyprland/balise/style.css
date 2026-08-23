@@ -193,6 +193,17 @@ window,
     padding: 2px;
 }
 
+/* The filter field's magnifier. A plain Label carrying a Phosphor glyph
+   (see ui/network_list.rs for why the field is an Entry and not a
+   gtk::SearchEntry) -- muted, so it reads as a hint about what the field
+   does rather than as a control. */
+.balise-search-icon {
+    color: #f2f2f7;
+    opacity: 0.45;
+    margin-left: 10px;
+    margin-right: 2px;
+}
+
 .balise-search-entry {
     background: transparent;
     border: none;

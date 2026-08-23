@@ -67,7 +67,16 @@ pub struct BaliseWindow {
 /// network list populated). `width_request`/`height_request` below pin
 /// it for real; content beyond this footprint scrolls internally
 /// (ScrolledWindow) instead of resizing the window.
-const PANEL_WIDTH: i32 = 360;
+///
+/// 360 -> 351 so the panel lines up exactly with the quickshell "tools"
+/// pill sitting directly above it (measured at 351 wide, right margin 6
+/// -- config.toml's margin_right matches). It used to overhang that pill
+/// by 25px on the left, which read as a misalignment.
+///
+/// Note this is only a MINIMUM: content wider than it still wins. Until
+/// the row status labels were ellipsized, the panel measured 374 here no
+/// matter what this constant said.
+const PANEL_WIDTH: i32 = 351;
 const PANEL_HEIGHT: i32 = 480;
 
 impl BaliseWindow {
@@ -160,7 +169,7 @@ impl BaliseWindow {
         // which is what "drilling in" should feel like.
         stack.add_named(detail_view.widget(), Some("detail"));
         stack.set_visible_child_name("wifi");
-        stack.set_size_request(300, 380);
+        stack.set_size_request(270, 380);
         panel_inner.append(&stack);
 
         let overlay = Overlay::new();
@@ -218,7 +227,7 @@ impl BaliseWindow {
             .orientation(Orientation::Vertical)
             .css_classes(["balise-password-overlay"])
             .spacing(8)
-            .width_request(300)
+            .width_request(270)
             .build();
         let saved_header_row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(12).build();
         let saved_title = gtk::Label::builder()

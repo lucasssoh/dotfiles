@@ -284,10 +284,10 @@ ShellRoot {
                     z: -1
                     anchors.top: parent.top
                     height: 31
-                    // 10 -> 14, asked for -- bottom corners only (flushTop
-                    // still squares the top ones off against the screen
-                    // edge, unaffected).
-                    cornerRadius: 14
+                    // 10 -> 14 -> 18, asked for -- bottom corners only
+                    // (flushTop still squares the top ones off against the
+                    // screen edge, unaffected).
+                    cornerRadius: 18
                     x: leftGroup.x
                     width: rightGroup.x + rightGroup.width - leftGroup.x
                     color: "#0c0c0e"
@@ -317,6 +317,42 @@ ShellRoot {
                 anchors.leftMargin: 6
                 flushTop: false
                 color: "#730c0c0e"
+                // Glass. These three float free of every screen edge, so
+                // all four of their edges are visible -- the one place in
+                // this bar where a pane read is possible at all.
+                //
+                // Two separate light sources, on purpose. The FILL is a
+                // vertical gradient (denser and lighter at the top,
+                // thinner and darker at the bottom) -- that's the body of
+                // the pane. The EDGE is a GlassRim sibling below, tracing
+                // the same five-stop diagonal Hyprland/Roue/Balise use --
+                // that's the highlight raking across it. A flat
+                // border.color was tried for the edge first and read as
+                // exactly what it was: a uniform light outline.
+                //
+                // Vertical, not the 135deg used in balise/style.css: these
+                // are ~24px tall and several hundred wide, so a diagonal
+                // would be swallowed by the width and read as a horizontal
+                // wash. Top-to-bottom is the only axis with enough travel.
+                //
+                // Deliberately NOT applied to the central island: it's
+                // flush against the screen's top edge and ~43:1, so only
+                // its bottom edge is ever visible -- a rim there was tried
+                // and dropped, it read as a stray underline rather than as
+                // a pane. Block.qml's no-border rule still holds for the
+                // solid blocks; these translucent ones are the exception.
+                // Both stops keep the SAME 0x73 alpha the flat fill had.
+                // Varying alpha instead (tried first) lets a different
+                // amount of wallpaper through at each end, which fights the
+                // gradient rather than adding to it -- measured: only 16
+                // units of travel, 10 of which were already there from the
+                // wallpaper alone. Constant alpha means the travel comes
+                // purely from the colour and is the same over any
+                // wallpaper.
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#733f4450" }
+                    GradientStop { position: 1.0; color: "#73060608" }
+                }
 
                 // Notification bell, moved here from the main bar's far
                 // left (was next to Media), asked for.
@@ -383,12 +419,49 @@ ShellRoot {
             // METRICS/TOOLS themselves, rather than sliding around
             // whenever ActiveWindow/Media/workspaces resize.
             Modules.Block {
+                id: launchers
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.right: tools.left
                 anchors.rightMargin: 6
                 flushTop: false
                 color: "#730c0c0e"
+                // Glass. These three float free of every screen edge, so
+                // all four of their edges are visible -- the one place in
+                // this bar where a pane read is possible at all.
+                //
+                // Two separate light sources, on purpose. The FILL is a
+                // vertical gradient (denser and lighter at the top,
+                // thinner and darker at the bottom) -- that's the body of
+                // the pane. The EDGE is a GlassRim sibling below, tracing
+                // the same five-stop diagonal Hyprland/Roue/Balise use --
+                // that's the highlight raking across it. A flat
+                // border.color was tried for the edge first and read as
+                // exactly what it was: a uniform light outline.
+                //
+                // Vertical, not the 135deg used in balise/style.css: these
+                // are ~24px tall and several hundred wide, so a diagonal
+                // would be swallowed by the width and read as a horizontal
+                // wash. Top-to-bottom is the only axis with enough travel.
+                //
+                // Deliberately NOT applied to the central island: it's
+                // flush against the screen's top edge and ~43:1, so only
+                // its bottom edge is ever visible -- a rim there was tried
+                // and dropped, it read as a stray underline rather than as
+                // a pane. Block.qml's no-border rule still holds for the
+                // solid blocks; these translucent ones are the exception.
+                // Both stops keep the SAME 0x73 alpha the flat fill had.
+                // Varying alpha instead (tried first) lets a different
+                // amount of wallpaper through at each end, which fights the
+                // gradient rather than adding to it -- measured: only 16
+                // units of travel, 10 of which were already there from the
+                // wallpaper alone. Constant alpha means the travel comes
+                // purely from the colour and is the same over any
+                // wallpaper.
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#733f4450" }
+                    GradientStop { position: 1.0; color: "#73060608" }
+                }
 
                 Modules.Launchers {
                     opacity: 0.8
@@ -408,6 +481,42 @@ ShellRoot {
                 anchors.rightMargin: 6
                 flushTop: false
                 color: "#730c0c0e"
+                // Glass. These three float free of every screen edge, so
+                // all four of their edges are visible -- the one place in
+                // this bar where a pane read is possible at all.
+                //
+                // Two separate light sources, on purpose. The FILL is a
+                // vertical gradient (denser and lighter at the top,
+                // thinner and darker at the bottom) -- that's the body of
+                // the pane. The EDGE is a GlassRim sibling below, tracing
+                // the same five-stop diagonal Hyprland/Roue/Balise use --
+                // that's the highlight raking across it. A flat
+                // border.color was tried for the edge first and read as
+                // exactly what it was: a uniform light outline.
+                //
+                // Vertical, not the 135deg used in balise/style.css: these
+                // are ~24px tall and several hundred wide, so a diagonal
+                // would be swallowed by the width and read as a horizontal
+                // wash. Top-to-bottom is the only axis with enough travel.
+                //
+                // Deliberately NOT applied to the central island: it's
+                // flush against the screen's top edge and ~43:1, so only
+                // its bottom edge is ever visible -- a rim there was tried
+                // and dropped, it read as a stray underline rather than as
+                // a pane. Block.qml's no-border rule still holds for the
+                // solid blocks; these translucent ones are the exception.
+                // Both stops keep the SAME 0x73 alpha the flat fill had.
+                // Varying alpha instead (tried first) lets a different
+                // amount of wallpaper through at each end, which fights the
+                // gradient rather than adding to it -- measured: only 16
+                // units of travel, 10 of which were already there from the
+                // wallpaper alone. Constant alpha means the travel comes
+                // purely from the colour and is the same over any
+                // wallpaper.
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#733f4450" }
+                    GradientStop { position: 1.0; color: "#73060608" }
+                }
 
                     // Left/right breathing room -- asked for, left
                     // especially (Block.qml's own Row has zero built-in
@@ -492,6 +601,14 @@ ShellRoot {
 
                     Item { width: 2; height: 1 }
                 }
+
+            // Gradient edges for the three translucent pills. Siblings,
+            // not children: Block reparents anything nested inside it
+            // into its content Row (see modules/GlassRim.qml). Declared
+            // after all three so they paint on top of their fills.
+            Modules.GlassRim { target: metrics }
+            Modules.GlassRim { target: launchers }
+            Modules.GlassRim { target: tools }
         }
     }
 }

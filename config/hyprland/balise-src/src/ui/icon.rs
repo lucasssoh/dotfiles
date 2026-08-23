@@ -29,6 +29,7 @@ pub const BLUETOOTH_SLASH: &str = "\u{E0DE}";
 pub const PLUGS_CONNECTED: &str = "\u{EB5A}"; // Ethernet row, active/carrier
 pub const PLUGS: &str = "\u{EB56}"; // Ethernet row, no cable (Phase 2)
 
+pub const MAGNIFYING_GLASS: &str = "\u{E30C}"; // Search/filter field
 pub const GEAR: &str = "\u{E270}"; // Per-row "configure" button -> detail page
 pub const CARET_LEFT: &str = "\u{E138}"; // Detail page's back button
 

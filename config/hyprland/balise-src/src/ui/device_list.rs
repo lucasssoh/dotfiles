@@ -204,7 +204,16 @@ impl DeviceList {
             Some(pct) => format!("{} · {}%{}", status_text, pct, if device.is_charging { " (charging)" } else { "" }),
             None => status_text,
         };
-        let status = gtk::Label::builder().label(&status_text).css_classes(["balise-status"]).halign(gtk::Align::Start).build();
+        let status = gtk::Label::builder()
+            .label(&status_text)
+            .css_classes(["balise-status"])
+            .halign(gtk::Align::Start)
+            // Ellipsized like the name above it: without this the row's
+            // natural width includes the whole status string, and a long
+            // one widens the entire panel (measured: it was pinning the
+            // window 23px past its width_request).
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
         info_box.append(&status);
         row.append(&info_box);
 

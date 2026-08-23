@@ -101,7 +101,14 @@ impl WiredList {
         } else {
             format!("{} · No cable", profile.device_name)
         };
-        let status = gtk::Label::builder().label(&status_text).css_classes(["balise-status"]).halign(gtk::Align::Start).build();
+        let status = gtk::Label::builder()
+            .label(&status_text)
+            .css_classes(["balise-status"])
+            .halign(gtk::Align::Start)
+            // See device_list.rs: an un-ellipsized status widens the panel.
+            // "eno1 · 1000 Mb/s · 192.168.1.89" is the worst case here.
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
         info_box.append(&status);
         row.append(&info_box);
 

@@ -16,7 +16,7 @@ pub struct NetworkList {
     container: gtk::Box,
     list_box: gtk::Box,
     scan_button: gtk::Button,
-    search_entry: gtk::SearchEntry,
+    search_entry: gtk::Entry,
     networks: Rc<RefCell<Vec<AccessPoint>>>,
     row_actions: Rc<RefCell<HashMap<String, gtk::Box>>>,
     on_connect: Rc<RefCell<Option<Rc<dyn Fn(AccessPoint)>>>>,
@@ -57,11 +57,26 @@ impl NetworkList {
             .focusable(true)
             .build();
 
-        let search_entry = gtk::SearchEntry::builder()
-            .placeholder_text("Search networks...")
+        // A plain Entry preceded by a Phosphor glyph, NOT a
+        // gtk::SearchEntry. SearchEntry draws its own magnifier from the
+        // system icon theme, which rendered as a thin hollow circle with
+        // a stub -- nothing like the Phosphor set every other icon here
+        // comes from, and there's no property to replace it. The only
+        // things given up are SearchEntry's keystroke debounce (the list
+        // is a handful of rows, re-filtering per keystroke is free) and
+        // its built-in clear button (Escape already clears, see below).
+        let search_icon = super::icon::icon_label(super::icon::MAGNIFYING_GLASS);
+        search_icon.add_css_class("balise-search-icon");
+        search_icon.set_valign(gtk::Align::Center);
+
+        let search_entry = gtk::Entry::builder()
+            // "Filter", not "Search": this narrows the list already on
+            // screen, it doesn't trigger a scan -- that's the Scan button.
+            .placeholder_text("Filter networks…")
             .hexpand(true)
             .css_classes(["balise-search-entry"])
             .can_focus(true)
+            .has_frame(false)
             .build();
 
         // Escape: clear the search if non-empty, else hide the whole
@@ -87,6 +102,7 @@ impl NetworkList {
         });
         search_entry.add_controller(esc_handler);
 
+        search_box.append(&search_icon);
         search_box.append(&search_entry);
         container.append(&search_box);
 
@@ -139,7 +155,7 @@ impl NetworkList {
         };
 
         let list_clone = list.clone();
-        search_entry.connect_search_changed(move |_| {
+        search_entry.connect_changed(move |_| {
             let networks = list_clone.networks.borrow().clone();
             list_clone.render_networks(&networks);
         });
@@ -404,6 +420,8 @@ impl NetworkList {
             .label(&status_text)
             .css_classes(["balise-status"])
             .halign(gtk::Align::Start)
+            // See device_list.rs: an un-ellipsized status widens the panel.
+            .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
         info_box.append(&status);
         row.append(&info_box);

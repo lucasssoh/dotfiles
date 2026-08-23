@@ -34,7 +34,7 @@ impl SavedList {
             .hscrollbar_policy(gtk::PolicyType::Never)
             .vscrollbar_policy(gtk::PolicyType::External)
             .min_content_height(320)
-            .min_content_width(320)
+            .min_content_width(270)
             .css_classes(["balise-scrolled"])
             .build();
 
@@ -182,6 +182,8 @@ impl SavedList {
             .label(status_text)
             .css_classes(["balise-status"])
             .halign(gtk::Align::Start)
+            // See device_list.rs: an un-ellipsized status widens the panel.
+            .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
         if network.autoconnect && !network.is_active {
             status.add_css_class("balise-status-accent");

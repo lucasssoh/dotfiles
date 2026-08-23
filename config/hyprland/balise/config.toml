@@ -11,7 +11,9 @@ position = "top-right"
 margin_top = 8
 margin_bottom = 8
 margin_left = 8
-margin_right = 8
+# 6, not 8: aligns the panel's right edge with the quickshell tools
+# pill above it (its own anchors.rightMargin is 6).
+margin_right = 6
 
 window_transition = "slidedown"
 window_transition_duration = 150
