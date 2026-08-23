@@ -109,14 +109,11 @@ impl NetworkList {
 
         let scan_button = super::icon::icon_text_button(super::icon::ARROWS_CLOCKWISE, "Scan", &["balise-button", "primary", "flat"]);
         scan_button.set_hexpand(true);
-        scan_button.set_tooltip_text(Some("Scan for Networks"));
 
         let hidden_button = super::icon::icon_text_button(super::icon::EYE_SLASH, "Hidden", &["balise-button", "flat"]);
-        hidden_button.set_tooltip_text(Some("Hidden Network"));
 
         let saved_button =
             super::icon::icon_text_button(super::icon::CLOCK_COUNTER_CLOCKWISE, "Saved", &["balise-button", "flat"]);
-        saved_button.set_tooltip_text(Some("Saved Networks"));
 
         footer.append(&scan_button);
         footer.append(&hidden_button);
@@ -521,7 +518,6 @@ impl NetworkList {
         if network.security.needs_password() && !network.is_connected {
             let lock_icon = super::icon::icon_label(super::icon::LOCK_SIMPLE);
             lock_icon.add_css_class("balise-signal-icon");
-            lock_icon.set_tooltip_text(Some("Secure Network"));
             lock_icon.set_valign(gtk::Align::Center);
             actions_box.append(&lock_icon);
         }
@@ -589,7 +585,6 @@ impl NetworkList {
         let gear_btn = gtk::Button::builder().css_classes(["balise-button", "balise-gear-button", "flat"]).build();
         gear_btn.set_child(Some(&gear));
         gear_btn.set_valign(gtk::Align::Center);
-        gear_btn.set_tooltip_text(Some("Details"));
 
         let network_detail = network.clone();
         let on_show_detail = self.on_show_detail.clone();

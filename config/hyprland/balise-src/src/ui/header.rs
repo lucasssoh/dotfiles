@@ -83,7 +83,6 @@ impl Header {
             .build();
         let back_button = gtk::Button::builder().css_classes(["balise-back-button", "flat"]).build();
         back_button.set_child(Some(&super::icon::icon_label(super::icon::CARET_LEFT)));
-        back_button.set_tooltip_text(Some("Back"));
         let back_title = gtk::Label::builder().label("").css_classes(["balise-back-title"]).halign(gtk::Align::Start).hexpand(true).build();
         back_title.set_ellipsize(gtk::pango::EllipsizeMode::End);
         back_row.append(&back_button);

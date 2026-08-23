@@ -194,7 +194,6 @@ impl SavedList {
             .css_classes(["balise-toggle-switch"])
             .halign(gtk::Align::Center)
             .valign(gtk::Align::Center)
-            .tooltip_text("Toggle automatic connection for this network")
             .build();
         row.append(&autoconnect_switch);
 
@@ -206,7 +205,6 @@ impl SavedList {
             .margin_start(4)
             .build();
         gear_btn.set_child(Some(&super::icon::icon_label(super::icon::GEAR)));
-        gear_btn.set_tooltip_text(Some("Details"));
         row.append(&gear_btn);
 
         // Ignore the switch's initial `active(...)` construction as a

@@ -265,7 +265,6 @@ impl DeviceList {
         let gear_btn = gtk::Button::builder().css_classes(["balise-button", "balise-gear-button", "flat"]).build();
         gear_btn.set_child(Some(&super::icon::icon_label(super::icon::GEAR)));
         gear_btn.set_valign(gtk::Align::Center);
-        gear_btn.set_tooltip_text(Some("Details"));
 
         let path = device.path.clone();
         let on_show_detail = self.on_show_detail.clone();
