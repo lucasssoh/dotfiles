@@ -26,19 +26,35 @@ window,
     border-radius: 16px;
 }
 
-/* Border: the SAME "curved glass" treatment as Hyprland's active-window
-   border, RoueWheel's hub rim, .roue-sidebar, swaync's .control-center and
-   (now-fixed) .orbit-panel -- one material read across the whole system.
-   LONGHAND background-image + background-clip, NOT the inline
-   `background: <gradient> padding-box, <gradient> border-box` shorthand:
-   that shorthand renders fine on .roue-sidebar/.control-center, but on
-   Orbit's panel/surface combination it made GTK draw the corners as a
-   right angle instead of following border-radius (confirmed live via a
-   cropped/zoomed screenshot of the real surface corner). The longhand
-   produces the identical visual result and rounds correctly everywhere --
-   do not "simplify" this back to the shorthand.
+/* Border, take two. The "background-clip: padding-box, border-box"
+   longhand trick (works for Orbit/Roue/swaync -- see their own style.css
+   files) rendered NOTHING in the border-box ring here: confirmed at the
+   pixel level (sampled the raw screenshot buffer) that the ring was flat
+   black with zero gradient pixels at border-width 2.5px, and even at a
+   diagnostic 20px the ring stayed solid black while the window DID grow
+   to make room for it (border-width was respected, the content just
+   never painted). Rather than chase why this one surface/widget
+   combination breaks the clip trick, switched to the classically robust
+   way to fake a gradient border in CSS: two nested boxes (see
+   ui/window.rs). `.balise-panel` (outer) is the gradient itself, a
+   single plain `background` filling its whole rounded rect --
+   `.balise-panel-inner` sits inside it with a small margin (below), and
+   that uncovered margin ring IS the border, with no clip-box ambiguity
+   possible. */
+.balise-panel {
+    border-radius: 16px;
+    background: linear-gradient(
+        135deg,
+        rgba(234, 234, 238, 0.9) 0%,
+        rgba(170, 172, 180, 0.65) 25%,
+        rgba(130, 132, 140, 0.45) 50%,
+        rgba(90, 92, 98, 0.3) 75%,
+        rgba(60, 62, 68, 0.18) 100%
+    );
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
 
-   No compositor blur behind Balise (tried it, removed again -- see
+/* No compositor blur behind Balise (tried it, removed again -- see
    hypr/windowrules.lua's header comment: a flat blurred backdrop read as
    dull/dark, not "glass"). Fill opacity 0.96, back up near Orbit's own
    0.97 for the same reason Orbit is that high: without blur behind it,
@@ -46,27 +62,15 @@ window,
    and a lower opacity here just shows an unblurred, distracting hint of
    whatever's behind instead of reading as glass.
 
-   Border width bumped 1.5px -> 2.5px and every gradient stop raised
-   (most visibly the tail end, 0.06 -> 0.18) so the ring reads clearly
-   all the way around instead of fading to near-invisible past the
-   top-left corner -- the previous values were "correct" in principle
-   (same ramp as Hyprland's own window border) but too subtle to actually
-   see at this panel's scale, per direct feedback. */
-.balise-panel {
-    border: 2.5px solid transparent;
-    border-radius: 16px;
-    background-image:
-        linear-gradient(rgba(12, 12, 14, 0.96), rgba(12, 12, 14, 0.96)),
-        linear-gradient(
-            135deg,
-            rgba(234, 234, 238, 0.9) 0%,
-            rgba(170, 172, 180, 0.65) 25%,
-            rgba(130, 132, 140, 0.45) 50%,
-            rgba(90, 92, 98, 0.3) 75%,
-            rgba(60, 62, 68, 0.18) 100%
-        );
-    background-clip: padding-box, border-box;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+   margin: 3px is the border's thickness (the gradient showing through
+   from .balise-panel behind it) -- bumped from an invisible 1.5-2.5px
+   attempt to something that actually reads at this panel's scale, per
+   direct feedback. border-radius 13px (16 - 3) keeps the inner corner
+   concentric with the outer one instead of looking squarer. */
+.balise-panel-inner {
+    background-color: rgba(12, 12, 14, 0.96);
+    border-radius: 13px;
+    margin: 3px;
     /* Global padding: more breathing room between the border and the
        content than the previous cramped 14px. */
     padding: 20px;

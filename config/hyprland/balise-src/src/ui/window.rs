@@ -88,16 +88,40 @@ impl BaliseWindow {
         let display = gtk4::gdk::Display::default().expect("no default display");
         let (fallback_css, user_css) = crate::theme::load(&display);
 
+        // Glass border, take two: the "background-clip: padding-box,
+        // border-box" longhand trick (works for Orbit/Roue/swaync) turned
+        // out to render NOTHING in the border-box ring here -- confirmed
+        // at the pixel level (sampled the raw screenshot buffer): with
+        // border: 2.5px the ring was flat black with zero gradient
+        // pixels, and even blown up to border: 20px as a diagnostic, the
+        // ring stayed solid black instead of showing the gradient, while
+        // the window did grow to make room for it (so the border-WIDTH
+        // was respected, just never painted). Rather than chase why this
+        // one surface/widget combination breaks the clip trick, switched
+        // to the classically robust way to fake a gradient border in
+        // CSS: two nested boxes. `panel` (outer, .balise-panel) is
+        // painted with the gradient as a single plain `background`
+        // filling its entire bounds; `panel_inner` (.balise-panel-inner)
+        // sits inside it with a small margin, carrying the actual opaque
+        // fill + all the real content -- the uncovered margin ring IS
+        // the border, no clip-box ambiguity possible.
         let panel = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
             .css_classes(["balise-panel"])
+            .vexpand(true)
+            .hexpand(true)
+            .build();
+
+        let panel_inner = gtk::Box::builder()
+            .orientation(Orientation::Vertical)
+            .css_classes(["balise-panel-inner"])
             .vexpand(true)
             .hexpand(true)
             .overflow(gtk::Overflow::Hidden)
             .build();
+        panel.append(&panel_inner);
 
         let header = Header::new();
-        panel.append(header.widget());
+        panel_inner.append(header.widget());
 
         let stack = gtk::Stack::builder()
             .vexpand(true)
@@ -117,7 +141,7 @@ impl BaliseWindow {
         // today (see the project plan's Phase 2/3 for when this needs
         // revisiting for Ethernet/Bluetooth's own minimums).
         stack.set_size_request(300, 380);
-        panel.append(&stack);
+        panel_inner.append(&stack);
 
         let overlay = Overlay::new();
         overlay.set_child(Some(&panel));
