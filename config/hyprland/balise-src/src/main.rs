@@ -35,7 +35,7 @@ enum Commands {
         /// center-left, center, center-right, bottom-left, bottom-center,
         /// bottom-right)
         position: Option<String>,
-        /// Optional tab to switch to (only "wifi" exists today)
+        /// Optional tab to switch to: "wifi", "bluetooth", or "ethernet"
         #[arg(long, short)]
         tab: Option<String>,
     },

@@ -8,9 +8,11 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use super::device_list::DeviceList;
 use super::header::Header;
 use super::network_list::NetworkList;
 use super::saved_list::SavedList;
+use super::wired_list::WiredList;
 use crate::config::Config;
 
 pub struct BaliseWindow {
@@ -20,6 +22,8 @@ pub struct BaliseWindow {
     header: Header,
     network_list: NetworkList,
     saved_list: SavedList,
+    device_list: DeviceList,
+    wired_list: WiredList,
     stack: gtk::Stack,
     fallback_css: gtk::CssProvider,
     user_css: gtk::CssProvider,
@@ -42,6 +46,18 @@ pub struct BaliseWindow {
 
     error_revealer: gtk::Revealer,
     error_label: gtk::Label,
+
+    // Bluetooth pairing agent (Phase 3) -- one reusable overlay for PIN
+    // entry, passkey entry, passkey/PIN display, and yes/no confirmation,
+    // adapted from orbit-vendor/src/ui/window.rs's bt_agent_* fields.
+    bt_agent_revealer: gtk::Revealer,
+    bt_agent_label: gtk::Label,
+    bt_agent_entry: gtk::Entry,
+    bt_agent_confirm_btn: gtk::Button,
+    bt_agent_cancel_btn: gtk::Button,
+    bt_pin_callback: Rc<RefCell<Option<async_channel::Sender<String>>>>,
+    bt_passkey_callback: Rc<RefCell<Option<async_channel::Sender<u32>>>>,
+    bt_confirm_callback: Rc<RefCell<Option<async_channel::Sender<bool>>>>,
 }
 
 /// Hard-fixed panel footprint -- `default_width`/`default_height` alone
@@ -132,14 +148,13 @@ impl BaliseWindow {
 
         let network_list = NetworkList::new();
         let saved_list = SavedList::new();
+        let device_list = DeviceList::new();
+        let wired_list = WiredList::new();
 
         stack.add_named(network_list.widget(), Some("wifi"));
+        stack.add_named(device_list.widget(), Some("bluetooth"));
+        stack.add_named(wired_list.widget(), Some("ethernet"));
         stack.set_visible_child_name("wifi");
-        // Minimum height so the panel doesn't collapse to nothing while
-        // WiFi's list is empty/loading -- same purpose as Orbit's
-        // stack.set_size_request, kept small since there's only one tab
-        // today (see the project plan's Phase 2/3 for when this needs
-        // revisiting for Ethernet/Bluetooth's own minimums).
         stack.set_size_request(300, 380);
         panel_inner.append(&stack);
 
@@ -319,6 +334,80 @@ impl BaliseWindow {
         error_close_btn.connect_clicked(move |_| rev.set_reveal_child(false));
         overlay.add_overlay(&error_revealer);
 
+        // ---- Bluetooth pairing agent overlay (Phase 3) ---------------------
+        // One reusable box for all five request kinds (PIN entry/display,
+        // passkey entry/display, yes-no confirmation); which callback slot
+        // is occupied (see app/mod.rs) decides what the Confirm button
+        // does. Adapted from orbit-vendor/src/ui/window.rs's bt_agent_box.
+        let bt_agent_box = gtk::Box::builder()
+            .orientation(Orientation::Vertical)
+            .spacing(12)
+            .css_classes(["balise-password-overlay"])
+            .margin_start(16)
+            .margin_end(16)
+            .margin_top(16)
+            .margin_bottom(16)
+            .build();
+        let bt_agent_label =
+            gtk::Label::builder().label("").css_classes(["balise-detail-label"]).halign(gtk::Align::Start).wrap(true).build();
+        let bt_agent_entry = gtk::Entry::builder().hexpand(true).build();
+        let bt_agent_btn_row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(8).halign(gtk::Align::End).build();
+        let bt_agent_cancel_btn = gtk::Button::builder().label("Cancel").css_classes(["balise-button", "flat"]).build();
+        let bt_agent_confirm_btn = gtk::Button::builder().label("Confirm").css_classes(["balise-button", "primary", "flat"]).build();
+        bt_agent_btn_row.append(&bt_agent_cancel_btn);
+        bt_agent_btn_row.append(&bt_agent_confirm_btn);
+        bt_agent_box.append(&bt_agent_label);
+        bt_agent_box.append(&bt_agent_entry);
+        bt_agent_box.append(&bt_agent_btn_row);
+
+        let bt_agent_revealer = gtk::Revealer::builder()
+            .child(&bt_agent_box)
+            .reveal_child(false)
+            .transition_type(gtk::RevealerTransitionType::SlideUp)
+            .transition_duration(250)
+            .valign(gtk::Align::End)
+            .can_target(true)
+            .build();
+        overlay.add_overlay(&bt_agent_revealer);
+
+        let bt_pin_callback: Rc<RefCell<Option<async_channel::Sender<String>>>> = Rc::new(RefCell::new(None));
+        let bt_passkey_callback: Rc<RefCell<Option<async_channel::Sender<u32>>>> = Rc::new(RefCell::new(None));
+        let bt_confirm_callback: Rc<RefCell<Option<async_channel::Sender<bool>>>> = Rc::new(RefCell::new(None));
+
+        // Disambiguates purely by which slot is occupied (pin -> passkey
+        // -> confirm), using take() so a slot fires once -- adapted from
+        // orbit-vendor/src/ui/window.rs:649-673.
+        let bt_pin_cb = bt_pin_callback.clone();
+        let bt_pass_cb = bt_passkey_callback.clone();
+        let bt_conf_cb = bt_confirm_callback.clone();
+        let bt_rev = bt_agent_revealer.clone();
+        let bt_ent = bt_agent_entry.clone();
+        bt_agent_confirm_btn.connect_clicked(move |_| {
+            if let Some(tx) = bt_pin_cb.borrow_mut().take() {
+                let _ = tx.send_blocking(bt_ent.text().to_string());
+            } else if let Some(tx) = bt_pass_cb.borrow_mut().take() {
+                if let Ok(val) = bt_ent.text().to_string().parse::<u32>() {
+                    let _ = tx.send_blocking(val);
+                }
+            } else if let Some(tx) = bt_conf_cb.borrow_mut().take() {
+                let _ = tx.send_blocking(true);
+            }
+            bt_rev.set_reveal_child(false);
+        });
+
+        let bt_pin_cancel = bt_pin_callback.clone();
+        let bt_pass_cancel = bt_passkey_callback.clone();
+        let bt_conf_cancel = bt_confirm_callback.clone();
+        let bt_rev_cancel = bt_agent_revealer.clone();
+        bt_agent_cancel_btn.connect_clicked(move |_| {
+            let _ = bt_pin_cancel.borrow_mut().take();
+            let _ = bt_pass_cancel.borrow_mut().take();
+            if let Some(tx) = bt_conf_cancel.borrow_mut().take() {
+                let _ = tx.send_blocking(false);
+            }
+            bt_rev_cancel.set_reveal_child(false);
+        });
+
         // Deliberately NOT valign(Start) here (unlike Orbit/Phase 0, where
         // the window's size was only a hint and content sat at its
         // natural size within whatever GTK gave it): the window is now
@@ -346,6 +435,8 @@ impl BaliseWindow {
             header,
             network_list,
             saved_list,
+            device_list,
+            wired_list,
             stack,
             fallback_css,
             user_css,
@@ -364,6 +455,14 @@ impl BaliseWindow {
             saved_revealer,
             error_revealer,
             error_label,
+            bt_agent_revealer,
+            bt_agent_label,
+            bt_agent_entry,
+            bt_agent_confirm_btn,
+            bt_agent_cancel_btn,
+            bt_pin_callback,
+            bt_passkey_callback,
+            bt_confirm_callback,
         };
         win.apply_position();
         win
@@ -383,6 +482,14 @@ impl BaliseWindow {
 
     pub fn saved_list(&self) -> &SavedList {
         &self.saved_list
+    }
+
+    pub fn device_list(&self) -> &DeviceList {
+        &self.device_list
+    }
+
+    pub fn wired_list(&self) -> &WiredList {
+        &self.wired_list
     }
 
     /// Show/hide, adapted from orbit-vendor/src/ui/window.rs:799-846. The
@@ -572,6 +679,62 @@ impl BaliseWindow {
             rev.set_reveal_child(false);
             gtk::glib::ControlFlow::Break
         });
+    }
+
+    // ---- Bluetooth pairing agent (Phase 3) -------------------------------
+    // Adapted from orbit-vendor/src/ui/window.rs:1197-1248.
+
+    pub fn show_bt_pin_request(&self, device_name: &str, tx: async_channel::Sender<String>) {
+        self.bt_agent_label.set_label(&format!("Enter PIN for {}:", device_name));
+        self.bt_agent_entry.set_visible(true);
+        self.bt_agent_entry.set_text("");
+        self.bt_agent_entry.set_placeholder_text(Some("PIN"));
+        self.bt_agent_confirm_btn.set_label("Pair");
+        *self.bt_pin_callback.borrow_mut() = Some(tx);
+        self.bt_agent_revealer.set_reveal_child(true);
+        self.bt_agent_entry.grab_focus();
+    }
+
+    pub fn show_bt_passkey_request(&self, device_name: &str, tx: async_channel::Sender<u32>) {
+        self.bt_agent_label.set_label(&format!("Enter Passkey for {}:", device_name));
+        self.bt_agent_entry.set_visible(true);
+        self.bt_agent_entry.set_text("");
+        self.bt_agent_entry.set_placeholder_text(Some("Passkey (6 digits)"));
+        self.bt_agent_confirm_btn.set_label("Pair");
+        *self.bt_passkey_callback.borrow_mut() = Some(tx);
+        self.bt_agent_revealer.set_reveal_child(true);
+        self.bt_agent_entry.grab_focus();
+    }
+
+    pub fn show_bt_confirm_request(&self, device_name: &str, passkey: u32, tx: async_channel::Sender<bool>) {
+        self.bt_agent_label.set_label(&format!("Does {} show passkey {:06}?", device_name, passkey));
+        self.bt_agent_entry.set_visible(false);
+        self.bt_agent_confirm_btn.set_label("Confirm");
+        *self.bt_confirm_callback.borrow_mut() = Some(tx);
+        self.bt_agent_revealer.set_reveal_child(true);
+    }
+
+    pub fn show_bt_pin_display(&self, device_name: &str, pincode: &str) {
+        self.bt_agent_label.set_label(&format!("Pairing with {}. Enter this PIN on the device: {}", device_name, pincode));
+        self.bt_agent_entry.set_visible(false);
+        self.bt_agent_confirm_btn.set_label("Dismiss");
+        self.bt_agent_revealer.set_reveal_child(true);
+    }
+
+    pub fn show_bt_passkey_display(&self, device_name: &str, passkey: u32) {
+        self.bt_agent_label.set_label(&format!("Pairing with {}. Enter this passkey on the device: {:06}", device_name, passkey));
+        self.bt_agent_entry.set_visible(false);
+        self.bt_agent_confirm_btn.set_label("Dismiss");
+        self.bt_agent_revealer.set_reveal_child(true);
+    }
+
+    pub fn cancel_bt_agent(&self) {
+        self.bt_agent_revealer.set_reveal_child(false);
+        let _ = self.bt_pin_callback.borrow_mut().take();
+        let _ = self.bt_passkey_callback.borrow_mut().take();
+        if let Some(tx) = self.bt_confirm_callback.borrow_mut().take() {
+            let _ = tx.send_blocking(false);
+        }
     }
 }
 

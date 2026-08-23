@@ -101,6 +101,40 @@ window,
     font-size: 0.9em;
 }
 
+/* Tab bar (WiFi/Bluetooth/Ethernet) -- same glass language as the
+   buttons: translucent gradient for the active tab instead of a flat
+   accent fill. */
+.balise-tab-bar {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.balise-tab {
+    background: transparent;
+    background-image: none;
+    color: #f2f2f7;
+    opacity: 0.6;
+    border: none;
+    box-shadow: none;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 6px 10px;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.balise-tab:hover {
+    opacity: 1;
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+}
+
+.balise-tab.active {
+    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
+    color: #f2f2f7;
+    opacity: 1;
+}
+
 /* ============================================================
    Rows, buttons, lists, switches, overlays. NOT a port of Orbit's flat,
    pill-shaped generated theme (orbit-vendor/src/theme.rs) -- asked to

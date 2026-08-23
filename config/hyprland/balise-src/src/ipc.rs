@@ -14,9 +14,8 @@ use tokio::net::UnixListener;
 pub enum DaemonCommand {
     Show,
     Hide,
-    /// (position override, tab). Only "wifi" exists today; the tab field
-    /// is kept for forward-compat with the later Ethernet/Bluetooth tabs
-    /// (see the project plan's roadmap) rather than dropped and re-added.
+    /// (position override, tab). Tab is one of "wifi"/"bluetooth"/
+    /// "ethernet" (see app/mod.rs's activate_tab).
     Toggle(Option<String>, Option<String>),
     ReloadTheme,
     ReloadConfig,
