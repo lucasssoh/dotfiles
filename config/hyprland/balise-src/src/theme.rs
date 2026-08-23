@@ -728,74 +728,27 @@ password-entry:focus {
 }
 
 /* ============================================================
-   Scrollbars. Nothing styled these before, so they fell back to GTK's
-   stock Adwaita scrollbar: a wide slider on a filled trough, with
-   stepper buttons -- far too loud next to this panel's material, and
-   the one widget still visibly "GTK default" in the whole app.
+   Scrollbars: none. Every ScrolledWindow sets
+   `vscrollbar_policy(PolicyType::External)` (see ui/*.rs), which draws
+   no scrollbar at all while leaving the view scrollable with the
+   wheel/touchpad -- asked for, after a first pass that merely styled
+   the stock Adwaita bar down to a thin capsule. External rather than
+   Never on purpose: Never would make the ScrolledWindow request its
+   child's full height and grow the fixed-size panel.
 
-   Kept as an overlay indicator (no reserved gutter, so the list keeps
-   its full width), reduced to a thin translucent capsule in the same
-   white-on-dark language as everything else, and widened/brightened
-   only while hovered or dragged. The trough is fully transparent: a
-   visible track is what made the stock one read as a control rather
-   than as a hint.
+   The rule below is belt-and-braces for any scrolled view added later
+   that forgets to set the policy.
    ============================================================ */
 scrollbar {
-    background: transparent;
-    background-image: none;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-}
-
-scrollbar trough {
-    background: transparent;
-    background-image: none;
-    border: none;
-    box-shadow: none;
-    min-width: 0;
-    min-height: 0;
-}
-
-scrollbar slider {
-    background-color: rgba(255, 255, 255, 0.18);
-    background-image: none;
-    border: none;
-    box-shadow: none;
-    border-radius: 9999px;
-    min-width: 5px;
-    min-height: 28px;
-    margin: 3px;
-    transition: background-color 0.18s ease;
-}
-
-scrollbar slider:hover {
-    background-color: rgba(255, 255, 255, 0.34);
-}
-
-scrollbar slider:active {
-    background-color: rgba(255, 255, 255, 0.48);
-}
-
-/* Idle overlay state -- GTK adds .overlay-indicator and drops the
-   slider to a hairline until the pointer comes near. Thinner and
-   dimmer still, so a resting list shows barely more than a hint. */
-scrollbar.overlay-indicator:not(.hovering):not(.dragging) slider {
-    background-color: rgba(255, 255, 255, 0.14);
-    min-width: 3px;
-    margin: 3px 4px;
-}
-
-/* Stepper arrows: Adwaita draws none by default, but a theme change
-   could bring them back -- they have no place on a panel this size. */
-scrollbar button {
-    min-width: 0;
-    min-height: 0;
-    padding: 0;
-    border: none;
-    background: transparent;
     opacity: 0;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
 }
 "#;
 

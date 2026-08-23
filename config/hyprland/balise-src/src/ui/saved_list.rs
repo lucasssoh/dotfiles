@@ -32,6 +32,7 @@ impl SavedList {
             .vexpand(true)
             .hexpand(true)
             .hscrollbar_policy(gtk::PolicyType::Never)
+            .vscrollbar_policy(gtk::PolicyType::External)
             .min_content_height(320)
             .min_content_width(320)
             .css_classes(["balise-scrolled"])

@@ -43,6 +43,7 @@ impl DeviceList {
             .vexpand(true)
             .hexpand(true)
             .hscrollbar_policy(gtk::PolicyType::Never)
+            .vscrollbar_policy(gtk::PolicyType::External)
             .min_content_height(280)
             .css_classes(["balise-scrolled"])
             .build();

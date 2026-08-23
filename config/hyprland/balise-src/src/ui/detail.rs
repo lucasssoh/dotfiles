@@ -81,6 +81,7 @@ impl DetailView {
             .vexpand(true)
             .hexpand(true)
             .hscrollbar_policy(gtk::PolicyType::Never)
+            .vscrollbar_policy(gtk::PolicyType::External)
             .css_classes(["balise-scrolled"])
             .build();
 
