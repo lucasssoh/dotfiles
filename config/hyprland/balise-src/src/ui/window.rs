@@ -251,8 +251,10 @@ impl BaliseWindow {
             .halign(gtk::Align::Start)
             .hexpand(true)
             .build();
-        let saved_close_btn =
-            gtk::Button::builder().icon_name("window-close-symbolic").css_classes(["balise-button", "flat"]).build();
+        let saved_close_btn = gtk::Button::builder()
+            .child(&super::icon::icon_label(super::icon::X))
+            .css_classes(["balise-button", "flat"])
+            .build();
         saved_header_row.append(&saved_title);
         saved_header_row.append(&saved_close_btn);
         saved_box.append(&saved_header_row);
@@ -285,15 +287,18 @@ impl BaliseWindow {
             .margin_bottom(16)
             .build();
         let error_header = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(8).build();
-        let error_icon = gtk::Image::builder().icon_name("dialog-error-symbolic").pixel_size(16).valign(gtk::Align::Center).build();
+        let error_icon = super::icon::icon_label(super::icon::WARNING_CIRCLE);
+        error_icon.set_valign(gtk::Align::Center);
         let error_title = gtk::Label::builder()
             .label("Error")
             .css_classes(["balise-error-title"])
             .halign(gtk::Align::Start)
             .hexpand(true)
             .build();
-        let error_close_btn =
-            gtk::Button::builder().icon_name("window-close-symbolic").css_classes(["balise-button", "flat"]).build();
+        let error_close_btn = gtk::Button::builder()
+            .child(&super::icon::icon_label(super::icon::X))
+            .css_classes(["balise-button", "flat"])
+            .build();
         error_header.append(&error_icon);
         error_header.append(&error_title);
         error_header.append(&error_close_btn);

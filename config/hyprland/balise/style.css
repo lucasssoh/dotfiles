@@ -54,23 +54,23 @@ window,
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
-/* No compositor blur behind Balise (tried it, removed again -- see
-   hypr/windowrules.lua's header comment: a flat blurred backdrop read as
-   dull/dark, not "glass"). Fill opacity 0.96, back up near Orbit's own
-   0.97 for the same reason Orbit is that high: without blur behind it,
-   the glass material has to be carried entirely by the fill + border,
-   and a lower opacity here just shows an unblurred, distracting hint of
-   whatever's behind instead of reading as glass.
+/* Real compositor blur behind Balise again (third pass -- see
+   hypr/windowrules.lua's header comment), paired THIS time with a
+   lighter, more translucent fill instead of Orbit's near-opaque 0.96/
+   0.97: rgb(40,40,45) is a genuine mid-gray rather than near-black, at
+   0.72 opacity so the blur actually shows through the glass instead of
+   being masked by an almost-solid layer sitting on top of it -- that
+   was the point of the previous two attempts reading as "dull/dark"
+   rather than "glass".
 
-   margin: 3px is the border's thickness (the gradient showing through
-   from .balise-panel behind it) -- bumped from an invisible 1.5-2.5px
-   attempt to something that actually reads at this panel's scale, per
-   direct feedback. border-radius 13px (16 - 3) keeps the inner corner
-   concentric with the outer one instead of looking squarer. */
+   margin: 1.5px matches swaync's .control-center border width (this
+   session's earlier 3px read as heavier than the rest of the system's
+   glass panels). border-radius 14.5px (16 - 1.5) keeps the inner corner
+   concentric with the outer one. */
 .balise-panel-inner {
-    background-color: rgba(12, 12, 14, 0.96);
-    border-radius: 13px;
-    margin: 3px;
+    background-color: rgba(40, 40, 45, 0.72);
+    border-radius: 14.5px;
+    margin: 1.5px;
     /* Global padding: more breathing room between the border and the
        content than the previous cramped 14px. */
     padding: 20px;
@@ -215,6 +215,18 @@ window,
     opacity: 0.5;
 }
 
+/* Phosphor glyphs (see ui/icon.rs) -- the same icon font the quickshell
+   bar uses everywhere (Fonts.qml's iconPhosphor), instead of GTK's system
+   icon-theme lookups Balise used at first, which drew from a different,
+   mismatched icon language. font-size here is the Regular weight's
+   natural glyph scale at this panel's text size -- inherits color from
+   whatever contains it (button text, .balise-signal-icon's dim white,
+   etc.) rather than hardcoding one here. */
+.balise-icon {
+    font-family: "Phosphor";
+    font-size: 14px;
+}
+
 .balise-icon-accent {
     color: #a8b4c4;
 }
@@ -269,9 +281,9 @@ window,
 }
 
 .balise-button:hover {
-    background-image: linear-gradient(135deg, #c2cbd6, #a8b4c4);
+    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
     border-color: #a8b4c4;
-    color: #1c1c1e;
+    color: #f2f2f7;
 }
 
 /* No glow (box-shadow) on primary/destructive -- inconsistent with the
@@ -279,31 +291,36 @@ window,
    thin border, never a diffuse colored halo. A visible border replaces
    the previous "1px solid transparent" (which left these two variants
    without the crisp edge every other button/card in the panel has). */
+/* Translucent accent/danger-tinted glass instead of a solid light fill
+   (which clashed once the panel itself became a lighter, more
+   translucent gray -- two similarly-light, fully opaque surfaces next to
+   each other stopped reading as distinct materials). Text stays light
+   (#f2f2f7 / #ffffff) since the fill is no longer solid light. */
 .balise-button.primary {
-    background-image: linear-gradient(135deg, #c2cbd6, #a8b4c4);
-    color: #1c1c1e;
+    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
+    color: #f2f2f7;
     border: 1px solid rgba(255, 255, 255, 0.35);
     box-shadow: none;
 }
 
 .balise-button.primary label {
-    color: #1c1c1e;
+    color: #f2f2f7;
 }
 
 .balise-button.primary:hover {
-    background-image: linear-gradient(135deg, #cfd6de, #b8c2d0);
-    color: #1c1c1e;
+    background-image: linear-gradient(135deg, rgba(210, 217, 227, 0.65), rgba(184, 194, 208, 0.4));
+    color: #f2f2f7;
 }
 
 .balise-button.destructive {
-    background-image: linear-gradient(135deg, #ff9a9a, #ff6e6e);
+    background-image: linear-gradient(135deg, rgba(255, 154, 154, 0.55), rgba(255, 110, 110, 0.35));
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.35);
     box-shadow: none;
 }
 
 .balise-button.destructive:hover {
-    background-image: linear-gradient(135deg, #ffaeae, #ff8a8a);
+    background-image: linear-gradient(135deg, rgba(255, 174, 174, 0.65), rgba(255, 138, 138, 0.42));
     color: #ffffff;
 }
 
