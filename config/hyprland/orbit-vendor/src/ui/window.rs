@@ -136,9 +136,14 @@ impl OrbitWindow {
         window.set_keyboard_mode(KeyboardMode::None);
         window.set_exclusive_zone(0);
         window.set_default_size(420, 500);
-        
-        window.add_css_class("background");
-        
+        // No "background" class: that's GTK's own class for painting an
+        // opaque themed rectangle behind everything, which doesn't follow
+        // this window's rounded corners (see orbit/style.css's own
+        // background-color: transparent override, kept as a defensive
+        // belt-and-braces in case some other GTK/theme path re-adds an
+        // opaque fill here). Leaving it off means main_box's own
+        // .orbit-panel rounded fill is the only thing ever painted.
+
         let css_provider = gtk4::CssProvider::new();
         let user_css_provider = gtk4::CssProvider::new();
         
