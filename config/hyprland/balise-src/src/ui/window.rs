@@ -44,12 +44,24 @@ pub struct BaliseWindow {
     error_label: gtk::Label,
 }
 
+/// Hard-fixed panel footprint -- `default_width`/`default_height` alone
+/// are only an initial hint; GTK still auto-grows/shrinks a layer-shell
+/// surface to match its content's natural size otherwise (confirmed
+/// live: the panel visibly changed height between screenshots as its
+/// network list populated). `width_request`/`height_request` below pin
+/// it for real; content beyond this footprint scrolls internally
+/// (ScrolledWindow) instead of resizing the window.
+const PANEL_WIDTH: i32 = 360;
+const PANEL_HEIGHT: i32 = 480;
+
 impl BaliseWindow {
     pub fn new(app: &Application, config: Config) -> Self {
         let window = ApplicationWindow::builder()
             .application(app)
-            .default_width(340)
-            .default_height(500)
+            .default_width(PANEL_WIDTH)
+            .default_height(PANEL_HEIGHT)
+            .width_request(PANEL_WIDTH)
+            .height_request(PANEL_HEIGHT)
             .resizable(false)
             .decorated(false)
             .build();

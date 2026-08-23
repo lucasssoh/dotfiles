@@ -38,16 +38,19 @@ window,
    produces the identical visual result and rounds correctly everywhere --
    do not "simplify" this back to the shorthand.
 
-   Fill opacity 0.97: there is no compositor blur behind Balise (no
-   layer_rule for the "balise" namespace in hypr/windowrules.lua, matching
-   Orbit's current no-blur state), so legibility rests entirely on this
-   near-opaque fill -- 0.97 is the value validated live on Orbit against an
-   unblurred backdrop this same session. */
+   Fill opacity 0.88: Balise DOES get real compositor blur behind it (see
+   the "balise" layer_rule in hypr/windowrules.lua -- a fresh, explicit
+   request for a "real glass" look, unlike Orbit which had blur removed
+   earlier this session). 0.88 is deliberately more transparent than
+   Orbit's old 0.97 (which was specifically compensating for *lacking*
+   blur) so the blur is actually visible through the fill -- close to
+   swaync's .control-center (0.90), a touch lower since Balise was asked
+   to read as glass first. */
 .balise-panel {
     border: 1.5px solid transparent;
     border-radius: 16px;
     background-image:
-        linear-gradient(rgba(12, 12, 14, 0.97), rgba(12, 12, 14, 0.97)),
+        linear-gradient(rgba(12, 12, 14, 0.88), rgba(12, 12, 14, 0.88)),
         linear-gradient(
             135deg,
             rgba(229, 229, 234, 0.75) 0%,
