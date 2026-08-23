@@ -2,7 +2,7 @@
 //! Adapted from orbit-vendor/src/ui/header.rs (WiFi/Bluetooth/VPN there
 //! -- VPN dropped, Ethernet gets its own tab here instead of Orbit's
 //! side "wired" button + overlay, per the project plan). The switch is
-//! shared across tabs and re-labeled/hidden per tab (Ethernet has no
+//! shared across tabs and re-labeled per tab (Ethernet has no
 //! radio-enable concept, so it's hidden there, matching how Orbit hides
 //! it for its own "vpn" tab).
 
@@ -22,10 +22,10 @@ pub struct Header {
     power_label: gtk::Label,
     is_programmatic_update: Rc<RefCell<bool>>,
     /// Detail mode (see `set_detail_mode`): the tab bar and radio switch
-    /// are swapped out for a back arrow + the endpoint's name.
-    tab_bar: gtk::Box,
-    title_row: gtk::Box,
-    back_row: gtk::Box,
+    /// are swapped out for a back arrow + the endpoint's name. They live
+    /// in a Stack rather than being shown/hidden, so the header keeps a
+    /// constant height across both modes -- see `set_detail_mode`.
+    mode_stack: gtk::Stack,
     back_button: gtk::Button,
     back_title: gtk::Label,
 }
@@ -89,9 +89,25 @@ impl Header {
         back_row.append(&back_button);
         back_row.append(&back_title);
 
-        container.append(&tab_bar);
-        container.append(&title_row);
-        container.append(&back_row);
+        // Tab mode and detail mode go in a Stack, not
+        // append + set_visible. A Stack is vhomogeneous, so the header
+        // measures the taller of the two modes at all times -- hiding a
+        // row instead would shrink the header, and with it the whole
+        // window (see set_power_visible's note on the same bug).
+        let tabs_mode = gtk::Box::builder().orientation(Orientation::Vertical).spacing(8).build();
+        tabs_mode.append(&tab_bar);
+        tabs_mode.append(&title_row);
+        back_row.set_visible(true);
+
+        let mode_stack = gtk::Stack::builder()
+            .vhomogeneous(true)
+            .transition_type(gtk::StackTransitionType::Crossfade)
+            .transition_duration(120)
+            .build();
+        mode_stack.add_named(&tabs_mode, Some("tabs"));
+        mode_stack.add_named(&back_row, Some("detail"));
+        mode_stack.set_visible_child_name("tabs");
+        container.append(&mode_stack);
 
         Self {
             container,
@@ -102,9 +118,7 @@ impl Header {
             power_box,
             power_label,
             is_programmatic_update: Rc::new(RefCell::new(false)),
-            tab_bar,
-            title_row,
-            back_row,
+            mode_stack,
             back_button,
             back_title,
         }
@@ -122,15 +136,9 @@ impl Header {
         match name {
             Some(name) => {
                 self.back_title.set_label(name);
-                self.tab_bar.set_visible(false);
-                self.title_row.set_visible(false);
-                self.back_row.set_visible(true);
+                self.mode_stack.set_visible_child_name("detail");
             }
-            None => {
-                self.back_row.set_visible(false);
-                self.tab_bar.set_visible(true);
-                self.title_row.set_visible(true);
-            }
+            None => self.mode_stack.set_visible_child_name("tabs"),
         }
     }
 
@@ -168,6 +176,24 @@ impl Header {
         &self.ethernet_tab
     }
 
+    /// Hides the radio switch WITHOUT removing it from the layout.
+    ///
+    /// `set_visible(false)` was the obvious thing to write here and it
+    /// caused a real glitch: dropping the widget shrank the header,
+    /// which shrank the whole window (its `height_request` is only a
+    /// minimum), and since the panel is anchored to the top of the
+    /// screen the bottom edge jumped. Crossfading to/from Ethernet then
+    /// showed the content lurching vertically -- measured at 492px tall
+    /// on WiFi/Bluetooth versus 480px on Ethernet.
+    ///
+    /// Opacity keeps the row allocated, so all three tabs are exactly
+    /// the same height. `can_target(false)` is what stops an invisible
+    /// switch from still swallowing clicks.
+    fn set_power_visible(&self, visible: bool) {
+        self.power_box.set_opacity(if visible { 1.0 } else { 0.0 });
+        self.power_box.set_can_target(visible);
+    }
+
     /// Adapted from orbit-vendor/src/ui/header.rs:155-180. Ethernet has
     /// no radio-enable concept (NetworkManager's per-device "managed"
     /// state isn't a user-facing toggle the way WiFi/Bluetooth radios
@@ -181,17 +207,17 @@ impl Header {
         match tab {
             "wifi" => {
                 self.wifi_tab.add_css_class("active");
-                self.power_box.set_visible(true);
+                self.set_power_visible(true);
                 self.power_label.set_label("WiFi");
             }
             "bluetooth" => {
                 self.bluetooth_tab.add_css_class("active");
-                self.power_box.set_visible(true);
+                self.set_power_visible(true);
                 self.power_label.set_label("Bluetooth");
             }
             "ethernet" => {
                 self.ethernet_tab.add_css_class("active");
-                self.power_box.set_visible(false);
+                self.set_power_visible(false);
             }
             _ => {}
         }
