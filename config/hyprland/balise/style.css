@@ -274,11 +274,16 @@ window,
     color: #1c1c1e;
 }
 
+/* No glow (box-shadow) on primary/destructive -- inconsistent with the
+   rest of the "glass" material, which reads through gradient fill + a
+   thin border, never a diffuse colored halo. A visible border replaces
+   the previous "1px solid transparent" (which left these two variants
+   without the crisp edge every other button/card in the panel has). */
 .balise-button.primary {
     background-image: linear-gradient(135deg, #c2cbd6, #a8b4c4);
     color: #1c1c1e;
-    border: 1px solid transparent;
-    box-shadow: 0 4px 12px rgba(168, 180, 196, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: none;
 }
 
 .balise-button.primary label {
@@ -293,8 +298,8 @@ window,
 .balise-button.destructive {
     background-image: linear-gradient(135deg, #ff9a9a, #ff6e6e);
     color: #ffffff;
-    border: 1px solid transparent;
-    box-shadow: 0 4px 12px rgba(255, 110, 110, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: none;
 }
 
 .balise-button.destructive:hover {
