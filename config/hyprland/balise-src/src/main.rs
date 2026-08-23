@@ -2,8 +2,10 @@ use clap::{Parser, Subcommand};
 
 mod app;
 mod config;
+mod dbus;
 mod ipc;
 mod paths;
+mod probe;
 mod theme;
 mod ui;
 
@@ -41,6 +43,26 @@ enum Commands {
     ReloadTheme,
     /// Reload config (position, margins) from config.toml
     ReloadConfig,
+    /// [dev] Print WiFi radio/device/active-SSID status -- no daemon, no
+    /// GTK, talks to NetworkManager directly (Phase 1a headless smoke
+    /// test, see the project plan)
+    Status,
+    /// [dev] List access points (optionally requesting a fresh scan first)
+    List {
+        #[arg(long)]
+        scan: bool,
+    },
+    /// [dev] List saved WiFi profiles (autoconnect + active state)
+    Saved,
+    /// [dev] Toggle a saved profile's autoconnect flag (path from `saved`
+    /// -- exposed for the §6.5 PSK-preservation checklist item; will
+    /// become the backing call for the UI's autoconnect switch in
+    /// Phase 1b)
+    SetAutoconnect {
+        path: String,
+        #[arg(action = clap::ArgAction::Set)]
+        on: bool,
+    },
 }
 
 fn main() {
@@ -63,6 +85,10 @@ fn main() {
         Some(Commands::Toggle { position, tab }) => toggle_daemon(position, tab),
         Some(Commands::ReloadTheme) => reload_theme(),
         Some(Commands::ReloadConfig) => reload_config(),
+        Some(Commands::Status) => probe::status(),
+        Some(Commands::List { scan }) => probe::list(scan),
+        Some(Commands::Saved) => probe::saved(),
+        Some(Commands::SetAutoconnect { path, on }) => probe::set_autoconnect(&path, on),
         None => run_gui(config),
     }
 }
