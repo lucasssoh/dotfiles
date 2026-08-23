@@ -91,9 +91,11 @@ impl SavedList {
                 .halign(gtk::Align::Start)
                 .build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&["connected"]);
             for n in active {
-                self.list_box.append(&self.create_row(n));
+                card.append(&self.create_row(n));
             }
+            self.list_box.append(&card);
         }
 
         if !saved.is_empty() {
@@ -103,9 +105,11 @@ impl SavedList {
                 .halign(gtk::Align::Start)
                 .build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&[]);
             for n in saved {
-                self.list_box.append(&self.create_row(n));
+                card.append(&self.create_row(n));
             }
+            self.list_box.append(&card);
         }
     }
 

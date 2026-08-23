@@ -296,9 +296,11 @@ impl NetworkList {
                 .halign(gtk::Align::Start)
                 .build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&["connected"]);
             for network in connected {
-                self.list_box.append(&self.create_network_row(network));
+                card.append(&self.create_network_row(network));
             }
+            self.list_box.append(&card);
         }
 
         if !available.is_empty() {
@@ -308,9 +310,11 @@ impl NetworkList {
                 .halign(gtk::Align::Start)
                 .build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&[]);
             for network in available {
-                self.list_box.append(&self.create_network_row(network));
+                card.append(&self.create_network_row(network));
             }
+            self.list_box.append(&card);
         }
     }
 

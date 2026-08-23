@@ -62,9 +62,15 @@ impl WiredList {
             return;
         }
 
+        // No named sub-sections here (usually just one wired interface),
+        // but still one unified card rather than per-row borders --
+        // tinted "connected" as soon as any profile in it is active.
+        let any_active = profiles.iter().any(|p| p.is_active);
+        let card = super::section::section_card(if any_active { &["connected"] } else { &[] });
         for profile in profiles {
-            self.list_box.append(&self.create_row(profile));
+            card.append(&self.create_row(profile));
         }
+        self.list_box.append(&card);
     }
 
     fn create_row(&self, profile: WiredProfile) -> gtk::Box {

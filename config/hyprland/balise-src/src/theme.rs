@@ -193,25 +193,14 @@ window,
     padding: 32px 16px;
 }
 
-.balise-network-row,
-.balise-saved-network-row {
+.balise-section-card {
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
-    padding: 10px 12px;
     margin: 4px 6px;
-    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-        border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.balise-network-row:hover,
-.balise-saved-network-row:hover {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
-    border-color: #a8b4c4;
-}
-
-.balise-network-row.connected,
-.balise-saved-network-row.active {
+.balise-section-card.connected {
     border: 1.5px solid transparent;
     border-radius: 14px;
     background-image:
@@ -225,10 +214,26 @@ window,
     background-clip: padding-box, border-box;
 }
 
+.balise-network-row,
+.balise-saved-network-row {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.balise-network-row:first-child,
+.balise-saved-network-row:first-child {
+    border-top: none;
+}
+
+.balise-network-row:hover,
+.balise-saved-network-row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
 .balise-network-row.focused,
 .balise-saved-network-row.focused {
-    border-color: #a8b4c4;
-    box-shadow: 0 0 0 2px rgba(168, 180, 196, 0.3);
+    background-color: rgba(168, 180, 196, 0.14);
 }
 
 .balise-ssid {

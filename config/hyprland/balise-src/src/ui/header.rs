@@ -57,8 +57,12 @@ impl Header {
         let bluetooth_tab = gtk::Button::builder().label("Bluetooth").css_classes(["balise-tab", "flat"]).hexpand(true).build();
         let ethernet_tab = gtk::Button::builder().label("Ethernet").css_classes(["balise-tab", "flat"]).hexpand(true).build();
 
-        tab_bar.append(&wifi_tab);
+        // Visual order matches the quickshell bar's own icon order
+        // (Bluetooth, Network/WiFi, Ethernet -- see shell.qml's
+        // connectivity Row) rather than this struct's field order, which
+        // stays wifi-first (that's still the default active tab).
         tab_bar.append(&bluetooth_tab);
+        tab_bar.append(&wifi_tab);
         tab_bar.append(&ethernet_tab);
 
         container.append(&tab_bar);

@@ -189,33 +189,29 @@ window,
     padding: 32px 16px;
 }
 
-/* Glass cards -- network rows / saved-network rows. Gradient fill (same
-   135deg direction as the panel border) rather than a flat color, so
-   every card in the panel reads as the same "curved glass" material. */
-.balise-network-row,
-.balise-saved-network-row {
+/* Section card -- one shared rounded background per section (ACTIVE
+   CONNECTION / AVAILABLE NETWORKS / CONNECTED / PAIRED / AVAILABLE /
+   SAVED NETWORKS...) instead of every row inside it having its own
+   border+background (asked for, iOS Control Center's Bluetooth panel as
+   the reference: a single grouped card per section, rows flowing inside
+   it with no per-item contour). `overflow: hidden` is set on the widget
+   in Rust (ui/section.rs) so a row's hover/focus highlight clips cleanly
+   to the card's own rounded corners instead of poking past them. */
+.balise-section-card {
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
-    padding: 10px 12px;
     margin: 4px 6px;
-    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-        border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.balise-network-row:hover,
-.balise-saved-network-row:hover {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
-    border-color: #a8b4c4;
-}
-
-/* Active/connected row: the real glass-border trick (longhand
-   background-image + background-clip through a transparent border, same
-   as .balise-panel) instead of a flat tinted background + glow shadow --
-   an accent-tinted glass ring around the row, matching Roue's
-   confirm_accent border treatment. */
-.balise-network-row.connected,
-.balise-saved-network-row.active {
+/* The one card that's the current/active item (ACTIVE CONNECTION's
+   single row, Bluetooth's CONNECTED group, wired's active device...):
+   the same real glass-border trick .balise-panel uses (longhand
+   background-image + background-clip through a transparent border) --
+   an accent-tinted glass ring around the whole card, matching Roue's
+   confirm_accent border treatment, moved here from the per-row
+   treatment it used to be. */
+.balise-section-card.connected {
     border: 1.5px solid transparent;
     border-radius: 14px;
     background-image:
@@ -229,10 +225,32 @@ window,
     background-clip: padding-box, border-box;
 }
 
+/* Rows themselves are flat now -- no border/background/radius/margin of
+   their own, just padding + a hairline divider between siblings (none on
+   the first row, so it doesn't double up with the card's own top edge).
+   Hover/focus is a plain background tint, clipped to the card's rounded
+   corners by the card's overflow:hidden rather than the row having its
+   own radius. */
+.balise-network-row,
+.balise-saved-network-row {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.balise-network-row:first-child,
+.balise-saved-network-row:first-child {
+    border-top: none;
+}
+
+.balise-network-row:hover,
+.balise-saved-network-row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
 .balise-network-row.focused,
 .balise-saved-network-row.focused {
-    border-color: #a8b4c4;
-    box-shadow: 0 0 0 2px rgba(168, 180, 196, 0.3);
+    background-color: rgba(168, 180, 196, 0.14);
 }
 
 .balise-ssid {

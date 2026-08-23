@@ -139,23 +139,29 @@ impl DeviceList {
         if !connected.is_empty() {
             let header = gtk::Label::builder().label("CONNECTED").css_classes(["balise-section-header"]).halign(gtk::Align::Start).build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&["connected"]);
             for d in connected {
-                self.list_box.append(&self.create_device_row(d));
+                card.append(&self.create_device_row(d));
             }
+            self.list_box.append(&card);
         }
         if !paired.is_empty() {
             let header = gtk::Label::builder().label("PAIRED").css_classes(["balise-section-header"]).halign(gtk::Align::Start).build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&[]);
             for d in paired {
-                self.list_box.append(&self.create_device_row(d));
+                card.append(&self.create_device_row(d));
             }
+            self.list_box.append(&card);
         }
         if !available.is_empty() {
             let header = gtk::Label::builder().label("AVAILABLE").css_classes(["balise-section-header"]).halign(gtk::Align::Start).build();
             self.list_box.append(&header);
+            let card = super::section::section_card(&[]);
             for d in available {
-                self.list_box.append(&self.create_device_row(d));
+                card.append(&self.create_device_row(d));
             }
+            self.list_box.append(&card);
         }
     }
 
