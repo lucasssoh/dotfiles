@@ -38,30 +38,38 @@ window,
    produces the identical visual result and rounds correctly everywhere --
    do not "simplify" this back to the shorthand.
 
-   Fill opacity 0.88: Balise DOES get real compositor blur behind it (see
-   the "balise" layer_rule in hypr/windowrules.lua -- a fresh, explicit
-   request for a "real glass" look, unlike Orbit which had blur removed
-   earlier this session). 0.88 is deliberately more transparent than
-   Orbit's old 0.97 (which was specifically compensating for *lacking*
-   blur) so the blur is actually visible through the fill -- close to
-   swaync's .control-center (0.90), a touch lower since Balise was asked
-   to read as glass first. */
+   No compositor blur behind Balise (tried it, removed again -- see
+   hypr/windowrules.lua's header comment: a flat blurred backdrop read as
+   dull/dark, not "glass"). Fill opacity 0.96, back up near Orbit's own
+   0.97 for the same reason Orbit is that high: without blur behind it,
+   the glass material has to be carried entirely by the fill + border,
+   and a lower opacity here just shows an unblurred, distracting hint of
+   whatever's behind instead of reading as glass.
+
+   Border width bumped 1.5px -> 2.5px and every gradient stop raised
+   (most visibly the tail end, 0.06 -> 0.18) so the ring reads clearly
+   all the way around instead of fading to near-invisible past the
+   top-left corner -- the previous values were "correct" in principle
+   (same ramp as Hyprland's own window border) but too subtle to actually
+   see at this panel's scale, per direct feedback. */
 .balise-panel {
-    border: 1.5px solid transparent;
+    border: 2.5px solid transparent;
     border-radius: 16px;
     background-image:
-        linear-gradient(rgba(12, 12, 14, 0.88), rgba(12, 12, 14, 0.88)),
+        linear-gradient(rgba(12, 12, 14, 0.96), rgba(12, 12, 14, 0.96)),
         linear-gradient(
             135deg,
-            rgba(229, 229, 234, 0.75) 0%,
-            rgba(142, 142, 147, 0.45) 25%,
-            rgba(99, 99, 102, 0.28) 50%,
-            rgba(58, 58, 60, 0.15) 75%,
-            rgba(28, 28, 30, 0.06) 100%
+            rgba(234, 234, 238, 0.9) 0%,
+            rgba(170, 172, 180, 0.65) 25%,
+            rgba(130, 132, 140, 0.45) 50%,
+            rgba(90, 92, 98, 0.3) 75%,
+            rgba(60, 62, 68, 0.18) 100%
         );
     background-clip: padding-box, border-box;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-    padding: 14px;
+    /* Global padding: more breathing room between the border and the
+       content than the previous cramped 14px. */
+    padding: 20px;
 }
 
 .balise-header {
