@@ -98,10 +98,29 @@ window, .blank-window, .floating-notifications {
 }
 
 /* ── Panel (control center) ────────────────────────────────────── */
+/* Border: the SAME "curved glass" treatment as Hyprland's active-window
+   border, RoueWheel's hub rim, .roue-sidebar and Orbit's own panel (see
+   roue/style.css's header comment and orbit/style.css's .orbit-panel) --
+   one material read across the whole system. Double-background trick
+   (opaque fill on padding-box, gradient on border-box, through a
+   transparent border) since GTK CSS has no `border-image`. Scoped to
+   this panel only, not the notification toasts (.notification) -- same
+   scope the confined blur layer_rule already uses (swaync-control-center
+   only, see hypr/windowrules.lua). */
 .control-center {
-    background: rgba(12, 12, 14, 0.90);
-    border: none;
+    border: 1.5px solid transparent;
     border-radius: 16px;
+    background:
+        linear-gradient(rgba(12, 12, 14, 0.90), rgba(12, 12, 14, 0.90)) padding-box,
+        linear-gradient(
+            135deg,
+            rgba(229, 229, 234, 0.75) 0%,
+            rgba(142, 142, 147, 0.45) 25%,
+            rgba(99, 99, 102, 0.28) 50%,
+            rgba(58, 58, 60, 0.15) 75%,
+            rgba(28, 28, 30, 0.06) 100%
+        ) border-box;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
     color: @text;
 }
 

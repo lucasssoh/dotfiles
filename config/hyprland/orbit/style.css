@@ -42,9 +42,41 @@ window,
     background-image: none;
 }
 
+/* Border: the SAME "curved glass" treatment as Hyprland's active-window
+   border, RoueWheel's hub rim, and .roue-sidebar (see roue/style.css's
+   header comment) -- one material read across the whole system rather
+   than Orbit staying the sole flat/no-border holdout. Same double-
+   background trick (opaque fill on padding-box, gradient on border-box,
+   through a transparent border) since GTK CSS has no `border-image`.
+   Background inlined here (was theme.toml's accent/opacity-driven fill,
+   #0c0c0e @ 0.90 -- see that file) because the trick needs an explicit
+   background value to pair with the gradient layer. */
 .orbit-panel {
-    /* No border, on purpose -- see the file header. Was 1px solid #505050. */
-    border: none;
+    /* The inline `background: <gradient> padding-box, <gradient>
+       border-box` shorthand (used successfully in roue/style.css's
+       .roue-sidebar) turned out to make GTK draw this panel's corners as
+       a right angle instead of following border-radius -- confirmed live
+       via a cropped/zoomed screenshot of the surface's real corner
+       (hyprctl layers -j for its geometry). Swapping to the exact same
+       two layers via the LONGHAND background-image + background-clip
+       properties (same visual result otherwise) rounds correctly instead.
+       swaync's .control-center and roue's .roue-sidebar were re-checked
+       the same way and don't have this problem, so left on the shorthand
+       -- whatever triggers it seems specific to this panel/surface. */
+    border: 1.5px solid transparent;
+    border-radius: 16px;
+    background-image:
+        linear-gradient(rgba(12, 12, 14, 0.90), rgba(12, 12, 14, 0.90)),
+        linear-gradient(
+            135deg,
+            rgba(229, 229, 234, 0.75) 0%,
+            rgba(142, 142, 147, 0.45) 25%,
+            rgba(99, 99, 102, 0.28) 50%,
+            rgba(58, 58, 60, 0.15) 75%,
+            rgba(28, 28, 30, 0.06) 100%
+        );
+    background-clip: padding-box, border-box;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
     padding: 14px;
 }
 
