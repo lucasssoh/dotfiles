@@ -456,6 +456,7 @@ ShellRoot {
                         Modules.AudioInput {}
                         Modules.Bluetooth {}
                         Modules.Network {}
+                        Modules.Ethernet {}
                     }
 
                     Item { width: 6; height: 1 }
