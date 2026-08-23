@@ -109,6 +109,40 @@ pub fn set_autoconnect(path: &str, on: bool) {
     });
 }
 
+/// Headless smoke test for `NetworkManager::wifi_details` -- run before
+/// any detail-page UI existed, cross-checked field by field against
+/// `nmcli -f ... device show` / `connection show`.
+pub fn wifi_details(ssid: &str) {
+    runtime().block_on(async {
+        let nm = match NetworkManager::new().await {
+            Ok(nm) => nm,
+            Err(e) => {
+                eprintln!("balise: failed to connect to NetworkManager: {}", e);
+                std::process::exit(1);
+            }
+        };
+
+        match nm.wifi_details(ssid).await {
+            Ok(d) => {
+                println!("  ssid:        {}", d.ssid);
+                println!("  connected:   {}", d.is_connected);
+                println!("  saved:       {}", if d.settings_path.is_empty() { "no" } else { &d.settings_path });
+                println!("  autoconnect: {}", d.autoconnect);
+                println!("  ip4:         {}", d.ip4_address);
+                println!("  ip6:         {}", d.ip6_address);
+                println!("  gateway:     {}", d.gateway);
+                println!("  dns:         {:?}", d.dns_servers);
+                println!("  mac:         {}", d.mac_address);
+                println!("  speed:       {}", d.speed);
+            }
+            Err(e) => {
+                eprintln!("balise: failed to read wifi details: {}", e);
+                std::process::exit(1);
+            }
+        }
+    });
+}
+
 pub fn ethernet() {
     runtime().block_on(async {
         let nm = match NetworkManager::new().await {

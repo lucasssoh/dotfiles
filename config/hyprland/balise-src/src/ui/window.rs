@@ -1,13 +1,17 @@
-//! Layer-shell window shell + WiFi overlays (password entry, hidden
-//! network, saved networks, error toast). Anchored corner panel (like
-//! Orbit, NOT a fullscreen 4-edge overlay like Roue/Prisme -- see the
-//! project plan).
+//! Layer-shell window shell + overlays (hidden network, saved networks,
+//! error toast, Bluetooth pairing agent) + the endpoint detail page.
+//! Anchored corner panel (like Orbit, NOT a fullscreen 4-edge overlay
+//! like Roue/Prisme -- see the project plan).
+//!
+//! WiFi password entry is deliberately NOT an overlay here: it expands
+//! inline under its own network row (ui/network_list.rs).
 
 use gtk4::{self as gtk, prelude::*, Application, ApplicationWindow, Orientation, Overlay};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use super::detail::{DetailTarget, DetailView};
 use super::device_list::DeviceList;
 use super::header::Header;
 use super::network_list::NetworkList;
@@ -24,17 +28,13 @@ pub struct BaliseWindow {
     saved_list: SavedList,
     device_list: DeviceList,
     wired_list: WiredList,
+    detail_view: DetailView,
+    /// Tab to return to when leaving the detail page.
+    detail_origin: Rc<RefCell<String>>,
     stack: gtk::Stack,
     fallback_css: gtk::CssProvider,
     user_css: gtk::CssProvider,
     is_animating: Rc<Cell<bool>>,
-
-    password_revealer: gtk::Revealer,
-    password_entry: gtk::PasswordEntry,
-    password_label: gtk::Label,
-    password_error_label: gtk::Label,
-    password_connect_btn: gtk::Button,
-    password_callback: Rc<RefCell<Option<Rc<dyn Fn(Option<String>)>>>>,
 
     hidden_revealer: gtk::Revealer,
     hidden_ssid_entry: gtk::Entry,
@@ -150,10 +150,16 @@ impl BaliseWindow {
         let saved_list = SavedList::new();
         let device_list = DeviceList::new();
         let wired_list = WiredList::new();
+        let detail_view = DetailView::new();
 
         stack.add_named(network_list.widget(), Some("wifi"));
         stack.add_named(device_list.widget(), Some("bluetooth"));
         stack.add_named(wired_list.widget(), Some("ethernet"));
+        // Added last on purpose: with a slide transition, GTK animates
+        // according to child order, so entering the detail page slides
+        // in from the right and going back slides out to the right --
+        // which is what "drilling in" should feel like.
+        stack.add_named(detail_view.widget(), Some("detail"));
         stack.set_visible_child_name("wifi");
         stack.set_size_request(300, 380);
         panel_inner.append(&stack);
@@ -161,55 +167,11 @@ impl BaliseWindow {
         let overlay = Overlay::new();
         overlay.set_child(Some(&panel));
 
-        // ---- password overlay ------------------------------------------
-        let password_box = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
-            .spacing(12)
-            .css_classes(["balise-password-overlay"])
-            .margin_start(16)
-            .margin_end(16)
-            .margin_top(16)
-            .margin_bottom(16)
-            .build();
-        let password_label = gtk::Label::builder()
-            .label("Enter password:")
-            .css_classes(["balise-detail-label"])
-            .halign(gtk::Align::Start)
-            .build();
-        let password_entry = gtk::PasswordEntry::builder().placeholder_text("Password").hexpand(true).build();
-        let password_error_label = gtk::Label::builder()
-            .label("")
-            .css_classes(["balise-error-text-small"])
-            .halign(gtk::Align::Start)
-            .visible(false)
-            .build();
-        let password_btn_row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(8).halign(gtk::Align::End).build();
-        let password_cancel_btn = gtk::Button::builder().label("Cancel").css_classes(["balise-button", "flat"]).build();
-        let password_connect_btn =
-            gtk::Button::builder().label("Connect").css_classes(["balise-button", "primary", "flat"]).build();
-        password_btn_row.append(&password_cancel_btn);
-        password_btn_row.append(&password_connect_btn);
-        password_box.append(&password_label);
-        password_box.append(&password_entry);
-        password_box.append(&password_error_label);
-        password_box.append(&password_btn_row);
-
-        let password_revealer = gtk::Revealer::builder()
-            .child(&password_box)
-            .reveal_child(false)
-            .transition_type(gtk::RevealerTransitionType::SlideUp)
-            .transition_duration(250)
-            .valign(gtk::Align::End)
-            .can_target(true)
-            .build();
-
-        let rev = password_revealer.clone();
-        let ent = password_entry.clone();
-        password_cancel_btn.connect_clicked(move |_| {
-            rev.set_reveal_child(false);
-            ent.set_text("");
-        });
-        overlay.add_overlay(&password_revealer);
+        // The WiFi password overlay that used to live here is gone:
+        // password entry is now inline, expanding under the network's
+        // own row (see ui/network_list.rs::build_password_form). That
+        // keeps the field visually attached to the network it belongs
+        // to, and drops this panel from six stacked overlays to four.
 
         // ---- hidden-network overlay -------------------------------------
         let hidden_box = gtk::Box::builder()
@@ -437,16 +399,12 @@ impl BaliseWindow {
             saved_list,
             device_list,
             wired_list,
+            detail_view,
+            detail_origin: Rc::new(RefCell::new("wifi".to_string())),
             stack,
             fallback_css,
             user_css,
             is_animating: Rc::new(Cell::new(false)),
-            password_revealer,
-            password_entry,
-            password_label,
-            password_error_label,
-            password_connect_btn,
-            password_callback: Rc::new(RefCell::new(None)),
             hidden_revealer,
             hidden_ssid_entry,
             hidden_password_entry,
@@ -491,6 +449,31 @@ impl BaliseWindow {
     pub fn wired_list(&self) -> &WiredList {
         &self.wired_list
     }
+
+    pub fn detail_view(&self) -> &DetailView {
+        &self.detail_view
+    }
+
+    /// Drill in: swap the header for "‹ name" and slide the detail page
+    /// in. Remembers which tab we came from so `leave_detail` returns
+    /// there rather than to a hardcoded default.
+    pub fn show_detail(&self, target: DetailTarget) {
+        *self.detail_origin.borrow_mut() = target.origin_tab().to_string();
+        self.header.set_detail_mode(Some(&target.title()));
+        self.detail_view.set_target(target);
+        self.stack.set_visible_child_name("detail");
+    }
+
+    /// Back out of the detail page. Returns the tab name restored, so
+    /// the caller can resync that tab's state (app/mod.rs re-reads the
+    /// radio + list for it).
+    pub fn leave_detail(&self) -> String {
+        let origin = self.detail_origin.borrow().clone();
+        self.header.set_detail_mode(None);
+        self.stack.set_visible_child_name(&origin);
+        origin
+    }
+
 
     /// Show/hide, adapted from orbit-vendor/src/ui/window.rs:799-846. The
     /// `is_animating` re-entrancy guard stops a fast double-toggle from
@@ -611,34 +594,6 @@ impl BaliseWindow {
 
     // ---- overlays -------------------------------------------------------
 
-    /// Adapted from orbit-vendor/src/ui/window.rs:946-967.
-    pub fn show_password_dialog<F: Fn(Option<String>) + 'static>(&self, ssid: &str, callback: F) {
-        self.password_label.set_label(&format!("Enter password for {}:", ssid));
-        self.password_entry.set_text("");
-        self.password_error_label.set_visible(false);
-        *self.password_callback.borrow_mut() = Some(Rc::new(callback));
-
-        let callback_clone = self.password_callback.clone();
-        let entry_clone = self.password_entry.clone();
-        let rev_clone = self.password_revealer.clone();
-        self.password_connect_btn.connect_clicked(move |_| {
-            if let Some(cb) = callback_clone.borrow().as_ref() {
-                cb(Some(entry_clone.text().to_string()));
-            }
-            rev_clone.set_reveal_child(false);
-        });
-
-        self.saved_revealer.set_reveal_child(false);
-        self.hidden_revealer.set_reveal_child(false);
-        self.password_revealer.set_reveal_child(true);
-        self.password_entry.grab_focus();
-    }
-
-    pub fn hide_password_dialog(&self) {
-        self.password_revealer.set_reveal_child(false);
-        self.password_entry.set_text("");
-    }
-
     /// Adapted from orbit-vendor/src/ui/window.rs:974-996.
     pub fn show_hidden_dialog<F: Fn(Option<(String, String)>) + 'static>(&self, callback: F) {
         self.hidden_ssid_entry.set_text("");
@@ -657,13 +612,11 @@ impl BaliseWindow {
         });
 
         self.saved_revealer.set_reveal_child(false);
-        self.password_revealer.set_reveal_child(false);
         self.hidden_revealer.set_reveal_child(true);
         self.hidden_ssid_entry.grab_focus();
     }
 
     pub fn show_saved_networks(&self) {
-        self.password_revealer.set_reveal_child(false);
         self.hidden_revealer.set_reveal_child(false);
         self.saved_revealer.set_reveal_child(true);
     }

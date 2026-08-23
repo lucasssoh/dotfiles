@@ -219,7 +219,6 @@ impl BluetoothManager {
         Ok(())
     }
 
-    #[allow(dead_code)] // not wired into the UI yet -- no device-details view in this pass
     pub async fn set_trusted(&self, path: &str, trusted: bool) -> zbus::Result<()> {
         self.conn
             .call_method(Some(BLUEZ), path, Some(PROPS_IFACE), "Set", &(DEVICE_IFACE, "Trusted", Value::Bool(trusted)))

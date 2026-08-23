@@ -1,6 +1,8 @@
 //! Saved-networks list (shown in an overlay revealer, not a stack page --
-//! see window.rs): autoconnect switch + Forget button per row. Adapted
-//! from orbit-vendor/src/ui/saved_networks_list.rs.
+//! see window.rs): autoconnect switch + gear button per row. Adapted
+//! from orbit-vendor/src/ui/saved_networks_list.rs. The row's Forget
+//! button moved into the shared detail page (ui/detail.rs) along with
+//! every other destructive action.
 
 use gtk4::prelude::*;
 use gtk4::{self as gtk, glib, Orientation};
@@ -14,7 +16,7 @@ pub struct SavedList {
     container: gtk::Box,
     list_box: gtk::Box,
     on_autoconnect_toggle: Rc<RefCell<Option<Rc<dyn Fn(String, bool)>>>>,
-    on_forget: Rc<RefCell<Option<Rc<dyn Fn(String)>>>>,
+    on_show_detail: Rc<RefCell<Option<Rc<dyn Fn(String)>>>>,
 }
 
 impl SavedList {
@@ -49,7 +51,7 @@ impl SavedList {
             container,
             list_box,
             on_autoconnect_toggle: Rc::new(RefCell::new(None)),
-            on_forget: Rc::new(RefCell::new(None)),
+            on_show_detail: Rc::new(RefCell::new(None)),
         };
         list.show_loading();
         list
@@ -195,13 +197,16 @@ impl SavedList {
             .build();
         row.append(&autoconnect_switch);
 
-        let forget_btn = gtk::Button::builder()
-            .label("Forget")
-            .css_classes(["balise-button", "destructive", "flat"])
+        // Gear -> detail page (replaces the red "Forget" button that
+        // used to sit here; Forget now lives in the detail page).
+        let gear_btn = gtk::Button::builder()
+            .css_classes(["balise-button", "balise-gear-button", "flat"])
             .valign(gtk::Align::Center)
             .margin_start(4)
             .build();
-        row.append(&forget_btn);
+        gear_btn.set_child(Some(&super::icon::icon_label(super::icon::GEAR)));
+        gear_btn.set_tooltip_text(Some("Details"));
+        row.append(&gear_btn);
 
         // Ignore the switch's initial `active(...)` construction as a
         // "user" toggle -- same 100ms settle window Orbit uses, since
@@ -222,11 +227,11 @@ impl SavedList {
             }
         });
 
-        let path_forget = network.settings_path.clone();
-        let on_forget = self.on_forget.clone();
-        forget_btn.connect_clicked(move |_| {
-            if let Some(callback) = on_forget.borrow().as_ref() {
-                callback(path_forget.clone());
+        let ssid_detail = network.ssid.clone();
+        let on_show_detail = self.on_show_detail.clone();
+        gear_btn.connect_clicked(move |_| {
+            if let Some(callback) = on_show_detail.borrow().as_ref() {
+                callback(ssid_detail.clone());
             }
         });
 
@@ -241,7 +246,9 @@ impl SavedList {
         *self.on_autoconnect_toggle.borrow_mut() = Some(Rc::new(callback));
     }
 
-    pub fn set_on_forget<F: Fn(String) + 'static>(&self, callback: F) {
-        *self.on_forget.borrow_mut() = Some(Rc::new(callback));
+    /// Gear button -- receives the network's SSID, so the caller can
+    /// resolve full details and open the shared detail page.
+    pub fn set_on_show_detail<F: Fn(String) + 'static>(&self, callback: F) {
+        *self.on_show_detail.borrow_mut() = Some(Rc::new(callback));
     }
 }

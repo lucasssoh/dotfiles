@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
 use zbus::Connection;
 
-use super::types::{AccessPoint, SavedNetwork, SecurityType, WiredProfile};
+use super::types::{AccessPoint, SavedNetwork, SecurityType, WifiDetails, WiredProfile};
 
 const NM: &str = "org.freedesktop.NetworkManager";
 const NM_PATH: &str = "/org/freedesktop/NetworkManager";
@@ -38,6 +38,8 @@ const AP_IFACE: &str = "org.freedesktop.NetworkManager.AccessPoint";
 const SETTINGS_IFACE: &str = "org.freedesktop.NetworkManager.Settings";
 const CONNECTION_IFACE: &str = "org.freedesktop.NetworkManager.Settings.Connection";
 const ACTIVE_IFACE: &str = "org.freedesktop.NetworkManager.Connection.Active";
+const IP4_IFACE: &str = "org.freedesktop.NetworkManager.IP4Config";
+const IP6_IFACE: &str = "org.freedesktop.NetworkManager.IP6Config";
 
 const DEVICE_TYPE_WIFI: u32 = 2;
 const DEVICE_TYPE_ETHERNET: u32 = 1;
@@ -590,10 +592,10 @@ impl NetworkManager {
                     connection_path = conn.to_string();
                 }
                 if let Some(ip4_path) = self.prop_path(active.as_str(), ACTIVE_IFACE, "Ip4Config").await {
-                    ip4_address = self.first_address(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "AddressData").await;
-                    gateway = self.prop_string(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "Gateway").await;
+                    ip4_address = self.first_address(ip4_path.as_str(), IP4_IFACE, "AddressData").await;
+                    gateway = self.prop_string(ip4_path.as_str(), IP4_IFACE, "Gateway").await;
                     dns_servers = self
-                        .address_list(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "NameserverData")
+                        .address_list(ip4_path.as_str(), IP4_IFACE, "NameserverData")
                         .await;
                 }
             }
@@ -666,6 +668,82 @@ impl NetworkManager {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Everything the WiFi detail page needs beyond the scanned
+    /// `AccessPoint`. Two independent halves (see `WifiDetails`): the
+    /// stored-profile half resolves for any saved network, the live half
+    /// only when this SSID is the active connection.
+    ///
+    /// Not a port of orbit-vendor's `get_network_details` in shape, only
+    /// in intent: that one is ~180 lines of hand-inlined
+    /// `Properties.Get` + `Value::Array` walking repeated per field, and
+    /// it identifies the active connection by comparing `Id == ssid`,
+    /// which is exactly the renamed-profile bug the project plan's §6.2
+    /// called out. This goes through the `prop_*`/`address_list` helpers
+    /// and reuses `active_wifi_ssid()` (which resolves the real SSID out
+    /// of the connection's settings) to decide whether we're the active
+    /// one.
+    pub async fn wifi_details(&self, ssid: &str) -> zbus::Result<WifiDetails> {
+        let mut details = WifiDetails { ssid: ssid.to_string(), ..Default::default() };
+
+        // ---- stored-profile half (works even when the network is down)
+        if let Some(settings_path) = self.find_profile_by_ssid(ssid).await {
+            if let Ok(settings) = self.get_connection_settings(&settings_path).await {
+                details.autoconnect = settings
+                    .get("connection")
+                    .and_then(|c| c.get("autoconnect"))
+                    .and_then(|v| bool::try_from(&**v).ok())
+                    // NetworkManager omits `autoconnect` entirely when it
+                    // holds its default, which is true -- a missing key
+                    // means enabled, not disabled.
+                    .unwrap_or(true);
+            }
+            details.settings_path = settings_path;
+        }
+
+        // ---- live half (only while this SSID is the active connection)
+        if self.active_wifi_ssid().await.as_deref() != Some(ssid) {
+            return Ok(details);
+        }
+        details.is_connected = true;
+
+        for path in self.active_connection_paths().await {
+            let p = path.as_str();
+            if self.prop_string(p, ACTIVE_IFACE, "Type").await != "802-11-wireless" {
+                continue;
+            }
+
+            if let Some(ip4) = self.prop_path(p, ACTIVE_IFACE, "Ip4Config").await {
+                if ip4.as_str() != "/" {
+                    details.ip4_address = self.first_address(ip4.as_str(), IP4_IFACE, "AddressData").await;
+                    details.gateway = self.prop_string(ip4.as_str(), IP4_IFACE, "Gateway").await;
+                    details.dns_servers = self.address_list(ip4.as_str(), IP4_IFACE, "NameserverData").await;
+                }
+            }
+
+            if let Some(ip6) = self.prop_path(p, ACTIVE_IFACE, "Ip6Config").await {
+                if ip6.as_str() != "/" {
+                    details.ip6_address = self.first_address(ip6.as_str(), IP6_IFACE, "AddressData").await;
+                }
+            }
+            break;
+        }
+
+        // MAC + link rate come off the device, not the connection. Using
+        // `wireless_devices()` rather than walking Connection.Active's
+        // `Devices` array (Orbit's route): the active WiFi connection is
+        // by definition on a WiFi device, and this already-tested helper
+        // saves an array-of-object-paths unwrap.
+        if let Some(device) = self.wireless_devices().await.unwrap_or_default().first() {
+            details.mac_address = self.prop_string(device, DEVICE_IFACE, "HwAddress").await;
+            let bitrate = self.prop_u32(device, WIRELESS_IFACE, "Bitrate").await;
+            if bitrate > 0 {
+                details.speed = format!("{} Mb/s", bitrate / 1000);
+            }
+        }
+
+        Ok(details)
     }
 
     async fn list_connections(&self) -> zbus::Result<Vec<String>> {

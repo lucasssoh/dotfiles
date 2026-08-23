@@ -11,8 +11,11 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::config::Config;
-use crate::dbus::{AccessPoint, AgentEvent, BluetoothDevice, BluetoothManager, NetworkManager, SavedNetwork, WiredProfile};
+use crate::dbus::{
+    AccessPoint, AgentEvent, BluetoothDevice, BluetoothManager, NetworkManager, SavedNetwork, WifiDetails, WiredProfile,
+};
 use crate::ipc::{DaemonCommand, DaemonServer};
+use crate::ui::detail::{DetailAction, DetailTarget};
 use crate::ui::device_list::DeviceAction;
 use crate::ui::BaliseWindow;
 
@@ -40,6 +43,12 @@ pub enum AppEvent {
     BtConfirmRequest(String, u32, async_channel::Sender<bool>),
     BtAuthRequest(String, async_channel::Sender<bool>),
     BtAgentCancel,
+
+    /// WiFi detail page: the metadata half is fetched off-thread, so
+    /// opening the page is a round trip rather than a direct call.
+    /// Boxed -- these are much larger than the other variants and would
+    /// otherwise set the size of every AppEvent.
+    ShowWifiDetail(Box<AccessPoint>, Box<WifiDetails>),
 
     // ---- Ethernet (Phase 2) ----------------------------------------------
     WiredResult(Vec<WiredProfile>),
@@ -277,7 +286,6 @@ impl BaliseApp {
                         AppEvent::ConnectSuccess => {
                             win.network_list().set_connecting_ssid(None);
                             win.network_list().set_disconnecting_ssid(None);
-                            win.hide_password_dialog();
                         }
                         AppEvent::ConnectHidden(ssid, password) => {
                             let nm_ref = nm.clone();
@@ -353,6 +361,9 @@ impl BaliseApp {
                         AppEvent::BtAgentCancel => {
                             win.cancel_bt_agent();
                         }
+                        AppEvent::ShowWifiDetail(ap, details) => {
+                            win.show_detail(DetailTarget::Wifi { ap: *ap, details: *details });
+                        }
                         AppEvent::WiredResult(profiles) => {
                             win.wired_list().set_profiles(profiles);
                         }
@@ -421,6 +432,27 @@ impl BaliseApp {
 
         self.app.run_with_args(&[] as &[&str])
     }
+}
+
+/// Fetches the WiFi metadata half off-thread, then opens the detail
+/// page through the event loop. Shared by the network row's gear and
+/// the saved-networks overlay's gear.
+fn spawn_wifi_detail(
+    nm: &Arc<Mutex<Option<NetworkManager>>>,
+    rt: &Arc<tokio::runtime::Runtime>,
+    tx: &async_channel::Sender<AppEvent>,
+    ap: AccessPoint,
+) {
+    let nm = nm.clone();
+    let rt = rt.clone();
+    let tx = tx.clone();
+    std::thread::spawn(move || {
+        let guard = nm.lock().unwrap();
+        if let Some(ref nm_inst) = *guard {
+            let details = rt.block_on(async { nm_inst.wifi_details(&ap.ssid).await }).unwrap_or_default();
+            let _ = tx.send_blocking(AppEvent::ShowWifiDetail(Box::new(ap), Box::new(details)));
+        }
+    });
 }
 
 /// Switches the visible stack page + header tint, and pushes a fresh
@@ -717,31 +749,23 @@ fn setup_ui_callbacks(
         });
     }
 
-    // Forget button (per saved-network row).
+    // The saved-network row's Forget button is gone (no destructive
+    // buttons in lists any more) -- its gear opens the shared detail
+    // page instead, where Forget lives. A saved network is not
+    // necessarily in range, so fall back to a synthetic AccessPoint
+    // when the last scan didn't see it.
     {
+        let win_saved_detail = win.clone();
         let nm = nm.clone();
         let rt = rt.clone();
         let tx = tx.clone();
-        win.saved_list().set_on_forget(move |path| {
-            let nm = nm.clone();
-            let rt = rt.clone();
-            let tx = tx.clone();
-            std::thread::spawn(move || {
-                let guard = nm.lock().unwrap();
-                if let Some(ref nm_inst) = *guard {
-                    match rt.block_on(async { nm_inst.forget(&path).await }) {
-                        Ok(()) => {
-                            let _ = tx.send_blocking(AppEvent::Notify("Network forgotten".to_string()));
-                            if let Ok(saved) = rt.block_on(async { nm_inst.saved_networks().await }) {
-                                let _ = tx.send_blocking(AppEvent::SavedResult(saved));
-                            }
-                        }
-                        Err(e) => {
-                            let _ = tx.send_blocking(AppEvent::Error(format!("Forget failed: {}", e)));
-                        }
-                    }
-                }
+        win.saved_list().set_on_show_detail(move |ssid: String| {
+            let ap = win_saved_detail.network_list().get_network(&ssid).unwrap_or_else(|| AccessPoint {
+                ssid: ssid.clone(),
+                is_saved: true,
+                ..Default::default()
             });
+            spawn_wifi_detail(&nm, &rt, &tx, ap);
         });
     }
 
@@ -764,7 +788,6 @@ fn setup_ui_callbacks(
     // orbit-vendor/src/app/mod.rs:1004-1110: reuses a saved profile or an
     // open network directly; prompts for a password otherwise.
     {
-        let win_connect = win.clone();
         let nm = nm.clone();
         let rt = rt.clone();
         let tx = tx.clone();
@@ -809,35 +832,255 @@ fn setup_ui_callbacks(
                         }
                     }
                 });
-            } else {
-                let ssid_dialog = ssid.clone();
-                win_connect.show_password_dialog(&ssid_dialog, move |password| {
-                    let Some(pwd) = password else { return };
-                    let nm = nm.clone();
-                    let rt = rt.clone();
-                    let tx = tx.clone();
-                    let ssid = ssid.clone();
-                    let device_path = device_path.clone();
-                    let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
+            }
+            // The secured/unsaved case never reaches here any more:
+            // network_list expands its own inline password form and
+            // reports back through `set_on_connect_password` below.
+        });
+    }
+
+    // Inline password form's Connect (ui/network_list.rs) -- the
+    // secured/unsaved path that used to go through the bottom overlay.
+    {
+        let nm = nm.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        win.network_list().set_on_connect_password(move |ap: AccessPoint, password: String| {
+            let nm = nm.clone();
+            let rt = rt.clone();
+            let tx = tx.clone();
+            let ssid = ap.ssid.clone();
+            let device_path = ap.device_path.clone();
+            let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
+            std::thread::spawn(move || {
+                let guard = nm.lock().unwrap();
+                if let Some(ref nm_inst) = *guard {
+                    match rt.block_on(async { nm_inst.connect(&ssid, Some(&password), &device_path).await }) {
+                        Ok(()) => {
+                            std::thread::sleep(std::time::Duration::from_millis(1000));
+                            let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                            let _ = tx.send_blocking(AppEvent::Notify(format!("Connected to {}", ssid)));
+                            if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                            }
+                        }
+                        Err(e) => {
+                            let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    // ---- detail page navigation ------------------------------------------
+
+    // WiFi gear: the metadata half needs a D-Bus round trip, so this
+    // hops through AppEvent::ShowWifiDetail rather than opening directly.
+    {
+        let nm = nm.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        win.network_list().set_on_show_detail(move |ap: AccessPoint| {
+            spawn_wifi_detail(&nm, &rt, &tx, ap);
+        });
+    }
+
+    // Bluetooth gear: BlueZ's GetManagedObjects already gave us every
+    // field, so this opens straight from the cached list -- no round
+    // trip, no event hop.
+    {
+        let win_detail = win.clone();
+        win.device_list().set_on_show_detail(move |path: String| {
+            if let Some(device) = win_detail.device_list().get_device(&path) {
+                win_detail.show_detail(DetailTarget::Bluetooth(device));
+            }
+        });
+    }
+
+    // Ethernet gear: same, the row already carries the full profile.
+    {
+        let win_detail = win.clone();
+        win.wired_list().set_on_show_detail(move |profile: WiredProfile| {
+            win_detail.show_detail(DetailTarget::Ethernet(profile));
+        });
+    }
+
+    // Back button: restore the tab bar, then resync whatever tab we
+    // landed back on (its data may have changed while we were away --
+    // a Forget or a trust toggle almost always did change it).
+    {
+        let win_back = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let current_tab = current_tab.clone();
+        let is_switching = is_switching.clone();
+        win.header().back_button().connect_clicked(move |_| {
+            let origin = win_back.leave_detail();
+            activate_tab(&win_back, &nm, &bt, &rt, &tx, &current_tab, &is_switching, &origin);
+        });
+    }
+
+    // Detail page actions. Everything destructive or secondary now
+    // arrives here rather than from a row. Each arm re-uses the same
+    // AppEvents the lists do, so results land in the UI identically.
+    {
+        let win_action = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let current_tab = current_tab.clone();
+        let is_switching = is_switching.clone();
+        win.detail_view().set_on_action(move |action: DetailAction| {
+            let nm = nm.clone();
+            let bt = bt.clone();
+            let rt = rt.clone();
+            let tx = tx.clone();
+
+            match action {
+                DetailAction::WifiDisconnect(ssid) => {
+                    let _ = tx.send_blocking(AppEvent::DisconnectStarted(ssid.clone()));
                     std::thread::spawn(move || {
                         let guard = nm.lock().unwrap();
                         if let Some(ref nm_inst) = *guard {
-                            match rt.block_on(async { nm_inst.connect(&ssid, Some(&pwd), &device_path).await }) {
+                            let _ = rt.block_on(async { nm_inst.disconnect(&ssid).await });
+                            std::thread::sleep(std::time::Duration::from_millis(1000));
+                            let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                            if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                            }
+                        }
+                    });
+                }
+                DetailAction::WifiForget(path) => {
+                    // Forgetting removes the very thing this page is
+                    // about, so leave it first rather than sitting on a
+                    // page describing a profile that no longer exists.
+                    let origin = win_action.leave_detail();
+                    activate_tab(&win_action, &nm, &bt, &rt, &tx, &current_tab, &is_switching, &origin);
+                    std::thread::spawn(move || {
+                        let guard = nm.lock().unwrap();
+                        if let Some(ref nm_inst) = *guard {
+                            match rt.block_on(async { nm_inst.forget(&path).await }) {
                                 Ok(()) => {
-                                    std::thread::sleep(std::time::Duration::from_millis(1000));
-                                    let _ = tx.send_blocking(AppEvent::ConnectSuccess);
-                                    let _ = tx.send_blocking(AppEvent::Notify(format!("Connected to {}", ssid)));
+                                    let _ = tx.send_blocking(AppEvent::Notify("Network forgotten".to_string()));
                                     if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
                                         let _ = tx.send_blocking(AppEvent::ScanResult(aps));
                                     }
+                                    if let Ok(saved) = rt.block_on(async { nm_inst.saved_networks().await }) {
+                                        let _ = tx.send_blocking(AppEvent::SavedResult(saved));
+                                    }
                                 }
                                 Err(e) => {
-                                    let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                                    let _ = tx.send_blocking(AppEvent::Error(format!("Forget failed: {}", e)));
                                 }
                             }
                         }
                     });
-                });
+                }
+                DetailAction::WifiAutoconnect(path, on) => {
+                    std::thread::spawn(move || {
+                        let guard = nm.lock().unwrap();
+                        if let Some(ref nm_inst) = *guard {
+                            if let Err(e) = rt.block_on(async { nm_inst.set_autoconnect(&path, on).await }) {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Failed to update autoconnect: {}", e)));
+                            }
+                            if let Ok(saved) = rt.block_on(async { nm_inst.saved_networks().await }) {
+                                let _ = tx.send_blocking(AppEvent::SavedResult(saved));
+                            }
+                        }
+                    });
+                }
+                DetailAction::Bt(path, bt_action) => {
+                    // Forget destroys this page's subject, same as WiFi.
+                    if matches!(bt_action, DeviceAction::Forget) {
+                        let origin = win_action.leave_detail();
+                        activate_tab(&win_action, &nm, &bt, &rt, &tx, &current_tab, &is_switching, &origin);
+                    }
+                    let _ = tx.send_blocking(AppEvent::BtActionStarted(path.clone(), bt_action.clone()));
+                    std::thread::spawn(move || {
+                        let guard = bt.lock().unwrap();
+                        if let Some(ref bt_inst) = *guard {
+                            let res = match bt_action {
+                                DeviceAction::Connect => rt.block_on(async { bt_inst.connect_device(&path).await }),
+                                DeviceAction::Disconnect => rt.block_on(async { bt_inst.disconnect_device(&path).await }),
+                                DeviceAction::Pair => rt.block_on(async { bt_inst.pair_device(&path).await }),
+                                DeviceAction::Forget => rt.block_on(async { bt_inst.forget_device(&path).await }),
+                            };
+                            let _ = tx.send_blocking(AppEvent::BtActionComplete);
+                            if let Err(e) = res {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Bluetooth action failed: {}", e)));
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(500));
+                            if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                            }
+                        }
+                    });
+                }
+                DetailAction::BtTrust(path, on) => {
+                    std::thread::spawn(move || {
+                        let guard = bt.lock().unwrap();
+                        if let Some(ref bt_inst) = *guard {
+                            if let Err(e) = rt.block_on(async { bt_inst.set_trusted(&path, on).await }) {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Failed to update trust: {}", e)));
+                            }
+                            if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                            }
+                        }
+                    });
+                }
+                DetailAction::EthConnect(profile) => {
+                    let _ = tx.send_blocking(AppEvent::WiredConnectStarted(profile.device_path.clone()));
+                    std::thread::spawn(move || {
+                        let guard = nm.lock().unwrap();
+                        if let Some(ref nm_inst) = *guard {
+                            let res = rt.block_on(async {
+                                nm_inst.activate_wired(&profile.connection_path, &profile.device_path).await
+                            });
+                            let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                            if let Err(e) = res {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                            }
+                            if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                            }
+                        }
+                    });
+                }
+                DetailAction::EthDisconnect(device_path) => {
+                    let _ = tx.send_blocking(AppEvent::WiredConnectStarted(device_path.clone()));
+                    std::thread::spawn(move || {
+                        let guard = nm.lock().unwrap();
+                        if let Some(ref nm_inst) = *guard {
+                            let res = rt.block_on(async { nm_inst.deactivate_wired(&device_path).await });
+                            let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                            if let Err(e) = res {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Disconnect failed: {}", e)));
+                            }
+                            if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                            }
+                        }
+                    });
+                }
+                DetailAction::EthAutoconnect(path, on) => {
+                    std::thread::spawn(move || {
+                        let guard = nm.lock().unwrap();
+                        if let Some(ref nm_inst) = *guard {
+                            if let Err(e) = rt.block_on(async { nm_inst.set_autoconnect(&path, on).await }) {
+                                let _ = tx.send_blocking(AppEvent::Error(format!("Failed to update autoconnect: {}", e)));
+                            }
+                            if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                            }
+                        }
+                    });
+                }
             }
         });
     }
@@ -977,37 +1220,9 @@ fn setup_ui_callbacks(
         });
     }
 
-    // Autoconnect switch (per wired-device row) -- shares
-    // NetworkManager::set_autoconnect with the WiFi saved-networks list.
-    {
-        let nm = nm.clone();
-        let rt = rt.clone();
-        let tx = tx.clone();
-        win.wired_list().set_on_autoconnect_toggle(move |path, enabled| {
-            let nm = nm.clone();
-            let rt = rt.clone();
-            let tx = tx.clone();
-            std::thread::spawn(move || {
-                let guard = nm.lock().unwrap();
-                if let Some(ref nm_inst) = *guard {
-                    match rt.block_on(async { nm_inst.set_autoconnect(&path, enabled).await }) {
-                        Ok(()) => {
-                            std::thread::sleep(std::time::Duration::from_millis(100));
-                            if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
-                                let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
-                            }
-                        }
-                        Err(e) => {
-                            let _ = tx.send_blocking(AppEvent::Error(format!("Failed to update autoconnect: {}", e)));
-                            if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
-                                let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
-                            }
-                        }
-                    }
-                }
-            });
-        });
-    }
+    // The wired row's autoconnect switch moved to the detail page
+    // (DetailAction::EthAutoconnect) along with the interface
+    // metadata, so there is nothing left to wire here.
 }
 
 /// 5s poll while the panel is visible AND the polled tab is the one
@@ -1026,6 +1241,10 @@ fn setup_periodic_refresh(
         if !*is_visible.borrow() {
             return glib::ControlFlow::Continue;
         }
+        // Also covers the detail page: while it's the visible child,
+        // `current_tab` still names the tab behind it, so this never
+        // matches and polling stays paused -- which is what we want,
+        // since a refetch would rebuild the list underneath it.
         let tab = current_tab.borrow().clone();
         let current_visible = stack.visible_child_name().map(|s| s.to_string());
         if Some(tab.clone()) != current_visible {

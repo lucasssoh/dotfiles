@@ -1,3 +1,4 @@
+pub mod detail;
 pub mod device_list;
 pub mod header;
 pub mod icon;

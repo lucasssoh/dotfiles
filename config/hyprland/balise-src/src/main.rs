@@ -70,6 +70,10 @@ enum Commands {
     BluetoothStatus,
     /// [dev] Discover nearby Bluetooth devices for 5s and list them
     BluetoothScan,
+    /// [dev] Print everything the WiFi detail page shows for one SSID
+    WifiDetails {
+        ssid: String,
+    },
 }
 
 fn main() {
@@ -98,6 +102,7 @@ fn main() {
         Some(Commands::SetAutoconnect { path, on }) => probe::set_autoconnect(&path, on),
         Some(Commands::Ethernet) => probe::ethernet(),
         Some(Commands::BluetoothStatus) => probe::bluetooth_status(),
+        Some(Commands::WifiDetails { ssid }) => probe::wifi_details(&ssid),
         Some(Commands::BluetoothScan) => probe::bluetooth_scan(),
         None => run_gui(config),
     }

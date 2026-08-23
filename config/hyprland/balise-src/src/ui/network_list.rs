@@ -24,6 +24,14 @@ pub struct NetworkList {
     on_show_saved: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
     connecting_ssid: Rc<RefCell<Option<String>>>,
     disconnecting_ssid: Rc<RefCell<Option<String>>>,
+
+    /// Inline password entry (replaces the bottom overlay Balise used
+    /// through Phase 1b): one revealer per secured row, keyed by SSID,
+    /// with at most one open at a time.
+    row_forms: Rc<RefCell<HashMap<String, gtk::Revealer>>>,
+    expanded_ssid: Rc<RefCell<Option<String>>>,
+    on_connect_password: Rc<RefCell<Option<Rc<dyn Fn(AccessPoint, String)>>>>,
+    on_show_detail: Rc<RefCell<Option<Rc<dyn Fn(AccessPoint)>>>>,
 }
 
 impl NetworkList {
@@ -126,6 +134,10 @@ impl NetworkList {
             on_show_saved: Rc::new(RefCell::new(None)),
             connecting_ssid: Rc::new(RefCell::new(None)),
             disconnecting_ssid: Rc::new(RefCell::new(None)),
+            row_forms: Rc::new(RefCell::new(HashMap::new())),
+            expanded_ssid: Rc::new(RefCell::new(None)),
+            on_connect_password: Rc::new(RefCell::new(None)),
+            on_show_detail: Rc::new(RefCell::new(None)),
         };
 
         let list_clone = list.clone();
@@ -250,6 +262,18 @@ impl NetworkList {
     }
 
     pub fn set_networks(&self, networks: Vec<AccessPoint>) {
+        // A password form is open: keep the fresh data, but do NOT
+        // rebuild the rows. `render_networks` recreates every widget,
+        // which would destroy the entry the user is typing into -- and
+        // the WiFi tab re-polls every 5s while visible, so this fires
+        // in the middle of typing a password almost every time.
+        // Re-rendering resumes as soon as the form is closed (connect or
+        // cancel), which ends with a refetch anyway.
+        if self.expanded_ssid.borrow().is_some() {
+            *self.networks.borrow_mut() = networks;
+            return;
+        }
+
         *self.networks.borrow_mut() = networks.clone();
         *self.connecting_ssid.borrow_mut() = None;
         *self.disconnecting_ssid.borrow_mut() = None;
@@ -258,6 +282,7 @@ impl NetworkList {
 
     fn render_networks(&self, networks: &[AccessPoint]) {
         self.row_actions.borrow_mut().clear();
+        self.row_forms.borrow_mut().clear();
         while let Some(child) = self.list_box.first_child() {
             self.list_box.remove(&child);
         }
@@ -318,22 +343,27 @@ impl NetworkList {
         }
     }
 
+    /// A row is now a VERTICAL box: the visible line on top, plus a
+    /// collapsed password form underneath it (secured networks only).
+    /// `.balise-network-row` sits on the outer box so the card divider
+    /// and hover tint cover the whole block once it expands.
     fn create_network_row(&self, network: &AccessPoint) -> gtk::Box {
-        let row = gtk::Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(12)
+        let outer = gtk::Box::builder()
+            .orientation(Orientation::Vertical)
             .css_classes(["balise-network-row"])
             .focusable(true)
             .build();
 
-        let row_focus = row.clone();
+        let row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(12).build();
+
+        let row_focus = outer.clone();
         let focus_in = gtk::EventControllerFocus::new();
         focus_in.connect_enter(move |_| row_focus.add_css_class("focused"));
-        let row_unfocus = row.clone();
+        let row_unfocus = outer.clone();
         let focus_out = gtk::EventControllerFocus::new();
         focus_out.connect_leave(move |_| row_unfocus.remove_css_class("focused"));
-        row.add_controller(focus_in);
-        row.add_controller(focus_out);
+        outer.add_controller(focus_in);
+        outer.add_controller(focus_out);
 
         if network.is_connected {
             let icon_container = gtk::Box::builder()
@@ -384,7 +414,106 @@ impl NetworkList {
         self.build_actions_box_content(&actions_box, network);
         self.row_actions.borrow_mut().insert(network.ssid.clone(), actions_box.clone());
         row.append(&actions_box);
-        row
+        outer.append(&row);
+
+        // Secured, unsaved networks get the inline password form. Open
+        // ones connect straight away, and saved ones already have their
+        // PSK in NetworkManager, so neither needs to prompt.
+        if network.security.needs_password() && !network.is_saved && !network.is_connected {
+            let revealer = self.build_password_form(network);
+            self.row_forms.borrow_mut().insert(network.ssid.clone(), revealer.clone());
+            outer.append(&revealer);
+        }
+
+        outer
+    }
+
+    /// The collapsed password form: entry + Cancel/Connect, revealed
+    /// under its row when the row's Connect button is pressed.
+    fn build_password_form(&self, network: &AccessPoint) -> gtk::Revealer {
+        let form = gtk::Box::builder()
+            .orientation(Orientation::Vertical)
+            .spacing(8)
+            .css_classes(["balise-inline-form"])
+            .build();
+
+        // PasswordEntry rather than a plain Entry: it ships GTK's own
+        // reveal-password eye button, so there's nothing to build for
+        // "let me check what I typed".
+        let entry = gtk::PasswordEntry::builder().show_peek_icon(true).hexpand(true).build();
+        entry.set_placeholder_text(Some("Password"));
+        form.append(&entry);
+
+        let buttons = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(8).halign(gtk::Align::End).build();
+        let cancel = gtk::Button::builder().label("Cancel").css_classes(["balise-button", "flat"]).build();
+        let connect = gtk::Button::builder().label("Connect").css_classes(["balise-button", "primary", "flat"]).build();
+        buttons.append(&cancel);
+        buttons.append(&connect);
+        form.append(&buttons);
+
+        let revealer = gtk::Revealer::builder()
+            .child(&form)
+            .reveal_child(false)
+            .transition_type(gtk::RevealerTransitionType::SlideDown)
+            .transition_duration(200)
+            .build();
+
+        let submit = {
+            let list = self.clone();
+            let network = network.clone();
+            let entry = entry.clone();
+            move || {
+                let password = entry.text().to_string();
+                if password.is_empty() {
+                    return;
+                }
+                list.collapse_forms();
+                if let Some(cb) = list.on_connect_password.borrow().as_ref() {
+                    cb(network.clone(), password);
+                }
+            }
+        };
+
+        let on_activate = submit.clone();
+        entry.connect_activate(move |_| on_activate());
+        let on_click = submit.clone();
+        connect.connect_clicked(move |_| on_click());
+
+        let list = self.clone();
+        cancel.connect_clicked(move |_| list.collapse_forms());
+
+        revealer
+    }
+
+    /// Closes every open password form and clears the expansion guard in
+    /// `set_networks`, so polling can resume rebuilding rows.
+    fn collapse_forms(&self) {
+        for revealer in self.row_forms.borrow().values() {
+            revealer.set_reveal_child(false);
+        }
+        *self.expanded_ssid.borrow_mut() = None;
+    }
+
+    /// Opens one row's form, closing any other. Returns false when this
+    /// SSID has no form (open or already-saved network).
+    fn expand_form(&self, ssid: &str) -> bool {
+        let forms = self.row_forms.borrow();
+        let Some(target) = forms.get(ssid) else { return false };
+
+        for (key, revealer) in forms.iter() {
+            revealer.set_reveal_child(key == ssid);
+        }
+        *self.expanded_ssid.borrow_mut() = Some(ssid.to_string());
+
+        // Focus the entry so the password can be typed immediately --
+        // the panel already holds keyboard focus (KeyboardMode::OnDemand
+        // while shown, see window.rs).
+        if let Some(form) = target.child() {
+            if let Some(entry) = form.first_child() {
+                entry.grab_focus();
+            }
+        }
+        true
     }
 
     fn build_actions_box_content(&self, actions_box: &gtk::Box, network: &AccessPoint) {
@@ -431,15 +560,44 @@ impl NetworkList {
                 )
                 .build();
 
+            // Secured + unsaved: expand this row's inline password form
+            // instead of firing a connect that would fail. Everything
+            // else (open, already-saved, or disconnecting) acts
+            // immediately. `expand_form` returning false means no form
+            // was built for this row, so fall through to the direct
+            // path rather than silently doing nothing.
             let network_clone = network.clone();
             let on_connect = self.on_connect.clone();
+            let list = self.clone();
             action_btn.connect_clicked(move |_| {
+                let needs_prompt =
+                    network_clone.security.needs_password() && !network_clone.is_saved && !network_clone.is_connected;
+                if needs_prompt && list.expand_form(&network_clone.ssid) {
+                    return;
+                }
                 if let Some(callback) = on_connect.borrow().as_ref() {
                     callback(network_clone.clone());
                 }
             });
             actions_box.append(&action_btn);
         }
+
+        // Gear -> detail page. Replaces the destructive buttons that
+        // used to live on rows: Forget/autoconnect now sit in there.
+        let gear = super::icon::icon_label(super::icon::GEAR);
+        let gear_btn = gtk::Button::builder().css_classes(["balise-button", "balise-gear-button", "flat"]).build();
+        gear_btn.set_child(Some(&gear));
+        gear_btn.set_valign(gtk::Align::Center);
+        gear_btn.set_tooltip_text(Some("Details"));
+
+        let network_detail = network.clone();
+        let on_show_detail = self.on_show_detail.clone();
+        gear_btn.connect_clicked(move |_| {
+            if let Some(cb) = on_show_detail.borrow().as_ref() {
+                cb(network_detail.clone());
+            }
+        });
+        actions_box.append(&gear_btn);
     }
 
     pub fn widget(&self) -> &gtk::Box {
@@ -460,5 +618,22 @@ impl NetworkList {
 
     pub fn set_on_show_saved<F: Fn() + 'static>(&self, callback: F) {
         *self.on_show_saved.borrow_mut() = Some(Rc::new(callback));
+    }
+
+    /// Fired by the inline form's Connect (or Enter in the entry).
+    pub fn set_on_connect_password<F: Fn(AccessPoint, String) + 'static>(&self, callback: F) {
+        *self.on_connect_password.borrow_mut() = Some(Rc::new(callback));
+    }
+
+    pub fn set_on_show_detail<F: Fn(AccessPoint) + 'static>(&self, callback: F) {
+        *self.on_show_detail.borrow_mut() = Some(Rc::new(callback));
+    }
+
+    /// Last scan result for one SSID. The saved-networks overlay's gear
+    /// only knows an SSID, and a saved network is not necessarily in
+    /// range, so callers fall back to a synthetic entry when this is
+    /// None.
+    pub fn get_network(&self, ssid: &str) -> Option<AccessPoint> {
+        self.networks.borrow().iter().find(|n| n.ssid == ssid).cloned()
     }
 }

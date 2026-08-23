@@ -3,8 +3,9 @@
 //! -- nothing serializes these any more (that was only for Orbit's
 //! `waybar-status`, which Balise doesn't have).
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum SecurityType {
+    #[default]
     None,
     Wep,
     Wpa,
@@ -53,7 +54,10 @@ impl SecurityType {
     }
 }
 
-#[derive(Debug, Clone)]
+// Default is used to synthesise an entry for a saved network that the
+// last scan didn't see (out of range), so its detail page can still be
+// opened from the saved-networks overlay -- see app/mod.rs.
+#[derive(Debug, Clone, Default)]
 pub struct AccessPoint {
     pub ssid: String,
     pub signal: u8,
@@ -99,5 +103,30 @@ pub struct WiredProfile {
     pub ip4_address: String,
     pub gateway: String,
     pub dns_servers: Vec<String>,
+    pub autoconnect: bool,
+}
+
+/// Everything the WiFi detail page shows beyond what a scanned
+/// `AccessPoint` already carries. Split in two halves, because they have
+/// different availability: the saved-profile half (`settings_path`,
+/// `autoconnect`) exists for any network with a stored profile even when
+/// it's down, while the live half (addresses, MAC, speed) only exists
+/// while this SSID is the *active* connection. Everything is
+/// `Default`-empty otherwise, and the UI simply omits empty rows.
+#[derive(Debug, Clone, Default)]
+pub struct WifiDetails {
+    pub ssid: String,
+    pub is_connected: bool,
+    pub ip4_address: String,
+    pub ip6_address: String,
+    pub gateway: String,
+    pub dns_servers: Vec<String>,
+    pub mac_address: String,
+    /// Human-readable ("650 Mb/s"), empty when not connected -- the raw
+    /// NM `Bitrate` is in kb/s, converted at read time.
+    pub speed: String,
+    /// Settings/N path of the stored profile, empty when the network has
+    /// never been saved. Non-empty is what enables Forget/autoconnect.
+    pub settings_path: String,
     pub autoconnect: bool,
 }

@@ -591,6 +591,112 @@ password-entry:focus {
     color: #f2f2f7;
     font-size: 12px;
 }
+
+/* ============================================================
+   Detail page + its entry points (ui/detail.rs, ui/header.rs's detail
+   mode, the per-row gear buttons, and the inline WiFi password form).
+   ============================================================ */
+
+/* Gear button: an icon-only affordance that must not compete with the
+   row's real action button next to it -- no fill, no border, muted
+   glyph, and it only materialises a surface on hover. This is what
+   replaced the red "Forget" buttons that used to sit on rows. */
+.balise-gear-button {
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    box-shadow: none;
+    padding: 6px 8px;
+    min-width: 0;
+    min-height: 0;
+    opacity: 0.55;
+}
+
+.balise-gear-button:hover {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+    border-color: rgba(255, 255, 255, 0.12);
+    opacity: 1;
+}
+
+/* Inverted (connected) card: the gear flips dark like everything else
+   in there -- see the .balise-section-card.connected block above. */
+.balise-section-card.connected .balise-gear-button {
+    background-image: none;
+    background-color: transparent;
+    border-color: transparent;
+    color: #1c1c1e;
+}
+
+.balise-section-card.connected .balise-gear-button:hover {
+    background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.16), rgba(28, 28, 30, 0.08));
+    border-color: rgba(28, 28, 30, 0.18);
+}
+
+/* Header's detail mode: "‹ <endpoint name>" replacing the tab bar. */
+.balise-back-row {
+    padding: 2px 0 6px 0;
+}
+
+.balise-back-button {
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    box-shadow: none;
+    padding: 4px 8px;
+    min-width: 0;
+    min-height: 0;
+    color: #f2f2f7;
+}
+
+.balise-back-button:hover {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.balise-back-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #f2f2f7;
+}
+
+/* Detail page body. No extra horizontal padding: the section cards
+   carry their own 6px side margin, same as in the lists, so the two
+   read as one continuous surface when navigating between them. */
+.balise-detail {
+    padding-bottom: 8px;
+}
+
+/* Label/value pairs. The label is the quiet half; the value is
+   selectable (see ui/detail.rs) so an IP or MAC can be copied out. */
+.balise-meta-label {
+    font-size: 11px;
+    color: #f2f2f7;
+    opacity: 0.55;
+}
+
+.balise-meta-value {
+    font-size: 12px;
+    color: #f2f2f7;
+}
+
+.balise-meta-value:selected {
+    background-color: rgba(168, 180, 196, 0.35);
+}
+
+/* Full-width stacked action buttons at the bottom of the detail page --
+   the one place destructive actions are allowed to look destructive,
+   now that they're behind a deliberate navigation step. */
+.balise-detail-button {
+    margin: 4px 6px;
+    padding: 10px 16px;
+}
+
+/* Inline WiFi password form (ui/network_list.rs), revealed under its
+   own row. Indented to line up with the row's text rather than its
+   icon, so it reads as belonging to that network. */
+.balise-inline-form {
+    padding: 10px 0 2px 0;
+}
 "#;
 
 /// Loads the external CSS (symlinked by install.sh from

@@ -21,6 +21,13 @@ pub struct Header {
     power_box: gtk::Box,
     power_label: gtk::Label,
     is_programmatic_update: Rc<RefCell<bool>>,
+    /// Detail mode (see `set_detail_mode`): the tab bar and radio switch
+    /// are swapped out for a back arrow + the endpoint's name.
+    tab_bar: gtk::Box,
+    title_row: gtk::Box,
+    back_row: gtk::Box,
+    back_button: gtk::Button,
+    back_title: gtk::Label,
 }
 
 impl Header {
@@ -65,8 +72,26 @@ impl Header {
         tab_bar.append(&wifi_tab);
         tab_bar.append(&ethernet_tab);
 
+        // Detail mode's replacement row: "‹ <endpoint name>". Built
+        // once and kept hidden rather than created on demand, so
+        // entering/leaving a detail page is two set_visible calls.
+        let back_row = gtk::Box::builder()
+            .orientation(Orientation::Horizontal)
+            .spacing(8)
+            .css_classes(["balise-back-row"])
+            .visible(false)
+            .build();
+        let back_button = gtk::Button::builder().css_classes(["balise-back-button", "flat"]).build();
+        back_button.set_child(Some(&super::icon::icon_label(super::icon::CARET_LEFT)));
+        back_button.set_tooltip_text(Some("Back"));
+        let back_title = gtk::Label::builder().label("").css_classes(["balise-back-title"]).halign(gtk::Align::Start).hexpand(true).build();
+        back_title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        back_row.append(&back_button);
+        back_row.append(&back_title);
+
         container.append(&tab_bar);
         container.append(&title_row);
+        container.append(&back_row);
 
         Self {
             container,
@@ -77,6 +102,35 @@ impl Header {
             power_box,
             power_label,
             is_programmatic_update: Rc::new(RefCell::new(false)),
+            tab_bar,
+            title_row,
+            back_row,
+            back_button,
+            back_title,
+        }
+    }
+
+    pub fn back_button(&self) -> &gtk::Button {
+        &self.back_button
+    }
+
+    /// `Some(name)` swaps the tab bar + radio switch for "‹ name";
+    /// `None` restores them. The tab bar keeps whichever tab was active,
+    /// so leaving the detail page lands back where the user came from
+    /// without re-tinting anything.
+    pub fn set_detail_mode(&self, name: Option<&str>) {
+        match name {
+            Some(name) => {
+                self.back_title.set_label(name);
+                self.tab_bar.set_visible(false);
+                self.title_row.set_visible(false);
+                self.back_row.set_visible(true);
+            }
+            None => {
+                self.back_row.set_visible(false);
+                self.tab_bar.set_visible(true);
+                self.title_row.set_visible(true);
+            }
         }
     }
 

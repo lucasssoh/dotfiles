@@ -2,9 +2,10 @@
 //! orbit-vendor/src/ui/device_list.rs, simplified: one generic Phosphor
 //! glyph for every device (Orbit differentiates audio/keyboard/mouse/
 //! phone via GTK system icons; the row's own name text already conveys
-//! that), no battery-level icon (just the raw percentage), no separate
-//! "Details" overlay -- a "Forget" button sits directly on
-//! paired/connected rows instead.
+//! that), no battery-level icon (just the raw percentage), and no
+//! details/forget-confirm overlays -- each row carries a gear button
+//! that opens the shared detail page (ui/detail.rs) instead, which is
+//! where Forget and the trust toggle now live.
 
 use gtk4::{self as gtk, prelude::*, Orientation};
 use std::cell::RefCell;
@@ -29,6 +30,7 @@ pub struct DeviceList {
     devices: Rc<RefCell<Vec<BluetoothDevice>>>,
     row_actions: Rc<RefCell<HashMap<String, gtk::Box>>>,
     on_action: Rc<RefCell<Option<Rc<dyn Fn(String, DeviceAction)>>>>,
+    on_show_detail: Rc<RefCell<Option<Rc<dyn Fn(String)>>>>,
     action_path: Rc<RefCell<Option<String>>>,
     action_type: Rc<RefCell<Option<DeviceAction>>>,
 }
@@ -63,6 +65,7 @@ impl DeviceList {
             devices: Rc::new(RefCell::new(Vec::new())),
             row_actions: Rc::new(RefCell::new(HashMap::new())),
             on_action: Rc::new(RefCell::new(None)),
+            on_show_detail: Rc::new(RefCell::new(None)),
             action_path: Rc::new(RefCell::new(None)),
             action_type: Rc::new(RefCell::new(None)),
         };
@@ -254,17 +257,23 @@ impl DeviceList {
         });
         actions_box.append(&action_btn);
 
-        if device.is_paired {
-            let forget_btn = gtk::Button::builder().label("Forget").css_classes(["balise-button", "destructive", "flat"]).build();
-            let path = device.path.clone();
-            let on_action = self.on_action.clone();
-            forget_btn.connect_clicked(move |_| {
-                if let Some(cb) = on_action.borrow().as_ref() {
-                    cb(path.clone(), DeviceAction::Forget);
-                }
-            });
-            actions_box.append(&forget_btn);
-        }
+        // Gear -> detail page. This replaces the red "Forget" button
+        // that used to sit on every paired row (asked for: no
+        // destructive buttons in the list). Forget, plus the trust
+        // toggle and the full device metadata, now live in there.
+        let gear_btn = gtk::Button::builder().css_classes(["balise-button", "balise-gear-button", "flat"]).build();
+        gear_btn.set_child(Some(&super::icon::icon_label(super::icon::GEAR)));
+        gear_btn.set_valign(gtk::Align::Center);
+        gear_btn.set_tooltip_text(Some("Details"));
+
+        let path = device.path.clone();
+        let on_show_detail = self.on_show_detail.clone();
+        gear_btn.connect_clicked(move |_| {
+            if let Some(cb) = on_show_detail.borrow().as_ref() {
+                cb(path.clone());
+            }
+        });
+        actions_box.append(&gear_btn);
     }
 
     pub fn widget(&self) -> &gtk::Box {
@@ -279,7 +288,19 @@ impl DeviceList {
         *self.on_action.borrow_mut() = Some(Rc::new(callback));
     }
 
+    /// Gear button -- receives the device's object path.
+    pub fn set_on_show_detail<F: Fn(String) + 'static>(&self, callback: F) {
+        *self.on_show_detail.borrow_mut() = Some(Rc::new(callback));
+    }
+
     pub fn get_device_name(&self, path: &str) -> Option<String> {
         self.devices.borrow().iter().find(|d| d.path == path).map(|d| d.name.clone())
+    }
+
+    /// Full record for the detail page -- served straight from the last
+    /// scan result, so opening details needs no extra D-Bus round trip
+    /// (BlueZ's GetManagedObjects already returned every field).
+    pub fn get_device(&self, path: &str) -> Option<BluetoothDevice> {
+        self.devices.borrow().iter().find(|d| d.path == path).cloned()
     }
 }

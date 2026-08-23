@@ -1,10 +1,12 @@
 //! Ethernet tab (Phase 2): one row per wired device/profile, with a
-//! Connect/Disconnect button and an autoconnect switch -- no separate
-//! "saved" overlay needed here (unlike WiFi, there's usually just one
-//! wired interface), matching the plan's "second stack child" design
-//! rather than Orbit's side-button-plus-overlay treatment.
+//! Connect/Disconnect button and a gear button -- no separate "saved"
+//! overlay needed here (unlike WiFi, there's usually just one wired
+//! interface), matching the plan's "second stack child" design rather
+//! than Orbit's side-button-plus-overlay treatment. The autoconnect
+//! switch that used to sit on the row now lives in the shared detail
+//! page (ui/detail.rs), so the row carries one action only.
 
-use gtk4::{self as gtk, glib, prelude::*, Orientation};
+use gtk4::{self as gtk, prelude::*, Orientation};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -15,7 +17,7 @@ pub struct WiredList {
     container: gtk::Box,
     list_box: gtk::Box,
     on_connect: Rc<RefCell<Option<Rc<dyn Fn(WiredProfile)>>>>,
-    on_autoconnect_toggle: Rc<RefCell<Option<Rc<dyn Fn(String, bool)>>>>,
+    on_show_detail: Rc<RefCell<Option<Rc<dyn Fn(WiredProfile)>>>>,
     connecting_device: Rc<RefCell<Option<String>>>,
 }
 
@@ -39,7 +41,7 @@ impl WiredList {
             container,
             list_box,
             on_connect: Rc::new(RefCell::new(None)),
-            on_autoconnect_toggle: Rc::new(RefCell::new(None)),
+            on_show_detail: Rc::new(RefCell::new(None)),
             connecting_device: Rc::new(RefCell::new(None)),
         };
         list.show_loading();
@@ -121,34 +123,25 @@ impl WiredList {
                 }
             });
             row.append(&action_btn);
-
-            let autoconnect_switch = gtk::Switch::builder()
-                .active(profile.autoconnect)
-                .css_classes(["balise-toggle-switch"])
-                .valign(gtk::Align::Center)
-                .tooltip_text("Toggle automatic connection")
-                .build();
-            if !profile.connection_path.is_empty() {
-                let path = profile.connection_path.clone();
-                let on_toggle = self.on_autoconnect_toggle.clone();
-                let is_user_action = Rc::new(RefCell::new(false));
-                let is_user_action_clone = is_user_action.clone();
-                glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
-                    *is_user_action_clone.borrow_mut() = true;
-                    glib::ControlFlow::Break
-                });
-                autoconnect_switch.connect_state_notify(move |switch| {
-                    if *is_user_action.borrow() {
-                        if let Some(cb) = on_toggle.borrow().as_ref() {
-                            cb(path.clone(), switch.is_active());
-                        }
-                    }
-                });
-            } else {
-                autoconnect_switch.set_sensitive(false);
-            }
-            row.append(&autoconnect_switch);
         }
+
+        // Gear -> detail page. The autoconnect switch used to sit right
+        // here on the row; it moved into the detail page along with the
+        // interface metadata, so the row keeps only its one primary
+        // action (matching the WiFi/Bluetooth rows).
+        let gear_btn = gtk::Button::builder().css_classes(["balise-button", "balise-gear-button", "flat"]).build();
+        gear_btn.set_child(Some(&super::icon::icon_label(super::icon::GEAR)));
+        gear_btn.set_valign(gtk::Align::Center);
+        gear_btn.set_tooltip_text(Some("Details"));
+
+        let on_show_detail = self.on_show_detail.clone();
+        let profile_detail = profile.clone();
+        gear_btn.connect_clicked(move |_| {
+            if let Some(cb) = on_show_detail.borrow().as_ref() {
+                cb(profile_detail.clone());
+            }
+        });
+        row.append(&gear_btn);
 
         row
     }
@@ -165,7 +158,7 @@ impl WiredList {
         *self.on_connect.borrow_mut() = Some(Rc::new(callback));
     }
 
-    pub fn set_on_autoconnect_toggle<F: Fn(String, bool) + 'static>(&self, callback: F) {
-        *self.on_autoconnect_toggle.borrow_mut() = Some(Rc::new(callback));
+    pub fn set_on_show_detail<F: Fn(WiredProfile) + 'static>(&self, callback: F) {
+        *self.on_show_detail.borrow_mut() = Some(Rc::new(callback));
     }
 }
