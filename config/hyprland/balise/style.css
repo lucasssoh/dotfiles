@@ -1,0 +1,77 @@
+/* Balise — theme, same palette as waybar/style.css, orbit/style.css,
+   roue/style.css and prisme/style.css. Reload: `balise reload-theme` (no
+   restart needed, daemon stays up -- see balise-src/src/theme.rs). This
+   file is the source of truth; src/theme.rs's FALLBACK_CSS is only a
+   safety net for when this file isn't reachable yet (see that file's
+   header comment for why). */
+
+@import url("../theme/fonts.css");
+
+*:focus,
+*:focus-visible {
+    outline: none;
+}
+
+/* GTK's built-in ".background" class paints an opaque themed rectangle
+   that ignores border-radius -- confirmed live on Orbit this session (a
+   right-angle corner poking past its rounded panel once its compositor
+   blur was removed). Balise's window never adds that class in the first
+   place (see balise-src/src/ui/window.rs); this is belt-and-braces in
+   case some GTK/theme path re-adds an opaque fill regardless. */
+window,
+.background {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    border-radius: 16px;
+}
+
+/* Border: the SAME "curved glass" treatment as Hyprland's active-window
+   border, RoueWheel's hub rim, .roue-sidebar, swaync's .control-center and
+   (now-fixed) .orbit-panel -- one material read across the whole system.
+   LONGHAND background-image + background-clip, NOT the inline
+   `background: <gradient> padding-box, <gradient> border-box` shorthand:
+   that shorthand renders fine on .roue-sidebar/.control-center, but on
+   Orbit's panel/surface combination it made GTK draw the corners as a
+   right angle instead of following border-radius (confirmed live via a
+   cropped/zoomed screenshot of the real surface corner). The longhand
+   produces the identical visual result and rounds correctly everywhere --
+   do not "simplify" this back to the shorthand.
+
+   Fill opacity 0.97: there is no compositor blur behind Balise (no
+   layer_rule for the "balise" namespace in hypr/windowrules.lua, matching
+   Orbit's current no-blur state), so legibility rests entirely on this
+   near-opaque fill -- 0.97 is the value validated live on Orbit against an
+   unblurred backdrop this same session. */
+.balise-panel {
+    border: 1.5px solid transparent;
+    border-radius: 16px;
+    background-image:
+        linear-gradient(rgba(12, 12, 14, 0.97), rgba(12, 12, 14, 0.97)),
+        linear-gradient(
+            135deg,
+            rgba(229, 229, 234, 0.75) 0%,
+            rgba(142, 142, 147, 0.45) 25%,
+            rgba(99, 99, 102, 0.28) 50%,
+            rgba(58, 58, 60, 0.15) 75%,
+            rgba(28, 28, 30, 0.06) 100%
+        );
+    background-clip: padding-box, border-box;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    padding: 14px;
+}
+
+.balise-header {
+    color: #f2f2f7;
+}
+
+.balise-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #f2f2f7;
+}
+
+.balise-hint {
+    color: #8e8e93;
+    font-size: 0.9em;
+}

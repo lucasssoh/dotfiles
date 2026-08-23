@@ -1,0 +1,42 @@
+[package]
+name = "balise"
+version = "0.1.0"
+edition = "2021"
+description = "Native Wayland WiFi/Bluetooth/Ethernet manager panel (GTK4 + layer-shell), first-party replacement for the vendored Orbit"
+license = "MIT"
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_14"] }
+gtk4-layer-shell = "0.4"
+async-channel = "2"
+serde = { version = "1", features = ["derive"] }
+# Config format (config.toml) -- already the repo's convention for
+# structured config (see roue-src/Cargo.toml's same note, and
+# orbit/config.toml).
+toml = "0.8"
+# Subcommands (daemon/show/hide/toggle/reload-theme/reload-config). Unlike
+# Prisme and Roue (one-shot processes, hand-parsed argv), Balise is a daemon
+# + thin client and needs a real subcommand surface -- same shape as
+# Orbit's CLI (orbit-vendor/src/main.rs).
+clap = { version = "4", features = ["derive"] }
+# default-features = false drops zbus's own smol/async-io executor so it
+# rides on the tokio runtime we already create for the D-Bus worker
+# threads -- two executors in one process otherwise. Pinned to 4.x on
+# purpose: do NOT bump to zbus 5 without checking its MSRV first (this
+# machine is on rustc 1.85 -- same reasoning as prisme-src's `image` and
+# `jxl-oxide` pins). 4.4 is confirmed known-good on 1.85 (orbit-vendor
+# already builds clean with it, see orbit-vendor/Cargo.lock).
+zbus = { version = "4.4", default-features = false, features = ["tokio"] }
+# Trimmed vs Orbit's "full": rt-multi-thread for the shared runtime, net
+# for the daemon's UnixListener, io-util for its Async{Read,Write}Ext, time
+# for the connect-confirmation poll sleeps. No "macros" -- we never use
+# #[tokio::main] or select!.
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time"] }
+# connection.uuid when creating a new WiFi profile via
+# AddAndActivateConnection -- NetworkManager rejects the dict without one.
+uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

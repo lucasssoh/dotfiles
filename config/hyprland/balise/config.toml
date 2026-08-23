@@ -1,0 +1,22 @@
+# Balise — position/margins/transitions
+# (theme -> style.css, in this same folder)
+
+# Top-right corner, same "floating panel" visual language as Orbit/swaync's
+# notification center.
+position = "top-right"
+
+# Same values as Orbit's config.toml / swaync's control-center-margin-* --
+# Hyprland already automatically offsets surfaces anchored to the top to
+# clear the area reserved by the bar.
+margin_top = 8
+margin_bottom = 8
+margin_left = 8
+margin_right = 8
+
+window_transition = "slidedown"
+window_transition_duration = 150
+
+# Kept even though Phase 1 only has a single WiFi tab -- forward-compat
+# with the later Ethernet/Bluetooth tabs (see the project plan's roadmap).
+stack_transition = "slidehorizontal"
+stack_transition_duration = 150
