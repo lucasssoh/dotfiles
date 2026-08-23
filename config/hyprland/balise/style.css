@@ -71,11 +71,13 @@ window,
    glass panels). border-radius 14.5px (16 - 1.5) keeps the inner corner
    concentric with the outer one. */
 .balise-panel-inner {
+    /* Darkened from the first pass (60,62,70 / 42,43,49 / 26,26,30) --
+       the top-left "glass metal" highlight read too light/bright. */
     background: linear-gradient(
         135deg,
-        rgba(60, 62, 70, 0.88) 0%,
-        rgba(42, 43, 49, 0.9) 45%,
-        rgba(26, 26, 30, 0.92) 100%
+        rgba(42, 44, 50, 0.88) 0%,
+        rgba(30, 31, 36, 0.9) 45%,
+        rgba(18, 18, 21, 0.92) 100%
     );
     border-radius: 14.5px;
     margin: 1.5px;
