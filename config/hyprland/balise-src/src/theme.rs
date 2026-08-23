@@ -88,13 +88,17 @@ window,
    glass panels). border-radius 14.5px (16 - 1.5) keeps the inner corner
    concentric with the outer one. */
 .balise-panel-inner {
-    /* Darkened from the first pass (60,62,70 / 42,43,49 / 26,26,30) --
-       the top-left "glass metal" highlight read too light/bright. */
+    /* Darkened twice now: first pass was (60,62,70 / 42,43,49 /
+       26,26,30), second (42,44,50 / 30,31,36 / 18,18,21). This third
+       pass goes darker again (asked for) -- the near-black ground is
+       what makes the translucent section cards on top of it read as
+       glass panes catching light rather than as merely lighter gray
+       boxes. */
     background: linear-gradient(
         135deg,
-        rgba(42, 44, 50, 0.88) 0%,
-        rgba(30, 31, 36, 0.9) 45%,
-        rgba(18, 18, 21, 0.92) 100%
+        rgba(30, 32, 37, 0.92) 0%,
+        rgba(19, 20, 24, 0.93) 45%,
+        rgba(10, 10, 13, 0.95) 100%
     );
     border-radius: 14.5px;
     margin: 1.5px;
@@ -194,24 +198,96 @@ window,
 }
 
 .balise-section-card {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-image: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.13) 0%,
+        rgba(255, 255, 255, 0.06) 45%,
+        rgba(255, 255, 255, 0.025) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 14px;
     margin: 4px 6px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
+/* Current/active section is INVERTED (light glass fill, dark text) --
+   see style.css's fuller note. */
 .balise-section-card.connected {
-    border: 1.5px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 14px;
-    background-image:
-        linear-gradient(135deg, rgba(168, 180, 196, 0.22), rgba(168, 180, 196, 0.10)),
-        linear-gradient(
-            135deg,
-            rgba(232, 236, 240, 0.65) 0%,
-            rgba(168, 180, 196, 0.35) 50%,
-            rgba(60, 64, 70, 0.12) 100%
-        );
-    background-clip: padding-box, border-box;
+    background-image: linear-gradient(
+        135deg,
+        rgba(244, 245, 248, 0.92) 0%,
+        rgba(226, 229, 235, 0.87) 50%,
+        rgba(206, 211, 220, 0.82) 100%
+    );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.balise-section-card.connected .balise-ssid {
+    color: #1c1c1e;
+}
+
+.balise-section-card.connected .balise-status {
+    color: #1c1c1e;
+    opacity: 0.65;
+}
+
+.balise-section-card.connected .balise-status-accent {
+    color: #3a4553;
+    opacity: 0.95;
+}
+
+.balise-section-card.connected .balise-signal-icon,
+.balise-section-card.connected .balise-icon-accent,
+.balise-section-card.connected .balise-detail-label {
+    color: #1c1c1e;
+    opacity: 0.75;
+}
+
+.balise-section-card.connected .balise-signal-bar-active,
+.balise-section-card.connected .balise-signal-bar-active-accent {
+    background-color: #1c1c1e;
+    opacity: 0.8;
+}
+
+.balise-section-card.connected .balise-signal-bar-inactive {
+    background-color: #1c1c1e;
+    opacity: 0.2;
+}
+
+.balise-section-card.connected .balise-icon-container {
+    background-color: rgba(28, 28, 30, 0.12);
+}
+
+.balise-section-card.connected .balise-button {
+    background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.16), rgba(28, 28, 30, 0.08));
+    color: #1c1c1e;
+    border: 1px solid rgba(28, 28, 30, 0.18);
+}
+
+.balise-section-card.connected .balise-button label {
+    color: #1c1c1e;
+}
+
+.balise-section-card.connected .balise-button:hover {
+    background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.26), rgba(28, 28, 30, 0.14));
+    border-color: rgba(28, 28, 30, 0.32);
+}
+
+.balise-section-card.connected .balise-button.destructive,
+.balise-section-card.connected .balise-button.destructive label {
+    color: #7a1f1f;
+}
+
+.balise-section-card.connected .balise-button.destructive {
+    background-image: linear-gradient(135deg, rgba(214, 74, 74, 0.32), rgba(214, 74, 74, 0.18));
+    border: 1px solid rgba(150, 40, 40, 0.35);
+}
+
+.balise-section-card.connected .balise-button.destructive:hover {
+    background-image: linear-gradient(135deg, rgba(214, 74, 74, 0.45), rgba(214, 74, 74, 0.26));
+    border-color: rgba(150, 40, 40, 0.5);
 }
 
 .balise-network-row,
@@ -234,6 +310,26 @@ window,
 .balise-network-row.focused,
 .balise-saved-network-row.focused {
     background-color: rgba(168, 180, 196, 0.14);
+}
+
+.balise-section-card.connected .balise-network-row,
+.balise-section-card.connected .balise-saved-network-row {
+    border-top: 1px solid rgba(28, 28, 30, 0.10);
+}
+
+.balise-section-card.connected .balise-network-row:first-child,
+.balise-section-card.connected .balise-saved-network-row:first-child {
+    border-top: none;
+}
+
+.balise-section-card.connected .balise-network-row:hover,
+.balise-section-card.connected .balise-saved-network-row:hover {
+    background-color: rgba(28, 28, 30, 0.07);
+}
+
+.balise-section-card.connected .balise-network-row.focused,
+.balise-section-card.connected .balise-saved-network-row.focused {
+    background-color: rgba(28, 28, 30, 0.12);
 }
 
 .balise-ssid {
@@ -404,6 +500,18 @@ window switch.balise-toggle-switch slider {
 window switch.balise-toggle-switch:checked slider,
 window switch.balise-toggle-switch:checked:not(:backdrop) slider {
     background-image: linear-gradient(135deg, #ffffff, #c2cbd6);
+}
+
+.balise-section-card.connected switch.balise-toggle-switch,
+.balise-section-card.connected switch.balise-toggle-switch trough {
+    background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.20), rgba(28, 28, 30, 0.10));
+    border: 1px solid rgba(28, 28, 30, 0.22);
+}
+
+.balise-section-card.connected switch.balise-toggle-switch:checked,
+.balise-section-card.connected switch.balise-toggle-switch:checked trough {
+    background-image: linear-gradient(135deg, rgba(58, 69, 83, 0.85), rgba(38, 46, 57, 0.7));
+    border-color: rgba(28, 28, 30, 0.35);
 }
 
 entry,
