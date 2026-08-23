@@ -9,10 +9,10 @@ import "../theme"
 // is actually carrying traffic) -- this one only tracks the wired
 // interface itself, mirroring Bluetooth.qml's on/off/connected shape.
 //
-// Status-only, no click action: neither Orbit (no dedicated wired --tab,
-// its wired overlay is a side button inside the wifi tab) nor Balise
-// (pre-cutover, not yet wired into the bar -- see the project plan) is
-// the obvious click target yet. Revisit once one of them is.
+// Left click opens Balise on its Ethernet tab. This module shipped
+// status-only at first, because back then neither Orbit (no dedicated
+// wired tab) nor Balise (not yet wired into the bar) was an obvious
+// click target; the cutover settled it.
 
 Item {
     id: root
@@ -93,5 +93,29 @@ fi
         color: root.inactive ? "#636366" : "#f2f2f7"
         font.family: Fonts.iconPhosphor
         font.pixelSize: 15
+    }
+
+    // Same shape as Bluetooth.qml: a real Process with onExited re-polling,
+    // so the icon updates as soon as the panel is done rather than waiting
+    // for the next nmcli monitor event.
+    Process {
+        id: pickerProc
+        command: ["bash", "-c", "$HOME/.config/waybar/scripts/balise-toggle.sh ethernet"]
+        onExited: root.poll()
+    }
+
+    Process {
+        id: nmtuiProc
+        command: ["wezterm", "start", "--class", "nm-tui-float", "--", "nmtui"]
+        onExited: root.poll()
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.LeftButton) pickerProc.running = true;
+            else nmtuiProc.running = true;
+        }
     }
 }

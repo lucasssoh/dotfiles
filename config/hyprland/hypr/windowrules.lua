@@ -430,10 +430,9 @@ hl.window_rule({
 --   swaync-control-center         -- the panel that opens on bell click
 -- swaync-notification-window (popup toasts) deliberately left WITHOUT a
 -- rule -- blur asked for only on the control-center block, not the
--- popups. Orbit and Balise (the WiFi/BT/VPN panel and its first-party
--- replacement) both cycled through a blur rule here more than once and
--- settled on NOT having one -- for Balise specifically, the "glass" read
--- is now built entirely from color/gradient in balise/style.css (a
+-- popups. Balise (the WiFi/BT/Ethernet panel) cycled through a blur rule
+-- here more than once and settled on NOT having one -- its "glass" read
+-- is built entirely from color/gradient in balise/style.css (a
 -- gradient fill on .balise-panel-inner instead of a flat one, alongside
 -- the border/button treatment already there), not compositor blur.
 --
@@ -452,7 +451,8 @@ hl.window_rule({
 hl.layer_rule({ match = { namespace = "swaync-control-center" }, blur = true, xray = true, ignore_alpha = 0.5 })
 -- Roue: anchored to all 4 edges (see roue-src/src/main.rs), so it's in
 -- the same "oversized surface" situation as swaync-control-center above,
--- not orbit -- same xray + ignore_alpha treatment, needed for the exact
+-- unlike Balise (an anchored corner panel) -- same xray + ignore_alpha
+-- treatment, needed for the exact
 -- same reason (confirmed live: without it the whole screen blurs, not
 -- just the wheel + sidebar). On-demand, shown for seconds at a time, same
 -- cost profile as the two rules above -- see hyprland.lua's

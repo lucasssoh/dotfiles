@@ -45,7 +45,7 @@ hl.on("hyprland.start", function()
     -- classify this session as "graphical" (Type=unspecified /
     -- Class=manager), so the target never activates automatically.
     -- Consequence: every WantedBy=graphical-session.target service (e.g.
-    -- orbit.service) must be started explicitly below instead of relying
+    -- balise.service) must be started explicitly below instead of relying
     -- on the target's activation.
     --
     -- xdg-desktop-portal.service is hit even worse: its unit has an
@@ -107,22 +107,23 @@ hl.on("hyprland.start", function()
     -- (and on config.reloaded / monitor.added / monitor.removed below).
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 
-    -- Native Wayland WiFi/Bluetooth/VPN manager (replaces the
-    -- gnome-control-center detour), built from the sources vendored by
-    -- install.sh (see orbit-vendor/). The waybar `orbit toggle` shortcut
-    -- reuses this daemon instead of relaunching one per click. Started
-    -- here via a systemd --user service (see systemd/orbit.service,
+    -- Native Wayland WiFi/Bluetooth/Ethernet manager (replaces the
+    -- gnome-control-center detour), built from the sources in this repo
+    -- by install.sh (see
+    -- balise-src/). The bar's `balise toggle` shortcut reuses this
+    -- daemon instead of relaunching one per click. Started
+    -- here via a systemd --user service (see systemd/balise.service,
     -- ExecStartPre sleep 3 + Restart=on-failure) rather than directly:
     -- the GTK4/layer-shell client can fail to initialize too early in the
     -- startup sequence, and the service handles the delay and automatic
     -- restart. Started explicitly here rather than via
     -- WantedBy=graphical-session.target, for the same reason as above
     -- (this target never activates on its own on this session).
-    hl.exec_cmd("systemctl --user start orbit.service")
-    -- Closes Orbit on an outside click (like swaync): GTK/gtk4-layer-shell
+    hl.exec_cmd("systemctl --user start balise.service")
+    -- Closes Balise on an outside click (like swaync): GTK/gtk4-layer-shell
     -- never notifies a layer-shell surface that it lost focus, so this
     -- behavior relies on Hyprland events instead.
-    hl.exec_cmd("bash ~/.config/hypr/scripts/orbit-autoclose.sh")
+    hl.exec_cmd("bash ~/.config/hypr/scripts/balise-autoclose.sh")
 end)
 
 -- A `hyprctl reload` reloads the static Lua files and clears rules set at
@@ -244,7 +245,7 @@ hl.config({
         -- alone doesn't blur anything by default though (no window/layer
         -- opts in just because this is true) -- actual blur only happens
         -- where explicitly requested:
-        --   - layerrule blur for orbit/swaync-notification-window/
+        --   - layerrule blur for swaync-notification-window/
         --     swaync-control-center (see windowrules.lua) -- small,
         --     on-demand panels, visible for seconds at a time, not the
         --     whole session, so nowhere near the bar's cost profile.

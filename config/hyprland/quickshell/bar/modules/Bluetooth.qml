@@ -6,7 +6,7 @@ import "../theme"
 // exists for BlueZ state (see shell.qml v2 header on why this stayed a
 // poll rather than a stream), but 45s was too slow -- dropped to 8s,
 // and the two actions that actually change bluetooth state from this
-// bar (orbit's picker, blueman-manager) now run as real Processes with
+// bar (balise's picker, blueman-manager) now run as real Processes with
 // onExited re-polling immediately, so at least "I just used the picker"
 // feels instant instead of waiting out the interval.
 //
@@ -87,7 +87,7 @@ fi
 
     Process {
         id: pickerProc
-        command: ["bash", "-c", "$HOME/.config/waybar/scripts/orbit-toggle.sh bluetooth"]
+        command: ["bash", "-c", "$HOME/.config/waybar/scripts/balise-toggle.sh bluetooth"]
         onExited: root.poll()
     }
 

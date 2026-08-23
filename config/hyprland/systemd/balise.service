@@ -1,11 +1,11 @@
 [Unit]
-Description=Orbit — gestionnaire WiFi/Bluetooth/VPN natif Wayland
+Description=Balise — gestionnaire WiFi/Bluetooth/Ethernet natif Wayland
 After=graphical-session.target
 
 [Service]
 Type=simple
 ExecStartPre=/bin/sleep 3
-ExecStart=%h/.local/bin/orbit daemon
+ExecStart=%h/.local/bin/balise daemon
 Restart=on-failure
 RestartSec=3
 PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR HYPRLAND_INSTANCE_SIGNATURE DBUS_SESSION_BUS_ADDRESS

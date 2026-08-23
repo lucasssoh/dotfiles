@@ -2,19 +2,19 @@
 set -uo pipefail
 
 # =========================================================
-# orbit-autoclose.sh — closes Orbit as soon as another window takes focus
+# balise-autoclose.sh — closes Balise as soon as another window takes focus
 # (same behavior as the swaync panel, which natively closes on an outside
 # click).
 #
-# Orbit is a plain layer-shell surface: GTK/gtk4-layer-shell never emits a
+# Balise is a plain layer-shell surface: GTK/gtk4-layer-shell never emits a
 # focus-loss event for this type of surface (its "is-active" property
 # never goes back to false). So we rely on Hyprland events (activewindow)
-# instead, which are reliable. Opening Orbit itself never triggers an
+# instead, which are reliable. Opening Balise itself never triggers an
 # activewindow event (layer-shell surfaces don't appear in this stream),
-# so this script can't accidentally close Orbit right after it opens.
+# so this script can't accidentally close Balise right after it opens.
 # =========================================================
 
-# ~/.local/bin (where install.sh places orbit) isn't in the PATH of
+# ~/.local/bin (where install.sh places balise) isn't in the PATH of
 # processes launched by Hyprland -- only the zsh profile adds it.
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -29,7 +29,7 @@ done
 socat -u UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
     case "$line" in
         activewindow\>\>*)
-            orbit hide >/dev/null 2>&1 || true
+            balise hide >/dev/null 2>&1 || true
             ;;
     esac
 done

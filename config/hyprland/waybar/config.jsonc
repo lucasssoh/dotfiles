@@ -150,7 +150,7 @@
         "format-disabled": "󰤭  ----o/s",
 
         "tooltip-format": "{essid} ({signalStrength}%)",
-        "on-click": "~/.config/waybar/scripts/orbit-toggle.sh wifi",
+        "on-click": "~/.config/waybar/scripts/balise-toggle.sh wifi",
         "on-click-right": "wezterm start --class nm-tui-float -- nmtui",
 
         "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
@@ -170,7 +170,7 @@
         "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
         "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
 
-        "on-click": "~/.config/waybar/scripts/orbit-toggle.sh bluetooth",
+        "on-click": "~/.config/waybar/scripts/balise-toggle.sh bluetooth",
         "on-click-right": "blueman-manager"
     },
 

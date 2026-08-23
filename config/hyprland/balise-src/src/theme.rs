@@ -7,7 +7,7 @@
 /// Fallback palette/panel, matching the rest of the system's "verre
 /// givré" material (hypr/hyprland.lua's active-window border gradient,
 /// roue/style.css's .roue-sidebar, swaync/style.css's .control-center,
-/// orbit/style.css's .orbit-panel) -- used if ~/.config/balise/style.css
+/// swaync/style.css's .control-center) -- used if ~/.config/balise/style.css
 /// doesn't exist yet (before install.sh, or running the binary directly
 /// during development). Copied here as a hardcoded string rather than
 /// `include_str!`-ed from the external file (config/hyprland/balise/
@@ -677,9 +677,14 @@ password-entry:focus {
     color: #f2f2f7;
 }
 
+/* No hover treatment: it's a small click target, not a control that
+   needs to advertise itself (asked for). Only the glyph brightens
+   slightly so it doesn't feel dead under the pointer. */
 .balise-back-button:hover {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-    border-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+    background-color: transparent;
+    border-color: transparent;
+    color: #ffffff;
 }
 
 .balise-back-title {

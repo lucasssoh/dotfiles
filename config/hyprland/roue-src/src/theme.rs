@@ -2,7 +2,7 @@
 //! the user file if present. Same mechanism as prisme-src/src/theme.rs
 //! (see its doc for the full reasoning).
 
-/// Fallback palette, identical to waybar/style.css, orbit/theme.toml, and
+/// Fallback palette, identical to waybar/style.css, balise/style.css, and
 /// prisme/style.css -- copied here as a hardcoded string for the same
 /// reason as in Prisme: `config/hyprland/roue/style.css` lives outside
 /// `roue-src/`, which install.sh copies alone into `~/.cache/roue-build/`

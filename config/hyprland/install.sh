@@ -223,40 +223,41 @@ elif [ "$DISTRO" = "debian" ]; then
 fi
 
 # ============================================================
-# ORBIT (native Wayland WiFi/Bluetooth/VPN manager)
+# BALISE (native Wayland WiFi/Bluetooth/Ethernet manager)
 # ============================================================
-# No Fedora/Debian package -- built from source. The source code (modified:
-# logo/title removed, smart toggle, truncation of overly long names -- see
-# orbit-vendor/README.md for details) is VENDORED directly in this repo
-# (orbit-vendor/) rather than cloned from GitHub on every install -- Orbit
-# is a low-activity solo-dev project; if its repo disappears one day, our
-# install shouldn't depend on it. Binary installed to ~/.local/bin (no sudo
-# needed), config in config/hyprland/orbit/ (symlinked further down like
-# the other directories).
-section "Building Orbit (WiFi/Bluetooth manager)"
+# First-party, written for this setup (balise-src/) -- replaces Orbit,
+# which was a vendored third-party app patched around repeatedly. Same
+# build pattern as Prisme/Roue below: copy the crate to a cache dir,
+# cargo build, install the binary to ~/.local/bin (no sudo needed).
+# Config + theme live in config/hyprland/balise/ and are symlinked
+# further down like the other module directories, so style.css can be
+# edited and reloaded with `balise reload-theme` without recompiling.
+#
+# No VPN support, by design.
+section "Building Balise (WiFi/Bluetooth/Ethernet manager)"
 
-ORBIT_BUILD="$HOME/.cache/orbit-build"
+BALISE_BUILD="$HOME/.cache/balise-build"
 
 if ! command -v cargo &>/dev/null; then
-    warn "cargo not found — skipping Orbit build. Install a Rust toolchain and re-run this script to get it."
+    warn "cargo not found — skipping Balise build. Install a Rust toolchain and re-run this script to get it."
 else
-    rm -rf "$ORBIT_BUILD"
-    mkdir -p "$ORBIT_BUILD"
-    cp -r "$REPO_DIR/orbit-vendor/." "$ORBIT_BUILD/"
+    rm -rf "$BALISE_BUILD"
+    mkdir -p "$BALISE_BUILD"
+    cp -r "$REPO_DIR/balise-src/." "$BALISE_BUILD/"
 
-    if (cd "$ORBIT_BUILD" && cargo build --release); then
+    if (cd "$BALISE_BUILD" && cargo build --release); then
         mkdir -p "$HOME/.local/bin"
-        install -Dm755 "$ORBIT_BUILD/target/release/orbit" "$HOME/.local/bin/orbit"
-        ok "Orbit built and installed to ~/.local/bin/orbit."
+        install -Dm755 "$BALISE_BUILD/target/release/balise" "$HOME/.local/bin/balise"
+        ok "Balise built and installed to ~/.local/bin/balise."
     else
-        warn "Orbit build failed — WiFi/Bluetooth waybar clicks will fall back to nmtui/blueman-manager until this is fixed."
+        warn "Balise build failed — the bar's WiFi/Bluetooth/Ethernet clicks will fall back to nmtui/blueman-manager until this is fixed."
     fi
 fi
 
 # ============================================================
 # PRISME (native Wayland wallpaper picker)
 # ============================================================
-# Same logic as the Orbit block above: source vendored in this repo
+# Same logic as the Balise block above: source lives in this repo
 # (prisme-src/), built at install time, binary in ~/.local/bin. Config (CSS
 # theme) in config/hyprland/prisme/, symlinked further down like the other
 # directories. awww stays the application backend (unchanged); Prisme only
@@ -322,7 +323,7 @@ fi
 # ============================================================
 # No distro package -- built from the upstream SVG sources with
 # rsvg-convert + xcursorgen (installed above). Not vendored like
-# Orbit/Prisme/Roue since this is a purely cosmetic asset pack, not
+# Balise/Prisme/Roue since this is a purely cosmetic asset pack, not
 # something the desktop depends on functionally: if upstream ever
 # disappears, re-running this script without network just skips the
 # build and hypr/hyprland.lua's XCURSOR_THEME falls back to whatever
@@ -367,7 +368,7 @@ if [ "$DISTRO" != "debian" ]; then
     ok "Bluetooth enabled."
 fi
 
-# Custom systemd --user services from the repo (orbit.service, etc.)
+# Custom systemd --user services from the repo (balise.service, etc.)
 SYSTEMD_DST="$HOME/.config/systemd/user"
 mkdir -p "$SYSTEMD_DST"
 
@@ -482,14 +483,14 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,dunst,swaync,orbit,prisme,roue,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,dunst,swaync,balise,prisme,roue,hyprlock,scripts,khal}
     ok "Old configs removed"
 fi
 
 section "Linking configuration directories"
 
 # Config directories to fully symlink into ~/.config
-modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "orbit" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
+modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "balise" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then
@@ -509,6 +510,18 @@ mkdir -p "$SCRIPTS_DST"
 find "$SCRIPTS_SRC" -maxdepth 1 -name "*.sh" | while read -r script; do
     safe_link "$script" "$SCRIPTS_DST/$(basename "$script")"
 done
+
+# Prune links whose target no longer exists. Linking alone never removes
+# anything, so every script renamed or deleted in the repo left a dangling
+# symlink here forever -- hyprland.lua would then silently exec a
+# nonexistent path. Found the hard way when orbit-autoclose.sh became
+# balise-autoclose.sh, alongside four older leftovers.
+pruned=0
+while IFS= read -r stale; do
+    rm -f "$stale"
+    pruned=$((pruned + 1))
+done < <(find "$SCRIPTS_DST" -maxdepth 1 -xtype l 2>/dev/null)
+[ "$pruned" -gt 0 ] && ok "Removed $pruned dangling script symlink(s)."
 
 ok "Hypr scripts linked."
 

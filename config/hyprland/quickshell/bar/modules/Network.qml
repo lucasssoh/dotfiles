@@ -114,7 +114,7 @@ fi
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
             if (mouse.button === Qt.LeftButton)
-                Quickshell.execDetached(["bash", "-c", "$HOME/.config/waybar/scripts/orbit-toggle.sh wifi"]);
+                Quickshell.execDetached(["bash", "-c", "$HOME/.config/waybar/scripts/balise-toggle.sh wifi"]);
             else
                 Quickshell.execDetached(["wezterm", "start", "--class", "nm-tui-float", "--", "nmtui"]);
         }

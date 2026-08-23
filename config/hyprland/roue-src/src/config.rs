@@ -1,5 +1,5 @@
 //! Loads a wheel definition from `~/.config/roue/wheels/<name>.toml` --
-//! same format as `orbit/theme.toml`. Adding a new wheel therefore requires
+//! a plain TOML table. Adding a new wheel therefore requires
 //! no Rust code change at all: just a new file here and a trigger (keyboard
 //! shortcut, waybar click...) that launches `roue <name>`.
 

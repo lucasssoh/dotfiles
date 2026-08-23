@@ -1,7 +1,7 @@
 //! Loads Prisme's CSS theme: fallback built into the binary, overridden by
 //! the user file if present.
 
-/// Fallback palette, identical to waybar/style.css and orbit/theme.toml --
+/// Fallback palette, identical to waybar/style.css and balise/style.css --
 /// used if ~/.config/prisme/style.css doesn't exist yet (before
 /// install.sh, or running the binary directly from prisme-src/ during
 /// development). Copied here as a hardcoded string rather than

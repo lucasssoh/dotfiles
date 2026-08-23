@@ -1,5 +1,5 @@
-/* Balise — theme, same palette as waybar/style.css, orbit/style.css,
-   roue/style.css and prisme/style.css. Reload: `balise reload-theme` (no
+/* Balise — theme, same palette as waybar/style.css, roue/style.css and
+   prisme/style.css. Reload: `balise reload-theme` (no
    restart needed, daemon stays up -- see balise-src/src/theme.rs). This
    file is the source of truth; src/theme.rs's FALLBACK_CSS is only a
    safety net for when this file isn't reachable yet (see that file's
@@ -142,18 +142,17 @@ window,
 
 /* ============================================================
    Rows, buttons, lists, switches, overlays. NOT a port of Orbit's flat,
-   pill-shaped generated theme (orbit-vendor/src/theme.rs) -- asked to
+   pill-shaped generated theme -- asked to
    match Roue's "verre" quality instead: gradient fills in the same
    135deg direction as the panel border everywhere a flat color would
    otherwise sit, real glass-bordered rows/overlays (the same
    padding-box-fill + border-box-gradient longhand trick as .balise-panel
    above) for anything that needs to stand out (the active network, the
    password/error overlays), rounded-rect buttons (10px, matching this
-   system's "cards/buttons" convention -- see orbit/style.css's own file
-   header) instead of 9999px pills. Literal palette values baked in
+   system's "cards/buttons" convention) instead of 9999px pills. Literal palette values baked in
    directly (no theme.toml/runtime color computation here) -- accent
    #a8b4c4, fg #f2f2f7, bg #0c0c0e, destructive #ff6e6e, same tokens as
-   waybar/style.css, orbit/theme.toml, roue/style.css. accent_fg
+   waybar/style.css, roue/style.css. accent_fg
    (#1c1c1e, dark) is text-on-accent, needed since #a8b4c4 is light
    enough that white text on it would be hard to read.
    ============================================================ */
@@ -471,7 +470,7 @@ window,
 }
 
 /* Buttons -- rounded-rect (10px, matching this system's card/button
-   convention -- see orbit/style.css's own file header), gradient fills
+   convention), gradient fills
    in the panel's own 135deg light direction rather than Orbit's flat
    9999px pills. */
 .balise-button {
@@ -734,9 +733,14 @@ password-entry:focus {
     color: #f2f2f7;
 }
 
+/* No hover treatment: it's a small click target, not a control that
+   needs to advertise itself (asked for). Only the glyph brightens
+   slightly so it doesn't feel dead under the pointer. */
 .balise-back-button:hover {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-    border-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+    background-color: transparent;
+    border-color: transparent;
+    color: #ffffff;
 }
 
 .balise-back-title {

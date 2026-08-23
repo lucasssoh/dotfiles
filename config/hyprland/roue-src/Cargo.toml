@@ -11,7 +11,7 @@ gtk4-layer-shell = "0.4"
 resvg = "0.45.1"
 serde = { version = "1", features = ["derive"] }
 # Wheel definition format (wheels/*.toml) -- already the repo's convention
-# for structured config (see orbit/theme.toml), better suited than a
+# for structured config, better suited than a
 # homemade key=value format for a list of sectors.
 toml = "0.8"
 

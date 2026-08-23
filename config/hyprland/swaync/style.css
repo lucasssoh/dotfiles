@@ -2,7 +2,7 @@
    SWAYNC — style.css
    Matching the quickshell bar's "verre givré" / no-border pass (see
    quickshell/bar/shell.qml's header comment) and Orbit's own equivalent
-   (orbit/style.css): the old neon #4fefff accent and #505050 borders are
+   (balise/style.css): the old neon #4fefff accent and #505050 borders are
    gone, one platinum-desaturated accent + no decorative border anywhere,
    bigger rounded corners, and a real (conservative) glass background.
    Text legibility over an arbitrary wallpaper is handled by real
@@ -60,7 +60,7 @@ window, .blank-window, .floating-notifications {
 
 /* No outline border any more (was 1px solid @overlay2) -- translucent
    fill instead, same conservative ~90% glass level as Orbit's panel
-   (orbit/theme.toml). Severity (low/normal/critical) now reads from
+   (balise/style.css). Severity (low/normal/critical) now reads from
    background tint + a left accent stripe on critical only, rather than a
    full outline colored per state -- kept, unlike a purely decorative
    border, because it's real functional signal (same principle as Orbit's
@@ -100,7 +100,7 @@ window, .blank-window, .floating-notifications {
 /* ── Panel (control center) ────────────────────────────────────── */
 /* Border: the SAME "curved glass" treatment as Hyprland's active-window
    border, RoueWheel's hub rim, .roue-sidebar and Orbit's own panel (see
-   roue/style.css's header comment and orbit/style.css's .orbit-panel) --
+   roue/style.css's header comment and balise/style.css's .balise-panel) --
    one material read across the whole system. Double-background trick
    (opaque fill on padding-box, gradient on border-box, through a
    transparent border) since GTK CSS has no `border-image`. Scoped to

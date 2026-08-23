@@ -83,9 +83,8 @@ impl BaliseWindow {
             .build();
 
         window.init_layer_shell();
-        // Distinct namespace from "orbit" -- both run side by side during
-        // the parallel build-out (see the project plan). Anchored corner
-        // panel, not a fullscreen surface: KeyboardMode::None normally,
+        // The namespace is what hypr/windowrules.lua matches on. Anchored
+        // corner panel, not a fullscreen surface: KeyboardMode::None normally,
         // flipped to OnDemand only while shown (see show()/hide() below),
         // exclusive_zone 0 (doesn't reserve screen space like a bar would).
         window.set_namespace("balise");
