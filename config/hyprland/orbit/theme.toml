@@ -8,13 +8,16 @@ accent_secondary = "#a8b4c4"  # was #4f9eff -- section headers (no more 2-tone a
 background       = "#0c0c0e"  # was #141414 -- matches the bar's deepened black
 foreground       = "#f2f2f7"  # text (unchanged, same token the bar uses)
 destructive      = "#ff6e6e"  # was #ff453a -- matches the bar's danger red
-opacity           = 0.90       # was 1.0 -- a real "glass" pass now, like the bar's
-                                # metrics/tools pills, but conservative (90%, not
-                                # their ~45%): Orbit holds actual readable content
-                                # (network lists, buttons), not glanceable stats, so
-                                # legibility matters more here. Real compositor blur
-                                # behind the panel (layerrule in windowrules.lua)
-                                # keeps whatever's behind it from ever being sharp
-                                # enough to fight with the text -- confirmed live at
-                                # a much lower opacity (0.35) before settling back
-                                # here, the blur itself was clearly visible then.
+opacity           = 0.97       # was 0.90, and 1.0 before that -- the compositor
+                                # blur behind the panel is gone now (removed on
+                                # request, see hypr/windowrules.lua), so the 10%
+                                # transparency at 0.90 stopped reading as "glass"
+                                # and started reading as a visible, unblurred hint
+                                # of whatever's behind -- most obvious in the
+                                # Bluetooth/VPN tabs, whose content is shorter than
+                                # the stack's forced minimum height (see
+                                # stack.set_size_request in window.rs), leaving a
+                                # patch of near-empty panel where that bleed-
+                                # through has nothing else layered over it to hide
+                                # under. 0.97 keeps a hint of "glass" without it
+                                # being legible as a second background.

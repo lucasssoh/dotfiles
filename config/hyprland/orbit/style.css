@@ -1,14 +1,15 @@
 /* Orbit — font + flat look, matching the quickshell bar's "verre givré" /
    no-border pass (see quickshell/bar/shell.qml's header comment): no
-   shadow/glow, no decorative border anywhere (the panel reads purely from
-   its own opaque fill contrast, same as every bar block), bigger rounded
-   corners (16px panel/cards/buttons, 10px nested tabs -- was a flat 8px
-   everywhere, matching swaync). Real transparency now too (theme.toml's
-   opacity: 0.90, was 1.0) -- conservative next to the bar's own ~45%
-   pills since this panel holds actual readable content. Text legibility
-   over an arbitrary wallpaper is handled by real compositor blur behind
-   the panel (see hypr/windowrules.lua's layerrule for Orbit), not a
-   text-shadow/outline hack -- tried that first, looked bad, reverted.
+   shadow/glow, decorative border now added back (see .orbit-panel below,
+   the panel used to read purely from its own opaque fill contrast, same
+   as every bar block), bigger rounded corners (16px panel/cards/buttons,
+   10px nested tabs -- was a flat 8px everywhere, matching swaync). Real
+   transparency too (theme.toml's opacity: 0.97, started at 1.0 then 0.90
+   -- see that file for why it crept back up). No compositor blur behind
+   the panel any more (removed on request, see hypr/windowrules.lua) --
+   text legibility relies on that near-opaque fill alone now, not a
+   text-shadow/outline hack either -- tried that first, looked bad,
+   reverted.
 
    Loaded on top of the CSS generated from theme.toml, at the same
    priority (STYLE_PROVIDER_PRIORITY_USER) but after -- so beating a rule
@@ -57,9 +58,12 @@ window,
    than Orbit staying the sole flat/no-border holdout. Same double-
    background trick (opaque fill on padding-box, gradient on border-box,
    through a transparent border) since GTK CSS has no `border-image`.
-   Background inlined here (was theme.toml's accent/opacity-driven fill,
-   #0c0c0e @ 0.90 -- see that file) because the trick needs an explicit
-   background value to pair with the gradient layer. */
+   Background inlined here (mirrors theme.toml's accent/opacity-driven
+   fill, #0c0c0e @ 0.97 -- keep this literal in sync with that file's
+   `opacity`, since this override replaces the generated CSS's own
+   background-color entirely instead of reading the value from it)
+   because the trick needs an explicit background value to pair with
+   the gradient layer. */
 .orbit-panel {
     /* The inline `background: <gradient> padding-box, <gradient>
        border-box` shorthand (used successfully in roue/style.css's
@@ -75,7 +79,7 @@ window,
     border: 1.5px solid transparent;
     border-radius: 16px;
     background-image:
-        linear-gradient(rgba(12, 12, 14, 0.90), rgba(12, 12, 14, 0.90)),
+        linear-gradient(rgba(12, 12, 14, 0.97), rgba(12, 12, 14, 0.97)),
         linear-gradient(
             135deg,
             rgba(229, 229, 234, 0.75) 0%,
