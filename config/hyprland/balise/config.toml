@@ -16,7 +16,14 @@ margin_right = 8
 window_transition = "slidedown"
 window_transition_duration = 150
 
-# Kept even though Phase 1 only has a single WiFi tab -- forward-compat
-# with the later Ethernet/Bluetooth tabs (see the project plan's roadmap).
-stack_transition = "slidehorizontal"
-stack_transition_duration = 150
+# Transition between the Bluetooth/WiFi/Ethernet tabs. They are siblings,
+# not a sequence, so sliding them implied a left/right ordering that
+# doesn't exist -- a plain crossfade instead (asked for). Note this does
+# NOT govern the drill-in to an endpoint's detail page, which stays a
+# directional slide because that one IS a sequence (list -> item); see
+# ui/window.rs's show_detail/leave_detail.
+stack_transition = "crossfade"
+# Court volontairement : le fondu n'est la que pour eviter un changement
+# net, pas pour se faire remarquer. Au-dela de ~150ms la bascule commence
+# a se sentir molle.
+stack_transition_duration = 120

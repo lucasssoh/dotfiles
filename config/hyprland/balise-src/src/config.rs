@@ -19,7 +19,7 @@ pub struct Config {
     #[serde(default = "default_stack_transition")]
     pub stack_transition: String,
 
-    #[serde(default = "default_transition_duration")]
+    #[serde(default = "default_stack_transition_duration")]
     pub stack_transition_duration: u32,
 
     #[serde(default = "default_margin")]
@@ -42,10 +42,19 @@ fn default_window_transition() -> String {
     "slidedown".to_string()
 }
 fn default_stack_transition() -> String {
-    "slidehorizontal".to_string()
+    "crossfade".to_string()
 }
 fn default_transition_duration() -> u32 {
     150
+}
+
+/// Deliberately shorter than the window's: the tab crossfade is only
+/// there to avoid a hard cut, not to be noticed. Separate from
+/// `default_transition_duration` so shortening one doesn't silently
+/// shorten the panel's own open/close animation too -- they shared a
+/// default until this split.
+fn default_stack_transition_duration() -> u32 {
+    120
 }
 fn default_margin() -> i32 {
     8
@@ -58,7 +67,7 @@ impl Default for Config {
             window_transition: default_window_transition(),
             window_transition_duration: default_transition_duration(),
             stack_transition: default_stack_transition(),
-            stack_transition_duration: default_transition_duration(),
+            stack_transition_duration: default_stack_transition_duration(),
             margin_top: default_margin(),
             margin_right: default_margin(),
             margin_bottom: default_margin(),

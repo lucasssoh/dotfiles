@@ -473,8 +473,7 @@ fn activate_tab(
         return;
     }
     *current_tab.borrow_mut() = tab.to_string();
-    win.stack().set_visible_child_name(tab);
-    win.header().set_tab(tab);
+    win.show_tab(tab);
 
     let nm = nm.clone();
     let bt = bt.clone();

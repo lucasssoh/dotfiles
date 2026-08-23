@@ -454,6 +454,23 @@ impl BaliseWindow {
         &self.detail_view
     }
 
+    /// Switches the visible tab, using the transition from config
+    /// (`stack_transition`, now a crossfade by default -- the three tabs
+    /// are siblings, not a sequence, so sliding them implied a
+    /// left/right ordering that doesn't exist).
+    ///
+    /// The guard matters: the back button calls `leave_detail` (which
+    /// slides) and then re-activates the same tab, and without it we'd
+    /// reset the transition type in the middle of that slide.
+    pub fn show_tab(&self, tab: &str) {
+        let already_there = self.stack.visible_child_name().map(|n| n.to_string()).as_deref() == Some(tab);
+        if !already_there {
+            self.stack.set_transition_type(parse_stack_transition(&self.config.borrow().stack_transition));
+            self.stack.set_visible_child_name(tab);
+        }
+        self.header.set_tab(tab);
+    }
+
     /// Drill in: swap the header for "‹ name" and slide the detail page
     /// in. Remembers which tab we came from so `leave_detail` returns
     /// there rather than to a hardcoded default.
@@ -461,6 +478,12 @@ impl BaliseWindow {
         *self.detail_origin.borrow_mut() = target.origin_tab().to_string();
         self.header.set_detail_mode(Some(&target.title()));
         self.detail_view.set_target(target);
+        // Deliberately NOT the configured tab transition: drilling in is
+        // a sequence (list -> item), so it keeps a directional slide even
+        // though the tabs themselves crossfade. `detail` is the last
+        // stack child, so SlideLeftRight brings it in from the right and
+        // takes it back out to the right.
+        self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
         self.stack.set_visible_child_name("detail");
     }
 
@@ -470,6 +493,7 @@ impl BaliseWindow {
     pub fn leave_detail(&self) -> String {
         let origin = self.detail_origin.borrow().clone();
         self.header.set_detail_mode(None);
+        self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
         self.stack.set_visible_child_name(&origin);
         origin
     }
