@@ -161,6 +161,35 @@ window,
    dialogs, 10px rounded-rect buttons -- matching Roue's "verre" quality
    rather than Orbit's flat 9999px-pill generated theme. */
 
+/* ---- Pourquoi ces alphas de bordure sont si hauts ---------------------
+   Chaque surface ici associe un REMPLISSAGE en degrade 135deg (clair en
+   haut-gauche -> sombre en bas-droite) a une BORDURE plate et uniforme.
+   Si l'alpha de la bordure tombe sous celui du remplissage a son point le
+   plus clair, la bordure disparait en haut-gauche -- pire, elle s'inverse
+   et se lit comme une couture sombre -- tout en restant visible en
+   bas-droite. Sur un coin arrondi, l'arc traverse exactement ce
+   basculement, ce qui donne des coins "mous"/asymetriques.
+
+   Mesure au pixel sur des captures reelles, avant correction :
+     carte de section  bordure 46 vs remplissage 55 a gauche  (-9, inversee)
+                       bordure 35 vs remplissage 27 a droite  (+8)
+     bouton primary    bordure 102 vs remplissage 121 a gauche (-19, inversee)
+                       bordure 97  vs remplissage 67  a droite (+30)
+   Apres, les quatre cotes du bouton primary mesurent 183-185 (ecart 2).
+
+   La regle : alpha_bordure > alpha_remplissage a son maximum, avec de la
+   marge. C'est pour ca que .balise-button.primary est a 0.70 et pas 0.35.
+
+   Teste et REJETE : le double-fond + `background-clip: padding-box,
+   border-box` (qui donnerait une vraie bordure en degrade). La couche
+   border-box peint un rectangle PLEIN sous le remplissage translucide et
+   transparait partout au lieu de rester dans l'anneau de 1px -- mesure :
+   le remplissage du bouton est passe de 121 a 209. Ce truc n'est
+   utilisable qu'avec un remplissage opaque ; le seul moyen d'avoir une
+   vraie bordure degradee avec de la translucidite est l'imbrication de
+   deux boites, comme .balise-panel / .balise-panel-inner.
+   -------------------------------------------------------------------- */
+
 .balise-search-container {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -204,7 +233,7 @@ window,
         rgba(255, 255, 255, 0.06) 45%,
         rgba(255, 255, 255, 0.025) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 14px;
     margin: 4px 6px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
@@ -263,7 +292,7 @@ window,
 .balise-section-card.connected .balise-button {
     background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.16), rgba(28, 28, 30, 0.08));
     color: #1c1c1e;
-    border: 1px solid rgba(28, 28, 30, 0.18);
+    border: 1px solid rgba(28, 28, 30, 0.34);
 }
 
 .balise-section-card.connected .balise-button label {
@@ -282,7 +311,7 @@ window,
 
 .balise-section-card.connected .balise-button.destructive {
     background-image: linear-gradient(135deg, rgba(214, 74, 74, 0.32), rgba(214, 74, 74, 0.18));
-    border: 1px solid rgba(150, 40, 40, 0.35);
+    border: 1px solid rgba(150, 40, 40, 0.55);
 }
 
 .balise-section-card.connected .balise-button.destructive:hover {
@@ -403,7 +432,7 @@ window,
 .balise-button {
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
     color: #f2f2f7;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.30);
     border-radius: 10px;
     padding: 6px 16px;
     font-size: 11px;
@@ -433,7 +462,7 @@ window,
 .balise-button.primary {
     background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
     color: #f2f2f7;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.70);
     box-shadow: none;
 }
 
@@ -449,7 +478,7 @@ window,
 .balise-button.destructive {
     background-image: linear-gradient(135deg, rgba(255, 154, 154, 0.55), rgba(255, 110, 110, 0.35));
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.60);
     box-shadow: none;
 }
 
@@ -467,7 +496,7 @@ window switch.balise-toggle-switch:not(:backdrop),
 window switch.balise-toggle-switch trough,
 window switch.balise-toggle-switch:not(:backdrop) trough {
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.34);
     box-shadow: none;
     border-radius: 9999px;
     min-width: 40px;
@@ -480,7 +509,7 @@ window switch.balise-toggle-switch:checked:hover,
 window switch.balise-toggle-switch:checked trough,
 window switch.balise-toggle-switch:checked:not(:backdrop) trough {
     background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.6), rgba(168, 180, 196, 0.4));
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.75);
     box-shadow: none;
 }
 
@@ -505,7 +534,7 @@ window switch.balise-toggle-switch:checked:not(:backdrop) slider {
 .balise-section-card.connected switch.balise-toggle-switch,
 .balise-section-card.connected switch.balise-toggle-switch trough {
     background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.20), rgba(28, 28, 30, 0.10));
-    border: 1px solid rgba(28, 28, 30, 0.22);
+    border: 1px solid rgba(28, 28, 30, 0.38);
 }
 
 .balise-section-card.connected switch.balise-toggle-switch:checked,
@@ -614,7 +643,7 @@ password-entry:focus {
 
 .balise-gear-button:hover {
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.30);
     opacity: 1;
 }
 
@@ -629,7 +658,7 @@ password-entry:focus {
 
 .balise-section-card.connected .balise-gear-button:hover {
     background-image: linear-gradient(135deg, rgba(28, 28, 30, 0.16), rgba(28, 28, 30, 0.08));
-    border-color: rgba(28, 28, 30, 0.18);
+    border-color: rgba(28, 28, 30, 0.34);
 }
 
 /* Header's detail mode: "‹ <endpoint name>" replacing the tab bar. */
