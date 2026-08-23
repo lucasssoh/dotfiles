@@ -290,14 +290,22 @@ impl BaliseWindow {
         error_close_btn.connect_clicked(move |_| rev.set_reveal_child(false));
         overlay.add_overlay(&error_revealer);
 
-        overlay.set_valign(gtk::Align::Start);
-        panel.set_valign(gtk::Align::Start);
+        // Deliberately NOT valign(Start) here (unlike Orbit/Phase 0, where
+        // the window's size was only a hint and content sat at its
+        // natural size within whatever GTK gave it): the window is now
+        // hard-fixed to PANEL_WIDTH x PANEL_HEIGHT (see width_request/
+        // height_request above), so panel/overlay/root_revealer need to
+        // actually FILL that footprint via vexpand, or the difference
+        // between their natural content height and the fixed window
+        // height shows up as a flat, untextured dead zone at the bottom
+        // -- confirmed live: it read as a plain rectangle with none of
+        // the row/button/border glass treatment, since nothing was
+        // painting it but the bare panel fill under an unfilled gap.
 
         let root_revealer = gtk::Revealer::builder()
             .transition_type(parse_revealer_transition(&config.window_transition))
             .transition_duration(config.window_transition_duration)
             .child(&overlay)
-            .valign(gtk::Align::Start)
             .build();
 
         window.set_child(Some(&root_revealer));
