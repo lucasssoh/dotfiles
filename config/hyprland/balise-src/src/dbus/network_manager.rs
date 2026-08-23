@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
 use zbus::Connection;
 
-use super::types::{AccessPoint, SavedNetwork, SecurityType};
+use super::types::{AccessPoint, SavedNetwork, SecurityType, WiredProfile};
 
 const NM: &str = "org.freedesktop.NetworkManager";
 const NM_PATH: &str = "/org/freedesktop/NetworkManager";
@@ -40,6 +40,7 @@ const CONNECTION_IFACE: &str = "org.freedesktop.NetworkManager.Settings.Connecti
 const ACTIVE_IFACE: &str = "org.freedesktop.NetworkManager.Connection.Active";
 
 const DEVICE_TYPE_WIFI: u32 = 2;
+const DEVICE_TYPE_ETHERNET: u32 = 1;
 
 type Settings = HashMap<String, HashMap<String, OwnedValue>>;
 
@@ -532,6 +533,173 @@ impl NetworkManager {
             .call_method(Some(NM), &path_obj, Some(CONNECTION_IFACE), "Update", &(&new_settings))
             .await?;
         Ok(())
+    }
+
+    // ---- wired / ethernet (Phase 2) --------------------------------------
+
+    pub async fn wired_devices(&self) -> zbus::Result<Vec<String>> {
+        let devices: Vec<OwnedObjectPath> = self
+            .conn
+            .call_method(Some(NM), NM_PATH, Some(NM_IFACE), "GetDevices", &())
+            .await?
+            .body()
+            .deserialize()?;
+
+        let mut wired = Vec::new();
+        for path in devices {
+            let dtype = self.prop_u32(path.as_str(), DEVICE_IFACE, "DeviceType").await;
+            if dtype == DEVICE_TYPE_ETHERNET {
+                wired.push(path.to_string());
+            }
+        }
+        Ok(wired)
+    }
+
+    /// Adapted from network_manager.rs:1047-1305, restructured around the
+    /// prop_* helpers. Per wired device: read live state off
+    /// `Device`/`Connection.Active`/`IP4Config` if there's an active
+    /// connection; otherwise fall back to scanning Settings for a
+    /// `802-3-ethernet` profile whose `interface-name` matches, same as
+    /// Orbit.
+    pub async fn wired_profiles(&self) -> zbus::Result<Vec<WiredProfile>> {
+        let mut profiles = Vec::new();
+
+        for device_path in self.wired_devices().await? {
+            let iface = self.prop_string(&device_path, DEVICE_IFACE, "Interface").await;
+            let iface = if iface.is_empty() { "Unknown".to_string() } else { iface };
+            let has_carrier = self.prop_bool(&device_path, DEVICE_IFACE, "Carrier").await;
+            let speed = self.prop_u32(&device_path, DEVICE_IFACE, "Speed").await;
+            let mac_address = self.prop_string(&device_path, DEVICE_IFACE, "HwAddress").await;
+            let active_path = self.prop_path(&device_path, DEVICE_IFACE, "ActiveConnection").await;
+
+            let mut name = iface.clone();
+            let mut connection_path = String::new();
+            let mut autoconnect = true;
+            let mut is_active = false;
+            let mut ip4_address = String::new();
+            let mut gateway = String::new();
+            let mut dns_servers = Vec::new();
+
+            if let Some(ref active) = active_path {
+                is_active = true;
+                let id = self.prop_string(active.as_str(), ACTIVE_IFACE, "Id").await;
+                if !id.is_empty() {
+                    name = id;
+                }
+                if let Some(conn) = self.prop_path(active.as_str(), ACTIVE_IFACE, "Connection").await {
+                    connection_path = conn.to_string();
+                }
+                if let Some(ip4_path) = self.prop_path(active.as_str(), ACTIVE_IFACE, "Ip4Config").await {
+                    ip4_address = self.first_address(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "AddressData").await;
+                    gateway = self.prop_string(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "Gateway").await;
+                    dns_servers = self
+                        .address_list(ip4_path.as_str(), "org.freedesktop.NetworkManager.IP4Config", "NameserverData")
+                        .await;
+                }
+            }
+
+            if connection_path.is_empty() {
+                // No active connection -- look for a saved 802-3-ethernet
+                // profile bound to this interface, matching Orbit's
+                // fallback.
+                if let Ok(paths) = self.list_connections().await {
+                    for path in paths {
+                        if let Ok(settings) = self.get_connection_settings(path.as_str()).await {
+                            let Some(connection) = settings.get("connection") else { continue };
+                            let conn_type = connection.get("type").and_then(|v| <&str>::try_from(&**v).ok()).unwrap_or_default();
+                            if conn_type != "802-3-ethernet" {
+                                continue;
+                            }
+                            let interface_name =
+                                connection.get("interface-name").and_then(|v| <&str>::try_from(&**v).ok()).unwrap_or_default();
+                            if interface_name != iface {
+                                continue;
+                            }
+                            connection_path = path;
+                            if let Some(id) = connection.get("id").and_then(|v| <&str>::try_from(&**v).ok()) {
+                                name = id.to_string();
+                            }
+                            autoconnect = connection.get("autoconnect").and_then(|v| bool::try_from(&**v).ok()).unwrap_or(true);
+                            break;
+                        }
+                    }
+                }
+            } else if let Ok(settings) = self.get_connection_settings(&connection_path).await {
+                if let Some(connection) = settings.get("connection") {
+                    autoconnect = connection.get("autoconnect").and_then(|v| bool::try_from(&**v).ok()).unwrap_or(true);
+                }
+            }
+
+            profiles.push(WiredProfile {
+                name,
+                device_name: iface,
+                device_path,
+                connection_path,
+                is_active,
+                has_carrier,
+                speed,
+                mac_address,
+                ip4_address,
+                gateway,
+                dns_servers,
+                autoconnect,
+            });
+        }
+
+        Ok(profiles)
+    }
+
+    pub async fn activate_wired(&self, connection_path: &str, device_path: &str) -> zbus::Result<()> {
+        let conn_path: ObjectPath = connection_path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
+        let dev_path: ObjectPath = device_path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
+        let specific: ObjectPath = "/".try_into().unwrap();
+        self.conn
+            .call_method(Some(NM), NM_PATH, Some(NM_IFACE), "ActivateConnection", &(&conn_path, &dev_path, &specific))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn deactivate_wired(&self, device_path: &str) -> zbus::Result<()> {
+        if let Some(active) = self.prop_path(device_path, DEVICE_IFACE, "ActiveConnection").await {
+            self.conn
+                .call_method(Some(NM), NM_PATH, Some(NM_IFACE), "DeactivateConnection", &(&active))
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn list_connections(&self) -> zbus::Result<Vec<String>> {
+        let paths: Vec<OwnedObjectPath> = self
+            .conn
+            .call_method(Some(NM), NM_SETTINGS_PATH, Some(SETTINGS_IFACE), "ListConnections", &())
+            .await?
+            .body()
+            .deserialize()?;
+        Ok(paths.into_iter().map(|p| p.to_string()).collect())
+    }
+
+    /// Reads an `aa{sv}` property (NetworkManager's AddressData/
+    /// NameserverData shape) and returns every entry's "address" key --
+    /// adapted from the byte-for-byte identical extraction idiom repeated
+    /// throughout network_manager.rs:1148-1207/1440-1560.
+    async fn address_list(&self, path: &str, iface: &str, name: &str) -> Vec<String> {
+        let Ok(owned) = self.get_prop(path, iface, name).await else { return Vec::new() };
+        let val: Value = Value::from(owned);
+        let Value::Array(array) = val else { return Vec::new() };
+
+        array
+            .iter()
+            .filter_map(|entry| {
+                let owned_entry = OwnedValue::try_from(entry).ok()?;
+                let map = HashMap::<String, OwnedValue>::try_from(owned_entry).ok()?;
+                let addr = map.get("address")?;
+                <&str>::try_from(&**addr).ok().map(|s| s.to_string())
+            })
+            .collect()
+    }
+
+    async fn first_address(&self, path: &str, iface: &str, name: &str) -> String {
+        self.address_list(path, iface, name).await.into_iter().next().unwrap_or_default()
     }
 }
 

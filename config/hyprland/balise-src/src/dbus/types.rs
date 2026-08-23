@@ -83,3 +83,21 @@ pub struct SavedNetwork {
     /// wrong path namespace and is always false).
     pub is_active: bool,
 }
+
+/// Phase 2 (Ethernet). Adapted from network_manager.rs:22-72's identically
+/// named struct.
+#[derive(Debug, Clone, Default)]
+pub struct WiredProfile {
+    pub name: String,
+    pub device_name: String,
+    pub device_path: String,
+    pub connection_path: String,
+    pub is_active: bool,
+    pub has_carrier: bool,
+    pub speed: u32,
+    pub mac_address: String,
+    pub ip4_address: String,
+    pub gateway: String,
+    pub dns_servers: Vec<String>,
+    pub autoconnect: bool,
+}

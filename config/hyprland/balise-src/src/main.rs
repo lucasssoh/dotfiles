@@ -63,6 +63,13 @@ enum Commands {
         #[arg(action = clap::ArgAction::Set)]
         on: bool,
     },
+    /// [dev] Print wired device/profile status (Phase 2 headless smoke test)
+    Ethernet,
+    /// [dev] Print Bluetooth radio state + known devices (Phase 3 headless
+    /// smoke test)
+    BluetoothStatus,
+    /// [dev] Discover nearby Bluetooth devices for 5s and list them
+    BluetoothScan,
 }
 
 fn main() {
@@ -89,6 +96,9 @@ fn main() {
         Some(Commands::List { scan }) => probe::list(scan),
         Some(Commands::Saved) => probe::saved(),
         Some(Commands::SetAutoconnect { path, on }) => probe::set_autoconnect(&path, on),
+        Some(Commands::Ethernet) => probe::ethernet(),
+        Some(Commands::BluetoothStatus) => probe::bluetooth_status(),
+        Some(Commands::BluetoothScan) => probe::bluetooth_scan(),
         None => run_gui(config),
     }
 }

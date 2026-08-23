@@ -1,8 +1,9 @@
+pub mod agent;
+pub mod bluez;
 pub mod network_manager;
 pub mod types;
 
+pub use agent::AgentEvent;
+pub use bluez::{BluetoothDevice, BluetoothManager, DeviceType};
 pub use network_manager::NetworkManager;
-// Not used yet outside this module -- wired into ui/network_list.rs and
-// ui/saved_list.rs in Phase 1b (see the project plan).
-#[allow(unused_imports)]
-pub use types::{AccessPoint, SavedNetwork, SecurityType};
+pub use types::{AccessPoint, SavedNetwork, SecurityType, WiredProfile};
