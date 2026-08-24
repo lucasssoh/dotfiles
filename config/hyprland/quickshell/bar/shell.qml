@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "modules" as Modules
+import "modules/veille"
 import "theme"
 
 // ============================================================
@@ -610,5 +611,15 @@ ShellRoot {
             Modules.GlassRim { target: launchers }
             Modules.GlassRim { target: tools }
         }
+    }
+
+    // Sleep-awareness clock overlay -- see modules/veille/Veille.qml and
+    // the project plan (temporal-drifting-hippo.md). Single instance, not
+    // inside the Variants above: unlike the bar itself, this isn't
+    // per-screen content, and zenMode is threaded in exactly the way
+    // ActiveWindow.qml's `monitor` property is (a plain pass-through, no
+    // singleton needed for one consumer).
+    Veille {
+        zenMode: shell.zenMode
     }
 }

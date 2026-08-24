@@ -1,0 +1,54 @@
+{
+    "enabled": true,
+    "language": "fr",
+
+    "position": "bottom-right",
+    "margins": { "x": 48, "y": 48 },
+    "monitor": "",
+
+    "showSeconds": true,
+    "showDate": false,
+
+    "messageIntervalMinutes": 20,
+    "messageHoldSeconds": 25,
+
+    "pulse": { "leadSeconds": 3, "durationSeconds": 10 },
+
+    "muteWhileGaming": false,
+    "respectZenMode": true,
+
+    "thresholds": {
+        "dayStart": "05:00",
+        "normal": "22:00",
+        "late": "23:00",
+        "midnight": "00:00",
+        "veryLate": "01:00"
+    },
+
+    "phases": {
+        "day": { "visible": false, "fontSize": 36, "opacity": 0.28 },
+        "evening": { "visible": true, "fontSize": 48, "opacity": 0.45 },
+        "late": { "visible": true, "fontSize": 64, "opacity": 0.65 },
+        "midnight": { "visible": true, "fontSize": 76, "opacity": 0.82 },
+        "veryLate": { "visible": true, "fontSize": 88, "opacity": 0.95 }
+    },
+
+    "appFamilies": {
+        "ide": ["^jetbrains-", "^com\\.jetbrains\\."],
+        "editor": ["^[Cc]ode$", "^codium$", "^dev\\.zed\\.Zed$"],
+        "terminal": ["wezterm", "^kitty$", "^Alacritty$"],
+        "browser": ["firefox", "brave-browser", "chromium", "google-chrome"],
+        "reader": ["zathura", "evince", "okular"],
+        "media": ["^mpv$", "^vlc$"],
+        "chat": ["discord", "vesktop", "[Ss]lack"],
+        "game": ["gamescope", "steam", "lutris", "heroic"]
+    },
+
+    "tokenPatterns": {
+        "ide": ["[–-]\\s*([^/\\\\]+\\.[A-Za-z0-9]+)\\s*$"],
+        "editor": ["^([^/\\\\]+\\.[A-Za-z0-9]+)\\b"],
+        "reader": ["^([^/\\\\]+\\.pdf)$"]
+    },
+
+    "debug": false
+}

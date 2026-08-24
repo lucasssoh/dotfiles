@@ -1,8 +1,8 @@
 # Dotfiles
 
-A Fedora + [Hyprland](https://hyprland.org/) desktop, used daily, versioned like software rather than kept as a folder of config files. It leans on a dozen existing FOSS tools (see below) and replaces the ones that didn't do what I needed with two native Rust/GTK4 apps written from scratch: **[Roue](config/hyprland/roue-src)** (a radial selection wheel) and **[Prisme](config/hyprland/prisme-src)** (a wallpaper picker with its own smart-crop engine).
+A Fedora + [Hyprland](https://hyprland.org/) desktop, used daily, versioned like software rather than kept as a folder of config files. It leans on a dozen existing FOSS tools (see below) and replaces the ones that didn't do what I needed with native Rust/GTK4 apps written from scratch: **[Roue](config/hyprland/roue-src)** (a radial selection wheel), **[Prisme](config/hyprland/prisme-src)** (a wallpaper picker with its own smart-crop engine), and **[Balise](config/hyprland/balise-src)** (a WiFi/Bluetooth/Ethernet panel, replacing a vendored third-party one).
 
-A deeper write-up of the design decisions (why Quickshell replaced Waybar, why Orbit is vendored instead of cloned, the HDR debugging story) lives in `portfolio-content/dotfiles/` at the repo root — not tracked in git, staged there for my portfolio site.
+A deeper write-up of the design decisions (why Quickshell replaced Waybar, why Balise replaced the vendored Orbit, the HDR debugging story) lives in `portfolio-content/dotfiles/` at the repo root — not tracked in git, staged there for my portfolio site.
 
 ## What's in here
 
@@ -10,10 +10,11 @@ A deeper write-up of the design decisions (why Quickshell replaced Waybar, why O
 |---|---|
 | **Hyprland** (`config/hyprland/hypr/`) | Compositor config, written in Hyprland's native **Lua** API (`hyprland.lua`, `keybinds.lua`, `windowrules.lua`, `monitors.lua`) rather than the classic `hyprland.conf` syntax |
 | **Quickshell bar** (`config/hyprland/quickshell/bar/`) | The active status bar (QML) — per-monitor workspaces/HDR, animated media widget, IPC-driven zen mode |
+| **Veille** (`config/hyprland/quickshell/bar/modules/veille/`) | A big, click-through clock overlay for late work/study sessions — grows more prominent and starts showing occasional (context-aware, bilingual) messages the later it gets. Configured via `quickshell/bar/veille.json`, hot-reloaded |
 | **Waybar** (`config/hyprland/waybar/`) | Kept installed and configured as an inert fallback, not started |
 | **Roue** (`config/hyprland/roue-src/`) | Native GTK4 radial wheel (press/aim/release), drives the power menu, power-profile switcher, and display-layout switcher from the same generic widget |
 | **Prisme** (`config/hyprland/prisme-src/`) | Native GTK4 wallpaper picker + a Rust smart-crop filter (`wallpaper-filter`) that recomposes wallpapers to fit each screen without cropping the subject |
-| **Orbit** (`config/hyprland/orbit-vendor/`) | WiFi/Bluetooth/VPN panel — vendored from [LifeOfATitan/orbit](https://github.com/LifeOfATitan/orbit) (MIT, credit: Amadeus) rather than cloned at install time, with small local UI patches tracked in place |
+| **Balise** (`config/hyprland/balise-src/`) | Native GTK4 WiFi/Bluetooth/Ethernet panel — first-party, replacing the vendored Orbit it started from. No VPN, by design |
 | **Rofi / SwayNC / dunst / systemd services** | Launcher, notifications, and background daemons (OLED-protection wallpaper slideshow, per-workspace dashboard) |
 | Everything else in `config/` | bash, tmux, wezterm, nvim, wireplumber, mangohud, nemo, fonts, mpv, firefox, KDE Plasma (alternate session) |
 
@@ -43,8 +44,8 @@ chmod +x setup_fedora.sh install_all.sh
 `install_all.sh` runs each module's own `install.sh` (fonts, bash, tmux, wezterm, nvim, wireplumber, mangohud, nemo), then Hyprland's, then KDE's. The Hyprland module ([`config/hyprland/install.sh`](config/hyprland/install.sh)) does the heavy lifting on its own:
 
 - Detects the distro (Fedora/Arch/Debian) and installs the matching package set.
-- Builds **Orbit, Prisme, and Roue from source** (`cargo build --release`) straight from the vendored/original sources in this repo, no external clone.
-- Symlinks every config directory into `~/.config` (`hypr`, `waybar`, `quickshell`, `rofi`, `dunst`, `swaync`, `orbit`, `prisme`, `roue`, `hyprlock`, `scripts`, `khal`, `theme`) — editing a file in the repo changes the live config immediately, no re-run needed.
+- Builds **Balise, Prisme, and Roue from source** (`cargo build --release`) straight from the sources in this repo, no external clone.
+- Symlinks every config directory into `~/.config` (`hypr`, `waybar`, `quickshell`, `rofi`, `dunst`, `swaync`, `balise`, `prisme`, `roue`, `hyprlock`, `scripts`, `khal`, `theme`) — editing a file in the repo changes the live config immediately, no re-run needed.
 - Enables the custom `systemd --user` services found under `systemd/`.
 - Falls back gracefully where a distro lacks a package (e.g. Quickshell isn't in apt — the script warns and points at a manual build).
 
