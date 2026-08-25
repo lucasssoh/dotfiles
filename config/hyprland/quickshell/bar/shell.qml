@@ -306,7 +306,7 @@ ShellRoot {
                     x: leftGroup.x
                     width: rightGroup.x + rightGroup.width - leftGroup.x
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1c1c1e" }
+                        GradientStop { position: 0.0; color: "#0c0c0e" }
                         GradientStop { position: 0.4; color: "#000000" }
                         GradientStop { position: 1.0; color: "#000000" }
                     }
