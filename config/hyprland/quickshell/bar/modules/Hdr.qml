@@ -10,14 +10,13 @@ import "../theme"
 // of lastIpcObject (the same "currentFormat" field hdr.sh itself parses
 // via `jq -r .currentFormat`).
 //
-// HDR *capability* (does this screen's EDID even advertise HDR support)
-// IS replicated now, unlike before -- same edid-decode-based check
-// hdr.sh's own hdr_capable() does, run once per monitor (a one-shot
-// Process at startup / whenever `monitor` changes, not a poll -- this
-// is a static hardware property, it doesn't change at runtime). On a
-// non-capable screen the badge renders in its normal "off" styling with
-// a diagonal strike across it, instead of looking like a normal
-// clickable-but-currently-off toggle.
+// HDR *capability* (does this screen's EDID even advertise HDR support,
+// same edid-decode-based check hdr.sh's own hdr_capable() does) is NOT
+// reflected in the badge at all any more -- tried both a diagonal strike
+// and a grey fill for a non-capable screen, neither actually read
+// clearly at a glance, so that distinction was dropped rather than kept
+// half-legible. The badge always looks the same regardless: transparent
+// off, cyan-rimmed active (see badge's own comment below).
 //
 // Why the refresh is wired the way it is below: toggling HDR (hdr.sh's
 // `hyprctl eval "hl.monitor(...)"`) does NOT appear to emit anything on
@@ -34,11 +33,14 @@ import "../theme"
 // menu run directly, etc.) -- known gap, same one-way-signal
 // limitation the original had before this rewrite, just narrower now.
 //
-// Compact badge instead of a sliding switch: static "hdr" label,
-// background flips from neutral to accent when active. 6px radius
-// matches every other 18px-tall pill in this bar (workspace pill,
-// ActiveWindow's app chip) -- one shared corner treatment for anything
-// at that height, distinct from Block.qml's own (taller, 24px) radius.
+// Compact badge instead of a sliding switch: static "hdr" label, always
+// on a transparent fill -- active/inactive is signalled by the rim's
+// colour, not the badge itself (see its own comment below). Radius is
+// 8, not the 6px shared by every other 18px-tall pill in this bar
+// (workspace pill, ActiveWindow's app chip) -- Hdr is the one such pill
+// that sits leftmost inside a bigger rounded pane (`tools`, see badge's
+// own comment below), so it alone needs the extra roundness to nest
+// under that pane's corner.
 
 Item {
     id: root
@@ -52,13 +54,6 @@ Item {
     readonly property var ipc: monitor ? monitor.lastIpcObject : null
     readonly property bool hdrActive: ipc && typeof ipc.currentFormat === "string"
         && ipc.currentFormat.indexOf("2101010") !== -1
-    readonly property string monitorName: root.monitor ? root.monitor.name : ""
-
-    // Optimistic default, matches hdr.sh's own hdr_capable(): if the
-    // EDID can't be found or edid-decode isn't installed, don't block --
-    // assume capable rather than incorrectly cross out a screen that
-    // might well support HDR.
-    property bool hdrCapable: true
 
     // 4px margin around the badge each side (was 2px) -- more breathing
     // room within the item, matching the disc's own margin bump.
@@ -67,34 +62,10 @@ Item {
 
     function refresh() { Hyprland.refreshMonitors(); }
 
-    Component.onCompleted: {
-        refresh();
-        checkCapability();
-    }
+    Component.onCompleted: refresh()
     Connections {
         target: Hyprland
         function onRawEvent(event) { root.refresh(); }
-    }
-
-    onMonitorNameChanged: checkCapability()
-
-    function checkCapability() {
-        if (root.monitorName === "") return;
-        capProc.command = ["bash", "-c",
-            "edid=\"\"; for p in /sys/class/drm/*-" + root.monitorName + "/edid; do " +
-            "[ -e \"$p\" ] && { edid=\"$p\"; break; }; done; " +
-            "if [ -n \"$edid\" ] && command -v edid-decode >/dev/null 2>&1; then " +
-            "edid-decode \"$edid\" 2>/dev/null | grep -qiE 'HDR Static Metadata|SMPTE ST ?2084|ST2084' " +
-            "&& echo 1 || echo 0; " +
-            "else echo 1; fi"];
-        capProc.running = true;
-    }
-
-    Process {
-        id: capProc
-        stdout: StdioCollector {
-            onStreamFinished: root.hdrCapable = this.text.trim() !== "0"
-        }
     }
 
     Process {
@@ -109,60 +80,77 @@ Item {
         onExited: root.refresh()
     }
 
-    // Final call after the whole material exploration (metal, porcelain,
-    // frosted glass, etc. -- see git history): back to something plain
-    // and legible. Inactive (SDR, or not HDR-capable at all) is an
-    // outline only, transparent fill -- reads as an available toggle,
-    // not a filled/pressed one. Active is a solid white fill -- the one
-    // state that should actually pop, "HDR is ON right now" gets the
-    // loudest treatment instead of the subtlest.
+    // Back to ONE look regardless of state (asked for -- both the grey
+    // not-capable fill and the porcelain-white active fill are gone):
+    // transparent badge, light text, always. Not-capable no longer
+    // differs from plain off at all -- it never actually read clearly at
+    // a glance either way, so the badge stops trying to signal it (was:
+    // a diagonal strike, then a grey fill; both dropped now).
+    //
+    // Active is still distinguishable, but ONLY via the rim below, not
+    // the fill: same transparent badge, but the glass edge's own
+    // highlight turns cyan instead of the neutral off-white every other
+    // rim in this bar uses -- GlassRim's `highlightColor`, itself
+    // Behavior-animated so the whole 5-stop ramp crossfades hue smoothly
+    // instead of snapping.
     Rectangle {
         id: badge
         anchors.centerIn: parent
         width: 35
         height: 18
-        radius: 6   // 2 -> 6, matches the workspace pill/window chip rounding
-        clip: true
-        // #f2f2f7 (full text-white) read too harsh here -- toned down a
-        // step, still clearly "lit up" next to the transparent/outline
-        // inactive state without being the brightest thing in the bar.
-        color: (root.hdrActive && root.hdrCapable) ? "#d1d1d6" : "transparent"
-        border.width: (root.hdrActive && root.hdrCapable) ? 0 : 1
-        border.color: "#636366"   // colors.lua "muted" -- same token the old diagonal strike used
-        Behavior on color { ColorAnimation { duration: 200 } }
+        // 6 -> 8: Hdr sits leftmost in the `tools` pill (after just a 4px
+        // spacer), right up against ITS 10px rounded left corner -- 6 read
+        // visibly squarer than the curve it's nested inside. 8 nests
+        // closer to concentric with that outer radius without going all
+        // the way to a full 9px capsule (half of the badge's own 18px
+        // height), which read too pill-shaped next to the rest of the bar.
+        radius: 8
+        color: "transparent"
 
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.centerIn: parent
             text: "hdr"
-            // Dark text on the white active fill, light text against the
-            // transparent/bar-background inactive state -- same swap
-            // logic as before, simpler colors either side of it now.
-            color: (root.hdrActive && root.hdrCapable) ? "#0c0c0e" : "#f2f2f7"
+            // Matches the rim's own cyan when active (asked for) -- same
+            // hex as `highlightColor` below, so the label and the edge
+            // read as the one signal, not two slightly-off cyans.
+            color: root.hdrActive ? "#6be3e8" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
             font.bold: true
             Behavior on color { ColorAnimation { duration: 200 } }
         }
+    }
 
-        // Diagonal strike across the badge when this screen's EDID
-        // doesn't advertise HDR support at all. Full corner-to-corner
-        // Pythagorean length used to overshoot the rounded corners --
-        // `clip: true` above only clips to badge's bounding RECTANGLE,
-        // not its rounded silhouette (same gotcha hit earlier on this
-        // exact badge's old material passes), so the strike's own square
-        // ends poked out past the curve instead of stopping at it.
-        // Scaled down instead of clipped properly -- asked for, simpler
-        // than a second rounded mask just for a 1px line.
-        Rectangle {
-            visible: !root.hdrCapable
-            anchors.centerIn: parent
-            width: Math.sqrt(badge.width * badge.width + badge.height * badge.height) * 0.82
-            height: 1
-            color: "#636366"   // colors.lua "muted"
-            rotation: Math.atan2(badge.height, badge.width) * 180 / Math.PI
-        }
+    // Sibling, not child of badge -- same reason GlassRim is kept out of
+    // Block's content Row in shell.qml: it traces badge's own x/y/width/
+    // height directly and must paint after it to sit on top of the fill.
+    // cornerRadius matches badge's own radius (GlassRim defaults to
+    // Block's 10px). highlightColor: cyan when HDR is actually active on
+    // THIS screen, the rim's own neutral default otherwise -- the ONLY
+    // visual difference active/inactive the FILL has left (see badge's
+    // own comment above; the label's own colour is the other half, see
+    // its Text above).
+    //
+    // Two sources, like metrics/launchers/tools in shell.qml and
+    // ActiveWindow.qml/Workspaces.qml's own pills (asked for, extended
+    // here to Hdr too): full-strength topLeft (default) plus a fainter
+    // bottomRight one, both retinted together since they share the same
+    // `highlightColor` expression.
+    GlassRim {
+        target: badge
+        cornerRadius: badge.radius
+        highlightColor: root.hdrActive ? "#6be3e8" : "#e5e5ea"
+        Behavior on highlightColor { ColorAnimation { duration: 200 } }
+    }
+    GlassRim {
+        target: badge
+        cornerRadius: badge.radius
+        lightOrigin: "bottomRight"
+        strength: 0.45
+        highlightColor: root.hdrActive ? "#6be3e8" : "#e5e5ea"
+        Behavior on highlightColor { ColorAnimation { duration: 200 } }
     }
 
     MouseArea {

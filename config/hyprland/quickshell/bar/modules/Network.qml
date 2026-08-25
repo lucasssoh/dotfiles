@@ -106,7 +106,7 @@ fi
         text: root.icon()
         color: root.kind === "none" ? "#636366" : "#f2f2f7"
         font.family: Fonts.iconPhosphor
-        font.pixelSize: 15
+        font.pixelSize: 16
     }
 
     MouseArea {

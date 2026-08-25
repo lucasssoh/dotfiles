@@ -22,6 +22,6 @@ Item {
         text: Qt.formatDateTime(clock.date, "HH:mm")
         color: "#f2f2f7"
         font.family: Fonts.ui
-        font.pixelSize: 13
+        font.pixelSize: 14
     }
 }

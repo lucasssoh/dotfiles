@@ -98,7 +98,7 @@ Item {
             text: root.iconGlyph
             color: "#f2f2f7"
             font.family: Fonts.iconPhosphor
-            font.pixelSize: 14
+            font.pixelSize: 15
         }
         Text {
             id: valueLabel
@@ -109,7 +109,7 @@ Item {
             visible: root.volumeText !== ""
             color: "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
     }
 

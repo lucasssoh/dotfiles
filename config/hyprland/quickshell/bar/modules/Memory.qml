@@ -57,7 +57,7 @@ Item {
             text: ""   // ph-memory
             color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
-            font.pixelSize: 14
+            font.pixelSize: 15
         }
         Text {
             id: valueLabel
@@ -67,7 +67,7 @@ Item {
             text: root.usedGB.toFixed(1) + "G"
             color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
     }
 }

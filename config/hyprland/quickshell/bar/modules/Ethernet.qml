@@ -92,7 +92,7 @@ fi
         text: root.icon()
         color: root.inactive ? "#636366" : "#f2f2f7"
         font.family: Fonts.iconPhosphor
-        font.pixelSize: 15
+        font.pixelSize: 16
     }
 
     // Same shape as Bluetooth.qml: a real Process with onExited re-polling,

@@ -1,22 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ---- Concurrency lock ---------------------------------------------------
+# Toggling a monitor's `disabled` state genuinely fires Hyprland's own
+# monitor.added/monitor.removed events (confirmed further down, see the
+# Quickshell-refresh comment) -- the SAME events that trigger THIS script
+# in the first place (hypr/hyprland.lua). One clean run settles into a
+# no-op on any later re-run (nothing left to change -> no further
+# transitions -> no further events), which is what makes that safe rather
+# than a feedback loop. But two overlapping runs, each reading its own
+# snapshot of `hyprctl monitors` and issuing hyprctl eval calls
+# interleaved with the other's, can each observe a half-applied state and
+# "correct" it into something the other run then has to re-correct --
+# every correction is itself a real transition, so it keeps firing more
+# events instead of converging. That race, not any single run, is what
+# actually froze the session hard enough to need a reboot switching
+# external-only -> internal-only live. A blocking flock removes the race
+# entirely: every invocation still eventually runs (nothing gets dropped,
+# unlike a non-blocking skip-if-busy lock would), but strictly one at a
+# time, each against a consistent, fully-settled monitor state.
+exec 200>"${XDG_RUNTIME_DIR:-/tmp}/hypr-workspace-manager.lock"
+flock 200
+
 # =========================================================
-# workspace-manager.sh — single engine: active screens, position,
-# alignment, and max refresh rate, resolved BY ROLE (never by
-# connector name — names can change between plugs, e.g. DP-2 becoming
-# DP-9 mid-session). The external screen is always set to SDR here:
-# HDR is never auto-applied, it's a manual choice via
-# waybar/scripts/hdr.sh (see below).
+# workspace-manager.sh — single engine: active screens, grid position,
+# and max refresh rate, resolved BY ROLE (never by connector name —
+# names can change between plugs, e.g. DP-2 becoming DP-9 mid-session).
+# Every external screen is always set to SDR here: HDR is never
+# auto-applied, it's a manual choice via waybar/scripts/hdr.sh (below).
 #
-#   Internal = 1st monitor whose name matches eDP*/LVDS*/DSI*
-#   External = 1st remaining monitor, in `hyprctl monitors` order
+#   Internal  = 1st monitor whose name matches eDP*/LVDS*/DSI*
+#   external  = 1st remaining monitor, in `hyprctl monitors` order
+#   external2, external3, ... = every further one, same order
 #
 #   Workspaces 1-5  -> the MAIN screen      (or the sole active one, if only one is)
 #   Workspaces 6-10 -> the SECONDARY screen (ditto)
 #
 # Split evenly (5/5, not the old 7/3) -- no reason one screen should get
-# more slots than the other by default.
+# more slots than the other by default. This 2-way split only ever
+# targets internal/first-external (a 3rd+ screen has no dedicated range
+# of its own yet -- it's fully positioned/enabled by the grid below, just
+# not a `hl.workspace_rule()` target).
 #
 # "Main" is not hardcoded to internal: it's whichever screen was last used
 # SOLO (mode "internal" or "external"), tracked as `main` in the state
@@ -28,22 +52,44 @@ set -euo pipefail
 # manual re-shuffle of everything just opened in 1-5 over to 6-10. Now
 # "both" keeps 1-5 on whichever screen was actually main a moment ago.
 #
-# The desired layout (which screens to use, which one is on the left,
-# how they align, which one is main) is read from a persistent JSON
-# state — same pattern as the wallpaper system (set_wallpaper.sh /
-# restore_wallpaper.sh + wallpaper-playlist.json):
+# Which screens are active is read from a persistent JSON state — same
+# pattern as the wallpaper system (set_wallpaper.sh / restore_wallpaper.sh
+# + wallpaper-playlist.json):
 #
 #   ~/.config/hypr/display-layout.json
-#   { "mode": "both"|"internal"|"external",
-#     "position": "external-left"|"external-right",
-#     "align": "center"|"top"|"bottom",
-#     "main": "internal"|"external" }
+#   { "mode": "both"|"internal"|"external", "main": "internal"|"external" }
 #
 # Written by scripts/display-layout.sh (rofi menu / waybar module).
-# Absent or invalid -> defaults to both / external-left / center / internal.
+# Absent or invalid -> defaults to both / internal. "both" now means ALL
+# connected screens (internal + every external), not just the first two —
+# see monitor-grid.py below for how a 3rd+ screen actually gets placed.
+#
+# WHERE each active screen sits is a separate, hand-edited file (this is
+# the part that used to be "position": "external-left"/"external-right" +
+# "align": a fixed left/right pairing breaks as soon as the external
+# screen and the laptop physically swap sides, which happens often enough
+# here to be worth a real fix rather than another enum value):
+#
+#   ~/.config/hypr/monitor-layout.json
+#   { "grid": [["external", "internal"]], "align": "center" }
+#
+# `grid` is a list of rows, each a list of roles (or null for a gap) --
+# one row = side by side (horizontal), one column = stacked (vertical),
+# more of both = a real grid for 3+ screens, e.g.
+# [["external", "external2"], ["internal", null]]. Column widths / row
+# heights are each the max size of the monitors placed in them, so
+# mismatched resolutions still line up; `align` ("start"|"center"|"end",
+# default "center"; "top"/"bottom"/"left"/"right" accepted as synonyms)
+# controls where a smaller monitor sits within its row/column. Swapping
+# which physical side a screen is on is then just swapping two roles in
+# the grid -- `display-layout.sh swap` does exactly that for
+# internal/external. Absent or invalid -> defaults to a single row with
+# every external (in order) followed by internal, matching the old
+# "external-left" default. The actual pixel math is done by
+# scripts/monitor-grid.py (see its own header) rather than in bash.
 #
 # Idempotent: only replays deterministic `hyprctl eval` calls from the
-# current state + the JSON file — safe to rerun with no side effect.
+# current state + the two JSON files — safe to rerun with no side effect.
 # Called by the hyprland.start / config.reloaded / monitor.added /
 # monitor.removed hooks (hypr/hyprland.lua).
 #
@@ -56,20 +102,15 @@ set -euo pipefail
 # =========================================================
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
+LAYOUT_FILE="$HOME/.config/hypr/monitor-layout.json"
 SCALE_FILE="$HOME/.config/hypr/scale.json"
 
-# ---- Desired layout (persistent state, defaults if absent/invalid) ----
+# ---- Desired active screens (persistent state, defaults if absent/invalid) ----
 layout_mode="both"
-layout_position="external-left"
-layout_align="center"
 layout_main="internal"
 if [[ -f "$STATE_FILE" ]]; then
     v="$(jq -r '.mode // empty'     "$STATE_FILE" 2>/dev/null || true)"
     if [[ "$v" =~ ^(both|internal|external)$ ]]; then layout_mode="$v"; fi
-    v="$(jq -r '.position // empty' "$STATE_FILE" 2>/dev/null || true)"
-    if [[ "$v" =~ ^(external-left|external-right)$ ]]; then layout_position="$v"; fi
-    v="$(jq -r '.align // empty'    "$STATE_FILE" 2>/dev/null || true)"
-    if [[ "$v" =~ ^(center|top|bottom)$ ]]; then layout_align="$v"; fi
     v="$(jq -r '.main // empty'     "$STATE_FILE" 2>/dev/null || true)"
     if [[ "$v" =~ ^(internal|external)$ ]]; then layout_main="$v"; fi
 fi
@@ -135,19 +176,49 @@ if [[ -z "$internal" ]]; then
 fi
 [[ -z "$internal" ]] && { echo "workspace-manager: aucun moniteur détecté" >&2; exit 0; }
 
-first_external="$(jq -r --arg m "$internal" '[.[] | select(.name != $m)][0].name // empty' <<<"$mons_json")"
+# Every other connected monitor, in `hyprctl monitors` order -- these are
+# roles "external", "external2", "external3", ... (role_map_json below),
+# never hardcoded to just one: a 3rd+ screen is fully positioned by the
+# grid (monitor-grid.py) even though it has no dedicated workspace range
+# (see header comment).
+externals=()
+while IFS= read -r n; do
+    [[ -n "$n" && "$n" != "$internal" ]] && externals+=("$n")
+done < <(jq -r '.[].name' <<<"$mons_json")
+first_external="${externals[0]:-}"
+
+role_map_json="$(jq -n --arg internal "$internal" '{internal: $internal}')"
+for i in "${!externals[@]}"; do
+    role="external"
+    [[ "$i" -gt 0 ]] && role="external$((i + 1))"
+    role_map_json="$(jq --arg r "$role" --arg n "${externals[$i]}" '. + {($r): $n}' <<<"$role_map_json")"
+done
 
 # ---- Resolving active screens from the desired mode (+ guards) ---
-active_internal=true
-active_external=true
+# "both" now means ALL connected screens, not just internal + the first
+# external -- a 3rd+ screen used to be left entirely unmanaged (whatever
+# position Hyprland's own "auto" gave it at boot).
+declare -A active
+active["$internal"]=true
+for e in "${externals[@]}"; do active["$e"]=true; done
 case "$layout_mode" in
-    internal) active_external=false ;;
-    external) active_internal=false ;;
+    internal)
+        for e in "${externals[@]}"; do active["$e"]=false; done
+        ;;
+    external)
+        active["$internal"]=false
+        for e in "${externals[@]}"; do active["$e"]=false; done
+        [[ -n "$first_external" ]] && active["$first_external"]=true
+        ;;
 esac
-[[ -z "$first_external" ]] && active_external=false   # no external connected -> can't be active
-if [[ "$active_internal" != true && "$active_external" != true ]]; then
-    active_internal=true   # never zero active screens: fall back to internal
-fi
+any_active=false
+for n in "$internal" "${externals[@]}"; do
+    [[ "${active[$n]}" == true ]] && any_active=true
+done
+[[ "$any_active" != true ]] && active["$internal"]=true   # never zero active screens: fall back to internal
+
+active_internal="${active[$internal]}"
+active_external="${active[$first_external]:-false}"
 
 # ---- Workspace target monitors (1-5 / 6-10) -- computed here (used to
 #      live only at the bottom) because the migration step below needs
@@ -185,61 +256,159 @@ best_refresh() {
     ' <<<"$mons_json" | sort -rn | head -1
 }
 
-# ---- Position / alignment (logical coordinates) -----------------------
+# ---- Grid layout (logical coordinates) ---------------------------------
 # Scale is fixed at 1 (100%) on every screen -- see the hl.monitor() calls
 # below -- so logical coordinates are just the physical pixel sizes,
 # no per-role division needed.
-int_w=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
-int_h=$(jq -r --arg m "$internal" '.[] | select(.name==$m) | .height' <<<"$mons_json")
-int_lw=$int_w
-int_lh=$int_h
-int_x=0
-int_y=0
+#
+# Default grid if monitor-layout.json is absent/invalid: one row, every
+# external (in order) followed by internal -- matches the old
+# "external-left" default. Built here (not as a literal) since the
+# number of externals varies.
+default_grid_roles=("external")
+for i in "${!externals[@]}"; do
+    [[ "$i" -gt 0 ]] && default_grid_roles+=("external$((i + 1))")
+done
+default_grid_roles+=("internal")
+default_grid_json="$(printf '%s\n' "${default_grid_roles[@]}" | jq -R . | jq -s '[.]')"
 
-if [[ -n "$first_external" ]]; then
-    ext_w=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
-    ext_h=$(jq -r --arg m "$first_external" '.[] | select(.name==$m) | .height' <<<"$mons_json")
-    ext_lw=$ext_w
-    ext_lh=$ext_h
-    ext_x=0
-    ext_y=0
-fi
-
-if [[ "$active_internal" == true && "$active_external" == true ]]; then
-    if [[ "$layout_position" == "external-left" ]]; then
-        ext_x=0; int_x=$ext_lw
-    else
-        int_x=0; ext_x=$int_lw
-    fi
-    max_h=$(( int_lh > ext_lh ? int_lh : ext_lh ))
-    case "$layout_align" in
-        top)    int_y=0; ext_y=0 ;;
-        bottom) int_y=$(( max_h - int_lh )); ext_y=$(( max_h - ext_lh )) ;;
-        *)      int_y=$(( (max_h - int_lh) / 2 )); ext_y=$(( (max_h - ext_lh) / 2 )) ;;
+grid_json="$default_grid_json"
+align="center"
+if [[ -f "$LAYOUT_FILE" ]]; then
+    v="$(jq -c '.grid // empty' "$LAYOUT_FILE" 2>/dev/null || true)"
+    [[ -n "$v" && "$v" != "null" ]] && grid_json="$v"
+    v="$(jq -r '.align // empty' "$LAYOUT_FILE" 2>/dev/null || true)"
+    case "$v" in
+        start|top|left)   align="start" ;;
+        end|bottom|right) align="end" ;;
+        center)           align="center" ;;
     esac
 fi
-# Only one active screen -> already x=0/y=0 by default above, nothing more to do.
 
-# ---- Applies the internal screen (if active) --------------------------------------
-if [[ "$active_internal" == true ]]; then
-    best_rr="$(best_refresh "$internal")"
-    int_mode="preferred"
-    [[ -n "$best_rr" ]] && int_mode="${int_w}x${int_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false, mode = \"$int_mode\", position = \"${int_x}x${int_y}\", scale = $int_scale })" >/dev/null
-fi
+dims_json="$(jq '[.[] | {(.name): {w: .width, h: .height}}] | add // {}' <<<"$mons_json")"
+active_json="{}"
+for n in "$internal" "${externals[@]}"; do
+    active_json="$(jq --arg n "$n" --argjson v "${active[$n]}" '. + {($n): $v}' <<<"$active_json")"
+done
 
-# ---- Applies the external screen (if active): max refresh, always SDR -------
-# SDR is ALWAYS the default here (desktop, startup, reload, hotplug): HDR
-# is never auto-applied, since it would skew the colors of any non-HDR
-# content. HDR is a strictly manual user choice, turned on on demand for
-# media content via the dedicated waybar module (waybar/scripts/hdr.sh
-# toggle/menu) — independent from this script.
-if [[ "$active_external" == true ]]; then
-    best_rr="$(best_refresh "$first_external")"
-    ext_mode="preferred"
-    [[ -n "$best_rr" ]] && ext_mode="${ext_w}x${ext_h}@${best_rr}"
-    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = false, mode = \"$ext_mode\", position = \"${ext_x}x${ext_y}\", scale = $ext_scale, bitdepth = 8, cm = \"auto\" })" >/dev/null
-fi
+positions_json="$(jq -n \
+    --argjson grid "$grid_json" \
+    --arg align "$align" \
+    --argjson dims "$dims_json" \
+    --argjson active "$active_json" \
+    --argjson role_map "$role_map_json" \
+    '{grid: $grid, align: $align, dims: $dims, active: $active, role_map: $role_map}' \
+    | python3 "$HOME/.config/hypr/scripts/monitor-grid.py")"
+
+# Any active monitor missing from positions_json (not placed in the
+# grid -- typo'd role, or a screen just plugged in and not added to
+# monitor-layout.json yet) falls back to (0, 0): visible but overlapping,
+# rather than silently skipped.
+monitor_pos() {
+    local name="$1" axis="$2"
+    jq -r --arg m "$name" --arg a "$axis" '.[$m][$a] // 0' <<<"$positions_json"
+}
+
+# ---- Applies every active monitor's real grid position/mode/scale in ONE
+# atomic `hyprctl eval` call (every `hl.monitor()` statement joined by
+# ";", one Lua chunk) -- not one hyprctl call per monitor like earlier
+# versions of this script. SDR is ALWAYS the default on externals here
+# (desktop, startup, reload, hotplug): HDR is never auto-applied, since
+# it would skew the colors of any non-HDR content -- it's a strictly
+# manual choice via waybar/scripts/hdr.sh, independent from this script.
+# Every external shares the same scale (scale.json only has one
+# "external" entry so far -- a 3rd+ screen with its own scale needs is a
+# future extension, not requested yet).
+#
+# Why one call instead of several: Hyprland's own overlap detector (the
+# on-screen "your monitor layout is invalid" warning) only ever
+# validates monitors against each other as they stood at the START of
+# one `hyprctl eval` invocation -- a monitor repositioned earlier IN THE
+# SAME invocation no longer counts as being at its old spot for a
+# statement later in that same invocation. So the classic trigger --
+# `display-layout.sh swap`, which puts each active screen exactly where
+# the OTHER one currently sits -- never has an observable moment where
+# both occupy the same spot, as long as both statements are issued
+# together. Confirmed live (grim before/after, no warning) rather than
+# assumed.
+#
+# An EARLIER version of this script "fixed" the same warning by parking
+# every about-to-be-active screen at a scratch position 100000px away
+# first, then moving it to its real spot in a second pass. That's not
+# needed at all any more -- a single atomic call already covers it, with
+# a real advantage: nothing here is ever positioned anywhere other than
+# its own final spot, not even for an instant. The old parking pass
+# mattered because it could -- and once did -- fling a screen the user
+# was actively looking at (cursor and all) to that scratch position,
+# which is what actually froze the session hard enough to need a reboot
+# (see git history). Batching removes that risk at the root instead of
+# just narrowing it.
+#
+# Which monitors are CURRENTLY enabled -- read from the live monitor
+# list, not from `active` (tonight's TARGET set). Only used for the
+# "survivors" check right below: whether at least one currently-enabled
+# screen is ALSO staying active tells us whether disabling the outgoing
+# screen(s) can safely join the same atomic call as the block above, or
+# has to wait (see that block's own comment on the one gap it leaves).
+declare -A was_enabled
+while IFS=$'\t' read -r n d; do
+    was_enabled["$n"]="$( [[ "$d" == "false" ]] && echo true || echo false )"
+done < <(jq -r '.[] | [.name, (.disabled | tostring)] | @tsv' <<<"$mons_json")
+survivors=0
+for n in "$internal" "${externals[@]}"; do
+    if [[ "${active[$n]:-false}" == true && "${was_enabled[$n]:-false}" == true ]]; then
+        survivors=$((survivors + 1))
+    fi
+done
+
+# Deliberately leaves ONE gap normally: a screen on its way OUT is left
+# for the disable loop further down, AFTER the workspace migration below
+# (see that section's own comment for why) -- so its current spot can
+# still, very rarely, coincide with an active screen's new one (e.g.
+# both -> one-screen when the survivor's 1-screen spot is exactly where
+# the outgoing screen was), and Hyprland's overlap warning can show for
+# that one case. Including the outgoing screen's disable in this SAME
+# atomic call would close it too, but ordinarily means disabling it
+# before migration runs -- exactly the ordering that reintroduced the
+# "fenêtres perdues/mal placées" bug migration was written to fix.
+#
+# EXCEPT when there are no survivors at all (`display-layout.sh apply`
+# switching straight between the two solo modes, e.g. external-only ->
+# internal-only): every workspace's target is then the SAME single
+# surviving screen regardless of order, by construction -- there's no
+# "which of several targets does this workspace belong on" ambiguity
+# left for Hyprland's own disconnect-time reassignment to get wrong, so
+# the bug above can't recur here. Confirmed live: real windows open,
+# switched screens this way, they landed correctly with no extra
+# migration needed. Folding the disable into this same atomic call closes
+# the overlap warning for exactly the case that prompted this section --
+# the classic default-(0,0)-vs-default-(0,0) solo swap.
+outgoing_folded_json="{}"
+apply_targets() {
+    local n scale extra w h best_rr mode x y stmts=""
+    for n in "$internal" "${externals[@]}"; do
+        [[ "${active[$n]:-false}" == true ]] || continue
+        if [[ "$n" == "$internal" ]]; then scale="$int_scale"; extra=""
+        else scale="$ext_scale"; extra=", bitdepth = 8, cm = \"auto\""; fi
+        w=$(jq -r --arg m "$n" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
+        h=$(jq -r --arg m "$n" '.[] | select(.name==$m) | .height' <<<"$mons_json")
+        best_rr="$(best_refresh "$n")"
+        mode="preferred"
+        [[ -n "$best_rr" ]] && mode="${w}x${h}@${best_rr}"
+        x="$(monitor_pos "$n" x)"; y="$(monitor_pos "$n" y)"
+        stmts+="hl.monitor({ output = \"$n\", disabled = false, mode = \"$mode\", position = \"${x}x${y}\", scale = $scale$extra }); "
+    done
+    if [[ "$survivors" -eq 0 ]]; then
+        for n in "$internal" "${externals[@]}"; do
+            if [[ "${was_enabled[$n]:-false}" == true && "${active[$n]:-false}" != true ]]; then
+                stmts+="hl.monitor({ output = \"$n\", disabled = true }); "
+                outgoing_folded_json="$(jq --arg n "$n" '. + {($n): true}' <<<"$outgoing_folded_json")"
+            fi
+        done
+    fi
+    [[ -n "$stmts" ]] && hyprctl eval "$stmts" >/dev/null
+}
+apply_targets
 
 # ---- Force-migrates already-open workspaces to their new target monitor,
 #      BEFORE the losing monitor gets disabled below ---------------------
@@ -283,18 +452,26 @@ migrate_workspace_if_needed() {
 for i in 1 2 3 4 5; do migrate_workspace_if_needed "$i" "$range15_target"; done
 for i in 6 7 8 9 10; do migrate_workspace_if_needed "$i" "$range610_target"; done
 
-# ---- Turns off the unwanted screen, AFTER activating the others ----------
+# ---- Turns off whatever's left to turn off, AFTER activating the others,
+#      AFTER the migration above (see its own comment for why) ----------
 # CRITICAL ORDER: disabling before enabling can momentarily pass through
 # zero active screens (e.g. switching external-only -> internal-only),
 # which makes Hyprland fall back to its headless fallback. On this 0.55.3
 # build, this fallback causes a SEGV (see hyprlandCrashReport4932.txt:
 # applyMonitorRule -> onDisconnect -> enterUnsafeState -> CHeadlessOutput::
-# commit -> SEGV). Enabling first guarantees at least one screen stays
-# active at all times.
-[[ "$active_internal" != true ]] && \
-    hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })" >/dev/null
-[[ -n "$first_external" && "$active_external" != true ]] && \
-    hyprctl eval "hl.monitor({ output = \"$first_external\", disabled = true })" >/dev/null
+# commit -> SEGV). Enabling first (apply_targets, above) guarantees at
+# least one screen stays active at all times. One atomic call for every
+# outgoing screen, same reasoning as apply_targets above -- excluding
+# whichever ones apply_targets already folded into ITS atomic call
+# (the no-survivors case, see its comment), which is most of them once a
+# solo -> different-solo switch is routine rather than rare.
+disable_stmts=""
+for n in "$internal" "${externals[@]}"; do
+    if [[ "${active[$n]}" != true ]] && [[ "$(jq -r --arg n "$n" '.[$n] // false' <<<"$outgoing_folded_json")" != true ]]; then
+        disable_stmts+="hl.monitor({ output = \"$n\", disabled = true }); "
+    fi
+done
+[[ -n "$disable_stmts" ]] && hyprctl eval "$disable_stmts" >/dev/null
 
 # ---- Workspace assignment (1-5 / 6-10) -- range15_target/range610_target
 #      were already resolved near the top (see comment there).

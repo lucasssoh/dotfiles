@@ -135,7 +135,7 @@ Item {
         id: titleMeasure
         text: root.windowTitle
         font.family: Fonts.ui
-        font.pixelSize: 13
+        font.pixelSize: 14
         visible: false
     }
 
@@ -143,7 +143,7 @@ Item {
         id: placeholderMeasure
         text: root.placeholderText
         font.family: Fonts.ui
-        font.pixelSize: 12
+        font.pixelSize: 13
         visible: false
     }
 
@@ -155,7 +155,7 @@ Item {
         text: root.placeholderText
         color: "#636366"   // colors.lua "muted" -- same token Hdr.qml uses for its own greyed-out state
         font.family: Fonts.ui
-        font.pixelSize: 12
+        font.pixelSize: 13
     }
 
     Rectangle {
@@ -171,11 +171,15 @@ Item {
         width: appLabel.implicitWidth + 22
         height: 18
         radius: 6   // same corner rounding as the active workspace pill (2 -> 6, more pronounced, still not a full pill/stadium shape)
-        // No border (see the no-border pass in shell.qml's header
+        // No FLAT border (see the no-border pass in shell.qml's header
         // comment) -- the graphite-platinum fill against the block's
         // darker background, plus the accent-colored label below, is
-        // enough to read as a chip on its own.
-        color: "#34383f"
+        // enough to read as a chip on its own. It does get the same
+        // GlassRim "verre métal" edge as the bar's other pills though
+        // (asked for): a child, not a sibling, here -- `chip` isn't a
+        // Block/reparenting container, so GlassRim's plain-child mode
+        // (target left unset, traces `parent`) applies directly.
+        color: "#34383f00"
 
         Text {
             renderType: Text.NativeRendering
@@ -185,9 +189,16 @@ Item {
             text: root.appName
             color: "#a8b4c4"
             font.family: Fonts.ui
-            font.pixelSize: 13
+            font.pixelSize: 14
             font.bold: true
         }
+
+        // Two sources, like metrics/launchers/tools in shell.qml: full-
+        // strength topLeft (default) plus a fainter bottomRight one
+        // (asked for, extended here from the floating panes to this
+        // chip and the active workspace pill).
+        GlassRim { cornerRadius: chip.radius }
+        GlassRim { cornerRadius: chip.radius; lightOrigin: "bottomRight"; strength: 0.45 }
     }
 
     Text {
@@ -198,7 +209,7 @@ Item {
         visible: root.hasWindow
         color: "#f2f2f7"
         font.family: Fonts.ui
-        font.pixelSize: 13
+        font.pixelSize: 14
         anchors.left: chip.right
         anchors.leftMargin: 10
         anchors.right: parent.right

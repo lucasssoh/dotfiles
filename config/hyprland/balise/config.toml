@@ -15,7 +15,14 @@ margin_left = 8
 # pill above it (its own anchors.rightMargin is 6).
 margin_right = 6
 
-window_transition = "slidedown"
+# "slidedown" (a vertical slide) used to be here -- switched to a plain
+# fade after confirming live that the slide closes unevenly: it visually
+# translates the whole panel upward, so the header/list scroll off past
+# the top well before the footer buttons do, reading as "the background
+# takes forever to actually disappear" even though the whole animation
+# is done in ~150-200ms either way. A crossfade fades every pixel at the
+# same rate, so nothing lingers behind the rest.
+window_transition = "crossfade"
 window_transition_duration = 150
 
 # Transition between the Bluetooth/WiFi/Ethernet tabs. They are siblings,

@@ -183,7 +183,7 @@ hl.config({
         -- left fields on this build, not a CSS-shorthand string -- that
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
-        gaps_out         = { top = 8, right = 8, bottom = 6, left = 8 },
+        gaps_out         = { top = 16, right = 8, bottom = 6, left = 8 },
         border_size      = 2,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
@@ -330,6 +330,17 @@ hl.config({
         -- (see keybinds.lua) -- that override only holds because this is true.
         preserve_split = true,
         smart_resizing = true,
+    },
+    misc = {
+        -- Hyprland paints its own built-in wallpaper (and a small logo
+        -- watermark) on whatever isn't yet covered by a real client --
+        -- most visibly for a moment on every `hyprctl reload`/monitor
+        -- change, before awww (restore_wallpaper.sh) repaints over it.
+        -- Both off, background_color set to solid black, so that gap is
+        -- just a flat black frame instead of Hyprland's default art.
+        disable_hyprland_logo    = true,
+        disable_splash_rendering = true,
+        background_color         = "rgba(000000ff)",
     },
 })
 

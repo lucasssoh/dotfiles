@@ -395,8 +395,29 @@ impl BaliseApp {
                             }
                             DaemonCommand::Toggle(position, tab) => {
                                 if *is_visible.borrow() {
-                                    win.hide();
-                                    *is_visible.borrow_mut() = false;
+                                    // Already open: a DIFFERENT tab was
+                                    // requested (e.g. BT is showing and the
+                                    // bar's WiFi icon was clicked) means
+                                    // switch to it and stay open, matching
+                                    // a normal tab click -- it must NOT
+                                    // read as "toggle this icon off" just
+                                    // because Balise happened to be open on
+                                    // something else. Only the tab already
+                                    // showing (or no tab at all, e.g. a
+                                    // bare `balise toggle`) still closes
+                                    // the panel.
+                                    let same_tab = tab.as_deref().map(|t| t == current_tab.borrow().as_str()).unwrap_or(true);
+                                    if same_tab {
+                                        win.hide();
+                                        *is_visible.borrow_mut() = false;
+                                    } else {
+                                        if let Some(pos) = position {
+                                            win.set_position(&pos);
+                                        }
+                                        if let Some(ref t) = tab {
+                                            activate_tab(&win, &nm, &bt, &rt, &tx, &current_tab, &is_switching, t);
+                                        }
+                                    }
                                 } else {
                                     if let Some(pos) = position {
                                         win.set_position(&pos);
@@ -625,6 +646,20 @@ fn setup_ui_callbacks(
         });
     }
 
+    // Bottom close bar -- "click anywhere else" itself is handled outside
+    // this app entirely, by hypr/scripts/balise-autoclose.sh (Hyprland's
+    // `activewindow` event -> `balise hide`, already running); this is
+    // just the one genuinely new, explicit close affordance. Routed
+    // through `tx` as the same DaemonCommand::Hide that script's `balise
+    // hide` sends, rather than calling win.hide() directly, so
+    // `is_visible` stays in sync the same way every other close path does.
+    {
+        let tx = tx.clone();
+        win.close_bar().connect_clicked(move |_| {
+            let _ = tx.send_blocking(AppEvent::DaemonCommand(DaemonCommand::Hide));
+        });
+    }
+
     // Tab buttons: activate_tab() (below setup_ui_callbacks) does the
     // actual stack/header switch + backend refresh -- shared with
     // `balise toggle --tab <tab>`'s DaemonCommand::Toggle handling.
@@ -768,18 +803,52 @@ fn setup_ui_callbacks(
         });
     }
 
-    // "Hidden" button -- opens the SSID+password overlay, connecting on
-    // submit via AppEvent::ConnectHidden (handled in the main event loop).
+    // "Hidden" button -- navigates to the hidden-network Stack page (see
+    // ui/window.rs's show_hidden_network()). Connect/Cancel are wired
+    // below, once, rather than re-registered on every open the way the
+    // old overlay-based version's Connect handler used to be (a real
+    // leaked-handler bug -- see the history note on window.rs's
+    // connect_child_revealed_notify wiring).
     {
         let win_hidden = win.clone();
-        let tx = tx.clone();
         win.network_list().set_on_connect_hidden(move || {
-            let tx = tx.clone();
-            win_hidden.show_hidden_dialog(move |data| {
-                if let Some((ssid, password)) = data {
-                    let _ = tx.send_blocking(AppEvent::ConnectHidden(ssid, password));
-                }
-            });
+            win_hidden.show_hidden_network();
+        });
+    }
+
+    // Hidden-network page: Connect submits via the same
+    // AppEvent::ConnectHidden the old overlay's Connect button sent, then
+    // leaves the page the same way the detail page's back button does;
+    // Cancel just leaves it. Both need `leave_detail()` (a `&self`
+    // method), so they're wired here rather than in window.rs's
+    // constructor, where `self`/`win` don't exist yet.
+    {
+        let win_hidden = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let current_tab = current_tab.clone();
+        let is_switching = is_switching.clone();
+        win.hidden_connect_btn().connect_clicked(move |_| {
+            let ssid = win_hidden.hidden_ssid_entry().text().to_string();
+            let password = win_hidden.hidden_password_entry().text().to_string();
+            let origin = win_hidden.leave_detail();
+            activate_tab(&win_hidden, &nm, &bt, &rt, &tx, &current_tab, &is_switching, &origin);
+            let _ = tx.send_blocking(AppEvent::ConnectHidden(ssid, password));
+        });
+    }
+    {
+        let win_hidden = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let current_tab = current_tab.clone();
+        let is_switching = is_switching.clone();
+        win.hidden_cancel_btn().connect_clicked(move |_| {
+            let origin = win_hidden.leave_detail();
+            activate_tab(&win_hidden, &nm, &bt, &rt, &tx, &current_tab, &is_switching, &origin);
         });
     }
 

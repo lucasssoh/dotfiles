@@ -133,7 +133,7 @@ Item {
                     text: chip.modelData.icon
                     color: "#f2f2f7"
                     font.family: Fonts.iconBrand
-                    font.pixelSize: 11   // 13 -> 11, asked for
+                    font.pixelSize: 12   // 13 -> 11, asked for
                 }
 
                 Image {

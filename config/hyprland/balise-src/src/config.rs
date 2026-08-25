@@ -39,7 +39,16 @@ fn default_position() -> String {
     "top-right".to_string()
 }
 fn default_window_transition() -> String {
-    "slidedown".to_string()
+    // "slidedown" (a vertical slide+clip) used to be the default -- moved
+    // to a plain crossfade after confirming live (frame-by-frame
+    // screenshots mid-transition) that the slide closes UNEVENLY: it
+    // visually translates the whole panel upward, so the top (header,
+    // list) scrolls off past the visible area well before the bottom
+    // (footer buttons, close bar) does, reading as "the background takes
+    // forever to actually go away" even though the whole thing wraps up
+    // in ~150-200ms either way. A crossfade fades every pixel of the
+    // panel at the same rate, so nothing lingers behind the rest.
+    "crossfade".to_string()
 }
 fn default_stack_transition() -> String {
     "crossfade".to_string()

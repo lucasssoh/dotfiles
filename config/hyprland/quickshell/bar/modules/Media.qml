@@ -63,7 +63,7 @@ Item {
         id: titleMeasure
         text: root.titleText
         font.family: Fonts.ui
-        font.pixelSize: 13
+        font.pixelSize: 14
         visible: false
     }
 
@@ -71,7 +71,7 @@ Item {
         id: placeholderMeasure
         text: root.placeholderText
         font.family: Fonts.ui
-        font.pixelSize: 12
+        font.pixelSize: 13
         visible: false
     }
 
@@ -152,7 +152,7 @@ Item {
             text: root.placeholderText
             color: "#636366"   // colors.lua "muted" -- same token Hdr.qml/ActiveWindow.qml's own placeholder use
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
 
         Row {
@@ -164,29 +164,97 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 6   // bumped up now the disc is smaller -- more breathing room around it
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
+            // 4 -> 8: more breathing room specifically between the wave
+            // and the scrolling title now that the wave itself is
+            // narrower (asked for) -- previously 4 read fine against a
+            // wider 5-bar/3px-spacing wave, tighter now that it's
+            // shrunk.
+            spacing: 8
 
-            // No more filled disc behind the glyph -- asked for, plain
-            // like every other icon in the bar. State now reads through
-            // the glyph's own color (same accent/muted pair the disc used
-            // to use for its fill: #a8b4c4 playing, #636366 muted) instead
-            // of a dark glyph on a colored circle.
-            Text {
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
+            // Animated equalizer bars instead of a static play/pause glyph
+            // (asked for). Paused: all bars pinned to the same minimum
+            // height, no motion at all. Playing: each bar drifts to a new
+            // random height on its own timer, independently of the
+            // others (different index -> different interval, see
+            // bar.index below), so the wave never looks lockstep/
+            // mechanical. Each bar grows from its own vertical CENTER
+            // symmetrically up and down (asked for -- was bottom-
+            // anchored, all growth upward only), via
+            // `anchors.verticalCenter` instead of `anchors.bottom`: a
+            // Rectangle's height change with a centered anchor expands
+            // equally on both sides for free, no extra math needed.
+            //
+            // Cheap by construction, not just by accident: the actual
+            // rise/fall is a `Behavior`-driven NumberAnimation (scene-
+            // graph interpolated, GPU-only, exactly how the marquee's
+            // own scroll and every colour fade in this bar already
+            // work) -- the JS only runs once every ~300-500ms per bar to
+            // pick the next random target, not per frame. And like the
+            // marquee's own `paused: !root.playing`, each bar's Timer is
+            // gated on `root.playing` -- zero timers firing, zero
+            // animation running, while paused or inactive.
+            Item {
+                id: waveIcon
                 anchors.verticalCenter: parent.verticalCenter
-                // Music note instead of a play triangle -- same glyph
-                // config.jsonc's own player-icons already use as the
-                // generic/default player icon, so it's a known-good
-                // codepoint in this environment.
-                text: root.playing ? "" : ""   // ph-music-notes / ph-pause
+                implicitWidth: waveRow.implicitWidth
+                implicitHeight: 14
+
+                readonly property real minBar: 3
+                readonly property real maxBar: 14
                 // Exact match to the scrolling title's own color below
                 // (#237823/#ffffff), not just a similar accent pair --
                 // asked for, so the icon reads as part of the same text
                 // rather than its own separate color choice.
-                color: root.playing ? "#237823" : "#ffffff"
-                font.family: Fonts.iconPhosphor
-                font.pixelSize: 14
+                readonly property color barColor: root.playing ? "#237823" : "#ffffff"
+
+                Row {
+                    id: waveRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    // 3 -> 2 (both bar width and this spacing), asked
+                    // for -- 5 bars at the old 3px/3px was noticeably
+                    // wider than the old 3-bar version, this compacts it
+                    // back down horizontally.
+                    spacing: 2
+
+                    Repeater {
+                        model: 5
+                        delegate: Rectangle {
+                            id: bar
+                            required property int index
+                            width: 2
+                            radius: 1
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: waveIcon.barColor
+                            Behavior on color { ColorAnimation { duration: 200 } }
+
+                            // Randomised while playing, pinned to
+                            // `minBar` otherwise -- the height binding
+                            // itself is what snaps every bar back to the
+                            // SAME size the instant playback stops, no
+                            // separate paused-state code path needed.
+                            property real target: waveIcon.minBar
+                            height: root.playing ? target : waveIcon.minBar
+                            Behavior on height {
+                                NumberAnimation { duration: 260; easing.type: Easing.InOutQuad }
+                            }
+
+                            Timer {
+                                running: root.playing
+                                repeat: true
+                                triggeredOnStart: true
+                                // Distinct fixed interval per bar (index-
+                                // based, not itself randomised) is what
+                                // keeps the five out of sync with each
+                                // other -- the actual unpredictability
+                                // comes from randomising the TARGET below
+                                // instead.
+                                interval: 320 + bar.index * 90
+                                onTriggered: bar.target = waveIcon.minBar
+                                    + Math.random() * (waveIcon.maxBar - waveIcon.minBar)
+                            }
+                        }
+                    }
+                }
             }
 
             Item {
@@ -213,48 +281,107 @@ Item {
                 // sitting exactly where copy N started -- snapping x back
                 // to 0 at that instant is visually seamless, reads as an
                 // infinite ticker rather than a jump.
-                Row {
-                    id: scroller
-                    x: 0
-                    spacing: 0
+                // Retracted a few px in from viewport's own left/right
+                // edges (asked for) -- the fade rectangles' OUTER corners
+                // are rounded, which cuts a small notch out of their
+                // coverage right at top/bottom near each edge, and text
+                // was reaching far enough out to poke through that
+                // notch. A second, slightly narrower clip just for the
+                // text keeps it inside the flat (non-notched) part of the
+                // fade instead of shrinking the fade or its radius.
+                Item {
+                    id: textClip
+                    anchors.fill: parent
+                    anchors.leftMargin: 5
+                    anchors.rightMargin: 5
+                    clip: true
 
-                    Repeater {
-                        model: viewport.copyCount
-                        delegate: Text {
-                            renderType: Text.NativeRendering
-                            font.hintingPreference: Font.PreferNoHinting
-                            text: root.titleText
-                            // Paused-state fade lives on the whole `pill`
-                            // above (matches waybar's #mpris.paused rule,
-                            // which faded the element, not just this
-                            // color) -- an opacity here too would double
-                            // it up.
-                            color: root.playing ? "#237823" : "#ffffff"
-                            font.family: Fonts.ui
-                            font.pixelSize: 13
-                            rightPadding: viewport.gap  // each copy carries its own trailing gap
+                    Row {
+                        id: scroller
+                        x: 0
+                        spacing: 0
+
+                        Repeater {
+                            model: viewport.copyCount
+                            delegate: Text {
+                                renderType: Text.NativeRendering
+                                font.hintingPreference: Font.PreferNoHinting
+                                text: root.titleText
+                                // Paused-state fade lives on the whole `pill`
+                                // above (matches waybar's #mpris.paused rule,
+                                // which faded the element, not just this
+                                // color) -- an opacity here too would double
+                                // it up.
+                                color: root.playing ? "#237823" : "#ffffff"
+                                font.family: Fonts.ui
+                                font.pixelSize: 14
+                                rightPadding: viewport.gap  // each copy carries its own trailing gap
+                            }
+                        }
+
+                        NumberAnimation {
+                            target: scroller
+                            property: "x"
+                            // `running` (bound to "is there text") is
+                            // start/stop -- toggling it back to true always
+                            // restarts from `from`. `paused` (bound to
+                            // playing) is real pause/resume: freezes x and
+                            // continues from that exact spot instead of
+                            // snapping back to the start every time play
+                            // resumes. Both guarded on titleText !== "" --
+                            // calling setPaused() while the animation isn't
+                            // running is a Qt warning, not just a no-op.
+                            running: root.titleText !== ""
+                            paused: root.titleText !== "" ? !root.playing : false
+                            loops: Animation.Infinite
+                            from: 0
+                            to: -viewport.unitWidth
+                            duration: viewport.unitWidth / viewport.speed * 1000
+                            easing.type: Easing.Linear
                         }
                     }
+                }
 
-                    NumberAnimation {
-                        target: scroller
-                        property: "x"
-                        // `running` (bound to "is there text") is
-                        // start/stop -- toggling it back to true always
-                        // restarts from `from`. `paused` (bound to
-                        // playing) is real pause/resume: freezes x and
-                        // continues from that exact spot instead of
-                        // snapping back to the start every time play
-                        // resumes. Both guarded on titleText !== "" --
-                        // calling setPaused() while the animation isn't
-                        // running is a Qt warning, not just a no-op.
-                        running: root.titleText !== ""
-                        paused: root.titleText !== "" ? !root.playing : false
-                        loops: Animation.Infinite
-                        from: 0
-                        to: -viewport.unitWidth
-                        duration: viewport.unitWidth / viewport.speed * 1000
-                        easing.type: Easing.Linear
+                // Fade the marquee out at both edges instead of the hard
+                // clip cut (asked for) -- two thin gradient strips,
+                // declared after `scroller` so they paint on top of it,
+                // going from opaque black at the outer edge to fully
+                // transparent at the inner edge. Cheap fake: not an
+                // actual mask/shader sampling what's really behind (that
+                // would need layer.effect + OpacityMask), just a flat
+                // black fade -- good enough here because the island's
+                // own background is already solid black by this point in
+                // its vertical gradient (see shell.qml's centerIsland),
+                // so "fade to black" and "fade to what's actually behind"
+                // are the same thing at this particular spot in the bar.
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: 26
+                    // Only the OUTER corners rounded (asked for) -- the
+                    // inner ones face the text and already fade to fully
+                    // transparent there, so rounding them would be
+                    // invisible anyway.
+                    topLeftRadius: 8
+                    bottomLeftRadius: 8
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#000000" }
+                        GradientStop { position: 1.0; color: "#00000000" }
+                    }
+                }
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: 26
+                    topRightRadius: 8
+                    bottomRightRadius: 8
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#00000000" }
+                        GradientStop { position: 1.0; color: "#000000" }
                     }
                 }
             }

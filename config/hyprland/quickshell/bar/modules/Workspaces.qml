@@ -104,6 +104,27 @@ Item {
                 radius: 6   // 2 -> 6, more pronounced corners (still short of a full pill at 9)
                 color: modelData.active ? "#34383f" : "transparent"
 
+                // Same GlassRim "verre métal" edge as the bar's other
+                // pills (asked for), on the active pill only -- occupied/
+                // empty stay plain (no fill to rim in the first place).
+                // Plain-child mode (target left unset, traces `parent`):
+                // `pill` is a bare Repeater delegate, not wrapped in any
+                // Block/reparenting container, so there's no separate
+                // sibling to hang a `target:` off of.
+                GlassRim {
+                    visible: pill.modelData.active
+                    cornerRadius: pill.radius
+                }
+                // Second, fainter source from bottomRight (asked for),
+                // same pairing as metrics/launchers/tools in shell.qml
+                // and ActiveWindow.qml's own chip.
+                GlassRim {
+                    visible: pill.modelData.active
+                    cornerRadius: pill.radius
+                    lightOrigin: "bottomRight"
+                    strength: 0.45
+                }
+
                 Text {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
@@ -114,7 +135,7 @@ Item {
                     // -> muted, no weight.
                     color: pill.modelData.active ? "#a8b4c4" : (pill.occupied ? "#f2f2f7" : "#48484a")
                     font.family: Fonts.ui
-                    font.pixelSize: 12
+                    font.pixelSize: 13
                     font.bold: pill.modelData.active
                 }
 

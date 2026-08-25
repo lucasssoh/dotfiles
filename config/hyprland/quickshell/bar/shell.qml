@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -281,7 +282,20 @@ ShellRoot {
                 // keeps it painted behind leftGroup/centerRow/rightGroup
                 // even though it's declared last (default stacking order
                 // in an Item is declaration order).
+                //
+                // Glossy OLED black now, not the old flat "#0c0c0e"
+                // (asked for, "vraiment ajoute le côté 000000") -- FILL
+                // only, borders/rim still deliberately untouched (see the
+                // "Deliberately NOT applied to the central island"
+                // comments on metrics/launchers/tools below: this island
+                // stays the one pill in the bar with no GlassRim at all).
+                // A vertical gradient stands in for the rim's own light-
+                // catches-the-top-edge logic: a sliver of dark grey right
+                // at the top eases into true black by 40% down, same
+                // "glossy curved surface" read as a rim would give, just
+                // baked into the fill since there's no edge to trace here.
                 Modules.Block {
+                    id: centerIsland
                     z: -1
                     anchors.top: parent.top
                     height: 31
@@ -291,7 +305,138 @@ ShellRoot {
                     cornerRadius: 18
                     x: leftGroup.x
                     width: rightGroup.x + rightGroup.width - leftGroup.x
-                    color: "#0c0c0e"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1c1c1e" }
+                        GradientStop { position: 0.4; color: "#000000" }
+                        GradientStop { position: 1.0; color: "#000000" }
+                    }
+                }
+
+                // Second, fainter glossy catch-light toward the bottom-
+                // right (asked for, "un bottomright un peu brillante
+                // aussi") -- a soft RADIAL highlight, echoing the same
+                // asymmetric topLeft/bottomRight pairing GlassRim uses on
+                // every other pill in this bar, just baked into the fill
+                // here since this island alone carries no rim to hang a
+                // second light source off of. Centered just past the
+                // island's own bottom-right corner and fully transparent
+                // by its outer stop, so it fades out before it would ever
+                // need clipping to the island's own rounded corner.
+                Shape {
+                    id: centerGloss
+                    z: -1
+                    x: centerIsland.x
+                    y: centerIsland.y
+                    width: centerIsland.width
+                    height: centerIsland.height
+                    antialiasing: true
+                    preferredRendererType: Shape.CurveRenderer
+
+                    ShapePath {
+                        strokeWidth: -1
+                        fillGradient: RadialGradient {
+                            // Pushed just PAST the actual corner (>100%/
+                            // >100%) on purpose -- only the near-left/
+                            // near-top arc of the circle then falls inside
+                            // the island at all, so it reads as a glow
+                            // hugging the corner itself rather than a
+                            // separate blob floating short of it (first
+                            // pass: 0.9/1.1 with a small radius, landed
+                            // visibly inboard of the real corner instead).
+                            //
+                            // Shrunk a lot from the first pass (2.6 ->
+                            // 1.1, alpha 0x2a -> 0x1c): Media sits flush
+                            // against this exact corner with NO margin of
+                            // its own (rightGroup's width IS the island's
+                            // own right edge), so the wider/brighter first
+                            // version reached far enough inward to wash
+                            // right over the mpris title -- reported as
+                            // "a translucent film over media". This stays
+                            // inside the rounded corner's own curve
+                            // instead of spilling onto whatever content
+                            // happens to be sitting there.
+                            centerX: centerGloss.width * 1.05
+                            centerY: centerGloss.height * 1.15
+                            centerRadius: centerGloss.height * 1.1
+                            focalX: centerX
+                            focalY: centerY
+                            GradientStop { position: 0.0; color: "#1cffffff" }
+                            GradientStop { position: 1.0; color: "#00ffffff" }
+                        }
+                        // Matches centerIsland's own corner treatment
+                        // exactly (square top -- flushTop -- rounded
+                        // bottom only) instead of a plain sharp-cornered
+                        // rect (reported: a faint square sliver of the
+                        // glow poking out past the real rounded corner,
+                        // worse under HDR's own tone curve than the
+                        // gradient math alone suggested it would be).
+                        // Relying on the RadialGradient's alpha reaching
+                        // ~0 before the true corner was the ONLY thing
+                        // keeping this contained before -- this makes it
+                        // structurally impossible to overflow, whatever
+                        // the gradient math does.
+                        PathRectangle {
+                            x: 0; y: 0
+                            width: centerGloss.width
+                            height: centerGloss.height
+                            bottomLeftRadius: centerIsland.cornerRadius
+                            bottomRightRadius: centerIsland.cornerRadius
+                        }
+                    }
+                }
+
+                // The GlassRim edge every other pill in this bar gets,
+                // added here too despite the earlier note above
+                // ("Deliberately NOT applied to the central island") --
+                // that pass was before the glossy-black fill existed,
+                // worth re-checking now rather than trusting the old
+                // verdict forever. `topOverflow` (> cornerRadius) pushes
+                // the traced rect's top edge above the bar entirely, so
+                // only the bottom arc -- the one edge this flush-top
+                // island actually has -- ever paints, same trick
+                // Block.qml's own `flushTop` documents.
+                //
+                // SYMMETRIC light from directly below (asked for -- a
+                // single corner hotspot, GlassRim's usual default, read
+                // lopsided/brighter on one side than the other here),
+                // not the diagonal corner-to-corner ramp every other rim
+                // in this bar uses: `hSpan: 0` removes the horizontal
+                // axis from the gradient entirely, leaving a pure
+                // vertical fade that's IDENTICAL at every x position --
+                // `lightOrigin`'s left/right choice becomes irrelevant
+                // once hSpan is 0 (only `_fromBottom` still matters),
+                // kept as bottomLeft arbitrarily. `strength: 0.6`, not
+                // the default 1.0 -- asked for "léger" (slight), a subtle
+                // grey line rather than a bright highlight.
+                //
+                // cornerRadius is centerIsland's own radius MINUS 1, not
+                // an exact match (reported separately: at the bright
+                // corner, a sliver of the black fill's own corner still
+                // showed past the rim's curve) -- a BIGGER radius cuts
+                // the corner further FROM the true corner point, not
+                // closer to it, so matching the fill's nominal radius
+                // exactly was the wrong direction: the ring needs to
+                // trace a SMALLER radius than the fill so its own curve
+                // reaches at least as close to the true corner as the
+                // fill's actual rendered shape does (Rectangle's native
+                // per-corner rounding and Shape/PathRectangle's own
+                // rounding don't trace pixel-identical curves at the
+                // same nominal radius).
+                Modules.GlassRim {
+                    target: centerIsland
+                    cornerRadius: centerIsland.cornerRadius - 1
+                    lightOrigin: "bottomLeft"
+                    hSpan: 0
+                    // Lightened further and darkened (asked for): 0.6 ->
+                    // 0.35 strength, and the highlight itself swapped
+                    // from GlassRim's default near-white "#e5e5ea" to a
+                    // plain mid-grey "#8e8e93" (the same tone GlassRim's
+                    // OWN second ramp stop already uses elsewhere) --
+                    // even at its brightest point this line no longer
+                    // approaches white, just a dim grey trace.
+                    strength: 0.35
+                    highlightColor: "#8e8e93"
+                    topOverflow: centerIsland.cornerRadius + 6
                 }
             }
 
@@ -607,9 +752,19 @@ ShellRoot {
             // not children: Block reparents anything nested inside it
             // into its content Row (see modules/GlassRim.qml). Declared
             // after all three so they paint on top of their fills.
+            //
+            // Two per pill now (asked for): the main topLeft source at
+            // full strength, plus a second, fainter one from bottomRight
+            // -- light catching the far corner too, not just one flat
+            // source. Weaker (0.45, not 1.0) so it reads as fill light,
+            // not a second equally-strong highlight competing with the
+            // real one.
             Modules.GlassRim { target: metrics }
+            Modules.GlassRim { target: metrics; lightOrigin: "bottomRight"; strength: 0.45 }
             Modules.GlassRim { target: launchers }
+            Modules.GlassRim { target: launchers; lightOrigin: "bottomRight"; strength: 0.45 }
             Modules.GlassRim { target: tools }
+            Modules.GlassRim { target: tools; lightOrigin: "bottomRight"; strength: 0.45 }
         }
     }
 

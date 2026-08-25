@@ -58,7 +58,7 @@ Item {
             text: ""   // ph-thermometer
             color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
-            font.pixelSize: 14
+            font.pixelSize: 15
         }
         // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars
         Text {
@@ -69,7 +69,7 @@ Item {
             text: String(root.celsius).padStart(3, " ")
             color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
     }
 }

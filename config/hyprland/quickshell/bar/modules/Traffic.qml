@@ -119,7 +119,7 @@ fi
             text: ""   // ph-arrows-down-up
             color: root.kind === "none" ? "#636366" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
-            font.pixelSize: 14
+            font.pixelSize: 15
         }
         Text {
             renderType: Text.NativeRendering
@@ -127,7 +127,7 @@ fi
             text: root.kind === "none" ? "----o/s" : root.formatRate(root.rateBps)
             color: root.kind === "none" ? "#636366" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
     }
 }

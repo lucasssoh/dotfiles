@@ -140,6 +140,33 @@ window,
     opacity: 1;
 }
 
+/* Bottom close bar -- "une petite pile large en bas pour fermer", then
+   asked to read as "une barre fine pleine" instead of a labeled button:
+   a thin, solid, edge-to-edge line (as full-width as panel_inner's own
+   padding allows) rather than an inset pill with an icon, closer to a
+   bottom-sheet's own drag handle. min-height/min-width/padding all
+   zeroed to override GTK's own button minimums (same as .balise-button
+   does) -- without them the theme's default button padding would keep
+   this several times taller than the bar itself. No hover state, asked
+   for: this reads as a fixed piece of the panel's own chrome, not
+   another interactive control competing for attention.
+*/
+.balise-close-bar {
+    background: rgba(255, 255, 255, 0.16);
+    border: none;
+    box-shadow: none;
+    border-radius: 9999px;
+    min-height: 4px;
+    min-width: 0;
+    padding: 0;
+    margin-top: 14px;
+}
+
+.balise-close-bar:hover {
+    background: rgba(255, 154, 154, 0.22);
+    color: #f2f2f7;
+}
+
 /* ============================================================
    Rows, buttons, lists, switches, overlays. NOT a port of Orbit's flat,
    pill-shaped generated theme -- asked to

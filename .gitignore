@@ -1,5 +1,6 @@
 config/hyprland/hypr/wallpaper-playlist.json
 config/hyprland/hypr/display-layout.json
+config/hyprland/hypr/monitor-layout.json
 config/hyprland/hypr/scale.json
 config/hyprland/.claude/
 config/hyprland/orbit-vendor/target/

@@ -50,7 +50,7 @@ Item {
         text: root.iconFor(PowerProfiles.profile)
         color: root.colorFor(PowerProfiles.profile)
         font.family: Fonts.iconPhosphor
-        font.pixelSize: 14
+        font.pixelSize: 15
     }
 
     MouseArea {

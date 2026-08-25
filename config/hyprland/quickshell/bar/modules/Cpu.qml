@@ -85,7 +85,7 @@ Item {
             text: ""   // ph-cpu
             color: root.usage >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
-            font.pixelSize: 14
+            font.pixelSize: 15
         }
         Text {
             id: valueLabel
@@ -95,7 +95,7 @@ Item {
             text: String(root.usage).padStart(3, " ") + " " + root.maxGhz.toFixed(1)
             color: root.usage >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
         }
     }
 }

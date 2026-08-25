@@ -1,7 +1,24 @@
-//! Layer-shell window shell + overlays (hidden network, saved networks,
-//! error toast, Bluetooth pairing agent) + the endpoint detail page.
-//! Anchored corner panel (like Orbit, NOT a fullscreen 4-edge overlay
-//! like Roue/Prisme -- see the project plan).
+//! Layer-shell window shell + overlays (error toast, Bluetooth pairing
+//! agent) + Stack sub-pages (endpoint detail, saved networks, hidden
+//! network). Saved networks and the hidden-network form used to be
+//! overlays too (bottom-sheet Revealers stacked on top of the current
+//! tab) -- moved into the Stack instead, alongside the endpoint detail
+//! page, so they get the panel's full width/height and the same
+//! "‹ title" header navigation instead of popping up on top of
+//! whatever tab happened to be showing underneath. Anchored corner
+//! panel (like Orbit, NOT a fullscreen 4-edge overlay like Roue/Prisme
+//! -- see the project plan). "Click anywhere else
+//! closes it" is handled OUTSIDE this file entirely, by
+//! hypr/scripts/balise-autoclose.sh listening for Hyprland's own
+//! `activewindow` event and calling `balise hide` -- same trick the
+//! comment there notes swaync already relies on. A real click-catching
+//! surface spanning the whole output (Roue's own shape) was considered
+//! here too, but rejected: it would block every click on the rest of the
+//! screen while Balise is open, not just ones meant to dismiss it, which
+//! the IPC-event approach never does. `close_bar` below is the one
+//! genuinely new close affordance this file adds: an explicit, always-
+//! visible control, for whoever doesn't already know clicking elsewhere
+//! works.
 //!
 //! WiFi password entry is deliberately NOT an overlay here: it expands
 //! inline under its own network row (ui/network_list.rs).
@@ -32,17 +49,15 @@ pub struct BaliseWindow {
     /// Tab to return to when leaving the detail page.
     detail_origin: Rc<RefCell<String>>,
     stack: gtk::Stack,
+    close_bar: gtk::Button,
     fallback_css: gtk::CssProvider,
     user_css: gtk::CssProvider,
     is_animating: Rc<Cell<bool>>,
 
-    hidden_revealer: gtk::Revealer,
     hidden_ssid_entry: gtk::Entry,
     hidden_password_entry: gtk::PasswordEntry,
     hidden_connect_btn: gtk::Button,
-    hidden_callback: Rc<RefCell<Option<Rc<dyn Fn(Option<(String, String)>)>>>>,
-
-    saved_revealer: gtk::Revealer,
+    hidden_cancel_btn: gtk::Button,
 
     error_revealer: gtk::Revealer,
     error_label: gtk::Label,
@@ -160,42 +175,16 @@ impl BaliseWindow {
         let wired_list = WiredList::new();
         let detail_view = DetailView::new();
 
-        stack.add_named(network_list.widget(), Some("wifi"));
-        stack.add_named(device_list.widget(), Some("bluetooth"));
-        stack.add_named(wired_list.widget(), Some("ethernet"));
-        // Added last on purpose: with a slide transition, GTK animates
-        // according to child order, so entering the detail page slides
-        // in from the right and going back slides out to the right --
-        // which is what "drilling in" should feel like.
-        stack.add_named(detail_view.widget(), Some("detail"));
-        stack.set_visible_child_name("wifi");
-        stack.set_size_request(270, 380);
-        panel_inner.append(&stack);
-
-        let overlay = Overlay::new();
-        overlay.set_child(Some(&panel));
-
-        // The WiFi password overlay that used to live here is gone:
-        // password entry is now inline, expanding under the network's
-        // own row (see ui/network_list.rs::build_password_form). That
-        // keeps the field visually attached to the network it belongs
-        // to, and drops this panel from six stacked overlays to four.
-
-        // ---- hidden-network overlay -------------------------------------
-        let hidden_box = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
-            .spacing(12)
-            .css_classes(["balise-password-overlay"])
-            .margin_start(16)
-            .margin_end(16)
-            .margin_top(16)
-            .margin_bottom(16)
-            .build();
-        let hidden_label = gtk::Label::builder()
-            .label("Connect to Hidden Network")
-            .css_classes(["balise-detail-label"])
-            .halign(gtk::Align::Start)
-            .build();
+        // Hidden-network form -- a real Stack page now (see the header
+        // comment at the top of this file), not a bottom-sheet Revealer
+        // floating on top of the WiFi tab. No title Label of its own: the
+        // header's own "‹ Connect to Hidden Network" (set by
+        // show_hidden_network()) carries that, same as the detail page
+        // never repeats its own title inline. Connect/Cancel are wired in
+        // app/mod.rs (both need to navigate the Stack back and Connect
+        // needs the app-level `tx` channel), not here -- window.rs only
+        // builds the widgets.
+        let hidden_box = gtk::Box::builder().orientation(Orientation::Vertical).spacing(12).build();
         let hidden_ssid_entry = gtk::Entry::builder().placeholder_text("Network Name (SSID)").hexpand(true).build();
         let hidden_password_entry =
             gtk::PasswordEntry::builder().placeholder_text("Password (Optional)").hexpand(true).build();
@@ -205,61 +194,71 @@ impl BaliseWindow {
             gtk::Button::builder().label("Connect").css_classes(["balise-button", "primary", "flat"]).build();
         hidden_btn_row.append(&hidden_cancel_btn);
         hidden_btn_row.append(&hidden_connect_btn);
-        hidden_box.append(&hidden_label);
         hidden_box.append(&hidden_ssid_entry);
         hidden_box.append(&hidden_password_entry);
         hidden_box.append(&hidden_btn_row);
 
-        let hidden_revealer = gtk::Revealer::builder()
-            .child(&hidden_box)
-            .reveal_child(false)
-            .transition_type(gtk::RevealerTransitionType::SlideUp)
-            .transition_duration(250)
-            .valign(gtk::Align::End)
-            .can_target(true)
-            .build();
-        let rev = hidden_revealer.clone();
-        hidden_cancel_btn.connect_clicked(move |_| rev.set_reveal_child(false));
-        overlay.add_overlay(&hidden_revealer);
+        stack.add_named(network_list.widget(), Some("wifi"));
+        stack.add_named(device_list.widget(), Some("bluetooth"));
+        stack.add_named(wired_list.widget(), Some("ethernet"));
+        // Saved networks -- also a real Stack page now, just the list
+        // itself (SavedList never had a title of its own either; same
+        // header-driven "‹ Saved Networks" as the hidden-network page
+        // above).
+        stack.add_named(saved_list.widget(), Some("saved"));
+        stack.add_named(&hidden_box, Some("hidden"));
+        // Added last on purpose: with a slide transition, GTK animates
+        // according to child order, so entering the detail page slides
+        // in from the right and going back slides out to the right --
+        // which is what "drilling in" should feel like. Same reason
+        // "saved"/"hidden" are added right before it rather than among
+        // the three tabs above: all four are reached the same way (a
+        // button on the WiFi tab, or a row's gear), so they should all
+        // slide in from the right the same way too.
+        stack.add_named(detail_view.widget(), Some("detail"));
+        stack.set_visible_child_name("wifi");
+        stack.set_size_request(270, 380);
+        panel_inner.append(&stack);
 
-        // ---- saved-networks overlay -------------------------------------
-        let saved_box = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
-            .css_classes(["balise-password-overlay"])
-            .spacing(8)
-            .width_request(270)
+        // Small close affordance at the bottom of the panel -- "une petite
+        // pile large en bas pour fermer", asked for as an explicit,
+        // discoverable way to dismiss Balise alongside clicking anywhere
+        // else (handled outside this file, see the header comment at the
+        // top of window.rs). No icon child (asked to read as "une barre
+        // fine pleine", a thin solid bar/handle -- not a labeled button):
+        // the widget is still a real Button underneath (click target +
+        // accessibility), style.css just draws it as a plain thin strip,
+        // no hover state. Wired in app/mod.rs's setup_ui_callbacks, same
+        // as the tab buttons -- window.rs only builds the widget, it
+        // doesn't own app-level show/hide state.
+        // "flat" (GTK's own stock class) strips the theme's default
+        // button chrome (background/border/hover overlay) so nothing
+        // fights with the plain CSS bar drawn above -- same reason every
+        // other custom-styled button in this panel also carries it.
+        // Capped at a third of PANEL_WIDTH and centered (asked for,
+        // after the first full-width pass read as too heavy) --
+        // width_request + halign(Center) rather than a CSS max-width,
+        // since a Box child defaults to Fill/hexpand-stretch and GTK CSS
+        // has no reliable max-width for that.
+        let close_bar = gtk::Button::builder()
+            .css_classes(["balise-close-bar", "flat"])
+            .halign(gtk::Align::Center)
+            .width_request(PANEL_WIDTH / 3)
             .build();
-        let saved_header_row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(12).build();
-        let saved_title = gtk::Label::builder()
-            .label("Saved Networks")
-            .css_classes(["balise-detail-label"])
-            .halign(gtk::Align::Start)
-            .hexpand(true)
-            .build();
-        let saved_close_btn = gtk::Button::builder()
-            .child(&super::icon::icon_label(super::icon::X))
-            .css_classes(["balise-button", "flat"])
-            .build();
-        saved_header_row.append(&saved_title);
-        saved_header_row.append(&saved_close_btn);
-        saved_box.append(&saved_header_row);
+        panel_inner.append(&close_bar);
 
-        let saved_list_widget = saved_list.widget().clone();
-        saved_list_widget.set_vexpand(true);
-        saved_list_widget.set_hexpand(true);
-        saved_box.append(&saved_list_widget);
+        let overlay = Overlay::new();
+        overlay.set_child(Some(&panel));
 
-        let saved_revealer = gtk::Revealer::builder()
-            .child(&saved_box)
-            .reveal_child(false)
-            .transition_type(gtk::RevealerTransitionType::SlideUp)
-            .transition_duration(250)
-            .valign(gtk::Align::End)
-            .can_target(true)
-            .build();
-        let rev = saved_revealer.clone();
-        saved_close_btn.connect_clicked(move |_| rev.set_reveal_child(false));
-        overlay.add_overlay(&saved_revealer);
+        // The WiFi password overlay that used to live here is gone:
+        // password entry is now inline, expanding under the network's
+        // own row (see ui/network_list.rs::build_password_form). Saved
+        // networks and the hidden-network form (used to be two more
+        // overlays right here) are Stack pages now instead -- see the
+        // header comment at the top of this file and `hidden_box`/
+        // `stack.add_named` above. That's what actually dropped this
+        // panel from six stacked overlays to two (error toast + the
+        // Bluetooth pairing agent, below).
 
         // ---- error toast --------------------------------------------------
         let error_box = gtk::Box::builder()
@@ -398,6 +397,40 @@ impl BaliseWindow {
 
         window.set_child(Some(&root_revealer));
 
+        // Drives show()/hide()'s actual window-visibility flip off GTK's
+        // own `child-revealed` property instead of a glib::timeout_add_local
+        // guessed to match `window_transition_duration` -- that guessed
+        // timer raced the real transition clock, and losing the race (the
+        // window unmapping a frame or two before/after the Revealer
+        // visually finished collapsing) is what showed up live as a brief
+        // leftover sliver of the panel still on screen right at the end of
+        // the close animation. is_child_revealed() is GTK's own ground
+        // truth for "the transition is REALLY done", so there's no longer
+        // a race to lose. Connected once here rather than per show()/
+        // hide() call, which would leak a new handler on every open/close
+        // (the hidden-network Connect button used to have exactly that
+        // bug, back when it was rewired inside every show_hidden_dialog()
+        // call -- fixed by moving its wiring to app/mod.rs instead, see
+        // show_hidden_network() below).
+        let is_animating = Rc::new(Cell::new(false));
+        {
+            let window = window.clone();
+            let anim = is_animating.clone();
+            root_revealer.connect_child_revealed_notify(move |rev| {
+                if rev.is_child_revealed() {
+                    // Show finished revealing -- window is already visible
+                    // and keyboard-interactive from show() itself, this
+                    // just clears the debounce guard.
+                    anim.set(false);
+                } else {
+                    // Hide finished collapsing -- actually unmap now.
+                    window.set_visible(false);
+                    window.set_keyboard_mode(KeyboardMode::None);
+                    anim.set(false);
+                }
+            });
+        }
+
         let win = Self {
             window,
             root_revealer,
@@ -410,15 +443,14 @@ impl BaliseWindow {
             detail_view,
             detail_origin: Rc::new(RefCell::new("wifi".to_string())),
             stack,
+            close_bar,
             fallback_css,
             user_css,
-            is_animating: Rc::new(Cell::new(false)),
-            hidden_revealer,
+            is_animating,
             hidden_ssid_entry,
             hidden_password_entry,
             hidden_connect_btn,
-            hidden_callback: Rc::new(RefCell::new(None)),
-            saved_revealer,
+            hidden_cancel_btn,
             error_revealer,
             error_label,
             bt_agent_revealer,
@@ -436,6 +468,12 @@ impl BaliseWindow {
 
     pub fn stack(&self) -> &gtk::Stack {
         &self.stack
+    }
+
+    /// The bottom close bar -- app/mod.rs wires its click to the same
+    /// Hide path `balise-autoclose.sh` drives.
+    pub fn close_bar(&self) -> &gtk::Button {
+        &self.close_bar
     }
 
     pub fn header(&self) -> &Header {
@@ -509,9 +547,29 @@ impl BaliseWindow {
 
     /// Show/hide, adapted from orbit-vendor/src/ui/window.rs:799-846. The
     /// `is_animating` re-entrancy guard stops a fast double-toggle from
-    /// leaving the panel half-revealed.
+    /// leaving the panel half-revealed. The actual window-visibility flip
+    /// (and, for hide, unmapping the surface) happens in the
+    /// `connect_child_revealed_notify` handler wired up in `new()`, off
+    /// GTK's own real transition-complete signal rather than a guessed
+    /// timeout -- see that handler's comment for why.
     pub fn show(&self) {
         if self.is_animating.get() {
+            return;
+        }
+        // Already targeting revealed -- e.g. a stray double-call to
+        // show() -- and nothing left to animate: set_reveal_child(true)
+        // below would be a silent no-op (GTK's own setter skips work,
+        // and with it the notify, when the value isn't actually
+        // changing), which would never fire the
+        // connect_child_revealed_notify handler that's the ONLY thing
+        // clearing `is_animating`. Skipping the whole call here instead
+        // of setting the guard is what stops that handler-that-never-
+        // fires from permanently wedging every future show()/hide() open
+        // -- confirmed live: this exact race, from balise-autoclose.sh's
+        // own two duplicate running instances each independently calling
+        // `balise hide` off the same Hyprland event, is what caused
+        // Balise to silently stop opening at all mid-session once.
+        if self.root_revealer.reveals_child() {
             return;
         }
         self.is_animating.set(true);
@@ -525,15 +583,8 @@ impl BaliseWindow {
         self.window.set_keyboard_mode(KeyboardMode::OnDemand);
 
         let rev = self.root_revealer.clone();
-        let anim = self.is_animating.clone();
-        let duration = self.config.borrow().window_transition_duration;
-
         gtk::glib::idle_add_local_once(move || {
             rev.set_reveal_child(true);
-            gtk::glib::timeout_add_local(std::time::Duration::from_millis(duration.into()), move || {
-                anim.set(false);
-                gtk::glib::ControlFlow::Break
-            });
         });
     }
 
@@ -541,20 +592,14 @@ impl BaliseWindow {
         if self.is_animating.get() {
             return;
         }
+        // Same no-op-guard reasoning as show() above, mirrored for the
+        // hide direction.
+        if !self.root_revealer.reveals_child() {
+            return;
+        }
         self.is_animating.set(true);
 
         self.root_revealer.set_reveal_child(false);
-
-        let window = self.window.clone();
-        let anim = self.is_animating.clone();
-        let duration = self.config.borrow().window_transition_duration;
-
-        gtk::glib::timeout_add_local(std::time::Duration::from_millis(duration.into()), move || {
-            window.set_visible(false);
-            window.set_keyboard_mode(KeyboardMode::None);
-            anim.set(false);
-            gtk::glib::ControlFlow::Break
-        });
     }
 
     pub fn set_position(&self, pos_str: &str) {
@@ -624,34 +669,54 @@ impl BaliseWindow {
         let _ = &self.fallback_css;
     }
 
-    // ---- overlays -------------------------------------------------------
+    // ---- Stack sub-pages (saved networks, hidden network) ---------------
+    // Both used to be Revealer overlays popped up on top of whichever tab
+    // was showing underneath; now real Stack pages, navigated exactly
+    // like show_detail()/leave_detail() above -- same "‹ title" header,
+    // same directional slide, same origin-tab bookkeeping via
+    // `detail_origin`. leave_detail() itself needed no changes: it
+    // already just restores whatever tab `detail_origin` names, with no
+    // idea (or need to know) whether the page being left was the endpoint
+    // detail page, saved networks, or the hidden-network form.
 
-    /// Adapted from orbit-vendor/src/ui/window.rs:974-996.
-    pub fn show_hidden_dialog<F: Fn(Option<(String, String)>) + 'static>(&self, callback: F) {
+    /// Both entry points are WiFi-only features, always reached from a
+    /// button on the WiFi tab -- origin is always "wifi", not read off
+    /// whatever tab happens to be current (there's only one to switch
+    /// away from that could reach either of these).
+    pub fn show_hidden_network(&self) {
+        *self.detail_origin.borrow_mut() = "wifi".to_string();
+        self.header.set_detail_mode(Some("Connect to Hidden Network"));
         self.hidden_ssid_entry.set_text("");
         self.hidden_password_entry.set_text("");
-        *self.hidden_callback.borrow_mut() = Some(Rc::new(callback));
-
-        let callback_clone = self.hidden_callback.clone();
-        let ssid_clone = self.hidden_ssid_entry.clone();
-        let pass_clone = self.hidden_password_entry.clone();
-        let rev_clone = self.hidden_revealer.clone();
-        self.hidden_connect_btn.connect_clicked(move |_| {
-            if let Some(cb) = callback_clone.borrow().as_ref() {
-                cb(Some((ssid_clone.text().to_string(), pass_clone.text().to_string())));
-            }
-            rev_clone.set_reveal_child(false);
-        });
-
-        self.saved_revealer.set_reveal_child(false);
-        self.hidden_revealer.set_reveal_child(true);
+        self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
+        self.stack.set_visible_child_name("hidden");
         self.hidden_ssid_entry.grab_focus();
     }
 
     pub fn show_saved_networks(&self) {
-        self.hidden_revealer.set_reveal_child(false);
-        self.saved_revealer.set_reveal_child(true);
+        *self.detail_origin.borrow_mut() = "wifi".to_string();
+        self.header.set_detail_mode(Some("Saved Networks"));
+        self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
+        self.stack.set_visible_child_name("saved");
     }
+
+    pub fn hidden_ssid_entry(&self) -> &gtk::Entry {
+        &self.hidden_ssid_entry
+    }
+
+    pub fn hidden_password_entry(&self) -> &gtk::PasswordEntry {
+        &self.hidden_password_entry
+    }
+
+    pub fn hidden_connect_btn(&self) -> &gtk::Button {
+        &self.hidden_connect_btn
+    }
+
+    pub fn hidden_cancel_btn(&self) -> &gtk::Button {
+        &self.hidden_cancel_btn
+    }
+
+    // ---- overlays -------------------------------------------------------
 
     /// Adapted from orbit-vendor/src/ui/window.rs:998-1007 -- auto-hides
     /// after 5s.

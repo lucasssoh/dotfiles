@@ -105,7 +105,7 @@ Item {
             ? root.classIcons[root.moduleClass] : root.text
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         font.family: Fonts.iconPhosphor
-        font.pixelSize: 14
+        font.pixelSize: 15
     }
 
     MouseArea {

@@ -4,6 +4,11 @@
 # the state persisted by Prisme/set_wallpaper.sh in
 # wallpaper-playlist.json. Launched by Hyprland's autostart
 # (hyprland.lua).
+#
+# Three mutually-exclusive modes: "static" (one image), "dynamic"
+# (slideshow service), "solid" (flat color via `awww clear`, no image
+# file -- neither Prisme nor set_wallpaper.sh's rofi picker write this
+# one yet, it's set by hand, e.g. { "mode": "solid", "color": "000000" }).
 # =========================================================
 
 # Source folder configurable via ~/.config/prisme/wallpapers.conf -- only
@@ -42,4 +47,13 @@ if [ "$MODE" = "static" ]; then
 elif [ "$MODE" = "dynamic" ]; then
     # Dynamic mode: delegates to the dedicated systemd service (slideshow)
     systemctl --user start wallpaper-slideshow.service
+
+elif [ "$MODE" = "solid" ]; then
+    # Solid mode: a flat color fill via awww's own `clear`, not an image --
+    # no wallpaper file involved, so nothing to look up in WALL_DIR/source.
+    # Mutually exclusive with the slideshow, same as static.
+    systemctl --user stop wallpaper-slideshow.service 2>/dev/null
+
+    COLOR=$(python3 -c "import json; print(json.load(open('$PLAYLIST_FILE')).get('color', '000000'))")
+    awww clear "$COLOR"
 fi
