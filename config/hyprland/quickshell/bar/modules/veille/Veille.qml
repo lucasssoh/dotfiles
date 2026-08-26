@@ -96,6 +96,21 @@ Scope {
         return Quickshell.screens[0] || null;
     }
 
+    readonly property var activeScreen: root.pickScreen()
+
+    // ---- screen-relative sizing -----------------------------------------
+    // Asked for: the clock shouldn't match raw pixels -- a 1440p panel
+    // should read visibly bigger than a 1080p one, not the same pixel
+    // size shrunk by the extra density ("ne pas match les pixels mais la
+    // taille reel de l'ecran"). ShellScreen.height is the output's own
+    // resolution (already in logical/post-scale pixels under Wayland
+    // fractional scaling), so this ratio tracks "how big is this screen",
+    // not just "how many pixels does it have". 1080p is the reference --
+    // sizes below are unchanged there, and scale up/down from it.
+    readonly property real sizeReferenceHeight: 1080
+    readonly property real screenScale:
+        root.activeScreen ? (root.activeScreen.height / root.sizeReferenceHeight) : 1.0
+
     readonly property bool anchorTop: config.position.indexOf("top") === 0
     readonly property bool anchorBottom: config.position.indexOf("bottom") === 0
     readonly property bool anchorLeftEdge: config.position.indexOf("left") !== -1
@@ -110,7 +125,7 @@ Scope {
 
     PanelWindow {
         id: overlay
-        screen: root.pickScreen()
+        screen: root.activeScreen
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "veille"
@@ -127,7 +142,7 @@ Scope {
         // Quickshell idiom for full click-through.
         mask: Region {}
 
-        visible: !root.suppressed && (root.pickScreen() !== null)
+        visible: !root.suppressed && (root.activeScreen !== null)
 
         anchors {
             top: root.effTop
@@ -148,7 +163,7 @@ Scope {
         Column {
             id: content
             anchors.centerIn: parent
-            spacing: 6
+            spacing: Math.round(6 * root.screenScale)
 
             Text {
                 id: clockText
@@ -163,7 +178,7 @@ Scope {
                 // font, which undercuts the "make time hard to ignore"
                 // point by making the ticking itself look unstable.
                 font.family: Fonts.mono
-                font.pixelSize: phase.fontSize
+                font.pixelSize: Math.round(phase.fontSize * root.screenScale)
                 color: "#f2f2f7"
                 opacity: phase.targetOpacity
                 text: Qt.formatDateTime(root.now, config.showSeconds ? "HH:mm:ss" : "HH:mm")
@@ -185,7 +200,7 @@ Scope {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 font.family: Fonts.ui
-                font.pixelSize: 16
+                font.pixelSize: Math.round(16 * root.screenScale)
                 color: "#8e8e93"
                 opacity: clockText.opacity
                 text: Qt.formatDateTime(root.now, "dddd d MMMM")
@@ -194,13 +209,13 @@ Scope {
             Text {
                 id: messageText
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(420, implicitWidth)
+                width: Math.min(420 * root.screenScale, implicitWidth)
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 font.family: Fonts.ui
-                font.pixelSize: 15
+                font.pixelSize: Math.round(15 * root.screenScale)
                 color: "#c7c7cc"
                 text: messages.text
                 opacity: messages.text !== "" ? 0.9 : 0

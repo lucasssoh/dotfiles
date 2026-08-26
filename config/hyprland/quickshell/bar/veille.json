@@ -12,7 +12,7 @@
     "messageIntervalMinutes": 20,
     "messageHoldSeconds": 25,
 
-    "pulse": { "leadSeconds": 3, "durationSeconds": 10 },
+    "pulse": { "leadSeconds": 3, "durationSeconds": 30 },
 
     "muteWhileGaming": false,
     "respectZenMode": true,

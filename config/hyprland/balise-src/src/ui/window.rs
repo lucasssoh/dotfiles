@@ -127,28 +127,37 @@ impl BaliseWindow {
         let display = gtk4::gdk::Display::default().expect("no default display");
         let (fallback_css, user_css) = crate::theme::load(&display);
 
-        // Glass border, take two: the "background-clip: padding-box,
-        // border-box" longhand trick (works for Orbit/Roue/swaync) turned
-        // out to render NOTHING in the border-box ring here -- confirmed
-        // at the pixel level (sampled the raw screenshot buffer): with
-        // border: 2.5px the ring was flat black with zero gradient
-        // pixels, and even blown up to border: 20px as a diagnostic, the
-        // ring stayed solid black instead of showing the gradient, while
-        // the window did grow to make room for it (so the border-WIDTH
-        // was respected, just never painted). Rather than chase why this
-        // one surface/widget combination breaks the clip trick, switched
-        // to the classically robust way to fake a gradient border in
-        // CSS: two nested boxes. `panel` (outer, .balise-panel) is
-        // painted with the gradient as a single plain `background`
-        // filling its entire bounds; `panel_inner` (.balise-panel-inner)
-        // sits inside it with a small margin, carrying the actual opaque
-        // fill + all the real content -- the uncovered margin ring IS
-        // the border, no clip-box ambiguity possible.
+        // Glass border, take three. Take two (the two-nested-boxes trick,
+        // see the git history on this comment) fixed the border itself
+        // rendering as flat black, but both boxes were still plain CSS
+        // rounded rects -- fine for straight-edged corners, a dead end
+        // for the CRT-style bend asked for on this panel (matching
+        // Quickshell's bar pills): GTK CSS's border-radius only does
+        // elliptical CORNERS, there's no clip-path, so a straight edge
+        // bulging outward in the middle can't be written in style.css no
+        // matter the property. `CrtFrame` (ui/crt_frame.rs) draws both
+        // curves itself with gsk::PathBuilder instead -- the outer one
+        // filled with the same border gradient `.balise-panel` used to
+        // paint via CSS (copied into Rust, see that file), the inner one
+        // used as a clip for `panel_inner` below, which keeps its own
+        // CSS background/padding/content completely unchanged and just
+        // gets cut to the curve for free.
+        //
+        // `panel` still exists, now just for `.balise-panel`'s
+        // box-shadow (style.css strips its background/border-radius
+        // duties, CrtFrame owns those) -- CSS box-shadow needs a real
+        // CSS-styled widget to hang off, painting it isn't something
+        // CrtFrame's own snapshot() reproduces.
         let panel = gtk::Box::builder()
             .css_classes(["balise-panel"])
             .vexpand(true)
             .hexpand(true)
             .build();
+
+        let crt_frame = super::crt_frame::CrtFrame::new();
+        crt_frame.set_vexpand(true);
+        crt_frame.set_hexpand(true);
+        panel.append(&crt_frame);
 
         let panel_inner = gtk::Box::builder()
             .orientation(Orientation::Vertical)
@@ -157,7 +166,7 @@ impl BaliseWindow {
             .hexpand(true)
             .overflow(gtk::Overflow::Hidden)
             .build();
-        panel.append(&panel_inner);
+        crt_frame.set_child(&panel_inner);
 
         let header = Header::new();
         panel_inner.append(header.widget());

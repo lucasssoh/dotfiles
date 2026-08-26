@@ -41,16 +41,22 @@ window,
    `.balise-panel-inner` sits inside it with a small margin (below), and
    that uncovered margin ring IS the border, with no clip-box ambiguity
    possible. */
+/* background/border-radius removed here (kept as a comment below for the
+   record) -- ui/crt_frame.rs's CrtFrame now paints this exact gradient
+   itself, curved instead of a plain rounded rect (see window.rs's own
+   comment on why: GTK CSS has no clip-path, so the "petit bend" asked
+   for can't be expressed as a CSS property no matter how it's written).
+   `border-radius: 16px` stays -- box-shadow below still follows it, and
+   a shadow's own soft blur hides the couple-px gap between this nominal
+   rounded rect and CrtFrame's actual curved silhouette.
+       background: linear-gradient(135deg,
+           rgba(234, 234, 238, 0.9) 0%, rgba(170, 172, 180, 0.65) 25%,
+           rgba(130, 132, 140, 0.45) 50%, rgba(90, 92, 98, 0.3) 75%,
+           rgba(60, 62, 68, 0.18) 100%);
+   -- copied verbatim into crt_frame.rs's BORDER_STOPS constant. */
 .balise-panel {
     border-radius: 16px;
-    background: linear-gradient(
-        135deg,
-        rgba(234, 234, 238, 0.9) 0%,
-        rgba(170, 172, 180, 0.65) 25%,
-        rgba(130, 132, 140, 0.45) 50%,
-        rgba(90, 92, 98, 0.3) 75%,
-        rgba(60, 62, 68, 0.18) 100%
-    );
+    background: none;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -84,8 +90,12 @@ window,
         rgba(19, 20, 24, 0.93) 45%,
         rgba(10, 10, 13, 0.95) 100%
     );
-    border-radius: 14.5px;
-    margin: 1.5px;
+    /* border-radius/margin removed -- ui/crt_frame.rs's CrtFrame now owns
+       both (its own inner_radius/margin fields, 14.5/1.5, same values),
+       clipping this box to its curved inner edge instead of this CSS
+       rounding a plain rect. This background still paints exactly as
+       before; it's just cut to a different (bulged) shape now, for
+       free, by the clip CrtFrame pushes before painting this widget. */
     /* Global padding: more breathing room between the border and the
        content than the previous cramped 14px. */
     padding: 20px;

@@ -183,8 +183,8 @@ hl.config({
         -- left fields on this build, not a CSS-shorthand string -- that
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
-        gaps_out         = { top = 16, right = 8, bottom = 6, left = 8 },
-        border_size      = 2,
+        gaps_out         = { top = 8, right = 8, bottom = 6, left = 8 },
+        border_size      = 1,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
