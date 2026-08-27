@@ -14,23 +14,13 @@ set -euo pipefail
 # =========================================================
 
 # ---- Settings ------------------------------------------------
-SDRBRIGHTNESS="1.0"     # SDR content brightness while the screen is in HDR (1.0..2.0)
-SDRSATURATION="1.0"     # SDR content saturation in HDR
-SDR_WHITE_LUMINANCE="203"  # SDR white level inside the HDR container (ITU-R BT.2408 diffuse
-                            # white, matches Hyprland's own fixed HDR_REF_LUMINANCE; default: 80)
+# HDR tuning (SDRBRIGHTNESS/SDR_WHITE_LUMINANCE/MAX_LUMINANCE/...) and the
+# last-choice persistence (hdr_last_choice/hdr_save_choice) live in
+# hdr-settings.sh, shared with scripts/workspace-manager.sh -- it needs the
+# exact same values to reapply whichever of HDR/SDR the user last picked
+# for a screen, instead of always resetting it to SDR on reload/hotplug.
+source "$HOME/.config/hypr/scripts/hdr-settings.sh"
 
-# HDR headroom sent to clients (monitorv2 min_luminance / max_luminance /
-# max_avg_luminance -- see src/config/lua/bindings/LuaBindingsConfigRules.cpp
-# in Hyprland's source). Empty = fall back to the EDID-reported value (this
-# panel: min 0.041, max 1037, max_avg 872 cd/m^2). Hyprland's own HDR white
-# reference is hardcoded at 203 cd/m^2 (HDR_REF_LUMINANCE), so these are the
-# direct equivalent of the three numbers Windows' "HDR Calibration" app
-# measures (min black level / max full-screen / max small-highlight) --
-# raising MAX_LUMINANCE above the EDID's reported peak increases the
-# perceived punch of highlights (more headroom above the 203 nit reference),
-# at the cost of the panel itself clipping anything past its real peak.
-MAX_LUMINANCE=""        # cd/m^2, empty = EDID (this panel: 1037)
-MAX_AVG_LUMINANCE=""    # cd/m^2, empty = EDID (this panel: 872)
 WAYBAR_SIGNAL=3         # must match "signal" in config.jsonc
 RASI="$HOME/.config/rofi/theme.rasi"   # menu theme (adjust if needed)
 ICON=""               # screen glyph (nf-md-monitor)
@@ -95,7 +85,7 @@ hdr_capable() {
 # We drive it via `hyprctl eval '<lua hl.*>'` instead (same pattern as
 # scripts/workspace-manager.sh).
 apply() {
-    local m="$1" want="$2" j w h rr x y scale mode position
+    local m="$1" want="$2" j w h rr x y scale mode position desc
     j=$(hyprctl monitors -j | jq -r --arg m "$m" '.[] | select(.name==$m)')
     w=$(jq -r '.width'        <<<"$j")
     h=$(jq -r '.height'       <<<"$j")
@@ -103,24 +93,16 @@ apply() {
     x=$(jq -r '.x'            <<<"$j")
     y=$(jq -r '.y'            <<<"$j")
     scale=$(jq -r '.scale'    <<<"$j")
+    desc=$(jq -r '.description // empty' <<<"$j")
     rr=$(LC_NUMERIC=C printf '%.2f' "$rr")  # FR locale = decimal comma, breaks the "W x H@RR" format
     mode="${w}x${h}@${rr}"
     position="${x}x${y}"
 
-    if [[ "$want" == "hdr" ]]; then
-        # Both floors forced to literal 0 rather than the EDID-reported 0.041
-        # cd/m^2: min_luminance is the floor for native HDR content (games,
-        # HDR video), sdr_min_luminance only affects SDR windows composited
-        # into the HDR container. The EDID value visibly lifted blacks above
-        # what the panel can actually do (confirmed against a bare TTY
-        # framebuffer, which has no compositor/CM path to introduce a floor).
-        local extra=", sdr_max_luminance = ${SDR_WHITE_LUMINANCE}, sdr_min_luminance = 0, min_luminance = 0"
-        [[ -n "$MAX_LUMINANCE" ]]     && extra+=", max_luminance = ${MAX_LUMINANCE}"
-        [[ -n "$MAX_AVG_LUMINANCE" ]] && extra+=", max_avg_luminance = ${MAX_AVG_LUMINANCE}"
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 10, cm = \"hdredid\", sdrbrightness = ${SDRBRIGHTNESS}, sdrsaturation = ${SDRSATURATION}${extra} })"
-    else
-        hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, bitdepth = 8, cm = \"auto\" })"
-    fi
+    hyprctl eval "hl.monitor({ output = \"$m\", mode = \"$mode\", position = \"$position\", scale = ${scale}, $(hdr_extra_clause "$want") })"
+    # Persists the choice (keyed by description, survives connector renames)
+    # so workspace-manager.sh reapplies it instead of resetting to SDR on
+    # the next hyprland.start/config.reloaded/monitor.added/removed.
+    hdr_save_choice "$desc" "$want"
 }
 
 refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }

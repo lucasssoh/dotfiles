@@ -175,7 +175,7 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 1,
+        gaps_in          = 3,
         -- 0 on right/left so tiled windows sit flush against the screen's
         -- left/right edges, same as the quickshell bar itself (see
         -- quickshell/bar/shell.qml's PanelWindow margins: 0). Top/bottom
@@ -183,8 +183,8 @@ hl.config({
         -- left fields on this build, not a CSS-shorthand string -- that
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
-        gaps_out         = { top = 8, right = 8, bottom = 6, left = 8 },
-        border_size      = 1,
+        gaps_out         = { top = 10, right = 8, bottom = 6, left = 8 },
+        border_size      = 2,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
@@ -208,7 +208,7 @@ hl.config({
             -- crops of all 4 corners before touching this).
             active_border = {
                 colors = {
-                    "rgba(E5E5EABF)",  -- text, ~75% alpha -- the highlight tip, top-left
+                    "rgba(f5f5fABF)",  -- text, ~75% alpha -- the highlight tip, top-left
                     "rgba(8E8E9373)",  -- subtle, ~45% alpha -- shoulder of the curve
                     "rgba(63636647)",  -- muted,  ~28% alpha -- the curve's terminator/mid-tone
                     "rgba(3A3A3C26)",  -- overlay, ~15% alpha -- entering shadow
@@ -221,7 +221,7 @@ hl.config({
             -- opacity drop on inactive windows (inactive_opacity/dim_inactive
             -- below are both off), so an inactive rim would just compete
             -- with that single signal instead of reinforcing it.
-            inactive_border = "rgba(0, 0, 0, 0)",
+            inactive_border = "rgba(3E3E3373)",
 
         },
         layout           = "dwindle",
@@ -237,7 +237,7 @@ hl.config({
         -- 3 -> 10: softer, more premium silhouette -- the glass border
         -- gradient above needs generous rounding to read as a curved edge
         -- rather than a thin outline on square corners.
-        rounding = 10,
+        rounding = 12,
         -- Enabled, unlike this file's history: the earlier "not worth the
         -- regression risk" reasoning was specifically about the BAR --
         -- always on screen, aboveWindows, composited over fullscreen HDR

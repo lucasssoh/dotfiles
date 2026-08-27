@@ -26,8 +26,12 @@ flock 200
 # workspace-manager.sh — single engine: active screens, grid position,
 # and max refresh rate, resolved BY ROLE (never by connector name —
 # names can change between plugs, e.g. DP-2 becoming DP-9 mid-session).
-# Every external screen is always set to SDR here: HDR is never
-# auto-applied, it's a manual choice via waybar/scripts/hdr.sh (below).
+# Every external screen's HDR/SDR state is reapplied here from whatever the
+# user last picked via waybar/scripts/hdr.sh (persisted in hdr-state.json,
+# see hdr-settings.sh) — never forced to SDR. HDR itself is still never
+# auto-*enabled* the first time a screen is seen (unknown screen -> SDR
+# default, same as before); this only stops an already-made choice from
+# getting silently undone by a reload/hotplug.
 #
 #   Internal  = 1st monitor whose name matches eDP*/LVDS*/DSI*
 #   external  = 1st remaining monitor, in `hyprctl monitors` order
@@ -104,6 +108,7 @@ flock 200
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
 LAYOUT_FILE="$HOME/.config/hypr/monitor-layout.json"
 SCALE_FILE="$HOME/.config/hypr/scale.json"
+source "$HOME/.config/hypr/scripts/hdr-settings.sh"
 
 # ---- Desired active screens (persistent state, defaults if absent/invalid) ----
 layout_mode="both"
@@ -312,10 +317,15 @@ monitor_pos() {
 # ---- Applies every active monitor's real grid position/mode/scale in ONE
 # atomic `hyprctl eval` call (every `hl.monitor()` statement joined by
 # ";", one Lua chunk) -- not one hyprctl call per monitor like earlier
-# versions of this script. SDR is ALWAYS the default on externals here
-# (desktop, startup, reload, hotplug): HDR is never auto-applied, since
-# it would skew the colors of any non-HDR content -- it's a strictly
-# manual choice via waybar/scripts/hdr.sh, independent from this script.
+# versions of this script. Each external's bitdepth/cm (SDR vs HDR) is
+# reapplied from hdr_last_choice() (hdr-settings.sh) here -- i.e. whatever
+# the user last picked via waybar/scripts/hdr.sh for THAT PHYSICAL SCREEN
+# (keyed by description, survives connector renames), defaulting to SDR
+# only the first time a screen is ever seen. This used to hardcode SDR
+# unconditionally on every desktop/startup/reload/hotplug, silently
+# undoing a manual HDR choice each time -- HDR itself is still never
+# auto-*enabled* out of nowhere, only ever re-asserted once the user has
+# actually turned it on once via hdr.sh.
 # Every external shares the same scale (scale.json only has one
 # "external" entry so far -- a 3rd+ screen with its own scale needs is a
 # future extension, not requested yet).
@@ -385,11 +395,17 @@ done
 # the classic default-(0,0)-vs-default-(0,0) solo swap.
 outgoing_folded_json="{}"
 apply_targets() {
-    local n scale extra w h best_rr mode x y stmts=""
+    local n scale extra w h best_rr mode x y stmts="" desc want
     for n in "$internal" "${externals[@]}"; do
         [[ "${active[$n]:-false}" == true ]] || continue
-        if [[ "$n" == "$internal" ]]; then scale="$int_scale"; extra=""
-        else scale="$ext_scale"; extra=", bitdepth = 8, cm = \"auto\""; fi
+        if [[ "$n" == "$internal" ]]; then
+            scale="$int_scale"; extra=""
+        else
+            scale="$ext_scale"
+            desc=$(jq -r --arg m "$n" '.[] | select(.name==$m) | .description // empty' <<<"$mons_json")
+            want="$(hdr_last_choice "$desc")"
+            extra=", $(hdr_extra_clause "$want")"
+        fi
         w=$(jq -r --arg m "$n" '.[] | select(.name==$m) | .width'  <<<"$mons_json")
         h=$(jq -r --arg m "$n" '.[] | select(.name==$m) | .height' <<<"$mons_json")
         best_rr="$(best_refresh "$n")"
@@ -496,9 +512,34 @@ for i in 6 7 8 9 10; do apply_workspace_rule "$i" "$range610_target"; done
 # not highlighting it at all, until something else forced a resync. This
 # is exactly the "need SUPER+C to make multi-monitor sort itself out"
 # symptom -- compact-workspaces.sh's own refreshWorkspaces call was
-# fixing it as an unrelated side effect. Silently a no-op if quickshell
-# isn't running/installed (still using waybar, or between sessions).
-qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 || true
+# fixing it as an unrelated side effect.
+#
+# Retried, not fire-and-forget: on the hyprland.start path (see
+# hypr/hyprland.lua), `quickshell -c bar` and this script are launched
+# within the same synchronous exec-once block, microseconds apart -- but
+# quickshell needs real wall-clock time afterwards to parse its QML and
+# bind its "bar" IPC target, while this script reaches this line almost
+# immediately (its own work above is just a handful of hyprctl/jq calls).
+# A single `qs ipc call` fired that early hits no running instance yet
+# and fails silently -- CONFIRMED via `qs -c bar ipc call bar
+# refreshWorkspaces` against a not-yet-started/killed quickshell: exit
+# 255, "No running instances for ... shell.qml" (a genuinely wrong
+# target/function name against a LIVE instance, by contrast, still exits
+# 0 -- so the exit code IS trustworthy here, just not against a live
+# instance). Result: the bar's very first paint shows only whatever
+# workspaces already existed natively (e.g. one per monitor, before this
+# script's own consolidation) instead of the full persistent 1-10 set --
+# and nothing retries it afterwards, since hl.workspace_rule() itself
+# never emits the raw IPC event that shell.qml's onRawEvent fallback
+# would otherwise catch (see shell.qml's own header comment on that
+# handler). Retrying here for a few seconds covers exactly that gap;
+# silently gives up (`|| true`) past the deadline -- still a no-op if
+# quickshell isn't running/installed at all (waybar fallback, or between
+# sessions), same as before.
+for _ in $(seq 1 20); do
+    qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 && break
+    sleep 0.25
+done || true
 
 # ---- Hands focus back to whoever had it before the migration step above
 #      possibly switched a monitor's visible workspace out from under it.
