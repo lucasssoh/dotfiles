@@ -73,6 +73,11 @@ Singleton {
 
     onSinkVolumeChanged: root.show("volume", sinkVolume, sinkMuted)
     onSinkMutedChanged: root.show("volume", sinkVolume, sinkMuted)
+    // Mic volume is scroll-adjustable too (AudioInput.qml's own
+    // MouseArea.onWheel, pre-existing, not something added this pass) --
+    // missed wiring this one up alongside the mute handler below at
+    // first, so scrolling changed the level but never popped the OSD.
+    onSourceVolumeChanged: root.show("mic", sourceVolume, sourceMuted)
     onSourceMutedChanged: root.show("mic", sourceVolume, sourceMuted)
 
     // ---- brightness: IPC-poked, one-shot sysfs read ----
