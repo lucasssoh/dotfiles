@@ -816,6 +816,11 @@ ShellRoot {
             focusable: false
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
+            // Missed on the first pass -- only the main bar had this.
+            // Found live: a maximized/fullscreen window covered the OSD
+            // entirely, since without it the popup wasn't necessarily on
+            // top of regular application windows.
+            aboveWindows: true
 
             anchors { bottom: true }
             margins.bottom: 48
