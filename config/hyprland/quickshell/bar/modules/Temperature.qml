@@ -1,38 +1,29 @@
 import QtQuick
-import Quickshell.Io
 import "../theme"
+import "../services"
 
-// Native port of waybar's `temperature` module. Timer + direct sysfs
-// read via FileView, no subprocess. Same simplification as the original
-// inline one-liner: hardcoded to thermal_zone0.
+// Native port of waybar's `temperature` module. Same simplification as
+// the original inline one-liner: hardcoded to thermal_zone0. Sampling
+// lives in the shared SystemStats singleton now -- see its header for
+// why (one bar instance per monitor, temperature is the same number on
+// every screen).
 
 Item {
     id: root
 
-    property int celsius: 0
+    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
+    // reactive form made the pill visibly grow/shrink every time
+    // celsius crossed a digit boundary. valueMetrics measures the
+    // worst-case string ONCE with the real font instead.
+    TextMetrics {
+        id: valueMetrics
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        text: "100"   // padStart(3) never exceeds 3 digits
+    }
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 52)   // 50 -> 52, point 6: 4pt grid
+    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
     implicitHeight: 24
-
-    FileView {
-        id: tempFile
-        path: "/sys/class/thermal/thermal_zone0/temp"
-        blockLoading: true
-    }
-
-    function sample() {
-        tempFile.reload();
-        const raw = parseInt(tempFile.text().trim());
-        root.celsius = isNaN(raw) ? 0 : Math.round(raw / 1000);
-    }
-
-    Timer {
-        interval: 5000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.sample()
-    }
 
     Row {
         id: label
@@ -52,22 +43,24 @@ Item {
         // Moral: there's no one correct anchor mode across icon fonts,
         // has to be re-checked (screenshot, not assumed) per swap.
         Text {
+            id: iconGlyph
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-thermometer
-            color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 15
         }
-        // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars
+        // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars,
+        // no unit (asked to keep it that way).
         Text {
             id: valueLabel
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: String(root.celsius).padStart(3, " ")
-            color: root.celsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            text: String(SystemStats.tempCelsius).padStart(3, " ")
+            color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 13
         }

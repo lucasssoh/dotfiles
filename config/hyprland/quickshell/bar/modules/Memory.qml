@@ -1,46 +1,27 @@
 import QtQuick
-import Quickshell.Io
 import "../theme"
+import "../services"
 
-// Native port of waybar's `memory` module. Timer + direct /proc/meminfo
-// read via FileView -- no free/awk subprocess.
+// Native port of waybar's `memory` module. Sampling lives in the shared
+// SystemStats singleton now -- see its header for why (one bar instance
+// per monitor, memory usage is the same number on every screen).
 
 Item {
     id: root
 
-    property real usedGB: 0
-    property int usedPct: 0
+    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
+    // reactive form made the pill visibly grow/shrink as usedGB's digit
+    // count changed. valueMetrics measures the worst-case string ONCE
+    // with the real font instead.
+    TextMetrics {
+        id: valueMetrics
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        text: "199.9GB"
+    }
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 72)   // 70 -> 72, point 6: 4pt grid
+    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
     implicitHeight: 24
-
-    FileView {
-        id: memFile
-        path: "/proc/meminfo"
-        blockLoading: true
-    }
-
-    function sample() {
-        memFile.reload();
-        const lines = memFile.text().split("\n");
-        let total = 0, avail = 0;
-        for (let i = 0; i < lines.length; i++) {
-            const l = lines[i];
-            if (l.indexOf("MemTotal:") === 0) total = parseInt(l.split(/\s+/)[1]);
-            else if (l.indexOf("MemAvailable:") === 0) avail = parseInt(l.split(/\s+/)[1]);
-        }
-        const usedKB = total - avail;
-        root.usedGB = usedKB / 1024 / 1024;
-        root.usedPct = total > 0 ? Math.round(100 * usedKB / total) : 0;
-    }
-
-    Timer {
-        interval: 5000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.sample()
-    }
 
     Row {
         id: label
@@ -51,11 +32,12 @@ Item {
         // what measured aligned for Phosphor -- see Temperature.qml's
         // comment for the full reasoning/history.
         Text {
+            id: iconGlyph
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-memory
-            color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.memUsedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 15
         }
@@ -64,8 +46,10 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: root.usedGB.toFixed(1) + "G"
-            color: root.usedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            // "G" -> "GB" (asked for, across all of METRICS: an
+            // unambiguous unit rather than a bare letter).
+            text: SystemStats.memUsedGB.toFixed(1) + "GB"
+            color: SystemStats.memUsedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 13
         }

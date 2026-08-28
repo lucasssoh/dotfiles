@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import Quickshell.Networking
 import "../theme"
 
 // Dedicated Ethernet module, asked for alongside Bluetooth/Network:
@@ -13,60 +14,39 @@ import "../theme"
 // status-only at first, because back then neither Orbit (no dedicated
 // wired tab) nor Balise (not yet wired into the bar) was an obvious
 // click target; the cutover settled it.
+//
+// State used to come from a `nmcli monitor` watcher triggering a
+// re-run `nmcli`/awk script on every change. Quickshell.Networking's
+// WiredDevice.hasLink (cable present, DBus-pushed) and .connected
+// (actively carrying an IP) replace both -- plain reactive binding,
+// zero nmcli process.
 
 Item {
     id: root
 
-    // "off": no cable plugged in (NetworkManager's own "unavailable" --
-    // no carrier), or no ethernet device/unmanaged at all.
-    // "on": cable plugged in, device ready ("disconnected" -- NM's real
-    // state once carrier is present but nothing's activated on it yet).
+    // "off": no cable plugged in (WiredDevice.hasLink false), or no
+    // ethernet device at all.
+    // "on": cable plugged in (hasLink), nothing activated on it yet.
     // "connected": actively carrying an IP.
-    property string state: "off"
+    // Best-across-all-wired-devices, not "first one found" -- a machine
+    // can have more than one ethernet-type row (a real NIC plus e.g.
+    // docker's veth), same reasoning the old nmcli version used.
+    // "connected" beats "on" (cable in, idle) beats "off".
+    readonly property string state: {
+        const devices = Networking.devices.values;
+        let hasLinkOnly = false;
+        for (let i = 0; i < devices.length; i++) {
+            const d = devices[i];
+            if (d.type !== DeviceType.Wired) continue;
+            if (d.connected) return "connected";
+            if (d.hasLink) hasLinkOnly = true;
+        }
+        return hasLinkOnly ? "on" : "off";
+    }
 
     // Icon-only, same narrow floor as Bluetooth.qml/Network.qml.
     implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
-
-    function poll() { if (!proc.running) proc.running = true; }
-
-    Process {
-        id: proc
-        // Best-across-all-ethernet-devices, not "first line" -- a
-        // machine can have more than one ethernet-type row (a real NIC
-        // plus e.g. docker's veth/unmanaged interfaces), and nmcli's own
-        // listing order isn't guaranteed to put the real NIC first.
-        // "connected" beats "disconnected" (cable in, idle) beats
-        // everything else (unavailable/unmanaged/absent -> "off").
-        command: ["bash", "-c", `
-lines=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null | awk -F: '$2=="ethernet"')
-if printf '%s\\n' "$lines" | grep -q ':connected$'; then
-    printf 'connected'
-elif printf '%s\\n' "$lines" | grep -q ':disconnected$'; then
-    printf 'on'
-else
-    printf 'off'
-fi
-`]
-        stdout: StdioCollector {
-            onStreamFinished: root.state = this.text.trim() || "off"
-        }
-    }
-
-    // Event-driven like Network.qml's own watcher -- a persistent `nmcli
-    // monitor` triggers a cheap one-shot re-query on any connectivity
-    // change (cable plugged/unplugged, link up/down) instead of polling.
-    Process {
-        id: watcher
-        command: ["nmcli", "monitor"]
-        running: true
-        stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => { if (line.trim() !== "" && !proc.running) proc.running = true; }
-        }
-    }
-
-    Component.onCompleted: root.poll()
 
     // Point 4 (HIG "clarity": color carries state, not decoration) --
     // "off" (no wired device at all) is the genuinely inactive state,
@@ -95,19 +75,17 @@ fi
         font.pixelSize: 16
     }
 
-    // Same shape as Bluetooth.qml: a real Process with onExited re-polling,
-    // so the icon updates as soon as the panel is done rather than waiting
-    // for the next nmcli monitor event.
+    // No more onExited: root.poll() here -- state is DBus-pushed now, it
+    // updates on its own as soon as NetworkManager reflects whatever
+    // these did.
     Process {
         id: pickerProc
         command: ["bash", "-c", "$HOME/.config/waybar/scripts/balise-toggle.sh ethernet"]
-        onExited: root.poll()
     }
 
     Process {
         id: nmtuiProc
         command: ["wezterm", "start", "--class", "nm-tui-float", "--", "nmtui"]
-        onExited: root.poll()
     }
 
     MouseArea {

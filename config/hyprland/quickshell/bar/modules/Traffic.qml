@@ -1,7 +1,6 @@
 import QtQuick
-import Quickshell
-import Quickshell.Io
 import "../theme"
+import "../services"
 
 // Split out of Network.qml (asked for): that module used to show BOTH
 // the connection type (wifi/ethernet/none) AND the download rate in one
@@ -11,86 +10,38 @@ import "../theme"
 // icon, same "simple and stable" treatment Bluetooth.qml already got
 // once its own battery % was dropped.
 //
-// Own interface-detection Process/Timer pair, not shared with
-// Network.qml's -- this codebase doesn't have a cross-module state-
-// sharing precedent for polled system data (every METRICS stat polls
-// independently, see Cpu.qml/Memory.qml/etc.), so this follows the same
-// convention rather than introducing a new one. Known minor cost: two
-// `nmcli monitor` watchers instead of one, same category as the
-// per-monitor duplicated Timer polling already flagged elsewhere in this
-// bar -- not fixed here either.
+// Interface detection + rate sampling now live in the shared SystemStats
+// singleton -- see its header for why. This used to run its OWN `nmcli
+// monitor` watcher and its own interface-detection Process, explicitly
+// NOT shared with Network.qml's (see that module's separate detection),
+// on the reasoning that this codebase had no cross-module state-sharing
+// precedent for polled system data. That was true until SystemStats
+// existed for Cpu/Memory/Temperature/Fan; once it did, folding Traffic's
+// nmcli watcher in too was the same fix for the same reason: the bar is
+// one instance PER MONITOR, so "own watcher, not shared" meant one
+// `nmcli monitor` process and one detection script per screen, for the
+// exact same interface/rate. Network.qml still runs its own separate
+// detection for the connection-type icon -- not touched here, still a
+// known (smaller) duplication, same category, just out of scope for
+// this pass.
 
 Item {
     id: root
 
-    property string iface: ""
-    property string kind: "none"   // "wifi" | "ethernet" | "none"
-    property real prevBytes: -1
-    property real rateBps: 0
+    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
+    // reactive form made the pill visibly grow/shrink as the rate
+    // string's length changed (B/s -> K/s -> M/s, digit count within
+    // each). valueMetrics measures the worst-case string ONCE with the
+    // real font instead.
+    TextMetrics {
+        id: valueMetrics
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        text: "999.9M/s"
+    }
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 88)
+    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
     implicitHeight: 24
-
-    Process {
-        id: watcher
-        command: ["nmcli", "monitor"]
-        running: true
-        stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => { if (line.trim() !== "" && !detect.running) detect.running = true; }
-        }
-    }
-
-    Process {
-        id: detect
-        command: ["bash", "-c", `
-e=$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="ethernet" && $3=="connected" {print $1; exit}')
-w=$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="wifi" && $3=="connected" {print $1; exit}')
-if [ -n "$e" ]; then
-    printf '{"kind":"ethernet","iface":"%s"}' "$e"
-elif [ -n "$w" ]; then
-    printf '{"kind":"wifi","iface":"%s"}' "$w"
-else
-    printf '{"kind":"none","iface":""}'
-fi
-`]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const obj = JSON.parse(this.text.trim());
-                    if (obj.iface !== root.iface) {
-                        root.prevBytes = -1;   // new interface -> discard the old delta baseline
-                        rxFile.path = obj.iface !== "" ? "/sys/class/net/" + obj.iface + "/statistics/rx_bytes" : "";
-                    }
-                    root.kind = obj.kind;
-                    root.iface = obj.iface;
-                } catch (e) {}
-            }
-        }
-    }
-
-    Component.onCompleted: detect.running = true
-
-    FileView {
-        id: rxFile
-        blockLoading: true
-    }
-
-    function sample() {
-        if (root.iface === "") { root.rateBps = 0; return; }
-        rxFile.reload();
-        const v = parseInt(rxFile.text().trim());
-        if (isNaN(v)) return;
-        if (root.prevBytes >= 0) root.rateBps = Math.max(0, (v - root.prevBytes) / 2);
-        root.prevBytes = v;
-    }
-
-    Timer {
-        interval: 2000
-        running: true
-        repeat: true
-        onTriggered: root.sample()
-    }
 
     // One combined string here (unlike Network.qml's old two-row stack)
     // -- this sits among METRICS' other plain single-row stats (Cpu's
@@ -110,22 +61,23 @@ fi
         // ph-arrows-down-up -- asked for specifically: a bidirectional
         // arrow reading as "traffic" rather than a connection-type
         // glyph (that's Network.qml's job now). Still really just the
-        // download side underneath (root.rateBps, rx_bytes only) -- the
-        // glyph is about what this NUMBER represents (data moving),
-        // not a claim that upload is being measured too.
+        // download side underneath (SystemStats.netRateBps, rx_bytes
+        // only) -- the glyph is about what this NUMBER represents (data
+        // moving), not a claim that upload is being measured too.
         Text {
+            id: iconGlyph
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: ""   // ph-arrows-down-up
-            color: root.kind === "none" ? "#636366" : "#f2f2f7"
+            color: SystemStats.netKind === "none" ? "#636366" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 15
         }
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: root.kind === "none" ? "----o/s" : root.formatRate(root.rateBps)
-            color: root.kind === "none" ? "#636366" : "#f2f2f7"
+            text: SystemStats.netKind === "none" ? "----o/s" : root.formatRate(SystemStats.netRateBps)
+            color: SystemStats.netKind === "none" ? "#636366" : "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 13
         }

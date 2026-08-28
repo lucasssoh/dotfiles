@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
+import Quickshell.Networking
 import "../theme"
 
 // Native-ish port of waybar's `network` module -- connection-type icon
@@ -9,73 +9,46 @@ import "../theme"
 // leaving this "simple and stable" like Bluetooth.qml's own icon-only
 // module became once its battery % was dropped.
 //
-// WHICH interface is active: event-driven, a persistent `nmcli monitor`
-// watcher triggers a cheap one-shot re-query only when connectivity
-// actually changes -- same pattern as the old network StreamModule.
-// Own detect Process, not shared with Traffic.qml's -- see that file's
-// header comment for why.
+// WHICH interface is active, and wifi's signal strength: both plain
+// reactive bindings over Quickshell.Networking now (NetworkManager's own
+// DBus objects, same family as Bluetooth.qml/Battery.qml) -- no more
+// `nmcli monitor` watcher, no more re-run `nmcli`/awk script on every
+// change or on a 10s poll for signal drift. signalStrength is already a
+// live double on WifiNetwork, no parsing needed. Own detect logic here,
+// not shared with SystemStats.qml's (same shape, different consumer) --
+// harmless now: Networking itself is the single shared native source
+// both read from, there's no process left to duplicate.
 
 Item {
     id: root
 
-    property string iface: ""
-    property string kind: "none"   // "wifi" | "ethernet" | "none"
-    property int wifiSignal: 0     // 0-100, only meaningful when kind === "wifi"
+    // Ethernet beats wifi if both happen to be connected, same priority
+    // the old nmcli script used.
+    readonly property var activeDevice: {
+        const devices = Networking.devices.values;
+        let wifi = null;
+        for (let i = 0; i < devices.length; i++) {
+            const d = devices[i];
+            if (!d.connected) continue;
+            if (d.type === DeviceType.Wired) return d;
+            if (d.type === DeviceType.Wifi) wifi = d;
+        }
+        return wifi;
+    }
+    readonly property string kind: !activeDevice ? "none" : (activeDevice.type === DeviceType.Wired ? "ethernet" : "wifi")   // "wifi" | "ethernet" | "none"
+    readonly property int wifiSignal: {   // 0-100, only meaningful when kind === "wifi"
+        if (kind !== "wifi" || !activeDevice) return 0;
+        const nets = activeDevice.networks.values;
+        for (let i = 0; i < nets.length; i++) {
+            if (nets[i].connected) return Math.round(nets[i].signalStrength);
+        }
+        return 0;
+    }
 
     // Icon-only, same narrow floor as Bluetooth.qml/Performance.qml's
     // own icon-only modules.
     implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
-
-    Process {
-        id: watcher
-        command: ["nmcli", "monitor"]
-        running: true
-        stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => { if (line.trim() !== "" && !detect.running) detect.running = true; }
-        }
-    }
-
-    Process {
-        id: detect
-        command: ["bash", "-c", `
-e=$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="ethernet" && $3=="connected" {print $1; exit}')
-w=$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="wifi" && $3=="connected" {print $1; exit}')
-if [ -n "$e" ]; then
-    printf '{"kind":"ethernet","iface":"%s","signal":0}' "$e"
-elif [ -n "$w" ]; then
-    sig=$(nmcli -t -f IN-USE,SIGNAL dev wifi list ifname "$w" 2>/dev/null | awk -F: '$1=="*" {print $2; exit}')
-    [ -z "$sig" ] && sig=0
-    printf '{"kind":"wifi","iface":"%s","signal":%s}' "$w" "$sig"
-else
-    printf '{"kind":"none","iface":"","signal":0}'
-fi
-`]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const obj = JSON.parse(this.text.trim());
-                    root.kind = obj.kind;
-                    root.iface = obj.iface;
-                    root.wifiSignal = obj.signal || 0;
-                } catch (e) {}
-            }
-        }
-    }
-
-    Component.onCompleted: detect.running = true
-
-    // Signal strength drifts (moving around, interference) without
-    // `nmcli monitor` necessarily firing a connectivity-change line --
-    // this is a deliberate light poll (like cpu/temp/etc.), not free,
-    // kept slow and only while actually on wifi.
-    Timer {
-        interval: 10000
-        running: root.kind === "wifi"
-        repeat: true
-        onTriggered: if (!detect.running) detect.running = true
-    }
 
     // ph-plugs-connected (no dedicated "ethernet" glyph in Phosphor,
     // this is the closest -- a physically plugged-in connection) / ph-

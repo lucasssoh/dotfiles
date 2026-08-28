@@ -1,74 +1,40 @@
 import QtQuick
-import Quickshell.Io
 import "../theme"
+import "../services"
 
-// Native port of waybar's `cpu` module. Still a Timer (there is no
-// kernel/DBus event for "usage changed" -- see shell.qml header), but
-// zero fork per tick: reads /proc/stat and /proc/cpuinfo directly via
-// FileView instead of spawning top/awk/lscpu.
+// Native port of waybar's `cpu` module. Sampling now lives in the shared
+// SystemStats singleton (services/SystemStats.qml) instead of this
+// module polling /proc/stat itself -- see that file's header for why:
+// this is one bar instance per monitor, and CPU usage is the same
+// number on every screen, so one shared sample beats one per monitor.
 //
-// Text matches config.jsonc's format string exactly: "  {usage:>3}
-// {max_frequency:.1f}" -- icon, usage right-padded to 3 chars, NO "%"
-// (waybar's own format string never had one), space, then the highest
+// Text matches config.jsonc's format string for the usage half: "  {usage:>3}"
+// -- right-padded to 3 chars, no "%" (waybar's own format string never
+// had one, and asked to keep it that way for usage specifically). The
+// frequency half DOES carry its unit ("GHz", asked for) -- highest
 // per-core frequency across /proc/cpuinfo's "cpu MHz" lines, in GHz to
-// 1 decimal (also no unit suffix, matching waybar's raw
-// {max_frequency:.1f} interpolation).
+// 1 decimal.
+//
+// Width is a fixed constant, NOT Math.max(label.implicitWidth, ...) --
+// that reactive form used to make the whole pill visibly grow/shrink
+// every time usage crossed a digit boundary (9 -> 10, 99 -> 100) or the
+// GHz decimal changed. valueMetrics below measures the actual worst-case
+// string ONCE, with the real font, so the box is sized right without
+// guessing a pixel number by hand -- same idea as Temperature.qml/
+// Fan.qml/Memory.qml/Traffic.qml now do.
 
 Item {
     id: root
 
-    property real prevTotal: -1
-    property real prevIdle: -1
-    property int usage: 0
-    property real maxGhz: 0
+    TextMetrics {
+        id: valueMetrics
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        text: "100 9.9GHz"   // widest realistic usage+freq combo
+    }
 
-    // Fixed floor: "  100 9.9" is about the widest this ever gets.
-    implicitWidth: Math.max(label.implicitWidth + 20, 76)
+    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
     implicitHeight: 24
-
-    FileView {
-        id: statFile
-        path: "/proc/stat"
-        blockLoading: true
-    }
-
-    FileView {
-        id: cpuInfoFile
-        path: "/proc/cpuinfo"
-        blockLoading: true
-    }
-
-    function sample() {
-        statFile.reload();
-        const line = statFile.text().split("\n")[0];
-        const parts = line.trim().split(/\s+/).slice(1).map(Number);
-        const idle = parts[3] + parts[4];
-        const total = parts.reduce((a, b) => a + b, 0);
-        if (root.prevTotal >= 0) {
-            const dTotal = total - root.prevTotal;
-            const dIdle = idle - root.prevIdle;
-            root.usage = dTotal > 0 ? Math.round(100 * (1 - dIdle / dTotal)) : 0;
-        }
-        root.prevTotal = total;
-        root.prevIdle = idle;
-
-        cpuInfoFile.reload();
-        const matches = cpuInfoFile.text().match(/cpu MHz\s*:\s*([\d.]+)/g) || [];
-        let maxMhz = 0;
-        for (let i = 0; i < matches.length; i++) {
-            const v = parseFloat(matches[i].split(":")[1]);
-            if (v > maxMhz) maxMhz = v;
-        }
-        root.maxGhz = maxMhz / 1000;
-    }
-
-    Timer {
-        interval: 3000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.sample()
-    }
 
     Row {
         id: label
@@ -79,11 +45,12 @@ Item {
         // what measured aligned for Phosphor -- see Temperature.qml's
         // comment for the full reasoning/history.
         Text {
+            id: iconGlyph
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-cpu
-            color: root.usage >= 90 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.cpuUsage >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 15
         }
@@ -92,8 +59,8 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: String(root.usage).padStart(3, " ") + " " + root.maxGhz.toFixed(1)
-            color: root.usage >= 90 ? "#ff6e6e" : "#f2f2f7"
+            text: String(SystemStats.cpuUsage).padStart(3, " ") + " " + SystemStats.cpuMaxGhz.toFixed(1) + "GHz"
+            color: SystemStats.cpuUsage >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 13
         }
