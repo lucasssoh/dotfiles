@@ -164,7 +164,9 @@ hl.bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
 hl.bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
 
 -- Volume, mic and backlight: media keys, no modifier
-hl.bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
+-- -l 1.0: hard-capped at 100%, never boosts past it -- the previous 1.5
+-- (150%) headroom went unused and asked to come out.
+hl.bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
 hl.bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { repeating = true })
 hl.bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })
 hl.bind("+ XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),     { locked = true })

@@ -59,4 +59,11 @@ QtObject {
     // (400) body weight -- the same "icon weight should track the type
     // weight next to it" idea SF Symbols itself is built around.
     readonly property string iconPhosphor: "Phosphor"
+
+    // Bold weight, same "separate family per weight" deal as above --
+    // confirmed via `fc-list` (Phosphor-Bold.ttf -> family "Phosphor-Bold",
+    // not "Phosphor" + font.weight: Font.Bold, which does nothing on this
+    // font). Opt-in per module, same as `mono` -- currently only the OSD
+    // (Osd.qml), asked for specifically ("plus grand et plus gras").
+    readonly property string iconPhosphorBold: "Phosphor-Bold"
 }

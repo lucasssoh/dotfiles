@@ -126,7 +126,10 @@ Item {
         onWheel: (wheel) => {
             if (!root.node || !root.node.audio) return;
             const step = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
-            root.node.audio.volume = Math.max(0, Math.min(1.5, root.node.audio.volume + step));
+            // Capped at 1.0 (100%), not 1.5 -- the boost headroom went
+            // unused and asked to come out, same cap as the media-key
+            // bind in keybinds.lua now uses.
+            root.node.audio.volume = Math.max(0, Math.min(1.0, root.node.audio.volume + step));
         }
     }
 }

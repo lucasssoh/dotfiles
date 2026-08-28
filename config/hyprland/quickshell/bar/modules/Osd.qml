@@ -13,10 +13,10 @@ import "../services"
 // hard-cutting, same "smooth open/close" preference the bar's own
 // header comment already states for Media.qml/ActiveWindow.qml.
 //
-// Horizontal capsule with the FILL itself as the level indicator (asked
-// for, referencing a phone media-volume slider) -- not a thin separate
-// progress bar under an icon+text row like the first pass. Translucent,
-// not a real compositor blur: Hyprland's layerrule blur needs a distinct
+// Horizontal capsule with the FILL itself as the level indicator
+// (referencing a phone media-volume slider), icon only -- no percentage
+// text, the fill already says how much (asked for). Translucent, not a
+// real compositor blur: Hyprland's layerrule blur needs a distinct
 // Wayland layer-shell namespace to target just this popup, and
 // Quickshell hardcodes the same "quickshell" namespace for every
 // PanelWindow in the process (confirmed live via `hyprctl layers -j`
@@ -53,12 +53,17 @@ Rectangle {
         if (kind === "mic") return muted ? "" : "";
         return muted ? "" : "";
     }
-    readonly property string percentText: Math.round(level * 100) + "%"
 
-    // Fill IS the level, not a separate bar -- clipped by the pill's own
-    // rounding (clip: true above), so only its leading edge is a hard
-    // vertical line; the outer edges stay capsule-round for free, no
-    // per-corner radius math needed.
+    // Fill IS the level -- rounded on its own LEFT corners to match the
+    // pill's cap. `clip: true` above only clips to the pill's
+    // rectangular bounding box in QtQuick, not to its rounded silhouette
+    // -- found live: without this, the fill's square corners poked past
+    // the pill's rounded ones. Right corners stay square on purpose:
+    // that edge is the actual level boundary, not the pill's own edge
+    // (matches at 100% since the pill's already-rounded cap sits under
+    // it there anyway). SpringAnimation instead of a plain eased tween
+    // (asked for) -- a physical settle instead of an instant/linear
+    // jump to the new level.
     Rectangle {
         id: fill
         anchors.left: parent.left
@@ -66,40 +71,48 @@ Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width * (pill.muted ? 0 : pill.level)
         color: pill.muted ? "#ff6e6e" : "#a8b4c4"
-        Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        topLeftRadius: pill.radius
+        bottomLeftRadius: pill.radius
+        Behavior on width { SpringAnimation { spring: 3; damping: 0.3 } }
     }
 
-    // Icon + text sit on the fill almost always in practice (it starts
-    // from x:0, and levels are rarely near-zero when this is even
-    // visible) -- dark ink on the light accent fill, same idea as the
-    // reference image's dark glyph on its own bright fill, rather than
-    // white-on-light-silver which measured too low-contrast to read.
-    // Muted is the one state genuinely sitting on the dark translucent
-    // track instead (fill width 0), so it keeps the danger/light pair
-    // the rest of this bar already uses for that state.
-    Row {
+    // Icon only, bigger + the Bold weight (asked for -- Fonts.qml's own
+    // header already flags Phosphor as one separate family PER weight,
+    // not a variable font, so this is Fonts.iconPhosphorBold, not
+    // font.weight: Font.Bold on the Regular family, which would do
+    // nothing). Dark ink on the light accent fill -- it sits on the fill
+    // almost always in practice (fill starts from x:0, levels are rarely
+    // near-zero when this is even visible) -- measured better contrast
+    // than white-on-silver.
+    Text {
         anchors.left: parent.left
         anchors.leftMargin: 16
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        text: pill.iconGlyph
+        color: pill.muted ? "#ff6e6e" : "#0c0c0e"
+        font.family: Fonts.iconPhosphorBold
+        font.pixelSize: 24
+    }
 
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: pill.iconGlyph
-            color: pill.muted ? "#ff6e6e" : "#0c0c0e"
-            font.family: Fonts.iconPhosphor
-            font.pixelSize: 18
-        }
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: pill.muted ? "Muet" : pill.percentText
-            color: pill.muted ? "#f2f2f7" : "#0c0c0e"
-            font.family: Fonts.ui
-            font.pixelSize: 14
-        }
+    // Muted keeps this word: the crossed-out icon alone, at a glance,
+    // reads ambiguous between "muted" and "just an off-state glyph" --
+    // same reasoning Bluetooth.qml/Network.qml distinguish shape per
+    // state instead of leaning on color alone. Also the one state
+    // genuinely sitting on the dark translucent track instead of the
+    // fill (fill width 0 when muted), so it keeps the danger/light color
+    // pair the rest of this bar already uses for that state.
+    Text {
+        anchors.left: parent.left
+        anchors.leftMargin: 48
+        anchors.verticalCenter: parent.verticalCenter
+        visible: pill.muted
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        text: "Muet"
+        color: "#f2f2f7"
+        font.family: Fonts.ui
+        font.pixelSize: 14
     }
 }
