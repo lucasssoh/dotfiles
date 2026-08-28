@@ -37,21 +37,22 @@ import "../services"
 // share one namespace, no per-window override anywhere in the installed
 // QML API). A layerrule on that shared namespace would blur the bar too,
 // continuously, for the whole session -- exactly what hyprland.lua's
-// decoration.blur.enabled comment already argued against doing. (The
-// reference screenshot's blue tint on one side wasn't a deliberate
-// design color either, just whatever sat behind the real macOS panel
-// showing through -- flat translucent fill, no gradient.)
+// decoration.blur.enabled comment already argued against doing.
 //
-// Glass/light-source sheen, kept separate from that blue tint: a soft
-// glow near the top-right corner, standing in for a light catching a
-// glass surface. QtQuick's own Gradient type is linear only (top<->
-// bottom or, via `orientation`, left<->right) -- no radial falloff --
-// and a real RadialGradient would mean pulling in Qt5Compat.
-// GraphicalEffects, another effects module, right after MultiEffect
-// already cost real debugging time this session for a much smaller
-// win. Three overlapping soft-edged circles (plain Rectangles,
-// decreasing opacity outward) approximate the same falloff instead,
-// with zero new risk.
+// Glass treatment: the SAME one shell.qml already uses on METRICS/
+// Launchers/TOOLS, not a bespoke one -- asked for, for consistency
+// with the rest of the bar. That system is a vertical Gradient body
+// (lighter/denser at the top, darker/thinner at the bottom, both stops
+// at the fill's own 0x73 alpha) plus GlassRim.qml traced around the
+// edge as the actual highlight -- a five-stop diagonal-reading ramp
+// raking across the top-left corner, the same one Hyprland's own
+// active-window border, Roue's hub and Balise's panel all use (see
+// GlassRim.qml's header). Two GlassRim instances, like those three
+// blocks: topLeft at full strength, a fainter bottomRight one as a
+// secondary source. (An earlier pass here built its own top-right glow
+// out of overlapping circles instead, before being asked to just reuse
+// this -- simpler, and actually consistent instead of a fourth
+// slightly-different glass recipe in the same bar.)
 
 Rectangle {
     id: card
@@ -63,49 +64,19 @@ Rectangle {
     width: 280
     height: 92
     radius: 20
-    // Bounding-box clip is fine here (unlike the old thick-fill level
-    // indicator, which needed pixel-exact rounded clipping and got it
-    // wrong twice) -- this only trims the soft glow's own overshoot past
-    // the card's edge, sub-pixel correctness genuinely doesn't matter
-    // for an approximate light glow the way it did for a number.
-    clip: true
 
-    // Plain flat translucent fill, not the gradient this had briefly --
-    // the blue tint in the reference screenshot was whatever sat behind
-    // the real macOS panel showing through ITS actual blur, not a
-    // deliberate design color. No blur here (see the header comment
-    // above for why). The light-source GLOW (below, separate from this
-    // fill) is the part of that reference actually being kept.
-    color: Qt.rgba(12 / 255, 12 / 255, 14 / 255, 0.82)
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#733f4450" }
+        GradientStop { position: 1.0; color: "#73060608" }
+    }
 
-    // Glow itself: outer-to-inner, each smaller and less transparent
-    // than the last, positioned to spill in from the top-right corner.
-    // White, not blue (see the header comment on why) -- reads as a
-    // neutral light catching glass, not a colored light source.
-    Rectangle {
-        x: card.width - width * 0.55
-        y: -height * 0.55
-        width: 160
-        height: width
-        radius: width / 2
-        color: Qt.rgba(1, 1, 1, 0.05)
-    }
-    Rectangle {
-        x: card.width - width * 0.6
-        y: -height * 0.45
-        width: 110
-        height: width
-        radius: width / 2
-        color: Qt.rgba(1, 1, 1, 0.06)
-    }
-    Rectangle {
-        x: card.width - width * 0.65
-        y: -height * 0.35
-        width: 70
-        height: width
-        radius: width / 2
-        color: Qt.rgba(1, 1, 1, 0.07)
-    }
+    // target left unset (null) -- these are plain CHILDREN of card, not
+    // siblings, so GlassRim's own child-mode default (trace `parent`)
+    // is correct as-is. `card` is a plain Rectangle here, not a
+    // Block.qml instance with content-reparenting, so there's no
+    // separate "sibling" wiring to do the way metrics/tools need it.
+    GlassRim { cornerRadius: card.radius }
+    GlassRim { cornerRadius: card.radius; lightOrigin: "bottomRight"; strength: 0.45 }
 
     opacity: OsdState.osdVisible ? 1 : 0
     scale: OsdState.osdVisible ? 1 : 0.9
