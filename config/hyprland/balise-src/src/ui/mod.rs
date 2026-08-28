@@ -2,6 +2,7 @@ pub mod crt_frame;
 pub mod detail;
 pub mod device_list;
 pub mod header;
+pub mod home;
 pub mod icon;
 pub mod network_list;
 pub mod saved_list;

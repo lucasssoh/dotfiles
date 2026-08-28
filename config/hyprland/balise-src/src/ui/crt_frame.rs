@@ -265,14 +265,16 @@ impl Default for CrtFrame {
 
 impl CrtFrame {
     /// `outer_radius`/`inner_radius`/`margin` mirror the CSS values this
-    /// replaces (`.balise-panel`'s 16px, `.balise-panel-inner`'s 14.5px
-    /// and 1.5px margin -- see balise/style.css). `bulge` is the "petit
-    /// bend" itself: how far a straight edge's own midpoint bows outward,
-    /// same parameter Quickshell's Block.qml/GlassRim.qml expose.
+    /// replaces (`.balise-panel`'s 20px, `.balise-panel-inner`'s 18.5px
+    /// and 1.5px margin -- see balise/style.css). 16/14.5 originally,
+    /// bumped "un peu plus" (asked for, panel-wide). `bulge` is the
+    /// "petit bend" itself: how far a straight edge's own midpoint bows
+    /// outward, same parameter Quickshell's Block.qml/GlassRim.qml
+    /// expose.
     pub fn new() -> Self {
         let obj: Self = glib::Object::builder().build();
-        obj.imp().outer_radius.set(16.0);
-        obj.imp().inner_radius.set(14.5);
+        obj.imp().outer_radius.set(20.0);
+        obj.imp().inner_radius.set(18.5);
         obj.imp().margin.set(1.5);
         obj.imp().bulge.set(4.0);
         obj

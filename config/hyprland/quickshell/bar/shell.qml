@@ -196,27 +196,32 @@ ShellRoot {
             implicitHeight: 31
 
             // ── ONE BAR ───────────────────────────────────────
-            // Clock + Workspaces sit dead center of the screen and never
-            // move -- ActiveWindow and Media (mpris) grow OUTWARD away
-            // from that fixed center point, asked for. The previous
-            // approach (a single Row inside one Block, horizontalCenter-
-            // anchored) kept the BLOCK's own center fixed, but Clock/
-            // Workspaces still visibly shifted whenever ActiveWindow --
-            // to their left in that Row -- changed width, since Row lays
-            // everything out sequentially from its left edge. Now
-            // centerRow is anchored straight to the screen's
-            // horizontalCenter and nothing else in here can move it;
-            // leftGroup/rightGroup are anchored OFF centerRow's own edges
-            // (not off each other, not off a screen edge), so their
-            // growth only ever extends away from the center, never
+            // Workspaces sits dead center of the screen and never moves --
+            // ActiveWindow and Media (mpris) grow OUTWARD away from that
+            // fixed center point, asked for. The previous approach (a
+            // single Row inside one Block, horizontalCenter-anchored) kept
+            // the BLOCK's own center fixed, but Workspaces still visibly
+            // shifted whenever ActiveWindow -- to its left in that Row --
+            // changed width, since Row lays everything out sequentially
+            // from its left edge. Now centerRow is anchored straight to
+            // the screen's horizontalCenter and nothing else in here can
+            // move it; leftGroup/rightGroup are anchored OFF centerRow's
+            // own edges (not off each other, not off a screen edge), so
+            // their growth only ever extends away from the center, never
             // toward it. The background (still Modules.Block, for its
             // shared corner-radius/color logic) has no content of its
             // own any more -- its x/width are bound straight to
             // leftGroup/rightGroup's actual on-screen extents instead of
             // Block's usual Row-implicitWidth auto-sizing, so the one
             // visible pill still reads as a single shape spanning
-            // window ⟷ mpris with clock/workspaces floating, unmoving,
-            // in the middle of it.
+            // window ⟷ mpris with workspaces floating, unmoving, in the
+            // middle of it.
+            //
+            // Clock used to sit here too -- moved into the tools pill
+            // (right before the power dot) and given a date alongside it,
+            // asked for. centerRow keeps its name/Row wrapper even with a
+            // single child now, since nothing else about this anchoring
+            // scheme changes.
             Item {
                 id: barRow
                 anchors.top: parent.top
@@ -239,7 +244,6 @@ ShellRoot {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 0
-                    Modules.Clock {}
                     Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
                 }
 
@@ -712,14 +716,19 @@ ShellRoot {
                     // snaps this pill's width instantly instead of
                     // triggering a smooth (but then near-continuous)
                     // resize. No more #34383f contrast background behind
-                    // these 4 -- asked for, sits directly on the pill's own
+                    // these -- asked for, sits directly on the pill's own
                     // translucent fill now, same as everything else in it.
+                    //
+                    // Bluetooth/Network/Ethernet's three separate icons
+                    // replaced by BaliseButton -- one consolidated bordered
+                    // block (own badge+GlassRim, like Hdr) that opens
+                    // Balise directly, asked for alongside Balise itself
+                    // dropping its tab-header concept. The three old
+                    // modules are left in the repo, just unreferenced here.
                     Row {
                         Modules.AudioOutput {}
                         Modules.AudioInput {}
-                        Modules.Bluetooth {}
-                        Modules.Network {}
-                        Modules.Ethernet {}
+                        Modules.BaliseButton {}
                     }
 
                     Item { width: 6; height: 1 }
@@ -728,6 +737,13 @@ ShellRoot {
                     // bar (were next to notif/clock/workspaces), asked for:
                     // now sit right of connectivity in this pill instead.
                     Modules.Performance {}
+
+                    Item { width: 6; height: 1 }
+
+                    // Clock (+ date) -- moved out of dead-center (see
+                    // barRow's own comment above) to right before the
+                    // power dot, asked for.
+                    Modules.Clock {}
 
                     Item {
                         implicitWidth: 28

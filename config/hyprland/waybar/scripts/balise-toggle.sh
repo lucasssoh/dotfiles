@@ -2,10 +2,14 @@
 set -euo pipefail
 
 # =========================================================
-# balise-toggle.sh <tab> — toggles Balise on the given tab
-# (wifi|bluetooth|ethernet),
-# first closing swaync if it's open -- both panels occupy the same corner
-# (top-right) and must never be open at the same time.
+# balise-toggle.sh [tab] — toggles Balise, optionally forcing it onto the
+# given tab (wifi|bluetooth|ethernet), first closing swaync if it's open --
+# both panels occupy the same corner (top-right) and must never be open at
+# the same time.
+#
+# tab is now OPTIONAL: the consolidated bar block (BaliseButton.qml) has
+# no per-icon tab of its own to force any more -- it just opens Balise on
+# whatever tab it last showed, same as calling `balise toggle` directly.
 # =========================================================
 
 # ~/.local/bin (where install.sh puts balise) isn't in the PATH of
@@ -14,4 +18,8 @@ set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 
 swaync-client -cp >/dev/null 2>&1 || true
-balise toggle --tab "${1:?usage: balise-toggle.sh <wifi|bluetooth|ethernet>}"
+if [ -n "${1:-}" ]; then
+    balise toggle --tab "$1"
+else
+    balise toggle
+fi

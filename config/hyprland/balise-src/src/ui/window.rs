@@ -31,6 +31,7 @@ use std::rc::Rc;
 use super::detail::{DetailTarget, DetailView};
 use super::device_list::DeviceList;
 use super::header::Header;
+use super::home::HomeView;
 use super::network_list::NetworkList;
 use super::saved_list::SavedList;
 use super::wired_list::WiredList;
@@ -41,12 +42,16 @@ pub struct BaliseWindow {
     root_revealer: gtk::Revealer,
     config: Rc<RefCell<Config>>,
     header: Header,
+    home_view: HomeView,
     network_list: NetworkList,
     saved_list: SavedList,
     device_list: DeviceList,
     wired_list: WiredList,
     detail_view: DetailView,
-    /// Tab to return to when leaving the detail page.
+    /// Page to return to when leaving whatever subpage is currently
+    /// showing -- "home", or one of "wifi"/"bluetooth"/"ethernet" when a
+    /// further drill-in (endpoint detail, saved networks, hidden
+    /// network) was reached from inside that section.
     detail_origin: Rc<RefCell<String>>,
     stack: gtk::Stack,
     close_bar: gtk::Button,
@@ -178,6 +183,7 @@ impl BaliseWindow {
             .transition_duration(config.stack_transition_duration)
             .build();
 
+        let home_view = HomeView::new();
         let network_list = NetworkList::new();
         let saved_list = SavedList::new();
         let device_list = DeviceList::new();
@@ -207,6 +213,12 @@ impl BaliseWindow {
         hidden_box.append(&hidden_password_entry);
         hidden_box.append(&hidden_btn_row);
 
+        // "home" first: with a slide transition, GTK animates according
+        // to child order, so entering any section slides in from the
+        // right and going back slides out to the right -- the same
+        // "drilling in" feel every other subpage below already has, now
+        // starting one level higher up.
+        stack.add_named(home_view.widget(), Some("home"));
         stack.add_named(network_list.widget(), Some("wifi"));
         stack.add_named(device_list.widget(), Some("bluetooth"));
         stack.add_named(wired_list.widget(), Some("ethernet"));
@@ -216,16 +228,9 @@ impl BaliseWindow {
         // above).
         stack.add_named(saved_list.widget(), Some("saved"));
         stack.add_named(&hidden_box, Some("hidden"));
-        // Added last on purpose: with a slide transition, GTK animates
-        // according to child order, so entering the detail page slides
-        // in from the right and going back slides out to the right --
-        // which is what "drilling in" should feel like. Same reason
-        // "saved"/"hidden" are added right before it rather than among
-        // the three tabs above: all four are reached the same way (a
-        // button on the WiFi tab, or a row's gear), so they should all
-        // slide in from the right the same way too.
+        // Added last on purpose, same ordering reasoning as "home" above.
         stack.add_named(detail_view.widget(), Some("detail"));
-        stack.set_visible_child_name("wifi");
+        stack.set_visible_child_name("home");
         stack.set_size_request(270, 380);
         panel_inner.append(&stack);
 
@@ -445,12 +450,13 @@ impl BaliseWindow {
             root_revealer,
             config: Rc::new(RefCell::new(config)),
             header,
+            home_view,
             network_list,
             saved_list,
             device_list,
             wired_list,
             detail_view,
-            detail_origin: Rc::new(RefCell::new("wifi".to_string())),
+            detail_origin: Rc::new(RefCell::new("home".to_string())),
             stack,
             close_bar,
             fallback_css,
@@ -489,6 +495,10 @@ impl BaliseWindow {
         &self.header
     }
 
+    pub fn home_view(&self) -> &HomeView {
+        &self.home_view
+    }
+
     pub fn network_list(&self) -> &NetworkList {
         &self.network_list
     }
@@ -509,10 +519,14 @@ impl BaliseWindow {
         &self.detail_view
     }
 
-    /// Switches the visible tab, using the transition from config
-    /// (`stack_transition`, now a crossfade by default -- the three tabs
-    /// are siblings, not a sequence, so sliding them implied a
-    /// left/right ordering that doesn't exist).
+    /// Enters a section ("wifi"/"bluetooth"/"ethernet"), reached either
+    /// from a home-page tile or externally via `balise toggle --tab
+    /// <tab>`. Always resets `detail_origin` to "home": whichever way you
+    /// got here, the back button from THIS section should lead back to
+    /// the tile grid, not to wherever some earlier, unrelated drill-in
+    /// left it -- see `leave_detail`'s own comment for the case that
+    /// relies on this (returning here after leaving an endpoint's detail
+    /// page re-asserts it).
     ///
     /// The guard matters: the back button calls `leave_detail` (which
     /// slides) and then re-activates the same tab, and without it we'd
@@ -520,18 +534,27 @@ impl BaliseWindow {
     pub fn show_tab(&self, tab: &str) {
         let already_there = self.stack.visible_child_name().map(|n| n.to_string()).as_deref() == Some(tab);
         if !already_there {
-            self.stack.set_transition_type(parse_stack_transition(&self.config.borrow().stack_transition));
+            // Drilling in from home is a sequence (grid -> section), same
+            // directional feel as every other subpage below -- not the
+            // plain crossfade three sibling tabs used to get.
+            self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
             self.stack.set_visible_child_name(tab);
         }
-        self.header.set_tab(tab);
+        match tab {
+            "wifi" => self.header.set_subpage_mode("WiFi", true),
+            "bluetooth" => self.header.set_subpage_mode("Bluetooth", true),
+            "ethernet" => self.header.set_subpage_mode("Ethernet", false),
+            _ => {}
+        }
+        *self.detail_origin.borrow_mut() = "home".to_string();
     }
 
     /// Drill in: swap the header for "‹ name" and slide the detail page
-    /// in. Remembers which tab we came from so `leave_detail` returns
+    /// in. Remembers which section we came from so `leave_detail` returns
     /// there rather than to a hardcoded default.
     pub fn show_detail(&self, target: DetailTarget) {
         *self.detail_origin.borrow_mut() = target.origin_tab().to_string();
-        self.header.set_detail_mode(Some(&target.title()));
+        self.header.set_subpage_mode(&target.title(), false);
         self.detail_view.set_target(target);
         // Deliberately NOT the configured tab transition: drilling in is
         // a sequence (list -> item), so it keeps a directional slide even
@@ -542,14 +565,21 @@ impl BaliseWindow {
         self.stack.set_visible_child_name("detail");
     }
 
-    /// Back out of the detail page. Returns the tab name restored, so
-    /// the caller can resync that tab's state (app/mod.rs re-reads the
-    /// radio + list for it).
+    /// Back out of whatever subpage is showing. Returns the page name
+    /// restored, so the caller can resync its state (app/mod.rs re-reads
+    /// the radio + list for a section, or does nothing for "home", since
+    /// `activate_tab`'s own "wifi"/"bluetooth"/"ethernet" guard already
+    /// no-ops there).
     pub fn leave_detail(&self) -> String {
         let origin = self.detail_origin.borrow().clone();
-        self.header.set_detail_mode(None);
-        self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
-        self.stack.set_visible_child_name(&origin);
+        match origin.as_str() {
+            "wifi" | "bluetooth" | "ethernet" => self.show_tab(&origin),
+            _ => {
+                self.header.set_home_mode();
+                self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
+                self.stack.set_visible_child_name("home");
+            }
+        }
         origin
     }
 
@@ -606,8 +636,27 @@ impl BaliseWindow {
         if !self.root_revealer.reveals_child() {
             return;
         }
-        self.is_animating.set(true);
 
+        // Reset all the way back to the home page before actually
+        // closing, whatever subpage (a section, an endpoint's detail
+        // page, saved networks, hidden network...) happened to be
+        // showing. Without this, closing mid-navigation left the Stack
+        // sitting exactly there and the header stuck in "‹ <title>" mode
+        // -- the NEXT open showed that leftover subpage instead of the
+        // home tiles, since nothing had ever navigated back out of it.
+        // Jumps straight there regardless of nesting depth (no need to
+        // unwind one leave_detail() at a time) with the Stack's
+        // transition type forced to None: the whole panel is already
+        // fading to nothing at this point, so a slide here would be both
+        // invisible and pointless.
+        if self.stack.visible_child_name().map(|n| n.to_string()).as_deref() != Some("home") {
+            self.header.set_home_mode();
+            self.stack.set_transition_type(gtk::StackTransitionType::None);
+            self.stack.set_visible_child_name("home");
+            *self.detail_origin.borrow_mut() = "home".to_string();
+        }
+
+        self.is_animating.set(true);
         self.root_revealer.set_reveal_child(false);
     }
 
@@ -683,18 +732,18 @@ impl BaliseWindow {
     // was showing underneath; now real Stack pages, navigated exactly
     // like show_detail()/leave_detail() above -- same "‹ title" header,
     // same directional slide, same origin-tab bookkeeping via
-    // `detail_origin`. leave_detail() itself needed no changes: it
-    // already just restores whatever tab `detail_origin` names, with no
-    // idea (or need to know) whether the page being left was the endpoint
-    // detail page, saved networks, or the hidden-network form.
+    // `detail_origin`. leave_detail() itself needed no special-casing for
+    // these two: it already just restores whatever page `detail_origin`
+    // names ("wifi" for both), with no idea (or need to know) whether the
+    // page being left was saved networks or the hidden-network form.
 
     /// Both entry points are WiFi-only features, always reached from a
-    /// button on the WiFi tab -- origin is always "wifi", not read off
-    /// whatever tab happens to be current (there's only one to switch
-    /// away from that could reach either of these).
+    /// button on the WiFi section -- origin is always "wifi", not read
+    /// off whatever section happens to be current (there's only one to
+    /// switch away from that could reach either of these).
     pub fn show_hidden_network(&self) {
         *self.detail_origin.borrow_mut() = "wifi".to_string();
-        self.header.set_detail_mode(Some("Connect to Hidden Network"));
+        self.header.set_subpage_mode("Connect to Hidden Network", false);
         self.hidden_ssid_entry.set_text("");
         self.hidden_password_entry.set_text("");
         self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
@@ -704,7 +753,7 @@ impl BaliseWindow {
 
     pub fn show_saved_networks(&self) {
         *self.detail_origin.borrow_mut() = "wifi".to_string();
-        self.header.set_detail_mode(Some("Saved Networks"));
+        self.header.set_subpage_mode("Saved Networks", false);
         self.stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
         self.stack.set_visible_child_name("saved");
     }

@@ -23,7 +23,7 @@ window,
     background-color: transparent;
     background-image: none;
     box-shadow: none;
-    border-radius: 16px;
+    border-radius: 20px;
 }
 
 /* Border, take two. The "background-clip: padding-box, border-box"
@@ -46,16 +46,18 @@ window,
    itself, curved instead of a plain rounded rect (see window.rs's own
    comment on why: GTK CSS has no clip-path, so the "petit bend" asked
    for can't be expressed as a CSS property no matter how it's written).
-   `border-radius: 16px` stays -- box-shadow below still follows it, and
+   `border-radius: 20px` stays -- box-shadow below still follows it, and
    a shadow's own soft blur hides the couple-px gap between this nominal
-   rounded rect and CrtFrame's actual curved silhouette.
+   rounded rect and CrtFrame's actual curved silhouette. 16px originally,
+   bumped along with everything else in this file (asked for, "un peu
+   plus de radius").
        background: linear-gradient(135deg,
            rgba(234, 234, 238, 0.9) 0%, rgba(170, 172, 180, 0.65) 25%,
            rgba(130, 132, 140, 0.45) 50%, rgba(90, 92, 98, 0.3) 75%,
            rgba(60, 62, 68, 0.18) 100%);
    -- copied verbatim into crt_frame.rs's BORDER_STOPS constant. */
 .balise-panel {
-    border-radius: 16px;
+    border-radius: 20px;
     background: none;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
@@ -74,7 +76,7 @@ window,
 
    margin: 1.5px matches swaync's .control-center border width (this
    session's earlier 3px read as heavier than the rest of the system's
-   glass panels). border-radius 14.5px (16 - 1.5) keeps the inner corner
+   glass panels). border-radius 18.5px (20 - 1.5) keeps the inner corner
    concentric with the outer one. */
 .balise-panel-inner {
     /* Darkened twice now: first pass was (60,62,70 / 42,43,49 /
@@ -91,7 +93,7 @@ window,
         rgba(10, 10, 13, 0.95) 100%
     );
     /* border-radius/margin removed -- ui/crt_frame.rs's CrtFrame now owns
-       both (its own inner_radius/margin fields, 14.5/1.5, same values),
+       both (its own inner_radius/margin fields, 18.5/1.5, same values),
        clipping this box to its curved inner edge instead of this CSS
        rounding a plain rect. This background still paints exactly as
        before; it's just cut to a different (bulged) shape now, for
@@ -111,43 +113,23 @@ window,
     color: #f2f2f7;
 }
 
+/* Home header's little live clock (replaced the plain "Balise" title) --
+   HH:MM large on top, "Fri Aug 28" small underneath, both right-aligned
+   (see ui/header.rs's own construction comment). */
+.balise-home-clock-time {
+    font-weight: 700;
+    font-size: 2.6em;
+    color: #f2f2f7;
+}
+
+.balise-home-clock-date {
+    font-size: 0.85em;
+    color: #8e8e93;
+}
+
 .balise-hint {
     color: #8e8e93;
     font-size: 0.9em;
-}
-
-/* Tab bar (WiFi/Bluetooth/Ethernet) -- same glass language as the
-   buttons: translucent gradient for the active tab instead of a flat
-   accent fill. */
-.balise-tab-bar {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    padding: 3px;
-}
-
-.balise-tab {
-    background: transparent;
-    background-image: none;
-    color: #f2f2f7;
-    opacity: 0.6;
-    border: none;
-    box-shadow: none;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 6px 10px;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
-}
-
-.balise-tab:hover {
-    opacity: 1;
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-}
-
-.balise-tab.active {
-    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
-    color: #f2f2f7;
-    opacity: 1;
 }
 
 /* Bottom close bar -- "une petite pile large en bas pour fermer", then
@@ -211,7 +193,14 @@ window,
    Apres, les quatre cotes du bouton primary mesurent 183-185 (ecart 2).
 
    La regle : alpha_bordure > alpha_remplissage a son maximum, avec de la
-   marge. C'est pour ca que .balise-button.primary est a 0.70 et pas 0.35.
+   marge. A l'origine .balise-button.primary etait a bordure 0.70 / fond
+   0.55 pour ca (pas 0.35).
+   Les boutons ne suivent plus cette regle du tout depuis leur passage en
+   fond PLAT (asked for : "pas de style verre... plus simple") -- sans
+   degrade, il n'y a plus de coin plus clair a depasser, donc plus de
+   marge minimale a respecter entre bordure et fond. Cette regle reste
+   valable pour tout le reste (cartes de section, panel, overlays), qui
+   gardent leur degrade 135deg.
 
    Teste et REJETE : le double-fond + `background-clip: padding-box,
    border-box` (qui donnerait une vraie bordure en degrade). La couche
@@ -226,7 +215,7 @@ window,
 .balise-search-container {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 15px;
     padding: 2px;
 }
 
@@ -292,7 +281,7 @@ window,
         rgba(255, 255, 255, 0.025) 100%
     );
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 14px;
+    border-radius: 17px;
     margin: 4px 6px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
@@ -307,7 +296,7 @@ window,
    reads as lit glass rather than a pasted-on white rectangle. */
 .balise-section-card.connected {
     border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 14px;
+    border-radius: 17px;
     background-image: linear-gradient(
         135deg,
         rgba(244, 245, 248, 0.92) 0%,
@@ -509,7 +498,7 @@ window,
 
 .balise-icon-container {
     background-color: rgba(168, 180, 196, 0.3);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 6px;
 }
 
@@ -517,18 +506,126 @@ window,
     opacity: 0.8;
 }
 
-/* Buttons -- rounded-rect (10px, matching this system's card/button
-   convention), gradient fills
-   in the panel's own 135deg light direction rather than Orbit's flat
-   9999px pills. */
-.balise-button {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+/* ============================================================
+   Home page (Control Center) -- see ui/home.rs. Five big tiles instead
+   of the old WiFi/Bluetooth/Ethernet tab bar.
+   ============================================================ */
+.balise-home {
+    padding: 4px 0;
+}
+
+/* Same base glass card as .balise-section-card (dark translucent,
+   hairline top edge), just with a bigger radius -- these are "gros
+   boutons" (asked for), not list-row containers, so they read as
+   individually pressable in a way a shared section card never needed
+   to. 20px, one step up from .balise-button's 13px.
+
+   Flat rgba fills here, NOT the 135deg gradient every other card/button
+   in this file uses: a toggle-style tile needed a genuinely ANIMATED
+   fill change on click (asked for, "une animation en spring"), and
+   `background-image` (what a gradient is, CSS-wise) doesn't interpolate
+   in GTK's CSS engine -- confirmed by this file's OWN pre-existing
+   `.balise-button` transition, which already only lists
+   background-color/border-color/color and never background-image, even
+   though its :hover swaps a gradient. `background-color` does animate
+   reliably (verified live: toggled Bluetooth's real radio state off-app
+   and screenshotted mid-transition, watched the fill genuinely
+   interpolate rather than snap). The `cubic-bezier` here overshoots
+   past 1.0 before settling back -- the standard "ease-out-back" curve,
+   which is what gives a plain timed transition the springy OVERSHOOT
+   feel that was asked for. It's an approximation of a real damped-spring
+   physics curve, not one: GTK's CSS engine only offers fixed timing
+   functions/cubic-beziers, no spring solver (that exists in
+   libadwaita's AdwSpringAnimation, not a dependency here). */
+.balise-tile {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 20px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    padding: 14px;
+    min-height: 76px;
+    transition:
+        background-color 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+        border-color 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.balise-tile:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* "On"/connected -- same inverted light-glass tint
+   .balise-section-card.connected uses for the current network/device
+   row (now a flat color instead of that card's gradient, per the header
+   comment above), so an active tile still reads with the same visual
+   vocabulary as an active row one tap further in. */
+.balise-tile.active {
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(226, 229, 235, 0.88);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.balise-tile-icon {
+    font-size: 22px;
     color: #f2f2f7;
-    border: 1px solid rgba(255, 255, 255, 0.30);
-    border-radius: 10px;
-    padding: 6px 16px;
-    font-size: 11px;
+    transition: color 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.balise-tile.active .balise-tile-icon {
+    color: #1c1c1e;
+}
+
+.balise-tile-title {
+    font-size: 13px;
     font-weight: 700;
+    color: #f2f2f7;
+    transition: color 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.balise-tile.active .balise-tile-title {
+    color: #1c1c1e;
+}
+
+.balise-tile-status {
+    font-size: 11px;
+    color: #8e8e93;
+    transition: color 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.balise-tile.active .balise-tile-status {
+    color: #1c1c1e;
+    opacity: 0.65;
+}
+
+/* Screenshot -- a wide action tile, icon+label side by side rather than
+   the square tiles' stacked icon-over-text shape (no on/off state to
+   show, so there's no status line needing the extra vertical room). */
+.balise-tile-wide {
+    min-height: 0;
+}
+
+/* Buttons -- rounded-rect (13px, was 10px -- bumped along with the rest
+   of the panel), FLAT fills and borders now, not the 135deg gradient
+   glass every card/panel in this file otherwise uses. Asked for
+   explicitly: "ne fait pas de style verre... soit plus simple" -- so
+   buttons are the one deliberate exception to the glass language here,
+   plain solid-color rgba() on both background and border. This also
+   sidesteps the "Pourquoi ces alphas de bordure sont si hauts" rule
+   above entirely: that whole measured border/fill-margin requirement
+   only exists because a GRADIENT fill's own bright corner can out-shine
+   a translucent flat border there -- with no gradient left to clash
+   with, border and fill alphas here are just picked for plain contrast,
+   no minimum margin between them required. font-weight 600, not 700:
+   bold text on an already-subtle fill was most of what read as "heavy"
+   to begin with. */
+.balise-button {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #f2f2f7;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 13px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
     box-shadow: none;
     min-height: 0;
     min-width: 0;
@@ -536,25 +633,22 @@ window,
 }
 
 .balise-button:hover {
-    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
+    background-color: rgba(168, 180, 196, 0.22);
     border-color: #a8b4c4;
     color: #f2f2f7;
 }
 
 /* No glow (box-shadow) on primary/destructive -- inconsistent with the
-   rest of the "glass" material, which reads through gradient fill + a
-   thin border, never a diffuse colored halo. A visible border replaces
-   the previous "1px solid transparent" (which left these two variants
-   without the crisp edge every other button/card in the panel has). */
-/* Translucent accent/danger-tinted glass instead of a solid light fill
-   (which clashed once the panel itself became a lighter, more
-   translucent gray -- two similarly-light, fully opaque surfaces next to
-   each other stopped reading as distinct materials). Text stays light
-   (#f2f2f7 / #ffffff) since the fill is no longer solid light. */
+   plain, flat material the rest of this section now uses. Translucent
+   accent/danger-tinted fill instead of a solid light one (which clashed
+   once the panel itself became a lighter, more translucent gray -- two
+   similarly-light, fully opaque surfaces next to each other stopped
+   reading as distinct materials). Text stays light (#f2f2f7 / #ffffff)
+   since the fill is translucent, not solid light. */
 .balise-button.primary {
-    background-image: linear-gradient(135deg, rgba(200, 208, 220, 0.55), rgba(168, 180, 196, 0.32));
+    background-color: rgba(184, 194, 208, 0.28);
     color: #f2f2f7;
-    border: 1px solid rgba(255, 255, 255, 0.70);
+    border: 1px solid rgba(255, 255, 255, 0.34);
     box-shadow: none;
 }
 
@@ -563,19 +657,19 @@ window,
 }
 
 .balise-button.primary:hover {
-    background-image: linear-gradient(135deg, rgba(210, 217, 227, 0.65), rgba(184, 194, 208, 0.4));
+    background-color: rgba(196, 205, 218, 0.34);
     color: #f2f2f7;
 }
 
 .balise-button.destructive {
-    background-image: linear-gradient(135deg, rgba(255, 154, 154, 0.55), rgba(255, 110, 110, 0.35));
+    background-color: rgba(255, 130, 130, 0.24);
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.60);
+    border: 1px solid rgba(255, 255, 255, 0.30);
     box-shadow: none;
 }
 
 .balise-button.destructive:hover {
-    background-image: linear-gradient(135deg, rgba(255, 174, 174, 0.65), rgba(255, 138, 138, 0.42));
+    background-color: rgba(255, 150, 150, 0.30);
     color: #ffffff;
 }
 
@@ -645,7 +739,7 @@ password-entry {
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #f2f2f7;
-    border-radius: 12px;
+    border-radius: 15px;
     padding: 8px 12px;
     min-height: 18px;
 }
@@ -670,7 +764,7 @@ password-entry:focus {
    else. */
 .balise-password-overlay {
     border: 1.5px solid transparent;
-    border-radius: 16px;
+    border-radius: 20px;
     background-image:
         linear-gradient(rgba(12, 12, 14, 0.99), rgba(12, 12, 14, 0.99)),
         linear-gradient(
@@ -698,7 +792,7 @@ password-entry:focus {
 
 .balise-error-overlay {
     border: 1.5px solid transparent;
-    border-radius: 16px;
+    border-radius: 20px;
     background-image:
         linear-gradient(rgba(12, 12, 14, 0.99), rgba(12, 12, 14, 0.99)),
         linear-gradient(
@@ -765,7 +859,10 @@ password-entry:focus {
     border-color: rgba(28, 28, 30, 0.34);
 }
 
-/* Header's detail mode: "‹ <endpoint name>" replacing the tab bar. */
+/* Header's subpage mode: "‹ title [switch]" -- shown for a section
+   (WiFi/Bluetooth/Ethernet, reached from a home tile), the endpoint
+   detail page, saved networks, or the hidden-network form. Replaced the
+   old tab bar entirely (see ui/header.rs). */
 .balise-back-row {
     padding: 2px 0 6px 0;
 }

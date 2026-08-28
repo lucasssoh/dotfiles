@@ -20,14 +20,26 @@ pub const LOCK_SIMPLE: &str = "\u{E308}"; // Secure-network indicator
 pub const X: &str = "\u{E4F6}"; // Close buttons
 pub const WARNING_CIRCLE: &str = "\u{E4E2}"; // Error toast
 
-pub const BLUETOOTH: &str = "\u{E0DA}"; // Generic device-row icon (Phase 3)
-#[allow(dead_code)] // not wired into the UI yet -- see the project plan's Phase 4
+pub const BLUETOOTH: &str = "\u{E0DA}"; // Generic device-row icon (Phase 3), also the Bluetooth home tile
 pub const BLUETOOTH_CONNECTED: &str = "\u{E0DC}";
 #[allow(dead_code)]
 pub const BLUETOOTH_SLASH: &str = "\u{E0DE}";
 
-pub const PLUGS_CONNECTED: &str = "\u{EB5A}"; // Ethernet row, active/carrier
-pub const PLUGS: &str = "\u{EB56}"; // Ethernet row, no cable (Phase 2)
+pub const PLUGS_CONNECTED: &str = "\u{EB5A}"; // Ethernet row/tile, active/carrier
+pub const PLUGS: &str = "\u{EB56}"; // Ethernet row/tile, no cable (Phase 2)
+
+// WiFi, high-signal glyph reused as the home tile's static icon (the
+// tile doesn't show a live signal tier the way the bar's own badge
+// does) -- same three-tier family the bar module already uses.
+pub const WIFI: &str = "\u{E4EA}";
+pub const WIFI_SLASH: &str = "\u{E4F2}"; // WiFi tile, radio off
+
+// Home-page action tiles (Control Center redesign, see the project
+// plan) -- codepoints fetched fresh from phosphor-icons/core's
+// src/icons.ts, not guessed (same discipline as every other glyph here).
+pub const MOON: &str = "\u{E1F6}"; // Night mode tile
+pub const CAMERA: &str = "\u{E10E}"; // Screenshot tile
+pub const AIRPLANE: &str = "\u{E002}"; // Airplane mode tile
 
 pub const MAGNIFYING_GLASS: &str = "\u{E30C}"; // Search/filter field
 pub const GEAR: &str = "\u{E270}"; // Per-row "configure" button -> detail page

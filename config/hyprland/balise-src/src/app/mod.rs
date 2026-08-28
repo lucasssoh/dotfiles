@@ -57,6 +57,10 @@ pub enum AppEvent {
 
     Error(String),
     Notify(String),
+
+    /// Night mode's marker-file state, read back after toggling it --
+    /// see the home tile's own click handler below.
+    NightModeState(bool),
 }
 
 pub struct BaliseApp {
@@ -121,7 +125,15 @@ impl BaliseApp {
 
             let nm: Arc<Mutex<Option<NetworkManager>>> = Arc::new(Mutex::new(None));
             let bt: Arc<Mutex<Option<BluetoothManager>>> = Arc::new(Mutex::new(None));
-            let current_tab = Rc::new(RefCell::new("wifi".to_string()));
+            // "home" now, matching the Stack's own initial page (used to
+            // default to "wifi" back when that was the first tab) --
+            // DaemonCommand::Toggle's same-tab check compares an
+            // incoming `--tab` against this, and with the old "wifi"
+            // default it misfired the very first time Balise was shown
+            // (still sitting on the home page) and then toggled to a
+            // section: it read as "same tab as current_tab" and closed
+            // instead of navigating in.
+            let current_tab = Rc::new(RefCell::new("home".to_string()));
 
             // Initialization thread: connect to NetworkManager/BlueZ
             // (retried, they may not be up yet at login) and push the
@@ -270,8 +282,11 @@ impl BaliseApp {
                     match event {
                         AppEvent::WifiPowerState(enabled) => {
                             win.header().set_power_state(enabled);
+                            win.home_view().set_wifi_enabled(enabled);
                         }
                         AppEvent::ScanResult(aps) => {
+                            let connected_ssid = aps.iter().find(|ap| ap.is_connected).map(|ap| ap.ssid.clone());
+                            win.home_view().set_wifi_ssid(connected_ssid);
                             win.network_list().set_networks(aps);
                         }
                         AppEvent::SavedResult(saved) => {
@@ -318,8 +333,11 @@ impl BaliseApp {
                         }
                         AppEvent::BtPowerState(enabled) => {
                             win.header().set_power_state(enabled);
+                            win.home_view().set_bluetooth_enabled(enabled);
                         }
                         AppEvent::BtScanResult(devices) => {
+                            let connected_names: Vec<String> = devices.iter().filter(|d| d.is_connected).map(|d| d.name.clone()).collect();
+                            win.home_view().set_bluetooth_connected(connected_names);
                             win.device_list().set_devices(devices);
                         }
                         AppEvent::BtActionStarted(path, action) => {
@@ -365,6 +383,18 @@ impl BaliseApp {
                             win.show_detail(DetailTarget::Wifi { ap: *ap, details: *details });
                         }
                         AppEvent::WiredResult(profiles) => {
+                            // Same "connected beats cable-present beats
+                            // off" priority Ethernet.qml's own state
+                            // derivation uses, over the same fields.
+                            let state = if profiles.iter().any(|p| p.is_active) {
+                                "connected"
+                            } else if profiles.iter().any(|p| p.has_carrier) {
+                                "on"
+                            } else {
+                                "off"
+                            };
+                            let active_name = profiles.iter().find(|p| p.is_active).map(|p| p.name.as_str());
+                            win.home_view().set_ethernet_state(state, active_name);
                             win.wired_list().set_profiles(profiles);
                         }
                         AppEvent::WiredConnectStarted(device_path) => {
@@ -382,6 +412,9 @@ impl BaliseApp {
                             let _ = std::process::Command::new("notify-send")
                                 .args(["--app-name=Balise", &msg])
                                 .spawn();
+                        }
+                        AppEvent::NightModeState(enabled) => {
+                            win.home_view().set_night_mode(enabled);
                         }
                         AppEvent::DaemonCommand(cmd) => match cmd {
                             DaemonCommand::Show => {
@@ -476,6 +509,53 @@ fn spawn_wifi_detail(
     });
 }
 
+/// Applies a WiFi/Bluetooth radio on/off change and reports the result
+/// back through `tx` -- shared by the section header's own radio switch
+/// and the home tiles' left-click toggle (see setup_ui_callbacks), so
+/// both paths behave identically instead of drifting apart over time.
+/// `is_switching` is set here (not by the caller): every caller needs
+/// the exact same set-true-before/clear-false-after-2s shape around the
+/// actual backend call, so there's no reason to make each one repeat it.
+fn toggle_radio(
+    nm: Arc<Mutex<Option<NetworkManager>>>,
+    bt: Arc<Mutex<Option<BluetoothManager>>>,
+    rt: Arc<tokio::runtime::Runtime>,
+    tx: async_channel::Sender<AppEvent>,
+    is_switching: Arc<Mutex<bool>>,
+    which: &str,
+    enabled: bool,
+) {
+    *is_switching.lock().unwrap() = true;
+    let is_switching_end = is_switching.clone();
+    let which = which.to_string();
+    std::thread::spawn(move || {
+        if which == "bluetooth" {
+            let guard = bt.lock().unwrap();
+            if let Some(ref bt_inst) = *guard {
+                match rt.block_on(async { bt_inst.set_powered(enabled).await }) {
+                    Ok(()) => {
+                        let _ = tx.send_blocking(AppEvent::BtPowerState(enabled));
+                    }
+                    Err(e) => {
+                        let _ = tx.send_blocking(AppEvent::Error(format!("Failed to toggle Bluetooth: {}", e)));
+                        if let Ok(actual) = rt.block_on(async { bt_inst.is_powered().await }) {
+                            let _ = tx.send_blocking(AppEvent::BtPowerState(actual));
+                        }
+                    }
+                }
+            }
+        } else {
+            let guard = nm.lock().unwrap();
+            if let Some(ref nm_inst) = *guard {
+                let _ = rt.block_on(async { nm_inst.set_wifi_enabled(enabled).await });
+                let _ = tx.send_blocking(AppEvent::WifiPowerState(enabled));
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        *is_switching_end.lock().unwrap() = false;
+    });
+}
+
 /// Switches the visible stack page + header tint, and pushes a fresh
 /// power-state/list read for whichever backend just became current --
 /// shared by the header's own tab buttons and by `balise toggle --tab
@@ -490,10 +570,20 @@ fn activate_tab(
     is_switching: &Arc<Mutex<bool>>,
     tab: &str,
 ) {
+    // Recorded even for "home" (and anything else unrecognized), before
+    // the early return below -- DaemonCommand::Toggle's same-tab check
+    // compares an incoming `--tab` against this, and it needs to
+    // correctly read "home" back after a `leave_detail()` call passes
+    // "home" in here (the back button's own handler, and every
+    // destructive DetailAction that leaves the detail page early, all do
+    // this) or a stray toggle right after going back to home would
+    // misfire as "same tab as before, close" instead of navigating into
+    // a section.
+    *current_tab.borrow_mut() = tab.to_string();
+
     if tab != "wifi" && tab != "bluetooth" && tab != "ethernet" {
         return;
     }
-    *current_tab.borrow_mut() = tab.to_string();
     win.show_tab(tab);
 
     let nm = nm.clone();
@@ -609,40 +699,8 @@ fn setup_ui_callbacks(
                 return;
             }
             let enabled = switch.is_active();
-            *is_switching.lock().unwrap() = true;
-
-            let nm = nm.clone();
-            let bt = bt.clone();
-            let rt = rt.clone();
-            let tx = tx.clone();
-            let is_switching_end = is_switching.clone();
-            let tab = current_tab.borrow().clone();
-            std::thread::spawn(move || {
-                if tab == "bluetooth" {
-                    let guard = bt.lock().unwrap();
-                    if let Some(ref bt_inst) = *guard {
-                        match rt.block_on(async { bt_inst.set_powered(enabled).await }) {
-                            Ok(()) => {
-                                let _ = tx.send_blocking(AppEvent::BtPowerState(enabled));
-                            }
-                            Err(e) => {
-                                let _ = tx.send_blocking(AppEvent::Error(format!("Failed to toggle Bluetooth: {}", e)));
-                                if let Ok(actual) = rt.block_on(async { bt_inst.is_powered().await }) {
-                                    let _ = tx.send_blocking(AppEvent::BtPowerState(actual));
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    let guard = nm.lock().unwrap();
-                    if let Some(ref nm_inst) = *guard {
-                        let _ = rt.block_on(async { nm_inst.set_wifi_enabled(enabled).await });
-                        let _ = tx.send_blocking(AppEvent::WifiPowerState(enabled));
-                    }
-                }
-                std::thread::sleep(std::time::Duration::from_secs(2));
-                *is_switching_end.lock().unwrap() = false;
-            });
+            let which = if current_tab.borrow().as_str() == "bluetooth" { "bluetooth" } else { "wifi" };
+            toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), which, enabled);
         });
     }
 
@@ -660,37 +718,73 @@ fn setup_ui_callbacks(
         });
     }
 
-    // Tab buttons: activate_tab() (below setup_ui_callbacks) does the
-    // actual stack/header switch + backend refresh -- shared with
-    // `balise toggle --tab <tab>`'s DaemonCommand::Toggle handling.
+    // Home tiles -- WiFi/Bluetooth: left click (GtkButton's own
+    // `clicked`, primary button + keyboard activation) toggles the radio
+    // in place via the same toggle_radio() the section header's own
+    // switch uses; right click (a secondary-button GestureClick, added
+    // here since the button itself only reacts to primary) opens the
+    // section, same activate_tab() plumbing the old tab buttons used.
+    // Asked for explicitly over a gear button: "pas de bouton
+    // d'engrenage mais clic droit". Ethernet has no radio-enable concept,
+    // so its tile keeps the old single-purpose click = navigate.
     {
-        let btn = win.header().wifi_tab().clone();
-        let win = win.clone();
+        let win_wifi = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let is_switching = is_switching.clone();
+        win.home_view().wifi_tile().connect_clicked(move |_| {
+            let enabled = !win_wifi.home_view().wifi_enabled();
+            toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "wifi", enabled);
+        });
+    }
+    {
+        let win_wifi = win.clone();
         let nm = nm.clone();
         let bt = bt.clone();
         let rt = rt.clone();
         let tx = tx.clone();
         let current_tab = current_tab.clone();
         let is_switching = is_switching.clone();
-        btn.connect_clicked(move |_| {
-            activate_tab(&win, &nm, &bt, &rt, &tx, &current_tab, &is_switching, "wifi");
+        let click = gtk4::GestureClick::new();
+        click.set_button(gtk4::gdk::BUTTON_SECONDARY);
+        click.connect_pressed(move |gesture, _, _, _| {
+            gesture.set_state(gtk4::EventSequenceState::Claimed);
+            activate_tab(&win_wifi, &nm, &bt, &rt, &tx, &current_tab, &is_switching, "wifi");
+        });
+        win.home_view().wifi_tile().add_controller(click);
+    }
+    {
+        let win_bt = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let is_switching = is_switching.clone();
+        win.home_view().bluetooth_tile().connect_clicked(move |_| {
+            let enabled = !win_bt.home_view().bluetooth_enabled();
+            toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "bluetooth", enabled);
         });
     }
     {
-        let btn = win.header().bluetooth_tab().clone();
-        let win = win.clone();
+        let win_bt = win.clone();
         let nm = nm.clone();
         let bt = bt.clone();
         let rt = rt.clone();
         let tx = tx.clone();
         let current_tab = current_tab.clone();
         let is_switching = is_switching.clone();
-        btn.connect_clicked(move |_| {
-            activate_tab(&win, &nm, &bt, &rt, &tx, &current_tab, &is_switching, "bluetooth");
+        let click = gtk4::GestureClick::new();
+        click.set_button(gtk4::gdk::BUTTON_SECONDARY);
+        click.connect_pressed(move |gesture, _, _, _| {
+            gesture.set_state(gtk4::EventSequenceState::Claimed);
+            activate_tab(&win_bt, &nm, &bt, &rt, &tx, &current_tab, &is_switching, "bluetooth");
         });
+        win.home_view().bluetooth_tile().add_controller(click);
     }
     {
-        let btn = win.header().ethernet_tab().clone();
+        let btn = win.home_view().ethernet_tile().clone();
         let win = win.clone();
         let nm = nm.clone();
         let bt = bt.clone();
@@ -700,6 +794,65 @@ fn setup_ui_callbacks(
         let is_switching = is_switching.clone();
         btn.connect_clicked(move |_| {
             activate_tab(&win, &nm, &bt, &rt, &tx, &current_tab, &is_switching, "ethernet");
+        });
+    }
+
+    // Airplane Mode tile -- no OS-level single toggle to call (see
+    // ui/home.rs's own header comment), just both radios' existing
+    // toggle_radio() calls fired together. Reads current state off
+    // HomeView the same way the WiFi/Bluetooth tiles' own left-click
+    // toggle does: "active" (both off) flips both on, anything else
+    // flips both off, regardless of which one was already off.
+    {
+        let win_air = win.clone();
+        let nm = nm.clone();
+        let bt = bt.clone();
+        let rt = rt.clone();
+        let tx = tx.clone();
+        let is_switching = is_switching.clone();
+        win.home_view().airplane_mode_tile().connect_clicked(move |_| {
+            let currently_active = !win_air.home_view().wifi_enabled() && !win_air.home_view().bluetooth_enabled();
+            let enable_radios = currently_active;
+            toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "wifi", enable_radios);
+            toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "bluetooth", enable_radios);
+        });
+    }
+
+    // Night mode tile -- direct action, no page of its own. State is
+    // inferred the same way toggle-night-mode.sh itself infers it (marker
+    // file presence), read back right after the toggle so the tile
+    // reflects reality rather than assuming the toggle succeeded.
+    {
+        let tx = tx.clone();
+        win.home_view().night_tile().connect_clicked(move |_| {
+            let tx = tx.clone();
+            std::thread::spawn(move || {
+                let _ = std::process::Command::new("bash")
+                    .arg("-c")
+                    .arg("$HOME/.config/hypr/scripts/toggle-night-mode.sh")
+                    .status();
+                let enabled = std::path::Path::new(&format!("{}/.cache/hypr-night-mode", std::env::var("HOME").unwrap_or_default())).exists();
+                let _ = tx.send_blocking(AppEvent::NightModeState(enabled));
+            });
+        });
+    }
+
+    // Screenshot tile -- direct action. Balise hides itself first (a
+    // region-select capture with the panel still on screen would either
+    // capture over it or get in the way of `slurp`'s own selection), then
+    // fires the capture after a short delay for the close animation to
+    // actually finish -- same capture pipeline as the existing
+    // Super+Shift+S keybind (hypr/keybinds.lua), not a second one.
+    {
+        let win_shot = win.clone();
+        win.home_view().screenshot_tile().connect_clicked(move |_| {
+            win_shot.hide();
+            glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
+                let _ = std::process::Command::new("bash")
+                    .arg("-c")
+                    .arg(r#"grim -g "$(slurp)" - | satty --filename - --fullscreen --output-filename - | wl-copy"#)
+                    .spawn();
+            });
         });
     }
 
