@@ -1,1 +1,2 @@
 singleton SystemStats 1.0 SystemStats.qml
+singleton OsdState 1.0 OsdState.qml

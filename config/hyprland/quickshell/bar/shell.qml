@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "modules" as Modules
 import "modules/veille"
+import "services"
 import "theme"
 
 // ============================================================
@@ -125,6 +126,13 @@ ShellRoot {
         }
         function toggleZen(): void {
             shell.zenMode = !shell.zenMode;
+        }
+        // Brightness has no DBus/kernel push to react to (see
+        // services/OsdState.qml's header) -- keybinds.lua calls this
+        // right after brightnessctl so the OSD shows the freshly-set
+        // level. `quickshell ipc call -c bar bar pokeBrightness`.
+        function pokeBrightness(): void {
+            OsdState.pokeBrightness();
         }
     }
 
@@ -776,5 +784,36 @@ ShellRoot {
     // singleton needed for one consumer).
     Veille {
         zenMode: shell.zenMode
+    }
+
+    // Volume/mic/brightness OSD -- see services/OsdState.qml for the
+    // trigger logic (Pipewire push for volume/mic, IPC-poked sysfs read
+    // for brightness). Per-screen like the bar itself (not single-
+    // instance like Veille above): there's no one obvious "the" screen
+    // to pop it on without a focused-monitor lookup this codebase
+    // doesn't have wired up yet, and showing it on every connected
+    // screen is the harmless default while there's usually just one
+    // anyway. Window stays mapped at all times (unlike the main bar's
+    // `visible: !shell.zenMode` hard unmap) so Osd.qml's own opacity/
+    // scale Behavior can actually fade it, not just pop -- no
+    // exclusiveZone set, it never reserves space from tiled windows.
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: osdWindow
+            required property var modelData
+            screen: modelData
+
+            focusable: false
+            color: "transparent"
+
+            anchors { bottom: true }
+            margins.bottom: 48
+            implicitWidth: osd.width
+            implicitHeight: osd.height
+
+            Modules.Osd { id: osd }
+        }
     }
 }

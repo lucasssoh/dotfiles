@@ -111,6 +111,7 @@ Singleton {
 
     function sampleCpu() {
         statFile.reload();
+        statFile.waitForJob();   // reload() alone queues an async re-read -- see pokeBrightness's comment in OsdState.qml, found the hard way
         const line = statFile.text().split("\n")[0];
         const parts = line.trim().split(/\s+/).slice(1).map(Number);
         const idle = parts[3] + parts[4];
@@ -124,6 +125,7 @@ Singleton {
         root.prevCpuIdle = idle;
 
         cpuInfoFile.reload();
+        cpuInfoFile.waitForJob();
         const matches = cpuInfoFile.text().match(/cpu MHz\s*:\s*([\d.]+)/g) || [];
         let maxMhz = 0;
         for (let i = 0; i < matches.length; i++) {
@@ -135,6 +137,7 @@ Singleton {
 
     function sampleMemory() {
         memFile.reload();
+        memFile.waitForJob();
         const lines = memFile.text().split("\n");
         let total = 0, avail = 0;
         for (let i = 0; i < lines.length; i++) {
@@ -149,6 +152,7 @@ Singleton {
 
     function sampleTemperature() {
         tempFile.reload();
+        tempFile.waitForJob();
         const raw = parseInt(tempFile.text().trim());
         root.tempCelsius = isNaN(raw) ? 0 : Math.round(raw / 1000);
     }
@@ -156,6 +160,7 @@ Singleton {
     function sampleFan() {
         if (root.fanPath === "") return;
         fanFile.reload();
+        fanFile.waitForJob();
         const v = parseInt(fanFile.text().trim());
         root.fanRpm = isNaN(v) ? "N/A" : String(v).padStart(4, " ");
     }
@@ -163,6 +168,7 @@ Singleton {
     function sampleTraffic() {
         if (root.netIface === "") { root.netRateBps = 0; return; }
         rxFile.reload();
+        rxFile.waitForJob();
         const v = parseInt(rxFile.text().trim());
         if (isNaN(v)) return;
         if (root.prevNetBytes >= 0)
