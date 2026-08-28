@@ -41,6 +41,17 @@ import "../services"
 // reference screenshot's blue tint on one side wasn't a deliberate
 // design color either, just whatever sat behind the real macOS panel
 // showing through -- flat translucent fill, no gradient.)
+//
+// Glass/light-source sheen, kept separate from that blue tint: a soft
+// glow near the top-right corner, standing in for a light catching a
+// glass surface. QtQuick's own Gradient type is linear only (top<->
+// bottom or, via `orientation`, left<->right) -- no radial falloff --
+// and a real RadialGradient would mean pulling in Qt5Compat.
+// GraphicalEffects, another effects module, right after MultiEffect
+// already cost real debugging time this session for a much smaller
+// win. Three overlapping soft-edged circles (plain Rectangles,
+// decreasing opacity outward) approximate the same falloff instead,
+// with zero new risk.
 
 Rectangle {
     id: card
@@ -52,14 +63,49 @@ Rectangle {
     width: 280
     height: 92
     radius: 20
+    // Bounding-box clip is fine here (unlike the old thick-fill level
+    // indicator, which needed pixel-exact rounded clipping and got it
+    // wrong twice) -- this only trims the soft glow's own overshoot past
+    // the card's edge, sub-pixel correctness genuinely doesn't matter
+    // for an approximate light glow the way it did for a number.
+    clip: true
 
     // Plain flat translucent fill, not the gradient this had briefly --
     // the blue tint in the reference screenshot was whatever sat behind
     // the real macOS panel showing through ITS actual blur, not a
     // deliberate design color. No blur here (see the header comment
-    // above for why), so no reason to fake a light source that was
-    // never actually part of the style being asked for.
+    // above for why). The light-source GLOW (below, separate from this
+    // fill) is the part of that reference actually being kept.
     color: Qt.rgba(12 / 255, 12 / 255, 14 / 255, 0.82)
+
+    // Glow itself: outer-to-inner, each smaller and less transparent
+    // than the last, positioned to spill in from the top-right corner.
+    // White, not blue (see the header comment on why) -- reads as a
+    // neutral light catching glass, not a colored light source.
+    Rectangle {
+        x: card.width - width * 0.55
+        y: -height * 0.55
+        width: 160
+        height: width
+        radius: width / 2
+        color: Qt.rgba(1, 1, 1, 0.05)
+    }
+    Rectangle {
+        x: card.width - width * 0.6
+        y: -height * 0.45
+        width: 110
+        height: width
+        radius: width / 2
+        color: Qt.rgba(1, 1, 1, 0.06)
+    }
+    Rectangle {
+        x: card.width - width * 0.65
+        y: -height * 0.35
+        width: 70
+        height: width
+        radius: width / 2
+        color: Qt.rgba(1, 1, 1, 0.07)
+    }
 
     opacity: OsdState.osdVisible ? 1 : 0
     scale: OsdState.osdVisible ? 1 : 0.9
