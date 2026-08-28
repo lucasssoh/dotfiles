@@ -54,16 +54,20 @@ Rectangle {
         return muted ? "" : "";
     }
 
-    // Fill IS the level -- rounded on its own LEFT corners to match the
-    // pill's cap. `clip: true` above only clips to the pill's
-    // rectangular bounding box in QtQuick, not to its rounded silhouette
-    // -- found live: without this, the fill's square corners poked past
-    // the pill's rounded ones. Right corners stay square on purpose:
-    // that edge is the actual level boundary, not the pill's own edge
-    // (matches at 100% since the pill's already-rounded cap sits under
-    // it there anyway). SpringAnimation instead of a plain eased tween
-    // (asked for) -- a physical settle instead of an instant/linear
-    // jump to the new level.
+    // Fill IS the level. Per the reference screenshots (0%, ~40%, 100%):
+    // the CONTAINER's corners stay rounded at every level, but the
+    // fill's own LEADING edge is a flat cut, not rounded -- only at
+    // 100%, where that edge coincides with the pill's own edge, does it
+    // pick up the pill's rounding too. So: LEFT corners (fill always
+    // starts at x:0, the pill's real left edge, at any level) match the
+    // pill's radius, clamped to width/2 so they degrade gracefully
+    // instead of a flat square once width gets small (found live, near
+    // 0-10%: a fixed radius bigger than width/2 broke down into a
+    // square -- per-corner radii don't auto-clamp the way the single
+    // `radius` property does). RIGHT corners are square UNLESS width
+    // has reached the pill's own width (100%), then they round to match
+    // too -- previously hard-pinned to 0 always, so 100% never actually
+    // matched the pill's rounded end.
     Rectangle {
         id: fill
         anchors.left: parent.left
@@ -71,8 +75,18 @@ Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width * (pill.muted ? 0 : pill.level)
         color: pill.muted ? "#ff6e6e" : "#a8b4c4"
-        topLeftRadius: pill.radius
-        bottomLeftRadius: pill.radius
+
+        readonly property real leftRadius: Math.min(pill.radius, width / 2)
+        // 1px tolerance: SpringAnimation can overshoot the target width
+        // slightly on its way to settling, floating-point width vs.
+        // parent.width could also miss an exact match by a hair.
+        readonly property bool atFullWidth: width >= parent.width - 1
+
+        topLeftRadius: leftRadius
+        bottomLeftRadius: leftRadius
+        topRightRadius: atFullWidth ? leftRadius : 0
+        bottomRightRadius: atFullWidth ? leftRadius : 0
+
         Behavior on width { SpringAnimation { spring: 3; damping: 0.3 } }
     }
 
