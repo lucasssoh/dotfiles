@@ -795,8 +795,16 @@ ShellRoot {
     // screen is the harmless default while there's usually just one
     // anyway. Window stays mapped at all times (unlike the main bar's
     // `visible: !shell.zenMode` hard unmap) so Osd.qml's own opacity/
-    // scale Behavior can actually fade it, not just pop -- no
-    // exclusiveZone set, it never reserves space from tiled windows.
+    // scale Behavior can actually fade it, not just pop.
+    //
+    // exclusionMode: Ignore is load-bearing, not decorative -- leaving
+    // exclusiveZone unset was WRONG (found live, tiled windows visibly
+    // shifted up/lost the bottom 48+60px strip): PanelWindow's default
+    // exclusionMode is Auto, which computes an exclusive zone from the
+    // anchored edge + size on its own, same as if exclusiveZone had been
+    // set explicitly. Ignore is the only way to get a genuinely
+    // non-reserving overlay, matching what this popup is actually
+    // supposed to be -- floating over tiled windows, never pushing them.
     Variants {
         model: Quickshell.screens
 
@@ -807,6 +815,7 @@ ShellRoot {
 
             focusable: false
             color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
 
             anchors { bottom: true }
             margins.bottom: 48
