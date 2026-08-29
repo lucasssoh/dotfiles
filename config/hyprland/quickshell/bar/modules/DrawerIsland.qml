@@ -153,8 +153,26 @@ Item {
     // `Math.max(0, ...)` never SHRINKS the island below what the row
     // itself currently needs, even if the row somehow exceeds
     // maxRowWidth.
-    readonly property real effectiveWidth:
-        topRow.implicitWidth + root.openProgress * Math.max(0, root.maxRowWidth - topRow.implicitWidth)
+    //
+    // Snapped to an EVEN number of pixels, which is what keeps the top
+    // row's own glyphs still while this animates. The island is centered
+    // in the bar, so its left edge sits at (barWidth - islandWidth) / 2:
+    // at a raw fractional width that edge lands on fractional pixels and
+    // wobbles between them frame to frame, and ActiveWindow, Workspaces
+    // and Media all render their text with NativeRendering, which
+    // re-rasterizes glyphs against the pixel grid rather than sliding
+    // them smoothly -- so sub-pixel drift shows up as the text visibly
+    // shimmering in place. Worst exactly where it was reported, at the
+    // very start and very end of the movement: InOutCubic is at its
+    // slowest there, so the width creeps across those fractions for
+    // several frames instead of passing through them. Even, not just
+    // whole: halving an odd difference reintroduces the same .5 that was
+    // being removed (the bar's own width is even).
+    readonly property real effectiveWidth: {
+        const raw = topRow.implicitWidth
+            + root.openProgress * Math.max(0, root.maxRowWidth - topRow.implicitWidth);
+        return Math.round(raw / 2) * 2;
+    }
 
     implicitWidth: root.effectiveWidth + root.margin * 2
     // drawerColumn's own height is the live sum of its children's
@@ -298,7 +316,12 @@ Item {
     // current content.
     Row {
         id: topRow
-        x: root.margin + (root.effectiveWidth - topRow.implicitWidth) / 2
+        // Rounded for the same reason effectiveWidth is snapped even:
+        // the row's own implicitWidth can be odd, and halving it puts
+        // this offset back on a half pixel. NativeRendering text does
+        // not tolerate that quietly -- it re-rasterizes rather than
+        // sliding, so the row appears to vibrate horizontally.
+        x: Math.round(root.margin + (root.effectiveWidth - topRow.implicitWidth) / 2)
         y: 0
         height: root.rowHeight
         spacing: 6

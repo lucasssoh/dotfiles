@@ -9,18 +9,60 @@
 local mod = "SUPER"
 
 -- ============================================================
+-- Keybinds cheatsheet dismissal
+-- ============================================================
+-- `bind` is used in place of `hl.bind` throughout this file. It registers
+-- the bind exactly as hl.bind would, UNCHANGED, and then registers a
+-- second, non-consuming bind on the same combo that tells the bar to
+-- hide the keybinds cheatsheet (see quickshell/bar/shell.qml).
+--
+-- Why this exists: the cheatsheet appears on a long SUPER hold and is
+-- meant to disappear when SUPER comes back up, but Hyprland deliberately
+-- suppresses a modifier's release bind once another key was pressed
+-- during the hold -- that suppression is what stops tap-to-launch
+-- bindings firing at the end of every SUPER+... combo. So after
+-- SUPER+Space or SUPER+H the release never arrives and the sheet just
+-- sits there. Watching Hyprland's event stream instead only covers part
+-- of it: fuzzel and rofi are layer surfaces and emit no window event at
+-- all, and moving a window within its workspace emits nothing either.
+-- The binds themselves are the only signal that sees every case.
+--
+-- Registered as a SEPARATE bind rather than by wrapping the original
+-- action on purpose: every existing bind here still reaches Hyprland
+-- byte for byte as it did before, so a mistake in this block can leave a
+-- stray `qs ipc call` behind but cannot break a shortcut.
+--
+-- Skipped for: anything not prefixed with SUPER (media keys, submap
+-- binds -- they can't follow a SUPER hold), the Super_L binds themselves
+-- (they already manage this state), and mouse binds (drag/resize rely on
+-- their own press/release handling; not worth perturbing for this).
+local hl_bind = hl.bind
+local function bind(key, action, opts)
+    hl_bind(key, action, opts)
+
+    local eligible = type(key) == "string"
+        and key:sub(1, #mod) == mod
+        and not key:find("Super_L", 1, true)
+        and not (opts ~= nil and opts.mouse)
+    if eligible then
+        hl_bind(key, hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsHide"),
+                { non_consuming = true })
+    end
+end
+
+-- ============================================================
 -- APPLICATIONS
 -- ============================================================
-hl.bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
-hl.bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"))
-hl.bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
-hl.bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
-hl.bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
-hl.bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
-hl.bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
+bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
+bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"))
+bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
+bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
+bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
+bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
+bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
-hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
+bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
@@ -32,7 +74,7 @@ hl.bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 -- guard, any brief press would trigger Lock (first sector) instead of
 -- just showing the wheel. Absolute path required, same reason as Prisme
 -- above (commit bbb8f61).
-hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
+bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 
 -- Power profile wheel -- same press/release gesture as above. Before:
 -- no keyboard shortcut, only the click on the waybar module
@@ -41,8 +83,8 @@ hl.bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 -- profile is currently applied comes from power-profiles-daemon, so
 -- `performance.sh roue-gen` regenerates wheels/powerprofile.toml on every
 -- press, same principle as the display wheel below.
-hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"))
-hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
+bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"))
+bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 
 -- Display layout wheel -- same press/release gesture, config regenerated
 -- on every press like powerprofile above (never fixed in the repo, unlike
@@ -52,14 +94,14 @@ hl.bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerpr
 -- `roue display` opens (see its doc and cmd_roue_gen in
 -- scripts/display-layout.sh). Replaces the old rofi menu
 -- (`display-layout.sh menu`, still available if needed).
-hl.bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
+bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
 -- Zen/focus mode: was `pkill -SIGUSR1 waybar` (waybar's built-in
 -- "toggle all bars" signal). quickshell has no such signal, so this
 -- calls its own IPC handler instead (see quickshell/bar/shell.qml's
 -- `zenMode` property / toggleZen()).
-hl.bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"))
-hl.bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
-hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
+bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"))
+bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
+bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
 
 -- ============================================================
 -- WINDOWS
@@ -67,46 +109,46 @@ hl.bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
 -- close (not kill): closes only the targeted window/tile. kill terminates
 -- the whole process -- for a multi-window app (Firefox...), that would
 -- close all of its windows instead of just the active one.
-hl.bind(mod .. "+ Q", function()
+bind(mod .. "+ Q", function()
     local w = hl.get_active_window()
     if w ~= nil then
         hl.dispatch(hl.dsp.window.close({ window = "address:" .. w.address }))
     end
 end)
 
-hl.bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
-hl.bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
-hl.bind(mod .. "+ P",           hl.dsp.window.pseudo())
+bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
+bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
+bind(mod .. "+ P",           hl.dsp.window.pseudo())
 -- Flips the active split's axis by hand (raw dwindle layoutmsg "togglesplit"
 -- -- there's no hl.dsp.window.toggle_split(), this is the passthrough for
 -- layout-specific messages). Needed now that smart_split is off and the axis
 -- is picked from aspect ratio + preserve_split (see hyprland.lua): this is
 -- the manual escape hatch for the rare case the ratio picks the wrong one.
-hl.bind(mod .. "+ T",           hl.dsp.layout("togglesplit"))
-hl.bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
+bind(mod .. "+ T",           hl.dsp.layout("togglesplit"))
+bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
 
 -- Move focus between windows (hjkl)
-hl.bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }))
-hl.bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }))
-hl.bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }))
-hl.bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }))
+bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }))
+bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }))
+bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }))
+bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }))
 
 -- Move the active window in the given direction
-hl.bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }))
-hl.bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }))
-hl.bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }))
-hl.bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }))
+bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }))
+bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }))
+bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }))
+bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }))
 
 -- Resize submap: SUPER+R enters "resize", hjkl resizes in 5px steps,
 -- Escape/Enter exits it.
-hl.bind(mod .. "+ R", hl.dsp.submap("resize"))
+bind(mod .. "+ R", hl.dsp.submap("resize"))
 hl.define_submap("resize", function()
-    hl.bind("+ H",      hl.dsp.window.resize({ x = -5, y = 0,  relative = true }), { repeating = true })
-    hl.bind("+ L",      hl.dsp.window.resize({ x =  5, y = 0,  relative = true }), { repeating = true })
-    hl.bind("+ K",      hl.dsp.window.resize({ x = 0,  y = -5, relative = true }), { repeating = true })
-    hl.bind("+ J",      hl.dsp.window.resize({ x = 0,  y =  5, relative = true }), { repeating = true })
-    hl.bind("+ Escape", hl.dsp.submap("reset"))
-    hl.bind("+ Return", hl.dsp.submap("reset"))
+    bind("+ H",      hl.dsp.window.resize({ x = -5, y = 0,  relative = true }), { repeating = true })
+    bind("+ L",      hl.dsp.window.resize({ x =  5, y = 0,  relative = true }), { repeating = true })
+    bind("+ K",      hl.dsp.window.resize({ x = 0,  y = -5, relative = true }), { repeating = true })
+    bind("+ J",      hl.dsp.window.resize({ x = 0,  y =  5, relative = true }), { repeating = true })
+    bind("+ Escape", hl.dsp.submap("reset"))
+    bind("+ Return", hl.dsp.submap("reset"))
 end)
 
 -- ============================================================
@@ -129,10 +171,10 @@ local ws_keys = {
 
 for _, ws in ipairs(ws_keys) do
     -- SUPER+key: switches focus to workspace n
-    hl.bind(mod .. "+ " .. ws.key, hl.dsp.focus({ workspace = tostring(ws.n) }))
+    bind(mod .. "+ " .. ws.key, hl.dsp.focus({ workspace = tostring(ws.n) }))
 
     -- SUPER+SHIFT+key: moves the active window to workspace n
-    hl.bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
+    bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
 end
 
 -- Mouse wheel: navigates between workspaces on the monitor under the
@@ -142,45 +184,45 @@ end
 -- workspace-manager.sh) instead of spilling into an unbound, unreachable
 -- workspace 11+ once it runs past the last one that already exists here
 -- (see scroll-workspace.sh's own header comment for the bug this fixes).
-hl.bind(mod .. "+ mouse_down", hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh prev"))
-hl.bind(mod .. "+ mouse_up",   hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh next"))
+bind(mod .. "+ mouse_down", hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh prev"))
+bind(mod .. "+ mouse_up",   hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh next"))
 
 -- Compacts occupied workspaces toward the start of their range, per monitor
-hl.bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
+bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
 
 -- Scratchpad (special "magic" workspace)
-hl.bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
+bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
+bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
 
 -- Move/resize window with the mouse (buttons 8/9)
-hl.bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
-hl.bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
+bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
+bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
 -- ============================================================
 -- SYSTEM & MEDIA
 -- ============================================================
-hl.bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"))
-hl.bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
-hl.bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
+bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"))
+bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
+bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
 
 -- Volume, mic and backlight: media keys, no modifier
 -- -l 1.0: hard-capped at 100%, never boosts past it -- the previous 1.5
 -- (150%) headroom went unused and asked to come out.
-hl.bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
-hl.bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { repeating = true })
-hl.bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })
-hl.bind("+ XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),     { locked = true })
+bind("+ XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
+bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { repeating = true })
+bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })
+bind("+ XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),     { locked = true })
 
 -- brightnessctl has no DBus/kernel push the bar's OSD can react to on its
 -- own (unlike volume/mic, pure Pipewire push -- see
 -- quickshell/bar/services/OsdState.qml's header for why), so the bind
 -- itself pokes the bar over IPC right after setting the level.
-hl.bind("+ XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+ && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
-hl.bind("+ XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%- && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
+bind("+ XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+ && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
+bind("+ XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%- && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
 
-hl.bind("+ XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("+ XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
-hl.bind("+ XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),        { locked = true })
+bind("+ XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+bind("+ XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+bind("+ XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),        { locked = true })
 
 -- ============================================================
 -- HELP
@@ -212,7 +254,7 @@ hl.bind("+ XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),        { locked =
 -- `non_consuming` on both so binding the bare Super key changes nothing
 -- about Super's normal job as the modifier prefix for everything else
 -- here -- the key events still reach the focused client as usual.
-hl.bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"),
+bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"),
         { long_press = true, non_consuming = true })
 
 -- The release is registered under BOTH modmasks, and that is not
@@ -226,8 +268,9 @@ hl.bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"),
 -- actually delivers is a compositor-internal ordering detail, so both
 -- are registered rather than betting on one; firing both is harmless,
 -- keybindsRelease is idempotent (disarm the timer, hide).
-hl.bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
+bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
         { release = true, non_consuming = true })
-hl.bind(mod .. "+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
+bind(mod .. "+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
         { release = true, non_consuming = true })
+
 

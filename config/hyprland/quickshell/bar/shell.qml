@@ -135,6 +135,38 @@ ShellRoot {
     property real keybindsLastReleaseMs: 0
     readonly property int keybindsReorderGuard: 250
 
+    // The one place the sheet gets hidden, so the release bind and the
+    // event fallback below can't drift apart. Stamping the release time
+    // here too means a press still in flight behind either of them is
+    // dropped by the reorder guard, whichever path got there first.
+    function hideKeybinds(): void {
+        keybindsHoldTimer.stop();
+        shell.keybindsLastReleaseMs = Date.now();
+        shell.keybindsVisible = false;
+    }
+
+    // Hyprland events that mean "a shortcut just DID something", used to
+    // dismiss the sheet when its release bind never arrives.
+    //
+    // It doesn't arrive whenever the hold ended in an actual combo --
+    // hold SUPER, press E, let go: nemo opens, but the sheet stays up.
+    // That is Hyprland behaving as designed, not a bug to bind around: a
+    // modifier's release bind is deliberately suppressed once another
+    // key was pressed during the hold, which is exactly what stops
+    // tap-to-launch bindings firing at the end of every SUPER+... combo.
+    // The clean hold-and-release path still uses the release bind; this
+    // covers the path where the compositor will never send one.
+    //
+    // A curated list rather than any raw event: `activewindow` in
+    // particular fires on plain focus-follows-mouse, which would snap
+    // the sheet shut just for moving the mouse while reading it. These
+    // are all consequences of a deliberate action instead.
+    readonly property var keybindsDismissEvents: [
+        "openwindow", "closewindow", "workspace", "workspacev2",
+        "movewindow", "movewindowv2", "fullscreen", "changefloatingmode",
+        "submap", "focusedmon"
+    ]
+
     // Alias, not the bare `veille` id, for anything reading this from
     // INSIDE the Variants delegate below -- confirmed live that a plain
     // sibling id declared elsewhere in this file (however positioned in
@@ -200,9 +232,16 @@ ShellRoot {
             keybindsHoldTimer.restart();
         }
         function keybindsRelease(): void {
-            shell.keybindsLastReleaseMs = Date.now();
-            keybindsHoldTimer.stop();
-            shell.keybindsVisible = false;
+            shell.hideKeybinds();
+        }
+        // Called by the companion bind keybinds.lua attaches to every
+        // SUPER+... combo (see its `bind` wrapper): the combo means the
+        // hold has turned into a real shortcut, and Hyprland will not
+        // send a release bind for it. Separate name from
+        // keybindsRelease even though both hide today -- one means "the
+        // key came up", the other "something else happened".
+        function keybindsHide(): void {
+            shell.hideKeybinds();
         }
     }
 
@@ -222,6 +261,16 @@ ShellRoot {
         function onRawEvent(event) {
             Hyprland.refreshWorkspaces();
             Hyprland.refreshToplevels();
+
+            // Fallback dismissal for the keybinds sheet -- see
+            // keybindsDismissEvents' own comment for why the release
+            // bind can't be relied on alone. Cheap: a string compare
+            // against a 10-entry list, and only while the sheet is
+            // actually up.
+            if (shell.keybindsVisible
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                shell.hideKeybinds();
+            }
         }
     }
 
