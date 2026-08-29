@@ -1,0 +1,370 @@
+import QtQuick
+import QtQuick.Shapes
+
+// Reusable "pill with an optional second row that drops open below it"
+// -- factored out so shell.qml's real central island (ActiveWindow/
+// Workspaces/Media) and its own preview.qml mock share ONE
+// implementation of the grow/shrink-with-a-drawer mechanics, instead of
+// two independently-coded copies of the same thing drifting apart
+// ("eviter de coder deux fois à la fois veille et preview"). Nothing in
+// here knows about Veille specifically -- `drawerItem` is any Item,
+// `drawerOpen` is whatever boolean the caller's own "observable"
+// (Veille today, some other widget later -- "un widget qui se déclenche
+// dans cet endroit sans que ça ne soit forcement Veille") currently
+// wants shown; this is just the display block it plugs into. The first
+// row is built from this Item's own default-property children, same
+// convention Block.qml already uses for its single-row pills.
+Item {
+    id: root
+
+    default property alias content: topRow.children
+
+    // A STACK of drawer contents, not one exclusive slot. Each entry
+    // opens and closes on its own `drawerOpen`, and the ones currently
+    // open sit stacked under the top row in declaration order -- so
+    // Veille showing its clock and the keybinds cheatsheet being held
+    // open are not rivals for a single slot: the island simply extends
+    // once further to fit both, then retracts by exactly that much when
+    // one of them goes away. Asked for explicitly, replacing a
+    // priority-based swap ("au lieu de changer, il s'etend une fois de
+    // plus pour afficher keybinding") -- and the more coherent model
+    // anyway: nothing has to be arbitrated away, and adding a third
+    // widget later needs no new rule about who beats whom.
+    //
+    // The CONTRACT each entry has to meet (both current ones do, see
+    // VeilleDrawerContent.qml / KeybindsDrawerContent.qml):
+    //   - `property bool drawerOpen` -- its own show/hide state, bound
+    //     by the caller (shell.qml) to whatever drives it.
+    //   - `implicitHeight` -- how tall it is when fully open. Its
+    //     `width` and `height` are driven from here; don't set them.
+    //   - `Behavior on height` -- see `expanded` below for why the
+    //     height animation is each entry's own rather than one
+    //     sequence's here.
+    // Objects declared inline in this list have no parent until the
+    // Instantiator at the bottom of this file reparents them into
+    // drawerColumn -- the same "pass a pre-built Item in as a slot"
+    // idiom the single-slot version used, just once per entry.
+    property list<Item> drawerItems
+
+    // Counts rather than returning early on the first open entry: an
+    // early return would leave the entries after it unread, and a
+    // property this binding never read is a dependency QML never
+    // registered, so a later entry opening or closing would not
+    // re-evaluate this. Harmless with today's two (the stale answer
+    // happens to match the correct one either way), but exactly the kind
+    // of thing that turns into a silent non-updating binding the moment
+    // a third entry joins the stack.
+    readonly property int openCount: {
+        let n = 0;
+        for (let i = 0; i < root.drawerItems.length; i++) {
+            if (root.drawerItems[i].drawerOpen) n++;
+        }
+        return n;
+    }
+    readonly property bool anyOpen: root.openCount > 0
+
+    // Set once the WIDEN phase has finished, cleared at the start of the
+    // close. Every entry's height is gated on it (see the Instantiator),
+    // which is what still gets "l'elargissement d'abord et ensuite
+    // l'allongement" out of a stack whose members come and go
+    // independently: the first entry to open waits for the island to
+    // reach full width, while any LATER one opening against an island
+    // that is already wide just lengthens straight away -- no pointless
+    // re-run of a widen phase that has nothing left to do.
+    property bool expanded: false
+
+    readonly property int margin: 6
+    readonly property int cornerRadius: 18
+    readonly property int rowHeight: 31
+    readonly property int revealDuration: 320
+
+    // The FULL height this could ever need -- every entry's
+    // `implicitHeight` summed (i.e. all of them open at once), not their
+    // current (possibly mid-animation, possibly closed) `height`. The
+    // PARENT PanelWindow (shell.qml's
+    // `bar`) sizes its own real Wayland surface off THIS, not off
+    // `root.height` below -- so the surface itself is allocated once at
+    // its maximum and never actually resized at the compositor level
+    // while the drawer animates open/closed; only in-scene geometry
+    // (this Item's own height, the fill Rectangle, GlassRim) changes
+    // frame to frame. Real wl_surface resizes on every frame of a 300ms
+    // animation is a plausible source of exactly the kind of hitch
+    // reported ("l'island se retracte un peu" right at the start/end of
+    // a transition) -- a live buffer renegotiation with the compositor
+    // is a fundamentally heavier operation than an in-scene repaint.
+    readonly property real maxHeight: {
+        let total = root.rowHeight;
+        for (let i = 0; i < root.drawerItems.length; i++) {
+            total += root.drawerItems[i].implicitHeight;
+        }
+        return total;
+    }
+
+    // The row's width at its OWN theoretical widest -- not a live
+    // snapshot, a genuine constant: sums each top-row child's own
+    // `maxWidth` (ActiveWindow.qml and Media.qml both already expose
+    // one -- 258px each, by design symmetry) where it has one, falling
+    // back to `implicitWidth` for anything that doesn't (Workspaces has
+    // no growth mechanism to bound in the first place -- its own
+    // implicitWidth already IS its max, for a given monitor's workspace
+    // count). Asked for explicitly: "une large fixe à veille qui est la
+    // taille maximum de activewindow + max workspaces + max media (+
+    // les marges)" -- sizing the drawer off the island's continuously-
+    // changing "current" width instead made whatever's showing visibly
+    // resize/jitter while it was open, not just once when it first
+    // appeared. Generic on purpose -- this file doesn't hardcode
+    // knowing ActiveWindow/Workspaces/Media by name, any future item
+    // dropped into the top row just needs to expose `maxWidth` (or not,
+    // and get measured by its own current size instead).
+    readonly property real maxRowWidth: {
+        let total = Math.max(0, topRow.children.length - 1) * topRow.spacing;
+        for (let i = 0; i < topRow.children.length; i++) {
+            const child = topRow.children[i];
+            total += (child.maxWidth !== undefined ? child.maxWidth : child.implicitWidth);
+        }
+        return total;
+    }
+
+    // 0 = fully closed (island tracks the row's own live width, ordinary
+    // bar behavior), 1 = fully open (island pinned at the fixed
+    // maxRowWidth floor) -- animated by openSequence/closeSequence
+    // below. A pure 0..1 LERP FRACTION, not a raw pixel offset added on
+    // top of a possibly-moving baseline (what this replaced): the old
+    // version calibrated its boost once, against whatever topRow.
+    // implicitWidth happened to be AT THE MOMENT it started animating,
+    // and never revisited that number -- so switching to an empty
+    // workspace (ActiveWindow shrinks) or stopping playback (Media
+    // shrinks) WHILE the drawer was sitting open made the island
+    // visibly retract, since the stale boost no longer summed back up
+    // to the fixed floor. `effectiveWidth` below re-reads
+    // topRow.implicitWidth LIVE on every recompute, at BOTH ends of the
+    // lerp, so it's self-correcting instead: at openProgress 1 the
+    // (topRow.implicitWidth - topRow.implicitWidth) terms cancel out
+    // exactly regardless of what the row's current width actually is,
+    // always landing on the true maxRowWidth. Asked for explicitly.
+    property real openProgress: 0
+
+    // If the row is narrower than the fixed maximum, Veille (or
+    // whatever else opens here) is what stretches the island out to it
+    // ("si island n'a pas de largeur max active, veille est censé
+    // l'etendre") -- with the row's own (still just its compact current
+    // self) content staying centered in the middle of that wider shape
+    // (see topRow's own `x` below), not stretched or left flush.
+    // `Math.max(0, ...)` never SHRINKS the island below what the row
+    // itself currently needs, even if the row somehow exceeds
+    // maxRowWidth.
+    readonly property real effectiveWidth:
+        topRow.implicitWidth + root.openProgress * Math.max(0, root.maxRowWidth - topRow.implicitWidth)
+
+    implicitWidth: root.effectiveWidth + root.margin * 2
+    // drawerColumn's own height is the live sum of its children's
+    // (animating) heights -- the Column reflows as each entry grows or
+    // shrinks, so entries below a closing one slide up on their own and
+    // nothing here has to compute stacking offsets by hand.
+    implicitHeight: root.rowHeight + drawerColumn.height
+    width: root.implicitWidth
+    height: root.implicitHeight
+
+    // Two-phase reveal, asked for explicitly ("l'animation en deux
+    // temps, l'elargissement d'abord et ensuite l'allongement"): widen
+    // the island to fit the drawer's fixed max width FIRST, only THEN
+    // grow the drawer's own height open -- reversed on close (shrink
+    // height back to 0 first, narrow back second), so it always
+    // unwinds the same way it wound up. `Easing.InOutCubic` on every
+    // leg -- asked for ("plutot douce au demarrage et rapide au milieu
+    // puis re-douce à la fin"), replacing the SpringAnimation this used
+    // before (a physical settle/bounce is a different feel than a
+    // smooth-fast-smooth ease).
+    //
+    // Only the WIDTH leg is animated here now. The height legs belong to
+    // the entries themselves (a `Behavior on height` each), because with
+    // a stack there is no longer one height to sequence: entries open
+    // and close independently, and a NumberAnimation here could only
+    // ever drive whichever single item it was pointed at. Sequencing
+    // survives the change because `expanded` -- flipped by the
+    // ScriptAction below only AFTER the widen finishes -- is what
+    // releases every entry's height binding; the ordering guarantee just
+    // moved from "animate B after A" to "B cannot start until A says
+    // so", which also holds for entries that open later.
+    SequentialAnimation {
+        id: openSequence
+        NumberAnimation {
+            target: root
+            property: "openProgress"
+            to: 1
+            duration: 260
+            easing.type: Easing.InOutCubic
+        }
+        ScriptAction { script: root.expanded = true }
+    }
+    SequentialAnimation {
+        id: closeSequence
+        // Clearing `expanded` sends every open entry's height binding to
+        // 0; their own Behaviors animate that. PauseAnimation then holds
+        // the island at full width until those have finished, so the
+        // narrowing still happens strictly after the shortening -- the
+        // same unwind order as before, expressed as a wait rather than
+        // as the second half of one animation.
+        ScriptAction { script: root.expanded = false }
+        PauseAnimation { duration: root.revealDuration }
+        NumberAnimation {
+            target: root
+            property: "openProgress"
+            to: 0
+            duration: 220
+            easing.type: Easing.InOutCubic
+        }
+    }
+    onAnyOpenChanged: {
+        if (root.anyOpen) {
+            closeSequence.stop();
+            // Already wide with something else open: the widen phase has
+            // nothing to do and `expanded` is already true, so the new
+            // entry lengthens the island straight from its own Behavior.
+            if (!root.expanded) openSequence.start();
+        } else {
+            openSequence.stop();
+            closeSequence.start();
+        }
+    }
+
+    // Same black fill + bottom-only rounding shell.qml's real central
+    // island used to draw straight into itself -- flush against
+    // whatever screen edge the PARENT is flush against (top corners
+    // square), rounded at the bottom regardless of how tall this grows,
+    // since the radii were never tied to a fixed height to begin with.
+    Rectangle {
+        id: fill
+        anchors.fill: parent
+        topLeftRadius: 0
+        topRightRadius: 0
+        bottomLeftRadius: root.cornerRadius
+        bottomRightRadius: root.cornerRadius
+        color: "#000000"
+    }
+
+    // Same GlassRim treatment every pill in this bar gets. Symmetric
+    // light from directly below (hSpan: 0), not the usual diagonal
+    // corner-to-corner ramp -- a single corner hotspot read lopsided on
+    // a shape this wide. topOverflow pushes the traced rect's top edge
+    // above the surface entirely, so only the bottom arc (the one edge
+    // this flush-top shape actually has) ever paints.
+    GlassRim {
+        target: fill
+        cornerRadius: root.cornerRadius - 1
+        lightOrigin: "bottomLeft"
+        hSpan: 0
+        strength: 0.35
+        highlightColor: "#8e8e93"
+        topOverflow: root.cornerRadius + 6
+    }
+
+    // Second, fainter glossy catch-light toward the bottom-right, same
+    // as before -- a soft RADIAL highlight echoing the diagonal
+    // topLeft/bottomRight pairing GlassRim uses elsewhere, baked into
+    // the fill since this shape carries no second rim to hang it off.
+    Shape {
+        id: gloss
+        anchors.fill: fill
+        antialiasing: true
+        preferredRendererType: Shape.CurveRenderer
+
+        ShapePath {
+            strokeWidth: -1
+            fillGradient: RadialGradient {
+                centerX: gloss.width * 1.05
+                centerY: gloss.height * 1.15
+                centerRadius: gloss.height * 1.1
+                focalX: centerX
+                focalY: centerY
+                GradientStop { position: 0.0; color: "#1cffffff" }
+                GradientStop { position: 1.0; color: "#00ffffff" }
+            }
+            PathRectangle {
+                x: 0; y: 0
+                width: gloss.width
+                height: gloss.height
+                bottomLeftRadius: root.cornerRadius
+                bottomRightRadius: root.cornerRadius
+            }
+        }
+    }
+
+    // Top row -- centered within root's own (possibly wider than the
+    // row itself, see `effectiveWidth` above) width, not just flush
+    // left with margin, so it stays visually centered ("en gardant
+    // compact au milieu les trois parties du island") whenever the
+    // drawer's fixed maxRowWidth floor is wider than the row's own
+    // current content.
+    Row {
+        id: topRow
+        x: root.margin + (root.effectiveWidth - topRow.implicitWidth) / 2
+        y: 0
+        height: root.rowHeight
+        spacing: 6
+    }
+
+    // Where the stack lives. A plain Column: its height is the live sum
+    // of its children's animating heights, and it re-lays-out on every
+    // change, so an entry closing above another makes the one below
+    // slide up without any offset arithmetic here.
+    Column {
+        id: drawerColumn
+        x: root.margin
+        y: root.rowHeight
+        width: root.effectiveWidth
+    }
+
+    // One set of bindings per entry. An Instantiator rather than a
+    // Repeater because these delegates are not visual children of
+    // anything -- they exist only to own the three Bindings below and to
+    // reparent their entry into drawerColumn once; the entry itself is
+    // an already-built Item passed in from outside, not something a
+    // delegate creates.
+    Instantiator {
+        model: root.drawerItems
+        delegate: QtObject {
+            required property var modelData
+
+            property Binding widthBinding: Binding {
+                target: modelData
+                property: "width"
+                value: root.effectiveWidth
+            }
+            // Closed is height 0; open is its natural implicitHeight --
+            // but only once `expanded` says the widen phase is done (see
+            // its own comment). The animation between the two is the
+            // entry's own `Behavior on height`, part of the contract at
+            // the top of this file.
+            property Binding heightBinding: Binding {
+                target: modelData
+                property: "height"
+                value: (modelData.drawerOpen && root.expanded) ? modelData.implicitHeight : 0
+            }
+            // The dévoilé (reveal) -- asked for back when Veille was the
+            // only thing in here ("il est caché puis affiché
+            // progressivement que le tiroir s'ouvre complement"), and
+            // driven from here for EVERY entry rather than re-declared
+            // by each content file, so the keybinds cheatsheet reveals
+            // exactly the way Veille does instead of drifting from it.
+            // `clip: true` (set below) already wipes the content in
+            // top-to-bottom as `height` grows, but a plain wipe alone
+            // reads as content getting cut off rather than unveiled.
+            // Tying opacity to that same height progress -- 0 when
+            // closed, 1 at full height -- fades it in lockstep with the
+            // wipe, with no second separately-timed animation.
+            property Binding opacityBinding: Binding {
+                target: modelData
+                property: "opacity"
+                value: modelData.implicitHeight > 0
+                    ? Math.min(1, modelData.height / modelData.implicitHeight)
+                    : 0
+            }
+
+            Component.onCompleted: {
+                modelData.clip = true;
+                modelData.parent = drawerColumn;
+            }
+        }
+    }
+}

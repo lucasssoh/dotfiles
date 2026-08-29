@@ -181,3 +181,53 @@ hl.bind("+ XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%- && qui
 hl.bind("+ XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("+ XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 hl.bind("+ XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),        { locked = true })
+
+-- ============================================================
+-- HELP
+-- ============================================================
+-- Keybinds cheatsheet: HOLDING SUPER ("Super_L" is the bare left-Super
+-- keysym, not `mod` used as a modifier prefix) drops it into the bar's
+-- central island in place of the clock, releasing hides it again (see
+-- quickshell/bar/shell.qml's keybindsVisible / KeybindsDrawerContent.qml).
+-- Same press/release gesture pairing as the power/profile/display wheels
+-- above (the `release` option, hyprlang's `bindr`).
+--
+-- `long_press` (verified against `hyprctl binds -j`, which reports the
+-- flag back as longPress: true -- NOT the camelCase spelling, which is
+-- silently ignored) is what makes this a HOLD rather than a press: on a
+-- quick tap Hyprland emits NO event here at all. That matters twice
+-- over. First, Super_L goes down at the start of EVERY other SUPER+...
+-- bind in this file, so a plain press bind would fire the sheet on all
+-- of them. Second, these two binds are two INDEPENDENT process spawns
+-- (`qs ... ipc call`, ~100ms each) with no ordering guarantee between
+-- them: on a tap, both fire at once and the release can easily land
+-- BEFORE the press, leaving the sheet stuck open with the key already
+-- up. Not emitting the press at all on a tap removes that race at the
+-- source (shell.qml keeps a small guard for the remaining case -- a
+-- release immediately after the threshold). Hyprland's long-press
+-- threshold is fixed (there is no binds:long_press_delay option in
+-- 0.56.2), so the rest of the delay lives on the quickshell side where
+-- it can actually be tuned: shell.qml's keybindsHoldDelay.
+--
+-- `non_consuming` on both so binding the bare Super key changes nothing
+-- about Super's normal job as the modifier prefix for everything else
+-- here -- the key events still reach the focused client as usual.
+hl.bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"),
+        { long_press = true, non_consuming = true })
+
+-- The release is registered under BOTH modmasks, and that is not
+-- redundant. A bind matches on the modifier state at the moment the
+-- event fires, and for the modifier key itself that state differs
+-- between its own two edges: SUPER is not yet applied when it goes
+-- DOWN (modmask 0, what the long-press bind above matches), but is
+-- still applied while it comes back UP -- so a release bind registered
+-- at modmask 0 alone never matches, which is exactly the "it opens but
+-- letting go doesn't close it" symptom. Which of the two Hyprland
+-- actually delivers is a compositor-internal ordering detail, so both
+-- are registered rather than betting on one; firing both is harmless,
+-- keybindsRelease is idempotent (disarm the timer, hide).
+hl.bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
+        { release = true, non_consuming = true })
+hl.bind(mod .. "+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
+        { release = true, non_consuming = true })
+

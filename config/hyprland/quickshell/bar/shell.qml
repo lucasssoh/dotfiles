@@ -94,6 +94,57 @@ ShellRoot {
     // windows actually reclaim the space instead of leaving a dead gap.
     property bool zenMode: false
 
+    // Keybinds cheatsheet, shown while SUPER is HELD (see
+    // hypr/keybinds.lua's "Super_L" bind, press/release calling
+    // keybindsPress/keybindsRelease below) -- the second thing to ever
+    // plug into DrawerIsland's slot, asked for explicitly as a test of
+    // the "sans que ça ne soit forcement Veille" extensibility
+    // centerIsland's own comment already called out. Shown on every
+    // screen's bar at once (unlike Veille -- a hand-triggered cheatsheet
+    // isn't the kind of "noise" repeating Veille on every monitor would
+    // be).
+    //
+    // A genuine HOLD, not a press: SUPER is the modifier prefix for
+    // nearly every other bind in keybinds.lua, so the key goes down
+    // constantly in normal use (SUPER+E, SUPER+Space, ...) and showing
+    // this on the bare press would flash it open on every one of them.
+    // The first half of that filtering is Hyprland's own `long_press`
+    // flag on the bind (see keybinds.lua) -- a quick tap emits nothing
+    // here at all. This timer is the SECOND half, and the tunable one:
+    // Hyprland's long-press threshold is fixed and fairly short, so
+    // keybindsPress below only ARMS this, and the sheet appears once
+    // SUPER has additionally been down this long.
+    property bool keybindsVisible: false
+    readonly property int keybindsHoldDelay: 350
+    Timer {
+        id: keybindsHoldTimer
+        interval: shell.keybindsHoldDelay
+        repeat: false
+        onTriggered: shell.keybindsVisible = true
+    }
+
+    // Guard against the two binds arriving OUT OF ORDER. They're two
+    // separate `qs ... ipc call` process spawns (~100ms each) racing
+    // each other, so a release very shortly after the long-press
+    // threshold can land BEFORE the press it's supposed to cancel --
+    // which would leave the sheet opening onto an already-released key
+    // and staying there. A press arriving within this window of the
+    // last release is treated as that stale press and dropped.
+    // Deliberately shorter than any real re-hold gesture, so holding
+    // SUPER again right after letting go still works normally.
+    property real keybindsLastReleaseMs: 0
+    readonly property int keybindsReorderGuard: 250
+
+    // Alias, not the bare `veille` id, for anything reading this from
+    // INSIDE the Variants delegate below -- confirmed live that a plain
+    // sibling id declared elsewhere in this file (however positioned in
+    // reading order) resolves to null from within a Variants-instantiated
+    // PanelWindow ("TypeError: Cannot read property 'suppressed' of
+    // null"), while `shell`'s own id does not. `shell.veille` is then
+    // just an ordinary property read on an object already known to
+    // resolve, sidestepping whatever that scoping boundary actually is.
+    property alias veille: veilleInstance
+
     // One bar per currently-connected screen, automatically -- Quickshell
     // creates/destroys instances as monitors plug/unplug, no manual
     // single/dual-output branching needed. Workspaces and HDR are
@@ -134,6 +185,25 @@ ShellRoot {
         function pokeBrightness(): void {
             OsdState.pokeBrightness();
         }
+        // `qs -c bar ipc call bar keybindsPress`/`keybindsRelease` --
+        // hypr/keybinds.lua's Super_L bind calls these on key down/up.
+        // Press only ARMS the hold timer above (it does NOT show
+        // anything on its own); release both disarms it and hides, so
+        // whichever of the two the gesture ends on, the state is
+        // consistent. `restart()` rather than `start()` so a repeat
+        // key-down (autorepeat, or a press whose release got lost)
+        // re-arms from zero instead of being ignored as "already
+        // running".
+        function keybindsPress(): void {
+            if (Date.now() - shell.keybindsLastReleaseMs < shell.keybindsReorderGuard)
+                return;
+            keybindsHoldTimer.restart();
+        }
+        function keybindsRelease(): void {
+            shell.keybindsLastReleaseMs = Date.now();
+            keybindsHoldTimer.stop();
+            shell.keybindsVisible = false;
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -153,6 +223,24 @@ ShellRoot {
             Hyprland.refreshWorkspaces();
             Hyprland.refreshToplevels();
         }
+    }
+
+    // Sleep-awareness clock -- LOGIC only now (see modules/veille/
+    // Veille.qml's own header for why the rendering moved into each
+    // bar's own central island instead of a separate overlay window).
+    // Still single instance, not inside the Variants below: unlike the
+    // bar itself, this isn't per-screen content -- every bar below reads
+    // this same instance (via `shell.veille`, see that alias's own
+    // comment) and only actually opens ITS drawer when `bar.screen ===
+    // shell.veille.activeScreen`. zenMode threaded in exactly the way
+    // ActiveWindow.qml's `monitor` property is (a plain pass-through, no
+    // singleton needed for one consumer). `id: veilleInstance`, not
+    // `veille` -- `shell`'s own `veille` alias (above) points at this;
+    // see its comment for why the Variants delegate below reads it
+    // through that instead of this id directly.
+    Veille {
+        id: veilleInstance
+        zenMode: shell.zenMode
     }
 
     Variants {
@@ -188,257 +276,113 @@ ShellRoot {
             // unused now but kept for the same "still correct if it ever
             // reaches an edge" reason).
             margins { top: 0; left: 0; right: 0 }
-            // Has to stay >= the island's own height (below) and >= metrics/
-            // tools' own bottom extent (3 top gap + their content, ~27) or
-            // whichever pill is taller gets clipped by the surface's own
-            // bounds. The main bar's Row stays flush at y:0 regardless
-            // (anchors.top), only metrics/tools use the extra space.
-            implicitHeight: 31
+            // centerIsland's own maxHeight (a DrawerIsland -- see that
+            // component's own comment), NOT its current/animated
+            // `height` -- the real Wayland surface is allocated ONCE at
+            // the tallest it could ever need to be and never actually
+            // resized at the compositor level while the drawer opens/
+            // closes, only the in-scene content within it does (a real
+            // per-frame surface resize was a plausible source of visible
+            // hitches right at the start/end of that transition). Always
+            // >= rowHeight (31) even with no drawer content at all --
+            // still implicitly >= metrics/tools' own bottom extent too
+            // (3 top gap + their content, ~27, less than rowHeight). The
+            // main bar's Row stays flush at y:0 regardless (anchors.top);
+            // metrics/tools/the drawer use the extra space below, which
+            // just renders as empty/transparent (and stays outside the
+            // input mask below) whenever the drawer isn't fully open.
+            implicitHeight: centerIsland.maxHeight
+
+            // Input stays restricted to the NORMAL bar's own height
+            // (centerIsland.rowHeight, 31) regardless of how tall the
+            // surface's implicitHeight above grows once its drawer
+            // opens -- asked for on the standalone overlay Veille's own
+            // drawer replaced ("ne bloque jamais les clics") and just as
+            // true here: the drawer can now visually extend well past
+            // the 24px exclusiveZone into space real windows occupy, and
+            // without this it would swallow clicks meant for whatever's
+            // underneath. Every existing clickable module (Workspaces,
+            // BaliseButton, Media, metrics/tools...) sits within this
+            // same top rowHeight already, so this changes nothing for
+            // them.
+            mask: Region {
+                x: 0
+                y: 0
+                width: bar.width
+                height: centerIsland.rowHeight
+            }
 
             // ── ONE BAR ───────────────────────────────────────
-            // ActiveWindow, Workspaces and Media all live in ONE Row now,
-            // centered on the screen as a whole -- asked for explicitly,
-            // AGAIN, after two earlier passes each got walked back by the
-            // next ask:
-            //   1) a single Row, horizontalCenter-anchored -- Workspaces
-            //      visibly shifted whenever ActiveWindow (to its left in
-            //      that Row) changed width, since Row lays out
-            //      sequentially from its own left edge. Rejected.
-            //   2) Workspaces pinned to the screen's own horizontalCenter
-            //      (never moves), ActiveWindow/Media in separate
-            //      leftGroup/rightGroup items growing outward from its
-            //      edges, with centerIsland's fill first tracking their
-            //      real combined extent (asymmetric -- the fill's own
-            //      center drifted off-screen-center), then forced
-            //      symmetric via `Math.max()` of the two sides (fixed the
-            //      drift, but "un gros vide d'un côté" -- padded the
-            //      shorter side with blank fill instead of just being
-            //      snug). Rejected too.
-            // This is (1) again, in other words -- Workspaces CAN shift
-            // now ("les éléments dedans peuvent être déplacé ou non"),
-            // that's accepted as the tradeoff for the island having "un
-            // centre d'extension" and being an exact snug fit around
-            // whatever's actually in it (asked for: ActiveWindow 3x +
-            // Workspaces 2x + Media x => island 6x, "+ les petites
-            // marges"), not padded to match whichever side is currently
-            // wider.
+            // ActiveWindow, Workspaces and Media, in ONE Row, centered
+            // on the screen as a whole -- see DrawerIsland.qml for the
+            // actual pill/drawer mechanics (background, corner radii,
+            // GlassRim, the gloss highlight, the drawer-below-the-row
+            // layout). Factored out into that reusable component,
+            // rather than written inline here a second time, specifically
+            // so shell.qml and preview.qml (the review tool) share ONE
+            // implementation instead of two independently-coded copies
+            // that can drift apart -- asked for explicitly ("eviter de
+            // coder deux fois à la fois veille et preview"). Went
+            // through two rejected in-between designs first (see
+            // DrawerIsland.qml's own header for that history) before
+            // landing on "one Row, centered as a whole" -- Workspaces
+            // CAN shift now when ActiveWindow/Media resize, accepted as
+            // the tradeoff for the whole shape staying an exact snug fit
+            // around whatever's actually in it, not padded to match
+            // whichever side is currently wider.
             //
             // Clock used to sit here too -- moved into the tools pill
             // (right before the power dot) and given a date alongside it,
             // asked for.
-            Item {
-                id: barRow
+            Modules.DrawerIsland {
+                id: centerIsland
                 anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                // 24 -> 27 -> 31: first pass matched metrics/tools' own
-                // bottom edge (27); this one grows past it on purpose --
-                // asked for, "presque toucher les fenêtres du dessous" --
-                // exclusiveZone (below, unchanged at 24) is what actually
-                // reserves space from tiled windows, not this height, so
-                // growing it further is purely visual (aboveWindows paints
-                // over the extra few px, gaps_out.top still leaves a sliver
-                // before real window content). metrics/tools deliberately
-                // NOT touched -- they stay their own size, just now sit
-                // shorter than the island instead of matching it exactly.
-                height: 31
+                anchors.horizontalCenter: parent.horizontalCenter
 
-                // ActiveWindow / Workspaces / Media, in that order, as
-                // plain sequential Row children -- Row positions each
-                // child's `x` itself from its own left edge, so none of
-                // the three carry their own horizontal anchor (that
-                // WOULD conflict with Row's own layout); `verticalCenter`
-                // stays safe to set explicitly since Row never touches
-                // vertical position, only horizontal. `spacing: 6` is the
-                // old leftGroup/rightGroup 6px gap, now just the gap
-                // between every adjacent pair instead of two separately-
-                // anchored margins.
-                Row {
-                    id: centerRow
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
-
-                    // opacity 0.9 matches waybar/style.css's old #window
-                    // rule (the whole element, not just its text).
-                    Modules.ActiveWindow {
-                        id: activeWindow
-                        anchors.verticalCenter: parent.verticalCenter
-                        opacity: 0.9
-                        monitor: Hyprland.monitorFor(bar.screen)
-                    }
-                    Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
-                    // Media (mpris) -- no Launchers inside any more
-                    // (asked for, a while back: pulled out into its own
-                    // separate floating island, see below).
-                    Modules.Media {
-                        id: media
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                // The one visible pill -- see header comment above. z: -1
-                // keeps it painted behind centerRow even though it's
-                // declared last (default stacking order in an Item is
-                // declaration order).
+                // `shell.veille` is the single shared logic instance
+                // (see Veille.qml's own header, and `shell`'s own
+                // `veille` alias comment for why it's read through that
+                // rather than a bare id) -- every screen's bar reads it,
+                // but only the one matching `activeScreen` ever actually
+                // opens ITS drawer; every other screen's `drawerOpen`
+                // here just stays permanently false. `drawerItem` is any
+                // Item -- "ça permettra de centraliser aussi plus tard
+                // [un] widget qui se déclenche dans cet endroit sans que
+                // ça ne soit forcement Veille" -- Veille was the first
+                // thing plugged in here; the keybinds cheatsheet is the
+                // second, proving that comment out.
                 //
-                // Plain deep black now, not the vertical "glossy OLED"
-                // gradient (#0c0c0e easing into #000000 by 40% down) this
-                // used to carry -- asked for explicitly, to match
-                // Veille's own card (modules/veille/Veille.qml, also a
-                // flat `color: "#000000"`, no gradient).
-                Modules.Block {
-                    id: centerIsland
-                    z: -1
-                    anchors.top: parent.top
-                    height: 31
-                    // 10 -> 14 -> 18, asked for -- bottom corners only
-                    // (flushTop still squares the top ones off against the
-                    // screen edge, unaffected).
-                    cornerRadius: 18
-                    // A snug fit around centerRow's own actual width, not
-                    // padded to match whichever side is wider -- asked
-                    // for explicitly, see the header comment above for
-                    // the two earlier tries this replaces. `margin` is
-                    // breathing room on both sides, same value the old
-                    // leftGroup/rightGroup 6px gap used.
-                    readonly property real margin: 6
-                    x: centerRow.x - margin
-                    width: centerRow.width + margin * 2
-                    color: "#000000"
-                }
-
-                // Second, fainter glossy catch-light toward the bottom-
-                // right (asked for, "un bottomright un peu brillante
-                // aussi") -- a soft RADIAL highlight, echoing the same
-                // asymmetric topLeft/bottomRight pairing GlassRim uses on
-                // every other pill in this bar, just baked into the fill
-                // here since this island alone carries no rim to hang a
-                // second light source off of. Centered just past the
-                // island's own bottom-right corner and fully transparent
-                // by its outer stop, so it fades out before it would ever
-                // need clipping to the island's own rounded corner.
-                Shape {
-                    id: centerGloss
-                    z: -1
-                    x: centerIsland.x
-                    y: centerIsland.y
-                    width: centerIsland.width
-                    height: centerIsland.height
-                    antialiasing: true
-                    preferredRendererType: Shape.CurveRenderer
-
-                    ShapePath {
-                        strokeWidth: -1
-                        fillGradient: RadialGradient {
-                            // Pushed just PAST the actual corner (>100%/
-                            // >100%) on purpose -- only the near-left/
-                            // near-top arc of the circle then falls inside
-                            // the island at all, so it reads as a glow
-                            // hugging the corner itself rather than a
-                            // separate blob floating short of it (first
-                            // pass: 0.9/1.1 with a small radius, landed
-                            // visibly inboard of the real corner instead).
-                            //
-                            // Shrunk a lot from the first pass (2.6 ->
-                            // 1.1, alpha 0x2a -> 0x1c): Media used to sit
-                            // flush against this exact corner with NO
-                            // margin of its own (rightGroup's width WAS
-                            // the island's own right edge -- before the
-                            // island's own x/width became symmetric, see
-                            // centerIsland's own comment; Media still IS
-                            // flush against it whenever it's the wider of
-                            // the two sides, just not unconditionally any
-                            // more), so the wider/brighter first version
-                            // reached far enough inward to wash right over
-                            // the mpris title -- reported as "a
-                            // translucent film over media". This stays
-                            // inside the rounded corner's own curve
-                            // instead of spilling onto whatever content
-                            // happens to be sitting there.
-                            centerX: centerGloss.width * 1.05
-                            centerY: centerGloss.height * 1.15
-                            centerRadius: centerGloss.height * 1.1
-                            focalX: centerX
-                            focalY: centerY
-                            GradientStop { position: 0.0; color: "#1cffffff" }
-                            GradientStop { position: 1.0; color: "#00ffffff" }
-                        }
-                        // Matches centerIsland's own corner treatment
-                        // exactly (square top -- flushTop -- rounded
-                        // bottom only) instead of a plain sharp-cornered
-                        // rect (reported: a faint square sliver of the
-                        // glow poking out past the real rounded corner,
-                        // worse under HDR's own tone curve than the
-                        // gradient math alone suggested it would be).
-                        // Relying on the RadialGradient's alpha reaching
-                        // ~0 before the true corner was the ONLY thing
-                        // keeping this contained before -- this makes it
-                        // structurally impossible to overflow, whatever
-                        // the gradient math does.
-                        PathRectangle {
-                            x: 0; y: 0
-                            width: centerGloss.width
-                            height: centerGloss.height
-                            bottomLeftRadius: centerIsland.cornerRadius
-                            bottomRightRadius: centerIsland.cornerRadius
-                        }
+                // They STACK rather than compete: each entry carries its
+                // own `drawerOpen`, and the island extends once further
+                // for each one that opens. So holding SUPER while
+                // Veille's clock is already showing adds the cheatsheet
+                // underneath it instead of replacing it, and letting go
+                // retracts by exactly that much again. Listed here in
+                // the order they stack, top to bottom. `drawerItems`,
+                // not bare children -- an unnamed child of a
+                // DrawerIsland lands in its TOP row instead, via its
+                // default-property alias.
+                drawerItems: [
+                    VeilleDrawerContent {
+                        veille: shell.veille
+                        drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
+                    },
+                    Modules.KeybindsDrawerContent {
+                        drawerOpen: shell.keybindsVisible
                     }
-                }
+                ]
 
-                // The GlassRim edge every other pill in this bar gets,
-                // added here too despite the earlier note above
-                // ("Deliberately NOT applied to the central island") --
-                // that pass was before the glossy-black fill existed,
-                // worth re-checking now rather than trusting the old
-                // verdict forever. `topOverflow` (> cornerRadius) pushes
-                // the traced rect's top edge above the bar entirely, so
-                // only the bottom arc -- the one edge this flush-top
-                // island actually has -- ever paints, same trick
-                // Block.qml's own `flushTop` documents.
-                //
-                // SYMMETRIC light from directly below (asked for -- a
-                // single corner hotspot, GlassRim's usual default, read
-                // lopsided/brighter on one side than the other here),
-                // not the diagonal corner-to-corner ramp every other rim
-                // in this bar uses: `hSpan: 0` removes the horizontal
-                // axis from the gradient entirely, leaving a pure
-                // vertical fade that's IDENTICAL at every x position --
-                // `lightOrigin`'s left/right choice becomes irrelevant
-                // once hSpan is 0 (only `_fromBottom` still matters),
-                // kept as bottomLeft arbitrarily. `strength: 0.6`, not
-                // the default 1.0 -- asked for "léger" (slight), a subtle
-                // grey line rather than a bright highlight.
-                //
-                // cornerRadius is centerIsland's own radius MINUS 1, not
-                // an exact match (reported separately: at the bright
-                // corner, a sliver of the black fill's own corner still
-                // showed past the rim's curve) -- a BIGGER radius cuts
-                // the corner further FROM the true corner point, not
-                // closer to it, so matching the fill's nominal radius
-                // exactly was the wrong direction: the ring needs to
-                // trace a SMALLER radius than the fill so its own curve
-                // reaches at least as close to the true corner as the
-                // fill's actual rendered shape does (Rectangle's native
-                // per-corner rounding and Shape/PathRectangle's own
-                // rounding don't trace pixel-identical curves at the
-                // same nominal radius).
-                Modules.GlassRim {
-                    target: centerIsland
-                    cornerRadius: centerIsland.cornerRadius - 1
-                    lightOrigin: "bottomLeft"
-                    hSpan: 0
-                    // Lightened further and darkened (asked for): 0.6 ->
-                    // 0.35 strength, and the highlight itself swapped
-                    // from GlassRim's default near-white "#e5e5ea" to a
-                    // plain mid-grey "#8e8e93" (the same tone GlassRim's
-                    // OWN second ramp stop already uses elsewhere) --
-                    // even at its brightest point this line no longer
-                    // approaches white, just a dim grey trace.
-                    strength: 0.35
-                    highlightColor: "#8e8e93"
-                    topOverflow: centerIsland.cornerRadius + 6
+                // opacity 0.9 matches waybar/style.css's old #window
+                // rule (the whole element, not just its text).
+                Modules.ActiveWindow {
+                    opacity: 0.9
+                    monitor: Hyprland.monitorFor(bar.screen)
                 }
+                Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
+                // Media (mpris) -- no Launchers inside any more (asked
+                // for, a while back: pulled out into its own separate
+                // floating island, see below).
+                Modules.Media {}
             }
 
             // ── METRICS (separate from the main bar, top-left) ─
@@ -779,16 +723,6 @@ ShellRoot {
             Modules.GlassRim { target: tools }
             Modules.GlassRim { target: tools; lightOrigin: "bottomRight"; strength: 0.45 }
         }
-    }
-
-    // Sleep-awareness clock overlay -- see modules/veille/Veille.qml and
-    // the project plan (temporal-drifting-hippo.md). Single instance, not
-    // inside the Variants above: unlike the bar itself, this isn't
-    // per-screen content, and zenMode is threaded in exactly the way
-    // ActiveWindow.qml's `monitor` property is (a plain pass-through, no
-    // singleton needed for one consumer).
-    Veille {
-        zenMode: shell.zenMode
     }
 
     // Volume/mic/brightness OSD -- see services/OsdState.qml for the

@@ -33,7 +33,6 @@ Scope {
     readonly property bool enabled: adapter.enabled
     readonly property string language: adapter.language
     readonly property string monitor: adapter.monitor
-    readonly property real widthFraction: adapter.widthFraction
     readonly property bool showSeconds: adapter.showSeconds
     readonly property bool showDate: adapter.showDate
     readonly property int messageIntervalMinutes: adapter.messageIntervalMinutes
@@ -73,17 +72,6 @@ Scope {
             property bool enabled: true
             property string language: "fr"
             property string monitor: ""
-
-            // Fraction of the SCREEN'S WIDTH the clock spans -- not a
-            // raw pixel font size ("proportionnel à la taille de l'ecran
-            // pas mesuré au pixel"), and the SAME value at every phase
-            // now ("garde la même taille pour chaque heure" -- an
-            // earlier pass escalated this 0.25->0.3333 across the 5
-            // phases, dropped). Veille.qml turns this into an actual
-            // font.pixelSize via TextMetrics (measures this exact font/
-            // string once, then solves for the size that hits the
-            // target width).
-            property real widthFraction: 0.29
 
             property bool showSeconds: true
             property bool showDate: false

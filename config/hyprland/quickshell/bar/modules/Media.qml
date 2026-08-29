@@ -79,6 +79,17 @@ Item {
     // its gap to the viewport, on top of the viewport's own padding.
     readonly property real openWidth: Math.max(viewportWidth + 34 + 24, 84)
 
+    // The widest this module can ever get -- same formula as openWidth
+    // above but with viewportWidth's own cap (maxViewport) substituted
+    // for its live value, so this stays a genuine constant instead of
+    // tracking whatever's currently playing. Mirrors ActiveWindow.qml's
+    // own `maxWidth` (also 258, coincidentally -- both cap around the
+    // same figure by design symmetry, see shell.qml's old header on the
+    // two being deliberately paired "élargisseurs"). Read by
+    // DrawerIsland.qml to size Veille's drawer at a fixed width instead
+    // of whatever this module's CURRENT width happens to be.
+    readonly property real maxWidth: Math.max(maxViewport + 34 + 24, 84)
+
     // Placeholder text/width when no player is active -- asked for: this
     // side of the bar collapsing to 0 while ActiveWindow (the module
     // symmetric to this one across the fixed centerRow -- see shell.qml's
