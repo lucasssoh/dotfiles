@@ -196,32 +196,36 @@ ShellRoot {
             implicitHeight: 31
 
             // ── ONE BAR ───────────────────────────────────────
-            // Workspaces sits dead center of the screen and never moves --
-            // ActiveWindow and Media (mpris) grow OUTWARD away from that
-            // fixed center point, asked for. The previous approach (a
-            // single Row inside one Block, horizontalCenter-anchored) kept
-            // the BLOCK's own center fixed, but Workspaces still visibly
-            // shifted whenever ActiveWindow -- to its left in that Row --
-            // changed width, since Row lays everything out sequentially
-            // from its left edge. Now centerRow is anchored straight to
-            // the screen's horizontalCenter and nothing else in here can
-            // move it; leftGroup/rightGroup are anchored OFF centerRow's
-            // own edges (not off each other, not off a screen edge), so
-            // their growth only ever extends away from the center, never
-            // toward it. The background (still Modules.Block, for its
-            // shared corner-radius/color logic) has no content of its
-            // own any more -- its x/width are bound straight to
-            // leftGroup/rightGroup's actual on-screen extents instead of
-            // Block's usual Row-implicitWidth auto-sizing, so the one
-            // visible pill still reads as a single shape spanning
-            // window ⟷ mpris with workspaces floating, unmoving, in the
-            // middle of it.
+            // ActiveWindow, Workspaces and Media all live in ONE Row now,
+            // centered on the screen as a whole -- asked for explicitly,
+            // AGAIN, after two earlier passes each got walked back by the
+            // next ask:
+            //   1) a single Row, horizontalCenter-anchored -- Workspaces
+            //      visibly shifted whenever ActiveWindow (to its left in
+            //      that Row) changed width, since Row lays out
+            //      sequentially from its own left edge. Rejected.
+            //   2) Workspaces pinned to the screen's own horizontalCenter
+            //      (never moves), ActiveWindow/Media in separate
+            //      leftGroup/rightGroup items growing outward from its
+            //      edges, with centerIsland's fill first tracking their
+            //      real combined extent (asymmetric -- the fill's own
+            //      center drifted off-screen-center), then forced
+            //      symmetric via `Math.max()` of the two sides (fixed the
+            //      drift, but "un gros vide d'un côté" -- padded the
+            //      shorter side with blank fill instead of just being
+            //      snug). Rejected too.
+            // This is (1) again, in other words -- Workspaces CAN shift
+            // now ("les éléments dedans peuvent être déplacé ou non"),
+            // that's accepted as the tradeoff for the island having "un
+            // centre d'extension" and being an exact snug fit around
+            // whatever's actually in it (asked for: ActiveWindow 3x +
+            // Workspaces 2x + Media x => island 6x, "+ les petites
+            // marges"), not padded to match whichever side is currently
+            // wider.
             //
             // Clock used to sit here too -- moved into the tools pill
             // (right before the power dot) and given a date alongside it,
-            // asked for. centerRow keeps its name/Row wrapper even with a
-            // single child now, since nothing else about this anchoring
-            // scheme changes.
+            // asked for.
             Item {
                 id: barRow
                 anchors.top: parent.top
@@ -239,73 +243,50 @@ ShellRoot {
                 // shorter than the island instead of matching it exactly.
                 height: 31
 
+                // ActiveWindow / Workspaces / Media, in that order, as
+                // plain sequential Row children -- Row positions each
+                // child's `x` itself from its own left edge, so none of
+                // the three carry their own horizontal anchor (that
+                // WOULD conflict with Row's own layout); `verticalCenter`
+                // stays safe to set explicitly since Row never touches
+                // vertical position, only horizontal. `spacing: 6` is the
+                // old leftGroup/rightGroup 6px gap, now just the gap
+                // between every adjacent pair instead of two separately-
+                // anchored margins.
                 Row {
                     id: centerRow
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 0
-                    Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
-                }
+                    spacing: 6
 
-                // ActiveWindow -- right edge anchored to centerRow's left
-                // edge (fixed 6px gap), so growth only ever extends the
-                // LEFT edge further left. opacity 0.9 matches waybar/
-                // style.css's old #window rule (the whole element, not
-                // just its text).
-                Item {
-                    id: leftGroup
-                    implicitWidth: activeWindow.implicitWidth
-                    height: 24
-                    anchors.right: centerRow.left
-                    anchors.rightMargin: 6
-                    anchors.verticalCenter: parent.verticalCenter
-
+                    // opacity 0.9 matches waybar/style.css's old #window
+                    // rule (the whole element, not just its text).
                     Modules.ActiveWindow {
                         id: activeWindow
-                        anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         opacity: 0.9
                         monitor: Hyprland.monitorFor(bar.screen)
                     }
-                }
-
-                // Media (mpris) -- back to its own chained group, no
-                // Launchers inside any more (asked for: pulled back out
-                // into its own separate floating island, see below,
-                // rather than grouped in here). Mirror of leftGroup: left
-                // edge anchored to centerRow's right edge, so growth only
-                // ever extends the RIGHT edge further right.
-                Item {
-                    id: rightGroup
-                    implicitWidth: media.implicitWidth
-                    height: 24
-                    anchors.left: centerRow.right
-                    anchors.leftMargin: 6
-                    anchors.verticalCenter: parent.verticalCenter
-
+                    Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
+                    // Media (mpris) -- no Launchers inside any more
+                    // (asked for, a while back: pulled out into its own
+                    // separate floating island, see below).
                     Modules.Media {
                         id: media
-                        anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
                 // The one visible pill -- see header comment above. z: -1
-                // keeps it painted behind leftGroup/centerRow/rightGroup
-                // even though it's declared last (default stacking order
-                // in an Item is declaration order).
+                // keeps it painted behind centerRow even though it's
+                // declared last (default stacking order in an Item is
+                // declaration order).
                 //
-                // Glossy OLED black now, not the old flat "#0c0c0e"
-                // (asked for, "vraiment ajoute le côté 000000") -- FILL
-                // only, borders/rim still deliberately untouched (see the
-                // "Deliberately NOT applied to the central island"
-                // comments on metrics/launchers/tools below: this island
-                // stays the one pill in the bar with no GlassRim at all).
-                // A vertical gradient stands in for the rim's own light-
-                // catches-the-top-edge logic: a sliver of dark grey right
-                // at the top eases into true black by 40% down, same
-                // "glossy curved surface" read as a rim would give, just
-                // baked into the fill since there's no edge to trace here.
+                // Plain deep black now, not the vertical "glossy OLED"
+                // gradient (#0c0c0e easing into #000000 by 40% down) this
+                // used to carry -- asked for explicitly, to match
+                // Veille's own card (modules/veille/Veille.qml, also a
+                // flat `color: "#000000"`, no gradient).
                 Modules.Block {
                     id: centerIsland
                     z: -1
@@ -315,13 +296,16 @@ ShellRoot {
                     // (flushTop still squares the top ones off against the
                     // screen edge, unaffected).
                     cornerRadius: 18
-                    x: leftGroup.x
-                    width: rightGroup.x + rightGroup.width - leftGroup.x
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#0c0c0e" }
-                        GradientStop { position: 0.4; color: "#000000" }
-                        GradientStop { position: 1.0; color: "#000000" }
-                    }
+                    // A snug fit around centerRow's own actual width, not
+                    // padded to match whichever side is wider -- asked
+                    // for explicitly, see the header comment above for
+                    // the two earlier tries this replaces. `margin` is
+                    // breathing room on both sides, same value the old
+                    // leftGroup/rightGroup 6px gap used.
+                    readonly property real margin: 6
+                    x: centerRow.x - margin
+                    width: centerRow.width + margin * 2
+                    color: "#000000"
                 }
 
                 // Second, fainter glossy catch-light toward the bottom-
@@ -357,13 +341,18 @@ ShellRoot {
                             // visibly inboard of the real corner instead).
                             //
                             // Shrunk a lot from the first pass (2.6 ->
-                            // 1.1, alpha 0x2a -> 0x1c): Media sits flush
-                            // against this exact corner with NO margin of
-                            // its own (rightGroup's width IS the island's
-                            // own right edge), so the wider/brighter first
-                            // version reached far enough inward to wash
-                            // right over the mpris title -- reported as
-                            // "a translucent film over media". This stays
+                            // 1.1, alpha 0x2a -> 0x1c): Media used to sit
+                            // flush against this exact corner with NO
+                            // margin of its own (rightGroup's width WAS
+                            // the island's own right edge -- before the
+                            // island's own x/width became symmetric, see
+                            // centerIsland's own comment; Media still IS
+                            // flush against it whenever it's the wider of
+                            // the two sides, just not unconditionally any
+                            // more), so the wider/brighter first version
+                            // reached far enough inward to wash right over
+                            // the mpris title -- reported as "a
+                            // translucent film over media". This stays
                             // inside the rounded corner's own curve
                             // instead of spilling onto whatever content
                             // happens to be sitting there.

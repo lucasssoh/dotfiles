@@ -32,9 +32,8 @@ Scope {
 
     readonly property bool enabled: adapter.enabled
     readonly property string language: adapter.language
-    readonly property string position: adapter.position
-    readonly property var margins: adapter.margins
     readonly property string monitor: adapter.monitor
+    readonly property real widthFraction: adapter.widthFraction
     readonly property bool showSeconds: adapter.showSeconds
     readonly property bool showDate: adapter.showDate
     readonly property int messageIntervalMinutes: adapter.messageIntervalMinutes
@@ -73,10 +72,18 @@ Scope {
 
             property bool enabled: true
             property string language: "fr"
-
-            property string position: "bottom-right"
-            property var margins: ({ x: 48, y: 48 })
             property string monitor: ""
+
+            // Fraction of the SCREEN'S WIDTH the clock spans -- not a
+            // raw pixel font size ("proportionnel à la taille de l'ecran
+            // pas mesuré au pixel"), and the SAME value at every phase
+            // now ("garde la même taille pour chaque heure" -- an
+            // earlier pass escalated this 0.25->0.3333 across the 5
+            // phases, dropped). Veille.qml turns this into an actual
+            // font.pixelSize via TextMetrics (measures this exact font/
+            // string once, then solves for the size that hits the
+            // target width).
+            property real widthFraction: 0.29
 
             property bool showSeconds: true
             property bool showDate: false
@@ -102,12 +109,18 @@ Scope {
                 veryLate: "01:00"
             })
 
+            // Only `visible` left per-phase now -- opacity (a 0.4->1.0
+            // escalation) and widthFraction (0.25->0.3333) both got
+            // dropped in later passes ("il faut enlever la dynamique
+            // d'opacité", "garde la même taille pour chaque heure"): the
+            // clock/quote are the same size and fully opaque at every
+            // hour, only "day" stays hidden.
             property var phases: ({
-                day:      { visible: false, fontSize: 36, opacity: 0.28 },
-                evening:  { visible: true,  fontSize: 48, opacity: 0.45 },
-                late:     { visible: true,  fontSize: 64, opacity: 0.65 },
-                midnight: { visible: true,  fontSize: 76, opacity: 0.82 },
-                veryLate: { visible: true,  fontSize: 88, opacity: 0.95 }
+                day:      { visible: false },
+                evening:  { visible: true  },
+                late:     { visible: true  },
+                midnight: { visible: true  },
+                veryLate: { visible: true  }
             })
 
             property var appFamilies: ({})

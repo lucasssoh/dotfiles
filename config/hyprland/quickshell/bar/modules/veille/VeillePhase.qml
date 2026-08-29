@@ -60,7 +60,48 @@ Scope {
         return ((minuteOfDay - root.dayStartMinutes) % 1440 + 1440) % 1440;
     }
 
-    readonly property int nowMinutes: root.now.getHours() * 60 + root.now.getMinutes()
+    // ---- hourly pulse ---------------------------------------------------
+    // Asked for: not permanently on screen even during a visible phase --
+    // "il ne faut pas qu'il soit constamment là", just a brief appearance
+    // around each round hour ("les heures piles"), starting a little
+    // early since second-precision is available to place it exactly:
+    // "3 secondes avant". leadSeconds is how early the pulse starts
+    // relative to the hour mark, pulseSeconds is its total length (so it
+    // also runs pulseSeconds-leadSeconds PAST the hour) -- fires every
+    // hour a visible phase is active, not just the 4 configured
+    // thresholds, so e.g. 2am/3am during veryLate still pulses even
+    // though neither has a threshold of its own.
+    //
+    // Declared before nowMinutes/phaseName below (rather than in its own
+    // section further down) because nowMinutes now depends on
+    // leadSeconds/secIntoHour -- see its comment.
+    readonly property int leadSeconds:
+        (root.config && root.config.pulse && root.config.pulse.leadSeconds !== undefined)
+            ? root.config.pulse.leadSeconds : 3
+    readonly property int pulseSeconds:
+        (root.config && root.config.pulse && root.config.pulse.durationSeconds !== undefined)
+            ? root.config.pulse.durationSeconds : 10
+
+    readonly property int secIntoHour: root.now.getMinutes() * 60 + root.now.getSeconds()
+    readonly property int trailingSeconds: Math.max(0, root.pulseSeconds - root.leadSeconds)
+    readonly property bool inPulse:
+        root.secIntoHour >= (3600 - root.leadSeconds) || root.secIntoHour < root.trailingSeconds
+
+    // Minute-of-day the CURRENT pulse is actually FOR, not just the raw
+    // wall-clock minute. The pulse's lead-in starts leadSeconds before
+    // its round hour (comment above), so for those few seconds `now` is
+    // still technically the outgoing hour -- without this snap, a phase
+    // that only becomes message-enabled exactly at that hour (evening ->
+    // late at 23:00, say) would gate its own very first pulse on the
+    // OLD phase, 3 seconds too early, and silently show nothing. Bumping
+    // to the next hour during the lead-in keeps the phase (and
+    // everything derived from it: fontSize, messagesEnabled, the
+    // {hours} slot) consistent for the pulse's whole visible window
+    // instead of switching partway through it.
+    readonly property int nowMinutes:
+        (root.secIntoHour >= (3600 - root.leadSeconds))
+            ? (root.now.getHours() * 60 + root.now.getMinutes() + 1) % 1440
+            : root.now.getHours() * 60 + root.now.getMinutes()
     readonly property int nowM: m(root.nowMinutes)
 
     readonly property string phaseName: {
@@ -74,9 +115,7 @@ Scope {
         return best;
     }
 
-    readonly property var phase: root.phaseDefs[root.phaseName] || { visible: true, fontSize: 48, opacity: 0.5 }
-    readonly property int fontSize: root.phase.fontSize !== undefined ? root.phase.fontSize : 48
-    readonly property real targetOpacity: root.phase.opacity !== undefined ? root.phase.opacity : 0.5
+    readonly property var phase: root.phaseDefs[root.phaseName] || { visible: true }
     // Asked for: the clock has no business being on screen in broad
     // daylight -- "il est censé être là la nuit surtout". Per-phase, not
     // a single hardcoded cutoff, so a night-shift schedule (or just a
@@ -100,29 +139,6 @@ Scope {
     // silent, asked for ("horloge discrète" with no nagging before 22h).
     readonly property bool messagesEnabled:
         root.phaseName === "late" || root.phaseName === "midnight" || root.phaseName === "veryLate"
-
-    // ---- hourly pulse ---------------------------------------------------
-    // Asked for: not permanently on screen even during a visible phase --
-    // "il ne faut pas qu'il soit constamment là", just a brief appearance
-    // around each round hour ("les heures piles"), starting a little
-    // early since second-precision is available to place it exactly:
-    // "3 secondes avant". leadSeconds is how early the pulse starts
-    // relative to the hour mark, pulseSeconds is its total length (so it
-    // also runs pulseSeconds-leadSeconds PAST the hour) -- fires every
-    // hour a visible phase is active, not just the 4 configured
-    // thresholds, so e.g. 2am/3am during veryLate still pulses even
-    // though neither has a threshold of its own.
-    readonly property int leadSeconds:
-        (root.config && root.config.pulse && root.config.pulse.leadSeconds !== undefined)
-            ? root.config.pulse.leadSeconds : 3
-    readonly property int pulseSeconds:
-        (root.config && root.config.pulse && root.config.pulse.durationSeconds !== undefined)
-            ? root.config.pulse.durationSeconds : 10
-
-    readonly property int secIntoHour: root.now.getMinutes() * 60 + root.now.getSeconds()
-    readonly property int trailingSeconds: Math.max(0, root.pulseSeconds - root.leadSeconds)
-    readonly property bool inPulse:
-        root.secIntoHour >= (3600 - root.leadSeconds) || root.secIntoHour < root.trailingSeconds
 
     // Minutes elapsed since a given named threshold (e.g. "late"),
     // wrapping through midnight the same way the phase computation does

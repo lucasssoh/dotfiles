@@ -66,4 +66,19 @@ QtObject {
     // font). Opt-in per module, same as `mono` -- currently only the OSD
     // (Osd.qml), asked for specifically ("plus grand et plus gras").
     readonly property string iconPhosphorBold: "Phosphor-Bold"
+
+    // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's
+    // clock/message font, downloaded via api.fontshare.com's CSS
+    // endpoint (the fonts.com share page itself is a JS app with no
+    // static download link) and installed to ~/.local/share/fonts same
+    // as Phosphor above. Regular/Bold specifically came back with a
+    // broken name table (`fc-list` shows family "false" for those two),
+    // so only Light/Medium/Semibold got kept; each is its own family
+    // string, same "separate family per weight" deal as Phosphor above.
+    // `clock` (Medium) is the clock digits; `clockLight` is the message/
+    // quote underneath, asked for specifically ("un font plus light pour
+    // le quote").
+    readonly property string clock: "Clash Grotesk Medium"
+    readonly property string clockLight: "Clash Grotesk Light"
+    readonly property string clockSemibold: "Clash Grotesk Semibold"
 }

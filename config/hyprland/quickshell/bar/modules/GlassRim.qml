@@ -102,6 +102,17 @@ Shape {
     // top arc curves back into view.
     property real topOverflow: 0
 
+    // Per-corner overrides, each defaulting to `cornerRadius` -- plain
+    // childless bindings, so anything that only ever sets `cornerRadius`
+    // (every call site before Veille.qml) renders identically to before.
+    // Added for a target flush against two screen edges (Veille's
+    // corner-anchored card): only the corner diagonally OPPOSITE the
+    // screen's own corner should curve, the other three stay square.
+    property real topLeftRadius: cornerRadius
+    property real topRightRadius: cornerRadius
+    property real bottomLeftRadius: cornerRadius
+    property real bottomRightRadius: cornerRadius
+
     // In sibling mode (target set) these are the target's OWN x/y within
     // the shared parent. In child mode (target null, tracing `parent`)
     // x/y must stay 0 -- `parent` here IS this item's own coordinate
@@ -156,7 +167,10 @@ Shape {
             y: -rim.topOverflow
             width: rim.width
             height: rim.height + rim.topOverflow
-            radius: rim.cornerRadius
+            topLeftRadius: rim.topLeftRadius
+            topRightRadius: rim.topRightRadius
+            bottomLeftRadius: rim.bottomLeftRadius
+            bottomRightRadius: rim.bottomRightRadius
         }
         // Inner edge -- OddEvenFill turns this second subpath into a hole,
         // leaving just the `thickness`-wide ring between the two.
@@ -165,7 +179,10 @@ Shape {
             y: -rim.topOverflow + rim.thickness
             width: Math.max(0, rim.width - rim.thickness * 2)
             height: Math.max(0, rim.height + rim.topOverflow - rim.thickness * 2)
-            radius: Math.max(0, rim.cornerRadius - rim.thickness)
+            topLeftRadius: Math.max(0, rim.topLeftRadius - rim.thickness)
+            topRightRadius: Math.max(0, rim.topRightRadius - rim.thickness)
+            bottomLeftRadius: Math.max(0, rim.bottomLeftRadius - rim.thickness)
+            bottomRightRadius: Math.max(0, rim.bottomRightRadius - rim.thickness)
         }
     }
 }

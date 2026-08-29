@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.UPower
 import "../../theme"
+import "../"
 
 // VEILLE -- a large, non-interactive clock that pulses briefly around
 // each round hour at night (see VeillePhase.qml's `inPulse`) to make the
@@ -98,30 +99,69 @@ Scope {
 
     readonly property var activeScreen: root.pickScreen()
 
-    // ---- screen-relative sizing -----------------------------------------
-    // Asked for: the clock shouldn't match raw pixels -- a 1440p panel
-    // should read visibly bigger than a 1080p one, not the same pixel
-    // size shrunk by the extra density ("ne pas match les pixels mais la
-    // taille reel de l'ecran"). ShellScreen.height is the output's own
-    // resolution (already in logical/post-scale pixels under Wayland
-    // fractional scaling), so this ratio tracks "how big is this screen",
-    // not just "how many pixels does it have". 1080p is the reference --
-    // sizes below are unchanged there, and scale up/down from it.
-    readonly property real sizeReferenceHeight: 1080
-    readonly property real screenScale:
-        root.activeScreen ? (root.activeScreen.height / root.sizeReferenceHeight) : 1.0
+    // Docked under the bar's central island (ActiveWindow/Workspaces/
+    // Media), asked for explicitly -- top-anchored, centered on the
+    // SCREEN's own horizontal center. Reading straight off the screen
+    // rather than reaching into shell.qml's own `centerIsland` geometry
+    // (Veille is one Scope instance; `bar`/`centerIsland` are one
+    // PanelWindow per screen under Variants -- no shared property to
+    // read it from without new cross-file wiring) still matches exactly:
+    // centerIsland's own x/width were reworked to stay symmetric around
+    // that same fixed point regardless of which side (ActiveWindow or
+    // Media) is driving its growth (see that file's own comment), so
+    // there's no drift left to chase any more. `barHeight` mirrors
+    // shell.qml's `bar`/`barRow`/`centerIsland` height (31) -- keep the
+    // two in sync by hand if that ever changes.
+    readonly property int barHeight: 31
+    readonly property int gapBelowBar: 10
 
-    readonly property bool anchorTop: config.position.indexOf("top") === 0
-    readonly property bool anchorBottom: config.position.indexOf("bottom") === 0
-    readonly property bool anchorLeftEdge: config.position.indexOf("left") !== -1
-    readonly property bool anchorRightEdge: config.position.indexOf("right") !== -1
-    // Falls back to bottom-right if `position` is unrecognized, rather
-    // than leaving the window unanchored (which would drift to whatever
-    // the compositor's own default corner is).
-    readonly property bool effTop: anchorTop && !anchorBottom
-    readonly property bool effBottom: anchorBottom || (!anchorTop && !anchorBottom)
-    readonly property bool effLeft: anchorLeftEdge && !anchorRightEdge
-    readonly property bool effRight: anchorRightEdge || (!anchorLeftEdge && !anchorRightEdge)
+    // ---- screen-relative sizing -----------------------------------------
+    // Asked for: the clock's size is a FRACTION OF THE SCREEN'S WIDTH,
+    // not a raw pixel font size -- "proportionnel à la taille de l'ecran
+    // pas mesuré au pixel". A 1440p/4K panel gets a genuinely bigger
+    // clock instead of the same pixel count read smaller. ONE fixed
+    // fraction (config.widthFraction) at every phase now, not an
+    // escalation -- dropped, asked for explicitly ("garde la même taille
+    // pour chaque heure").
+    //
+    // TextMetrics measures THIS font rendering THIS exact string once at
+    // a reference size (100px) -- `width / 100` is then "screen pixels
+    // of rendered width per 1px of font.pixelSize" for this font/string
+    // combo, however wide its glyphs actually are. Solving that ratio
+    // for the target width (a fraction of the screen) gives the
+    // font.pixelSize that hits it exactly, without hardcoding or
+    // guessing a character-width constant.
+    TextMetrics {
+        id: clockMetrics
+        font.family: Fonts.clock
+        font.pixelSize: 100
+        text: config.showSeconds ? "00:00:00" : "00:00"
+    }
+    readonly property real clockWidthPerPixelSize: clockMetrics.width / 100
+
+    // The width the clock text should occupy on THIS screen -- stored
+    // separately from the font.pixelSize it implies (below) so clockText
+    // can be pinned to this exact width directly. Fonts.clock isn't
+    // monospace, so this also keeps the surrounding glass card from
+    // resizing as the visible digits change.
+    readonly property real clockTargetWidth:
+        config.widthFraction * (root.activeScreen ? root.activeScreen.width : 1920)
+
+    readonly property int clockPixelSize:
+        Math.round(root.clockTargetWidth / Math.max(0.001, root.clockWidthPerPixelSize))
+
+    // Everything else in the overlay (date/message text, the Column's
+    // own spacing, the glass card's padding/corner radius below) scales
+    // off the clock's own resolved size rather than a second, independent
+    // screen-based factor -- one reference number, so the whole thing
+    // grows/shrinks as one piece regardless of screen. Ratios carried
+    // over from the previous fixed-pixel version (16/48, 15/48, 6/48
+    // relative to its old default 48px clock).
+    readonly property int dateTextSize: Math.round(root.clockPixelSize * 0.32)
+    readonly property int messageTextSize: Math.round(root.clockPixelSize * 0.3)
+    readonly property int columnSpacing: Math.round(root.clockPixelSize * 0.08)
+    readonly property int cardPadding: Math.round(root.clockPixelSize * 0.28)
+    readonly property int cardRadius: Math.round(root.clockPixelSize * 0.16)
 
     PanelWindow {
         id: overlay
@@ -142,86 +182,155 @@ Scope {
         // Quickshell idiom for full click-through.
         mask: Region {}
 
-        visible: !root.suppressed && (root.activeScreen !== null)
+        // Mapped whenever there's a screen to put it on, regardless of
+        // `suppressed` -- the open/close animation below (`card.scale`)
+        // needs the surface to stay mapped THROUGH the retract, which an
+        // instant unmap would prevent. Same always-mapped-but-animated-
+        // invisible pattern Osd.qml already uses for its own show/hide.
+        visible: root.activeScreen !== null
 
-        anchors {
-            top: root.effTop
-            bottom: root.effBottom
-            left: root.effLeft
-            right: root.effRight
-        }
+        // Top-anchored + spanning the full width (left+right both
+        // anchored, the same trick `bar`'s own PanelWindow in shell.qml
+        // uses for its centered island) -- layer-shell has no "anchor to
+        // screen center" primitive, so a full-width surface with its
+        // CONTENT centered inside is the standard way to get a
+        // horizontally-centered floating panel. margins.top clears the
+        // bar + a small gap below it.
+        anchors { top: true; left: true; right: true }
         margins {
-            top: config.margins.y || 0
-            bottom: config.margins.y || 0
-            left: config.margins.x || 0
-            right: config.margins.x || 0
+            top: root.barHeight + root.gapBelowBar
+            left: 0
+            right: 0
         }
 
-        implicitWidth: content.implicitWidth
-        implicitHeight: content.implicitHeight
+        implicitHeight: content.implicitHeight + root.cardPadding * 2
 
-        Column {
-            id: content
-            anchors.centerIn: parent
-            spacing: Math.round(6 * root.screenScale)
+        // Solid, pure opaque black -- dropping the translucent glass
+        // gradient this used to carry (Osd.qml's own treatment): "un
+        // fond noir pur opaque, peu importe l'heure". GlassRim still
+        // traces the edge -- it's an independent border highlight, not
+        // dependent on the fill being translucent -- kept for the same
+        // rim-light read the rest of the bar uses.
+        Rectangle {
+            id: card
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: content.implicitWidth + root.cardPadding * 2
+            height: content.implicitHeight + root.cardPadding * 2
+            // Rounded on all four corners again -- asked for explicitly
+            // ("garde l'arrondi de bordure partout"). A previous pass
+            // squared off three of them for a corner-flush layout; now
+            // that the card floats under the bar instead of hugging a
+            // screen corner, there's no straight screen edge to justify
+            // that any more.
+            radius: root.cardRadius
+            color: "#000000"
 
-            Text {
-                id: clockText
-                anchors.horizontalCenter: parent.horizontalCenter
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                // Mono, not Fonts.ui -- the first real use of it (see
-                // theme/fonts.css's own header: kept for exactly this
-                // case, "fast-changing numeric readouts", previously
-                // unused anywhere). Without it, each second's digits
-                // subtly reflow the text's width under a proportional
-                // font, which undercuts the "make time hard to ignore"
-                // point by making the ticking itself look unstable.
-                font.family: Fonts.mono
-                font.pixelSize: Math.round(phase.fontSize * root.screenScale)
-                color: "#f2f2f7"
-                opacity: phase.targetOpacity
-                text: Qt.formatDateTime(root.now, config.showSeconds ? "HH:mm:ss" : "HH:mm")
-
-                // Escalation should be FELT arriving, not snap -- asked
-                // for implicitly by the whole "progressive" framing.
-                Behavior on font.pixelSize {
-                    NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-                }
-                Behavior on opacity {
-                    NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-                }
+            // Zoom in/out from the TOP edge (where it's anchored, right
+            // under the bar) -- asked for, after a horizontal slide
+            // (tried in between) got asked to be swapped back: turned
+            // out the SLIDE wasn't the fix, the easing was -- "utilise un
+            // simple zoom avec un bon ease-in ease-out ou mieux un
+            // spring". SpringAnimation, matching the same "physical
+            // settle" tuning Osd.qml's own track fill already uses,
+            // rather than a plain eased tween.
+            transformOrigin: Item.Top
+            scale: root.suppressed ? 0 : 1
+            Behavior on scale {
+                SpringAnimation { spring: 3; damping: 0.3 }
             }
 
-            Text {
-                id: dateText
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible: config.showDate
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                font.family: Fonts.ui
-                font.pixelSize: Math.round(16 * root.screenScale)
-                color: "#8e8e93"
-                opacity: clockText.opacity
-                text: Qt.formatDateTime(root.now, "dddd d MMMM")
-            }
+            GlassRim { cornerRadius: root.cardRadius }
+            GlassRim { cornerRadius: root.cardRadius; lightOrigin: "bottomRight"; strength: 0.45 }
 
-            Text {
-                id: messageText
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(420 * root.screenScale, implicitWidth)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                font.family: Fonts.ui
-                font.pixelSize: Math.round(15 * root.screenScale)
-                color: "#c7c7cc"
-                text: messages.text
-                opacity: messages.text !== "" ? 0.9 : 0
+            Column {
+                id: content
+                anchors.centerIn: parent
+                spacing: root.columnSpacing
 
-                Behavior on opacity {
-                    NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                Text {
+                    id: clockText
+                    // Left-anchored, same as messageText below -- asked
+                    // for explicitly ("aligne l'horloge avec le quote").
+                    // Both share the exact same width (clockTargetWidth)
+                    // and AlignLeft, so their glyphs start flush at the
+                    // same x regardless of how much of that width either
+                    // string's own glyphs actually fill -- AlignHCenter
+                    // on just the clock (the previous state) put its
+                    // digits centered WITHIN that box while the quote
+                    // sat flush left in an identically-positioned box,
+                    // so the two visibly didn't line up even though
+                    // their boxes did.
+                    anchors.left: parent.left
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    // Fonts.clock (Clash Grotesk Medium) -- latest of
+                    // several tried here (Fonts.mono, Nosifer, DSEG7
+                    // Classic, Liberation Serif all came before it).
+                    // `width`/`horizontalAlignment` below pin the box to
+                    // the phase's computed target width explicitly
+                    // instead of leaving the Text auto-sized (Fonts.clock
+                    // isn't monospace).
+                    font.family: Fonts.clock
+                    font.pixelSize: root.clockPixelSize
+                    width: root.clockTargetWidth
+                    horizontalAlignment: Text.AlignLeft
+                    // Slightly warm off-white, not pure white -- asked
+                    // for explicitly ("pas de blanc parfait mais
+                    // legerement creme").
+                    color: "#f2ecd9"
+                    text: Qt.formatDateTime(root.now, config.showSeconds ? "HH:mm:ss" : "HH:mm")
+
+                    // Size (not opacity any more -- that escalation was
+                    // dropped, see phases' own comment in VeilleConfig.qml)
+                    // should still be FELT arriving, not snap.
+                    Behavior on font.pixelSize {
+                        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on width {
+                        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                    }
+                }
+
+                Text {
+                    id: dateText
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: config.showDate
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    font.family: Fonts.ui
+                    font.pixelSize: root.dateTextSize
+                    color: "#8e8e93"
+                    text: Qt.formatDateTime(root.now, "dddd d MMMM")
+                }
+
+                Text {
+                    id: messageText
+                    // Left-anchored, not centered -- asked for
+                    // explicitly ("l'ancrer à gauche"). Width matches
+                    // the clock's own target width exactly, so the
+                    // message block's left edge lines up with the
+                    // clock's rather than floating independently.
+                    anchors.left: parent.left
+                    width: root.clockTargetWidth
+                    horizontalAlignment: Text.AlignLeft
+                    wrapMode: Text.WordWrap
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    // Fonts.clockLight -- a lighter weight than the
+                    // clock's own Fonts.clock (Medium), asked for
+                    // explicitly ("un font plus light pour le quote").
+                    font.family: Fonts.clockLight
+                    font.pixelSize: root.messageTextSize
+                    // Dimmer cream, not cool gray -- same warm shift as
+                    // clockText's own color, kept proportionally dimmer.
+                    color: "#c9c4b3"
+                    text: messages.text
+                    opacity: messages.text !== "" ? 0.9 : 0
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                    }
                 }
             }
         }

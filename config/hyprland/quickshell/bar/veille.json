@@ -2,9 +2,8 @@
     "enabled": true,
     "language": "fr",
 
-    "position": "bottom-right",
-    "margins": { "x": 48, "y": 48 },
     "monitor": "",
+    "widthFraction": 0.29,
 
     "showSeconds": true,
     "showDate": false,
@@ -26,11 +25,11 @@
     },
 
     "phases": {
-        "day": { "visible": false, "fontSize": 36, "opacity": 0.28 },
-        "evening": { "visible": true, "fontSize": 48, "opacity": 0.45 },
-        "late": { "visible": true, "fontSize": 64, "opacity": 0.65 },
-        "midnight": { "visible": true, "fontSize": 76, "opacity": 0.82 },
-        "veryLate": { "visible": true, "fontSize": 88, "opacity": 0.95 }
+        "day": { "visible": false },
+        "evening": { "visible": true },
+        "late": { "visible": true },
+        "midnight": { "visible": true },
+        "veryLate": { "visible": true }
     },
 
     "appFamilies": {
