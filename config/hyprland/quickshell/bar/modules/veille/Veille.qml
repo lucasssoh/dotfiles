@@ -57,6 +57,7 @@ Scope {
     VeilleContext {
         id: context
         config: config
+        now: root.now
     }
 
     VeilleMessages {
@@ -138,6 +139,20 @@ Scope {
             root.debugOffsetMs = 0;
         }
 
+        // `qs -c bar ipc call veille sample` -- draws a message right now,
+        // through the exact path a pulse would take (tone weighting,
+        // curated/grammar mix, live context), and prints it. The offline
+        // sampler (quickshell/bar/tools/veille-sample.mjs) covers volume
+        // and taste; this one answers the different question of whether
+        // the LIVE context is what you think it is -- it's the only way to
+        // see a {heuresApp} or churn line fire against a real session.
+        // Advances the anti-repetition ring like a real draw does, which
+        // is why it's behind the debug flag.
+        function sample(): string {
+            if (!config.debug) return "veille debug disabled -- set \"debug\": true in veille.json";
+            return messages.selectMessage();
+        }
+
         // `qs -c bar ipc call veille probe` -- prints the REAL class and
         // title Hyprland reports for whatever's focused right now, so
         // veille.json's appFamilies/tokenPatterns can be filled in from
@@ -147,7 +162,16 @@ Scope {
             if (!config.debug) return "veille debug disabled -- set \"debug\": true in veille.json";
             return "class=[" + context.windowClass + "] title=[" + context.windowTitle
                 + "] family=[" + context.family + "] token=[" + context.token
-                + "] level=" + context.level;
+                + "] level=" + context.level
+                // The session signals the grammar gates on (see
+                // VeilleContext's own "session shape" section). Without
+                // these in the probe there's no way to tell a fragment
+                // that never fires from one whose fact simply isn't true
+                // yet -- they look identical from the outside.
+                + " | sameFamilyMinutes=" + context.sameFamilyMinutes
+                + " churn=" + context.churn
+                + " weekend=" + context.weekend
+                + " streak=" + messages.streak;
         }
     }
 }

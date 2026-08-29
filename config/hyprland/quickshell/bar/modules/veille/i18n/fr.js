@@ -96,6 +96,27 @@ var catalog = {
             "Une dernière chose. Toujours une dernière chose.",
             "Même une horloge de sensibilisation au sommeil pense que tu devrais dormir, là.",
             "À cette heure, ta motivation carbure surtout à l'entêtement."
+        ],
+        // Cinquième ton, ajouté avec la grammaire (voir
+        // i18n/grammar.js). Le seul registre sans ironie du lot : il
+        // prend le dessus quand c'est le troisième soir de suite, parce
+        // qu'à ce stade la vanne a déjà été faite et la répéter n'est
+        // plus qu'une insistance.
+        tender: [
+            "Tu as le droit d'arrêter là, sans avoir fini.",
+            "Ça a été une longue journée. Elle peut se terminer maintenant.",
+            "Personne ne te demande plus rien ce soir.",
+            "Ce n'est pas de la paresse. C'est du repos, et tu en as besoin.",
+            "Tu en as fait assez pour aujourd'hui.",
+            "Il n'y a rien à prouver à cette heure-ci.",
+            "Ce que tu laisses en plan ce soir ne dit rien de toi.",
+            "Tu peux poser tout ça. Ça t'attendra sans bouger.",
+            "Sois un peu tendre avec toi, il est tard.",
+            "Ça ira mieux demain. Vraiment.",
+            "Tu n'as pas à finir la journée en beauté pour avoir le droit de dormir.",
+            "Le plus dur est derrière toi. Le reste peut attendre le matin.",
+            "Rien de ce qui reste ne vaut la nuit que tu es en train d'y laisser.",
+            "Va te coucher. C'est tout ce qu'il y a à faire, là, maintenant."
         ]
     },
 

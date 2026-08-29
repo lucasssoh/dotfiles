@@ -37,6 +37,7 @@ Scope {
     readonly property bool showDate: adapter.showDate
     readonly property int messageIntervalMinutes: adapter.messageIntervalMinutes
     readonly property int messageHoldSeconds: adapter.messageHoldSeconds
+    readonly property real curatedRatio: adapter.curatedRatio
     readonly property var pulse: adapter.pulse
     readonly property bool muteWhileGaming: adapter.muteWhileGaming
     readonly property bool respectZenMode: adapter.respectZenMode
@@ -78,6 +79,12 @@ Scope {
 
             property int messageIntervalMinutes: 20
             property int messageHoldSeconds: 25
+
+            // Share of draws that start from the hand-written catalogs
+            // (i18n/fr.js) rather than the grammar (i18n/fr-grammar.js).
+            // 0 = generated only, 1 = the pre-grammar behaviour. Neither
+            // end is the good setting: see VeilleMessages.qml.
+            property real curatedRatio: 0.35
 
             // Not permanently on screen -- a brief pulse around each
             // round hour instead (see VeillePhase.qml's `inPulse`).

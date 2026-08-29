@@ -23,6 +23,12 @@ Scope {
 
     property var config: null   // VeilleConfig instance
 
+    // Injected like VeillePhase's, for the same two reasons: the session
+    // signals below are functions of elapsed time, and Veille.qml's debug
+    // `setNow` hook has to be able to drive them the way it drives the
+    // phases.
+    property date now: new Date()
+
     readonly property var toplevel: Hyprland.activeToplevel
     readonly property var ipc: (root.toplevel && root.toplevel.lastIpcObject) ? root.toplevel.lastIpcObject : null
 
@@ -121,4 +127,77 @@ Scope {
     // from the level-2 pool (asked for: "rester subtil", not every tick)
     // -- this just reports what's AVAILABLE, not how it's used.
     readonly property int level: root.hasToken ? 2 : (root.family !== "" ? 1 : 0)
+
+    // ---- session shape -------------------------------------------------
+    // What the focused window is says nothing about how the evening has
+    // actually gone. These three do, and they're what let a message say
+    // something the user couldn't have predicted from the app name alone
+    // -- "ça fait 3 h que la même fenêtre est devant toi" is a different
+    // claim from "tu es dans l'IDE", and only one of them can be wrong.
+    //
+    // Nothing here is exposed to the grammar directly; VeilleMessages
+    // folds them into the context object, and a fragment naming
+    // {heuresApp} (or carrying `when: { churn: ">=5" }`) is simply
+    // ineligible until the fact holds. See i18n/grammar.js.
+    property string trackedFamily: ""
+    property real familySince: 0
+    property var familySwitches: []
+
+    readonly property int churnWindowMs: 15 * 60000
+
+    onFamilyChanged: {
+        // An empty family is NOT a switch. `hasWindow` reports "" for a
+        // floating window, a dashboard surface, or an empty workspace --
+        // treating any of those as a change would reset a three-hour
+        // session every time a dialog opened, which is exactly the kind
+        // of quietly-wrong number that's worse than no number.
+        if (root.family === "") return;
+        if (root.family === root.trackedFamily) return;
+
+        const at = root.now.getTime();
+        root.trackedFamily = root.family;
+        root.familySince = at;
+
+        const kept = [];
+        for (let i = 0; i < root.familySwitches.length; i++)
+            if (root.familySwitches[i] >= at - root.churnWindowMs)
+                kept.push(root.familySwitches[i]);
+        kept.push(at);
+        root.familySwitches = kept;
+    }
+
+    // Minutes spent in the CURRENT family without switching to another
+    // one. Unlike VeillePhase's {hours} (which counts from the `late`
+    // threshold and so says the same thing whatever you're doing), this
+    // is a real session length.
+    readonly property int sameFamilyMinutes:
+        (root.trackedFamily === "" || root.familySince === 0)
+            ? 0
+            : Math.max(0, Math.floor((root.now.getTime() - root.familySince) / 60000))
+
+    // Family switches in the last quarter hour -- the difference between
+    // being absorbed in something and casting about for something to be
+    // absorbed in. Both are reasons to still be up; they aren't the same
+    // reason, and the grammar has lines for each.
+    readonly property int churn: {
+        const cut = root.now.getTime() - root.churnWindowMs;
+        let n = 0;
+        for (let i = 0; i < root.familySwitches.length; i++)
+            if (root.familySwitches[i] >= cut) n++;
+        return n;
+    }
+
+    // Whether the NIGHT is a weekend one, which is not the same question
+    // as whether today is Saturday: at 01:00 on a Saturday the evening
+    // being lived is Friday's. Anything before dayStart belongs to the
+    // previous day, the same remapping VeillePhase applies to its
+    // thresholds.
+    readonly property bool weekend: {
+        const dayStart = (root.config && root.config.thresholds && root.config.thresholds.dayStart)
+            ? root.config.thresholds.dayStart : "05:00";
+        const startHour = parseInt(dayStart.split(":")[0], 10) || 0;
+        let day = root.now.getDay();
+        if (root.now.getHours() < startHour) day = (day + 6) % 7;
+        return day === 5 || day === 6;   // vendredi soir / samedi soir
+    }
 }
