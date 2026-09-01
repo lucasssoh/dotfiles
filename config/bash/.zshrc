@@ -146,3 +146,8 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # =========================
 source ~/.config/ccnote/ccnote.zsh
 export PATH="$HOME/.npm-global/bin:$PATH"
+
+# Local secrets / environment
+if [ -f "$HOME/.config/bash/.env.local" ]; then
+    source "$HOME/.config/bash/.env.local"
+fi

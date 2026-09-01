@@ -78,3 +78,8 @@ command -v starship >/dev/null && eval "$(starship init bash)"
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# Local secrets / environment
+if [ -f "$HOME/.config/bash/.env.local" ]; then
+    source "$HOME/.config/bash/.env.local"
+fi
