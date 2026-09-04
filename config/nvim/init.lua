@@ -16,6 +16,14 @@ vim.opt.cursorline = true
 
 vim.opt.clipboard = "unnamedplus"
 
+-- Terminal window title: wezterm has no distinct window class for
+-- "running nvim" vs "plain shell" (org.wezfurlong.wezterm either way),
+-- so Veille's terminal tokenPattern (bar/veille.json) recognizes this
+-- session by title shape instead -- "<file> - NVIM" -- which is why the
+-- literal "NVIM" suffix stays even though it's redundant to the eye.
+vim.opt.title = true
+vim.opt.titlestring = "%t - NVIM"
+
 vim.opt.timeoutlen = 300
 vim.opt.ttimeoutlen = 0
 vim.opt.tabstop = 4

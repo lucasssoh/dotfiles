@@ -175,7 +175,7 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 3,
+        gaps_in          = 0,
         -- 0 on right/left so tiled windows sit flush against the screen's
         -- left/right edges, same as the quickshell bar itself (see
         -- quickshell/bar/shell.qml's PanelWindow margins: 0). Top/bottom
@@ -184,7 +184,7 @@ hl.config({
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
         gaps_out         = { top = 10, right = 8, bottom = 6, left = 8 },
-        border_size      = 2,
+        border_size      = 1,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
@@ -207,12 +207,15 @@ hl.config({
             -- color) at bottom-right -- confirmed empirically too (grim
             -- crops of all 4 corners before touching this).
             active_border = {
+                -- colors = {
+                --     "rgba(f5f5fABF)",  -- text, ~75% alpha -- the highlight tip, top-left
+                --     "rgba(8E8E9373)",  -- subtle, ~45% alpha -- shoulder of the curve
+                --     "rgba(63636647)",  -- muted,  ~28% alpha -- the curve's terminator/mid-tone
+                --     "rgba(3A3A3C26)",  -- overlay, ~15% alpha -- entering shadow
+                --     "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
+                -- },
                 colors = {
-                    "rgba(f5f5fABF)",  -- text, ~75% alpha -- the highlight tip, top-left
-                    "rgba(8E8E9373)",  -- subtle, ~45% alpha -- shoulder of the curve
-                    "rgba(63636647)",  -- muted,  ~28% alpha -- the curve's terminator/mid-tone
-                    "rgba(3A3A3C26)",  -- overlay, ~15% alpha -- entering shadow
-                    "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
+                    "rgba(8E8E9373)"
                 },
                 angle = 45,
             },
@@ -279,7 +282,7 @@ hl.config({
         },
         inactive_opacity = 1,
         active_opacity   = 1,
-        dim_inactive     = false,
+        dim_inactive     = true,
         dim_strength     = 0.35,
     },
 })

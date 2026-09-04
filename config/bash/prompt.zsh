@@ -103,19 +103,9 @@ _prompt_precmd() {
   (( exit != 0 )) && char_color="$_prompt_red"
 
   # Séparateur horodaté marquant la fin de la commande précédente
-  # (ligne pleine largeur, heure calée à droite)
   local sep=""
-  if (( _prompt_had_cmd )); then
-    local time_str=$(strftime '%H:%M:%S' $EPOCHSECONDS)
-    local cols=${COLUMNS:-80}
-    local dash_len=$(( cols - ${#time_str} - 1 ))
-    (( dash_len < 0 )) && dash_len=0
-    local dashes
-    printf -v dashes '%*s' "$dash_len" ''
-    dashes=${dashes// /─}
-    sep="%F{$_prompt_dim_grey}${dashes}%f %F{$_prompt_grey}${time_str}%f
+  (( _prompt_had_cmd )) && sep="%F{$_prompt_dim_grey}───%f %F{$_prompt_grey}$(strftime '%H:%M:%S' $EPOCHSECONDS)%f
 "
-  fi
   _prompt_had_cmd=1
 
   local project_seg=""
