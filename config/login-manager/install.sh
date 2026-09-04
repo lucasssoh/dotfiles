@@ -53,19 +53,21 @@ else
 fi
 
 # ============================================================
-# ASCII ART TO /ETC/ISSUE (The Fix)
+# NO BANNER: undo any leftover ASCII-art deployment from an older
+# install (restore-issue.service, its unit file, and the /etc/issue
+# it wrote), so /etc/issue goes back to its package-managed symlink.
 # ============================================================
-section "Deploying ASCII Art"
+section "Cleaning Up Old Banner Setup"
 
-if [ -f "$REPO_DIR/assets/ascii.txt" ]; then
-    # Installed to a stable system path (not /etc/issue directly, which is a
-    # package-managed symlink that gets overwritten on updates) ; restored
-    # into /etc/issue on every boot by restore-issue.service.
-    sudo install -Dm644 "$REPO_DIR/assets/ascii.txt" /usr/local/share/tuigreet/issue.txt
-    ok "ASCII art source deployed to /usr/local/share/tuigreet/issue.txt"
-else
-    err "assets/ascii.txt not found!"
+sudo systemctl disable --now restore-issue.service &>/dev/null || true
+sudo rm -f /etc/systemd/system/restore-issue.service
+sudo rm -f /usr/local/share/tuigreet/issue.txt
+if [ ! -L /etc/issue ]; then
+    sudo rm -f /etc/issue
+    sudo ln -s ../usr/lib/issue /etc/issue
 fi
+sudo systemctl daemon-reload
+ok "No banner: /etc/issue restored to its default symlink."
 
 # ============================================================
 # CONFIG DEPLOYMENT
@@ -80,17 +82,6 @@ sudo chown greeter:greeter /var/cache/tuigreet
 sudo chmod 0755 /var/cache/tuigreet
 
 ok "Configuration installed."
-
-# ============================================================
-# ASCII ART PERSISTENCE SERVICE
-# ============================================================
-section "Enabling ASCII Art Restore Service"
-
-sudo install -Dm644 "$REPO_DIR/systemd/restore-issue.service" /etc/systemd/system/restore-issue.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now restore-issue.service
-
-ok "restore-issue.service enabled (re-applies ASCII art to /etc/issue on every boot)."
 
 # ============================================================
 # SERVICE MANAGEMENT

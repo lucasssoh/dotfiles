@@ -7,9 +7,10 @@ vt = 1
 # saturated color). Named ANSI colors only -- the Linux VT console can't
 # be trusted to render truecolor/hex well, and tuigreet's --theme spec
 # only guarantees the ANSI-named set anyway (see apognu/tuigreet README).
-# white   = banner/typed input (hero content, brightest)
-# gray    = border/prompt labels/button hints (structural accent)
+# white    = typed input (brightest)
+# gray     = border/prompt labels/button hints (structural accent)
 # darkgray = base text/footer action text (deemphasized, matches the
 #            dim date label under the clock in hyprlock.conf)
-command = "tuigreet --time --issue --cmd /usr/bin/start-hyprland --remember --asterisks --theme border=gray;text=darkgray;greet=white;time=white;prompt=gray;input=white;action=darkgray;button=gray"
+# No banner: --issue dropped, just the bare login prompt.
+command = "tuigreet --time --cmd /usr/bin/start-hyprland --remember --asterisks --theme border=gray;text=darkgray;time=white;prompt=gray;input=white;action=darkgray;button=gray"
 user = "greeter"
