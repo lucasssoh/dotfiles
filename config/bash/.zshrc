@@ -132,9 +132,9 @@ bindkey -M viins 'jk' jk-escape
 bindkey -M viins 'kj' kj-escape
 
 # =========================
-# STARSHIP (APRÈS vi mode, AVANT syntax-highlighting)
+# PROMPT (APRÈS vi mode, AVANT syntax-highlighting)
 # =========================
-command -v starship >/dev/null && eval "$(starship init zsh)"
+source ~/.config/bash/prompt.zsh
 
 # =========================
 # SYNTAX HIGHLIGHTING (EN DERNIER — obligatoire)

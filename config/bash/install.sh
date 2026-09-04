@@ -32,16 +32,6 @@ elif command -v apt-get &> /dev/null; then
 fi
 
 # =========================
-# STARSHIP
-# =========================
-if ! command -v starship &> /dev/null; then
-    info "Installing Starship..."
-    curl -fsSL -o /tmp/starship-install.sh https://starship.rs/install.sh
-    sh /tmp/starship-install.sh -y
-    rm -f /tmp/starship-install.sh
-fi
-
-# =========================
 # ZSH PLUGINS
 # =========================
 ZSH_PLUGIN_DIR="$HOME/.zsh"
@@ -82,9 +72,7 @@ safe_link "$DOTFILES_DIR/config/bash/.bash_aliases" "$HOME/.bash_aliases"
 
 # Zsh (principal)
 safe_link "$DOTFILES_DIR/config/bash/.zshrc" "$HOME/.zshrc"
-
-# Starship
-safe_link "$DOTFILES_DIR/config/bash/starship.toml" "$HOME/.config/starship.toml"
+safe_link "$DOTFILES_DIR/config/bash/prompt.zsh" "$HOME/.config/bash/prompt.zsh"
 
 # =========================
 # SHELL PAR DÉFAUT
