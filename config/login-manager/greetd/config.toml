@@ -2,5 +2,14 @@
 vt = 1
 
 [default_session]
-command = "tuigreet --time --issue --cmd /usr/bin/start-hyprland --remember --asterisks"
+# Theme: monochrome silver/white to echo the "verre givré" palette used
+# across hyprlock/quickshell (platinum accent, white highlights, no
+# saturated color). Named ANSI colors only -- the Linux VT console can't
+# be trusted to render truecolor/hex well, and tuigreet's --theme spec
+# only guarantees the ANSI-named set anyway (see apognu/tuigreet README).
+# white   = banner/typed input (hero content, brightest)
+# gray    = border/prompt labels/button hints (structural accent)
+# darkgray = base text/footer action text (deemphasized, matches the
+#            dim date label under the clock in hyprlock.conf)
+command = "tuigreet --time --issue --cmd /usr/bin/start-hyprland --remember --asterisks --theme border=gray;text=darkgray;greet=white;time=white;prompt=gray;input=white;action=darkgray;button=gray"
 user = "greeter"
