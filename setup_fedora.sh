@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 BOLD="\e[1m"
 GREEN="\e[32m"
@@ -10,6 +10,14 @@ RESET="\e[0m"
 info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 warn() { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+
+# Compact terminal: narration (info/ok/warn) stays visible, everything else
+# (dnf, copr, snap output) goes to the persistent log instead.
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DOTFILES_DIR/scripts/lib/status.sh"
+status_init
+sudo -v || true  # prime the sudo cache once so it doesn't expire mid-run
+redirect_output_to_log
 
 info "Updating system..."
 sudo dnf upgrade -y

@@ -23,11 +23,30 @@ set -euo pipefail
 # Small retry loop, not a bare one-shot call: this runs from Hyprland's
 # exec-once block, which can fire before pipewire-pulse has finished
 # enumerating ALSA cards on a cold login.
-SOURCE="alsa_input.pci-0000_36_00.6.analog-stereo"
 PORT="analog-input-headset-mic"
 
+# Generic discovery instead of a fixed PCI-address source name: any
+# alsa_input.*.analog-stereo source that exposes BOTH
+# analog-input-internal-mic and analog-input-headset-mic ports is the same
+# "combo jack without jack-sensing" signature described above, regardless
+# of which sound card/PCI address it lives on. If no source matches the
+# machine simply doesn't have this quirk -- the retry loop below then finds
+# nothing and exits without effect, same as before.
+find_combo_jack_source() {
+    pactl list sources 2>/dev/null | awk '
+        /^Source #/ { name=""; has_internal=0; has_headset=0 }
+        /^[[:space:]]*Name:/ { name=$2 }
+        /analog-input-internal-mic/ { has_internal=1 }
+        /analog-input-headset-mic/ { has_headset=1 }
+        name ~ /^alsa_input\..*\.analog-stereo$/ && has_internal && has_headset {
+            print name; exit
+        }
+    '
+}
+
 for _ in $(seq 1 20); do
-    if pactl list short sources 2>/dev/null | grep -q "$SOURCE"; then
+    SOURCE="$(find_combo_jack_source)"
+    if [ -n "$SOURCE" ]; then
         pactl set-source-port "$SOURCE" "$PORT" 2>/dev/null || true
         exit 0
     fi

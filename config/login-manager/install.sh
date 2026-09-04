@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Exit immediately if a command exits with a non-zero status
-set -e
+set -Eeuo pipefail
 
 # Colors and formatting
 BOLD="\e[1m"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 GREEN="\e[32m"
 RESET="\e[0m"

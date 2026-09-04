@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/scripts/dev_setup.sh
+../../../../scripts/dev_setup.sh

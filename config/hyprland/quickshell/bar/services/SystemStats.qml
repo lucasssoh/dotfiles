@@ -61,6 +61,10 @@ Singleton {
     property int memUsedPct: 0
 
     // ---- Temperature.qml ----
+    // thermal_zone path glob-discovered once at startup, same pattern as
+    // Fan.qml's hwmon discovery below -- thermal_zone0 isn't guaranteed to
+    // be the CPU package sensor (or to exist at all) on every machine.
+    property string tempPath: ""
     property int tempCelsius: 0
 
     // ---- Fan.qml ----
@@ -105,7 +109,7 @@ Singleton {
     FileView { id: statFile; path: "/proc/stat"; blockLoading: true }
     FileView { id: cpuInfoFile; path: "/proc/cpuinfo"; blockLoading: true }
     FileView { id: memFile; path: "/proc/meminfo"; blockLoading: true }
-    FileView { id: tempFile; path: "/sys/class/thermal/thermal_zone0/temp"; blockLoading: true }
+    FileView { id: tempFile; blockLoading: true }
     FileView { id: fanFile; blockLoading: true }
     FileView { id: rxFile; blockLoading: true }
 
@@ -151,6 +155,7 @@ Singleton {
     }
 
     function sampleTemperature() {
+        if (root.tempPath === "") return;
         tempFile.reload();
         tempFile.waitForJob();
         const raw = parseInt(tempFile.text().trim());
@@ -189,6 +194,25 @@ Singleton {
                 if (root.fanPath !== "") {
                     fanFile.path = root.fanPath;
                     root.sampleFan();
+                }
+            }
+        }
+    }
+
+    // Same glob-and-resolve-once pattern for the thermal sensor:
+    // thermal_zone0 isn't guaranteed to exist or to be the CPU package
+    // sensor on every machine. Temperature.qml gates its own visibility on
+    // tempPath being non-empty, same as Fan.qml does for fanPath.
+    Process {
+        id: tempDiscover
+        command: ["bash", "-c", "find /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -n1"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.tempPath = this.text.trim();
+                if (root.tempPath !== "") {
+                    tempFile.path = root.tempPath;
+                    root.sampleTemperature();
                 }
             }
         }

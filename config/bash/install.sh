@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 BLUE="\e[34m"
 GREEN="\e[32m"
@@ -22,7 +22,12 @@ elif command -v apt-get &> /dev/null; then
     sudo apt-get install -y fzf ripgrep fd-find make gcc zsh
 
     if ! command -v zoxide &> /dev/null; then
-        curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+        # Download first, then run: a direct `curl | sh` hides a curl
+        # failure (network down, 404) behind sh happily exiting 0 on empty
+        # stdin.
+        curl -fsSL -o /tmp/zoxide-install.sh https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh
+        sh /tmp/zoxide-install.sh
+        rm -f /tmp/zoxide-install.sh
     fi
 fi
 
@@ -31,7 +36,9 @@ fi
 # =========================
 if ! command -v starship &> /dev/null; then
     info "Installing Starship..."
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
+    curl -fsSL -o /tmp/starship-install.sh https://starship.rs/install.sh
+    sh /tmp/starship-install.sh -y
+    rm -f /tmp/starship-install.sh
 fi
 
 # =========================

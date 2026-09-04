@@ -18,15 +18,40 @@ for i in $(seq 1 30); do
 done
 [ -z "$SOCKET" ] && exit 1
 
-# PIP thumbnail geometry (bottom-right corner of a 1920x1080 screen)
-PIP_W=480
-PIP_H=270
-PIP_X=1420
-PIP_Y=780
+# Discover the focused monitor's real resolution once at startup (not
+# per-event -- a monitor swap mid PIP-session is an edge case not worth
+# re-querying for). Falls back to 1920x1080 if hyprctl/python3 return
+# nothing usable, matching this script's previous fixed behavior.
+read -r SCREEN_W SCREEN_H <<EOF_GEOM
+$(hyprctl monitors -j 2>/dev/null | python3 -c "
+import json, sys
+try:
+    mons = json.load(sys.stdin)
+except Exception:
+    mons = []
+target = next((m for m in mons if m.get('focused')), mons[0] if mons else None)
+if target:
+    print(target.get('width', 1920), target.get('height', 1080))
+else:
+    print(1920, 1080)
+" 2>/dev/null)
+EOF_GEOM
+SCREEN_W="${SCREEN_W:-1920}"
+SCREEN_H="${SCREEN_H:-1080}"
 
-# Restored geometry (centered on a 1920x1080 screen)
-FULL_W=1280
-FULL_H=720
+# PIP thumbnail geometry: same proportions as the original 1920x1080-only
+# constants (1/4 screen, small fixed margin from the bottom-right corner),
+# now computed for whatever screen is actually focused.
+PIP_MARGIN_X=20
+PIP_MARGIN_Y=30
+PIP_W=$(( SCREEN_W / 4 ))
+PIP_H=$(( SCREEN_H / 4 ))
+PIP_X=$(( SCREEN_W - PIP_W - PIP_MARGIN_X ))
+PIP_Y=$(( SCREEN_H - PIP_H - PIP_MARGIN_Y ))
+
+# Restored geometry: centered, same 2/3-of-screen proportions as before
+FULL_W=$(( SCREEN_W * 2 / 3 ))
+FULL_H=$(( SCREEN_H * 2 / 3 ))
 
 # Window classes affected by PIP behavior
 pip_classes=("mpv" "com.gabm.satty")
@@ -47,7 +72,7 @@ shrink_window() {
 
 restore_window() {
     local addr=$1
-    hyprctl dispatch movewindowpixel "exact $(( (1920 - FULL_W) / 2 )) $(( (1080 - FULL_H) / 2 )),address:${addr}"
+    hyprctl dispatch movewindowpixel "exact $(( (SCREEN_W - FULL_W) / 2 )) $(( (SCREEN_H - FULL_H) / 2 )),address:${addr}"
     hyprctl dispatch resizewindowpixel "exact ${FULL_W} ${FULL_H},address:${addr}"
 }
 

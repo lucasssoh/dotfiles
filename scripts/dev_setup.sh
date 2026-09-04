@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -34,7 +34,13 @@ export NVM_DIR="$HOME/.nvm"
 # Install NVM if missing
 if [ ! -d "$NVM_DIR" ]; then
     echo "Installation de NVM..."
-    PROFILE=/dev/null curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+    # Download first, then run: piping curl straight into bash hides a
+    # curl failure (network down, 404) behind bash happily exiting 0 on an
+    # empty stdin -- the real error only surfaced later as a confusing
+    # "nvm: command not found".
+    curl -fsSL -o /tmp/nvm-install.sh https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh
+    PROFILE=/dev/null bash /tmp/nvm-install.sh
+    rm -f /tmp/nvm-install.sh
 fi
 
 # Must be loaded before the rest of the script can run

@@ -7,7 +7,7 @@
 RESET_MODE=false
 [ "$1" = "--reset" ] && RESET_MODE=true
 
-set -e
+set -Eeuo pipefail
 
 BOLD="\e[1m"
 GREEN="\e[32m"
@@ -89,15 +89,17 @@ section "Installing packages"
 $PKG_UPDATE
 
 if [ "$DISTRO" = "fedora" ]; then
-    sudo dnf copr enable -y lionheartp/Hyprland 2>/dev/null || true
+    sudo dnf copr enable -y lionheartp/Hyprland ||
+        warn "COPR lionheartp/Hyprland could not be enabled — hyprland may fail to install."
     # Quickshell -- the actual bar (see quickshell/bar/), waybar/config.jsonc
     # is no longer started but stays installed/in the repo as a fallback,
     # same "kept but not started" pattern as dunst below.
-    sudo dnf copr enable -y errornointernet/quickshell 2>/dev/null || true
+    sudo dnf copr enable -y errornointernet/quickshell ||
+        warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
 
     PKGS=(
         # Hyprland ecosystem
-        dbus-x11 dbus-daemon hyprland hyprpaper xdg-desktop-portal-hyprland
+        dbus-x11 dbus-daemon hyprland xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
         # (SwayNotificationCenter replaces dunst as the active notification
         # daemon; dunst stays installed/available as a fallback, not started.
@@ -142,7 +144,7 @@ if [ "$DISTRO" = "fedora" ]; then
 elif [ "$DISTRO" = "arch" ]; then
     PKGS=(
         # Hyprland ecosystem
-        dbus hyprland hyprlock hyprpaper hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+        dbus hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
         # quickshell is the active bar (see quickshell/bar/); waybar stays
         # installed as a fallback, not started -- same pattern as dunst
@@ -182,7 +184,7 @@ elif [ "$DISTRO" = "debian" ]; then
     warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
     PKGS=(
-        dbus dbus-x11 hyprland hyprpaper
+        dbus dbus-x11 hyprland
         waybar dunst rofi khal hyprsunset
         pipewire pipewire-pulse wireplumber pavucontrol
         network-manager network-manager-gnome
@@ -203,6 +205,17 @@ fi
 
 $PKG_INSTALL "${PKGS[@]}"
 ok "Packages installed."
+
+if [ "$DISTRO" = "fedora" ]; then
+    # --skip-unavailable means a COPR failure above can silently drop
+    # hyprland/quickshell from the install instead of failing it -- verify
+    # the two non-negotiable pieces actually landed rather than reporting
+    # success regardless. (Not checked on Arch/Debian: those branches don't
+    # use --skip-unavailable, and Debian's quickshell gap is already an
+    # acknowledged manual step, see the warn above.)
+    command -v Hyprland >/dev/null 2>&1 || err "Hyprland did not install (COPR unavailable?)."
+    command -v quickshell >/dev/null 2>&1 || err "quickshell did not install (COPR unavailable?)."
+fi
 
 # Font Awesome 6 -- quickshell/bar's Launchers.qml (Steam/Discord logos)
 # and Fonts.qml's iconSolid/iconBrand. Fedora's fontawesome-6-free-fonts/
@@ -457,8 +470,13 @@ elif ! command -v curl &>/dev/null || ! command -v jq &>/dev/null; then
 else
     info "Downloading Phosphor Icons (@phosphor-icons/web, latest)..."
     PHOSPHOR_TMP="$(mktemp -d)"
+    # `|| true`: this is a best-effort optional download (see the graceful
+    # "install manually" fallback below) -- under `pipefail`, a curl failure
+    # here (network down, registry unreachable) would otherwise make this
+    # assignment itself fail and, since it's not inside an if/&&/||, take
+    # the *entire* install script down with it via `set -e`.
     PHOSPHOR_VERSION="$(curl -fsL https://registry.npmjs.org/@phosphor-icons/web \
-        | jq -r '."dist-tags".latest')"
+        | jq -r '."dist-tags".latest' 2>/dev/null)" || true
 
     if [ -n "$PHOSPHOR_VERSION" ] && [ "$PHOSPHOR_VERSION" != "null" ] \
         && curl -fLo "$PHOSPHOR_TMP/phosphor.tgz" \
@@ -589,8 +607,11 @@ EOF
 
 ok "Wallpaper scripts ready and added to App Launcher."
 
-# Start awww daemon ONLY if in a Wayland session and not already running
-if [ -n "$WAYLAND_DISPLAY" ]; then
+# Start awww daemon ONLY if in a Wayland session and not already running.
+# WAYLAND_DISPLAY is legitimately absent (not just empty) when this script
+# runs from a plain TTY before any session exists -- ${VAR:-} keeps that
+# safe under `set -u`.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
     if ! pgrep -x "awww-daemon" >/dev/null; then
         awww-daemon &
         sleep 1
@@ -617,7 +638,7 @@ if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
 fi
 
 # 6. Apply wallpaper (awww version)
-if [ -n "$WAYLAND_DISPLAY" ] && pgrep -x "awww-daemon" >/dev/null; then
+if [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -x "awww-daemon" >/dev/null; then
     if [ -f "$STATE_FILE" ]; then
         CURRENT_WP=$(cat "$STATE_FILE")
 

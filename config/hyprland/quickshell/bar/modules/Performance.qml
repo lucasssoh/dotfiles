@@ -19,6 +19,13 @@ Item {
     // Tighter padding: glued right up against the power button next to it.
     implicitWidth: Math.max(label.implicitWidth + 12, 32)
     implicitHeight: 24
+    // Collapses to nothing without power-profiles-daemon: hasPerformanceProfile
+    // is Quickshell's own availability signal for this service (verified
+    // against Quickshell.Services.UPower's qmltypes -- there's no separate
+    // "daemon present" flag exposed, this is it). Without this gate the
+    // module used to always show a "balanced" glyph and silently do
+    // nothing on click when the daemon isn't installed/running.
+    visible: PowerProfiles.hasPerformanceProfile
 
     // Asked for: a glyph per profile that actually reads as its own
     // state instead of 3 unrelated icons (was a flame, a low-battery

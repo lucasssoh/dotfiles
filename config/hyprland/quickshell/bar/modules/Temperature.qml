@@ -2,11 +2,12 @@ import QtQuick
 import "../theme"
 import "../services"
 
-// Native port of waybar's `temperature` module. Same simplification as
-// the original inline one-liner: hardcoded to thermal_zone0. Sampling
-// lives in the shared SystemStats singleton now -- see its header for
+// Native port of waybar's `temperature` module. Sensor discovery (glob
+// over thermal_zone*/temp, same idea as Fan.qml's hwmon glob) and sampling
+// both live in the shared SystemStats singleton now -- see its header for
 // why (one bar instance per monitor, temperature is the same number on
-// every screen).
+// every screen, and the right thermal_zoneN isn't stable across machines
+// so it only needs discovering once, not once per monitor).
 
 Item {
     id: root
@@ -24,6 +25,7 @@ Item {
 
     implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
     implicitHeight: 24
+    visible: SystemStats.tempPath !== ""
 
     Row {
         id: label

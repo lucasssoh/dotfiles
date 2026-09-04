@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 BOLD="\e[1m"
 GREEN="\e[32m"
@@ -57,18 +57,27 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # -----------------------------
+# Compact status + persistent log (terminal = summary, log = full detail)
+# -----------------------------
+source "$DOTFILES_DIR/scripts/lib/status.sh"
+status_init
+sudo -v || true  # prime the sudo cache once up front; modules run long enough for it to expire mid-summary otherwise
+
+# -----------------------------
 # Run each module
 # -----------------------------
 section "Modules"
 MODULES=(fonts bash tmux wezterm nvim wireplumber mangohud nemo)
 HYPR_MODULE="hyprland"
+KDE_MODULE="kde"
 #
 for module in "${MODULES[@]}"; do
     MODULE_PATH="$DOTFILES_DIR/config/$module"
     if [ -d "$MODULE_PATH" ]; then
-        info "Running module: $module"
         chmod +x "$MODULE_PATH/install.sh"
-        "$MODULE_PATH/install.sh"
+        run_step "$module" "$MODULE_PATH/install.sh" || true
+    else
+        skip_step "$module" "directory not found"
     fi
 done
 
@@ -77,27 +86,27 @@ done
 # -----------------------------
 HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
 if [ -d "$HYPR_PATH" ]; then
-    info "Running Hyprland module..."
     chmod +x "$HYPR_PATH/install.sh"
-    "$HYPR_PATH/install.sh"
+    run_step "$HYPR_MODULE" "$HYPR_PATH/install.sh" || true
+else
+    skip_step "$HYPR_MODULE" "directory not found"
 fi
 
 # -----------------------------
 # Install KDE Plasma
 # -----------------------------
-# Swap HYPR_MODULE for KDE_MODULE
-KDE_MODULE="kde"
 KDE_PATH="$DOTFILES_DIR/config/$KDE_MODULE"
-
 if [ -d "$KDE_PATH" ]; then
-    info "Running KDE Plasma 6 module..."
     chmod +x "$KDE_PATH/install.sh"
     # The call to kde/install.sh will handle --allowerasing
-    "$KDE_PATH/install.sh"
+    run_step "$KDE_MODULE" "$KDE_PATH/install.sh" || true
 else
-    warn "KDE module not found at $KDE_PATH"
+    skip_step "$KDE_MODULE" "directory not found"
 fi
+
 # -----------------------------
 # Done
 # -----------------------------
-ok "Global installation complete."
+rc=0
+status_summary || rc=$?
+exit "$rc"

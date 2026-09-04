@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 BLUE="\e[34m"
 GREEN="\e[32m"
@@ -10,6 +10,10 @@ ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 FONT_DIR="$HOME/.local/share/fonts"
 mkdir -p "$FONT_DIR"
+
+# Must be initialized: read unconditionally below, and with `set -u` an
+# unset read is a hard error, not just an empty string.
+NEEDS_CACHE_RELOAD=false
 
 # List of fonts to install (exact names for the GitHub URL)
 # Using an array so more can be added easily

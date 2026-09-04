@@ -43,6 +43,11 @@ Item {
     // same narrow floor as Performance.qml's own icon-only module.
     implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
+    // Collapses to nothing on machines with no Bluetooth adapter at all
+    // (no radio, or BlueZ not running) -- same pattern as Battery.qml's
+    // `present` gate. Distinct from `state === "off"` above, which is a
+    // radio that EXISTS but is powered down and stays visible/actionable.
+    visible: Bluetooth.defaultAdapter !== null
 
     // Point 4 (HIG "clarity": color carries state, not decoration) --
     // radio powered OFF is the one state here that's genuinely inactive
