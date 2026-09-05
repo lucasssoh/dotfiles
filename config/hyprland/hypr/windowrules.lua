@@ -65,14 +65,6 @@ hl.window_rule({
 })
 
 -- ============================================================
--- DUNST — no focus stealing
--- ============================================================
-hl.window_rule({
-    match            = { class = "dunst" },
-    no_initial_focus = true,
-})
-
--- ============================================================
 -- ALL FLOATING WINDOWS → centered by default
 -- ============================================================
 hl.window_rule({
@@ -418,43 +410,33 @@ hl.window_rule({
 })
 
 -- ============================================================
--- LAYER BLUR — swaync / Roue
+-- LAYER BLUR — Roue
 -- ============================================================
--- Real compositor blur behind these specific layer-shell surfaces, not a
+-- Real compositor blur behind this specific layer-shell surface, not a
 -- global effect (see hyprland.lua's decoration.blur.enabled comment for
--- the full reasoning): small, on-demand panels, visible for seconds at a
+-- the full reasoning): a small, on-demand panel, visible for seconds at a
 -- time, unlike the always-on bar (quickshell layer, deliberately left
 -- with no rule here -- opts out simply by omission, layers don't get
--- blur unless a rule says so). Namespaces confirmed live via
--- `hyprctl layers -j` while each was open, not guessed:
---   swaync-control-center         -- the panel that opens on bell click
--- swaync-notification-window (popup toasts) deliberately left WITHOUT a
--- rule -- blur asked for only on the control-center block, not the
--- popups. Balise (the WiFi/BT/Ethernet panel) cycled through a blur rule
--- here more than once and settled on NOT having one -- its "glass" read
--- is built entirely from color/gradient in balise/style.css (a
--- gradient fill on .balise-panel-inner instead of a flat one, alongside
--- the border/button treatment already there), not compositor blur.
+-- blur unless a rule says so). Balise (the WiFi/BT/Ethernet panel) cycled
+-- through a blur rule here more than once and settled on NOT having one
+-- -- its "glass" read is built entirely from color/gradient in
+-- balise/style.css (a gradient fill on .balise-panel-inner instead of a
+-- flat one, alongside the border/button treatment already there), not
+-- compositor blur.
 --
--- xray + ignore_alpha on swaync-control-center only: its layer surface is
--- actually the FULL screen (2560x1416, confirmed via `hyprctl layers -j`
--- while open -- swaync sizes it that way for its own click-catching
--- area), even though the visible panel is just a small block in the
--- top-left corner. Plain blur=true pre-renders the blurred backdrop for
--- the surface's whole bounding box regardless of its actual per-pixel
--- transparency -- observed live as the ENTIRE screen going blurry, not
--- just that block. xray alone wasn't enough (tested); adding
--- ignore_alpha (threshold below which a pixel is treated as fully
--- transparent and skipped) is what actually confined the blur to the
--- genuinely-opaque panel area, confirmed live -- the rest of the
--- oversized surface stays crisp.
-hl.layer_rule({ match = { namespace = "swaync-control-center" }, blur = true, xray = true, ignore_alpha = 0.5 })
+-- swaync's control-center used to have a rule here too (namespace
+-- swaync-control-center, xray + ignore_alpha to confine blur to its
+-- actually-opaque panel despite an oversized full-screen click-catching
+-- surface behind it) -- gone along with swaync itself. Its quickshell
+-- replacement (NotificationCenter.qml) closes via a HyprlandFocusGrab
+-- instead of that oversized surface, so its layer is already sized to
+-- its real visible bounds and never needed this hack.
+--
 -- Roue: anchored to all 4 edges (see roue-src/src/main.rs), so it's in
--- the same "oversized surface" situation as swaync-control-center above,
--- unlike Balise (an anchored corner panel) -- same xray + ignore_alpha
--- treatment, needed for the exact
--- same reason (confirmed live: without it the whole screen blurs, not
--- just the wheel + sidebar). On-demand, shown for seconds at a time, same
--- cost profile as the two rules above -- see hyprland.lua's
--- decoration.blur.enabled comment.
+-- the same "oversized surface" situation swaync's control-center used to
+-- be in (see above), unlike Balise (an anchored corner panel) -- same
+-- xray + ignore_alpha treatment, needed for the exact same reason
+-- (confirmed live: without it the whole screen blurs, not just the wheel
+-- + sidebar). On-demand, shown for seconds at a time -- see
+-- hyprland.lua's decoration.blur.enabled comment.
 hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xray = true, ignore_alpha = 0.5 })

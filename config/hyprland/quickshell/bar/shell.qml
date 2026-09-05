@@ -268,6 +268,21 @@ ShellRoot {
         function keybindsHide(): void {
             shell.hideKeybinds();
         }
+        // Replaces `swaync-client -t -sw` -- hypr/keybinds.lua's SUPER+I
+        // calls this now, same IPC shape as toggleZen above. No
+        // per-screen click context on this path (unlike the bell click
+        // itself, which passes its own bar.screen) -- defaults to the
+        // first screen, acceptable for a keybind with no click position
+        // to derive one from.
+        function toggleNotificationCenter(): void {
+            NotificationState.toggleNotificationCenter(Quickshell.screens[0]);
+        }
+        // Close-only (not a toggle) -- waybar/scripts/balise-toggle.sh
+        // calls this right before showing Balise, same mutual-exclusion
+        // swaync-client -cp used to give it.
+        function closeNotificationCenter(): void {
+            NotificationState.close();
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -295,6 +310,25 @@ ShellRoot {
             if (shell.keybindsVisible
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 shell.hideKeybinds();
+            }
+
+            // Same trick closes the notification drawer now that it
+            // lives inside this always-present window (a DrawerIsland
+            // entry, see toolsIsland above) instead of its own separate
+            // focusable PanelWindow -- HyprlandFocusGrab's outside-click
+            // detection doesn't apply here any more, but the underlying
+            // problem it solved (layer-shell surfaces never get a real
+            // focus-loss event) is the exact same one Balise's own
+            // scripts/balise-autoclose.sh works around externally via
+            // Hyprland's `activewindow` event. Reusing
+            // keybindsDismissEvents rather than bare `activewindow`
+            // directly, and for the same documented reason above it: raw
+            // `activewindow` also fires on plain focus-follows-mouse,
+            // which would close the drawer just from moving the pointer
+            // over another window while reading a notification.
+            if (NotificationState.centerOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                NotificationState.close();
             }
         }
     }
@@ -359,13 +393,21 @@ ShellRoot {
             // per-frame surface resize was a plausible source of visible
             // hitches right at the start/end of that transition). Always
             // >= rowHeight (31) even with no drawer content at all --
-            // still implicitly >= metrics/tools' own bottom extent too
-            // (3 top gap + their content, ~27, less than rowHeight). The
-            // main bar's Row stays flush at y:0 regardless (anchors.top);
-            // metrics/tools/the drawer use the extra space below, which
-            // just renders as empty/transparent (and stays outside the
-            // input mask below) whenever the drawer isn't fully open.
-            implicitHeight: centerIsland.maxHeight
+            // still implicitly >= metrics' own bottom extent too (3 top
+            // gap + its content, ~27, less than rowHeight). The main
+            // bar's Row stays flush at y:0 regardless (anchors.top);
+            // metrics/the drawers use the extra space below, which just
+            // renders as empty/transparent (and stays outside the input
+            // mask below) whenever a drawer isn't fully open.
+            //
+            // Math.max, not just centerIsland's own -- toolsIsland now
+            // grows a drawer too (NotificationCenter), and its own
+            // maxHeight (rowHeight + a 600px-tall entry) is taller than
+            // centerIsland's ever gets. Sizing off centerIsland alone
+            // would clip the notification drawer at whatever height
+            // centerIsland happened to need instead of the drawer's own
+            // real full-open height.
+            implicitHeight: Math.max(centerIsland.maxHeight, toolsIsland.maxHeight)
 
             // Input stays restricted to the NORMAL bar's own height
             // (centerIsland.rowHeight, 31) regardless of how tall the
@@ -376,14 +418,37 @@ ShellRoot {
             // the 24px exclusiveZone into space real windows occupy, and
             // without this it would swallow clicks meant for whatever's
             // underneath. Every existing clickable module (Workspaces,
-            // BaliseButton, Media, metrics/tools...) sits within this
-            // same top rowHeight already, so this changes nothing for
-            // them.
+            // Media, metrics...) sits within this same top rowHeight
+            // already, so this changes nothing for them.
+            //
+            // TWO regions now, not one blanket full-width strip: TOOLS'
+            // own drawer (NotificationCenter) can extend well past that
+            // same rowHeight when open, and its actual content (buttons,
+            // the notification list) needs to stay clickable -- a single
+            // bar-width mask fixed at rowHeight would swallow clicks into
+            // it exactly the way this comment says the mask exists to
+            // PREVENT elsewhere. `Region`'s own default `regions` list
+            // property unions any nested Regions (confirmed against
+            // Quickshell's own Region type), so this is a real two-rect
+            // mask, not one region silently overriding the other: the
+            // first covers the always-present top strip end to end
+            // (unchanged), the second covers just TOOLS' own x-range, at
+            // ITS live height (toolsIsland.height already tracks its
+            // drawer's own open/close animation, no separate state to
+            // keep in sync).
             mask: Region {
-                x: 0
-                y: 0
-                width: bar.width
-                height: centerIsland.rowHeight
+                Region {
+                    x: 0
+                    y: 0
+                    width: bar.width
+                    height: centerIsland.rowHeight
+                }
+                Region {
+                    x: toolsIsland.x
+                    y: 0
+                    width: toolsIsland.width
+                    height: toolsIsland.height
+                }
             }
 
             // ── ONE BAR ───────────────────────────────────────
@@ -519,45 +584,6 @@ ShellRoot {
                     GradientStop { position: 1.0; color: "#73060608" }
                 }
 
-                // Notification bell, moved here from the main bar's far
-                // left (was next to Media), asked for.
-                Modules.StreamModule {
-                    watchCommand: ["swaync-client", "--subscribe-waybar"]
-                    watchIsData: true
-                    minWidth: 40
-                    clickCommand: ["bash", "-c", "$HOME/.config/waybar/scripts/swaync-toggle.sh"]
-                    rightClickCommand: ["swaync-client", "-d", "-sw"]
-                    // ph-bell-ringing / ph-bell / ph-bell-z (Phosphor's "sleeping
-                    // bell" -- an actual semantic match for do-not-disturb,
-                    // better than reusing a plain bell) / ph-bell-slash
-                    // (inhibited = notifications actively blocked, distinct
-                    // from dnd's "quieted"). Phosphor has no compound "dnd +
-                    // inhibited" glyph the way the old Nerd Font set did --
-                    // both dnd-inhibited variants fall back to bell-slash,
-                    // same shape as plain inhibited; classColors below still
-                    // carries the has-notification distinction.
-                    classIcons: ({
-                        "notification": "",
-                        "none": "",
-                        "dnd-notification": "",
-                        "dnd-none": "",
-                        "inhibited-notification": "",
-                        "inhibited-none": "",
-                        "dnd-inhibited-notification": "",
-                        "dnd-inhibited-none": ""
-                    })
-                    classColors: ({
-                        "notification": "#a8b4c4",
-                        "dnd-notification": "#a8b4c4",
-                        "inhibited-notification": "#a8b4c4",
-                        "dnd-inhibited-notification": "#a8b4c4",
-                        "dnd-none": "#48484a",
-                        "dnd-inhibited-none": "#48484a",
-                        "none": "#f2f2f7",
-                        "inhibited-none": "#f2f2f7"
-                    })
-                }
-
                 Item { width: 6; height: 1 }
 
                 Modules.Cpu {}
@@ -574,16 +600,17 @@ ShellRoot {
             // Launchers -- its own separate floating island (asked for:
             // out of the central island entirely, and placed in front of
             // TOOLS rather than trailing the island). Right edge anchored
-            // to TOOLS' own left edge (needs `id: tools` below) instead
-            // of chasing the island's dynamic width -- sits at a stable
-            // position relative to the screen's right edge, same as
-            // METRICS/TOOLS themselves, rather than sliding around
-            // whenever ActiveWindow/Media/workspaces resize.
+            // to TOOLS' own left edge (`toolsIsland`, now a DrawerIsland
+            // rather than a plain Block) instead of chasing the island's
+            // dynamic width -- sits at a stable position relative to the
+            // screen's right edge, same as METRICS/TOOLS themselves,
+            // rather than sliding around whenever ActiveWindow/Media/
+            // workspaces resize.
             Modules.Block {
                 id: launchers
                 anchors.top: parent.top
                 anchors.topMargin: 3
-                anchors.right: tools.left
+                anchors.right: toolsIsland.left
                 anchors.rightMargin: 6
                 flushTop: false
                 color: "#730c0c0e"
@@ -633,15 +660,43 @@ ShellRoot {
             // display/hdr/connectivity/perf/power -- status/toggle
             // indicators, split from METRICS. Same floating treatment
             // (3px top gap, 6px right gap, rounded corners, translucent
-            // fill).
-            Modules.Block {
-                id: tools
+            // fill) -- now a DrawerIsland (was a plain Block) so it can
+            // host the notification center as a real drawer, same
+            // mechanism centerIsland already uses for Veille/Keybindings
+            // (asked for explicitly, after a first pass built the
+            // notification center as its own separate floating
+            // PanelWindow+HyprlandFocusGrab instead). `flushTop: false` +
+            // the fillGradient below reproduce this pill's original
+            // floating/translucent look (see DrawerIsland.qml's own
+            // header for why that needed generalizing -- it was
+            // hardcoded for centerIsland's flush-top/opaque-black look
+            // until now). `rowSpacing: 0` keeps this row's existing
+            // hand-tuned Item spacers (the "6 -> 3 -> 2" gaps below)
+            // working as before -- centerIsland's own top row has no
+            // manual spacers and relies on DrawerIsland's 6px default
+            // instead, so that default had to become overridable rather
+            // than just lowering it outright.
+            Modules.DrawerIsland {
+                id: toolsIsland
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 flushTop: false
-                color: "#730c0c0e"
+                rowSpacing: 0
+                twoPhase: false
+                // Matches METRICS' own Block height exactly (asked for:
+                // closed, this pill was sitting 7px lower than METRICS --
+                // DrawerIsland's 31px default was tuned for centerIsland's
+                // row, not this one).
+                rowHeight: 24
+                fillColor: "#730c0c0e"
+
+                drawerItems: [
+                    Modules.NotificationCenter {
+                        drawerOpen: NotificationState.centerOpen && NotificationState.activeScreen === bar.screen
+                    }
+                ]
                 // Glass. These three float free of every screen edge, so
                 // all four of their edges are visible -- the one place in
                 // this bar where a pane read is possible at all.
@@ -674,7 +729,7 @@ ShellRoot {
                 // wallpaper alone. Constant alpha means the travel comes
                 // purely from the colour and is the same over any
                 // wallpaper.
-                gradient: Gradient {
+                fillGradient: Gradient {
                     GradientStop { position: 0.0; color: "#733f4450" }
                     GradientStop { position: 1.0; color: "#73060608" }
                 }
@@ -760,12 +815,23 @@ ShellRoot {
                     // power dot, asked for.
                     Modules.Clock {}
 
+                    Item { width: 2; height: 1 }
+
+                    // Notification bell -- moved again (asked for:
+                    // "entre clock et power", i.e. the literal power dot
+                    // below, not the power-PROFILE icon it sat next to
+                    // before) -- was leftmost, then next to Hdr, then
+                    // between Battery and Clock, before landing here.
+                    Modules.NotificationBell { screen: bar.screen }
+
+                    Item { width: 2; height: 1 }
+
                     Item {
                         // 28 -> 20 -> 16: same space-saving pass as the
-                        // two Item spacers above -- this box's own width
-                        // IS the gap between Clock and the power dot,
-                        // there being no separate spacer Item here to
-                        // shrink instead. Still bigger than the 8px dot
+                        // other spacers in this cluster -- this box's own
+                        // width is the gap before the power dot (the
+                        // notification bell now sits between it and Clock,
+                        // asked for). Still bigger than the 8px dot
                         // itself, just a tighter click target than
                         // before rather than a roomy one.
                         implicitWidth: 16
@@ -794,10 +860,15 @@ ShellRoot {
                     Item { width: 2; height: 1 }
                 }
 
-            // Gradient edges for the three translucent pills. Siblings,
-            // not children: Block reparents anything nested inside it
-            // into its content Row (see modules/GlassRim.qml). Declared
-            // after all three so they paint on top of their fills.
+            // Gradient edges for the two remaining translucent Blocks.
+            // Siblings, not children: Block reparents anything nested
+            // inside it into its content Row (see modules/GlassRim.qml).
+            // Declared after both so they paint on top of their fills.
+            // TOOLS used to get the same treatment here too, until it
+            // became a DrawerIsland -- that component now draws its own
+            // equivalent pair internally (see DrawerIsland.qml's
+            // `flushTop: false` branch), so an external declaration here
+            // would just double it up.
             //
             // Two per pill now (asked for): the main topLeft source at
             // full strength, plus a second, fainter one from bottomRight
@@ -809,8 +880,6 @@ ShellRoot {
             Modules.GlassRim { target: metrics; lightOrigin: "bottomRight"; strength: 0.45 }
             Modules.GlassRim { target: launchers }
             Modules.GlassRim { target: launchers; lightOrigin: "bottomRight"; strength: 0.45 }
-            Modules.GlassRim { target: tools }
-            Modules.GlassRim { target: tools; lightOrigin: "bottomRight"; strength: 0.45 }
         }
     }
 
@@ -888,4 +957,47 @@ ShellRoot {
             Modules.BatteryAlert { id: batteryAlert }
         }
     }
+
+    // Notification toasts -- replaces swaync's own notification-window
+    // popups. Same per-screen Variants/exclusionMode/aboveWindows shape
+    // as OSD/BatteryAlert above; anchored top-left with swaync's own
+    // margins (positionX/positionY: "left"/"top" in swaync/config.json --
+    // that pair only ever governed TOAST position, unlike the
+    // control-center below). Always mapped, like OSD, so
+    // NotificationCard's own state can drive fades later without a
+    // window remap; content is simply empty/zero-height when
+    // NotificationState.toastQueue is empty.
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: notifToastWindow
+            required property var modelData
+            screen: modelData
+
+            focusable: false
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+
+            anchors { top: true; left: true }
+            margins { top: 8; left: 3 }
+            implicitWidth: toastStack.width
+            implicitHeight: toastStack.height
+
+            Modules.NotificationToast { id: toastStack }
+        }
+    }
+
+    // Notification center used to live here, as its own separate
+    // PanelWindow + HyprlandFocusGrab (positioned under METRICS,
+    // reveal-animated by hand). Gone now -- it's a `Modules.
+    // NotificationCenter` drawer entry on `toolsIsland` instead (see
+    // that DrawerIsland instantiation above), closed via the same
+    // Hyprland raw-event listener that already dismisses the keybinds
+    // sheet (see the `Connections { target: Hyprland }` block near the
+    // top of this file). Same reasoning as Veille/Keybindings already
+    // living inside this window rather than in their own: one fewer
+    // layer-shell surface, one fewer place to keep animation timing in
+    // sync by hand.
 }

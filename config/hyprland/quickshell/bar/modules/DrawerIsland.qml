@@ -75,8 +75,52 @@ Item {
 
     readonly property int margin: 6
     readonly property int cornerRadius: 18
-    readonly property int rowHeight: 31
+    // 31 was tuned for centerIsland's own row (ActiveWindow/Workspaces/
+    // Media) -- overridable now that TOOLS' row (METRICS-style icons,
+    // originally a plain 24px-tall Block) needs to match METRICS' own
+    // height instead, or its closed pill visibly sits lower/taller than
+    // METRICS right next to it.
+    property int rowHeight: 31
     readonly property int revealDuration: 320
+
+    // Visual chrome, generalized for a second consumer with a different
+    // look (TOOLS' own floating pane, unlike centerIsland which is flush
+    // against the screen's top edge) -- defaults below reproduce the
+    // original hardcoded look byte-for-byte, so centerIsland itself is
+    // untouched by this. `flushTop` mirrors Block.qml's own property of
+    // the same name/meaning (square top corners + asymmetric GlassRim
+    // when true, all 4 corners rounded + the METRICS/TOOLS-style
+    // symmetric GlassRim pair when false). `fillGradient` (null by
+    // default) takes precedence over `fillColor` when set, same
+    // precedence Rectangle itself already gives gradient over color.
+    property bool flushTop: true
+    property color fillColor: "#000000"
+    property Gradient fillGradient: null
+
+    // centerIsland's own row holds genuinely variable-width content
+    // (ActiveWindow's title, Media's marquee) -- widening to the fixed
+    // `maxRowWidth` floor BEFORE revealing height avoids that content
+    // visibly resizing while a drawer is already open (see
+    // `maxRowWidth`'s own comment). TOOLS' row is effectively fixed-width
+    // (no maxWidth hints anywhere in it -- see NotificationBell.qml's
+    // header for why one was deliberately NOT added), so gating height
+    // behind a width phase that has nothing real to do would just be a
+    // pure, pointless delay before the drawer can even start opening
+    // (asked for explicitly: "l'ideal c'est de ne pas elargir la largeur
+    // d'abord... car ici le texte est fixe"). `twoPhase: false` skips the
+    // sequencing entirely: `expanded` tracks `anyOpen` immediately, and
+    // `openProgress` (still there for the rare case TOOLS' own row width
+    // *does* shift slightly, e.g. BaliseButton's IconSlot animations)
+    // gets its own plain, unblocking Behavior instead of being driven by
+    // openSequence/closeSequence.
+    property bool twoPhase: true
+    // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
+    // this 6px auto-spacing entirely, no manual spacers between its
+    // children. TOOLS' own content instead uses spacing:0 plus hand-tuned
+    // Item spacers per gap (documented "6 -> 3 -> 2" iteration in
+    // shell.qml) -- exposed so a floating consumer can opt into that
+    // same fine-grained control instead of double-spacing on top of it.
+    property int rowSpacing: 6
 
     // The FULL height this could ever need -- every entry's
     // `implicitHeight` summed (i.e. all of them open at once), not their
@@ -233,7 +277,33 @@ Item {
             easing.type: Easing.InOutCubic
         }
     }
+
+    // twoPhase: false path -- no sequencing at all. `expanded` mirrors
+    // `anyOpen` the instant it changes (so entries' own height Behaviors
+    // start right away, nothing waits on a width phase), and
+    // `openProgress` just tracks `anyOpen` through a plain parallel
+    // Behavior instead of the sequences above. `enabled` on the Binding/
+    // Behavior (not an `if` in onAnyOpenChanged alone) so a LIVE toggle
+    // of `twoPhase` itself would never leave openProgress stuck
+    // half-owned by the wrong mechanism -- not something any current
+    // caller does, but cheap insurance since both drive the same
+    // property.
+    Binding {
+        target: root
+        property: "openProgress"
+        value: root.anyOpen ? 1 : 0
+        when: !root.twoPhase
+    }
+    Behavior on openProgress {
+        enabled: !root.twoPhase
+        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+    }
+
     onAnyOpenChanged: {
+        if (!root.twoPhase) {
+            root.expanded = root.anyOpen;
+            return;
+        }
         if (root.anyOpen) {
             closeSequence.stop();
             // Already wide with something else open: the widen phase has
@@ -251,23 +321,27 @@ Item {
     // whatever screen edge the PARENT is flush against (top corners
     // square), rounded at the bottom regardless of how tall this grows,
     // since the radii were never tied to a fixed height to begin with.
+    // Non-flush consumers (TOOLS) get all 4 corners rounded instead, same
+    // as Block.qml's own flushTop gating.
     Rectangle {
         id: fill
         anchors.fill: parent
-        topLeftRadius: 0
-        topRightRadius: 0
+        topLeftRadius: root.flushTop ? 0 : root.cornerRadius
+        topRightRadius: root.flushTop ? 0 : root.cornerRadius
         bottomLeftRadius: root.cornerRadius
         bottomRightRadius: root.cornerRadius
-        color: "#000000"
+        color: root.fillColor
+        gradient: root.fillGradient
     }
 
-    // Same GlassRim treatment every pill in this bar gets. Symmetric
-    // light from directly below (hSpan: 0), not the usual diagonal
-    // corner-to-corner ramp -- a single corner hotspot read lopsided on
-    // a shape this wide. topOverflow pushes the traced rect's top edge
-    // above the surface entirely, so only the bottom arc (the one edge
-    // this flush-top shape actually has) ever paints.
+    // Flush-top treatment (centerIsland's original, only consumer until
+    // now): symmetric light from directly below (hSpan: 0), not the
+    // usual diagonal corner-to-corner ramp -- a single corner hotspot
+    // read lopsided on a shape this wide. topOverflow pushes the traced
+    // rect's top edge above the surface entirely, so only the bottom arc
+    // (the one edge this flush-top shape actually has) ever paints.
     GlassRim {
+        visible: root.flushTop
         target: fill
         cornerRadius: root.cornerRadius - 1
         lightOrigin: "bottomLeft"
@@ -275,6 +349,22 @@ Item {
         strength: 0.35
         highlightColor: "#8e8e93"
         topOverflow: root.cornerRadius + 6
+    }
+
+    // Floating-pane treatment (all 4 edges visible, nothing to hide) --
+    // the exact topLeft-full + bottomRight-faint pairing METRICS/TOOLS'
+    // own Blocks already use elsewhere in this bar (see shell.qml).
+    GlassRim {
+        visible: !root.flushTop
+        target: fill
+        cornerRadius: root.cornerRadius
+    }
+    GlassRim {
+        visible: !root.flushTop
+        target: fill
+        cornerRadius: root.cornerRadius
+        lightOrigin: "bottomRight"
+        strength: 0.45
     }
 
     // Second, fainter glossy catch-light toward the bottom-right, same
@@ -302,6 +392,8 @@ Item {
                 x: 0; y: 0
                 width: gloss.width
                 height: gloss.height
+                topLeftRadius: root.flushTop ? 0 : root.cornerRadius
+                topRightRadius: root.flushTop ? 0 : root.cornerRadius
                 bottomLeftRadius: root.cornerRadius
                 bottomRightRadius: root.cornerRadius
             }
@@ -324,7 +416,7 @@ Item {
         x: Math.round(root.margin + (root.effectiveWidth - topRow.implicitWidth) / 2)
         y: 0
         height: root.rowHeight
-        spacing: 6
+        spacing: root.rowSpacing
     }
 
     // Where the stack lives. A plain Column: its height is the live sum

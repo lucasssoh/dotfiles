@@ -65,17 +65,17 @@ hl.on("hyprland.start", function()
     -- Session services and daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
     -- quickshell replaces waybar as the bar (see quickshell/bar/) --
-    -- config.jsonc/style.css stay in the repo as a fallback, same
-    -- pattern as dunst below, just not started:
+    -- config.jsonc/style.css stay in the repo as a fallback, kept but
+    -- not started:
     --   hl.exec_cmd("waybar")
     --   hl.exec_cmd("bash ~/.config/waybar/scripts/watch-reload.sh")
+    -- Notifications (history, DND, mpris controls) are native to
+    -- quickshell now (see quickshell/bar/services/NotificationState.qml)
+    -- -- no separate daemon to start here any more. Used to be swaync,
+    -- which replaced dunst for the same reason quickshell replaced
+    -- waybar: one process claiming org.freedesktop.Notifications
+    -- instead of two competing for it.
     hl.exec_cmd("quickshell -c bar")
-    -- swaync replaces dunst as the notification center (history, toggles,
-    -- mpris controls). Both claim the same D-Bus name
-    -- org.freedesktop.Notifications and can't coexist -- dunst is
-    -- therefore no longer started, but its config stays in the repo as a
-    -- fallback.
-    hl.exec_cmd("swaync")
     -- hypridle disabled on this machine (config present and valid, see
     -- hypridle.conf, but not enabled). Uncomment to re-enable.
     -- hl.exec_cmd("hypridle")
@@ -248,10 +248,14 @@ hl.config({
         -- alone doesn't blur anything by default though (no window/layer
         -- opts in just because this is true) -- actual blur only happens
         -- where explicitly requested:
-        --   - layerrule blur for swaync-notification-window/
-        --     swaync-control-center (see windowrules.lua) -- small,
-        --     on-demand panels, visible for seconds at a time, not the
-        --     whole session, so nowhere near the bar's cost profile.
+        --   - layerrule blur for Roue (see windowrules.lua) -- a small,
+        --     on-demand panel, visible for seconds at a time, not the
+        --     whole session, so nowhere near the bar's cost profile. The
+        --     notification center used to be in this bullet too
+        --     (swaync-control-center) -- gone along with swaync itself,
+        --     its quickshell replacement closes via HyprlandFocusGrab
+        --     instead of an oversized click-catching surface, so it
+        --     never needed this hack in the first place.
         --   - windows with an opacity override below 1.0 (Thunar, Nemo,
         --     Pavucontrol -- see windowrules.lua) pick up a blurred
         --     backdrop as a side effect of already being translucent.

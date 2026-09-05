@@ -3,9 +3,11 @@ set -euo pipefail
 
 # =========================================================
 # balise-toggle.sh [tab] — toggles Balise, optionally forcing it onto the
-# given tab (wifi|bluetooth|ethernet), first closing swaync if it's open --
-# both panels occupy the same corner (top-right) and must never be open at
-# the same time.
+# given tab (wifi|bluetooth|ethernet), first closing the notification
+# center if it's open -- declutter convention carried over from when
+# both panels shared the same top-right corner; the notification center
+# now sits top-left (under the bar's METRICS block) instead, but opening
+# one still puts the other away.
 #
 # tab is now OPTIONAL: the consolidated bar block (BaliseButton.qml) has
 # no per-icon tab of its own to force any more -- it just opens Balise on
@@ -17,7 +19,7 @@ set -euo pipefail
 # `balise` would be silently not found without this (the click did nothing).
 export PATH="$HOME/.local/bin:$PATH"
 
-swaync-client -cp >/dev/null 2>&1 || true
+qs -c bar ipc call bar closeNotificationCenter >/dev/null 2>&1 || true
 if [ -n "${1:-}" ]; then
     balise toggle --tab "$1"
 else

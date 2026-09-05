@@ -16,7 +16,6 @@
     // ============================================================
 
     "modules-left": [
-        "custom/notification",
         "clock",
         "hyprland/workspaces",
         "hyprland/window"
@@ -76,7 +75,8 @@
 
     // ── Media ────────────────────────────────────────────────────
     // Just an indicator that something is playing -- full title/artist and
-    // controls live in swaync (mpris widget in the notification center).
+    // controls live in the notification center (quickshell's
+    // NotificationCenter.qml).
     "mpris": {
         // Static truncation (native, no scroll -- a marquee needs a fast
         // poll loop even while idle, not worth the battery cost). "…"
@@ -244,30 +244,11 @@
         ]
     },
 
-    // ── Notifications (swaync) ──────────────────────────────────
-    // Official swaync waybar format (upstream README): "alt" (set by
-    // swaync-client -swb) serves both as the format-icons key AND the
-    // CSS class -> see #custom-notification.* in style.css.
-    "custom/notification": {
-        "tooltip": true,
-        "format": "{icon}",
-        "format-icons": {
-            "notification": "󱅫",
-            "none": "󰂜",
-            "dnd-notification": "󰂠",
-            "dnd-none": "󰪓",
-            "inhibited-notification": "󰂛",
-            "inhibited-none": "󰪑",
-            "dnd-inhibited-notification": "󰂛",
-            "dnd-inhibited-none": "󰪑"
-        },
-        "return-type": "json",
-        "exec-if": "which swaync-client",
-        "exec": "swaync-client -swb",
-        "on-click": "~/.config/waybar/scripts/swaync-toggle.sh",
-        "on-click-right": "swaync-client -d -sw",
-        "escape": true
-    },
+    // Notifications used to live here (swaync's waybar module) -- gone
+    // now that quickshell owns notifications natively (see
+    // quickshell/bar/modules/NotificationBell.qml). This file is a
+    // dormant fallback already (waybar isn't started, see
+    // hypr/hyprland.lua), kept in sync mostly for hygiene.
 
     // ── Power ────────────────────────────────────────────────────
     "custom/power": {

@@ -92,8 +92,7 @@ if [ "$DISTRO" = "fedora" ]; then
     sudo dnf copr enable -y lionheartp/Hyprland ||
         warn "COPR lionheartp/Hyprland could not be enabled — hyprland may fail to install."
     # Quickshell -- the actual bar (see quickshell/bar/), waybar/config.jsonc
-    # is no longer started but stays installed/in the repo as a fallback,
-    # same "kept but not started" pattern as dunst below.
+    # is no longer started but stays installed/in the repo as a fallback.
     sudo dnf copr enable -y errornointernet/quickshell ||
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
 
@@ -101,11 +100,12 @@ if [ "$DISTRO" = "fedora" ]; then
         # Hyprland ecosystem
         dbus-x11 dbus-daemon hyprland xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
-        # (SwayNotificationCenter replaces dunst as the active notification
-        # daemon; dunst stays installed/available as a fallback, not started.
-        # quickshell replaces waybar as the active bar the same way -- waybar
-        # stays installed/available as a fallback, not started either)
-        quickshell waybar dunst SwayNotificationCenter rofi-wayland khal hyprsunset
+        # quickshell is the active bar AND the active notification daemon
+        # (see quickshell/bar/services/NotificationState.qml) -- waybar
+        # stays installed/available as a fallback, not started. No
+        # separate notification daemon package needed any more (used to
+        # be SwayNotificationCenter, before that dunst).
+        quickshell waybar rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -146,9 +146,12 @@ elif [ "$DISTRO" = "arch" ]; then
         # Hyprland ecosystem
         dbus hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
-        # quickshell is the active bar (see quickshell/bar/); waybar stays
-        # installed as a fallback, not started -- same pattern as dunst
-        quickshell waybar dunst swaync rofi-wayland khal hyprsunset
+        # quickshell is the active bar AND the active notification daemon
+        # (see quickshell/bar/services/NotificationState.qml); waybar
+        # stays installed as a fallback, not started. No separate
+        # notification daemon package needed any more (used to be
+        # swaync, before that dunst).
+        quickshell waybar rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -179,13 +182,12 @@ elif [ "$DISTRO" = "arch" ]; then
 
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
-    warn "swaync (SwayNotificationCenter) is often not packaged in apt — install manually if 'swaync' isn't found."
-    warn "quickshell (the active bar, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
+    warn "quickshell (the active bar AND notification daemon, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
     warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
     PKGS=(
         dbus dbus-x11 hyprland
-        waybar dunst rofi khal hyprsunset
+        waybar rofi khal hyprsunset
         pipewire pipewire-pulse wireplumber pavucontrol
         network-manager network-manager-gnome
         blueman
@@ -501,14 +503,14 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,dunst,swaync,balise,prisme,roue,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,balise,prisme,roue,hyprlock,scripts,khal}
     ok "Old configs removed"
 fi
 
 section "Linking configuration directories"
 
 # Config directories to fully symlink into ~/.config
-modules=("hypr" "waybar" "quickshell" "rofi" "dunst" "swaync" "balise" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
+modules=("hypr" "waybar" "quickshell" "rofi" "balise" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then

@@ -3,8 +3,8 @@ set -uo pipefail
 
 # =========================================================
 # balise-autoclose.sh — closes Balise as soon as another window takes focus
-# (same behavior as the swaync panel, which natively closes on an outside
-# click).
+# (same behavior as the notification center, which closes on an outside
+# click via a native HyprlandFocusGrab -- see NotificationCenter.qml).
 #
 # Balise is a plain layer-shell surface: GTK/gtk4-layer-shell never emits a
 # focus-loss event for this type of surface (its "is-active" property

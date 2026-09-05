@@ -101,7 +101,10 @@ bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh rou
 -- `zenMode` property / toggleZen()).
 bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"))
 bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
-bind(mod .. "+ I",       hl.dsp.exec_cmd("swaync-client -t -sw"))
+-- Notification center: was `swaync-client -t -sw`. quickshell owns
+-- notifications natively now (see quickshell/bar/services/
+-- NotificationState.qml) -- same IPC pattern as toggleZen above.
+bind(mod .. "+ I",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleNotificationCenter"))
 
 -- ============================================================
 -- WINDOWS
