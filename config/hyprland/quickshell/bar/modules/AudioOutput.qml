@@ -70,7 +70,7 @@ Item {
         objects: root.node ? [root.node] : []
     }
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 64)   // 65 -> 64, point 6: 4pt grid
+    implicitWidth: label.implicitWidth + 2   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
     implicitHeight: 24
     visible: root.node !== null
 
@@ -79,7 +79,10 @@ Item {
     // "audio routed to the screen's own output") / ph-speaker-high
     readonly property string iconGlyph: root.muted ? ""
         : (root.isHeadphone ? "" : root.isHdmi ? "" : "")
-    readonly property string volumeText: root.muted ? "" : Math.round(root.volume * 100) + "%"
+    // No "%" (asked for, same pass as Battery.qml: "beaucoup plus sobre
+    // et econome") -- the icon right next to it already says what this
+    // number means.
+    readonly property string volumeText: root.muted ? "" : Math.round(root.volume * 100)
 
     // No color rule for #pulseaudio.output in waybar/style.css -- only
     // the glyph changes on mute, color stays plain text.
@@ -87,6 +90,34 @@ Item {
         id: label
         anchors.centerIn: parent
         spacing: 4
+
+        // Value BEFORE the icon, right-aligned in a slot pinned to a
+        // hidden "100" reference's width -- exactly Battery.qml's own
+        // layout (asked for explicitly: "exactement comme avec
+        // battery"). Right-aligned keeps the digit flush against the
+        // icon at any digit count; any leftover slack for a shorter
+        // value pushes out to the far left of the whole cluster
+        // instead of opening a gap next to the icon.
+        Text {
+            id: valueLabel
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.volumeText
+            visible: root.volumeText !== ""
+            color: "#f2f2f7"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            width: volumeRef.implicitWidth
+            horizontalAlignment: Text.AlignRight
+        }
+        Text {
+            id: volumeRef
+            visible: false
+            text: "100"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+        }
 
         // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
         // what measured aligned for Phosphor -- see Temperature.qml's
@@ -99,17 +130,6 @@ Item {
             color: "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 15
-        }
-        Text {
-            id: valueLabel
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.volumeText
-            visible: root.volumeText !== ""
-            color: "#f2f2f7"
-            font.family: Fonts.ui
-            font.pixelSize: 13
         }
     }
 

@@ -27,6 +27,13 @@ import Quickshell.Services.Pipewire
 // (see shell.qml's IpcHandler) -- and pokeBrightness() below does one
 // cheap sysfs FileView.reload(), no brightnessctl/bash spawn on this
 // side either.
+//
+// Battery-low is a SEPARATE surface (BatteryAlertState.qml/
+// BatteryAlert.qml) -- a centered, click-to-dismiss modal styled after
+// iOS/macOS's own "Low Battery" alert, not this transient corner popup.
+// It doesn't belong here: this OSD auto-hides on a timer and is meant to
+// be glanced at, not interacted with, which is wrong for a warning that
+// wants an acknowledgement.
 Singleton {
     id: root
 

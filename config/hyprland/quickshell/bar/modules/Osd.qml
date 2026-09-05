@@ -13,6 +13,11 @@ import "../services"
 // hard-cutting, same "smooth open/close" preference the bar's own
 // header comment already states for Media.qml/ActiveWindow.qml.
 //
+// Battery-low is NOT part of this popup -- BatteryAlert.qml is its own
+// centered, click-to-dismiss modal (styled after iOS/macOS's "Low
+// Battery" alert), a deliberately different shape for a warning that
+// wants an acknowledgement rather than a glance-and-forget corner popup.
+//
 // Redesigned around macOS's own brightness/volume HUD (reference
 // screenshot: title label, small-icon/thin-track/big-icon row, tick
 // marks): deliberately sidesteps the previous design's whole class of
@@ -29,30 +34,33 @@ import "../services"
 // plain Rectangle with a plain `radius`, no clamping, no masking, no
 // thresholds.
 //
-// Translucent, not a real compositor blur, still: Hyprland's layerrule
-// blur needs a distinct Wayland layer-shell namespace to target just
-// this popup, and Quickshell hardcodes the same "quickshell" namespace
-// for every PanelWindow in the process (confirmed live via `hyprctl
-// layers -j` while this was visible -- the always-on bar and this popup
-// share one namespace, no per-window override anywhere in the installed
-// QML API). A layerrule on that shared namespace would blur the bar too,
-// continuously, for the whole session -- exactly what hyprland.lua's
-// decoration.blur.enabled comment already argued against doing.
+// Opaque card, not translucent glass -- asked for, after this used the
+// shared glass recipe below at first. (Translucency was never a real
+// compositor blur anyway: Hyprland's layerrule blur needs a distinct
+// Wayland layer-shell namespace to target just this popup, and
+// Quickshell hardcodes the same "quickshell" namespace for every
+// PanelWindow in the process -- confirmed live via `hyprctl layers -j`
+// -- so a layerrule on that shared namespace would've blurred the
+// always-on bar too, continuously, for the whole session. Moot now:
+// solid fill needs no blur to read cleanly, so that whole tradeoff
+// stopped mattering.)
 //
 // Glass treatment: the SAME one shell.qml already uses on METRICS/
-// Launchers/TOOLS, not a bespoke one -- asked for, for consistency
-// with the rest of the bar. That system is a vertical Gradient body
-// (lighter/denser at the top, darker/thinner at the bottom, both stops
-// at the fill's own 0x73 alpha) plus GlassRim.qml traced around the
-// edge as the actual highlight -- a five-stop diagonal-reading ramp
-// raking across the top-left corner, the same one Hyprland's own
-// active-window border, Roue's hub and Balise's panel all use (see
-// GlassRim.qml's header). Two GlassRim instances, like those three
-// blocks: topLeft at full strength, a fainter bottomRight one as a
-// secondary source. (An earlier pass here built its own top-right glow
-// out of overlapping circles instead, before being asked to just reuse
-// this -- simpler, and actually consistent instead of a fourth
-// slightly-different glass recipe in the same bar.)
+// Launchers/TOOLS, not a bespoke one -- for consistency with the rest
+// of the bar (still true for the GlassRim edge highlight below, just
+// not for the fill's alpha anymore). That system is a vertical Gradient
+// body (lighter/denser at the top, darker/thinner at the bottom -- here
+// at full 0xff alpha instead of those other blocks' shared 0x73, the
+// one deliberate difference) plus GlassRim.qml traced around the edge
+// as the actual highlight -- a five-stop diagonal-reading ramp raking
+// across the top-left corner, the same one Hyprland's own active-window
+// border, Roue's hub and Balise's panel all use (see GlassRim.qml's
+// header). Two GlassRim instances, like those three blocks: topLeft at
+// full strength, a fainter bottomRight one as a secondary source. (An
+// earlier pass here built its own top-right glow out of overlapping
+// circles instead, before being asked to just reuse this -- simpler,
+// and actually consistent instead of a fourth slightly-different glass
+// recipe in the same bar.)
 
 Rectangle {
     id: card
@@ -66,8 +74,8 @@ Rectangle {
     radius: 20
 
     gradient: Gradient {
-        GradientStop { position: 0.0; color: "#733f4450" }
-        GradientStop { position: 1.0; color: "#73060608" }
+        GradientStop { position: 0.0; color: "#ff3f4450" }
+        GradientStop { position: 1.0; color: "#ff060608" }
     }
 
     // target left unset (null) -- these are plain CHILDREN of card, not
@@ -96,9 +104,9 @@ Rectangle {
     // matches the reference's own small-sun/big-sun pair, which is the
     // same icon at two scales too, not two different icons.
     readonly property string iconGlyph: {
-        if (kind === "brightness") return "";
-        if (kind === "mic") return muted ? "" : "";
-        return muted ? "" : "";
+        if (kind === "brightness") return "";
+        if (kind === "mic") return muted ? "" : "";
+        return muted ? "" : "";
     }
 
     Text {

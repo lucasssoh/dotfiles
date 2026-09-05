@@ -217,6 +217,31 @@ ShellRoot {
         function pokeBrightness(): void {
             OsdState.pokeBrightness();
         }
+        // Preview the low-battery alert on demand -- there's no real
+        // battery to trigger it on a desktop. Bypasses the actual
+        // UPower state/tier tracking entirely (see
+        // BatteryAlertState.qml's simulate). `qs -c bar ipc call bar
+        // simulateBattery 8`.
+        function simulateBattery(percent: int): void {
+            BatteryAlertState.simulate(percent);
+        }
+        // Dismiss it again without clicking Close by hand -- the alert
+        // has no auto-hide timer (asked for, matches the reference), so
+        // a simulateBattery test run needs an explicit way back down.
+        function dismissBattery(): void {
+            BatteryAlertState.dismiss();
+        }
+        // Preview Battery.qml's own top-bar module -- separate from
+        // simulateBattery above, which only drives the low-battery
+        // ALERT. No real UPower/power-profiles-daemon state touched
+        // (see BatteryPreviewState.qml). `qs -c bar ipc call bar
+        // previewBattery 62 false` (percent, charging).
+        function previewBattery(percent: int, charging: bool): void {
+            BatteryPreviewState.set(percent, charging);
+        }
+        function previewBatteryOff(): void {
+            BatteryPreviewState.clear();
+        }
         // `qs -c bar ipc call bar keybindsPress`/`keybindsRelease` --
         // hypr/keybinds.lua's Super_L bind calls these on key down/up.
         // Press only ARMS the hold timer above (it does NOT show
@@ -544,10 +569,6 @@ ShellRoot {
                 // wifi/rate module, now grouped with METRICS' other
                 // continuously-updating stats instead.
                 Modules.Traffic {}
-
-                Item { width: 6; height: 1 }
-
-                Modules.Battery {}
             }
 
             // Launchers -- its own separate floating island (asked for:
@@ -720,7 +741,19 @@ ShellRoot {
                     // now sit right of connectivity in this pill instead.
                     Modules.Performance {}
 
-                    Item { width: 6; height: 1 }
+                    // 6 -> 3 -> 2: this whole power-profile/battery/
+                    // clock/power cluster read as too spread out (asked
+                    // for twice now, "ça consomme trop d'espace") --
+                    // tightened here and at the same two spots below,
+                    // plus the power dot's own box just after Clock.
+                    Item { width: 2; height: 1 }
+
+                    // Moved here from METRICS (asked for): sits between
+                    // power-profile and the clock now, grouped with the
+                    // other power/status modules instead of CPU/RAM/fan.
+                    Modules.Battery {}
+
+                    Item { width: 2; height: 1 }
 
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the
@@ -728,7 +761,14 @@ ShellRoot {
                     Modules.Clock {}
 
                     Item {
-                        implicitWidth: 28
+                        // 28 -> 20 -> 16: same space-saving pass as the
+                        // two Item spacers above -- this box's own width
+                        // IS the gap between Clock and the power dot,
+                        // there being no separate spacer Item here to
+                        // shrink instead. Still bigger than the 8px dot
+                        // itself, just a tighter click target than
+                        // before rather than a roomy one.
+                        implicitWidth: 16
                         implicitHeight: 24
 
                         // Plain filled dot instead of a glyph (was 󰍃, before
@@ -816,6 +856,36 @@ ShellRoot {
             implicitHeight: osd.height
 
             Modules.Osd { id: osd }
+        }
+    }
+
+    // Low-battery alert -- see services/BatteryAlertState.qml for the
+    // UPower threshold-crossing trigger logic and BatteryAlert.qml's own
+    // header for why this is a separate, centered, click-to-dismiss
+    // surface rather than a third OsdState "kind". Same per-screen
+    // Variants/exclusionMode/aboveWindows shape as the OSD window right
+    // above, for the same reasons -- but genuinely CENTERED rather than
+    // anchored to an edge: no `anchors` block at all, which leaves
+    // Hyprland to position the (unanchored, sized-to-content) layer
+    // surface itself -- confirmed live it lands dead center, same as any
+    // other anchor-less wlr-layer-shell surface.
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: batteryAlertWindow
+            required property var modelData
+            screen: modelData
+
+            focusable: false
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+
+            implicitWidth: batteryAlert.width
+            implicitHeight: batteryAlert.height
+
+            Modules.BatteryAlert { id: batteryAlert }
         }
     }
 }

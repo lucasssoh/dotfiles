@@ -52,7 +52,10 @@ Item {
                                          // glued pair (e.g. display+hdr) can sit tighter without
                                          // affecting other ScriptModule instances (apps, etc.)
 
-    implicitWidth: Math.max(label.implicitWidth + root.padding, root.minWidth)
+    // 5px margin around badge, same as Balise's own implicitWidth --
+    // badge itself (not this Item directly) is what root.padding/
+    // root.minWidth now size, see badge below.
+    implicitWidth: badge.width + 5
     implicitHeight: 24
 
     function poll() {
@@ -94,23 +97,55 @@ Item {
 
     Component.onCompleted: if (root.interval === 0) root.poll();
 
+    // Small badge, same recipe as Hdr.qml/BaliseButton.qml's own (asked
+    // for explicitly -- "comme hdr ou balise ou l'icone est plus petite
+    // et encadré dans un sous bouton avec border glass"): a transparent
+    // Rectangle sized to content (root.padding/root.minWidth still drive
+    // that, same as before -- just sizing THIS instead of the whole
+    // Item directly now), radius 8 to match Hdr's own (this module sits
+    // right next to it in the `tools` pill), plus GlassRim's edge below.
+    Rectangle {
+        id: badge
+        anchors.centerIn: parent
+        width: Math.max(label.implicitWidth + root.padding, root.minWidth)
+        height: 18
+        radius: 8
+        color: "transparent"
+    }
+
     // Fonts.icon: the one current instantiation (display-layout status,
     // see shell.qml) only ever shows an icon glyph here, never mixed with
     // prose -- a future instance that needs real text alongside would
     // need its own Text/Row split, same as e.g. Bluetooth.qml.
+    //
+    // 15 -> 12 -> 10: still read as too big (asked for again, "surtout
+    // en mode both") -- display-layout.sh's "both" state uses nf-md-
+    // monitor_multiple specifically (two overlapping monitor shapes),
+    // a visually bulkier glyph at any given pixelSize than the single-
+    // monitor/laptop ones the internal/external states use, on top of
+    // Fonts.icon (a Nerd Font) generally inking wider within its own
+    // em-box than Fonts.iconPhosphor's glyphs do. 10 shrinks all three
+    // states, "both" included, rather than leaving them at a size only
+    // tuned against the two narrower glyphs.
     Text {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         id: label
-        anchors.centerIn: parent
+        anchors.centerIn: badge
         text: root.classIcons[root.moduleClass] !== undefined
             ? root.classIcons[root.moduleClass] : root.text
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         opacity: root.textOpacity
         font.family: Fonts.icon
-        font.pixelSize: 15
+        font.pixelSize: 10
         font.letterSpacing: root.letterSpacing
     }
+
+    // Same two-source "verre métal" edge as Hdr's badge and Balise's own
+    // (topLeft full strength, a fainter bottomRight source) -- traces
+    // badge's live x/y/width/height.
+    GlassRim { target: badge; cornerRadius: badge.radius }
+    GlassRim { target: badge; cornerRadius: badge.radius; lightOrigin: "bottomRight"; strength: 0.45 }
 
     MouseArea {
         anchors.fill: parent
