@@ -148,8 +148,32 @@ Item {
     // both animate on: the row stays put, and the drawer FADES/GROWS
     // INTO the space below rather than the whole island darkening as one
     // slab.
+    //
+    // This is the PANEL's own fade, and it deliberately still runs
+    // alongside the stretch: the empty pane has to be visibly there
+    // while it extends, otherwise there is nothing to watch stretching.
+    // What must NOT fade in with it is the panel's CONTENT -- that's
+    // `contentProgress` below, a separate phase.
     property real opaqueProgress: root.anyOpen ? 1 : 0
     Behavior on opaqueProgress { NumberAnimation { duration: 260; easing.type: Easing.InOutCubic } }
+
+    // 0 = drawer contents invisible, 1 = fully revealed. A SEPARATE
+    // phase from opaqueProgress above, asked for explicitly: "S'etire
+    // d'abord / Fade en affichant les elements une fois le tiroir
+    // ouvert". Before this, every entry's opacity was bound straight to
+    // its own height ratio (see opacityBinding in the Instantiator at
+    // the bottom), so the content faded in *in lockstep with* the
+    // stretch -- the two motions were one, which is the thing that was
+    // wrong. Now the stretch happens against an empty pane, and only
+    // once it has finished does this ramp the content in.
+    //
+    // Driven by the open/close sequences in BOTH twoPhase modes -- the
+    // twoPhase:false path (TOOLS: notifications + Balise) previously had
+    // no sequence at all, which is why an earlier attempt at this that
+    // only touched openSequence/closeSequence changed nothing there.
+    property real contentProgress: 0
+    // How long the content fade itself takes, once the stretch is done.
+    readonly property int contentFadeDuration: 200
 
     // centerIsland's own row holds genuinely variable-width content
     // (ActiveWindow's title, Media's marquee) -- widening to the fixed
@@ -292,29 +316,27 @@ Item {
     width: root.implicitWidth
     height: root.implicitHeight
 
-    // Two-phase reveal, asked for explicitly ("l'animation en deux
-    // temps, l'elargissement d'abord et ensuite l'allongement"): widen
-    // the island to fit the drawer's fixed max width FIRST, only THEN
-    // grow the drawer's own height open -- reversed on close (shrink
-    // height back to 0 first, narrow back second), so it always
-    // unwinds the same way it wound up. `Easing.InOutCubic` on every
-    // leg -- asked for ("plutot douce au demarrage et rapide au milieu
-    // puis re-douce à la fin"), replacing the SpringAnimation this used
-    // before (a physical settle/bounce is a different feel than a
-    // smooth-fast-smooth ease).
+    // Three-phase reveal: widen FIRST, then fade, then grow height --
+    // asked for explicitly ("S'etire d'abord, Fade en affichant les
+    // elements une fois le tiroir ouvert"). The width phase (openProgress)
+    // happens first, *then* opaqueProgress (the fade) starts. On close,
+    // this reverses: fade out first, wait for height to shrink, then
+    // narrow back. `Easing.InOutCubic` on every leg -- asked for ("plutot
+    // douce au demarrage et rapide au milieu puis re-douce à la fin").
     //
-    // Only the WIDTH leg is animated here now. The height legs belong to
-    // the entries themselves (a `Behavior on height` each), because with
-    // a stack there is no longer one height to sequence: entries open
-    // and close independently, and a NumberAnimation here could only
-    // ever drive whichever single item it was pointed at. Sequencing
-    // survives the change because `expanded` -- flipped by the
+    // Only the WIDTH and OPACITY legs are animated here. The height legs
+    // belong to the entries themselves (a `Behavior on height` each),
+    // because with a stack there is no longer one height to sequence:
+    // entries open and close independently, and a NumberAnimation here
+    // could only ever drive whichever single item it was pointed at.
+    // Sequencing survives the change because `expanded` -- flipped by the
     // ScriptAction below only AFTER the widen finishes -- is what
     // releases every entry's height binding; the ordering guarantee just
     // moved from "animate B after A" to "B cannot start until A says
     // so", which also holds for entries that open later.
     SequentialAnimation {
         id: openSequence
+        // 1. Widen to max width first
         NumberAnimation {
             target: root
             property: "openProgress"
@@ -322,18 +344,37 @@ Item {
             duration: 260
             easing.type: Easing.InOutCubic
         }
+        // 2. Once wide, release the entries' height bindings -- they
+        //    stretch open on their own `Behavior on height`.
         ScriptAction { script: root.expanded = true }
+        // 3. Wait out that stretch, THEN fade the content in. The pause
+        //    is what makes this a real second phase rather than two
+        //    motions overlapping.
+        PauseAnimation { duration: root.revealDuration }
+        NumberAnimation {
+            target: root
+            property: "contentProgress"
+            to: 1
+            duration: root.contentFadeDuration
+            easing.type: Easing.OutCubic
+        }
     }
     SequentialAnimation {
         id: closeSequence
-        // Clearing `expanded` sends every open entry's height binding to
-        // 0; their own Behaviors animate that. PauseAnimation then holds
-        // the island at full width until those have finished, so the
-        // narrowing still happens strictly after the shortening -- the
-        // same unwind order as before, expressed as a wait rather than
-        // as the second half of one animation.
+        // 1. Fade the content back out first -- the exact reverse of the
+        //    open order, so the pane is empty again before it retracts.
+        NumberAnimation {
+            target: root
+            property: "contentProgress"
+            to: 0
+            duration: 140
+            easing.type: Easing.OutCubic
+        }
+        // 2. Then collapse the content's height
         ScriptAction { script: root.expanded = false }
+        // 3. Wait for entries' height Behaviors to finish shrinking
         PauseAnimation { duration: root.revealDuration }
+        // 4. Finally, narrow back to normal width
         NumberAnimation {
             target: root
             property: "openProgress"
@@ -345,11 +386,11 @@ Item {
 
     // twoPhase: false path -- no sequencing at all. `expanded` mirrors
     // `anyOpen` the instant it changes (so entries' own height Behaviors
-    // start right away, nothing waits on a width phase), and
-    // `openProgress` just tracks `anyOpen` through a plain parallel
-    // Behavior instead of the sequences above. `enabled` on the Binding/
+    // start right away, nothing waits on a width phase), and both
+    // `openProgress` and `opaqueProgress` track `anyOpen` through plain
+    // Behaviors instead of the sequences above. `enabled` on the Binding/
     // Behavior (not an `if` in onAnyOpenChanged alone) so a LIVE toggle
-    // of `twoPhase` itself would never leave openProgress stuck
+    // of `twoPhase` itself would never leave either property stuck
     // half-owned by the wrong mechanism -- not something any current
     // caller does, but cheap insurance since both drive the same
     // property.
@@ -363,10 +404,54 @@ Item {
         enabled: !root.twoPhase
         NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
     }
+    // ...but the CONTENT reveal is still sequenced even here. There is
+    // no width phase to wait on in this mode (TOOLS pins
+    // `fixedContentWidth`, so the island never actually widens -- the
+    // only thing that stretches is the drawer growing DOWNWARD), so
+    // these skip straight to the stretch and then fade, which is the
+    // whole of "s'etire d'abord, fade ensuite" for a fixed-width island.
+    //
+    // Sequences rather than a Binding+Behavior on contentProgress: the
+    // reveal has to START only after the stretch has finished, and a
+    // Behavior can only stretch out a transition, not delay its start.
+    SequentialAnimation {
+        id: fastOpenSequence
+        ScriptAction { script: root.expanded = true }
+        PauseAnimation { duration: root.revealDuration }
+        NumberAnimation {
+            target: root
+            property: "contentProgress"
+            to: 1
+            duration: root.contentFadeDuration
+            easing.type: Easing.OutCubic
+        }
+    }
+    SequentialAnimation {
+        id: fastCloseSequence
+        NumberAnimation {
+            target: root
+            property: "contentProgress"
+            to: 0
+            duration: 140
+            easing.type: Easing.OutCubic
+        }
+        ScriptAction { script: root.expanded = false }
+    }
 
     onAnyOpenChanged: {
         if (!root.twoPhase) {
-            root.expanded = root.anyOpen;
+            // Was a bare `root.expanded = root.anyOpen` -- which is
+            // exactly why an earlier pass at the staged reveal appeared
+            // to do nothing on TOOLS: with no sequence running here,
+            // openSequence/closeSequence below are dead code in this
+            // mode and editing them changed nothing that TOOLS renders.
+            if (root.anyOpen) {
+                fastCloseSequence.stop();
+                fastOpenSequence.start();
+            } else {
+                fastOpenSequence.stop();
+                fastCloseSequence.start();
+            }
             return;
         }
         if (root.anyOpen) {
@@ -582,14 +667,31 @@ Item {
             // `clip: true` (set below) already wipes the content in
             // top-to-bottom as `height` grows, but a plain wipe alone
             // reads as content getting cut off rather than unveiled.
-            // Tying opacity to that same height progress -- 0 when
-            // closed, 1 at full height -- fades it in lockstep with the
-            // wipe, with no second separately-timed animation.
+            //
+            // This USED to be the height ratio alone, which faded the
+            // content in exactly in lockstep with the stretch -- the two
+            // motions were one, and that is the thing that was asked to
+            // change ("S'etire d'abord / Fade en affichant les elements
+            // une fois le tiroir ouvert").
+            //
+            // The `min` of the two terms is what gets the staged reveal
+            // without breaking the case it replaces:
+            //   - FIRST entry to open: the island stretches while
+            //     `contentProgress` is still 0, so the height ratio
+            //     hits 1 with opacity pinned at 0 -- an empty pane
+            //     extending. The sequence then ramps contentProgress and
+            //     THAT term becomes the one doing the fade. Staged.
+            //   - An entry opening LATER, against an island already
+            //     open (contentProgress already 1): no stretch phase is
+            //     being sequenced for it, so the height ratio is the
+            //     smaller term and it fades in with its own growth --
+            //     the original lockstep behaviour, which is still the
+            //     right answer there.
             property Binding opacityBinding: Binding {
                 target: modelData
                 property: "opacity"
                 value: modelData.implicitHeight > 0
-                    ? Math.min(1, modelData.height / modelData.implicitHeight)
+                    ? Math.min(root.contentProgress, modelData.height / modelData.implicitHeight)
                     : 0
             }
 

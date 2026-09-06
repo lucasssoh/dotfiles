@@ -95,6 +95,13 @@ Rectangle {
     GlassRim { cornerRadius: card.radius }
     GlassRim { cornerRadius: card.radius; lightOrigin: "bottomRight"; strength: 0.45 }
 
+    // Deliberately NOT `visible: alertVisible`: that was tried and is
+    // wrong twice over -- it does not zero an item's width/height in QML
+    // (so the window above it stayed 292x292 and kept eating clicks
+    // anyway, the actual bug), and it would skip the fade-out below by
+    // yanking the card out of the scene on the first frame of a dismiss.
+    // The click-through fix lives on the window instead, as an input
+    // mask -- see batteryAlertWindow in shell.qml.
     opacity: BatteryAlertState.alertVisible ? 1 : 0
     scale: BatteryAlertState.alertVisible ? 1 : 0.9
     Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

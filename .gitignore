@@ -15,3 +15,4 @@ config/hyprland/roue/wheels/audio-input.toml
 
 # Portfolio content staging: drafted here, copied into my-portfolio by hand
 portfolio-content/
+.claude/

@@ -184,7 +184,7 @@ hl.config({
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
         gaps_out         = { top = 10, right = 8, bottom = 6, left = 8 },
-        border_size      = 1,
+        border_size      = 3,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
@@ -215,7 +215,7 @@ hl.config({
                 --     "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
                 -- },
                 colors = {
-                    "rgba(8E8E9373)"
+                    "rgb(142, 142, 142)"
                 },
                 angle = 45,
             },
@@ -267,7 +267,7 @@ hl.config({
         -- explicit no_blur in windowrules.lua, set well before this was
         -- ever turned on, for exactly this kind of situation.
         blur = {
-            enabled           = true,
+            enabled           = false,
             size              = 6,
             passes            = 3,
             new_optimizations = true,
@@ -276,9 +276,9 @@ hl.config({
         },
         shadow = {
             enabled       = true,
-            range         = 24,
+            range         = 50,
             render_power  = 4,
-            color         = "rgba(0,0,0,0.55)",
+            color         = "rgba(0,0,0,1)",
             -- Back to none, same reasoning as inactive_border above: no
             -- per-window treatment on unfocused windows at all, so the
             -- active glass border stays the one unambiguous focus cue.

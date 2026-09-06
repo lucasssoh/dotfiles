@@ -1,14 +1,24 @@
 import QtQuick
-import Quickshell.Io
 import Quickshell.Services.Mpris
 import "../theme"
 import "../services"
 
 // swaync's control-center replacement -- header/clear-all, a DND toggle,
-// a trimmed mpris section, the same 2 quick-action buttons swaync's own
-// buttons-grid had, then the notification history itself
+// a trimmed mpris section, then the notification history itself
 // (NotificationState.trackedNotifications -- see that file's header for
 // why this list IS the daemon's own history, not a separate buffer).
+//
+// The quick-action buttons swaync's buttons-grid had (Night mode,
+// Screenshot) are NOT here any more -- asked for: "enlever les boutons
+// pour screenshot et pour nightmode car c'est deja dans balise". Both
+// now live as real rows in Balise's own home page
+// (modules/balise/BaliseHome.qml, driven by BaliseState.toggleNightMode()
+// /triggerScreenshot()), which is the toggle surface for system controls
+// -- and Balise's night-mode row is a *stateful* switch reflecting the
+// daemon's live state, where this file's button was a fire-and-forget
+// `bash -c` with no idea whether night mode was currently on. Two
+// controls for one setting, one of them blind: the blind one goes. This
+// drawer keeps only what is about notifications themselves.
 //
 // A DrawerIsland entry now (shell.qml's `toolsIsland`, the TOOLS block
 // turned into a drawer -- asked for explicitly: "même mécanisme que
@@ -52,14 +62,13 @@ Item {
     id: root
 
     property bool drawerOpen: false
-    implicitHeight: 600
+    // 600 - 56: the quick-actions row (40) plus the Column spacing above
+    // it (16) that went with it. Shrinking the drawer by exactly what was
+    // removed keeps the history list the same size it always was, rather
+    // than paying out the freed space as extra empty pane under "No
+    // notifications".
+    implicitHeight: 544
     Behavior on height { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
-
-    // Quick-action scripts -- swaync/config.json's buttons-grid, ported
-    // 1:1 (same two scripts, same "shell out via bash -c" shape
-    // BatteryAlertState.lowPowerProc already uses for its own button).
-    Process { id: nightModeProc; command: ["bash", "-c", "$HOME/.config/hypr/scripts/toggle-night-mode.sh"] }
-    Process { id: screenshotProc; command: ["bash", "-c", "$HOME/.config/waybar/scripts/screenshot-region.sh"] }
 
     // Same playerctld blacklist Media.qml's own mpris widget applies
     // (that file's header: "same blacklist swaync/config.json already
@@ -229,63 +238,6 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 onClicked: if (root.mprisPlayer) root.mprisPlayer.togglePlaying()
-            }
-        }
-
-        // ---- quick actions (swaync's buttons-grid, ported 1:1) ----
-        Row {
-            width: parent.width
-            spacing: 8
-
-            Rectangle {
-                width: (parent.width - 8) / 2
-                height: 40
-                radius: 12
-                color: nightArea.containsMouse ? "#14161d" : "transparent"
-                border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.18)
-                Behavior on color { ColorAnimation { duration: 120 } }
-                Text {
-                    anchors.centerIn: parent
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: "Night mode"
-                    color: "#f2f2f7"
-                    font.family: Fonts.ui
-                    font.pixelSize: 13
-                }
-                MouseArea {
-                    id: nightArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: nightModeProc.running = true
-                }
-            }
-            Rectangle {
-                width: (parent.width - 8) / 2
-                height: 40
-                radius: 12
-                color: shotArea.containsMouse ? "#14161d" : "transparent"
-                border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.18)
-                Behavior on color { ColorAnimation { duration: 120 } }
-                Text {
-                    anchors.centerIn: parent
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: "Screenshot"
-                    color: "#f2f2f7"
-                    font.family: Fonts.ui
-                    font.pixelSize: 13
-                }
-                MouseArea {
-                    id: shotArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: screenshotProc.running = true
-                }
             }
         }
     }

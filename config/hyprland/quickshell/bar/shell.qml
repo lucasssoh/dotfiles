@@ -981,6 +981,25 @@ ShellRoot {
             implicitWidth: batteryAlert.width
             implicitHeight: batteryAlert.height
 
+            // Input region, not paint state. BatteryAlert.qml hides
+            // itself with `opacity: 0`, which leaves the card at its
+            // full 292x292 -- and the two implicit sizes above read that
+            // size regardless of whether an alert is showing, so this
+            // layer surface sits 292x292 dead center on the screen at
+            // all times. An unmasked wlr-layer-shell surface takes input
+            // across its whole extent, so that invisible square was
+            // quietly swallowing clicks in the middle of the screen:
+            // reported live after a stray click there landed on the
+            // "Power save mode" pill and really did switch the power
+            // profile. Masking to an EMPTY region whenever there is no
+            // alert lets those clicks fall through to whatever is
+            // underneath, and costs the card nothing -- it keeps its
+            // size, so its dismiss fade/scale still animates normally.
+            mask: Region {
+                width: BatteryAlertState.alertVisible ? batteryAlert.width : 0
+                height: BatteryAlertState.alertVisible ? batteryAlert.height : 0
+            }
+
             Modules.BatteryAlert { id: batteryAlert }
         }
     }
@@ -1008,7 +1027,26 @@ ShellRoot {
             aboveWindows: true
 
             anchors { top: true; left: true }
-            margins { top: 8; left: 3 }
+            // Nudged down/right to sit INSIDE the top-left tile instead
+            // of straddling its frame -- asked for: "descend un peu en
+            // bas à droite pour qu'elles ne coupent pas la bordure de la
+            // tuile du dessous". `exclusionMode: Ignore` above means this
+            // surface is placed against the raw monitor edge, NOT below
+            // the bar's exclusive zone, so the old top:8/left:3 put the
+            // card over the bar AND across the tile's border lines, which
+            // then read as interrupted where the card covered them.
+            //
+            // Where that tile actually starts, on this setup:
+            //   top  = 24 (bar exclusive zone) + 10 (gaps_out.top)
+            //          +  3 (border_size)      = 37
+            //   left =  8 (gaps_out.left)      +  3 (border_size) = 11
+            // (all three from hypr/hyprland.lua). +9 past each clears the
+            // rounding=12 corner arc too, so the frame stays unbroken all
+            // the way around the card rather than just along the straight
+            // runs. Hardcoded like the numbers it replaces -- Hyprland's
+            // gaps/border aren't queryable from here -- so if gaps_out,
+            // border_size or the bar's height change, these follow.
+            margins { top: 46; left: 20 }
             implicitWidth: toastStack.width
             implicitHeight: toastStack.height
 

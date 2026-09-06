@@ -24,7 +24,9 @@ import Quickshell.Hyprland
 //
 // Toggle without killing the process: `scripts/dashboard-toggle.sh`
 // flips the `enabled` gate below over IPC (`qs -c dashboard ipc call
-// dashboard toggle`) and notifies via notify-send/swaync -- the process
+// dashboard toggle`) and notifies via notify-send, which now lands in
+// the bar's own notification center (bar/services/NotificationState.qml
+// owns org.freedesktop.Notifications; swaync is gone) -- the process
 // itself (and its empty-workspace tracking) keeps running either way,
 // so toggling is instant and never re-pays the startup cost above.
 //
