@@ -370,7 +370,24 @@ ShellRoot {
             required property var modelData
             screen: modelData
 
-            focusable: false
+            // Normally false, and emphatically so: a bar that accepts
+            // keyboard focus takes it away from whatever the user is
+            // actually working in every time they brush it with the
+            // pointer. It flips true for exactly one situation -- Balise's
+            // WiFi credential form is on screen on THIS screen's bar --
+            // because a layer-shell surface the compositor treats as
+            // non-focusable is sent no key events at all, so a text field
+            // inside it is simply dead.
+            //
+            // Quickshell maps this to layer-shell keyboard-interactivity
+            // `on_demand`, not `exclusive`: focus is handed over when the
+            // user clicks the surface and released when they click away,
+            // rather than seized the moment the flag goes up. Scoped per
+            // screen (`activeScreen`) so the other monitor's bar, which
+            // has no form on it, stays inert.
+            focusable: BaliseState.textInputActive
+                && BaliseState.panelOpen
+                && BaliseState.activeScreen === bar.screen
             visible: !shell.zenMode
             // exclusiveZone stays at the main bar's own height (24), not
             // the window's full implicitHeight below (30) -- the metrics

@@ -16,16 +16,25 @@
 //! - `active_wifi_ssid()` resolves the real 802-11-wireless.ssid instead
 //!   of the connection's renameable `Id` label.
 //!
-//! Documented gap kept as-is (project plan §6.3): `connect()` only writes
-//! `key-mgmt = "wpa-psk"` for a *new* profile, so WPA3-SAE/enterprise
-//! networks can't get a new profile created this way (already-saved
-//! profiles of any type still activate fine via ActivateConnection).
+//! The §6.3 gap is CLOSED: `build_security_groups` now writes the right
+//! `key-mgmt` per `SecurityType` (`wpa-psk` / `sae` / `wpa-eap` /
+//! `wpa-eap-suite-b-192` / WEP's `none`) and, for the enterprise cases,
+//! the whole `802-1x` group (EAP method, identity, anonymous identity,
+//! phase-2 auth) from the credentials the user typed -- so an eduroam-shaped
+//! network can be joined from scratch, not just reactivated from an
+//! existing profile.
+//!
+//! One deliberate omission there: no `802-1x.ca-cert` /
+//! `domain-suffix-match` is written. Balise has no UI to pick a
+//! certificate file, and NM joins without one (wpa_supplicant logs the
+//! connection as unvalidated). That is the same trade-off `nmcli
+//! device wifi connect` makes.
 
 use std::collections::HashMap;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
 use zbus::Connection;
 
-use super::types::{AccessPoint, SavedNetwork, SecurityType, WifiDetails, WiredProfile};
+use super::types::{AccessPoint, SavedNetwork, SecurityType, WifiCredentials, WifiDetails, WiredProfile};
 
 const NM: &str = "org.freedesktop.NetworkManager";
 const NM_PATH: &str = "/org/freedesktop/NetworkManager";
@@ -426,16 +435,44 @@ impl NetworkManager {
 
     // ---- mutations --------------------------------------------------------
 
-    /// Adapted from network_manager.rs:462-531. Reuses an existing saved
-    /// profile via ActivateConnection (password ignored -- NM reuses the
-    /// stored secret); otherwise builds a new profile via
-    /// AddAndActivateConnection. See this module's header comment for the
-    /// WPA2-PSK-only documented gap.
-    pub async fn connect(&self, ssid: &str, password: Option<&str>, device_path: &str) -> zbus::Result<()> {
+    /// Adapted from network_manager.rs:462-531, then extended for
+    /// credential entry.
+    ///
+    /// Three branches, not the original two:
+    /// - a saved profile and NO new credentials -> plain
+    ///   ActivateConnection, NM reuses the stored secret (unchanged);
+    /// - a saved profile and new credentials -> `update_wifi_security`
+    ///   rewrites just the security groups, THEN activate. This is the
+    ///   "the saved password is wrong / the campus rotated it" path; it
+    ///   deliberately keeps the rest of the profile (autoconnect, IP
+    ///   config, renamed id) instead of deleting and recreating it;
+    /// - no profile -> AddAndActivateConnection, now with the right
+    ///   `key-mgmt` and, for enterprise, a real `802-1x` group.
+    pub async fn connect(
+        &self,
+        ssid: &str,
+        security: &SecurityType,
+        creds: Option<&WifiCredentials>,
+        device_path: &str,
+    ) -> zbus::Result<()> {
         let dev_path: ObjectPath = device_path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
         let specific_object: ObjectPath = "/".try_into().unwrap();
+        let has_creds = matches!(creds, Some(c) if !c.is_empty());
 
-        if let Some(existing) = self.find_profile_by_ssid(ssid).await {
+        // An 802.1X profile with no username is invalid, and NM rejects it
+        // with a D-Bus error whose text says nothing a user could act on.
+        // The form asks for both fields, so this only fires for a caller
+        // that skipped it -- but it fires with a message worth reading.
+        if security.is_enterprise() && has_creds && creds.map_or(true, |c| c.identity.is_empty()) {
+            return Err(zbus::Error::Failure(
+                "This network needs a username as well as a password".to_string(),
+            ));
+        }
+
+        let active_path: Option<String> = if let Some(existing) = self.find_profile_by_ssid(ssid).await {
+            if has_creds {
+                self.update_wifi_security(&existing, security, creds.unwrap()).await?;
+            }
             let existing_path: ObjectPath = existing.as_str().try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
             self.conn
                 .call_method(
@@ -445,9 +482,13 @@ impl NetworkManager {
                     "ActivateConnection",
                     &(&existing_path, &dev_path, &specific_object),
                 )
-                .await?;
+                .await?
+                .body()
+                .deserialize::<OwnedObjectPath>()
+                .ok()
+                .map(|p| p.to_string())
         } else {
-            let config = build_wifi_connection_dict(ssid, password, false);
+            let config = build_wifi_connection_dict(ssid, security, creds, false);
             self.conn
                 .call_method(
                     Some(NM),
@@ -456,26 +497,96 @@ impl NetworkManager {
                     "AddAndActivateConnection",
                     &(&config, &dev_path, &specific_object),
                 )
-                .await?;
-        }
+                .await?
+                .body()
+                // AddAndActivateConnection returns (settings_path,
+                // active_path) -- only the second is of interest here.
+                .deserialize::<(OwnedObjectPath, OwnedObjectPath)>()
+                .ok()
+                .map(|(_, active)| active.to_string())
+        };
 
-        // Poll for confirmation, up to 15s, same as Orbit.
+        // Poll for confirmation, up to 15s, same as Orbit -- but watching
+        // the ActiveConnection's own State alongside the active SSID, so a
+        // rejected credential reports itself in a second or two instead of
+        // spending the full 15s pretending to still be connecting. That
+        // difference is the whole point of a password form: "wrong
+        // password" has to come back while the field is still on screen.
         for _ in 0..30 {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             if self.active_wifi_ssid().await.as_deref() == Some(ssid) {
                 return Ok(());
             }
+            if let Some(ref path) = active_path {
+                // NM_ACTIVE_CONNECTION_STATE_DEACTIVATED. Reached when
+                // authentication fails and NM gives up (it also deletes a
+                // brand-new profile that never activated, which is why
+                // nothing needs cleaning up here).
+                if self.prop_u32(path, ACTIVE_IFACE, "State").await == 4 {
+                    return Err(zbus::Error::Failure(if has_creds {
+                        "Authentication failed \u{2014} check the credentials".to_string()
+                    } else {
+                        "Connection failed".to_string()
+                    }));
+                }
+            }
         }
-        Err(zbus::Error::Address("Connection timeout".to_string()))
+        Err(zbus::Error::Failure("Connection timeout".to_string()))
+    }
+
+    /// Replaces an existing profile's security groups wholesale with ones
+    /// built from freshly typed credentials -- the read-modify-write shape
+    /// `set_autoconnect` already uses, except the two security groups are
+    /// DROPPED rather than copied through before the new ones go in. That
+    /// matters for a network that changes kind (personal -> enterprise, or
+    /// the reverse): a leftover `psk` next to a new `802-1x` group makes NM
+    /// reject the whole profile as inconsistent.
+    async fn update_wifi_security(
+        &self,
+        settings_path: &str,
+        security: &SecurityType,
+        creds: &WifiCredentials,
+    ) -> zbus::Result<()> {
+        let path_obj: ObjectPath = settings_path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
+        let current = self.get_connection_settings(settings_path).await?;
+
+        let mut new_settings: HashMap<String, HashMap<String, Value>> = HashMap::new();
+        for (group_name, group_settings) in current {
+            if group_name == "802-11-wireless-security" || group_name == "802-1x" {
+                continue;
+            }
+            let mut new_group: HashMap<String, Value> = HashMap::new();
+            for (key, value) in group_settings {
+                new_group.insert(key, Value::from(value));
+            }
+            new_settings.insert(group_name, new_group);
+        }
+        for (name, group) in build_security_groups(security, Some(creds)) {
+            new_settings.insert(
+                name.to_string(),
+                group.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
+            );
+        }
+
+        self.conn
+            .call_method(Some(NM), &path_obj, Some(CONNECTION_IFACE), "Update", &(&new_settings))
+            .await?;
+        Ok(())
     }
 
     /// Adapted from network_manager.rs:533-580. Always creates a new
     /// profile (never reuses one), no confirmation poll -- matching
     /// Orbit's behavior for hidden networks.
-    pub async fn connect_hidden(&self, ssid: &str, password: Option<&str>, device_path: &str) -> zbus::Result<()> {
+    pub async fn connect_hidden(
+        &self,
+        ssid: &str,
+        security: &SecurityType,
+        creds: Option<&WifiCredentials>,
+        device_path: &str,
+    ) -> zbus::Result<()> {
         let dev_path: ObjectPath = device_path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
         let specific_object: ObjectPath = "/".try_into().unwrap();
-        let config = build_wifi_connection_dict(ssid, password, true);
+        let config = build_wifi_connection_dict(ssid, security, creds, true);
         self.conn
             .call_method(
                 Some(NM),
@@ -698,6 +809,28 @@ impl NetworkManager {
                     // holds its default, which is true -- a missing key
                     // means enabled, not disabled.
                     .unwrap_or(true);
+
+                // Read back from what was actually stored rather than from
+                // AP flags: this half of `wifi_details` is the half that
+                // still resolves when the network is out of range and
+                // there are no flags to read (see WifiDetails::security).
+                let wsec = settings.get("802-11-wireless-security");
+                let key_mgmt = wsec
+                    .and_then(|g| g.get("key-mgmt"))
+                    .and_then(|v| String::try_from(&**v).ok())
+                    .unwrap_or_default();
+                details.security = Some(match key_mgmt.as_str() {
+                    "wpa-eap" => SecurityType::Enterprise,
+                    "wpa-eap-suite-b-192" => SecurityType::Wpa3Enterprise,
+                    "sae" => SecurityType::Wpa3,
+                    "wpa-psk" => SecurityType::Wpa2,
+                    // NM spells WEP as key-mgmt "none" plus a static key,
+                    // which is also how a genuinely open profile with a
+                    // (pointless) security group would look -- the key is
+                    // what tells them apart.
+                    "none" if wsec.map_or(false, |g| g.contains_key("wep-key0")) => SecurityType::Wep,
+                    _ => SecurityType::None,
+                });
             }
             details.settings_path = settings_path;
         }
@@ -813,13 +946,104 @@ fn owned_value_to_bytes(v: OwnedValue) -> Vec<u8> {
     }
 }
 
+/// The security half of a WiFi profile: the `802-11-wireless-security`
+/// group, plus an `802-1x` group for the enterprise cases. Returned as a
+/// list of (group name, group) pairs rather than folded straight into a
+/// connection dict, because it has two callers with different shapes --
+/// `build_wifi_connection_dict` (a brand-new profile) and
+/// `update_wifi_security` (replacing these same groups on an existing
+/// one, when the user re-types a password that had gone stale).
+///
+/// Empty for an open network, and for any network the user gave no
+/// credentials for: NM then either joins it as open, or -- for a saved
+/// profile being reactivated -- keeps whatever secrets it already has.
+fn build_security_groups<'a>(
+    security: &SecurityType,
+    creds: Option<&'a WifiCredentials>,
+) -> Vec<(&'static str, HashMap<&'static str, Value<'a>>)> {
+    let creds = match creds {
+        Some(c) if !c.is_empty() => c,
+        _ => return Vec::new(),
+    };
+    if !security.needs_password() {
+        return Vec::new();
+    }
+
+    let mut groups = Vec::new();
+    let mut wsec: HashMap<&str, Value> = HashMap::new();
+
+    match security {
+        SecurityType::Enterprise | SecurityType::Wpa3Enterprise => {
+            wsec.insert(
+                "key-mgmt",
+                if matches!(security, SecurityType::Wpa3Enterprise) {
+                    "wpa-eap-suite-b-192".into()
+                } else {
+                    "wpa-eap".into()
+                },
+            );
+
+            // "peap"/"mschapv2" is the eduroam-shaped default -- see
+            // WifiCredentials' own field docs. `eap` is `as` (an array)
+            // in NM's schema even though exactly one method is ever
+            // written here.
+            let eap = if creds.eap_method.is_empty() { "peap" } else { creds.eap_method.as_str() };
+            let mut x8021: HashMap<&str, Value> = HashMap::new();
+            x8021.insert("eap", Value::new(vec![eap.to_string()]));
+            x8021.insert("identity", creds.identity.as_str().into());
+            x8021.insert("password", creds.password.as_str().into());
+            if !creds.anonymous_identity.is_empty() {
+                x8021.insert("anonymous-identity", creds.anonymous_identity.as_str().into());
+            }
+            // EAP-PWD is a single-phase method: writing a phase2-auth for
+            // it makes NM reject the profile outright.
+            if eap != "pwd" {
+                let phase2 = if creds.phase2_auth.is_empty() { "mschapv2" } else { creds.phase2_auth.as_str() };
+                x8021.insert("phase2-auth", phase2.into());
+            }
+
+            groups.push(("802-11-wireless-security", wsec));
+            groups.push(("802-1x", x8021));
+        }
+        SecurityType::Wpa3 => {
+            // Same passphrase as WPA2, under SAE rather than PSK. This is
+            // the bit the old code got wrong: it wrote `wpa-psk` for
+            // every secured network, which a WPA3-only AP refuses.
+            wsec.insert("key-mgmt", "sae".into());
+            wsec.insert("psk", creds.password.as_str().into());
+            groups.push(("802-11-wireless-security", wsec));
+        }
+        SecurityType::Wep => {
+            // WEP has no key-mgmt of its own in NM's model -- it's
+            // "none" (i.e. no WPA) plus a static key.
+            wsec.insert("key-mgmt", "none".into());
+            wsec.insert("auth-alg", "open".into());
+            wsec.insert("wep-key0", creds.password.as_str().into());
+            // 1 = NM_WEP_KEY_TYPE_KEY (a hex/ASCII key, what a WEP
+            // network actually hands out, rather than a passphrase to
+            // hash).
+            wsec.insert("wep-key-type", Value::U32(1));
+            groups.push(("802-11-wireless-security", wsec));
+        }
+        _ => {
+            wsec.insert("key-mgmt", "wpa-psk".into());
+            wsec.insert("auth-alg", "open".into());
+            wsec.insert("psk", creds.password.as_str().into());
+            groups.push(("802-11-wireless-security", wsec));
+        }
+    }
+
+    groups
+}
+
 /// Builds the nested `a{sa{sv}}` connection dict for
 /// AddAndActivateConnection, shared by `connect()` (new-profile branch)
 /// and `connect_hidden()` -- adapted from network_manager.rs:477-506 and
 /// :534-563 (identical shape, `hidden` is the only difference).
 fn build_wifi_connection_dict<'a>(
     ssid: &'a str,
-    password: Option<&'a str>,
+    security: &SecurityType,
+    creds: Option<&'a WifiCredentials>,
     hidden: bool,
 ) -> HashMap<&'static str, HashMap<&'static str, Value<'a>>> {
     let mut connection: HashMap<&str, Value> = HashMap::new();
@@ -839,14 +1063,8 @@ fn build_wifi_connection_dict<'a>(
     config.insert("connection", connection);
     config.insert("802-11-wireless", wireless);
 
-    // WPA2-personal only -- see this module's header comment (project
-    // plan §6.3) for the documented WPA3-SAE/enterprise gap.
-    if let Some(pwd) = password {
-        let mut wsec: HashMap<&str, Value> = HashMap::new();
-        wsec.insert("key-mgmt", "wpa-psk".into());
-        wsec.insert("auth-alg", "open".into());
-        wsec.insert("psk", pwd.into());
-        config.insert("802-11-wireless-security", wsec);
+    for (name, group) in build_security_groups(security, creds) {
+        config.insert(name, group);
     }
 
     let mut ipv4: HashMap<&str, Value> = HashMap::new();
@@ -858,4 +1076,184 @@ fn build_wifi_connection_dict<'a>(
     config.insert("ipv6", ipv6);
 
     config
+}
+
+/// Unit tests for `build_security_groups` only -- the one piece of this
+/// module with real branching, and the one piece that cannot be exercised
+/// against the hardware here: writing an 802.1X profile needs an
+/// enterprise access point to aim at, and there isn't one on this network.
+/// The shapes asserted below are NetworkManager's own settings schema
+/// (`nm-settings-dbus(5)`, `802-11-wireless-security` and `802-1x`).
+///
+/// Everything else in this file is a D-Bus round trip that a unit test
+/// could only assert against a mock of NM's own semantics -- the headless
+/// `balise status|list|saved|wifi-details` probes exist for those.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn creds(password: &str, identity: &str) -> WifiCredentials {
+        WifiCredentials {
+            password: password.to_string(),
+            identity: identity.to_string(),
+            ..Default::default()
+        }
+    }
+
+    type Groups<'a> = Vec<(&'static str, HashMap<&'static str, Value<'a>>)>;
+
+    fn group<'a, 'b>(groups: &'b Groups<'a>, name: &str) -> &'b HashMap<&'static str, Value<'a>> {
+        &groups
+            .iter()
+            .find(|(n, _)| *n == name)
+            .unwrap_or_else(|| panic!("expected a `{name}` group, got {:?}", groups.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
+            .1
+    }
+
+    fn text(g: &HashMap<&'static str, Value<'_>>, key: &str) -> String {
+        match g.get(key) {
+            Some(Value::Str(v)) => v.to_string(),
+            other => panic!("`{key}`: expected a string, got {other:?}"),
+        }
+    }
+
+    fn strings(g: &HashMap<&'static str, Value<'_>>, key: &str) -> Vec<String> {
+        match g.get(key) {
+            Some(Value::Array(a)) => a
+                .iter()
+                .map(|e| match e {
+                    Value::Str(v) => v.to_string(),
+                    other => panic!("`{key}`: expected strings, got {other:?}"),
+                })
+                .collect(),
+            other => panic!("`{key}`: expected an array, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn open_network_gets_no_security_group() {
+        assert!(build_security_groups(&SecurityType::None, Some(&creds("hunter2", ""))).is_empty());
+    }
+
+    #[test]
+    fn no_credentials_means_no_security_group() {
+        // The saved-profile reactivation path: NM keeps whatever secret it
+        // already holds, and writing an empty psk over it would be the one
+        // way to break a working profile.
+        assert!(build_security_groups(&SecurityType::Wpa2, None).is_empty());
+        assert!(build_security_groups(&SecurityType::Wpa2, Some(&WifiCredentials::default())).is_empty());
+    }
+
+    #[test]
+    fn wpa2_writes_a_psk() {
+        let c = creds("hunter2", "");
+        let g = build_security_groups(&SecurityType::Wpa2, Some(&c));
+        let wsec = group(&g, "802-11-wireless-security");
+        assert_eq!(text(wsec, "key-mgmt"), "wpa-psk");
+        assert_eq!(text(wsec, "psk"), "hunter2");
+        assert!(g.iter().all(|(n, _)| *n != "802-1x"));
+    }
+
+    #[test]
+    fn wpa3_writes_sae_not_psk() {
+        // The bug this whole change set fixes at the personal end: every
+        // secured network used to get `wpa-psk`, which a WPA3-only AP
+        // refuses outright.
+        let c = creds("hunter2", "");
+        let g = build_security_groups(&SecurityType::Wpa3, Some(&c));
+        let wsec = group(&g, "802-11-wireless-security");
+        assert_eq!(text(wsec, "key-mgmt"), "sae");
+        assert_eq!(text(wsec, "psk"), "hunter2");
+    }
+
+    #[test]
+    fn wep_writes_a_static_key_not_a_psk() {
+        let c = creds("0123456789", "");
+        let g = build_security_groups(&SecurityType::Wep, Some(&c));
+        let wsec = group(&g, "802-11-wireless-security");
+        assert_eq!(text(wsec, "key-mgmt"), "none");
+        assert_eq!(text(wsec, "wep-key0"), "0123456789");
+        assert!(!wsec.contains_key("psk"));
+    }
+
+    #[test]
+    fn enterprise_writes_an_802_1x_group() {
+        let c = creds("hunter2", "lucas@univ.fr");
+        let g = build_security_groups(&SecurityType::Enterprise, Some(&c));
+
+        assert_eq!(text(group(&g, "802-11-wireless-security"), "key-mgmt"), "wpa-eap");
+
+        let x = group(&g, "802-1x");
+        // eduroam's defaults, applied when the form's EAP pickers are
+        // left alone.
+        assert_eq!(strings(x, "eap"), vec!["peap".to_string()]);
+        assert_eq!(text(x, "identity"), "lucas@univ.fr");
+        assert_eq!(text(x, "password"), "hunter2");
+        assert_eq!(text(x, "phase2-auth"), "mschapv2");
+        // Not written when the user left it blank -- an empty
+        // anonymous-identity is not the same as none.
+        assert!(!x.contains_key("anonymous-identity"));
+    }
+
+    #[test]
+    fn enterprise_honours_the_pickers() {
+        let c = WifiCredentials {
+            password: "hunter2".to_string(),
+            identity: "lucas@univ.fr".to_string(),
+            anonymous_identity: "anonymous@univ.fr".to_string(),
+            eap_method: "ttls".to_string(),
+            phase2_auth: "pap".to_string(),
+        };
+        let g = build_security_groups(&SecurityType::Enterprise, Some(&c));
+        let x = group(&g, "802-1x");
+        assert_eq!(strings(x, "eap"), vec!["ttls".to_string()]);
+        assert_eq!(text(x, "phase2-auth"), "pap");
+        assert_eq!(text(x, "anonymous-identity"), "anonymous@univ.fr");
+    }
+
+    #[test]
+    fn eap_pwd_has_no_phase_two() {
+        // EAP-PWD is single-phase; NM rejects a profile that carries a
+        // phase2-auth alongside it.
+        let c = WifiCredentials {
+            password: "hunter2".to_string(),
+            identity: "lucas@univ.fr".to_string(),
+            eap_method: "pwd".to_string(),
+            phase2_auth: "mschapv2".to_string(),
+            ..Default::default()
+        };
+        let g = build_security_groups(&SecurityType::Enterprise, Some(&c));
+        assert!(!group(&g, "802-1x").contains_key("phase2-auth"));
+    }
+
+    #[test]
+    fn wpa3_enterprise_uses_suite_b() {
+        let c = creds("hunter2", "lucas@univ.fr");
+        let g = build_security_groups(&SecurityType::Wpa3Enterprise, Some(&c));
+        assert_eq!(
+            text(group(&g, "802-11-wireless-security"), "key-mgmt"),
+            "wpa-eap-suite-b-192"
+        );
+    }
+
+    #[test]
+    fn ap_flags_classify_enterprise_and_owe() {
+        // Bit values from NM's NM80211ApSecurityFlags. The PSK/SAE pair is
+        // already covered by this module's own header comment (read live
+        // off real APs); these two are the ones added alongside credential
+        // entry.
+        //
+        // 0x200 = KEY_MGMT_802_1X, 0x2000 = KEY_MGMT_EAP_SUITE_B_192,
+        // 0x800 = KEY_MGMT_OWE, 0x400 = KEY_MGMT_SAE.
+        assert_eq!(SecurityType::from_flags(1, 0, 0x188 | 0x200), SecurityType::Enterprise);
+        assert_eq!(SecurityType::from_flags(1, 0, 0x2000), SecurityType::Wpa3Enterprise);
+        // OWE is encrypted but credential-free -- it must not be offered a
+        // password form.
+        assert_eq!(SecurityType::from_flags(1, 0, 0x800), SecurityType::None);
+        assert!(!SecurityType::from_flags(1, 0, 0x800).needs_password());
+        // Unchanged classifications.
+        assert_eq!(SecurityType::from_flags(1, 0, 0x488), SecurityType::Wpa3);
+        assert_eq!(SecurityType::from_flags(1, 0, 0x188), SecurityType::Wpa2);
+        assert_eq!(SecurityType::from_flags(0, 0, 0), SecurityType::None);
+    }
 }

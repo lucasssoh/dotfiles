@@ -69,15 +69,30 @@ pub enum ClientCommand {
     /// here is a cached one.
     RefreshState,
     // ---- section lists (QML frontend, second slice) -- scan/connect/
-    // disconnect only, for an already-existing profile (open network,
-    // already-saved WiFi, already-paired Bluetooth device, wired
-    // profile). No password/pairing here on purpose -- see the project
-    // plan for why those are a separate, later slice.
+    // disconnect. Bluetooth pairing is still out (it needs the BlueZ
+    // agent bridged to QML, a separate pass); WiFi credentials are in,
+    // see `WifiConnect`.
     WifiScan,
+    /// `credentials` absent (or all-empty) keeps the original meaning:
+    /// join an open network, or reactivate a saved profile with the
+    /// secret NM already holds. Present, it is what the user just typed
+    /// into the detail page's form -- a passphrase, or a username +
+    /// password + EAP method for an enterprise network like eduroam --
+    /// and it is written into the profile before activation (see
+    /// `NetworkManager::connect`).
+    ///
+    /// `security` rides along rather than being re-read daemon-side
+    /// because the frontend already has it (it renders the form off the
+    /// same value) and because a saved-but-out-of-range network has no
+    /// scanned AP left to read the flags from. Absent/unrecognised falls
+    /// back to WPA2-PSK, which is what the old code assumed for
+    /// everything.
     WifiConnect {
         ssid: String,
         #[serde(default)]
-        password: Option<String>,
+        security: Option<String>,
+        #[serde(default)]
+        credentials: Option<crate::dbus::WifiCredentials>,
     },
     WifiDisconnect {
         ssid: String,
@@ -175,6 +190,22 @@ pub enum ServerPush {
     /// row.
     WifiDetail {
         details: crate::dbus::WifiDetails,
+    },
+    /// How a `WifiConnect` ended. Only meaningful once credentials could
+    /// be typed: before that, a failed connect had nowhere to be reported
+    /// (the GTK app has its own error label, the QML frontend just watched
+    /// the list and eventually noticed nothing had changed). A password
+    /// form has to say "that password was rejected" and say it in the
+    /// place the password was typed, so the outcome is pushed explicitly
+    /// rather than inferred.
+    ///
+    /// `error` is empty when `ok` -- it carries the daemon's own message
+    /// otherwise ("Authentication failed -- check the credentials",
+    /// "Connection timeout", ...), rendered verbatim under the form.
+    WifiConnectResult {
+        ssid: String,
+        ok: bool,
+        error: String,
     },
 }
 

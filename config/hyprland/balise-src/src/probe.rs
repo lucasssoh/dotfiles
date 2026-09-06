@@ -128,6 +128,10 @@ pub fn wifi_details(ssid: &str) {
                 println!("  connected:   {}", d.is_connected);
                 println!("  saved:       {}", if d.settings_path.is_empty() { "no" } else { &d.settings_path });
                 println!("  autoconnect: {}", d.autoconnect);
+                println!(
+                    "  security:    {}",
+                    d.security.as_ref().map(|s| s.label()).unwrap_or("(no saved profile)")
+                );
                 println!("  ip4:         {}", d.ip4_address);
                 println!("  ip6:         {}", d.ip6_address);
                 println!("  gateway:     {}", d.gateway);

@@ -14,12 +14,18 @@ import "../../services"
 // functions building separate widget trees, since QML's declarative
 // layout doesn't need the imperative construction ui/detail.rs does.
 //
-// Read/toggle/forget for an already-paired/saved endpoint only -- no
-// password entry for a new secured WiFi network, no Bluetooth pairing
-// (needs the BlueZ agent bridged to QML, a separate pass). An unpaired
-// Bluetooth device's page is informational only, no action button --
-// asked for explicitly ("un appareil non appairé montre juste ses
-// infos, pas de bouton Pair").
+// WiFi credential entry lives here now (fourth slice): a secured network
+// with no saved profile gets a form on this page instead of the "no
+// Connect button at all" dead end it used to be, and that form covers
+// enterprise networks (eduroam and the rest of the 802.1X family) as well
+// as ordinary passphrase ones -- username, EAP method and phase-2 auth,
+// not just a password box. A saved network can reopen the same form to
+// replace credentials that stopped working.
+//
+// Bluetooth pairing is still out (it needs the BlueZ agent bridged to
+// QML, a separate pass). An unpaired Bluetooth device's page stays
+// informational only, no action button -- asked for explicitly ("un
+// appareil non appairé montre juste ses infos, pas de bouton Pair").
 //
 // Calls BaliseState directly rather than emitting per-action signals
 // like BaliseNetworkRow/BaliseDeviceRow/BaliseWiredRow do -- unlike
@@ -40,6 +46,115 @@ Item {
 
     readonly property color accent: "#a8b4c4"
     readonly property color destructive: "#ff6e6e"
+
+    // ---- WiFi credential entry ------------------------------------------
+    // The SSID every WiFi action on this page targets. `ap` and `details`
+    // are fetched independently and either can be briefly missing (see
+    // pageTitle's own header), so this reads whichever is there.
+    readonly property string wifiSsid: root.ap ? String(root.ap.ssid || "") : (root.details ? String(root.details.ssid || "") : "")
+    // Security kind, preferring the live scan and falling back to what the
+    // saved profile stored (WifiDetails.security, added for exactly this
+    // -- a saved network out of range has no AccessPoint to read). "" when
+    // neither is known yet, which is treated as "don't offer a form".
+    readonly property string wifiSecurity: {
+        if (root.ap && root.ap.security) return String(root.ap.security);
+        if (root.details && root.details.security) return String(root.details.security);
+        return "";
+    }
+    readonly property bool wifiSecured: root.wifiSecurity !== "" && root.wifiSecurity !== "none"
+    readonly property bool wifiEnterprise: root.wifiSecurity === "enterprise" || root.wifiSecurity === "wpa3_enterprise"
+    readonly property bool wifiSaved: !!(root.details && root.details.settings_path !== "")
+
+    readonly property bool connecting: root.kind === "wifi" && root.wifiSsid !== "" && BaliseState.connectingSsid === root.wifiSsid
+    // Only this network's own failure -- BaliseState.connectError is a
+    // single slot shared by every attempt (it's a broadcast), so it
+    // carries the SSID it belongs to and this filters on it.
+    readonly property string connectError: {
+        const e = BaliseState.connectError;
+        if (!e || root.kind !== "wifi" || e.ssid !== root.wifiSsid) return "";
+        return String(e.message || "");
+    }
+
+    // Opened by the "Change credentials" action on an already-saved
+    // network. An unsaved secured one doesn't need it: there is no stored
+    // secret to reuse, so the form is the only way in and shows itself.
+    property bool credentialsOpen: false
+    readonly property bool showCredentials: root.kind === "wifi"
+        && root.wifiSecured
+        && !root.statusConnected
+        // A rejected credential re-opens the form on its own, saved or
+        // not: the message is useless without the field it refers to.
+        && (!root.wifiSaved || root.credentialsOpen || root.connectError !== "")
+
+    // EAP/phase-2 pickers keep their state here; the three text values
+    // live in the fields themselves (`passwordField.text` and friends
+    // below) rather than being mirrored into properties, so there is
+    // exactly one copy of a typed password in memory and clearing the
+    // field clears it. Defaults match the daemon's own fallbacks (see
+    // WifiCredentials' field docs): PEAP + MSCHAPv2, what eduroam
+    // deployments overwhelmingly use.
+    property string credEap: "peap"
+    property string credPhase2: "mschapv2"
+    property bool credAdvancedOpen: false
+
+    readonly property bool canSubmit: passwordField.text !== ""
+        && (!root.wifiEnterprise || identityField.text !== "")
+        && !root.connecting
+
+    function submitCredentials() {
+        if (!root.canSubmit) return;
+        BaliseState.connectWifi(root.wifiSsid, root.wifiSecurity, {
+            password: passwordField.text,
+            // Enterprise-only fields are sent empty otherwise rather than
+            // omitted, so the daemon's own struct fills in identically
+            // whichever branch built the object.
+            identity: root.wifiEnterprise ? identityField.text : "",
+            anonymous_identity: root.wifiEnterprise ? anonymousField.text : "",
+            eap_method: root.wifiEnterprise ? root.credEap : "",
+            phase2_auth: root.wifiEnterprise ? root.credPhase2 : ""
+        });
+    }
+
+    // Drop the typed secret the moment it is no longer needed, rather than
+    // leaving it in a field until this page happens to be destroyed. Only
+    // the password: leaving the username filled in is a convenience, not a
+    // secret, and the form may still be needed for a retry.
+    onStatusConnectedChanged: {
+        if (root.statusConnected) {
+            passwordField.text = "";
+            root.credentialsOpen = false;
+        }
+    }
+
+    // The bar is `focusable: false` (shell.qml) -- a layer surface the
+    // compositor sends no key events to. This is what lifts that while a
+    // field is on screen; the Binding restores the previous value when
+    // this page is destroyed or the form closes, so the bar goes back to
+    // never taking focus. See BaliseState.textInputActive.
+    Binding {
+        target: BaliseState
+        property: "textInputActive"
+        value: true
+        when: root.showCredentials
+    }
+
+    // Put the caret in the first empty field as the form appears, so the
+    // user's click on the bar (which is what actually hands the layer
+    // surface its keyboard focus -- see the Binding above) lands them
+    // typing rather than hunting for the box. One frame late on purpose:
+    // the fields have to exist and be laid out first.
+    onShowCredentialsChanged: {
+        if (root.showCredentials) focusTimer.restart();
+    }
+    Timer {
+        id: focusTimer
+        interval: 50
+        repeat: false
+        onTriggered: {
+            if (root.wifiEnterprise && identityField.text === "") identityField.forceFieldFocus();
+            else passwordField.forceFieldFocus();
+        }
+    }
 
     // Sized by whichever page layer holds it (BaliseHome.qml's own two
     // sliding Loaders, at its fixed `pageHeight`) -- this page no longer
@@ -99,10 +214,11 @@ Item {
             // ap-derived and details-derived rows are independent (see
             // pageTitle/statusText's own header) -- either can be
             // missing without blanking the other's rows out.
-            if (root.ap) {
-                rows.push({ label: "Security", value: root.ap.security !== "none" ? "Secured" : "Open" });
-                rows.push({ label: "Signal", value: root.ap.signal + "%" });
-            }
+            // Spelled out rather than the old "Secured"/"Open" pair: on
+            // this page the exact kind is what tells the user whether the
+            // form below is going to ask for a username.
+            if (root.wifiSecurity !== "") rows.push({ label: "Security", value: BaliseState.securityLabel(root.wifiSecurity) });
+            if (root.ap) rows.push({ label: "Signal", value: root.ap.signal + "%" });
             const d = root.details;
             if (d) {
                 if (d.speed) rows.push({ label: "Link speed", value: d.speed });
@@ -178,13 +294,20 @@ Item {
         if (root.kind === "wifi" && (root.ap || root.details)) {
             if (root.statusConnected) {
                 list.push({ label: "Disconnect", style: "normal", token: "wifi-disconnect" });
+            } else if (root.showCredentials) {
+                // The form draws its own Connect (it has to know whether
+                // the fields are filled in) -- no duplicate down here.
             } else if (root.wifiConnectable) {
                 // The only Connect affordance there is now -- the list
                 // rows lost their pills when they became single-action
-                // chevron rows (see BaliseNetworkRow.qml's header). A
-                // secured network with no saved profile still gets none,
-                // since there's no password form in this pass.
-                list.push({ label: "Connect", style: "primary", token: "wifi-connect" });
+                // chevron rows (see BaliseNetworkRow.qml's header).
+                list.push({ label: root.connecting ? "Connecting…" : "Connect", style: "primary", token: "wifi-connect" });
+            }
+            // Way back into the form for a network whose stored secret
+            // stopped working -- rotated campus password, retyped
+            // passphrase after a router reset.
+            if (root.wifiSecured && root.wifiSaved && !root.showCredentials && !root.statusConnected) {
+                list.push({ label: "Change credentials", style: "normal", token: "wifi-credentials" });
             }
             if (root.details && root.details.settings_path !== "") list.push({ label: "Forget this network", style: "destructive", token: "wifi-forget" });
         } else if (root.kind === "bluetooth" && root.device) {
@@ -199,8 +322,12 @@ Item {
     }
     function runAction(token) {
         switch (token) {
-        case "wifi-connect": BaliseState.connectWifi(root.ap ? root.ap.ssid : root.details.ssid); break;
-        case "wifi-disconnect": BaliseState.disconnectWifi(root.ap ? root.ap.ssid : root.details.ssid); root.backRequested(); break;
+        // No credentials passed: this branch is only reachable for an
+        // open network or a saved profile, both of which connect on what
+        // NetworkManager already holds.
+        case "wifi-connect": if (!root.connecting) BaliseState.connectWifi(root.wifiSsid, root.wifiSecurity, null); break;
+        case "wifi-credentials": root.credentialsOpen = true; break;
+        case "wifi-disconnect": BaliseState.disconnectWifi(root.wifiSsid); root.backRequested(); break;
         case "wifi-forget": BaliseState.forgetWifi(root.details.settings_path); root.backRequested(); break;
         case "bt-disconnect": BaliseState.disconnectBluetooth(root.device.path); break;
         case "bt-connect": BaliseState.connectBluetooth(root.device.path); break;
@@ -333,6 +460,211 @@ Item {
                 font.pixelSize: 13
                 font.bold: true
                 elide: Text.ElideRight
+            }
+        }
+
+        // ---- credentials form ----
+        // Above the metadata, not below it: on an unsaved secured network
+        // this is the only thing on the page the user came here to do,
+        // and the address rows underneath are all empty anyway until it
+        // succeeds.
+        //
+        // The fields are instantiated unconditionally (only this Column's
+        // `visible` flips) rather than sitting behind a Loader, because
+        // `canSubmit` and `submitCredentials` read them by id -- a Loader
+        // would make those references resolve to null on every page where
+        // the form is hidden.
+        Column {
+            id: credentialsForm
+            width: parent.width
+            spacing: 8
+            visible: root.showCredentials
+
+            Text {
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: root.wifiEnterprise ? "SIGN IN" : "PASSWORD"
+                color: Qt.rgba(1, 1, 1, 0.4)
+                font.family: Fonts.ui
+                font.pixelSize: 11
+                font.bold: true
+                font.letterSpacing: 1
+            }
+
+            Rectangle {
+                width: parent.width
+                height: formColumn.implicitHeight + 28
+                radius: 12
+                color: Surfaces.card
+
+                Column {
+                    id: formColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 14
+                    anchors.topMargin: 14
+                    spacing: 10
+
+                    // Enterprise (eduroam & co) asks for a username as
+                    // well -- the one thing that made those networks
+                    // unreachable from here even once a password box
+                    // existed.
+                    BaliseTextField {
+                        id: identityField
+                        visible: root.wifiEnterprise
+                        placeholder: "Username"
+                        onAccepted: passwordField.forceFieldFocus()
+                        onEscaped: root.backRequested()
+                    }
+
+                    BaliseTextField {
+                        id: passwordField
+                        placeholder: "Password"
+                        secret: true
+                        onAccepted: root.submitCredentials()
+                        onEscaped: root.backRequested()
+                    }
+
+                    // Everything below is enterprise-only and defaulted --
+                    // folded away so the common eduroam case is two
+                    // fields and a button, and opened by the handful of
+                    // deployments that want TTLS/PAP or an outer identity.
+                    Item {
+                        visible: root.wifiEnterprise
+                        width: parent.width
+                        height: 20
+
+                        Text {
+                            id: advancedLabel
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: (root.credAdvancedOpen ? "▾  " : "▸  ") + "EAP settings"
+                            color: advancedArea.containsMouse ? "#f2f2f7" : "#8e8e93"
+                            font.family: Fonts.ui
+                            font.pixelSize: 11
+                            font.bold: true
+                            Behavior on color { ColorAnimation { duration: 120 } }
+                        }
+                        MouseArea {
+                            id: advancedArea
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: advancedLabel.width + 16
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.credAdvancedOpen = !root.credAdvancedOpen
+                        }
+                    }
+
+                    Column {
+                        visible: root.wifiEnterprise && root.credAdvancedOpen
+                        width: parent.width
+                        spacing: 8
+
+                        Text {
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: "Method"
+                            color: "#8e8e93"
+                            font.family: Fonts.ui
+                            font.pixelSize: 11
+                        }
+                        BaliseSegmented {
+                            options: [
+                                { label: "PEAP", value: "peap" },
+                                { label: "TTLS", value: "ttls" },
+                                { label: "PWD", value: "pwd" }
+                            ]
+                            value: root.credEap
+                            onPicked: (v) => root.credEap = v
+                        }
+
+                        Text {
+                            // EAP-PWD has no inner phase at all -- the
+                            // daemon drops phase2-auth for it (NM rejects
+                            // a profile carrying both), so offering the
+                            // picker would be offering a no-op.
+                            visible: root.credEap !== "pwd"
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: "Phase 2"
+                            color: "#8e8e93"
+                            font.family: Fonts.ui
+                            font.pixelSize: 11
+                        }
+                        BaliseSegmented {
+                            visible: root.credEap !== "pwd"
+                            options: [
+                                { label: "MSCHAPv2", value: "mschapv2" },
+                                { label: "PAP", value: "pap" },
+                                { label: "GTC", value: "gtc" }
+                            ]
+                            value: root.credPhase2
+                            onPicked: (v) => root.credPhase2 = v
+                        }
+
+                        BaliseTextField {
+                            id: anonymousField
+                            placeholder: "Anonymous identity (optional)"
+                            onAccepted: root.submitCredentials()
+                            onEscaped: root.backRequested()
+                        }
+                    }
+
+                    // The daemon's own message, verbatim ("Authentication
+                    // failed -- check the credentials", "Connection
+                    // timeout", ...). Sits directly above the button that
+                    // produced it rather than in a toast, so the field to
+                    // fix is still on screen next to the reason.
+                    Text {
+                        visible: root.connectError !== ""
+                        width: parent.width
+                        renderType: Text.NativeRendering
+                        font.hintingPreference: Font.PreferNoHinting
+                        text: root.connectError
+                        color: root.destructive
+                        font.family: Fonts.ui
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 40
+                        radius: 20
+                        color: {
+                            if (!root.canSubmit) return Surfaces.card;
+                            return submitArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium;
+                        }
+                        border.width: 1
+                        border.color: root.canSubmit ? root.accent : Qt.rgba(1, 1, 1, 0.10)
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: root.connecting ? "Connecting…" : "Connect"
+                            color: root.canSubmit ? root.accent : "#8e8e93"
+                            font.family: Fonts.ui
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+                        MouseArea {
+                            id: submitArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: root.canSubmit
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.submitCredentials()
+                        }
+                    }
+                }
             }
         }
 

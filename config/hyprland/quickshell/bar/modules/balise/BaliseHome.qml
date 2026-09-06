@@ -31,7 +31,10 @@ import "../../services"
 // plain click on Ethernet, which has no radio to toggle) opens that
 // section's list -- scan + connect/disconnect for an already-existing
 // profile only, no password entry, no pairing, no detail page (all
-// explicitly deferred). Navigation stays inside this same file rather
+// deferred at the time; the detail page landed in the third slice and
+// WiFi credential entry, including enterprise/eduroam, in the fourth --
+// see BaliseDetailPage.qml. Bluetooth pairing is still outstanding).
+// Navigation stays inside this same file rather
 // than a new top-level drawer entry: `currentPage` switches a `Loader`
 // between the tile grid below and BaliseSectionList.qml, and
 // `implicitHeight` follows whichever page is actually loaded so

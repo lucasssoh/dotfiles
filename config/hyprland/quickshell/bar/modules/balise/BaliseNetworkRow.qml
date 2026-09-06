@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 
 // One row of the WiFi section list. `modelData` is exactly one
 // balise-src `AccessPoint` (dbus/types.rs) as JSON -- snake_case fields
@@ -96,7 +97,11 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: {
-                const sec = row.secured ? String(row.modelData.security || "").toUpperCase() : "Open";
+                // Was `.toUpperCase()` on the raw token, which shipped
+                // "WPA3_ENTERPRISE" to the user's eyes the moment
+                // enterprise networks became distinguishable -- see
+                // BaliseState.securityLabel.
+                const sec = BaliseState.securityLabel(row.modelData.security);
                 if (row.connected) return "Connected · " + sec;
                 const saved = row.modelData.is_saved ? " · Saved" : "";
                 return sec + " · " + (row.modelData.signal || 0) + "%" + saved;

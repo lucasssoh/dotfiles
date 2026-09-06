@@ -70,9 +70,42 @@ Ce qui a changé au passage, et qui vaut d'être su :
   saisie du mot de passe dépliée sous sa propre ligne, listes groupées
   en une carte par section. Orbit n'a aucun équivalent de tout ça.
 
+## Saisie des identifiants (WiFi)
+
+Le formulaire vit sur la page détail du réseau, côté QML
+(`quickshell/bar/modules/balise/BaliseDetailPage.qml`). Il s'ouvre tout
+seul pour un réseau sécurisé sans profil enregistré, et se rouvre à la
+demande (« Change credentials ») ou automatiquement après un refus, pour
+un réseau déjà enregistré dont le secret ne marche plus.
+
+Deux formes :
+
+- **Personnel** — un champ mot de passe. `key-mgmt` est choisi d'après le
+  type réel du réseau : `wpa-psk`, `sae` pour du WPA3, ou la clé statique
+  WEP. Avant, tout réseau sécurisé recevait `wpa-psk`, ce qu'un point
+  d'accès WPA3-only refuse.
+- **Entreprise (802.1X : eduroam & compagnie)** — identifiant + mot de
+  passe, plus une section repliée pour la méthode EAP (PEAP / TTLS /
+  PWD), la phase 2 (MSCHAPv2 / PAP / GTC) et l'identité anonyme. Les
+  défauts (PEAP + MSCHAPv2) couvrent la quasi-totalité des déploiements
+  eduroam.
+
+Deux points à savoir :
+
+- **Le bandeau doit prendre le focus clavier pour ça.** C'est une surface
+  layer-shell déclarée `focusable: false` — sans quoi le compositeur ne
+  lui envoie aucun événement clavier et un champ de saisie y est
+  simplement mort. `shell.qml` bascule `focusable` le temps que le
+  formulaire est à l'écran, et seulement sur l'écran concerné.
+- **Aucun certificat CA n'est écrit** (`802-1x.ca-cert`,
+  `domain-suffix-match`). Il n'y a pas d'UI pour en choisir un ;
+  NetworkManager se connecte sans, sans valider le certificat du serveur.
+  C'est le même compromis que `nmcli device wifi connect`.
+
 ## Limite connue
 
-`connect()` n'écrit que `key-mgmt = "wpa-psk"` pour un **nouveau**
-profil. Un réseau WPA3-SAE ou entreprise ne peut donc pas être créé de
-zéro depuis ce panneau ; un profil déjà enregistré, lui, s'active
-normalement quel que soit son type.
+L'appairage Bluetooth n'est pas joignable depuis le panneau QML : il
+demande de ponter l'agent BlueZ (`org.bluez.Agent1`, déjà enregistré par
+le daemon) jusqu'à QML. Un appareil déjà appairé se connecte
+normalement ; c'est la fenêtre GTK qui affiche encore les demandes de
+code PIN / passkey.

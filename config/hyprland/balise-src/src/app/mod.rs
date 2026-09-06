@@ -12,7 +12,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::config::Config;
 use crate::dbus::{
-    AccessPoint, AgentEvent, BluetoothDevice, BluetoothManager, NetworkManager, SavedNetwork, WifiDetails, WiredProfile,
+    AccessPoint, AgentEvent, BluetoothDevice, BluetoothManager, NetworkManager, SavedNetwork, SecurityType,
+    WifiCredentials, WifiDetails, WiredProfile,
 };
 use crate::ipc::{ClientCommand, DaemonServer, NightModeState as PushNightModeState, RadioState, ServerPush};
 use crate::ui::detail::{DetailAction, DetailTarget};
@@ -30,6 +31,12 @@ pub enum AppEvent {
     DisconnectStarted(String),
     ConnectSuccess,
     ConnectHidden(String, String),
+    /// (ssid, ok, error) -- broadcast to the QML frontend so its password
+    /// form can clear itself on success or show the daemon's own failure
+    /// message in place. Purely a push: unlike ConnectSuccess right above,
+    /// it touches no GTK widget (the GTK side already learns the same
+    /// thing from Notify/Error).
+    WifiConnectResult(String, bool, String),
 
     // ---- Bluetooth (Phase 3) --------------------------------------------
     BtPowerState(bool),
@@ -338,8 +345,22 @@ impl BaliseApp {
                                 if let Some(ref nm_inst) = *guard {
                                     let devices = rt_ref.block_on(async { nm_inst.wireless_devices().await }).unwrap_or_default();
                                     if let Some(device_path) = devices.first() {
-                                        let pwd = if password.is_empty() { None } else { Some(password.as_str()) };
-                                        match rt_ref.block_on(async { nm_inst.connect_hidden(&ssid, pwd, device_path).await }) {
+                                        // A hidden network is never in a
+                                        // scan result, so there are no AP
+                                        // flags to classify it from: WPA2
+                                        // stays the assumption the GTK
+                                        // hidden-network form has always
+                                        // made, and an empty password
+                                        // still means "join it open".
+                                        let creds = if password.is_empty() {
+                                            None
+                                        } else {
+                                            Some(WifiCredentials { password: password.clone(), ..Default::default() })
+                                        };
+                                        let security = if password.is_empty() { SecurityType::None } else { SecurityType::Wpa2 };
+                                        match rt_ref.block_on(async {
+                                            nm_inst.connect_hidden(&ssid, &security, creds.as_ref(), device_path).await
+                                        }) {
                                             Ok(()) => {
                                                 let _ = tx_ref.send_blocking(AppEvent::Notify(format!(
                                                     "Connecting to hidden network {}...",
@@ -414,6 +435,9 @@ impl BaliseApp {
                         }
                         AppEvent::WifiDetailResult(details) => {
                             broadcast_wifi_detail(&broadcaster, &details);
+                        }
+                        AppEvent::WifiConnectResult(ssid, ok, error) => {
+                            broadcast_wifi_connect_result(&broadcaster, &ssid, ok, &error);
                         }
                         AppEvent::WiredResult(profiles) => {
                             // Same "connected beats cable-present beats
@@ -571,7 +595,7 @@ impl BaliseApp {
                                     }
                                 });
                             }
-                            ClientCommand::WifiConnect { ssid, password } => {
+                            ClientCommand::WifiConnect { ssid, security, credentials } => {
                                 let nm = nm.clone();
                                 let rt = rt.clone();
                                 let tx = tx.clone();
@@ -583,7 +607,17 @@ impl BaliseApp {
                                 // not-currently-scanned network, same
                                 // fallback AppEvent::ConnectHidden already
                                 // uses.
-                                let cached_device_path = win.network_list().get_network(&ssid).map(|ap| ap.device_path);
+                                let cached = win.network_list().get_network(&ssid);
+                                let cached_device_path = cached.as_ref().map(|ap| ap.device_path.clone());
+                                // The frontend's own value wins when it
+                                // sent one (it is what the form was drawn
+                                // from, so it is what the user answered);
+                                // the cached scan result covers a caller
+                                // that sent none, and WPA2 backstops both.
+                                let security = match security {
+                                    Some(s) => SecurityType::from_wire(&s),
+                                    None => cached.map(|ap| ap.security).unwrap_or(SecurityType::Wpa2),
+                                };
                                 let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
                                 std::thread::spawn(move || {
                                     let guard = nm.lock().unwrap();
@@ -595,18 +629,56 @@ impl BaliseApp {
                                                 .ok()
                                                 .and_then(|d| d.into_iter().next()),
                                         };
-                                        if let Some(device_path) = device_path {
-                                            match rt.block_on(async { nm_inst.connect(&ssid, password.as_deref(), &device_path).await }) {
-                                                Ok(()) => {
-                                                    std::thread::sleep(std::time::Duration::from_millis(1000));
-                                                    let _ = tx.send_blocking(AppEvent::ConnectSuccess);
-                                                    let _ = tx.send_blocking(AppEvent::Notify(format!("Connected to {}", ssid)));
-                                                    if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
-                                                        let _ = tx.send_blocking(AppEvent::ScanResult(aps));
-                                                    }
+                                        let Some(device_path) = device_path else {
+                                            // No wireless device at all --
+                                            // without this the frontend's
+                                            // form would sit on "Connecting"
+                                            // forever, since every other
+                                            // exit from here reports back.
+                                            let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                                            let _ = tx.send_blocking(AppEvent::WifiConnectResult(
+                                                ssid.clone(),
+                                                false,
+                                                "No wireless device available".to_string(),
+                                            ));
+                                            let _ = tx.send_blocking(AppEvent::Error("No wireless device available".to_string()));
+                                            return;
+                                        };
+                                        match rt.block_on(async {
+                                            nm_inst.connect(&ssid, &security, credentials.as_ref(), &device_path).await
+                                        }) {
+                                            Ok(()) => {
+                                                std::thread::sleep(std::time::Duration::from_millis(1000));
+                                                let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                                                let _ = tx.send_blocking(AppEvent::WifiConnectResult(ssid.clone(), true, String::new()));
+                                                let _ = tx.send_blocking(AppEvent::Notify(format!("Connected to {}", ssid)));
+                                                if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                                    let _ = tx.send_blocking(AppEvent::ScanResult(aps));
                                                 }
-                                                Err(e) => {
-                                                    let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                                                // The network is saved now
+                                                // (a new profile was just
+                                                // written), so the detail
+                                                // page the form lives on
+                                                // needs its own re-fetch to
+                                                // stop saying "not saved"
+                                                // and to show the address
+                                                // rows.
+                                                if let Ok(details) = rt.block_on(async { nm_inst.wifi_details(&ssid).await }) {
+                                                    let _ = tx.send_blocking(AppEvent::WifiDetailResult(details));
+                                                }
+                                            }
+                                            Err(e) => {
+                                                let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                                                let _ = tx.send_blocking(AppEvent::WifiConnectResult(ssid.clone(), false, e.to_string()));
+                                                let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                                                // Re-push the list too: a
+                                                // failed attempt can still
+                                                // have changed things NM-side
+                                                // (a rewritten profile, a
+                                                // dropped previous
+                                                // connection).
+                                                if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                                    let _ = tx.send_blocking(AppEvent::ScanResult(aps));
                                                 }
                                             }
                                         }
@@ -951,6 +1023,22 @@ fn broadcast_wired_list(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::
 fn broadcast_wifi_detail(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>, details: &crate::dbus::WifiDetails) {
     if let Some(tx) = broadcaster.borrow().as_ref() {
         let push = ServerPush::WifiDetail { details: details.clone() };
+        let _ = tx.send(push.to_line());
+    }
+}
+
+fn broadcast_wifi_connect_result(
+    broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>,
+    ssid: &str,
+    ok: bool,
+    error: &str,
+) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::WifiConnectResult {
+            ssid: ssid.to_string(),
+            ok,
+            error: error.to_string(),
+        };
         let _ = tx.send(push.to_line());
     }
 }
@@ -1537,10 +1625,11 @@ fn setup_ui_callbacks(
                 });
             } else if !ap.security.needs_password() || ap.is_saved {
                 let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
+                let security = ap.security.clone();
                 std::thread::spawn(move || {
                     let guard = nm.lock().unwrap();
                     if let Some(ref nm_inst) = *guard {
-                        match rt.block_on(async { nm_inst.connect(&ssid, None, &device_path).await }) {
+                        match rt.block_on(async { nm_inst.connect(&ssid, &security, None, &device_path).await }) {
                             Ok(()) => {
                                 std::thread::sleep(std::time::Duration::from_millis(1000));
                                 let _ = tx.send_blocking(AppEvent::ConnectSuccess);
@@ -1574,11 +1663,17 @@ fn setup_ui_callbacks(
             let tx = tx.clone();
             let ssid = ap.ssid.clone();
             let device_path = ap.device_path.clone();
+            let security = ap.security.clone();
+            // The GTK form is a single password field, so it can only
+            // ever fill the PSK half -- an enterprise network needs the
+            // QML detail page's own form (username + EAP method), which
+            // is where credential entry actually lives now.
+            let creds = WifiCredentials { password, ..Default::default() };
             let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
             std::thread::spawn(move || {
                 let guard = nm.lock().unwrap();
                 if let Some(ref nm_inst) = *guard {
-                    match rt.block_on(async { nm_inst.connect(&ssid, Some(&password), &device_path).await }) {
+                    match rt.block_on(async { nm_inst.connect(&ssid, &security, Some(&creds), &device_path).await }) {
                         Ok(()) => {
                             std::thread::sleep(std::time::Duration::from_millis(1000));
                             let _ = tx.send_blocking(AppEvent::ConnectSuccess);
