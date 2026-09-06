@@ -178,6 +178,23 @@ ShellRoot {
     // resolve, sidestepping whatever that scoping boundary actually is.
     property alias veille: veilleInstance
 
+    // The ShellScreen the current toast stack belongs on, resolved from
+    // the Hyprland output name NotificationState latched when that stack
+    // opened (see `toastScreenName` there for why one screen and why a
+    // name). null means "could not resolve" -- no toast up yet, or the
+    // latched monitor has been unplugged since -- and the toast windows
+    // below read that as "show on every screen", so the fallback is a
+    // duplicated notification rather than a missing one.
+    readonly property var toastScreen: {
+        const want = NotificationState.toastScreenName;
+        if (!want) return null;
+        const screens = Quickshell.screens;
+        for (let i = 0; i < screens.length; i++) {
+            if (screens[i].name === want) return screens[i];
+        }
+        return null;
+    }
+
     // One bar per currently-connected screen, automatically -- Quickshell
     // creates/destroys instances as monitors plug/unplug, no manual
     // single/dual-output branching needed. Workspaces and HDR are
@@ -1134,6 +1151,17 @@ ShellRoot {
             id: notifToastWindow
             required property var modelData
             screen: modelData
+
+            // ...but only ONE of those per-screen surfaces is actually
+            // mapped at a time: the one on the monitor the stack was
+            // latched to. Without this every notification popped an
+            // identical card on both monitors at once, which reads as a
+            // double notification (it was reported as "deux notif" on a
+            // WiFi connect -- balise sends exactly one, this window was
+            // drawing it twice). `shell.toastScreen === null` is the
+            // can't-resolve fallback and deliberately maps all of them,
+            // so no notification can ever go unseen.
+            visible: shell.toastScreen === null || shell.toastScreen === modelData
 
             focusable: false
             color: "transparent"

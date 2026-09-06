@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 import "."
 
@@ -106,6 +107,29 @@ Singleton {
     readonly property alias toasts: toastModel
     readonly property int maxToasts: 4
 
+    // Which monitor the current stack of toasts belongs on, by Hyprland
+    // output NAME (not a screen object): the toast surface is a
+    // per-screen `Variants` in shell.qml, so without this ONE
+    // notification popped a card on EVERY monitor at once -- two
+    // identical "Connected to <ssid>" cards side by side on a
+    // laptop-plus-external setup, which reads as the backend having sent
+    // the notification twice. It hadn't: dbus-monitor sees exactly one
+    // Notify per connect.
+    //
+    // Latched when the stack goes from empty to non-empty, NOT bound
+    // live to `Hyprland.focusedMonitor` -- a live binding would teleport
+    // a card that is already on screen the moment focus moves, and a
+    // notification arriving while others are still up joins the stack
+    // where the user is already looking.
+    //
+    // A name rather than the ShellScreen itself so an unplugged monitor
+    // leaves a string that simply resolves to nothing instead of a
+    // dangling object reference; shell.qml maps it back and falls back to
+    // showing on every screen when it cannot (see `toastScreen` there),
+    // so a display change can never swallow a notification entirely.
+    // Same reason it starts empty.
+    property string toastScreenName: ""
+
     // swaync/config.json's own timeout / timeout-low / timeout-critical,
     // ported verbatim (6s / 4s / never). Critical always overrides
     // whatever expireTimeout the sending app itself requested -- swaync's
@@ -142,6 +166,9 @@ Singleton {
         //       && BatteryAlertState.battPercent <= BatteryAlertState.tiers[0]) return;
 
         const timeout = root._timeoutFor(n);
+        // Opening a fresh stack picks the monitor -- see toastScreenName.
+        if (toastModel.count === 0)
+            root.toastScreenName = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
         // Inserted at the front, and the cap trims from the BACK -- newest
         // first in the model is also newest on top on screen.
         toastModel.insert(0, {
