@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
+import "."
 
 // State + trigger logic for the native notification daemon -- replaces
 // swaync (GTK) entirely. NotificationBell.qml/NotificationToast.qml/
@@ -58,27 +59,20 @@ Singleton {
     property bool centerOpen: false
     property var activeScreen: null
 
-    // Closes Balise first -- same declutter convention
-    // waybar/scripts/swaync-toggle.sh and balise-toggle.sh already
-    // enforced between swaync's panel and Balise, back when both lived
-    // in the same top-right corner and could visually collide. Kept even
-    // though NotificationCenter.qml now sits top-left under METRICS
-    // instead (no actual overlap left to avoid) -- still reads as
-    // "opening one puts away the other" rather than letting two floating
-    // panels stack up at once. ~/.local/bin (where install.sh puts
-    // balise) isn't on the PATH of processes Hyprland launches -- same
-    // PATH fix swaync-toggle.sh needed.
-    Process {
-        id: baliseHideProc
-        command: ["bash", "-c", "PATH=\"$HOME/.local/bin:$PATH\" balise hide >/dev/null 2>&1 || true"]
-    }
-
+    // Closes Balise's own drawer first -- both now live as entries on the
+    // same toolsIsland (see shell.qml), and were asked to be mutually
+    // exclusive rather than stacking like Veille/Keybindings do:
+    // "les deux ne peuvent pas s'empiler et soit l'un soit l'autre
+    // s'ouvre". A direct call now (`import "."` makes BaliseState
+    // resolvable here) -- this used to shell out to the external GTK
+    // app's own `balise hide` CLI, back when Balise wasn't a QML drawer
+    // in this same process yet.
     function toggleNotificationCenter(screen) {
         if (root.centerOpen && root.activeScreen === screen) {
             root.close();
             return;
         }
-        baliseHideProc.running = true;
+        BaliseState.close();
         root.activeScreen = screen;
         root.centerOpen = true;
         root.hasUnseen = false;

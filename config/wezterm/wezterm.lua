@@ -41,7 +41,7 @@ config.inactive_pane_hsb = {
 -- =========================
 config.colors = {
   foreground = "#f8f8f2",
-  background = "#000201",
+  background = "#000000",
   cursor_bg = "#ffffff",
   selection_fg = "#f8f8f2",
   selection_bg = "#484e54",

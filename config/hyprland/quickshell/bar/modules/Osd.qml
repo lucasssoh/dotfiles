@@ -92,7 +92,7 @@ Rectangle {
     Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
     readonly property string titleText: {
-        if (kind === "brightness") return "Luminosité";
+        if (kind === "brightness") return "Brightness";
         if (kind === "mic") return "Micro";
         return "Volume";
     }

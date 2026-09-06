@@ -1,6 +1,6 @@
 local parsers = {
   "lua", "javascript", "typescript", "tsx", "python",
-  "java", "json", "markdown", "markdown_inline",
+  "java", "c_sharp", "json", "markdown", "markdown_inline",
   "bash", "html", "css", "yaml", "vim", "vimdoc",
 }
 

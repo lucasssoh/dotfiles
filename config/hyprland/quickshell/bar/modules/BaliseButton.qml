@@ -1,9 +1,9 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import "../theme"
+import "../services"
 
 // Single consolidated "open Balise" button -- replaces the three separate
 // Network/Bluetooth/Ethernet icons that used to sit in this pill, asked
@@ -45,6 +45,8 @@ import "../theme"
 
 Item {
     id: root
+
+    property var screen: null
 
     // ---- internet slot (WiFi OR Ethernet, whichever is active) --------
     readonly property var activeDevice: {
@@ -169,18 +171,13 @@ Item {
     GlassRim { target: badge; cornerRadius: badge.radius }
     GlassRim { target: badge; cornerRadius: badge.radius; lightOrigin: "bottomRight"; strength: 0.45 }
 
-    // No --tab any more: Balise itself is dropping the tab-header concept
-    // (see the project plan), and this button no longer distinguishes
-    // "which icon was clicked" the way the three separate ones used to --
-    // it just opens/closes Balise on whatever it last showed.
-    Process {
-        id: openBalise
-        command: ["bash", "-c", "$HOME/.config/waybar/scripts/balise-toggle.sh"]
-    }
-
+    // Opens Balise's own drawer on toolsIsland now (BaliseHome.qml, see
+    // the project plan) instead of launching the separate GTK app --
+    // BaliseState owns the toggle/mutual-exclusion-with-notifications
+    // logic, same shape as NotificationBell.qml's own click handler.
     MouseArea {
         anchors.fill: parent
-        onClicked: openBalise.running = true
+        onClicked: BaliseState.togglePanel(root.screen)
     }
 
     // One conditional icon slot: collapses its own width to 0 (not a

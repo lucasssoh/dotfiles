@@ -14,13 +14,13 @@ use crate::config::Config;
 use crate::dbus::{
     AccessPoint, AgentEvent, BluetoothDevice, BluetoothManager, NetworkManager, SavedNetwork, WifiDetails, WiredProfile,
 };
-use crate::ipc::{DaemonCommand, DaemonServer};
+use crate::ipc::{ClientCommand, DaemonServer, NightModeState as PushNightModeState, RadioState, ServerPush};
 use crate::ui::detail::{DetailAction, DetailTarget};
 use crate::ui::device_list::DeviceAction;
 use crate::ui::BaliseWindow;
 
 pub enum AppEvent {
-    DaemonCommand(DaemonCommand),
+    DaemonCommand(ClientCommand),
     DaemonStarted(DaemonServer),
 
     WifiPowerState(bool),
@@ -49,6 +49,9 @@ pub enum AppEvent {
     /// Boxed -- these are much larger than the other variants and would
     /// otherwise set the size of every AppEvent.
     ShowWifiDetail(Box<AccessPoint>, Box<WifiDetails>),
+    /// The QML-only equivalent -- just a broadcast, no `win.*` GTK call
+    /// (unlike ShowWifiDetail, which also opens the GTK detail page).
+    WifiDetailResult(WifiDetails),
 
     // ---- Ethernet (Phase 2) ----------------------------------------------
     WiredResult(Vec<WiredProfile>),
@@ -134,6 +137,27 @@ impl BaliseApp {
             // section: it read as "same tab as current_tab" and closed
             // instead of navigating in.
             let current_tab = Rc::new(RefCell::new("home".to_string()));
+
+            // Mirrors of the same state already pushed to the GTK
+            // widgets below (win.home_view().set_wifi_enabled(...) etc.),
+            // kept independently so the QML frontend's own commands
+            // (ClientCommand::WifiToggle and friends, see the
+            // AppEvent::DaemonCommand match) have a "current state" to
+            // flip without reaching into a GTK widget for it -- backend
+            // state shouldn't depend on GTK still existing (see the
+            // project plan: GTK is meant to come out entirely once QML
+            // reaches parity, and this is the one place that would have
+            // silently kept a GTK dependency otherwise).
+            let wifi_enabled = Rc::new(RefCell::new(false));
+            let bt_enabled = Rc::new(RefCell::new(false));
+            let night_mode_enabled = Rc::new(RefCell::new(false));
+            // Set once AppEvent::DaemonStarted fires (daemon mode only --
+            // stays None in one-shot GUI mode, where there's no socket to
+            // push state over anyway). RefCell<Option<...>> rather than
+            // requiring it up front: the broadcaster only exists once the
+            // async DaemonServer::new() call in the init thread below
+            // actually resolves.
+            let broadcaster: Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>> = Rc::new(RefCell::new(None));
 
             // Initialization thread: connect to NetworkManager/BlueZ
             // (retried, they may not be up yet at login) and push the
@@ -283,10 +307,13 @@ impl BaliseApp {
                         AppEvent::WifiPowerState(enabled) => {
                             win.header().set_power_state(enabled);
                             win.home_view().set_wifi_enabled(enabled);
+                            *wifi_enabled.borrow_mut() = enabled;
+                            broadcast_state(&broadcaster, *wifi_enabled.borrow(), *bt_enabled.borrow(), *night_mode_enabled.borrow());
                         }
                         AppEvent::ScanResult(aps) => {
                             let connected_ssid = aps.iter().find(|ap| ap.is_connected).map(|ap| ap.ssid.clone());
                             win.home_view().set_wifi_ssid(connected_ssid);
+                            broadcast_wifi_list(&broadcaster, &aps);
                             win.network_list().set_networks(aps);
                         }
                         AppEvent::SavedResult(saved) => {
@@ -334,10 +361,13 @@ impl BaliseApp {
                         AppEvent::BtPowerState(enabled) => {
                             win.header().set_power_state(enabled);
                             win.home_view().set_bluetooth_enabled(enabled);
+                            *bt_enabled.borrow_mut() = enabled;
+                            broadcast_state(&broadcaster, *wifi_enabled.borrow(), *bt_enabled.borrow(), *night_mode_enabled.borrow());
                         }
                         AppEvent::BtScanResult(devices) => {
                             let connected_names: Vec<String> = devices.iter().filter(|d| d.is_connected).map(|d| d.name.clone()).collect();
                             win.home_view().set_bluetooth_connected(connected_names);
+                            broadcast_bt_list(&broadcaster, &devices);
                             win.device_list().set_devices(devices);
                         }
                         AppEvent::BtActionStarted(path, action) => {
@@ -382,6 +412,9 @@ impl BaliseApp {
                         AppEvent::ShowWifiDetail(ap, details) => {
                             win.show_detail(DetailTarget::Wifi { ap: *ap, details: *details });
                         }
+                        AppEvent::WifiDetailResult(details) => {
+                            broadcast_wifi_detail(&broadcaster, &details);
+                        }
                         AppEvent::WiredResult(profiles) => {
                             // Same "connected beats cable-present beats
                             // off" priority Ethernet.qml's own state
@@ -395,6 +428,7 @@ impl BaliseApp {
                             };
                             let active_name = profiles.iter().find(|p| p.is_active).map(|p| p.name.as_str());
                             win.home_view().set_ethernet_state(state, active_name);
+                            broadcast_wired_list(&broadcaster, &profiles);
                             win.wired_list().set_profiles(profiles);
                         }
                         AppEvent::WiredConnectStarted(device_path) => {
@@ -415,18 +449,321 @@ impl BaliseApp {
                         }
                         AppEvent::NightModeState(enabled) => {
                             win.home_view().set_night_mode(enabled);
+                            *night_mode_enabled.borrow_mut() = enabled;
+                            broadcast_state(&broadcaster, *wifi_enabled.borrow(), *bt_enabled.borrow(), *night_mode_enabled.borrow());
                         }
                         AppEvent::DaemonCommand(cmd) => match cmd {
-                            DaemonCommand::Show => {
+                            ClientCommand::Show => {
                                 win.show();
                                 *is_visible.borrow_mut() = true;
                                 trigger_refresh(&nm, &rt, &tx, &last_refresh);
                             }
-                            DaemonCommand::Hide => {
+                            ClientCommand::Hide => {
                                 win.hide();
                                 *is_visible.borrow_mut() = false;
                             }
-                            DaemonCommand::Toggle(position, tab) => {
+                            // ---- home page commands from the QML frontend
+                            // (see the project plan) -- same underlying
+                            // calls the GTK home tiles' own click handlers
+                            // make in setup_ui_callbacks below, just
+                            // triggered over the socket instead of a GTK
+                            // signal. The resulting WifiPowerState/
+                            // BtPowerState/NightModeState event (sent back
+                            // by toggle_radio/run_night_mode_toggle
+                            // themselves) is what actually updates
+                            // wifi_enabled/bt_enabled/night_mode_enabled
+                            // and broadcasts -- no need to do either here.
+                            ClientCommand::WifiToggle => {
+                                let enabled = !*wifi_enabled.borrow();
+                                toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "wifi", enabled);
+                            }
+                            ClientCommand::BtToggle => {
+                                let enabled = !*bt_enabled.borrow();
+                                toggle_radio(nm.clone(), bt.clone(), rt.clone(), tx.clone(), is_switching.clone(), "bluetooth", enabled);
+                            }
+                            ClientCommand::NightModeToggle => {
+                                run_night_mode_toggle(tx.clone());
+                            }
+                            ClientCommand::Screenshot => {
+                                run_screenshot(win.clone());
+                            }
+                            ClientCommand::RefreshState => {
+                                let nm = nm.clone();
+                                let bt = bt.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    if let Some(ref nm_inst) = *nm.lock().unwrap() {
+                                        if let Ok(enabled) = rt.block_on(async { nm_inst.is_wifi_enabled().await }) {
+                                            let _ = tx.send_blocking(AppEvent::WifiPowerState(enabled));
+                                        }
+                                    }
+                                    if let Some(ref bt_inst) = *bt.lock().unwrap() {
+                                        if let Ok(powered) = rt.block_on(async { bt_inst.is_powered().await }) {
+                                            let _ = tx.send_blocking(AppEvent::BtPowerState(powered));
+                                        }
+                                    }
+                                });
+                            }
+                            // ---- section lists (second slice) -- same
+                            // thread bodies as the matching GTK callbacks
+                            // in setup_ui_callbacks below (scan button,
+                            // set_on_connect/set_on_action/set_on_connect
+                            // for wired), just triggered by a JSON command
+                            // instead of a GTK signal. Deliberately no
+                            // password/pairing support here -- see the
+                            // project plan.
+                            ClientCommand::WifiScan => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let _ = rt.block_on(async { nm_inst.request_scan().await });
+                                        std::thread::sleep(std::time::Duration::from_millis(1500));
+                                        if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                            let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::WifiConnect { ssid, password } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                // Resolve device_path off GTK's own cached
+                                // scan list (kept in sync by the same
+                                // ScanResult events QML's own list is
+                                // populated from) -- falls back to the
+                                // first wireless device for a saved-but-
+                                // not-currently-scanned network, same
+                                // fallback AppEvent::ConnectHidden already
+                                // uses.
+                                let cached_device_path = win.network_list().get_network(&ssid).map(|ap| ap.device_path);
+                                let _ = tx.send_blocking(AppEvent::ConnectStarted(ssid.clone()));
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let device_path = match cached_device_path {
+                                            Some(p) => Some(p),
+                                            None => rt
+                                                .block_on(async { nm_inst.wireless_devices().await })
+                                                .ok()
+                                                .and_then(|d| d.into_iter().next()),
+                                        };
+                                        if let Some(device_path) = device_path {
+                                            match rt.block_on(async { nm_inst.connect(&ssid, password.as_deref(), &device_path).await }) {
+                                                Ok(()) => {
+                                                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                                                    let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                                                    let _ = tx.send_blocking(AppEvent::Notify(format!("Connected to {}", ssid)));
+                                                    if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                                        let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::WifiDisconnect { ssid } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                let _ = tx.send_blocking(AppEvent::DisconnectStarted(ssid.clone()));
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let _ = rt.block_on(async { nm_inst.disconnect(&ssid).await });
+                                        std::thread::sleep(std::time::Duration::from_millis(1000));
+                                        let _ = tx.send_blocking(AppEvent::ConnectSuccess);
+                                        std::thread::sleep(std::time::Duration::from_millis(500));
+                                        if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                            let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::BtScan => {
+                                let bt = bt.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = bt.lock().unwrap();
+                                    if let Some(ref bt_inst) = *guard {
+                                        let _ = rt.block_on(async { bt_inst.start_discovery().await });
+                                        std::thread::sleep(std::time::Duration::from_secs(5));
+                                        let _ = rt.block_on(async { bt_inst.stop_discovery().await });
+                                        if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                            let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::BtConnect { path } => {
+                                run_bt_action(bt.clone(), rt.clone(), tx.clone(), path, DeviceAction::Connect);
+                            }
+                            ClientCommand::BtDisconnect { path } => {
+                                run_bt_action(bt.clone(), rt.clone(), tx.clone(), path, DeviceAction::Disconnect);
+                            }
+                            ClientCommand::EthConnect { connection_path, device_path } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                let _ = tx.send_blocking(AppEvent::WiredConnectStarted(device_path.clone()));
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        match rt.block_on(async { nm_inst.activate_wired(&connection_path, &device_path).await }) {
+                                            Ok(()) => {
+                                                let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                                                let _ = tx.send_blocking(AppEvent::Notify("Ethernet connected".to_string()));
+                                                if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                                    let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                                                }
+                                            }
+                                            Err(e) => {
+                                                let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                                                let _ = tx.send_blocking(AppEvent::Error(format!("Connect failed: {}", e)));
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::EthList => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                            let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                                        }
+                                    }
+                                });
+                            }
+                            // ---- detail page (third slice) -- same
+                            // underlying dbus/network_manager.rs and
+                            // dbus/bluez.rs calls the GTK detail page's
+                            // own buttons already make (ui/detail.rs),
+                            // just triggered by a JSON command. Every
+                            // mutating one re-fetches and re-broadcasts
+                            // its own list/detail afterward so the QML
+                            // row and detail page both see the result --
+                            // same "one event feeds both UIs" pattern as
+                            // WifiScan/BtScan/EthList.
+                            ClientCommand::WifiDetail { ssid } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        if let Ok(details) = rt.block_on(async { nm_inst.wifi_details(&ssid).await }) {
+                                            let _ = tx.send_blocking(AppEvent::WifiDetailResult(details));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::WifiForget { settings_path } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let _ = rt.block_on(async { nm_inst.forget(&settings_path).await });
+                                        if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                            let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::WifiAutoconnect { ssid, settings_path, autoconnect } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let _ = rt.block_on(async { nm_inst.set_autoconnect(&settings_path, autoconnect).await });
+                                        if let Ok(details) = rt.block_on(async { nm_inst.wifi_details(&ssid).await }) {
+                                            let _ = tx.send_blocking(AppEvent::WifiDetailResult(details));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::BtForget { path } => {
+                                let bt = bt.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = bt.lock().unwrap();
+                                    if let Some(ref bt_inst) = *guard {
+                                        let _ = rt.block_on(async { bt_inst.forget_device(&path).await });
+                                        if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                            let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::BtTrust { path, trusted } => {
+                                let bt = bt.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = bt.lock().unwrap();
+                                    if let Some(ref bt_inst) = *guard {
+                                        let _ = rt.block_on(async { bt_inst.set_trusted(&path, trusted).await });
+                                        if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                            let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::EthAutoconnect { connection_path, autoconnect } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        let _ = rt.block_on(async { nm_inst.set_autoconnect(&connection_path, autoconnect).await });
+                                        if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                            let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::EthDisconnect { device_path } => {
+                                let nm = nm.clone();
+                                let rt = rt.clone();
+                                let tx = tx.clone();
+                                let _ = tx.send_blocking(AppEvent::WiredConnectStarted(device_path.clone()));
+                                std::thread::spawn(move || {
+                                    let guard = nm.lock().unwrap();
+                                    if let Some(ref nm_inst) = *guard {
+                                        match rt.block_on(async { nm_inst.deactivate_wired(&device_path).await }) {
+                                            Ok(()) => {
+                                                let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                                                if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                                    let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                                                }
+                                            }
+                                            Err(e) => {
+                                                let _ = tx.send_blocking(AppEvent::WiredConnectComplete);
+                                                let _ = tx.send_blocking(AppEvent::Error(format!("Disconnect failed: {}", e)));
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            ClientCommand::Toggle { position, tab } => {
                                 if *is_visible.borrow() {
                                     // Already open: a DIFFERENT tab was
                                     // requested (e.g. BT is showing and the
@@ -463,17 +800,18 @@ impl BaliseApp {
                                     trigger_refresh(&nm, &rt, &tx, &last_refresh);
                                 }
                             }
-                            DaemonCommand::ReloadTheme => {
+                            ClientCommand::ReloadTheme => {
                                 win.apply_theme();
                             }
-                            DaemonCommand::ReloadConfig => {
+                            ClientCommand::ReloadConfig => {
                                 win.reload_config();
                             }
-                            DaemonCommand::Quit => {
+                            ClientCommand::Quit => {
                                 std::process::exit(0);
                             }
                         },
                         AppEvent::DaemonStarted(server) => {
+                            *broadcaster.borrow_mut() = Some(server.broadcaster());
                             let tx_cmd = tx.clone();
                             server.run(move |cmd| {
                                 let _ = tx_cmd.send_blocking(AppEvent::DaemonCommand(cmd));
@@ -505,6 +843,145 @@ fn spawn_wifi_detail(
         if let Some(ref nm_inst) = *guard {
             let details = rt.block_on(async { nm_inst.wifi_details(&ap.ssid).await }).unwrap_or_default();
             let _ = tx.send_blocking(AppEvent::ShowWifiDetail(Box::new(ap), Box::new(details)));
+        }
+    });
+}
+
+/// Serializes a full `ServerPush::State` from the three tracked booleans
+/// and sends it to every connected client (QML frontend included) --
+/// called after each of WifiPowerState/BtPowerState/NightModeState
+/// updates the corresponding tracked value, so it always reflects
+/// whichever ONE thing actually just changed plus the other two's
+/// last-known values (the push itself carries all three every time,
+/// there's no partial/delta message). A no-op (not an error) when
+/// `broadcaster` is still None -- either GUI mode (no daemon, no socket)
+/// or the brief window during daemon startup before DaemonServer::new()
+/// has resolved.
+fn broadcast_state(
+    broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>,
+    wifi_enabled: bool,
+    bt_enabled: bool,
+    night_mode_enabled: bool,
+) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::State {
+            wifi: RadioState { enabled: wifi_enabled },
+            bluetooth: RadioState { enabled: bt_enabled },
+            night_mode: PushNightModeState { active: night_mode_enabled },
+        };
+        // Err here only means "no subscribers currently connected", not
+        // a real failure -- nothing to log, the next state change tries
+        // again.
+        let _ = tx.send(push.to_line());
+    }
+}
+
+/// Same `broadcaster` plumbing as `broadcast_state` above, but for the
+/// WiFi/Bluetooth/Ethernet section lists (second slice, see the project
+/// plan) -- separate pushes rather than folded into `ServerPush::State`,
+/// so an unrelated radio toggle never re-serializes a whole AP/device/
+/// profile list. Called right next to the existing `win.*_list().
+/// set_*(...)` GTK calls in the matching `AppEvent::ScanResult`/
+/// `BtScanResult`/`WiredResult` arms below -- same event, same data,
+/// just also handed to any QML client.
+fn broadcast_wifi_list(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>, access_points: &[AccessPoint]) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::WifiList { access_points: access_points.to_vec() };
+        let _ = tx.send(push.to_line());
+    }
+}
+
+fn broadcast_bt_list(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>, devices: &[BluetoothDevice]) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::BluetoothList { devices: devices.to_vec() };
+        let _ = tx.send(push.to_line());
+    }
+}
+
+fn broadcast_wired_list(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>, profiles: &[WiredProfile]) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::WiredList { profiles: profiles.to_vec() };
+        let _ = tx.send(push.to_line());
+    }
+}
+
+fn broadcast_wifi_detail(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>, details: &crate::dbus::WifiDetails) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::WifiDetail { details: details.clone() };
+        let _ = tx.send(push.to_line());
+    }
+}
+
+/// Runs `toggle-night-mode.sh` and reports the resulting marker-file
+/// state back through `tx` -- shared by the home tile's own click
+/// handler and `ClientCommand::NightModeToggle` (the QML frontend's
+/// equivalent, see the project plan), so both trigger the exact same
+/// script/state-readback logic.
+fn run_night_mode_toggle(tx: async_channel::Sender<AppEvent>) {
+    std::thread::spawn(move || {
+        let _ = std::process::Command::new("bash")
+            .arg("-c")
+            .arg("$HOME/.config/hypr/scripts/toggle-night-mode.sh")
+            .status();
+        let enabled = std::path::Path::new(&format!("{}/.cache/hypr-night-mode", std::env::var("HOME").unwrap_or_default())).exists();
+        let _ = tx.send_blocking(AppEvent::NightModeState(enabled));
+    });
+}
+
+/// Hides Balise then fires the region-capture pipeline -- shared by the
+/// home tile's own click handler and `ClientCommand::Screenshot` (the
+/// QML frontend's equivalent). Same capture pipeline as the existing
+/// Super+Shift+S keybind (hypr/keybinds.lua), not a second one; the
+/// short delay is for the close animation to actually finish before
+/// `slurp`'s own region selection starts, so it doesn't capture over
+/// Balise itself.
+fn run_screenshot(win: Rc<BaliseWindow>) {
+    win.hide();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
+        let _ = std::process::Command::new("bash")
+            .arg("-c")
+            .arg(r#"grim -g "$(slurp)" - | satty --filename - --fullscreen --output-filename - | wl-copy"#)
+            .spawn();
+    });
+}
+
+/// Connect/Disconnect for one Bluetooth device -- shared shape with
+/// `set_on_action`'s own dispatch in setup_ui_callbacks below, trimmed to
+/// just these two actions (`ClientCommand::BtConnect`/`BtDisconnect`
+/// deliberately never pass `DeviceAction::Pair`/`Forget` here -- pairing
+/// is a separate later slice, see the project plan).
+fn run_bt_action(
+    bt: Arc<Mutex<Option<BluetoothManager>>>,
+    rt: Arc<tokio::runtime::Runtime>,
+    tx: async_channel::Sender<AppEvent>,
+    path: String,
+    action: DeviceAction,
+) {
+    let _ = tx.send_blocking(AppEvent::BtActionStarted(path.clone(), action.clone()));
+    std::thread::spawn(move || {
+        let guard = bt.lock().unwrap();
+        if let Some(ref bt_inst) = *guard {
+            let res = match action {
+                DeviceAction::Connect => rt.block_on(async { bt_inst.connect_device(&path).await }),
+                DeviceAction::Disconnect => rt.block_on(async { bt_inst.disconnect_device(&path).await }),
+                DeviceAction::Pair | DeviceAction::Forget => return,
+            };
+            match res {
+                Ok(()) => {
+                    let _ = tx.send_blocking(AppEvent::BtActionComplete);
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                        let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                    }
+                }
+                Err(e) => {
+                    let _ = tx.send_blocking(AppEvent::BtActionComplete);
+                    let _ = tx.send_blocking(AppEvent::Error(format!("Bluetooth action failed: {}", e)));
+                    if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                        let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
+                    }
+                }
+            }
         }
     });
 }
@@ -708,13 +1185,13 @@ fn setup_ui_callbacks(
     // this app entirely, by hypr/scripts/balise-autoclose.sh (Hyprland's
     // `activewindow` event -> `balise hide`, already running); this is
     // just the one genuinely new, explicit close affordance. Routed
-    // through `tx` as the same DaemonCommand::Hide that script's `balise
+    // through `tx` as the same ClientCommand::Hide that script's `balise
     // hide` sends, rather than calling win.hide() directly, so
     // `is_visible` stays in sync the same way every other close path does.
     {
         let tx = tx.clone();
         win.close_bar().connect_clicked(move |_| {
-            let _ = tx.send_blocking(AppEvent::DaemonCommand(DaemonCommand::Hide));
+            let _ = tx.send_blocking(AppEvent::DaemonCommand(ClientCommand::Hide));
         });
     }
 
@@ -818,41 +1295,23 @@ fn setup_ui_callbacks(
         });
     }
 
-    // Night mode tile -- direct action, no page of its own. State is
-    // inferred the same way toggle-night-mode.sh itself infers it (marker
-    // file presence), read back right after the toggle so the tile
-    // reflects reality rather than assuming the toggle succeeded.
+    // Night mode tile -- direct action, no page of its own. Factored out
+    // (run_night_mode_toggle) so ClientCommand::NightModeToggle -- the
+    // QML frontend's equivalent, see the project plan -- runs the exact
+    // same logic instead of a second copy.
     {
         let tx = tx.clone();
         win.home_view().night_tile().connect_clicked(move |_| {
-            let tx = tx.clone();
-            std::thread::spawn(move || {
-                let _ = std::process::Command::new("bash")
-                    .arg("-c")
-                    .arg("$HOME/.config/hypr/scripts/toggle-night-mode.sh")
-                    .status();
-                let enabled = std::path::Path::new(&format!("{}/.cache/hypr-night-mode", std::env::var("HOME").unwrap_or_default())).exists();
-                let _ = tx.send_blocking(AppEvent::NightModeState(enabled));
-            });
+            run_night_mode_toggle(tx.clone());
         });
     }
 
-    // Screenshot tile -- direct action. Balise hides itself first (a
-    // region-select capture with the panel still on screen would either
-    // capture over it or get in the way of `slurp`'s own selection), then
-    // fires the capture after a short delay for the close animation to
-    // actually finish -- same capture pipeline as the existing
-    // Super+Shift+S keybind (hypr/keybinds.lua), not a second one.
+    // Screenshot tile -- direct action. Factored out (run_screenshot) for
+    // the same reason as night mode above.
     {
         let win_shot = win.clone();
         win.home_view().screenshot_tile().connect_clicked(move |_| {
-            win_shot.hide();
-            glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
-                let _ = std::process::Command::new("bash")
-                    .arg("-c")
-                    .arg(r#"grim -g "$(slurp)" - | satty --filename - --fullscreen --output-filename - | wl-copy"#)
-                    .spawn();
-            });
+            run_screenshot(win_shot.clone());
         });
     }
 

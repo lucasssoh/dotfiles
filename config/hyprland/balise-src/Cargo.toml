@@ -10,6 +10,11 @@ gtk4 = { version = "0.9", features = ["v4_14"] }
 gtk4-layer-shell = "0.4"
 async-channel = "2"
 serde = { version = "1", features = ["derive"] }
+# IPC wire format (ipc.rs) -- JSON-lines both ways now, replacing the old
+# hand-rolled colon-delimited text protocol so the growing command/push
+# surface (QML frontend, see the project plan) doesn't need a parser
+# rewrite every time a field is added.
+serde_json = "1"
 # Config format (config.toml) -- already the repo's convention for
 # structured config (see roue-src/Cargo.toml's same note).
 toml = "0.8"
@@ -27,9 +32,13 @@ clap = { version = "4", features = ["derive"] }
 zbus = { version = "4.4", default-features = false, features = ["tokio"] }
 # Trimmed vs Orbit's "full": rt-multi-thread for the shared runtime, net
 # for the daemon's UnixListener, io-util for its Async{Read,Write}Ext, time
-# for the connect-confirmation poll sleeps. No "macros" -- we never use
-# #[tokio::main] or select!.
-tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time"] }
+# for the connect-confirmation poll sleeps. "sync" added for the
+# broadcast channel that pushes state to every connected client (ipc.rs);
+# "macros" added for that same file's per-connection `select!` (reading
+# the next client command and forwarding the next broadcast push are two
+# independent, unordered event sources on one socket -- select! is the
+# actual right tool here, not a leftover default).
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "sync", "macros"] }
 # connection.uuid when creating a new WiFi profile via
 # AddAndActivateConnection -- NetworkManager rejects the dict without one.
 uuid = { version = "1", features = ["v4"] }

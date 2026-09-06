@@ -75,6 +75,14 @@ Item {
 
     readonly property int margin: 6
     readonly property int cornerRadius: 18
+    // The drawer block's own, deliberately rounder than the row pill's
+    // (asked for: "arrondir beaucoup plus les coins du conteneur
+    // principal"). Separate from `cornerRadius` above rather than a bump
+    // to it: that one is also the row pill's shape, and the pill is only
+    // ~24-31px tall, so any radius past half its height is clamped away
+    // anyway -- raising it there would change nothing while quietly
+    // reshaping centerIsland's own flush-top rim/gloss geometry too.
+    property int drawerRadius: 30
     // 31 was tuned for centerIsland's own row (ActiveWindow/Workspaces/
     // Media) -- overridable now that TOOLS' row (METRICS-style icons,
     // originally a plain 24px-tall Block) needs to match METRICS' own
@@ -82,6 +90,16 @@ Item {
     // METRICS right next to it.
     property int rowHeight: 31
     readonly property int revealDuration: 320
+    // Breathing room between the row and the drawer block below it --
+    // asked for explicitly ("ajoute un espace entre les tools et la
+    // ligne"), now that the two are independent blocks rather than one
+    // continuous shape (see opaqueProgress's own header below). This
+    // gap is the ONLY thing separating them now that the hairline that
+    // used to sit in it is gone (see the note where it was drawn).
+    // Scaled by opaqueProgress like drawerFill itself, so it opens and
+    // closes with it instead of permanently adding dead space to the
+    // closed pill's own height.
+    readonly property int drawerGap: 8
 
     // Visual chrome, generalized for a second consumer with a different
     // look (TOOLS' own floating pane, unlike centerIsland which is flush
@@ -96,6 +114,42 @@ Item {
     property bool flushTop: true
     property color fillColor: "#000000"
     property Gradient fillGradient: null
+
+    // The drawer block's own fill. Overridable per consumer because the
+    // two islands want opposite things: TOOLS' drawers (Balise, the
+    // notification center) put opaque cards on it and can therefore
+    // afford a translucent panel, while centerIsland's drawers (Veille's
+    // clock, the keybinds sheet) draw bare text straight onto it, where
+    // translucency would eat legibility. Defaults reproduce the opaque
+    // look both had before, so centerIsland is untouched.
+    property color drawerFillTop: "#ff1e2128"
+    property color drawerFillBottom: "#ff060608"
+
+    // Pins the island's content width instead of letting it track its
+    // own row -- asked for explicitly ("fixer la largeur pour match la
+    // largeur du modules tools. il ne doit absolument pas bouger"). The
+    // TOOLS row's own width genuinely fluctuates in normal use (the
+    // battery percentage going 100 -> 9, the HDR chip appearing), and
+    // every one of those moved the whole pill's left edge, drawer
+    // included. `Math.max` with the row's own implicitWidth is pure
+    // insurance: it only ever engages if the row grows past the pinned
+    // value, where clipping icons would be worse than a rare nudge.
+    property int fixedContentWidth: 0
+
+    // The row and the drawer are two independent blocks, not one shape
+    // that grows taller -- asked for explicitly after the first fade
+    // pass merged them into one continuous fill ("laisser le bloc tools
+    // intact... le tiroir est un bloc à part"): the row's own `fill`
+    // below stays exactly as it always was (fixed height, its usual
+    // fillColor/fillGradient, no reaction to anyOpen at all) and
+    // `drawerFill` further down is a wholly separate Rectangle that
+    // simply doesn't exist (zero height) until something opens under it.
+    // `opaqueProgress` is what that block's fade-in and the gap above it
+    // both animate on: the row stays put, and the drawer FADES/GROWS
+    // INTO the space below rather than the whole island darkening as one
+    // slab.
+    property real opaqueProgress: root.anyOpen ? 1 : 0
+    Behavior on opaqueProgress { NumberAnimation { duration: 260; easing.type: Easing.InOutCubic } }
 
     // centerIsland's own row holds genuinely variable-width content
     // (ActiveWindow's title, Media's marquee) -- widening to the fixed
@@ -138,6 +192,10 @@ Item {
     // is a fundamentally heavier operation than an in-scene repaint.
     readonly property real maxHeight: {
         let total = root.rowHeight;
+        // Only relevant once something can actually be open (an empty
+        // stack never shows the gap either) -- matches implicitHeight's
+        // own `drawerColumn.height > 0` gate below.
+        if (root.drawerItems.length > 0) total += root.drawerGap;
         for (let i = 0; i < root.drawerItems.length; i++) {
             total += root.drawerItems[i].implicitHeight;
         }
@@ -213,6 +271,8 @@ Item {
     // whole: halving an odd difference reintroduces the same .5 that was
     // being removed (the bar's own width is even).
     readonly property real effectiveWidth: {
+        if (root.fixedContentWidth > 0)
+            return Math.max(root.fixedContentWidth, topRow.implicitWidth);
         const raw = topRow.implicitWidth
             + root.openProgress * Math.max(0, root.maxRowWidth - topRow.implicitWidth);
         return Math.round(raw / 2) * 2;
@@ -223,7 +283,12 @@ Item {
     // (animating) heights -- the Column reflows as each entry grows or
     // shrinks, so entries below a closing one slide up on their own and
     // nothing here has to compute stacking offsets by hand.
-    implicitHeight: root.rowHeight + drawerColumn.height
+    // Scaled by opaqueProgress, not a flat +drawerGap the instant
+    // drawerColumn's own height leaves 0 -- that would pop in as one
+    // discontinuous 8px jump on the very first frame of a grow/shrink
+    // instead of easing in with the other thing the same progress
+    // already drives (drawerFill's own opacity).
+    implicitHeight: root.rowHeight + root.drawerGap * root.opaqueProgress + drawerColumn.height
     width: root.implicitWidth
     height: root.implicitHeight
 
@@ -319,13 +384,19 @@ Item {
     // Same black fill + bottom-only rounding shell.qml's real central
     // island used to draw straight into itself -- flush against
     // whatever screen edge the PARENT is flush against (top corners
-    // square), rounded at the bottom regardless of how tall this grows,
-    // since the radii were never tied to a fixed height to begin with.
-    // Non-flush consumers (TOOLS) get all 4 corners rounded instead, same
-    // as Block.qml's own flushTop gating.
+    // square), rounded at the bottom regardless of whether a drawer is
+    // open below it. Non-flush consumers (TOOLS) get all 4 corners
+    // rounded instead, same as Block.qml's own flushTop gating.
+    // Fixed height (just the row), not anchors.fill: parent -- this is
+    // the row's OWN pill, complete and unaffected on its own regardless
+    // of anyOpen (see opaqueProgress's header above); `drawerFill` below
+    // is the separate block that actually reacts.
     Rectangle {
         id: fill
-        anchors.fill: parent
+        x: 0
+        y: 0
+        width: parent.width
+        height: root.rowHeight
         topLeftRadius: root.flushTop ? 0 : root.cornerRadius
         topRightRadius: root.flushTop ? 0 : root.cornerRadius
         bottomLeftRadius: root.cornerRadius
@@ -419,6 +490,52 @@ Item {
         spacing: root.rowSpacing
     }
 
+    // The drawer's own block -- a wholly separate Rectangle from `fill`
+    // above (asked for explicitly: "le tiroir est un bloc à part"), not
+    // a taller version of the row's own pill. Zero height (invisible)
+    // until something opens under it, then tracks drawerColumn's live
+    // height exactly, so it grows/shrinks in lockstep with the content
+    // without a second, separately-timed animation of its own -- only
+    // its opacity gets one (opaqueProgress), fading it in/out alongside
+    // the gap opening above it rather than popping in at full strength
+    // the instant height leaves 0. Independently rounded on all 4 corners
+    // (not just matching fill's bottom-only rounding) since it now reads
+    // as its own distinct pane sitting under the row, not a continuation
+    // of its shape. Same dark BatteryAlert.qml gradient as before --
+    // constant now rather than lerped, since this block simply isn't
+    // there at all when closed instead of needing a translucent rest
+    // state to fade from.
+    //
+    // x/width match `fill` exactly (its full 0..parent.width span, not
+    // drawerColumn's own margin-inset one) -- asked for explicitly
+    // ("aligner le bloc tools et la largeur des elements tiroir"): the
+    // row's icons sit inset by `margin` WITHIN fill, and drawerColumn's
+    // own content sits inset by that same margin within THIS block, so
+    // the two panes' outer edges line up while each still insets its
+    // content identically.
+    Rectangle {
+        id: drawerFill
+        x: 0
+        y: root.rowHeight + root.drawerGap * root.opaqueProgress
+        width: parent.width
+        height: drawerColumn.height
+        radius: root.drawerRadius
+        opacity: root.opaqueProgress
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: root.drawerFillTop }
+            GradientStop { position: 1.0; color: root.drawerFillBottom }
+        }
+    }
+
+    // There was a hairline divider drawn across this seam (a 1px rule
+    // growing from the centre outward on `opaqueProgress`, added when
+    // the row and the drawer first became two separate blocks). It's
+    // gone: asked to make it "completement transparente", and a fully
+    // transparent rule is just an invisible Rectangle to maintain. The
+    // separation now rests entirely on `drawerGap` plus the two blocks'
+    // own distinct shapes -- the "ligne imaginaire" ended up genuinely
+    // imaginary.
+
     // Where the stack lives. A plain Column: its height is the live sum
     // of its children's animating heights, and it re-lays-out on every
     // change, so an entry closing above another makes the one below
@@ -426,7 +543,7 @@ Item {
     Column {
         id: drawerColumn
         x: root.margin
-        y: root.rowHeight
+        y: root.rowHeight + root.drawerGap * root.opaqueProgress
         width: root.effectiveWidth
     }
 

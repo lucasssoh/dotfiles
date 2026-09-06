@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "modules" as Modules
 import "modules/veille"
+import "modules/balise"
 import "services"
 import "theme"
 
@@ -329,6 +330,16 @@ ShellRoot {
             if (NotificationState.centerOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 NotificationState.close();
+            }
+
+            // Same close mechanism for Balise's own drawer -- see
+            // BaliseState.qml's header for why the two are mutually
+            // exclusive rather than stacking, this is the other half:
+            // closing on outside interaction, not just when the other
+            // one opens.
+            if (BaliseState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                BaliseState.close();
             }
         }
     }
@@ -691,10 +702,26 @@ ShellRoot {
                 // row, not this one).
                 rowHeight: 24
                 fillColor: "#730c0c0e"
+                // Measured from this pill as it stands today (428px
+                // outer, minus DrawerIsland's own 6px margin each side)
+                // -- pinning it here keeps both the pill and the drawer
+                // hanging off it perfectly still while the row's own
+                // content changes width underneath (see
+                // fixedContentWidth's own comment).
+                fixedContentWidth: 416
+                // Translucent panel, opaque cards on top of it -- see
+                // theme/Surfaces.qml for the whole rule. Only TOOLS gets
+                // it: centerIsland's drawers draw bare text with no card
+                // behind it.
+                drawerFillTop: Surfaces.panelTop
+                drawerFillBottom: Surfaces.panelBottom
 
                 drawerItems: [
                     Modules.NotificationCenter {
                         drawerOpen: NotificationState.centerOpen && NotificationState.activeScreen === bar.screen
+                    },
+                    BaliseHome {
+                        drawerOpen: BaliseState.panelOpen && BaliseState.activeScreen === bar.screen
                     }
                 ]
                 // Glass. These three float free of every screen edge, so
@@ -786,7 +813,7 @@ ShellRoot {
                     Row {
                         Modules.AudioOutput {}
                         Modules.AudioInput {}
-                        Modules.BaliseButton {}
+                        Modules.BaliseButton { screen: bar.screen }
                     }
 
                     Item { width: 6; height: 1 }

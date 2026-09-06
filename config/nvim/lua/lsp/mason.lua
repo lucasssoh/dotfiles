@@ -31,7 +31,11 @@ return {
 
         require("mason").setup({})
         require("mason-lspconfig").setup({
-            ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd"},
+            -- omnisharp needs the .NET SDK on PATH (dotnet) to run --
+            -- already true on this machine. No custom handler needed, same
+            -- as ts_ls/pyright/clangd: default_setup covers it, unlike
+            -- jdtls which needs its own workspace/lombok wiring below.
+            ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd", "omnisharp"},
             handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
         })
 

@@ -1,9 +1,14 @@
 //! Public WiFi data types, adapted from
-//! orbit-vendor/src/dbus/network_manager.rs:4-42. `serde` derives dropped
-//! -- nothing serializes these any more (that was only for Orbit's
-//! `waybar-status`, which Balise doesn't have).
+//! orbit-vendor/src/dbus/network_manager.rs:4-42. `serde` derives were
+//! dropped when this was ported (nothing serialized these for Orbit's
+//! own purposes) -- back now (`Serialize` only, see ipc.rs's own header
+//! for why not `Deserialize` too) for `ServerPush::WifiList`/
+//! `WiredList`, the QML frontend's WiFi/Ethernet section lists.
 
-#[derive(Debug, Clone, PartialEq, Default)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SecurityType {
     #[default]
     None,
@@ -57,7 +62,7 @@ impl SecurityType {
 // Default is used to synthesise an entry for a saved network that the
 // last scan didn't see (out of range), so its detail page can still be
 // opened from the saved-networks overlay -- see app/mod.rs.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct AccessPoint {
     pub ssid: String,
     pub signal: u8,
@@ -72,7 +77,7 @@ pub struct AccessPoint {
     pub ap_path: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SavedNetwork {
     /// The real 802-11-wireless.ssid, not connection.id (see the project
     /// plan's §6.2 -- Orbit's get_active_ssid conflates the two).
@@ -90,7 +95,7 @@ pub struct SavedNetwork {
 
 /// Phase 2 (Ethernet). Adapted from network_manager.rs:22-72's identically
 /// named struct.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct WiredProfile {
     pub name: String,
     pub device_name: String,
@@ -113,7 +118,9 @@ pub struct WiredProfile {
 /// it's down, while the live half (addresses, MAC, speed) only exists
 /// while this SSID is the *active* connection. Everything is
 /// `Default`-empty otherwise, and the UI simply omits empty rows.
-#[derive(Debug, Clone, Default)]
+/// `Serialize` added for the QML frontend's own detail page (third
+/// slice, see the project plan) -- `ServerPush::WifiDetail`.
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct WifiDetails {
     pub ssid: String,
     pub is_connected: bool,

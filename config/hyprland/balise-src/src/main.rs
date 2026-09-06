@@ -10,7 +10,7 @@ mod theme;
 mod ui;
 
 use config::Config;
-use ipc::{DaemonClient, DaemonCommand};
+use ipc::{ClientCommand, DaemonClient};
 
 #[derive(Parser)]
 #[command(name = "balise")]
@@ -129,7 +129,7 @@ fn toggle_daemon(position: Option<String>, tab: Option<String>) {
         std::process::exit(1);
     }
 
-    match DaemonClient::send_command(DaemonCommand::Toggle(position, tab)) {
+    match DaemonClient::send_command(ClientCommand::Toggle { position, tab }) {
         Ok(response) => println!("Daemon response: {}", response),
         Err(e) => {
             eprintln!("Failed to send command: {}", e);
@@ -144,7 +144,7 @@ fn show() {
         return;
     }
 
-    match DaemonClient::send_command(DaemonCommand::Show) {
+    match DaemonClient::send_command(ClientCommand::Show) {
         Ok(response) => println!("Show triggered: {}", response),
         Err(e) => {
             eprintln!("Failed to show window: {}", e);
@@ -159,7 +159,7 @@ fn hide() {
         return;
     }
 
-    match DaemonClient::send_command(DaemonCommand::Hide) {
+    match DaemonClient::send_command(ClientCommand::Hide) {
         Ok(response) => println!("Hide triggered: {}", response),
         Err(e) => {
             eprintln!("Failed to hide window: {}", e);
@@ -174,7 +174,7 @@ fn reload_theme() {
         return;
     }
 
-    match DaemonClient::send_command(DaemonCommand::ReloadTheme) {
+    match DaemonClient::send_command(ClientCommand::ReloadTheme) {
         Ok(response) => println!("Theme reload triggered: {}", response),
         Err(e) => {
             eprintln!("Failed to trigger theme reload: {}", e);
@@ -189,7 +189,7 @@ fn reload_config() {
         return;
     }
 
-    match DaemonClient::send_command(DaemonCommand::ReloadConfig) {
+    match DaemonClient::send_command(ClientCommand::ReloadConfig) {
         Ok(response) => println!("Config reload triggered: {}", response),
         Err(e) => {
             eprintln!("Failed to trigger config reload: {}", e);

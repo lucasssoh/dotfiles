@@ -131,7 +131,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
-                text: "Ne pas déranger"
+                text: "Do not disturb"
                 color: "#f2f2f7"
                 font.family: Fonts.ui
                 font.pixelSize: 14
@@ -249,7 +249,7 @@ Item {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: "Mode nuit"
+                    text: "Night mode"
                     color: "#f2f2f7"
                     font.family: Fonts.ui
                     font.pixelSize: 13
@@ -274,7 +274,7 @@ Item {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: "Capture"
+                    text: "Screenshot"
                     color: "#f2f2f7"
                     font.family: Fonts.ui
                     font.pixelSize: 13
@@ -317,7 +317,7 @@ Item {
             visible: list.count === 0
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "Aucune notification"
+            text: "No notifications"
             color: Qt.rgba(1, 1, 1, 0.4)
             font.family: Fonts.ui
             font.pixelSize: 13

@@ -5,6 +5,7 @@
 //! interface) instead of NetworkManager's per-object property reads.
 
 use std::collections::HashMap;
+use serde::Serialize;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
 use zbus::Connection;
 
@@ -19,7 +20,8 @@ const PROPS_IFACE: &str = "org.freedesktop.DBus.Properties";
 /// name -> (property name -> value)).
 type ManagedObjects = HashMap<OwnedObjectPath, HashMap<String, HashMap<String, OwnedValue>>>;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DeviceType {
     Audio,
     Keyboard,
@@ -28,7 +30,7 @@ pub enum DeviceType {
     Other,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BluetoothDevice {
     pub path: String,
     pub name: String,
