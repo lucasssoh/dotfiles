@@ -166,6 +166,25 @@ Singleton {
         onTriggered: socket.connected = true
     }
 
+    // Assigns only when the payload actually differs. These three arrays
+    // back ListViews whose model is a plain JS array, and reassigning one
+    // resets that model wholesale -- every delegate destroyed and rebuilt,
+    // scroll position and any running transition with it.
+    //
+    // That did not matter while the lists only arrived on an explicit
+    // scan. It does now: RefreshState re-broadcasts all three, and
+    // BaliseState polls it every 3s while the drawer is open, so an
+    // unguarded assignment would rebuild the WiFi list under the user
+    // twenty times a minute while they are reading it. Comparing first
+    // means a poll that finds nothing changed costs one string compare and
+    // touches no binding at all -- and it retroactively calms the 12s
+    // section rescan too.
+    function _assignList(prop, value) {
+        const next = value || [];
+        if (JSON.stringify(root[prop]) === JSON.stringify(next)) return;
+        root[prop] = next;
+    }
+
     function _handleLine(line) {
         const trimmed = line.trim();
         if (trimmed === "") return;
@@ -180,11 +199,11 @@ Singleton {
             root.bluetoothEnabled = !!(msg.bluetooth && msg.bluetooth.enabled);
             root.nightModeEnabled = !!(msg.night_mode && msg.night_mode.active);
         } else if (msg.type === "wifi_list") {
-            root.wifiNetworks = msg.access_points || [];
+            root._assignList("wifiNetworks", msg.access_points);
         } else if (msg.type === "bluetooth_list") {
-            root.bluetoothDevices = msg.devices || [];
+            root._assignList("bluetoothDevices", msg.devices);
         } else if (msg.type === "wired_list") {
-            root.wiredProfiles = msg.profiles || [];
+            root._assignList("wiredProfiles", msg.profiles);
         } else if (msg.type === "wifi_detail") {
             root.wifiDetail = msg.details || null;
         }

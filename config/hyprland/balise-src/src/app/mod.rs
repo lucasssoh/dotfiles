@@ -497,10 +497,53 @@ impl BaliseApp {
                                         if let Ok(enabled) = rt.block_on(async { nm_inst.is_wifi_enabled().await }) {
                                             let _ = tx.send_blocking(AppEvent::WifiPowerState(enabled));
                                         }
+                                        // The LISTS too, not just the radio
+                                        // power flags. Reported: opening
+                                        // Balise after a few minutes showed
+                                        // an empty "Current network" and a
+                                        // WiFi tile claiming nothing was
+                                        // connected, and only going down
+                                        // into a section and back fixed it.
+                                        //
+                                        // That is exactly this: the QML home
+                                        // page derives its hero card and
+                                        // every tile subtitle from the AP /
+                                        // wired / device lists (see
+                                        // BaliseHome.qml's heroName,
+                                        // connectedWifiAp, activeWiredProfile),
+                                        // but the only commands that ever
+                                        // broadcast those were WifiScan /
+                                        // BtScan / EthList -- all of them
+                                        // second-level actions. So the home
+                                        // page was rendering whatever the
+                                        // last visit to a section had left
+                                        // behind, and nothing at all on a
+                                        // fresh open.
+                                        //
+                                        // These are plain cached reads, NOT
+                                        // scans: no request_scan(), no
+                                        // start_discovery(), no sleep. They
+                                        // return what NetworkManager/BlueZ
+                                        // already know, which is all the
+                                        // home page needs -- it asks which
+                                        // network is CONNECTED, never what
+                                        // else is in range. That is what
+                                        // makes this safe to leave on
+                                        // BaliseState's own poll rather than
+                                        // firing it on open only.
+                                        if let Ok(aps) = rt.block_on(async { nm_inst.access_points().await }) {
+                                            let _ = tx.send_blocking(AppEvent::ScanResult(aps));
+                                        }
+                                        if let Ok(profiles) = rt.block_on(async { nm_inst.wired_profiles().await }) {
+                                            let _ = tx.send_blocking(AppEvent::WiredResult(profiles));
+                                        }
                                     }
                                     if let Some(ref bt_inst) = *bt.lock().unwrap() {
                                         if let Ok(powered) = rt.block_on(async { bt_inst.is_powered().await }) {
                                             let _ = tx.send_blocking(AppEvent::BtPowerState(powered));
+                                        }
+                                        if let Ok(devices) = rt.block_on(async { bt_inst.get_devices().await }) {
+                                            let _ = tx.send_blocking(AppEvent::BtScanResult(devices));
                                         }
                                     }
                                 });

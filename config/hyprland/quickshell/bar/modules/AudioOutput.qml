@@ -79,45 +79,27 @@ Item {
     // "audio routed to the screen's own output") / ph-speaker-high
     readonly property string iconGlyph: root.muted ? ""
         : (root.isHeadphone ? "" : root.isHdmi ? "" : "")
-    // No "%" (asked for, same pass as Battery.qml: "beaucoup plus sobre
-    // et econome") -- the icon right next to it already says what this
-    // number means.
-    readonly property string volumeText: root.muted ? "" : Math.round(root.volume * 100)
-
+    // Icon ONLY -- the numeric level that used to sit before it is gone,
+    // asked for: "puisqu'on a deja ce retour, enleve les valeurs devant
+    // les icones audio output et input". That retour is the OSD (Osd.qml,
+    // bottom-center), which pops up on exactly the gestures that change
+    // this value -- the scroll handler below, and the media keys in
+    // keybinds.lua -- so the permanent readout was spelling out a number
+    // that is only ever looked at in the moment it is already being shown,
+    // larger, somewhere else. The icon still carries what stays true
+    // between those moments: the output route (speaker/headphones/HDMI)
+    // and mute.
+    //
+    // The Row is kept around its single remaining child rather than
+    // anchoring that Text directly, so `label.implicitWidth` above still
+    // measures the same thing and this file stays structurally identical
+    // to AudioInput.qml next to it.
+    //
     // No color rule for #pulseaudio.output in waybar/style.css -- only
     // the glyph changes on mute, color stays plain text.
     Row {
         id: label
         anchors.centerIn: parent
-        spacing: 4
-
-        // Value BEFORE the icon, right-aligned in a slot pinned to a
-        // hidden "100" reference's width -- exactly Battery.qml's own
-        // layout (asked for explicitly: "exactement comme avec
-        // battery"). Right-aligned keeps the digit flush against the
-        // icon at any digit count; any leftover slack for a shorter
-        // value pushes out to the far left of the whole cluster
-        // instead of opening a gap next to the icon.
-        Text {
-            id: valueLabel
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.volumeText
-            visible: root.volumeText !== ""
-            color: "#f2f2f7"
-            font.family: Fonts.ui
-            font.pixelSize: 13
-            width: volumeRef.implicitWidth
-            horizontalAlignment: Text.AlignRight
-        }
-        Text {
-            id: volumeRef
-            visible: false
-            text: "100"
-            font.family: Fonts.ui
-            font.pixelSize: 13
-        }
 
         // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
         // what measured aligned for Phosphor -- see Temperature.qml's

@@ -47,18 +47,26 @@ pub enum ClientCommand {
     BtToggle,
     NightModeToggle,
     Screenshot,
-    /// Re-reads the actual radio power state from NetworkManager/BlueZ and
-    /// re-broadcasts it -- fixes the QML frontend's cached wifiEnabled/
-    /// bluetoothEnabled going stale when the radio is toggled from
-    /// OUTSIDE Balise entirely (a hardware rfkill key, GNOME quick
-    /// settings, another app). The GTK app never had this problem: its
-    /// own `ClientCommand::Show` already calls `trigger_refresh` on every
+    /// Re-reads the current state from NetworkManager/BlueZ and
+    /// re-broadcasts it -- fixes the QML frontend's cached state going
+    /// stale. The GTK app never had this problem: its own
+    /// `ClientCommand::Show` already calls `trigger_refresh` on every
     /// open. QML has no equivalent "just became visible" moment it tells
     /// the daemon about, and reusing `Show` outright would pop the real
     /// GTK window on screen as a side effect -- so this is `Show`'s own
-    /// radio-state half, on its own, safe to call as often as needed
+    /// refresh half, on its own, safe to call as often as needed
     /// (BaliseState.qml polls it on an interval while its drawer is
     /// open, see that file's own header).
+    ///
+    /// Covers BOTH halves of that state: the radio power flags (stale
+    /// when a radio is toggled from outside Balise -- a hardware rfkill
+    /// key, GNOME quick settings, another app) AND the access-point /
+    /// wired-profile / bluetooth-device lists the QML home page reads its
+    /// hero card and tile subtitles from. It shipped as the power flags
+    /// alone, which left that home page showing whatever a previous visit
+    /// to a section list had cached, or nothing at all -- see the handler
+    /// in app/mod.rs for the full story. Still no scanning: every read
+    /// here is a cached one.
     RefreshState,
     // ---- section lists (QML frontend, second slice) -- scan/connect/
     // disconnect only, for an already-existing profile (open network,

@@ -1,4 +1,6 @@
 import QtQuick
+import Qt5Compat.GraphicalEffects
+import ".."
 import "../../theme"
 import "../../services"
 
@@ -211,14 +213,14 @@ Item {
     // ---- header: pinned, like the section lists' own back row -- only
     // the body below it scrolls, so the way out of the page is always
     // reachable no matter how far down an endpoint's metadata runs.
+    // No inset of its own -- see BaliseSectionList.qml's header comment
+    // for why (BaliseHome's `pageArea` already pads every page by 20, and
+    // levels 2/3 were doubling it to 40 while level 1 stayed at 20).
     Item {
         id: headerRow
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
-        anchors.topMargin: 20
         height: 30
 
         Rectangle {
@@ -277,20 +279,35 @@ Item {
         anchors.top: headerRow.bottom
         anchors.bottom: parent.bottom
         anchors.topMargin: 14
-        anchors.bottomMargin: 20
         contentWidth: body.width
         contentHeight: layout.implicitHeight
         boundsBehavior: Flickable.StopAtBounds
         flickDeceleration: 3000
         clip: true
 
+        // Soft edges rather than a hard cut -- see ScrollFadeMask.qml.
+        layer.enabled: true
+        layer.effect: OpacityMask { maskSource: bodyMask }
+
+        // A child of the Flickable for the same reason as BaliseHome's --
+        // this page's Flickable is a Component root, and only the mask's
+        // size is ever read.
+        ScrollFadeMask {
+            id: bodyMask
+            view: body
+            width: body.width
+            height: body.height
+        }
+
         // Explicit x/width rather than anchors: inside a Flickable the
         // children's `parent` is the contentItem, which has no width of
-        // its own to anchor against.
+        // its own to anchor against. x:0/full width now -- the 20px inset
+        // this carried was the horizontal half of the same double padding
+        // (see headerRow above).
         Column {
             id: layout
-            x: 20
-            width: body.width - 40
+            x: 0
+            width: body.width
             spacing: 16
 
         // ---- status card ----

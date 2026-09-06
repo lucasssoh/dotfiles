@@ -10,9 +10,21 @@ import "../services"
 // Pure rendering + two request signals; NotificationState.qml decides
 // what dismiss/action actually do (toast-only hide vs. real dismiss()).
 //
-// Same glass recipe as Osd.qml/BatteryAlert.qml (2-stop vertical
-// Gradient + two GlassRim children) -- see Osd.qml's header for why this
-// is "glass" in look without being real compositor blur. Height is
+// NOT the glass recipe Osd.qml/BatteryAlert.qml use (2-stop vertical
+// Gradient + two GlassRim children, see Osd.qml's header) -- notification
+// cards are deliberately the one flat, matte surface in this bar. Asked
+// for in two steps: first for the toasts alone ("les popups notifs ne
+// doivent pas avoir d'effet metallique"), then for the center's history
+// too ("il faut aussi le même style non metalic dans les notifcenter").
+// The `glass` opt-out property that briefly existed between those two is
+// gone with the second one -- one consumer's exception is worth a knob,
+// both consumers agreeing is just the look.
+//
+// What made it read as brushed metal was the #3f4450 top stop raking to
+// near-black under two specular rims. Flat #1e2128 instead: the drawer
+// pane's own top stop (DrawerIsland.drawerFillTop), so in the center the
+// card is the same material as the pane it sits on, and it stays opaque
+// over that translucent pane (theme/Surfaces.qml's rule). Height is
 // content-driven (body text length varies notification to notification),
 // unlike Osd/BatteryAlert's fixed literal heights -- `layout` below has
 // no bottom anchor, so its implicit height drives `card.height` with no
@@ -35,12 +47,15 @@ Rectangle {
     radius: 16
     height: layout.height + 28
 
-    gradient: Gradient {
-        GradientStop { position: 0.0; color: "#ff3f4450" }
-        GradientStop { position: 1.0; color: "#ff060608" }
-    }
-    GlassRim { cornerRadius: card.radius }
-    GlassRim { cornerRadius: card.radius; lightOrigin: "bottomRight"; strength: 0.45 }
+    // No `gradient` at all now, which is also the only way to actually
+    // get rid of one: Rectangle.gradient is a QJSValue that accepts a
+    // Gradient object or a preset, so assigning `null` to switch a
+    // gradient off is silently dropped -- no warning in quickshell's log
+    // -- and the old gradient keeps painting. That cost a debugging pass
+    // when the matte variant was still a runtime opt-out; the fix then
+    // was two gradient stops collapsing to one colour, and now that both
+    // consumers want matte there is simply no gradient to declare.
+    color: "#ff1e2128"
 
     Column {
         id: layout

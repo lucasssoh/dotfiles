@@ -1,4 +1,6 @@
 import QtQuick
+import Qt5Compat.GraphicalEffects
+import ".."
 import "../../theme"
 
 // Shared shell for the WiFi/Bluetooth/Ethernet section lists. Layout
@@ -46,12 +48,21 @@ Item {
     // that file's own header already documents.
     implicitHeight: 480
 
+    // No inset of its own -- asked for: "reduit les paddings dans les sous
+    // contexte de niveau 2 et niveau 3, ils ne matchent pas l'UI main".
+    // Every page in this drawer is loaded into BaliseHome's `pageArea`,
+    // which ALREADY applies 20px on all four sides; the level-2 and
+    // level-3 pages were each adding their own 20 on top, so their content
+    // sat 40 from the pane edge where the home grid sits at 20 -- the two
+    // levels visibly failed to line up with each other, which is what the
+    // mismatch was. Only the 14px gap below this header survives, since
+    // that is spacing between two blocks rather than padding against an
+    // edge.
     Item {
         id: header
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: 20
         height: 30
 
         Rectangle {
@@ -131,8 +142,6 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: header.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
         anchors.topMargin: 14
         height: root.showMaster ? 54 : 0
         radius: 12
@@ -210,13 +219,18 @@ Item {
         anchors.right: parent.right
         anchors.top: root.showMaster ? masterCard.bottom : header.bottom
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
         anchors.topMargin: 14
-        anchors.bottomMargin: 20
         clip: true
         spacing: 8
         delegate: root.rowDelegate
+
+        // Soft top/bottom edges once the list outruns the pane -- asked
+        // for alongside the notification history's ("dans les notifs et
+        // balise aussi, puisqu'on a scroll, il ne faut pas couper les
+        // elements brutement"). A saturated WiFi scan is the longest list
+        // in this drawer, so this is the one that shows it most.
+        layer.enabled: true
+        layer.effect: OpacityMask { maskSource: listMask }
 
         section.property: root.grouped ? "_group" : ""
         section.criteria: ViewSection.FullString
@@ -277,5 +291,14 @@ Item {
             font.family: Fonts.ui
             font.pixelSize: 13
         }
+    }
+
+    // Size mirrors `listView`; position is irrelevant (see
+    // ScrollFadeMask.qml).
+    ScrollFadeMask {
+        id: listMask
+        view: listView
+        width: listView.width
+        height: listView.height
     }
 }

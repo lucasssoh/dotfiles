@@ -694,21 +694,94 @@ ShellRoot {
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 flushTop: false
-                rowSpacing: 0
+                // ONE gap for the whole row -- asked for: "regularise le
+                // gap entre chaque bloc de module dans tools island". This
+                // was `rowSpacing: 0` plus a hand-tuned `Item` spacer
+                // between each pair, which had drifted to 0 / 6 / 6 / 2 /
+                // 2 / 2 / 2 across the row (three separate tuning passes,
+                // each touching only the cluster it was about). Now the
+                // spacing is structural and cannot drift again: one number
+                // here, and the only Items left in the row are the two
+                // matching end paddings.
+                //
+                // 2, down from the 4 this landed on when the gaps were
+                // first regularized -- the "compact" half of the same
+                // request that unpinned the width below. Not a fresh
+                // guess: 2 is where the right-hand cluster had already
+                // been tuned by hand over three passes ("6 -> 3 -> 2",
+                // "ça consomme trop d'espace"), so it is the one tight
+                // value already validated on this row. It now applies to
+                // the whole row instead of a third of it.
+                rowSpacing: 2
                 twoPhase: false
+                // Snappier stretch+fade than DrawerIsland's defaults --
+                // asked for ("l'animation de elargissement fade se fasse
+                // un peu plus rapidement"), and set HERE, on this island
+                // alone, rather than by lowering the component's own
+                // defaults. centerIsland must keep the feel it has: "il
+                // ne faut pas affecter les animations et effet de
+                // l'island du milieu". It overrides none of these, so it
+                // still runs 320/200/140/260/260/220 exactly as before.
+                //
+                // revealDuration has to stay equal to the `Behavior on
+                // height` of THIS island's entries -- NotificationCenter
+                // .qml and BaliseHome.qml, both 220 to match. Anything
+                // else and the content fade starts mid-stretch.
+                revealDuration: 220
+                contentFadeDuration: 150
+                contentFadeOutDuration: 110
+                panelFadeDuration: 200
+                // twoPhase is false here, so this one only feeds the
+                // plain `Behavior on openProgress` (the row's own rare
+                // width shifts, e.g. BaliseButton's IconSlot); the
+                // narrow leg it would pair with is openSequence's, which
+                // never runs in this mode.
+                widenDuration: 180
                 // Matches METRICS' own Block height exactly (asked for:
                 // closed, this pill was sitting 7px lower than METRICS --
                 // DrawerIsland's 31px default was tuned for centerIsland's
                 // row, not this one).
                 rowHeight: 24
                 fillColor: "#730c0c0e"
-                // Measured from this pill as it stands today (428px
-                // outer, minus DrawerIsland's own 6px margin each side)
-                // -- pinning it here keeps both the pill and the drawer
-                // hanging off it perfectly still while the row's own
-                // content changes width underneath (see
-                // fixedContentWidth's own comment).
-                fixedContentWidth: 416
+                // UNPINNED -- the pill tracks its own content again,
+                // asked for: "j'aimerai que ce soit compact et que ça
+                // s'adapte avec le nombre d'element à l'interieur".
+                //
+                // This deliberately reverses the earlier `fixedContentWidth:
+                // 416` (asked for then as "fixer la largeur pour match la
+                // largeur du modules tools. il ne doit absolument pas
+                // bouger"). That number was measured with every module
+                // showing, so whenever one is not -- the battery is hidden
+                // on this machine unless discharging, which is most of the
+                // time -- the row sat 52px narrower than the shape drawn
+                // around it, and that dead air IS the thing that reads as
+                // not compact.
+                //
+                // What the pin was protecting against is mostly gone
+                // anyway: the two modules whose text changes width
+                // (Battery, and the audio readouts until this same pass
+                // removed them) both size their digits against a hidden
+                // "100" slot, so a percentage going 100 -> 9 no longer
+                // moves anything. What is left is modules appearing or
+                // disappearing outright (battery, the HDR chip), which is
+                // occasional rather than continuous -- and this island is
+                // anchored by its RIGHT edge, so those only ever move the
+                // left one.
+                //
+                // ...and the drawer follows that width, rather than
+                // setting one of its own: "la largeur du tiroir doit
+                // suivre impérativement celle de la barre (pour les
+                // tiroirs à droite)". So the pill measures itself against
+                // its own icons, and the notification center and Balise
+                // open at exactly that width -- both of them size every
+                // section off `parent.width` rather than a literal number,
+                // which is what makes that work (see
+                // NotificationCenter.qml's header).
+                fixedContentWidth: 0
+                // ...and opening must not widen the pill either -- see
+                // DrawerIsland's own comment for why the default would
+                // have added the hidden Battery module's width here.
+                widenOnOpen: false
                 // Translucent panel, opaque cards on top of it -- see
                 // theme/Surfaces.qml for the whole rule. Only TOOLS gets
                 // it: centerIsland's drawers draw bare text with no card
@@ -766,6 +839,9 @@ ShellRoot {
                     // padding, content starts flush at x:0, and
                     // ScriptModule's own centering math wasn't enough to
                     // clear the pill's rounded left edge on its own).
+                    // Equal on both ends now, and the ONLY two spacer
+                    // Items left in this row -- everything between two
+                    // modules is `rowSpacing` above.
                     Item { width: 4; height: 1 }
 
                     // Hdr before the display-layout status now (asked
@@ -793,8 +869,6 @@ ShellRoot {
                         })
                     }
 
-                    Item { width: 6; height: 1 }
-
                     // Network's rate text re-measures its digit count every
                     // 2s (see Network.qml's Timer) -- deliberately NOT
                     // width-animated, so a rate-text change still just
@@ -810,39 +884,31 @@ ShellRoot {
                     // Balise directly, asked for alongside Balise itself
                     // dropping its tab-header concept. The three old
                     // modules are left in the repo, just unreferenced here.
-                    Row {
-                        Modules.AudioOutput {}
-                        Modules.AudioInput {}
-                        Modules.BaliseButton { screen: bar.screen }
-                    }
-
-                    Item { width: 6; height: 1 }
+                    // These three used to sit in a nested `Row` of their
+                    // own, which grouped them visually by gluing them at
+                    // spacing 0 while everything around them had a gap.
+                    // Dissolved into this row: they are three separate
+                    // module blocks like any other, so they take the same
+                    // regular gap. The Row carried no shared property, it
+                    // was only ever the grouping.
+                    Modules.AudioOutput {}
+                    Modules.AudioInput {}
+                    Modules.BaliseButton { screen: bar.screen }
 
                     // Performance profile + power, moved here from the main
                     // bar (were next to notif/clock/workspaces), asked for:
                     // now sit right of connectivity in this pill instead.
                     Modules.Performance {}
 
-                    // 6 -> 3 -> 2: this whole power-profile/battery/
-                    // clock/power cluster read as too spread out (asked
-                    // for twice now, "ça consomme trop d'espace") --
-                    // tightened here and at the same two spots below,
-                    // plus the power dot's own box just after Clock.
-                    Item { width: 2; height: 1 }
-
                     // Moved here from METRICS (asked for): sits between
                     // power-profile and the clock now, grouped with the
                     // other power/status modules instead of CPU/RAM/fan.
                     Modules.Battery {}
 
-                    Item { width: 2; height: 1 }
-
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the
                     // power dot, asked for.
                     Modules.Clock {}
-
-                    Item { width: 2; height: 1 }
 
                     // Notification bell -- moved again (asked for:
                     // "entre clock et power", i.e. the literal power dot
@@ -850,8 +916,6 @@ ShellRoot {
                     // before) -- was leftmost, then next to Hdr, then
                     // between Battery and Clock, before landing here.
                     Modules.NotificationBell { screen: bar.screen }
-
-                    Item { width: 2; height: 1 }
 
                     Item {
                         // 28 -> 20 -> 16: same space-saving pass as the
@@ -884,7 +948,8 @@ ShellRoot {
                         }
                     }
 
-                    Item { width: 2; height: 1 }
+                    // Matches the leading spacer -- see its comment.
+                    Item { width: 4; height: 1 }
                 }
 
             // Gradient edges for the two remaining translucent Blocks.
@@ -950,6 +1015,28 @@ ShellRoot {
             margins.bottom: 48
             implicitWidth: osd.width
             implicitHeight: osd.height
+
+            // Input region, not paint state -- the same fix
+            // batteryAlertWindow above already carries, missed here on
+            // that pass and reported live for the volume/brightness
+            // popup ("même soucis d'invisibilité superficielle sur les
+            // retour scroll de luminosité et de volume en bas au
+            // milieu"). Osd.qml hides with `opacity: 0`, which leaves
+            // the card at its full 280x92, and `implicitWidth/Height`
+            // above read that size whether or not anything is showing --
+            // so an unmasked layer surface was taking input across a
+            // permanent invisible rectangle at bottom-center, 48px up.
+            //
+            // ALWAYS empty here, where the battery alert's own mask is
+            // merely empty-while-hidden: that card is click-to-dismiss
+            // and so needs input while it shows, but the OSD is a pure
+            // readout -- no MouseArea, no handler anywhere in Osd.qml,
+            // it auto-hides on OsdState's own timer. And a popup that
+            // appears BECAUSE you are scrolling a volume/brightness key
+            // is the worst possible thing to have swallow the next
+            // click. It keeps its size either way, so the show/hide
+            // fade+scale is untouched.
+            mask: Region { width: 0; height: 0 }
 
             Modules.Osd { id: osd }
         }
@@ -1047,10 +1134,33 @@ ShellRoot {
             // gaps/border aren't queryable from here -- so if gaps_out,
             // border_size or the bar's height change, these follow.
             margins { top: 46; left: 20 }
-            implicitWidth: toastStack.width
-            implicitHeight: toastStack.height
 
-            Modules.NotificationToast { id: toastStack }
+            // FIXED size, where this used to track the stack's own height.
+            // A card leaving now animates for 180ms AFTER its model row is
+            // gone (see NotificationToast.qml's `remove` transition), and
+            // the stack's contentHeight drops the instant that row goes --
+            // so a surface sized off it would shrink out from under the
+            // very animation it is meant to be showing, guillotining the
+            // bottom card mid-exit. Tall enough for maxToasts (4) cards at
+            // their realistic worst (two body lines plus an action row).
+            implicitWidth: toastStack.cardWidth
+            implicitHeight: 640
+
+            // ...which then has to be masked, or that fixed 640x340 of
+            // mostly-empty transparent surface would eat clicks meant for
+            // the window underneath. Same input-region trick as
+            // batteryAlertWindow above: the region covers only what the
+            // stack currently fills, and collapses to nothing (fully
+            // click-through) when there are no toasts at all.
+            mask: Region {
+                width: toastStack.cardWidth
+                height: toastStack.contentHeight
+            }
+
+            Modules.NotificationToast {
+                id: toastStack
+                anchors.fill: parent
+            }
         }
     }
 

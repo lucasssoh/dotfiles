@@ -89,7 +89,37 @@ Item {
     // height instead, or its closed pill visibly sits lower/taller than
     // METRICS right next to it.
     property int rowHeight: 31
-    readonly property int revealDuration: 320
+    // ---- reveal timings ----
+    // Every default below is centerIsland's ORIGINAL value, and
+    // centerIsland must keep getting exactly those: asked for explicitly
+    // after a previous pass generalized this component and silently
+    // dragged the middle island along with TOOLS ("il ne faut pas
+    // affecter les animations et effet de l'island du milieu, les autres
+    // sessions ont factorisé celui-ci avec les autres alors que je ne
+    // voulais pas ça"). Being a shared component is not license to give
+    // the two islands one shared feel -- the sharing is of MECHANICS,
+    // and every number that makes up the feel is a knob the consumer
+    // sets. toolsIsland overrides these in shell.qml; centerIsland
+    // overrides nothing and is therefore untouched by anything here.
+    //
+    // `revealDuration` doubles as the PauseAnimation both open sequences
+    // wait out before fading content in, so it MUST stay equal to the
+    // duration of the `Behavior on height` of THAT island's own entries
+    // (centerIsland: VeilleDrawerContent/KeybindsDrawerContent, both
+    // 320; toolsIsland: NotificationCenter/BaliseHome, both 220). Lower
+    // one without the other and the fade starts while the pane is still
+    // stretching -- exactly the lockstep the staged reveal exists to
+    // avoid.
+    property int revealDuration: 320
+    // How long the content fade itself takes, once the stretch is done,
+    // and how long it takes to fade back out on close.
+    property int contentFadeDuration: 200
+    property int contentFadeOutDuration: 140
+    // The drawer PANEL's own fade (opaqueProgress below), and the width
+    // phase's two legs (twoPhase: true only -- see openSequence).
+    property int panelFadeDuration: 260
+    property int widenDuration: 260
+    property int narrowDuration: 220
     // Breathing room between the row and the drawer block below it --
     // asked for explicitly ("ajoute un espace entre les tools et la
     // ligne"), now that the two are independent blocks rather than one
@@ -136,6 +166,43 @@ Item {
     // value, where clipping icons would be worse than a rare nudge.
     property int fixedContentWidth: 0
 
+    // The width arrow points ONE way, and it points from the row down into
+    // the drawer: the Instantiator at the bottom of this file forces every
+    // entry to `effectiveWidth`, and entries are expected to reflow into
+    // whatever that turns out to be. Asked for: "la largeur du tiroir doit
+    // suivre impérativement celle de la barre (pour les tiroirs à droite)".
+    //
+    // A `drawerDrivesWidth` opt-in briefly did the reverse here (an entry
+    // declaring its own implicitWidth, the island stretching sideways to
+    // host it). It is gone: with the TOOLS pill now sized to its own icons,
+    // a drawer that set its own width would have made the island snap to a
+    // different shape on open, which is exactly what pinning and then
+    // unpinning that pill was working to get rid of.
+
+    // Whether opening widens the island to `maxRowWidth` first.
+    //
+    // TRUE (centerIsland) is the original behaviour and the reason
+    // maxRowWidth exists: its row holds genuinely variable content
+    // (ActiveWindow's title, Media's marquee), so the drawer widens to a
+    // fixed floor before revealing, and that floor deliberately counts
+    // items that are not currently visible -- Media when nothing is
+    // playing -- so the island does not resize when playback starts under
+    // an open drawer.
+    //
+    // FALSE (toolsIsland) because that same "count everything" is wrong
+    // for a pill that is supposed to hug its icons: `maxRowWidth` sums
+    // every child's implicitWidth regardless of `visible`, so the hidden
+    // Battery module was still in the total and opening a drawer widened
+    // the pill by its 42px out of nowhere. That went unnoticed while the
+    // row was pinned at a fixed 416 (the pin swallowed it); unpinning
+    // made it visible. Measured: 356 closed, 398 open, for a row whose
+    // content never changed.
+    //
+    // Fixed here rather than by teaching maxRowWidth to skip invisible
+    // children, which would silently change centerIsland's floor -- the
+    // one thing it must keep.
+    property bool widenOnOpen: true
+
     // The row and the drawer are two independent blocks, not one shape
     // that grows taller -- asked for explicitly after the first fade
     // pass merged them into one continuous fill ("laisser le bloc tools
@@ -155,7 +222,9 @@ Item {
     // What must NOT fade in with it is the panel's CONTENT -- that's
     // `contentProgress` below, a separate phase.
     property real opaqueProgress: root.anyOpen ? 1 : 0
-    Behavior on opaqueProgress { NumberAnimation { duration: 260; easing.type: Easing.InOutCubic } }
+    Behavior on opaqueProgress {
+        NumberAnimation { duration: root.panelFadeDuration; easing.type: Easing.InOutCubic }
+    }
 
     // 0 = drawer contents invisible, 1 = fully revealed. A SEPARATE
     // phase from opaqueProgress above, asked for explicitly: "S'etire
@@ -172,8 +241,6 @@ Item {
     // no sequence at all, which is why an earlier attempt at this that
     // only touched openSequence/closeSequence changed nothing there.
     property real contentProgress: 0
-    // How long the content fade itself takes, once the stretch is done.
-    readonly property int contentFadeDuration: 200
 
     // centerIsland's own row holds genuinely variable-width content
     // (ActiveWindow's title, Media's marquee) -- widening to the fixed
@@ -297,8 +364,11 @@ Item {
     readonly property real effectiveWidth: {
         if (root.fixedContentWidth > 0)
             return Math.max(root.fixedContentWidth, topRow.implicitWidth);
+        // `widenOnOpen: false` collapses the open-time term to zero, so
+        // the island is simply its row, open or closed.
+        const target = root.widenOnOpen ? root.maxRowWidth : topRow.implicitWidth;
         const raw = topRow.implicitWidth
-            + root.openProgress * Math.max(0, root.maxRowWidth - topRow.implicitWidth);
+            + root.openProgress * Math.max(0, target - topRow.implicitWidth);
         return Math.round(raw / 2) * 2;
     }
 
@@ -341,7 +411,7 @@ Item {
             target: root
             property: "openProgress"
             to: 1
-            duration: 260
+            duration: root.widenDuration
             easing.type: Easing.InOutCubic
         }
         // 2. Once wide, release the entries' height bindings -- they
@@ -367,7 +437,7 @@ Item {
             target: root
             property: "contentProgress"
             to: 0
-            duration: 140
+            duration: root.contentFadeOutDuration
             easing.type: Easing.OutCubic
         }
         // 2. Then collapse the content's height
@@ -379,7 +449,7 @@ Item {
             target: root
             property: "openProgress"
             to: 0
-            duration: 220
+            duration: root.narrowDuration
             easing.type: Easing.InOutCubic
         }
     }
@@ -402,7 +472,7 @@ Item {
     }
     Behavior on openProgress {
         enabled: !root.twoPhase
-        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+        NumberAnimation { duration: root.widenDuration; easing.type: Easing.InOutCubic }
     }
     // ...but the CONTENT reveal is still sequenced even here. There is
     // no width phase to wait on in this mode (TOOLS pins
@@ -432,7 +502,7 @@ Item {
             target: root
             property: "contentProgress"
             to: 0
-            duration: 140
+            duration: root.contentFadeOutDuration
             easing.type: Easing.OutCubic
         }
         ScriptAction { script: root.expanded = false }

@@ -1,4 +1,5 @@
 import QtQuick
+import Qt5Compat.GraphicalEffects
 import Quickshell.Services.Mpris
 import "../theme"
 import "../services"
@@ -68,7 +69,9 @@ Item {
     // than paying out the freed space as extra empty pane under "No
     // notifications".
     implicitHeight: 544
-    Behavior on height { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
+    // Kept equal to DrawerIsland's `revealDuration` -- see the comment
+    // there; the island waits out exactly this long before fading content in.
+    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
 
     // Same playerctld blacklist Media.qml's own mpris widget applies
     // (that file's header: "same blacklist swaync/config.json already
@@ -264,6 +267,38 @@ Item {
             onActionRequested: (action) => NotificationState.invokeAction(notification, action)
         }
 
+        // Leaves to the RIGHT -- asked for, and the opposite of the
+        // toasts' own exit ("pour popup il repart vers la gauche, pour les
+        // notifcenter, il repart vers la droite"), which is the direction
+        // each one arrived from in the first place: toasts slide in from
+        // the screen's left edge, history cards belong to a pane on the
+        // right of the bar.
+        //
+        // A ListView, unlike the Column the toasts used to be, keeps a
+        // removed delegate alive for the duration of this transition
+        // instead of destroying it with its model row -- that is the whole
+        // reason an exit animation is possible here at all. `InCubic`
+        // (accelerating away) rather than the OutCubic used on arrivals:
+        // the card should look like it is being flicked off, not easing to
+        // a stop somewhere off-pane.
+        remove: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "x"; to: list.width; duration: 180; easing.type: Easing.InCubic }
+                NumberAnimation { property: "opacity"; to: 0; duration: 180 }
+            }
+        }
+        // The cards below a dismissed one closing the gap. Kept slightly
+        // shorter than the exit itself so the list has already settled by
+        // the time the next one in a Clear-all cascade starts leaving.
+        removeDisplaced: Transition {
+            NumberAnimation { properties: "y"; duration: 160; easing.type: Easing.OutCubic }
+        }
+
+        // Soft edges instead of a hard cut wherever the history is taller
+        // than the pane -- see ScrollFadeMask.qml.
+        layer.enabled: true
+        layer.effect: OpacityMask { maskSource: listMask }
+
         Text {
             anchors.centerIn: parent
             visible: list.count === 0
@@ -274,5 +309,15 @@ Item {
             font.family: Fonts.ui
             font.pixelSize: 13
         }
+    }
+
+    // Size mirrors `list` exactly; position is irrelevant (see
+    // ScrollFadeMask.qml -- this is consumed as a texture, never drawn
+    // where it sits).
+    ScrollFadeMask {
+        id: listMask
+        view: list
+        width: list.width
+        height: list.height
     }
 }

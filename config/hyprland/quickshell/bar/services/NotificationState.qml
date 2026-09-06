@@ -83,11 +83,27 @@ Singleton {
     }
 
     // ---- toasts ----
-    // {id, notification, expiresAt} entries, newest last. expiresAt: 0
-    // means "never auto-hide" (critical urgency). Capped purely as a
-    // render/height concern -- the cap never drops anything from
-    // trackedNotifications, only from this presentation list.
-    property var toastQueue: []
+    // {notifId, notification, expiresAt} rows, newest FIRST (that is also
+    // the on-screen order, so nothing has to reverse this to render it).
+    // expiresAt: 0 means "never auto-hide" (critical urgency). Capped
+    // purely as a render/height concern -- the cap never drops anything
+    // from trackedNotifications, only from this presentation list.
+    //
+    // A ListModel, not the plain JS array this used to be. A JS array is
+    // not a diffable model: any change to it resets the view wholesale, so
+    // every delegate was destroyed and rebuilt on every arrival and every
+    // expiry. That silently rules out ANY enter/exit animation (a
+    // destroyed delegate cannot animate its own departure) and made the
+    // arrival slide fire on the whole stack rather than the new card. With
+    // a ListModel the view sees real insert/remove operations and can run
+    // NotificationToast.qml's own add/remove Transitions on exactly the
+    // row that changed.
+    //
+    // `dynamicRoles` because one of the roles is the Notification QObject
+    // itself; static roles infer their type from the first row inserted
+    // and do not hold object references.
+    ListModel { id: toastModel; dynamicRoles: true }
+    readonly property alias toasts: toastModel
     readonly property int maxToasts: 4
 
     // swaync/config.json's own timeout / timeout-low / timeout-critical,
@@ -96,7 +112,16 @@ Singleton {
     // own hard override, not a guess about what the sender meant.
     function _timeoutFor(n) {
         if (n.urgency === NotificationUrgency.Critical) return 0;
-        if (n.expireTimeout >= 0) return n.expireTimeout * 1000;
+        // MILLISECONDS, straight through -- this used to be
+        // `expireTimeout * 1000`, which silently made any sender that
+        // asks for its own timeout immortal: `notify-send -t 2000` was
+        // landing 2000 SECONDS out (measured: expiresAt - now = 1999455ms
+        // for a 2s request). It went unnoticed because notify-send's
+        // default is -1, which takes the urgency branch below instead, so
+        // ordinary notifications expired correctly the whole time. 0 is
+        // still "never expire" here, which is also what the spec means by
+        // it, so `>= 0` stays.
+        if (n.expireTimeout >= 0) return n.expireTimeout;
         return n.urgency === NotificationUrgency.Low ? 4000 : 6000;
     }
 
@@ -117,25 +142,42 @@ Singleton {
         //       && BatteryAlertState.battPercent <= BatteryAlertState.tiers[0]) return;
 
         const timeout = root._timeoutFor(n);
-        root.toastQueue = root.toastQueue
-            .concat([{ id: n.id, notification: n, expiresAt: timeout > 0 ? Date.now() + timeout : 0 }])
-            .slice(-root.maxToasts);
+        // Inserted at the front, and the cap trims from the BACK -- newest
+        // first in the model is also newest on top on screen.
+        toastModel.insert(0, {
+            notifId: n.id,
+            notification: n,
+            expiresAt: timeout > 0 ? Date.now() + timeout : 0
+        });
+        while (toastModel.count > root.maxToasts) toastModel.remove(toastModel.count - 1);
+    }
+
+    function _toastIndex(id) {
+        for (let i = 0; i < toastModel.count; i++) {
+            if (toastModel.get(i).notifId === id) return i;
+        }
+        return -1;
     }
 
     function _removeToast(id) {
-        root.toastQueue = root.toastQueue.filter((e) => e.id !== id);
+        const i = root._toastIndex(id);
+        if (i >= 0) toastModel.remove(i);
     }
 
     // One shared re-checking Timer rather than one Timer per notification
-    // -- simplest way to expire entries out of a plain JS array for the
-    // handful of concurrent toasts this ever sees.
+    // -- simplest way to expire rows for the handful of concurrent toasts
+    // this ever sees. Backwards so removing a row cannot shift one that
+    // has not been examined yet out from under the loop.
     Timer {
         interval: 250
         repeat: true
-        running: root.toastQueue.length > 0
+        running: toastModel.count > 0
         onTriggered: {
             const now = Date.now();
-            root.toastQueue = root.toastQueue.filter((e) => e.expiresAt === 0 || e.expiresAt > now);
+            for (let i = toastModel.count - 1; i >= 0; i--) {
+                const e = toastModel.get(i).expiresAt;
+                if (e !== 0 && e <= now) toastModel.remove(i);
+            }
         }
     }
 
@@ -153,9 +195,56 @@ Singleton {
         notification.dismiss();
     }
 
+    // Clear-all as a CASCADE rather than one bulk wipe -- asked for: "en
+    // clear all il faut un petit effet escalier pour qu'il se degage une à
+    // une même ultra rapidement, je veux garder le système reactif".
+    //
+    // The staircase is not animated here at all: dismissing one
+    // notification per tick is enough, because each removal independently
+    // fires NotificationCenter.qml's own `remove` transition, so the cards
+    // peel off to the right one after another on their own. Doing it this
+    // way rather than staggering delays inside the view is also what keeps
+    // it interruptible -- see below.
+    //
+    // 45ms is deliberately shorter than the 180ms exit itself, so the
+    // cards overlap in flight (a cascade, not a queue of separate
+    // departures): ten notifications are fully gone in under half a
+    // second. Nothing blocks meanwhile -- this is a Timer, not a loop, so
+    // the drawer stays live and a notification arriving mid-cascade is
+    // simply not part of the batch.
+    property int clearStagger: 45
+    property var _clearBatch: []
+
     function clearAll() {
-        const all = server.trackedNotifications.values.slice();
-        for (const n of all) root.dismissForever(n);
+        if (server.trackedNotifications.values.length === 0) return;
+        // Snapshotted, and in `values` order -- oldest first, which is
+        // also top-to-bottom on screen, so the cascade runs down the list
+        // the way it is read.
+        root._clearBatch = server.trackedNotifications.values.slice();
+        root._clearStep();       // first card leaves immediately, no lead-in delay
+        clearTimer.restart();
+    }
+
+    function _clearStep() {
+        while (root._clearBatch.length > 0) {
+            const n = root._clearBatch.shift();
+            // Skip anything that went away on its own since the snapshot
+            // (the sending app closed it, or the user beat the cascade to
+            // it) -- dismiss() on an already-destroyed Notification would
+            // throw and strand the rest of the batch.
+            if (server.trackedNotifications.values.indexOf(n) >= 0) {
+                root.dismissForever(n);
+                return;
+            }
+        }
+        clearTimer.stop();
+    }
+
+    Timer {
+        id: clearTimer
+        interval: root.clearStagger
+        repeat: true
+        onTriggered: root._clearStep()
     }
 
     // hide-on-action: true (swaync's own default, ported) -- an invoked

@@ -1,4 +1,6 @@
 import QtQuick
+import Qt5Compat.GraphicalEffects
+import ".."
 import "../../theme"
 import "../../services"
 
@@ -66,7 +68,7 @@ Item {
     // page had been left behind.
     //
     // Done on OPEN rather than on close on purpose: the drawer still
-    // takes this file's own 320ms `Behavior on height` to retract, and
+    // takes this file's own `Behavior on height` to retract, and
     // resetting during that would swap the Loader back to the home grid
     // mid-collapse (a visible content jump). Here the reset happens
     // while the height is still 0, DrawerIsland's own height Binding
@@ -224,7 +226,8 @@ Item {
     // this Item's height between 0 and `pageHeight` -- i.e. the drawer
     // reveal for Balise itself, the notification center's own entry
     // being the other one on the same island.
-    Behavior on height { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
+    // Kept equal to DrawerIsland's `revealDuration` -- see the comment there.
+    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
 
     // Airplane mode has no single backend flag -- computed the same way
     // ui/home.rs's own refresh_airplane does: both radios off.
@@ -600,6 +603,27 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             flickDeceleration: 3000
             clip: true
+
+            // Soft edges rather than a hard cut, same as the section
+            // lists' and the notification history's. The grid usually
+            // fits, and ScrollFadeMask draws nothing at an end it cannot
+            // scroll toward, so on a tall island this costs a layer and
+            // shows no fade at all.
+            layer.enabled: true
+            layer.effect: OpacityMask { maskSource: homeMask }
+
+            // Declared as a CHILD of the Flickable (so it lands in its
+            // contentItem) purely because this page's root IS the
+            // Flickable -- a Component has no sibling slot. Harmless:
+            // only the mask's size is read, it is never drawn in the
+            // scene, and it is outside homeColumn so it adds nothing to
+            // the content height either.
+            ScrollFadeMask {
+                id: homeMask
+                view: homeFlick
+                width: homeFlick.width
+                height: homeFlick.height
+            }
 
             // What sizes the whole panel -- see root.homeContentHeight.
             Binding {
