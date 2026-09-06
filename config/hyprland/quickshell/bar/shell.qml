@@ -799,6 +799,16 @@ ShellRoot {
                 // DrawerIsland's own comment for why the default would
                 // have added the hidden Battery module's width here.
                 widenOnOpen: false
+                // The drawer is its OWN block here, below the pill and
+                // separated from it by a gap -- asked for ("laisser le
+                // bloc tools intact... le tiroir est un bloc à part").
+                // Set on this island alone: centerIsland keeps the
+                // original single-shape behaviour where the island
+                // itself just extends, in its own colour ("il ne doit
+                // pas partir d'une ligne imaginaire mais directement
+                // c'est l'island qui s'etend (comme avant) et avec ses
+                // couleurs").
+                splitDrawer: true
                 // Translucent panel, opaque cards on top of it -- see
                 // theme/Surfaces.qml for the whole rule. Only TOOLS gets
                 // it: centerIsland's drawers draw bare text with no card

@@ -129,7 +129,12 @@ Item {
     // Scaled by opaqueProgress like drawerFill itself, so it opens and
     // closes with it instead of permanently adding dead space to the
     // closed pill's own height.
-    readonly property int drawerGap: 8
+    //
+    // Zero unless the drawer is its own block: with `splitDrawer: false`
+    // there are no two blocks to separate in the first place, the island
+    // is one continuous shape, and any gap here would just be a band of
+    // its own fill nothing is ever drawn into.
+    readonly property int drawerGap: root.splitDrawer ? 8 : 0
 
     // Visual chrome, generalized for a second consumer with a different
     // look (TOOLS' own floating pane, unlike centerIsland which is flush
@@ -145,13 +150,41 @@ Item {
     property color fillColor: "#000000"
     property Gradient fillGradient: null
 
+    // Whether the drawer is a SEPARATE block sitting under the row, or
+    // simply the island itself getting taller.
+    //
+    // FALSE (centerIsland, the default) is the original behaviour and
+    // the one it must keep: ONE shape, `fill` spanning the whole island,
+    // its own colour, growing downward as the drawer opens -- "il ne
+    // doit pas partir d'une ligne imaginaire mais directement c'est
+    // l'island qui s'etend (comme avant) et avec ses couleurs". No gap,
+    // no second pane, no second fill: the row's pill just becomes taller
+    // and the drawer's content is drawn straight onto it. This is why
+    // the drawer entries here (Veille's clock, the keybinds sheet) can
+    // draw bare text with no card behind them.
+    //
+    // TRUE (toolsIsland) is the two-block look asked for there ("laisser
+    // le bloc tools intact... le tiroir est un bloc à part"): the row's
+    // pill keeps a fixed height and its own shape, and `drawerFill`
+    // below is a wholly separate rounded pane that fades/grows in under
+    // it across `drawerGap`, hosting opaque cards (notifications,
+    // Balise).
+    //
+    // A previous pass made the two-block look unconditional, which
+    // dragged centerIsland into a look that was never meant for it --
+    // the same mistake the timing knobs above already document. Sharing
+    // MECHANICS is not sharing the look: every visual difference between
+    // the two islands is a knob the consumer sets.
+    property bool splitDrawer: false
+
     // The drawer block's own fill. Overridable per consumer because the
     // two islands want opposite things: TOOLS' drawers (Balise, the
     // notification center) put opaque cards on it and can therefore
     // afford a translucent panel, while centerIsland's drawers (Veille's
     // clock, the keybinds sheet) draw bare text straight onto it, where
-    // translucency would eat legibility. Defaults reproduce the opaque
-    // look both had before, so centerIsland is untouched.
+    // translucency would eat legibility. Read only when `splitDrawer` is
+    // true -- centerIsland has no second pane to colour, its drawer IS
+    // the island's own `fillColor`.
     property color drawerFillTop: "#ff1e2128"
     property color drawerFillBottom: "#ff060608"
 
@@ -203,8 +236,10 @@ Item {
     // one thing it must keep.
     property bool widenOnOpen: true
 
-    // The row and the drawer are two independent blocks, not one shape
-    // that grows taller -- asked for explicitly after the first fade
+    // In the SPLIT look only (`splitDrawer: true`, TOOLS -- centerIsland
+    // is one shape that grows taller and none of the paragraph below
+    // applies to it), the row and the drawer are two independent blocks
+    // -- asked for explicitly after the first fade
     // pass merged them into one continuous fill ("laisser le bloc tools
     // intact... le tiroir est un bloc à part"): the row's own `fill`
     // below stays exactly as it always was (fixed height, its usual
@@ -542,16 +577,22 @@ Item {
     // square), rounded at the bottom regardless of whether a drawer is
     // open below it. Non-flush consumers (TOOLS) get all 4 corners
     // rounded instead, same as Block.qml's own flushTop gating.
-    // Fixed height (just the row), not anchors.fill: parent -- this is
-    // the row's OWN pill, complete and unaffected on its own regardless
-    // of anyOpen (see opaqueProgress's header above); `drawerFill` below
-    // is the separate block that actually reacts.
+    // Height depends on which look this island is in (see `splitDrawer`):
+    //   - splitDrawer FALSE (centerIsland): the WHOLE island, row and
+    //     open drawer together, exactly as it always was -- one shape in
+    //     one colour that simply gets taller. Everything hung off `fill`
+    //     below (the GlassRim, the gloss) follows it down automatically,
+    //     so the rim stays on the real bottom edge of the extended
+    //     island rather than stranded at the row's own.
+    //   - splitDrawer TRUE (toolsIsland): just the row, fixed, complete
+    //     and unaffected by anyOpen (see opaqueProgress's header above);
+    //     `drawerFill` below is the separate block that reacts.
     Rectangle {
         id: fill
         x: 0
         y: 0
         width: parent.width
-        height: root.rowHeight
+        height: root.splitDrawer ? root.rowHeight : root.height
         topLeftRadius: root.flushTop ? 0 : root.cornerRadius
         topRightRadius: root.flushTop ? 0 : root.cornerRadius
         bottomLeftRadius: root.cornerRadius
@@ -668,8 +709,13 @@ Item {
     // own content sits inset by that same margin within THIS block, so
     // the two panes' outer edges line up while each still insets its
     // content identically.
+    // Only exists in the split look -- with `splitDrawer: false` the
+    // island's own `fill` above already spans the drawer, in the
+    // island's own colour, and a second pane on top of it would be
+    // precisely the separate block centerIsland must not have.
     Rectangle {
         id: drawerFill
+        visible: root.splitDrawer
         x: 0
         y: root.rowHeight + root.drawerGap * root.opaqueProgress
         width: parent.width
