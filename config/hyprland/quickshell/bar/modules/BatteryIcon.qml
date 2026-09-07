@@ -1,5 +1,4 @@
 import QtQuick
-import "../theme"
 
 // Custom-drawn battery glyph -- a rounded-rect OUTLINE with a small
 // terminal nub on the right (the classic iOS/macOS system battery icon:
@@ -27,11 +26,17 @@ Item {
     property color outlineColor: "#f2f2f7"
     property color fillColor: "#f2f2f7"
     property real outlineOpacity: 0.7
-    // Overlays a pulsing bolt when true -- ph-lightning (0xe2de), the
-    // SAME glyph/color (#ffcc00) Performance.qml already uses for its
-    // own "performance" power-profile state, reused verbatim rather
-    // than picking a new charging color out of nowhere.
+    // Overlays a static '+' when true (see the overlay below) -- two
+    // Rectangles, not the ph-lightning glyph earlier passes drew here:
+    // at the 20x10 the bar renders this at, the bolt's diagonals never
+    // resolved into a bolt, they just muddied the fill.
     property bool charging: false
+    // The '+' is drawn TWICE in two colors, split on the fill's own box
+    // (see the overlay below): dark where it lies on the filled part,
+    // battery-colored where it lies on the empty part -- neither color
+    // survives both backgrounds, and the split moves with the charge.
+    property color plusOnFill: "#3a3a3c"
+    property color plusOnEmpty: root.fillColor
 
     implicitWidth: 22
     implicitHeight: 11
@@ -40,6 +45,23 @@ Item {
     readonly property real nubHeight: height * 0.5
     readonly property real bodyWidth: width - nubWidth - 1
     readonly property real borderWidth: Math.max(1, height * 0.14)
+
+    // Fill geometry, hoisted to root because the '+' overlay below has
+    // to clip itself to exactly this box. `fillInset` is derived from
+    // `root.height`, NOT from the fill Rectangle's own height -- that
+    // would be a binding loop (height depends on inset, inset would
+    // depend on height).
+    readonly property real fillInset: borderWidth + Math.max(1, height * 0.15)
+    readonly property real fillWidth: Math.max(0, (bodyWidth - fillInset * 2)
+        * Math.max(0, Math.min(1, percent / 100)))
+
+    // Shared by both copies of the '+' so they cannot drift apart. The
+    // arm is sized to the fill's own inner height so the mark can sit
+    // entirely INSIDE the fill: any taller and its top/bottom tips poke
+    // out past a full fill and stay light, which reads as debris rather
+    // than as a mark.
+    readonly property real plusArm: Math.max(2, (height - fillInset * 2) * 0.95)
+    readonly property real plusThickness: Math.max(1, height * 0.16)
 
     // Body outline -- border only, transparent inside, so the fill
     // Rectangle below shows through instead of sitting on top of a
@@ -69,45 +91,82 @@ Item {
     }
 
     // Proportional fill, inset from the outline's own border so it never
-    // overlaps or visually thickens it. `inset` is derived from
-    // `root.height`, NOT this Rectangle's own `height` below -- that
-    // would be a binding loop (height depends on inset, inset would
-    // depend on height).
+    // overlaps or visually thickens it (geometry lives on root above).
     Rectangle {
-        readonly property real inset: root.borderWidth + Math.max(1, root.height * 0.15)
-        x: inset
-        y: inset
-        width: Math.max(0, (root.bodyWidth - inset * 2) * Math.max(0, Math.min(1, root.percent / 100)))
-        height: root.height - inset * 2
-        radius: Math.max(0, body.radius - inset)
+        x: root.fillInset
+        y: root.fillInset
+        width: root.fillWidth
+        height: root.height - root.fillInset * 2
+        radius: Math.max(0, body.radius - root.fillInset)
         color: root.fillColor
     }
 
-    // Pulsing bolt overlay, centered over the whole glyph (body + fill)
-    // -- same convention as macOS/phone battery icons showing a bolt
-    // through the outline when plugged in, rather than a separate badge
-    // off to the side (no room for one at this icon's usual sizes
-    // anyway). The pulse (not a static bolt) is what actually reads as
-    // "charging in progress" rather than "charging icon exists". White,
-    // not Performance.qml's own yellow (#ffcc00, the first pass here) --
-    // asked back to white once seen against the light green the
-    // outline/fill also turn while charging (Battery.qml's own
-    // isCharging branch): yellow-on-green read worse than white-on-green
-    // does.
-    Text {
+    // Charging mark: a plain '+', centered on the BODY rather than on
+    // this Item -- the icon is NOT symmetric (the terminal nub eats
+    // `nubWidth + 1` on the right), so centering on root's own width
+    // pushes the mark visibly right of where the battery reads as
+    // centered. Both copies below are laid out against the body box for
+    // exactly that reason.
+    //
+    // A single color does not work here, because the mark straddles two
+    // backgrounds whose split MOVES with the charge: the light fill
+    // wherever the battery is filled, the empty body everywhere else.
+    // Dark grey disappears on the empty side, the battery color
+    // disappears on the fill. So the same mark is drawn twice: once in
+    // full in the battery color, then again in dark on top, clipped to
+    // exactly the fill Rectangle's box. Whatever the fill covers is
+    // dark, everything else keeps the battery color, and the seam is the
+    // fill's own edge -- so it reads as the fill passing behind the
+    // mark, not as two marks.
+    //
+    // Overdraw, not two complementary clips, because the mark is taller
+    // than the fill box: the arms that overshoot it vertically have to
+    // stay light too, and here they do for free.
+    component ChargePlus: Item {
+        property color barColor: "#000000"
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: root.plusArm
+            height: root.plusThickness
+            color: parent.barColor
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: root.plusThickness
+            height: root.plusArm
+            color: parent.barColor
+        }
+    }
+
+    ChargePlus {
         visible: root.charging
-        anchors.centerIn: parent
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: ""
-        color: "#f2f2f7"
-        font.family: Fonts.iconPhosphorBold
-        font.pixelSize: root.height * 0.95
-        SequentialAnimation on opacity {
-            running: root.charging
-            loops: Animation.Infinite
-            NumberAnimation { from: 1.0; to: 0.35; duration: 700; easing.type: Easing.InOutQuad }
-            NumberAnimation { from: 0.35; to: 1.0; duration: 700; easing.type: Easing.InOutQuad }
+        x: 0
+        y: 0
+        width: root.bodyWidth
+        height: root.height
+        barColor: root.plusOnEmpty
+    }
+
+    // Dark copy, clipped to the fill. Its ChargePlus is laid out against
+    // the same body box and merely shifted back by the clipper's own
+    // position, so the two copies stay pixel-aligned however the fill
+    // edge falls across them.
+    Item {
+        visible: root.charging
+        x: root.fillInset
+        y: root.fillInset
+        width: root.fillWidth
+        height: root.height - root.fillInset * 2
+        clip: true
+
+        ChargePlus {
+            x: -root.fillInset
+            y: -root.fillInset
+            width: root.bodyWidth
+            height: root.height
+            barColor: root.plusOnFill
         }
     }
 }
