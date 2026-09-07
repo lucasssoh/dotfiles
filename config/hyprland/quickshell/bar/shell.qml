@@ -935,8 +935,17 @@ ShellRoot {
                     // module blocks like any other, so they take the same
                     // regular gap. The Row carried no shared property, it
                     // was only ever the grouping.
-                    Modules.AudioOutput {}
-                    Modules.AudioInput {}
+                    //
+                    // These two are the only bare glyphs in the row --
+                    // every other block draws its own border/badge and so
+                    // carries ~6px of internal padding before its edge.
+                    // At `rowSpacing: 2` that made headphones/mic sit
+                    // visibly tighter against [display] and [balise] than
+                    // those two sit against each other. The pad is on the
+                    // OUTER side of each only, so the pair still reads as
+                    // a pair -- see AudioOutput.qml's own note.
+                    Modules.AudioOutput { leadingPad: 5 }
+                    Modules.AudioInput { trailingPad: 5 }
                     Modules.BaliseButton { screen: bar.screen }
 
                     // Performance profile + power, moved here from the main

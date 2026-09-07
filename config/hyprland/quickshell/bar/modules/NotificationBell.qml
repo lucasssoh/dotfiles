@@ -40,7 +40,16 @@ Item {
     readonly property bool hasUnseen: NotificationState.hasUnseen
     readonly property bool dnd: NotificationState.dnd
 
-    implicitWidth: Math.max(label.implicitWidth + 20, 40)
+    // 6px of padding a side, matching Clock/Performance/ScriptModule in
+    // this row -- asked for, after those two ("aligne la bell aussi").
+    //
+    // The `Math.max(..., 40)` this replaces was pure inflation: 40 always
+    // won (label is 15 + 20 = 35), putting 12.5px a side here, the widest
+    // in TOOLS, and the hole between the clock and this bell is what made
+    // it visible. Nothing was riding on the floor either -- Phosphor is
+    // monospaced, so all three bell glyphs below (bell-z / bell-ringing /
+    // bell) measure exactly the same and this width never moves anyway.
+    implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
 
     readonly property string iconGlyph: {

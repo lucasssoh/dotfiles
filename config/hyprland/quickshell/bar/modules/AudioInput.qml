@@ -20,7 +20,14 @@ Item {
         objects: root.node ? [root.node] : []
     }
 
-    implicitWidth: label.implicitWidth + 2   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
+    // Outer breathing room, set per-instance from shell.qml -- see
+    // AudioOutput.qml's copy of this pair for the whole reasoning. This
+    // is the RIGHT half of that group, so it's `trailingPad` that gets
+    // set here and `leadingPad` that stays 0.
+    property real leadingPad: 0
+    property real trailingPad: 0
+
+    implicitWidth: label.implicitWidth + 2 + root.leadingPad + root.trailingPad   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
     implicitHeight: 24
     visible: root.node !== null
 
@@ -33,7 +40,11 @@ Item {
     // No color rule for #pulseaudio.input in waybar/style.css either.
     Row {
         id: label
-        anchors.centerIn: parent
+        // Not centerIn: the pads are one-sided. With both at 0 this is
+        // x: 1 on a width of implicitWidth+2, i.e. exactly what
+        // centerIn resolved to before.
+        anchors.verticalCenter: parent.verticalCenter
+        x: root.leadingPad + 1
 
         // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
         // what measured aligned for Phosphor -- see Temperature.qml's

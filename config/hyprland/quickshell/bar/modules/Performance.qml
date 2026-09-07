@@ -14,10 +14,20 @@ import "../theme"
 Item {
     id: root
 
-    // Single glyph always -- floor mostly guards against tiny font-metric
-    // jitter between the three icons, not a real digit-count concern.
-    // Tighter padding: glued right up against the power button next to it.
-    implicitWidth: Math.max(label.implicitWidth + 12, 32)
+    // Padding only, no floor -- 6px a side, the value ScriptModule and
+    // Clock use in this same row. Asked for ("les paddings right de
+    // powerprofile et horloge sont trop grand par rapport aux autres").
+    //
+    // The `Math.max(..., 32)` floor this replaces read as jitter
+    // protection but wasn't: Phosphor is monospaced (every glyph advances
+    // exactly font.pixelSize), so the width already jumped 32 -> 42
+    // whenever the profile went to Performance -- that glyph is TWO
+    // characters (see iconFor below) where the other two are one. The
+    // floor only ever inflated the SINGLE-glyph cases, i.e. balanced and
+    // eco, which is what this module shows nearly all the time, to ~10px
+    // of padding a side. Dropping it leaves the same 15px jump on profile
+    // change as before, at a consistent 6px a side in every state.
+    implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
     // Collapses to nothing without power-profiles-daemon: hasPerformanceProfile
     // is Quickshell's own availability signal for this service (verified

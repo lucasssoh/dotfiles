@@ -11,7 +11,13 @@ import "../theme"
 
 Item {
     id: root
-    implicitWidth: label.implicitWidth + 20
+    // 20 -> 12, i.e. 10px of padding a side down to 6 -- asked for ("les
+    // paddings right de powerprofile et horloge sont trop grand par
+    // rapport aux autres"). 6 is what ScriptModule already uses in the
+    // same row, and what Performance.qml now lands on too. "HH:mm" is
+    // fixed-width in practice (the leading zero is kept), so there is
+    // nothing here for the extra padding to have been absorbing.
+    implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
 
     SystemClock {

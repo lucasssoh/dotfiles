@@ -128,7 +128,28 @@ Item {
         objects: root.node ? [root.node] : []
     }
 
-    implicitWidth: label.implicitWidth + 2   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
+    // Outer breathing room, set per-instance from shell.qml -- these two
+    // are the only "bare" modules in TOOLS (no border, no badge, no
+    // padding of their own), so at the row's uniform `rowSpacing: 2` the
+    // glyphs sat 2px from the bordered blocks on either side while every
+    // bordered neighbour keeps ~6px between its own glyph and its edge.
+    // The gap was structurally regular and still read as unequal.
+    //
+    // Padding on the OUTER side only (leading here, trailing on
+    // AudioInput), never symmetric: headphones+mic are one group, so the
+    // gap BETWEEN them has to stay the tight one. Symmetric padding was
+    // tried first and inverts exactly that -- it grows the inner gap to
+    // twice the outer ones and the pair stops reading as a pair.
+    //
+    // Asked for as "espacer un peu plus [display] [audio] [balise]", and
+    // done here rather than by raising `rowSpacing`: that number is
+    // deliberately one value for the whole row (see shell.qml) and
+    // raising it would also push apart perf/battery/clock/bell, undoing
+    // the "compact" pass that brought it 4 -> 2.
+    property real leadingPad: 0
+    property real trailingPad: 0
+
+    implicitWidth: label.implicitWidth + 2 + root.leadingPad + root.trailingPad   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
     implicitHeight: 24
     visible: root.node !== null
 
@@ -157,7 +178,11 @@ Item {
     // the glyph changes on mute, color stays plain text.
     Row {
         id: label
-        anchors.centerIn: parent
+        // Not centerIn: the pads are one-sided. With both at 0 this is
+        // x: 1 on a width of implicitWidth+2, i.e. exactly what
+        // centerIn resolved to before.
+        anchors.verticalCenter: parent.verticalCenter
+        x: root.leadingPad + 1
 
         // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
         // what measured aligned for Phosphor -- see Temperature.qml's
