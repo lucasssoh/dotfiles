@@ -183,7 +183,7 @@ hl.config({
         -- left fields on this build, not a CSS-shorthand string -- that
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
-        gaps_out         = { top = 10, right = 8, bottom = 6, left = 8 },
+        gaps_out         = { top = 14, right = 7, bottom = 6, left = 7 },
         border_size      = 3,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
@@ -215,7 +215,7 @@ hl.config({
                 --     "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
                 -- },
                 colors = {
-                    "rgb(142, 142, 142)"
+                    "rgb(80, 80, 80)"
                 },
                 angle = 45,
             },
@@ -278,7 +278,7 @@ hl.config({
             enabled       = true,
             range         = 50,
             render_power  = 4,
-            color         = "rgba(0,0,0,1)",
+            color         = "rgba(0,0,0,0.4)",
             -- Back to none, same reasoning as inactive_border above: no
             -- per-window treatment on unfocused windows at all, so the
             -- active glass border stays the one unambiguous focus cue.
