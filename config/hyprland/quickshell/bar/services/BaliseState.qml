@@ -179,10 +179,6 @@ Singleton {
         root._send({ cmd: "eth_autoconnect", connection_path: connectionPath, autoconnect: autoconnect });
     }
 
-    // Returns whether the command actually went out -- callers that put
-    // the UI into a pending state (connectWifi) need to know, otherwise a
-    // send dropped because the daemon is down leaves a spinner running
-    // against a reply that will never come.
     // Display name for a `security` token (the snake_case value the
     // daemon puts in every access point and, since credential entry
     // landed, in WifiDetails too). Lives on the singleton that already
@@ -207,39 +203,85 @@ Singleton {
         }
     }
 
+    // Returns whether the command actually went out -- callers that put
+    // the UI into a pending state (connectWifi) need to know, otherwise a
+    // send dropped because the daemon is down leaves a spinner running
+    // against a reply that will never come.
+    // Returns whether the command actually went out -- callers that put
+    // the UI into a pending state (connectWifi) need to know, otherwise a
+    // send dropped because the daemon is down leaves a spinner running
+    // against a reply that will never come.
     function _send(obj) {
-        if (!socket.connected) return false;
-        socket.write(JSON.stringify(obj) + "\n");
-        socket.flush();
+        const sock = socketLoader.item;
+        if (!sock || !sock.connected) return false;
+        sock.write(JSON.stringify(obj) + "\n");
+        sock.flush();
         return true;
     }
 
-    Socket {
-        id: socket
-        path: root.socketPath
-        connected: true
+    // Whether the daemon is actually reachable right now. Everything that
+    // sends goes through `_send`, which checks this -- so when it is
+    // false, every toggle/scan/connect in this file silently does nothing.
+    // That is the failure mode this whole Loader dance exists to prevent.
+    readonly property bool daemonConnected: socketLoader.item ? socketLoader.item.connected : false
 
-        parser: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => root._handleLine(line)
-        }
+    onDaemonConnectedChanged: {
+        // Freshly (re)connected -- pull the real radio state in at once,
+        // rather than leaving the tiles showing whatever they were last
+        // told, which after a failed cold start is nothing at all.
+        if (root.daemonConnected) root.refreshState();
+    }
 
-        // The daemon may not be up yet (bar starts before balise.service
-        // on a cold login, or the service briefly restarts) -- retry on
-        // a plain timer rather than failing silently forever. Cheap:
-        // `connected = true` on an already-connected socket is a no-op,
-        // so this is safe to fire even once a connection has succeeded
-        // (interval just keeps ticking, next real disconnect is caught
-        // the same way).
-        onConnectionStateChanged: {
-            if (!connected) reconnectTimer.restart();
+    // The Socket lives inside a Loader so it can be DESTROYED AND REBUILT,
+    // which is the only way to reconnect it.
+    //
+    // Quickshell's Socket cannot be revived in place: once a connection
+    // attempt has failed, or the peer has gone away, writing
+    // `connected = true` again does nothing at all -- no retry, no error,
+    // no connectionStateChanged. Verified on an isolated probe against a
+    // Unix socket that appeared only after the shell had already failed
+    // to reach it: re-asserting `true` every 700ms never connected (and
+    // neither did dropping it to `false` first, on its own event-loop
+    // turn); recreating the Socket object connected on the very next
+    // tick, and the server saw the client arrive.
+    //
+    // This mattered in practice, not in theory. The bar starts before
+    // balise.service (that unit has its own `ExecStartPre=sleep 3`), so
+    // the first attempt on a cold boot ALWAYS fails. The previous code
+    // retried by writing `connected = true` from a one-shot timer re-armed
+    // out of `onConnectionStateChanged` -- two independent reasons for it
+    // to never recover, and after a reboot it didn't: exactly one
+    // `ServerNotFoundError` in the bar's log and a shell that had been
+    // disconnected ever since, with every WiFi/Bluetooth toggle silently
+    // doing nothing.
+    Loader {
+        id: socketLoader
+        active: true
+        sourceComponent: Component {
+            Socket {
+                path: root.socketPath
+                connected: true
+
+                parser: SplitParser {
+                    splitMarker: "\n"
+                    onRead: (line) => root._handleLine(line)
+                }
+            }
         }
     }
 
+    // Repeating, and driven by a binding on the connection state rather
+    // than by a signal -- it cannot get wedged whatever the Socket did or
+    // did not emit. Stops on its own the moment a rebuild connects.
     Timer {
         id: reconnectTimer
         interval: 2000
-        onTriggered: socket.connected = true
+        repeat: true
+        running: !root.daemonConnected
+        onTriggered: {
+            socketLoader.active = false;
+            socketLoader.active = true;
+        }
     }
 
     // Assigns only when the payload actually differs. These three arrays
