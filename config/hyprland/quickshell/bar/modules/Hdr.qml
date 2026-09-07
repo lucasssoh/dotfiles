@@ -36,11 +36,9 @@ import "../theme"
 // Compact badge instead of a sliding switch: static "hdr" label, always
 // on a transparent fill -- active/inactive is signalled by the rim's
 // colour, not the badge itself (see its own comment below). Radius is
-// 8, not the 6px shared by every other 18px-tall pill in this bar
-// (workspace pill, ActiveWindow's app chip) -- Hdr is the one such pill
-// that sits leftmost inside a bigger rounded pane (`tools`, see badge's
-// own comment below), so it alone needs the extra roundness to nest
-// under that pane's corner.
+// 6, the same as every other 18px-tall pill in this bar (workspace
+// pill, ActiveWindow's app chip, and BaliseButton's own badge two
+// slots to the right in this same `tools` pill).
 
 Item {
     id: root
@@ -98,13 +96,15 @@ Item {
         anchors.centerIn: parent
         width: 35
         height: 18
-        // 6 -> 8: Hdr sits leftmost in the `tools` pill (after just a 4px
-        // spacer), right up against ITS 10px rounded left corner -- 6 read
-        // visibly squarer than the curve it's nested inside. 8 nests
-        // closer to concentric with that outer radius without going all
-        // the way to a full 9px capsule (half of the badge's own 18px
-        // height), which read too pill-shaped next to the rest of the bar.
-        radius: 8
+        // 8 -> 6: back to the shared 6 (asked for -- "que les boutons hdr
+        // et display de tools island soient comme le bouton de balise,
+        // c-a-d avec coin arrondi mais pas totalement arrondi comme un
+        // pill"). 8 on an 18px-tall badge sits one pixel short of a full
+        // 9px capsule, which is what read as pill-shaped next to
+        // BaliseButton's own 6px badge in the same row; nesting closer to
+        // concentric with the `tools` pill's 10px left corner is no longer
+        // worth the two chips in that row not matching each other.
+        radius: 6
         color: "transparent"
 
         Text {

@@ -102,14 +102,15 @@ Item {
     // et encadré dans un sous bouton avec border glass"): a transparent
     // Rectangle sized to content (root.padding/root.minWidth still drive
     // that, same as before -- just sizing THIS instead of the whole
-    // Item directly now), radius 8 to match Hdr's own (this module sits
-    // right next to it in the `tools` pill), plus GlassRim's edge below.
+    // Item directly now), radius 6 to match Hdr's own and BaliseButton's
+    // (all three sit in the same `tools` pill and now share the one
+    // rounded-but-not-capsule corner), plus GlassRim's edge below.
     Rectangle {
         id: badge
         anchors.centerIn: parent
         width: Math.max(label.implicitWidth + root.padding, root.minWidth)
         height: 18
-        radius: 8
+        radius: 6
         color: "transparent"
     }
 
