@@ -19,11 +19,32 @@ _prompt_grey="243"
 _prompt_dim_grey="237"
 
 # --- Git (vcs_info) ---
-zstyle ':vcs_info:git:*' formats " %F{$_prompt_grey}%b%f%u%c"
-zstyle ':vcs_info:git:*' actionformats " %F{$_prompt_grey}%b|%a%f%u%c"
+zstyle ':vcs_info:git:*' formats " %F{$_prompt_grey}%b%f%u%c%m"
+zstyle ':vcs_info:git:*' actionformats " %F{$_prompt_grey}%b|%a%f%u%c%m"
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr " %F{$_prompt_dim_red}✗%f"
 zstyle ':vcs_info:*' stagedstr " %F{$_prompt_orange}●%f"
+
+# --- Commits locaux non poussés (%m) ---
+# ↑N  : N commits d'avance sur l'upstream, donc pas encore poussés.
+# ↑?  : branche sans upstream, jamais poussée.
+# Volontairement pas de ↓ : le retard sur le remote ne serait exact
+# qu'après un fetch, et le prompt ne doit rien faire passer sur le réseau.
+zstyle ':vcs_info:git*+set-message:*' hooks git-push-status
+
++vi-git-push-status() {
+  # Colle au marqueur précédent (✗/●) s'il y en a un, sinon s'en sépare.
+  local sep=" "
+  [[ -n "${hook_com[unstaged]}${hook_com[staged]}" ]] && sep=""
+
+  local ahead
+  if ! ahead=$(command git rev-list --count '@{upstream}..HEAD' 2>/dev/null); then
+    hook_com[misc]+="${sep}%F{$_prompt_dim_red}↑?%f"
+    return
+  fi
+
+  (( ahead > 0 )) && hook_com[misc]+="${sep}%F{$_prompt_orange}↑${ahead}%f"
+}
 
 # --- Projet (langage/framework du dossier courant) ---
 # Détecté via des fichiers manifestes de projet (Cargo.toml, package.json...),
