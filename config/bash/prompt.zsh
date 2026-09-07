@@ -97,6 +97,26 @@ _prompt_cmd_start=0
 _prompt_cmd_duration=""
 _prompt_had_cmd=0
 
+# Format HHhMMmSSs, en omettant les unités de tête nulles :
+#   3.4s / 12.0s          (moins d'une minute, la précision reste utile)
+#   3m07s                 (moins d'une heure)
+#   2h05m09s              (au-delà)
+_prompt_format_duration() {
+  local LC_NUMERIC=C   # locale fr : sinon printf écrit "2,4s" au lieu de "2.4s"
+  local -F elapsed=$1
+  local -i total h m sec
+  (( total = elapsed ))
+  (( h = total / 3600, m = total % 3600 / 60, sec = total % 60 ))
+
+  if (( h > 0 )); then
+    printf '%dh%02dm%02ds' $h $m $sec
+  elif (( m > 0 )); then
+    printf '%dm%02ds' $m $sec
+  else
+    printf '%.1fs' $elapsed
+  fi
+}
+
 _prompt_preexec() {
   _prompt_cmd_start=$EPOCHREALTIME
 }
@@ -110,7 +130,7 @@ _prompt_precmd() {
   _prompt_cmd_duration=""
   if (( _prompt_cmd_start > 0 )); then
     local elapsed=$(( EPOCHREALTIME - _prompt_cmd_start ))
-    (( elapsed >= 2 )) && _prompt_cmd_duration=$(printf ' %.1fs' $elapsed)
+    (( elapsed >= 2 )) && _prompt_cmd_duration=" $(_prompt_format_duration $elapsed)"
     _prompt_cmd_start=0
   fi
 
