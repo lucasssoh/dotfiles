@@ -15,10 +15,6 @@ key.set("n", "<leader>l", "<C-w>l", { desc = "Go to right window" })
 key.set("n", "<leader>j", "<C-w>j", { desc = "Go to bottom window" })
 key.set("n", "<leader>k", "<C-w>k", { desc = "Go to top window" })
 
--- Tmux (let Alt+V / Alt+S pass through)
-key.set({ "n", "i", "v" }, "<A-v>", "<Nop>", { silent = true })
-key.set({ "n", "i", "v" }, "<A-s>", "<Nop>", { silent = true })
-
 -- NvimTree
 key.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true, desc = "Toggle file explorer" })
 

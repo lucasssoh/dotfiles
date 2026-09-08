@@ -53,15 +53,23 @@ def create_note_template(target_dir, note_name):
     
     if not os.path.exists(index_file):
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
-        template = f"""---
+        # En-tête de métadonnées mdp, pas un frontmatter YAML : mdp lit les
+        # blocs <!-- clé: valeur --> et affiche tout le reste à l'écran. Un
+        # frontmatter --- ... --- ferait apparaître "tags: []" sur la
+        # première slide. Les clés inconnues (tags:) sont ignorées par mdp,
+        # donc rien n'est perdu. Voir config/ccslide/ pour la présentation.
+        template = f"""<!--
 title: {note_name}
-date: {now}
+footer: {now}
 tags: []
----
+-->
 
 # {note_name}
 
+---
+
 ## Sommaire
+
 - 
 """
         with open(index_file, "w", encoding="utf-8") as f:

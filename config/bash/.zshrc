@@ -145,6 +145,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # CCNOTE
 # =========================
 source ~/.config/ccnote/ccnote.zsh
+source ~/.config/ccslide/ccslide.zsh
 export PATH="$HOME/.npm-global/bin:$PATH"
 
 # Local secrets / environment
