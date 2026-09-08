@@ -67,7 +67,10 @@ sudo -v || true  # prime the sudo cache once up front; modules run long enough f
 # Run each module
 # -----------------------------
 section "Modules"
-MODULES=(fonts bash tmux wezterm nvim wireplumber mangohud nemo)
+# ccnote/ccslide right after bash: .zshrc sources ~/.config/ccnote/ccnote.zsh
+# and ~/.config/ccslide/ccslide.zsh, and those two paths only exist once
+# their own module has run.
+MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo)
 HYPR_MODULE="hyprland"
 KDE_MODULE="kde"
 #
