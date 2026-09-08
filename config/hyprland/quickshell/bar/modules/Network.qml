@@ -36,11 +36,15 @@ Item {
         return wifi;
     }
     readonly property string kind: !activeDevice ? "none" : (activeDevice.type === DeviceType.Wired ? "ethernet" : "wifi")   // "wifi" | "ethernet" | "none"
+    // *100: signalStrength is a 0..1 double, not a percentage -- same
+    // bug (and same fix) as BaliseButton.qml's own copy of this block,
+    // see its comment. This module is currently unreferenced from the
+    // bar, fixed alongside so the two stay identical.
     readonly property int wifiSignal: {   // 0-100, only meaningful when kind === "wifi"
         if (kind !== "wifi" || !activeDevice) return 0;
         const nets = activeDevice.networks.values;
         for (let i = 0; i < nets.length; i++) {
-            if (nets[i].connected) return Math.round(nets[i].signalStrength);
+            if (nets[i].connected) return Math.round(nets[i].signalStrength * 100);
         }
         return 0;
     }

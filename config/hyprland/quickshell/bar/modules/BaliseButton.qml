@@ -61,11 +61,17 @@ Item {
         return wifi;
     }
     readonly property string netKind: !root.activeDevice ? "none" : (root.activeDevice.type === DeviceType.Wired ? "ethernet" : "wifi")
+    // WifiNetwork.signalStrength is a 0..1 double (verified live against
+    // Quickshell.Networking: nmcli's 100% link reads back as 0.9), NOT a
+    // 0-100 percentage -- so the *100 is what makes the tier thresholds
+    // below mean anything. Without it every connected link rounded to 0
+    // or 1 and the badge was permanently pinned to the wifi-low glyph,
+    // whatever the actual signal.
     readonly property int wifiSignal: {
         if (root.netKind !== "wifi" || !root.activeDevice) return 0;
         const nets = root.activeDevice.networks.values;
         for (let i = 0; i < nets.length; i++) {
-            if (nets[i].connected) return Math.round(nets[i].signalStrength);
+            if (nets[i].connected) return Math.round(nets[i].signalStrength * 100);
         }
         return 0;
     }
@@ -238,6 +244,28 @@ Item {
                 slot.implicitWidth = label.implicitWidth;
                 label.opacity = 1;
             }
+        }
+
+        // The glyph can also change WITHOUT `shown` changing -- a wifi
+        // tier switch (low -> medium -> high as the signal moves, or on
+        // roaming to a stronger AP) and bluetooth's own
+        // ph-bluetooth -> ph-bluetooth-connected are both glyph-only
+        // changes on an already-visible slot. `displayGlyph` used to be
+        // written ONLY from onShownChanged/Component.onCompleted, so
+        // those never reached the Text: the slot kept rendering whatever
+        // tier it happened to have when it first appeared (observed
+        // live: still the half-signal glyph on a 100% link). Guarded on
+        // a non-empty glyph so the hide path keeps showing the icon that
+        // was actually there while it fades out -- that's the whole
+        // reason displayGlyph exists as a separate property.
+        onGlyphChanged: {
+            if (slot.glyph === "") return;
+            slot.displayGlyph = slot.glyph;
+            // Tiers aren't guaranteed to ink the same width; resync the
+            // box, but only when no in/out animation is currently
+            // driving implicitWidth itself.
+            if (slot.shown && !showSeq.running && !hideSeq.running)
+                slot.implicitWidth = label.implicitWidth;
         }
 
         onShownChanged: {

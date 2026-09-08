@@ -904,6 +904,46 @@ ShellRoot {
                         // actually governs the width for realistic content.
                         minWidth: 30
                         padding: 6
+                        // Phosphor instead of the script's own Nerd Font
+                        // glyphs (asked for: everything else in TOOLS is
+                        // Phosphor now, so this one block was the only
+                        // foreign icon set left in the row). The script
+                        // keeps printing nf-md-laptop/monitor/
+                        // monitor_multiple -- waybar/config.jsonc still
+                        // runs the same `status` command and has no
+                        // Phosphor -- and these three override its text
+                        // per class, which is exactly what `classIcons`
+                        // is for.
+                        //
+                        // ph-laptop and ph-monitor are one-for-one with
+                        // the two single-screen Nerd Font glyphs.
+                        // \ueba4 is ph-devices: Phosphor has no
+                        // two-monitors glyph at all (checked the whole
+                        // name list -- monitor, monitor-play,
+                        // monitor-arrow-up, desktop, television, and
+                        // nothing plural), and ph-devices is the closest
+                        // in MEANING rather than in outline -- a big
+                        // screen plus a small one, which is literally
+                        // what "both" is here (laptop + external). The
+                        // generic two-overlapping-rectangles glyphs
+                        // (ph-copy/ph-cards) trace the old icon's shape
+                        // more closely but say "duplicate", not "two
+                        // displays".
+                        iconFont: Fonts.iconPhosphorBold
+                        // 10 -> 14: the size below Fonts.icon was shrunk
+                        // to (see ScriptModule.qml's own note on that
+                        // number) was compensating for the Nerd Font
+                        // inking wide inside its em-box. Phosphor doesn't,
+                        // so at 10 these three came out visibly smaller
+                        // than the Phosphor glyphs on either side of them.
+                        // 14 puts them back on par with the row's other
+                        // icons, which sit at 12-15.
+                        iconPixelSize: 14
+                        classIcons: ({
+                            "display-internal": "\ue586",
+                            "display-external": "\ue32e",
+                            "display-both": "\ueba4"
+                        })
                         clickCommand: ["bash", "-c",
                             "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"]
                         classColors: ({

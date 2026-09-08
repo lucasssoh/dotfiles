@@ -37,6 +37,23 @@ Item {
                                          // class/alt. Empty = show obj.text
                                          // as-is (the common case).
 
+    // Icon font override. Default stays Fonts.icon (the Nerd Font) --
+    // it's what every waybar script's own glyphs are written against,
+    // so a plain instantiation keeps rendering the script's text as-is.
+    // The display-layout instance in shell.qml opts into Phosphor
+    // instead (asked for: the rest of TOOLS is Phosphor, so its one
+    // Nerd Font glyph read as a different icon set sitting in the same
+    // row) and supplies its own Phosphor codepoints via `classIcons`,
+    // leaving the script's Nerd Font output for waybar/config.jsonc,
+    // which still runs the same `status` command.
+    //
+    // Size travels with the family: the two ink very differently within
+    // their em-box (see the pixelSize note further down), so a per-
+    // instance family override that couldn't also move the size would
+    // just trade one mismatch for another.
+    property string iconFont: Fonts.icon
+    property real iconPixelSize: 10
+
     property string text: ""
     property string tooltip: ""
     property string moduleClass: ""
@@ -137,14 +154,16 @@ Item {
             ? root.classIcons[root.moduleClass] : root.text
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         opacity: root.textOpacity
-        font.family: Fonts.icon
+        font.family: root.iconFont
         // Bold, same "thicken every icon in METRICS/TOOLS" pass that
         // moved those two blocks' Phosphor glyphs onto the Phosphor-Bold
         // family. JetBrainsMono Nerd Font ships Bold under the SAME
         // family name (verified via `fc-list`, style=Bold), so unlike
-        // Phosphor this one IS a font.weight and not a second family.
+        // Phosphor this one IS a font.weight and not a second family --
+        // harmless on a Phosphor-Bold `iconFont`, which is already the
+        // bold cut and has no weight axis to move.
         font.weight: Font.Bold
-        font.pixelSize: 10
+        font.pixelSize: root.iconPixelSize
         font.letterSpacing: root.letterSpacing
     }
 
