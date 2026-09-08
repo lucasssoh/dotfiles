@@ -66,7 +66,7 @@ Item {
         anchors.centerIn: parent
         text: root.iconFor(PowerProfiles.profile)
         color: root.colorFor(PowerProfiles.profile)
-        font.family: Fonts.iconPhosphor
+        font.family: Fonts.iconPhosphorBold
         font.pixelSize: 15
     }
 

@@ -51,7 +51,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-cpu
             color: SystemStats.cpuUsage >= 90 ? "#ff6e6e" : "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
         Text {

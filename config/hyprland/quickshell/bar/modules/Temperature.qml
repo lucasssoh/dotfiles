@@ -51,7 +51,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-thermometer
             color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
         // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars,

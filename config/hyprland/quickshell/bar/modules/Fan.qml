@@ -43,7 +43,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: ""   // ph-fan
             color: "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
         Text {

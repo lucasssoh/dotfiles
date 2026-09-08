@@ -70,7 +70,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: ""   // ph-arrows-down-up
             color: SystemStats.netKind === "none" ? "#636366" : "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
         Text {

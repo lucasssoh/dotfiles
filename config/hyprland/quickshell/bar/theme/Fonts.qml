@@ -63,8 +63,14 @@ QtObject {
     // Bold weight, same "separate family per weight" deal as above --
     // confirmed via `fc-list` (Phosphor-Bold.ttf -> family "Phosphor-Bold",
     // not "Phosphor" + font.weight: Font.Bold, which does nothing on this
-    // font). Opt-in per module, same as `mono` -- currently only the OSD
-    // (Osd.qml), asked for specifically ("plus grand et plus gras").
+    // font). Opt-in per module, same as `mono` -- the OSD (Osd.qml, asked
+    // for specifically: "plus grand et plus gras") and, since the
+    // "thicken toutes les polices icones" pass, every Phosphor glyph in
+    // the METRICS and TOOLS blocks (Cpu/Temperature/Fan/Memory/Traffic,
+    // AudioOutput/AudioInput/BaliseButton/Performance/NotificationBell).
+    // Bold is a whole extra family here, so those modules' glyphs ink a
+    // touch wider than the Regular ones did -- the two blocks' pill
+    // widths follow their content, so nothing needed re-measuring.
     readonly property string iconPhosphorBold: "Phosphor-Bold"
 
     // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's

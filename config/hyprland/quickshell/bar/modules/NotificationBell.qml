@@ -68,7 +68,7 @@ Item {
         anchors.centerIn: parent
         text: root.iconGlyph
         color: root.iconColor
-        font.family: Fonts.iconPhosphor
+        font.family: Fonts.iconPhosphorBold
         font.pixelSize: 15
     }
 

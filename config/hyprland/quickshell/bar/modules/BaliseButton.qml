@@ -154,7 +154,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: ""
             color: "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 12
         }
     }
@@ -275,7 +275,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: slot.displayGlyph
             color: "#f2f2f7"
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconPhosphorBold
             font.pixelSize: 12
             opacity: 0
         }

@@ -138,6 +138,12 @@ Item {
         color: root.classColors[root.moduleClass] || "#f2f2f7"
         opacity: root.textOpacity
         font.family: Fonts.icon
+        // Bold, same "thicken every icon in METRICS/TOOLS" pass that
+        // moved those two blocks' Phosphor glyphs onto the Phosphor-Bold
+        // family. JetBrainsMono Nerd Font ships Bold under the SAME
+        // family name (verified via `fc-list`, style=Bold), so unlike
+        // Phosphor this one IS a font.weight and not a second family.
+        font.weight: Font.Bold
         font.pixelSize: 10
         font.letterSpacing: root.letterSpacing
     }
