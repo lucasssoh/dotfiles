@@ -199,13 +199,21 @@ Singleton {
         }
     }
 
-    // Same glob-and-resolve-once pattern for the thermal sensor:
-    // thermal_zone0 isn't guaranteed to exist or to be the CPU package
-    // sensor on every machine. Temperature.qml gates its own visibility on
-    // tempPath being non-empty, same as Fan.qml does for fanPath.
+    // Same resolve-once pattern for the thermal sensor, but by PREFERENCE
+    // rather than by glob order. Taking the first thermal_zone was wrong on
+    // both vendors: thermal_zone0 is `acpitz` on this machine and on most
+    // Intel laptops, i.e. a board/skin sensor that lags the die by seconds
+    // and flattens out under load -- not the CPU package temperature the
+    // bar is meant to show. So: x86_pkg_temp first (Intel package), then
+    // the coretemp/k10temp hwmon (Intel/AMD die), and only then fall back
+    // to whatever thermal zone exists, for a machine that exposes none of
+    // them. All four sources report millidegrees, so sampleTemperature's
+    // /1000 holds regardless of which one wins.
+    // Temperature.qml gates its own visibility on tempPath being non-empty,
+    // same as Fan.qml does for fanPath.
     Process {
         id: tempDiscover
-        command: ["bash", "-c", "find /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -n1"]
+        command: ["bash", "-c", "{ grep -lx x86_pkg_temp /sys/class/thermal/thermal_zone*/type; grep -lx coretemp /sys/class/hwmon/hwmon*/name; grep -lx k10temp /sys/class/hwmon/hwmon*/name; } 2>/dev/null | head -n1 | sed -e 's@/type$@/temp@' -e 's@/name$@/temp1_input@' | grep . || find /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -n1"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {

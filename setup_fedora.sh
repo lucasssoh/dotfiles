@@ -162,3 +162,23 @@ sudo systemctl enable --now dbus-broker
 
 sudo loginctl enable-linger "$USER"
 ok "Base Fedora system ready."
+
+# =========================
+# HARDWARE-SPECIFIC DRIVERS
+# =========================
+# Everything above is machine-independent. This step is not: it detects the
+# CPU generation and GPUs and installs what THIS machine needs (Intel iHD
+# VAAPI + thermald, AMD radeontop, SOF audio firmware, ...). See
+# scripts/lib/hardware.sh for the table and its forward-compatibility rules.
+#
+# Piped rather than run plainly: redirect_output_to_log above sent this
+# script's stdout to the log file, and the hardware report + the manual
+# follow-ups (NVIDIA driver command, Lenovo conservation mode) are the one
+# part of this run the user actually has to read. tee puts them on the real
+# terminal (fd 3) AND in the log.
+info "Detecting hardware and installing its drivers..."
+if bash "$DOTFILES_DIR/scripts/install-hardware.sh" 2>&1 | tee -a "$LOG_FILE" >&3; then
+    ok "Hardware drivers installed."
+else
+    warn "Hardware phase failed — re-run it on its own with: ./install hardware"
+fi

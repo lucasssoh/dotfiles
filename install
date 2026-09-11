@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# install — the single entry point for this repo.
+#
+# Two phases, in order, matching the two halves of setting up a machine:
+#
+#   system  root-side: base Fedora packages and services, then the drivers
+#           this specific CPU/GPU needs (detected, not hardcoded -- see
+#           scripts/lib/hardware.sh). Wants sudo throughout.
+#   user    user-side: every config/*/install.sh module, then Hyprland,
+#           then KDE. Symlinks the repo into ~/.config.
+#
+# Running phases separately is supported and sometimes what you want:
+# `./install hardware` alone after swapping laptops, `./install user` alone
+# after pulling new config.
+#
+# The two phase scripts (setup_fedora.sh, install_all.sh) still work when
+# called directly -- this file orchestrates them, it doesn't replace them.
+set -Eeuo pipefail
+
+BOLD="\e[1m"; GREEN="\e[32m"; YELLOW="\e[33m"; RED="\e[31m"; BLUE="\e[34m"; RESET="\e[0m"
+
+info()    { echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()      { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+err()     { echo -e "${RED}[ ERR]${RESET}  $*" >&2; exit 1; }
+
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    cat <<'EOF'
+Usage: ./install [PHASE ...] [--detect] [--dry-run] [--help]
+
+Phases (default: system user):
+  system         Base Fedora packages + services, then the hardware phase.
+                 (setup_fedora.sh)
+  hardware       Only the CPU/GPU-specific drivers, auto-detected. Included
+                 in `system`; run it alone after a hardware change.
+                 (scripts/install-hardware.sh)
+  user           All config modules, Hyprland, KDE. Symlinks into ~/.config.
+                 (install_all.sh)
+  login-manager  greetd + tuigreet as the display manager. Opt-in and
+                 interactive -- it asks before touching system login.
+                 (config/login-manager/install.sh)
+
+Options:
+  --detect     Print the hardware detection and exit. Changes nothing.
+  --dry-run    Print the phases that would run, in order, and exit.
+  -h, --help   This text.
+
+Examples:
+  ./install                    # full setup on a fresh Fedora
+  ./install --detect           # what does this machine look like?
+  ./install user               # re-apply configs after `git pull`
+  ./install hardware           # re-run driver detection after a hw change
+EOF
+}
+
+# Phase name -> the script that implements it. Keeping this as one table
+# means --dry-run, --help and the runner can't drift apart.
+phase_script() {
+    case "$1" in
+        system)        echo "$DOTFILES_DIR/setup_fedora.sh" ;;
+        hardware)      echo "$DOTFILES_DIR/scripts/install-hardware.sh" ;;
+        user)          echo "$DOTFILES_DIR/install_all.sh" ;;
+        login-manager) echo "$DOTFILES_DIR/config/login-manager/install.sh" ;;
+        *)             return 1 ;;
+    esac
+}
+
+PHASES=()
+DRY_RUN=false
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        --detect)  exec "$DOTFILES_DIR/scripts/hardware-detect.sh" --report ;;
+        --dry-run) DRY_RUN=true ;;
+        -*)        err "Unknown option: $1 (try --help)" ;;
+        *)
+            phase_script "$1" >/dev/null 2>&1 || err "Unknown phase: $1 (try --help)"
+            PHASES+=("$1") ;;
+    esac
+    shift
+done
+
+# Default: the full fresh-machine path. `hardware` is deliberately absent --
+# setup_fedora.sh runs it itself, so listing it here would install the same
+# packages twice.
+[ "${#PHASES[@]}" -eq 0 ] && PHASES=(system user)
+
+if [ "$DRY_RUN" = true ]; then
+    echo -e "\n${BOLD}Would run, in order:${RESET}\n"
+    for p in "${PHASES[@]}"; do
+        printf '  %-14s %s\n' "$p" "$(phase_script "$p")"
+    done
+    echo
+    exit 0
+fi
+
+# Sanity check before asking for sudo or touching anything: a missing phase
+# script means a broken/partial clone, and finding that out halfway through
+# a system install is far worse than finding it out now.
+for p in "${PHASES[@]}"; do
+    script="$(phase_script "$p")"
+    [ -f "$script" ] || err "Phase '$p': missing $script — incomplete clone?"
+    chmod +x "$script" 2>/dev/null || true
+done
+
+echo -e "\n${BOLD}── dotfiles ──${RESET}\n"
+info "Phases: ${PHASES[*]}"
+"$DOTFILES_DIR/scripts/hardware-detect.sh" --report
+
+# Prime the sudo cache once here rather than letting each phase discover it
+# separately: `system` runs long enough that an expiry mid-phase would
+# otherwise stall behind a password prompt buried in the scrolling log.
+if printf '%s\n' "${PHASES[@]}" | grep -qxE 'system|hardware|login-manager'; then
+    sudo -v || warn "Could not prime sudo — phases will prompt as they go."
+fi
+
+failed=()
+for p in "${PHASES[@]}"; do
+    echo -e "\n${BOLD}══ Phase: $p ══${RESET}\n"
+    # Each phase keeps its own status UI and its own log (scripts/lib/
+    # status.sh) -- run it as a real subprocess and let it render itself
+    # rather than capturing its output here.
+    if "$(phase_script "$p")"; then
+        ok "Phase '$p' completed."
+    else
+        rc=$?
+        warn "Phase '$p' failed (exit $rc)."
+        failed+=("$p")
+        # Later phases assume earlier ones ran: `user` symlinks configs for
+        # packages `system` was supposed to install. Stopping here beats
+        # cascading a system-phase failure into a hundred confusing
+        # module errors.
+        break
+    fi
+done
+
+echo
+if [ "${#failed[@]}" -gt 0 ]; then
+    err "Stopped at phase: ${failed[*]} — see the log path printed above, fix, then re-run \`./install ${failed[0]}\`."
+fi
+
+echo -e "${GREEN}${BOLD}Done.${RESET}\n"
+info "Not run automatically (opt-in, modifies system login):  ./install login-manager"
+info "Re-check hardware after any change:                     ./install --detect"
+echo

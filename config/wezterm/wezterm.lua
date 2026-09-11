@@ -12,7 +12,12 @@ config.font = wezterm.font_with_fallback({
     weight = 'Regular',
   },
 })
-config.font_size = 12.0
+-- 13.0, not 12.0: sized for a 14" 1920x1200 panel (~162 DPI) at scale 1.
+-- The previous 12.0 was tuned on a 15.6" 1920x1080 (~143 DPI), where the
+-- same point size renders ~13% larger physically. Point sizes are
+-- resolution-independent, not DENSITY-independent -- moving to a denser
+-- panel at the same compositor scale shrinks the text on screen.
+config.font_size = 13.0
 config.line_height = 1.0
 config.front_end = "OpenGL"
 config.prefer_egl = true

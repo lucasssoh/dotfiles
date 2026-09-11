@@ -97,17 +97,31 @@ if [ "$DISTRO" = "fedora" ]; then
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
 
     PKGS=(
-        # Hyprland ecosystem
-        dbus-x11 dbus-daemon hyprland xdg-desktop-portal-hyprland
+        # Hyprland ecosystem.
+        # hyprlock/hypridle are SEPARATE rpms on Fedora, not dependencies of
+        # hyprland -- they were only ever in the Arch list below, so a fresh
+        # Fedora install ended up with Super+Esc (hyprlock.conf is linked and
+        # bound) pointing at a binary that wasn't there.
+        dbus-x11 dbus-daemon hyprland hyprlock hypridle xdg-desktop-portal-hyprland
         # Bar / notifications / launcher
         # quickshell is the active bar AND the active notification daemon
         # (see quickshell/bar/services/NotificationState.qml) -- waybar
         # stays installed/available as a fallback, not started. No
         # separate notification daemon package needed any more (used to
         # be SwayNotificationCenter, before that dunst).
-        quickshell waybar rofi-wayland khal hyprsunset
+        # fuzzel is the actual app launcher (Super+Space, see
+        # hypr/keybinds.lua); rofi is kept for the cliphist picker (Super+V)
+        # and its .rasi themes. config/fuzzel/ has its own module for the
+        # config file -- listed here too so a standalone run of this script
+        # still yields a usable desktop.
+        quickshell waybar fuzzel rofi-wayland khal hyprsunset
         # Wallpaper daemon
         awww
+        # Backs `powerprofilesctl`, which waybar/scripts/performance.sh calls
+        # for the Super+Shift+Delete power-profile wheel. Used to arrive only
+        # as a side effect of the KDE module, so skipping KDE silently broke
+        # that wheel.
+        power-profiles-daemon
         # Network
         NetworkManager network-manager-applet nm-connection-editor
         # Bluetooth

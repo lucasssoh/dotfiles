@@ -70,7 +70,18 @@ section "Modules"
 # ccnote/ccslide right after bash: .zshrc sources ~/.config/ccnote/ccnote.zsh
 # and ~/.config/ccslide/ccslide.zsh, and those two paths only exist once
 # their own module has run.
-MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo)
+#
+# fuzzel/fastfetch/firefox/mpv were missing from this list for a long time:
+# their modules existed and worked, nothing ever called them, and the gap
+# was invisible on a machine where they'd been installed by hand once. On a
+# genuinely fresh install it meant no app launcher at all (fuzzel IS
+# Super+Space, see hypr/keybinds.lua) and an empty workspace dashboard
+# (fastfetch, see scripts/dashboard-fastfetch.sh).
+#
+# login-manager is deliberately NOT here: it rewrites system login (greetd)
+# and prompts interactively, which would block this otherwise unattended
+# run. It's a phase of its own -- `./install login-manager`.
+MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox mpv)
 HYPR_MODULE="hyprland"
 KDE_MODULE="kde"
 #
