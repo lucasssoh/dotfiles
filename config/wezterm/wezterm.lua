@@ -7,7 +7,8 @@ local act = wezterm.action
 -- =========================
 config.font = wezterm.font_with_fallback({
   {
-    family = 'GoogleSansCode Nerd Font Mono',
+--[[     family = 'GoogleSansCode Nerd Font Mono', ]]
+    family = 'JetBrains Mono',
     weight = 'Regular',
   },
 })
