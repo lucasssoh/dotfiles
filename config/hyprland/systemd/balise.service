@@ -1,5 +1,10 @@
+# Balise's BACKEND only: NetworkManager/BlueZ logic behind a Unix socket
+# at $XDG_RUNTIME_DIR/balise.sock. It draws nothing -- the panel is QML,
+# in quickshell/bar/modules/balise/, and reads that socket directly (see
+# quickshell/bar/services/BaliseState.qml). The same binary's `toggle`
+# subcommand opens a legacy GTK window that nothing here starts.
 [Unit]
-Description=Balise — gestionnaire WiFi/Bluetooth/Ethernet natif Wayland
+Description=Balise — démon WiFi/Bluetooth/Ethernet (backend du panneau QML)
 After=graphical-session.target
 
 [Service]

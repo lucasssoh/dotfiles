@@ -150,8 +150,9 @@ if [ "$DISTRO" = "fedora" ]; then
         bc jq curl git lm_sensors unzip socat
         # Qt theming
         qt5ct qt6ct
-        # Orbit (WiFi/Bluetooth/VPN manager) build deps -- no Fedora package,
-        # built from source further down in this script
+        # Balise build deps (the Rust daemon + its legacy GTK window) --
+        # no Fedora package, built from source further down in this script.
+        # Named Orbit here until Balise replaced it.
         rust cargo gtk4-devel gtk4-layer-shell-devel NetworkManager-libnm-devel bluez-libs-devel
     )
 
@@ -190,14 +191,14 @@ elif [ "$DISTRO" = "arch" ]; then
         bc jq curl git lm_sensors unzip socat
         # Qt
         qt5ct qt6ct
-        # Orbit build deps
+        # Balise build deps
         rust cargo gtk4-layer-shell libnm bluez-libs
     )
 
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
     warn "quickshell (the active bar AND notification daemon, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
-    warn "Orbit build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
+    warn "Balise build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
     PKGS=(
         dbus dbus-x11 hyprland
@@ -258,9 +259,16 @@ fi
 # which was a vendored third-party app patched around repeatedly. Same
 # build pattern as Prisme/Roue below: copy the crate to a cache dir,
 # cargo build, install the binary to ~/.local/bin (no sudo needed).
-# Config + theme live in config/hyprland/balise/ and are symlinked
-# further down like the other module directories, so style.css can be
-# edited and reloaded with `balise reload-theme` without recompiling.
+#
+# What this binary is FOR, now that the UI has moved: `balise daemon` is
+# the backend -- NetworkManager/BlueZ logic behind a Unix socket -- and
+# that is what the session runs (systemd/balise.service). The panel the
+# user sees is QML, in quickshell/bar/modules/balise/, talking to that
+# socket. The crate's own GTK4 window (`balise toggle`) still builds and
+# still works, but nothing opens it any more; config/hyprland/balise/'s
+# config.toml and style.css theme THAT window, so they are legacy too
+# (the QML panel is styled from quickshell/bar/theme/). Still symlinked
+# further down with the other module directories.
 #
 # No VPN support, by design.
 section "Building Balise (WiFi/Bluetooth/Ethernet manager)"
@@ -321,7 +329,7 @@ fi
 # ============================================================
 # ROUE (RPG weapon-menu-style radial selection wheel)
 # ============================================================
-# Same logic as the Orbit/Prisme blocks above: source vendored in this repo
+# Same logic as the Balise/Prisme blocks above: source vendored in this repo
 # (roue-src/), built at install time, single binary in ~/.local/bin/roue.
 # Replaces waybar/scripts/rofi-power.sh and rofi-performance.sh -- one
 # binary for all wheels, each defined by a TOML file in

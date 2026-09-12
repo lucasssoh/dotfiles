@@ -1,4 +1,9 @@
-# Balise — position/margins/transitions
+# Balise — position/margins/transitions for the LEGACY GTK4 WINDOW
+# (`balise toggle`), which nothing in the session opens any more: the
+# panel you see is QML, in quickshell/bar/modules/balise/, styled from
+# quickshell/bar/theme/. Kept because that window still builds and runs
+# if invoked by hand. The Rust binary's other half, `balise daemon`, is
+# the live backend and reads none of this.
 # (theme -> style.css, in this same folder)
 
 # Top-right corner, same "floating panel" visual language as Orbit/swaync's

@@ -107,22 +107,34 @@ hl.on("hyprland.start", function()
     -- (and on config.reloaded / monitor.added / monitor.removed below).
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
 
-    -- Native Wayland WiFi/Bluetooth/Ethernet manager (replaces the
-    -- gnome-control-center detour), built from the sources in this repo
-    -- by install.sh (see
-    -- balise-src/). The bar's `balise toggle` shortcut reuses this
-    -- daemon instead of relaunching one per click. Started
-    -- here via a systemd --user service (see systemd/balise.service,
-    -- ExecStartPre sleep 3 + Restart=on-failure) rather than directly:
-    -- the GTK4/layer-shell client can fail to initialize too early in the
-    -- startup sequence, and the service handles the delay and automatic
-    -- restart. Started explicitly here rather than via
-    -- WantedBy=graphical-session.target, for the same reason as above
-    -- (this target never activates on its own on this session).
+    -- Balise BACKEND only. The Rust crate in balise-src/ (built by
+    -- install.sh) is now two separable things, and this starts just the
+    -- first:
+    --   * `balise daemon` -- the NetworkManager/BlueZ logic, exposing a
+    --     Unix socket at $XDG_RUNTIME_DIR/balise.sock. This is what runs.
+    --   * `balise toggle|show|hide` -- the original GTK4 window. LEGACY:
+    --     nothing in the session opens it any more, it is only reachable
+    --     by typing the command by hand.
+    --
+    -- The panel you actually see is QML, inside the bar: the bar button
+    -- calls BaliseState.togglePanel() (quickshell/bar/modules/
+    -- BaliseButton.qml), which renders quickshell/bar/modules/balise/ and
+    -- talks to the socket above directly (services/BaliseState.qml). So
+    -- the daemon has no UI of its own in this session.
+    --
+    -- Via a systemd --user service (see systemd/balise.service,
+    -- ExecStartPre sleep 3 + Restart=on-failure) rather than directly, for
+    -- the delay and the automatic restart. Started explicitly here rather
+    -- than via WantedBy=graphical-session.target, for the same reason as
+    -- above (this target never activates on its own on this session).
     hl.exec_cmd("systemctl --user start balise.service")
-    -- Closes Balise on an outside click (like swaync): GTK/gtk4-layer-shell
-    -- never notifies a layer-shell surface that it lost focus, so this
-    -- behavior relies on Hyprland events instead.
+    -- INERT as things stand -- kept running only so the legacy GTK window
+    -- still behaves if it is ever opened by hand. It watches Hyprland's
+    -- activewindow events and runs `balise hide`, which acts on that GTK
+    -- window and nothing else; the QML panel closes itself on an outside
+    -- click via HyprlandFocusGrab (see shell.qml), the native mechanism
+    -- this script existed to work around, because GTK/gtk4-layer-shell
+    -- never reported focus loss for a layer-shell surface.
     hl.exec_cmd("bash ~/.config/hypr/scripts/balise-autoclose.sh")
 end)
 
