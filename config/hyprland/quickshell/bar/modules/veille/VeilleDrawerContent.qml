@@ -1,4 +1,5 @@
 import QtQuick
+import ".."
 import "../../theme"
 
 // Clock + message content for Veille's drawer -- now living inside the
@@ -47,7 +48,50 @@ Item {
     readonly property bool showDate: root.veille ? root.veille.config.showDate : false
     readonly property real textWidth: Math.max(0, root.width - root.hPad * 2)
 
-    implicitHeight: root.topGap + content.implicitHeight + root.bottomGap
+    // + the handle's own band: it sits ABOVE topGap, so the drawer grows
+    // by exactly what the handle takes and the clock/quote block keeps
+    // the size it had.
+    implicitHeight: handle.implicitHeight + root.topGap + content.implicitHeight + root.bottomGap
+
+    // ---- force-close -------------------------------------------------
+    // The same grabber the tools drawers use (DrawerHandle), instantiated
+    // here in the content rather than in DrawerIsland -- for the reason
+    // that file's own header gives: the island is shared with TOOLS, and
+    // centerIsland's feel is meant to stay exactly as it is.
+    //
+    // Why Veille needs one at all, when it already closes itself after
+    // `pulse.durationSeconds`: those 30 seconds are 30 seconds of the
+    // screen's middle being taken over, and there are evenings where that
+    // is simply not affordable. This dismisses the pulse on screen; the
+    // next round hour is unaffected (see Veille.qml's `dismiss`).
+    //
+    // NARROWER than the drawer, unlike the tools handles which span
+    // theirs. centerIsland's drawer deliberately sits OUTSIDE the bar's
+    // input mask ("ne bloque jamais les clics", see shell.qml) so
+    // shell.qml has to punch a hole in that mask for this band -- and the
+    // hole has to be the handle, not the full width of a clock nobody
+    // ever clicks.
+    DrawerHandle {
+        id: handle
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        width: 120
+        onCloseRequested: if (root.veille) root.veille.dismiss()
+    }
+
+    // The hole shell.qml opens in that mask, in THIS item's coordinates.
+    // Exported rather than recomputed over there so the handle's size and
+    // placement stay one fact, stated where the handle actually is.
+    //
+    // Four ints rather than the one `rect` property this obviously wants
+    // to be: a Quickshell Region reading its x/width through a rect-typed
+    // property does not track it -- the mask keeps the rect's first,
+    // pre-layout value forever while every number on screen looks right.
+    // See the Region in shell.qml for how that was pinned down.
+    readonly property int closeHitX: handle.x
+    readonly property int closeHitY: handle.y
+    readonly property int closeHitWidth: handle.width
+    readonly property int closeHitHeight: handle.height
 
     // The dévoilé (reveal) that used to be declared here is now owned by
     // DrawerIsland instead (it drives `opacity` off this Item's own
@@ -80,7 +124,7 @@ Item {
         id: content
         anchors.left: parent.left
         anchors.leftMargin: root.hPad
-        anchors.top: parent.top
+        anchors.top: handle.bottom
         anchors.topMargin: root.topGap
         spacing: root.columnSpacing
 

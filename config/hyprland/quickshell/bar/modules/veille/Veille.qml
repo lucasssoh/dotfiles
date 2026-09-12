@@ -86,10 +86,46 @@ Scope {
         PowerProfiles.profile === PowerProfile.Performance
         || (context.ipc !== null && context.ipc.fullscreen !== 0)
 
+    // ---- force-close ----------------------------------------------------
+    // Asked for: a pulse lands mid-rush and has to be gone NOW ("il bloque
+    // la vue lorsque je suis en rush et que j'ai malgre tout vraiment
+    // besoin d'etudier ou de travailler"). VeilleDrawerContent's handle
+    // calls this; the drawer then closes through the island's ordinary
+    // retract animation, because `suppressed` below is the same property
+    // that was holding it open -- nothing here fades or hides anything
+    // itself.
+    //
+    // Dismisses THIS pulse only. Not the evening, not Veille: the next
+    // round hour comes back exactly as before. Silencing longer is what
+    // veille.json's `enabled` (and zenMode) are for -- a single click that
+    // quietly turned off the rest of the night would be a much bigger
+    // thing than the gesture looks like.
+    //
+    // Keyed on WHICH pulse rather than a plain bool, so nothing has to
+    // clear the flag on a timer: the key is the round hour the current
+    // pulse belongs to. `Math.round` finds it from either side of the
+    // hour mark, which is what makes the lead-in seconds (still the
+    // PREVIOUS hour by wall clock, see VeillePhase's `nowMinutes`) carry
+    // the same key as the rest of their own pulse. Taken in local time so
+    // a pulse straddling midnight keeps one key across the rollover
+    // instead of changing identity halfway through and un-dismissing
+    // itself.
+    readonly property real pulseKey:
+        Math.round((root.now.getTime() - root.now.getTimezoneOffset() * 60000) / 3600000)
+    // NaN until something is dismissed -- NaN === anything is false, so
+    // this needs no separate "has ever been dismissed" flag.
+    property real dismissedPulseKey: NaN
+    readonly property bool dismissed: root.dismissedPulseKey === root.pulseKey
+
+    function dismiss() {
+        root.dismissedPulseKey = root.pulseKey;
+    }
+
     readonly property bool suppressed:
         !config.enabled
         || !phase.phaseVisible
         || !phase.inPulse
+        || root.dismissed
         || (config.respectZenMode && root.zenMode)
         || (config.muteWhileGaming && root.gaming)
 

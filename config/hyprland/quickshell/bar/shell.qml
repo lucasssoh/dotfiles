@@ -516,6 +516,53 @@ ShellRoot {
                     width: toolsIsland.width
                     height: toolsIsland.height
                 }
+                // THIRD region, and the only exception to "centerIsland's
+                // drawer never takes clicks": Veille's close handle
+                // (VeilleDrawerContent's own DrawerHandle -- see there for
+                // why it exists). A handle nothing can click is just a
+                // drawn line, so the mask has to open over it.
+                //
+                // Exactly the handle's band, not the drawer -- ~120x18 in
+                // the middle, and only while Veille is actually showing.
+                // The rule above stands everywhere else: the clock, the
+                // quote and the keybinds sheet all still let clicks
+                // through to whatever window is underneath.
+                //
+                // Geometry is derived, not typed in twice: the entry
+                // publishes the handle's band in its OWN coordinates
+                // (closeHitX/Y/Width/Height) and this adds the two offsets
+                // between the entry and the window -- centerIsland's own x
+                // plus its `margin` (drawerColumn.x), and rowHeight plus
+                // the animated drawerGap (drawerColumn.y; the gap is 0 for
+                // centerIsland, which is not split, but reading it keeps
+                // this correct if that ever changes). VeilleDrawerContent
+                // is the FIRST entry in drawerItems, so its own offset
+                // within that column is 0.
+                //
+                // Four separate ints and not one `rect` property, which is
+                // what this was first written as: a Region whose x/width
+                // read through a rect-typed property renders and reports
+                // the right numbers but the MASK never follows them -- the
+                // hole stayed at wherever the rect happened to point on the
+                // very first evaluation (offscreen, before layout) and the
+                // handle was visibly hovering nothing. Measured, not
+                // guessed: with `x: centerIsland.x + 316` hard-coded in
+                // place of the rect term the hover lit up immediately, same
+                // final coordinates either way.
+                //
+                // Clamped against the entry's LIVE height, which the
+                // island animates from 0: the hole opens as the band
+                // itself is revealed and is fully closed again whenever
+                // Veille is not on screen.
+                Region {
+                    x: centerIsland.x + centerIsland.margin + veilleDrawer.closeHitX
+                    y: centerIsland.rowHeight
+                       + centerIsland.drawerGap * centerIsland.opaqueProgress
+                       + veilleDrawer.closeHitY
+                    width: veilleDrawer.closeHitWidth
+                    height: Math.max(0, Math.min(veilleDrawer.closeHitHeight,
+                                                 veilleDrawer.height - veilleDrawer.closeHitY))
+                }
             }
 
             // ── ONE BAR ───────────────────────────────────────
@@ -570,6 +617,7 @@ ShellRoot {
                 // default-property alias.
                 drawerItems: [
                     VeilleDrawerContent {
+                        id: veilleDrawer
                         veille: shell.veille
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
                     },
