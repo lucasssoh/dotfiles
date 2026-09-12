@@ -16,8 +16,11 @@ import "../services"
 // notifications" flag swaync surfaced that NotificationServer has no
 // equivalent for; dnd already covers the "quieted" case that matters
 // here). Glyphs are the exact same Phosphor codepoints reused verbatim
-// from that old map (U+E5E8 bell-ringing, U+E0CE bell, U+E5EE bell-z),
-// not re-picked from scratch.
+// from that old map (U+E0CE bell, U+E5EE bell-z), not re-picked from
+// scratch. The UNSEEN state is the one exception: it was U+E5E8
+// bell-ringing and is now U+E0D0 bell-simple (asked for) -- the ringing
+// arcs were the loudest thing in TOOLS for a state the accent colour
+// below already announces on its own.
 Item {
     id: root
 
@@ -47,14 +50,14 @@ Item {
     // won (label is 15 + 20 = 35), putting 12.5px a side here, the widest
     // in TOOLS, and the hole between the clock and this bell is what made
     // it visible. Nothing was riding on the floor either -- Phosphor is
-    // monospaced, so all three bell glyphs below (bell-z / bell-ringing /
+    // monospaced, so all three bell glyphs below (bell-z / bell-simple /
     // bell) measure exactly the same and this width never moves anyway.
     implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
 
     readonly property string iconGlyph: {
         if (root.dnd) return "";                          // bell-z (sleeping)
-        return root.hasUnseen ? "" : "";             // bell-ringing / plain bell
+        return root.hasUnseen ? "\uE0D0" : "\uE0CE";   // bell-simple (unseen) / bell (idle)
     }
     readonly property color iconColor: {
         if (root.hasUnseen) return "#a8b4c4";
