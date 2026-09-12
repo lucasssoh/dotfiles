@@ -400,6 +400,26 @@ Scope {
             if (root.phase.inPulse) {
                 if (!root.phase.messagesEnabled) return;
                 if (!root.pastGrace) return;
+                // The 00:00 pulse is the rollover's, not the cooldown's.
+                // Its lead-in starts a few seconds BEFORE midnight (see
+                // VeillePhase's leadSeconds), so drawing here put an
+                // ordinary message on screen and let onMidnightCrossed
+                // below replace it three seconds later -- two sentences
+                // for one appearance, reported as exactly that ("deux
+                // messages qui chevauchent... il faut un seul message").
+                // Measured before the fix: present() at 23:59:56 with a
+                // regular line, then again at 23:59:59 with the midnight
+                // one.
+                //
+                // Skipping the draw rather than suppressing the rollover:
+                // the midnight line is the one that's actually about the
+                // moment, and it lands inside this same pulse by
+                // construction, so the pulse is never left silent. (The
+                // one exception is debug's `setNow "00:00"`, which lands
+                // in the pulse without the day ever changing and so
+                // shows the clock alone -- a fake rollover having no
+                // rollover message is the honest answer there.)
+                if (root.phase.midnightPulse) return;
                 if (!root.dueForMessage) return;
                 root.present(root.selectMessage());
             } else {
@@ -417,10 +437,14 @@ Scope {
         // regular interval next allows it. In practice this always fires
         // inside the 00:00 pulse anyway (that pulse's window covers the
         // rollover instant by construction), so there's no separate
-        // visibility concern here -- just the cooldown bypass. Still
-        // re-arms the normal cooldown afterward (present() always does),
-        // so this doesn't cause a second message to land right on top of
-        // it.
+        // visibility concern here -- just the cooldown bypass.
+        //
+        // That "always inside the 00:00 pulse" is also why this one is
+        // free to present unconditionally: the pulse it lands in skips
+        // its own draw for exactly this reason (see above), so the
+        // rollover is the only thing speaking there. Re-arming the normal
+        // cooldown afterward (present() always does) then keeps the 01:00
+        // pulse quiet as usual.
         function onMidnightCrossed() {
             if (!root.phase || !root.phase.messagesEnabled) return;
             root.present(root.selectMidnightMessage());

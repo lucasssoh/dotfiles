@@ -104,6 +104,17 @@ Scope {
             : root.now.getHours() * 60 + root.now.getMinutes()
     readonly property int nowM: m(root.nowMinutes)
 
+    // The 00:00 pulse -- the one the calendar-day rollover happens
+    // INSIDE. True for the whole of it, lead-in included: `nowMinutes`
+    // above has already snapped to the hour the pulse is for, so the few
+    // seconds that are still 23:59 by wall clock answer true here like
+    // the rest of their own pulse.
+    //
+    // Exists so VeilleMessages can leave that pulse's message to
+    // `midnightCrossed` instead of drawing one of its own three seconds
+    // early -- see its onInPulseChanged.
+    readonly property bool midnightPulse: root.nowMinutes === 0
+
     readonly property string phaseName: {
         let best = "day";
         for (let i = 0; i < order.length; i++) {
