@@ -267,6 +267,12 @@ ShellRoot {
         function previewBattery(percent: int, charging: bool): void {
             BatteryPreviewState.set(percent, charging);
         }
+        // `qs -c bar ipc call bar previewBatteryConservation true` --
+        // previews the Lenovo ~60% charge cap, which only changes the
+        // module's color WHILE CHARGING (see Battery.qml's batteryColor).
+        function previewBatteryConservation(on: bool): void {
+            BatteryPreviewState.setConservation(on);
+        }
         function previewBatteryOff(): void {
             BatteryPreviewState.clear();
         }

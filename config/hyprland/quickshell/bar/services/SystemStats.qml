@@ -71,6 +71,24 @@ Singleton {
     property string fanPath: ""
     property string fanRpm: "N/A"
 
+    // ---- Battery.qml (Lenovo conservation mode) ----
+    // The one value sampled here that is NOT a rate (see this file's
+    // header): a plain boolean flag. It lives here anyway for the OTHER
+    // half of that header's argument -- it's system-wide state, so a
+    // per-module read would run once per monitor, on its own timer, for
+    // the same byte. There is also no DBus push for it: UPower reports
+    // the battery, not the EC policy capping it.
+    //
+    // Lenovo IdeaPad only: the EC exposes a binary ~60% cap, and
+    // ideapad-laptop.ko exports `conservation_mode` and nothing else
+    // (ThinkPads get the generic charge_control_*_threshold knobs
+    // instead -- verified against both module binaries, see
+    // scripts/lib/hardware.sh's own note). conservationPath stays empty
+    // on every other machine and Battery.qml's color then behaves
+    // exactly as it did before.
+    property string conservationPath: ""
+    property bool conservationMode: false
+
     // ---- Traffic.qml ----
     // Ethernet beats wifi if both happen to be connected -- same
     // priority the old nmcli script used. Reactive: re-evaluates
@@ -111,6 +129,7 @@ Singleton {
     FileView { id: memFile; path: "/proc/meminfo"; blockLoading: true }
     FileView { id: tempFile; blockLoading: true }
     FileView { id: fanFile; blockLoading: true }
+    FileView { id: conservationFile; blockLoading: true }
     FileView { id: rxFile; blockLoading: true }
 
     function sampleCpu() {
@@ -160,6 +179,13 @@ Singleton {
         tempFile.waitForJob();
         const raw = parseInt(tempFile.text().trim());
         root.tempCelsius = isNaN(raw) ? 0 : Math.round(raw / 1000);
+    }
+
+    function sampleConservation() {
+        if (root.conservationPath === "") return;
+        conservationFile.reload();
+        conservationFile.waitForJob();   // see sampleCpu's note: reload() alone only queues an async re-read
+        root.conservationMode = conservationFile.text().trim() === "1";
     }
 
     function sampleFan() {
@@ -226,6 +252,27 @@ Singleton {
         }
     }
 
+    // Same discover-once pattern as the fan/thermal probes above. Globbed
+    // from /sys/devices/platform rather than through
+    // /sys/bus/platform/drivers/<name>/: the driver's registered name and
+    // its place in the module tree both move between kernel releases
+    // (ideapad-laptop moved into a lenovo/ subdirectory in 7.1), the
+    // attribute's own name does not.
+    Process {
+        id: conservationDiscover
+        command: ["bash", "-c", "find /sys/devices/platform -name conservation_mode 2>/dev/null | head -n1"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.conservationPath = this.text.trim();
+                if (root.conservationPath !== "") {
+                    conservationFile.path = root.conservationPath;
+                    root.sampleConservation();
+                }
+            }
+        }
+    }
+
     Timer {
         interval: root.tickMs
         running: true
@@ -236,6 +283,7 @@ Singleton {
             root.sampleMemory();
             root.sampleTemperature();
             root.sampleFan();
+            root.sampleConservation();
             root.sampleTraffic();
         }
     }

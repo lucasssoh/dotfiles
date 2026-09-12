@@ -38,13 +38,32 @@ Item {
     readonly property bool lowBattery: root.present && !root.isCharging && root.pct <= 20
     readonly property bool ecoActive: PowerProfiles.profile === PowerProfile.PowerSaver
 
+    // Lenovo conservation mode: the EC's binary ~60% charge cap (read off
+    // sysfs by SystemStats, empty/false on any non-IdeaPad). Same
+    // preview-or-real shape as isCharging above.
+    readonly property bool conservationActive: BatteryPreviewState.active
+        ? BatteryPreviewState.conservation
+        : SystemStats.conservationMode
+
     // The one state-dependent color set this module has -- charging
     // (light green) and low-without-charging (amber if eco's already
     // on, red otherwise) are both genuine STATE, unlike a fixed
     // charge-level color ramp (25/50/75%, say) which waybar's original
     // rule deliberately never had and this still doesn't.
+    //
+    // Conservation mode swaps that charging green for sky blue: the cap
+    // only MEANS anything while charging -- it's the difference between
+    // "climbing to 100" and "climbing to ~60 and stopping" -- so it
+    // deliberately doesn't tint the discharging or full states, where it
+    // would just be noise. Once the cap is reached UPower leaves the
+    // Charging state on its own, isCharging goes false, and the color
+    // returns to the normal idle white with no special case needed here.
+    // Same lightness as the green it replaces (~74%), so the module's
+    // visual weight in the pill doesn't shift; well clear of the
+    // theme's desaturated blue-grey accent (#a8b4c4) so it still reads
+    // as blue rather than as a greyed-out green.
     readonly property color batteryColor: {
-        if (root.isCharging) return "#a3d9a5";
+        if (root.isCharging) return root.conservationActive ? "#8ecae6" : "#a3d9a5";
         if (root.lowBattery) return root.ecoActive ? "#ffb454" : "#ff6e6e";
         return "#f2f2f7";
     }
