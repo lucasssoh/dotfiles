@@ -224,7 +224,9 @@ Item {
     // measured.
     property int homeContentHeight: 0
     readonly property int pageHeight: Math.max(360, root.homeContentHeight + 40)
-    implicitHeight: root.pageHeight
+    // + the handle's band: pageHeight measures the PAGE, the handle sits
+    // above it, so the drawer has to grow by exactly that much.
+    implicitHeight: root.pageHeight + handle.implicitHeight
     // Still here, and still only ever exercised by DrawerIsland driving
     // this Item's height between 0 and `pageHeight` -- i.e. the drawer
     // reveal for Balise itself, the notification center's own entry
@@ -894,11 +896,19 @@ Item {
     // ever needs. The outgoing page keeps its own instance while it
     // slides (roles swap rather than the old page being rebuilt), so its
     // scroll position doesn't jump to the top on the way out.
+    DrawerHandle {
+        id: handle
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        onCloseRequested: BaliseState.close()
+    }
+
     Item {
         id: pageArea
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: handle.bottom
         anchors.bottom: parent.bottom
         anchors.leftMargin: 20
         anchors.rightMargin: 20

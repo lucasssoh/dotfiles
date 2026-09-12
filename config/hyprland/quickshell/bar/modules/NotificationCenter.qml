@@ -68,7 +68,10 @@ Item {
     // removed keeps the history list the same size it always was, rather
     // than paying out the freed space as extra empty pane under "No
     // notifications".
-    implicitHeight: 544
+    // 544 is the content; the handle's band is added on top so the
+    // drawer grows by exactly what the handle takes, leaving the history
+    // list the size it has always been.
+    implicitHeight: 544 + handle.implicitHeight
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment
     // there; the island waits out exactly this long before fading content in.
     Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
@@ -84,11 +87,19 @@ Item {
         return real.length > 0 ? real[0] : null;
     }
 
+    DrawerHandle {
+        id: handle
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        onCloseRequested: NotificationState.close()
+    }
+
     Column {
         id: topSection
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: handle.bottom
         anchors.leftMargin: 20
         anchors.rightMargin: 20
         anchors.topMargin: 20
