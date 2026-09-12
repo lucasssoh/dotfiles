@@ -62,6 +62,10 @@ Shape {
     // whatever the pill's aspect ratio.
     property real hSpan: 0.65
     property real vSpan: 0.50
+    // hSpan is ignored when `lightOrigin` is one of the symmetric ones
+    // (see there); `vSpan` still means the same thing, and is the only
+    // knob those have.
+    readonly property real _hSpan: _symmetric ? 0 : hSpan
 
     // Which corner the highlight sits on: "topLeft", "topRight",
     // "bottomLeft" or "bottomRight". topLeft for anything that floats
@@ -69,8 +73,23 @@ Shape {
     // against the screen's TOP edge has no visible upper arête, so a hot
     // spot up there would be spent on a boundary nobody can see -- those
     // take one of the bottom corners instead.
+    //
+    // Plus two SYMMETRIC origins, "bottom" and "top": an edge lit
+    // straight up or straight down, with the left and right sides
+    // treated identically. They ignore `hSpan` entirely (the gradient
+    // vector is made purely vertical, see the LinearGradient below) --
+    // which is the whole point, since any horizontal component is what
+    // makes one side of the shape brighter than the other.
+    //
+    // Added for the small badges inside the islands (hdr/display/balise):
+    // a corner hot spot reads as a direction on a big pane, but on an
+    // 18px chip it mostly reads as one lopsided corner. Those use a
+    // "bottom" + faint "top" pair instead of the topLeft/bottomRight one
+    // the panes keep.
     property string lightOrigin: "topLeft"
-    readonly property bool _fromBottom: lightOrigin === "bottomLeft" || lightOrigin === "bottomRight"
+    readonly property bool _symmetric: lightOrigin === "bottom" || lightOrigin === "top"
+    readonly property bool _fromBottom:
+        lightOrigin === "bottomLeft" || lightOrigin === "bottomRight" || lightOrigin === "bottom"
     readonly property bool _fromRight: lightOrigin === "topRight" || lightOrigin === "bottomRight"
 
     // Scales every stop's ALPHA only (never the RGB, so the highlight
@@ -140,9 +159,15 @@ Shape {
             // last stop on the bottom-right, like the 135deg in the CSS
             // versions and Hyprland's angle=45 -- but now both axes
             // actually contribute on a shape this wide.
-            readonly property real _d: 1.0 / (Math.pow(rim.hSpan / Math.max(1, rim.width), 2)
+            //
+            // A symmetric origin zeroes the horizontal term (`_hSpan`),
+            // which collapses the whole solve to dx = 0, dy = H/vSpan --
+            // a straight vertical vector, so every x reads the same stop
+            // and the two sides come out identical by construction rather
+            // than by picking a lucky angle.
+            readonly property real _d: 1.0 / (Math.pow(rim._hSpan / Math.max(1, rim.width), 2)
                                             + Math.pow(rim.vSpan / Math.max(1, rim.height), 2))
-            readonly property real _dx: rim.hSpan * _d / Math.max(1, rim.width)
+            readonly property real _dx: rim._hSpan * _d / Math.max(1, rim.width)
             readonly property real _dy: rim.vSpan * _d / Math.max(1, rim.height)
             x1: rim._fromRight ? rim.width : 0
             y1: rim._fromBottom ? rim.height : 0

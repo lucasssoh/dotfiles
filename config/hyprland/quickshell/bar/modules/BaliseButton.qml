@@ -180,12 +180,40 @@ Item {
     // Traces `badge`'s live x/y/width/height (GlassRim.qml binds to
     // `target`'s geometry every frame), so it grows/shrinks in step with
     // the animated resize above instead of needing its own Behavior.
-    // Two sources, matching Hdr's own badge (and metrics/launchers/tools
-    // in shell.qml): full-strength topLeft (default) plus a fainter
-    // bottomRight one, asked for explicitly ("le bouton hdr a un light
-    // source en bas à droite, ajoute aussi ça pour le bouton balise").
-    GlassRim { target: badge; cornerRadius: badge.radius }
-    GlassRim { target: badge; cornerRadius: badge.radius; lightOrigin: "bottomRight"; strength: 0.45 }
+    // Symmetric light from BELOW, not the topLeft/bottomRight diagonal the
+    // bar's bigger panes use -- asked for, for the island badges
+    // specifically ("un light source bas symétrique, pas haut gauche bas
+    // droite"). Two sources still, same idiom as before: the lit one from
+    // the bottom plus a fainter one from the top, so the upper arête
+    // still reads instead of dissolving into the pill behind it.
+    //
+    // vSpan 1.0 (not the 0.65/0.5 diagonal default) spends the whole
+    // five-stop ramp across the badge's 18px height, which is what makes
+    // the bottom edge read as the lit one on a chip this small.
+    //
+    // 0.40/0.18 and not the full-strength 1.0/0.45 the panes use: a
+    // corner hot spot only ever lights a short arc, while a symmetric
+    // source lights the ENTIRE bottom run at the ramp's brightest stop,
+    // so the same numbers that read as a highlight on a pane read as a
+    // white underline here -- measured, 157 luminance against the old
+    // diagonal's 92 peak, and "la puissance du blanc est trop forte".
+    // 0.40 puts it at 66, below the look it replaces, with the direction
+    // still legible; 0.28 was tried too and loses the bottom edge into
+    // the other three.
+    GlassRim {
+        target: badge
+        cornerRadius: badge.radius
+        lightOrigin: "bottom"
+        vSpan: 1.0
+        strength: 0.40
+    }
+    GlassRim {
+        target: badge
+        cornerRadius: badge.radius
+        lightOrigin: "top"
+        vSpan: 1.0
+        strength: 0.18
+    }
 
     // Opens Balise's own drawer on toolsIsland now (BaliseHome.qml, see
     // the project plan) instead of launching the separate GTK app --
