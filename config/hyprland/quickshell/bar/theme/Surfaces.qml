@@ -23,8 +23,8 @@ import QtQuick
 // not so much that text on it starts fighting the background.
 QtObject {
     // ---- the panel itself: THE only translucent thing ----------------
-    readonly property color panelTop: "#d91e2128"      // 85% of #1e2128
-    readonly property color panelBottom: "#d9060608"   // 85% of #060608
+    readonly property color panelTop: "#ff000000"      // 85% of #1e2128
+    readonly property color panelBottom: "#ff060608"   // 85% of #060608
 
     // ---- everything sitting ON the panel: fully opaque ---------------
     // Plain card/row fill and its hover, the two neutral tiers this bar

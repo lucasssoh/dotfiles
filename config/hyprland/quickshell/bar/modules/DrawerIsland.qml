@@ -727,7 +727,16 @@ Item {
             GradientStop { position: 1.0; color: root.drawerFillBottom }
         }
     }
-
+    GlassRim {
+        visible: root.splitDrawer
+        target: drawerFill
+        cornerRadius: root.drawerRadius
+        lightOrigin: "bottomLeft"
+        hSpan: 0
+        strength: 0.35
+        highlightColor: "#8e8e93"
+        opacity: root.opaqueProgress
+    }
     // There was a hairline divider drawn across this seam (a 1px rule
     // growing from the centre outward on `opaqueProgress`, added when
     // the row and the drawer first became two separate blocks). It's

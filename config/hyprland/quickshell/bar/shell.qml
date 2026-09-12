@@ -908,6 +908,7 @@ ShellRoot {
                 // behind it.
                 drawerFillTop: Surfaces.panelTop
                 drawerFillBottom: Surfaces.panelBottom
+                drawerRadius: 20
 
                 drawerItems: [
                     Modules.NotificationCenter {
