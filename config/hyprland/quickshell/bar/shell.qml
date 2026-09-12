@@ -243,6 +243,16 @@ ShellRoot {
         function simulateBattery(percent: int): void {
             BatteryAlertState.simulate(percent);
         }
+        // Fake the "charger just got plugged in" edge -- same reason
+        // simulateBattery exists (no battery here to plug anything
+        // into). With no argument it keeps whatever percentage the
+        // alert is already showing, so
+        // `simulateBattery 8` then `simulatePlug` is exactly the
+        // "je branche pendant que l'alerte est affichée" case.
+        // `qs -c bar ipc call bar simulatePlug -1`.
+        function simulatePlug(percent: int): void {
+            BatteryAlertState.simulatePlug(percent);
+        }
         // Dismiss it again without clicking Close by hand -- the alert
         // has no auto-hide timer (asked for, matches the reference), so
         // a simulateBattery test run needs an explicit way back down.

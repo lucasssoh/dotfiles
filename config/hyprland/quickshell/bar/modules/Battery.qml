@@ -59,6 +59,25 @@ Item {
     implicitHeight: 24
     visible: root.present
 
+    // Quiet acknowledgement that the charger was just plugged in.
+    // BatteryAlertState only puts its centered card on screen when
+    // the plug-in actually answers something (a low-battery warning
+    // on screen, or a still-low battery) -- but the EVENT is worth a
+    // signal at any level, so it emits `plugged()` every time and
+    // this module pops once. One scale bump on the whole
+    // number+icon row, no color of its own: batteryColor above
+    // already swings to green on the same UPower state change, so
+    // the pulse is just what makes you notice it happen.
+    Connections {
+        target: BatteryAlertState
+        function onPlugged() { plugPulse.restart(); }
+    }
+    SequentialAnimation {
+        id: plugPulse
+        NumberAnimation { target: label; property: "scale"; to: 1.22; duration: 130; easing.type: Easing.OutCubic }
+        NumberAnimation { target: label; property: "scale"; to: 1.0; duration: 380; easing.type: Easing.OutBack }
+    }
+
     Row {
         id: label
         anchors.centerIn: parent

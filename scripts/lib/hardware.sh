@@ -392,9 +392,28 @@ hw_notes() {
 
     case "$HW_SYS_VENDOR" in
         *LENOVO*|*Lenovo*)
-            echo "Lenovo: battery charge limiting (conservation mode, caps at ~60% to spare the cell when mostly plugged in) is exposed by the in-tree ideapad_laptop driver. Check and toggle with:"
-            echo "    cat /sys/bus/platform/drivers/ideapad_acpi/*/conservation_mode"
-            echo "    echo 1 | sudo tee /sys/bus/platform/drivers/ideapad_acpi/*/conservation_mode"
+            # Deliberately spelled out: the obvious thing to reach for is a
+            # percentage ("cap it at 80"), and on an IdeaPad that is not an
+            # option. Verified against this kernel's own module binary:
+            # ideapad-laptop.ko exports conservation_mode and nothing else,
+            # while thinkpad_acpi.ko does export charge_control_*_threshold
+            # -- so the generic sysfs knob genuinely is a ThinkPad(-and-
+            # others) feature, not something missing from the setup here.
+            echo "Lenovo battery charge limiting — read this before looking for an 80% cap:"
+            echo "  * IdeaPad (ideapad-laptop driver): only a BINARY 'conservation mode', which the EC pins at ~55-60%. There is no configurable threshold, so 80% is not reachable; the real choice is ~60% or 100%. Worth turning ON while the laptop lives plugged in for days, and OFF the day before travelling, since it costs that much runtime."
+            echo "  * ThinkPad (thinkpad_acpi driver) and some other vendors DO expose the generic kernel knob, which takes any percentage."
+            echo "  Check which one this machine has, then toggle it:"
+            # Globbed from /sys/devices/platform rather than through
+            # /sys/bus/platform/drivers/<name>/: the driver's registered
+            # name and its location in the module tree both move between
+            # releases (ideapad-laptop moved into a lenovo/ subdirectory in
+            # 7.1), the attribute's name does not.
+            echo "    find /sys/devices/platform -name conservation_mode -o -name charge_control_end_threshold"
+            echo "    # conservation_mode: 1 to cap, 0 to charge fully"
+            echo "    echo 1 | sudo tee \$(find /sys/devices/platform -name conservation_mode | head -n1)"
+            echo "    # charge_control_end_threshold, if present: any percentage"
+            echo "    echo 80 | sudo tee \$(find /sys/devices/platform -name charge_control_end_threshold | head -n1)"
+            echo "  Neither survives a reboot on its own — a systemd unit or udev rule is needed to make it stick."
             ;;
     esac
 

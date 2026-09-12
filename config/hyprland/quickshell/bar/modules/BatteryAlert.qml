@@ -45,10 +45,12 @@ import "../services"
 // own header has the fuller history of why this recipe is "glass" in
 // look without being a real compositor blur.
 //
-// Battery glyph: BatteryIcon.qml's hand-drawn proportional gauge (outline
-// + nub + exact-percentage fill), reused verbatim from the pass before
-// this one -- still correct here, just recolored and set inside a tile
-// instead of sitting bare on the card.
+// Battery glyph: gone, along with the tile it sat in -- replaced by
+// BatteryRing.qml, a thick ring whose own stroke is the gauge, with the
+// percentage and a status icon (plug / lightning) scrolling inside it.
+// BatteryIcon.qml's small hand-drawn gauge is still what Battery.qml
+// draws in the top bar, where it has to read at 20x10px next to a
+// number; at 84px on a card it was just a picture of a battery.
 //
 // Check/X badges: the checkmark is Phosphor Bold's real "check" glyph
 // (0xe182, found by rendering the font's own glyph table and reading
@@ -63,19 +65,87 @@ Rectangle {
     id: card
 
     readonly property int percent: BatteryAlertState.percent
-    readonly property bool critical: BatteryAlertState.critical
-    readonly property color accent: critical ? "#ff6e6e" : "#a8b4c4"
-    readonly property color accentLight: critical ? "#ff8a8a" : "#c3ccd8"
+    // BatteryAlertState.critical (<= the last tier) is no longer read
+    // here: the warmth ramp below is a continuous function of the level,
+    // so "is this the critical tier" stopped being a color decision --
+    // 5% simply lands on the ramp's hot end. The state still tracks it
+    // for the trigger logic.
+
+    // Second mode of this same card: the charger was just plugged in
+    // (BatteryAlertState.mode, see that file's "charger plugged in"
+    // section). Everything below reads `charging` rather than being a
+    // second card -- plugging in while the warning is up is the ANSWER
+    // to that warning, so the card answers in place: green accent, the
+    // glyph grows its charging '+', headline and both pills re-label.
+    // The morph is free, animation-wise: the color properties below are
+    // Behavior-animated at the few places that matter, and nothing in
+    // the layout moves (same tile, same headline row, same two pills at
+    // the same sizes), which is exactly why this fits in one card
+    // instead of needing a second surface.
+    readonly property bool charging: BatteryAlertState.mode === "charging"
+
+    // Warmth ramp -- the unplugged accent is no longer two fixed colors
+    // (platinum, then red below the last tier) but a continuous slide
+    // from cool to hot as the level drops (asked for: "accentuer un peu
+    // la chaleur de la couleur en fonction du niveau de batterie si ce
+    // n'est pas chargé"). Three anchors, linear between them, flat
+    // outside:
+    //
+    //     >= 30%   #a8b4c4  platinum, this bar's neutral accent
+    //       15%    #ffb454  amber -- the SAME amber Battery.qml already
+    //                       uses for "low, but eco is on"
+    //     <= 5%    #ff6e6e  red -- the critical tier, and the same red
+    //                       used for mute/critical everywhere else
+    //
+    // Anchored on the tiers rather than on round numbers: 20/10/5 are
+    // where this card actually fires, so a 20% alert opens visibly warm,
+    // a 10% one amber, a 5% one fully red -- the color carries the
+    // urgency the tier already encodes, instead of the card looking
+    // identical at 20% and at 6%.
+    //
+    // Interpolated in straight RGB, deliberately NOT through hue: a hue
+    // sweep from platinum-blue to amber runs through green on the way,
+    // and green is this card's OTHER state (charging). Straight RGB
+    // passes through a muted tan instead, which reads as "warming up"
+    // and can never be mistaken for the charging color.
+    //
+    // No ramp while charging: green is a state, not a level, and the
+    // whole point of the plugged-in card is that the level stopped
+    // being the news.
+    function mixColor(a, b, t) {
+        const k = Math.max(0, Math.min(1, t));
+        return Qt.rgba(a.r + (b.r - a.r) * k,
+                       a.g + (b.g - a.g) * k,
+                       a.b + (b.b - a.b) * k, 1);
+    }
+    readonly property color warmAccent: {
+        const p = Math.max(0, Math.min(100, card.percent));
+        const cool = Qt.rgba(0.659, 0.706, 0.769, 1);   // #a8b4c4
+        const warm = Qt.rgba(1.0, 0.706, 0.329, 1);     // #ffb454
+        const hot = Qt.rgba(1.0, 0.431, 0.431, 1);      // #ff6e6e
+        if (p >= 30) return cool;
+        if (p <= 5) return hot;
+        if (p >= 15) return card.mixColor(cool, warm, (30 - p) / 15);
+        return card.mixColor(warm, hot, (15 - p) / 10);
+    }
+
+    // NOT `readonly` (unlike every other derived property in this file):
+    // a Behavior can only be attached to a writable property -- QML
+    // refuses to load with "accentLight is a read-only property"
+    // otherwise. The bindings below are still the only thing that ever
+    // writes them.
+    property color accent: charging ? "#a3d9a5" : card.warmAccent
+    property color accentLight: charging ? "#bfe6c0" : Qt.lighter(card.warmAccent, 1.12)
+    Behavior on accent { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on accentLight { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
     // Square, deliberately -- width is the SAME literal as height below
-    // (292), not derived from it, same "two equal literals" approach
-    // iconTile already uses. The square target is THIS container, the
-    // whole card -- not iconTile (already square on its own terms) and
-    // not the battery glyph inside it (reverted back to its normal
-    // elongated shape above after a wrong guess at squaring that
-    // instead).
+    // (292), not derived from it. The square target is THIS container,
+    // the whole card, not whatever icon sits at the top of it (that one
+    // is square on its own terms, and was a wrong guess at what "square"
+    // meant once already).
     width: 292
-    // Sum of the fixed rows below (24 top pad + 76 icon tile + 16 gap +
+    // Sum of the fixed rows below (20 top pad + 84 ring + 12 gap +
     // 22 title + 22 gap + 50 button + 10 gap + 50 button + 22 bottom
     // pad) -- no QtQuick.Layouts in this codebase, so the height is
     // this literal total rather than something a Column would compute
@@ -107,45 +177,45 @@ Rectangle {
     Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
-    // Square, deliberately -- width/height are the same literal (76),
-    // not derived from each other, so this can never drift into a
-    // rectangle as the rest of the layout changes around it. Bigger
-    // than the first pass (64 -> 76) specifically to give the icon
-    // inside more breathing room: BatteryIcon itself stayed the same
-    // size, so the padding around it grew on its own.
-    Rectangle {
-        id: iconTile
+    // The icon: one thick ring, its stroke doing the gauging, with the
+    // percentage and a status glyph inside it (BatteryRing.qml -- see
+    // that file for the arc/flow/scroll mechanics). Replaced the
+    // rounded-square TILE + small battery glyph this card inherited from
+    // the Figma mockup: asked for explicitly ("un simple cercle epaix
+    // suffit et la jauge c'est le remplissage du border"), and the tile
+    // went with it -- a ring needs no box around it.
+    //
+    // 84 across at topMargin 20 with a 12 gap under it, where the tile
+    // was 76 at 24 with a 16 gap: 20 + 84 + 12 is the same 116 as
+    // 24 + 76 + 16, so the card's height literal below still adds up
+    // and it stays square. A bigger ring for free, in other words.
+    BatteryRing {
+        id: gauge
         anchors.top: parent.top
-        anchors.topMargin: 24
+        anchors.topMargin: 20
         anchors.horizontalCenter: parent.horizontalCenter
-        width: 76
-        height: 76
-        radius: 18
-        color: "#1a1d2a"
-
-        // Back to BatteryIcon's normal elongated proportions -- the
-        // square target was never this icon, it was the CARD as a
-        // whole (see card.width/height below). Squaring the icon itself
-        // was the wrong fix, corrected here.
-        BatteryIcon {
-            anchors.centerIn: parent
-            width: 34
-            height: 17
-            percent: card.percent
-            outlineColor: card.accent
-            fillColor: card.accent
-            outlineOpacity: 1.0
-        }
+        width: 84
+        height: 84
+        percent: card.percent
+        charging: card.charging
+        // NOT card.accent: that one already resolves charging -> green,
+        // and the ring needs both colors at once -- its two center
+        // faces (plug / lightning) are both on screen during the scroll.
+        lowColor: card.warmAccent
+        chargeColor: "#a3d9a5"
     }
 
     Text {
         id: titleLabel
-        anchors.top: iconTile.bottom
-        anchors.topMargin: 16
+        anchors.top: gauge.bottom
+        anchors.topMargin: 12
         anchors.horizontalCenter: parent.horizontalCenter
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
-        text: card.percent + "% battery remaining"
+        // No percentage here anymore: the ring above says it, in bigger
+        // type, right next to the gauge that means it. This line names
+        // the STATE instead -- two words, no number to re-read.
+        text: card.charging ? "Charging" : "Battery low"
         color: "#f2f2f7"
         font.family: Fonts.ui
         font.pixelSize: 17
@@ -188,7 +258,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "Power save mode"
+            text: card.charging ? "Balanced mode" : "Power save mode"
             color: "#ffffff"
             font.family: Fonts.ui
             font.pixelSize: 15
@@ -227,7 +297,9 @@ Rectangle {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: BatteryAlertState.activateLowPowerMode()
+            onClicked: card.charging
+                ? BatteryAlertState.activateBalancedMode()
+                : BatteryAlertState.activateLowPowerMode()
         }
     }
 
@@ -252,7 +324,10 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "Not now"
+            // "Not now" postpones a decision; once you're plugged in
+            // there's nothing left to postpone, so the same pill says
+            // what it now does instead.
+            text: card.charging ? "Dismiss" : "Not now"
             color: "#f2f2f7"
             font.family: Fonts.ui
             font.pixelSize: 15
