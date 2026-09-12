@@ -1,0 +1,27 @@
+# Lenovo IdeaPad battery conservation mode — make it writable without root.
+#
+# ideapad-laptop exposes the EC's ~60% charge cap as a plain sysfs
+# attribute, owned root:root 0644. Reading it needs nothing; WRITING it
+# needs root, which is why the Balise panel's "Charge 60%" toggle would
+# otherwise be a read-only indicator. This hands write access to the
+# `wheel` group once, at device-add time, so nothing has to escalate
+# privileges at runtime — no pkexec, no password prompt per toggle, no
+# setuid helper.
+#
+# Why RUN+= and a shell rather than udev's own GROUP=/MODE=: those two
+# apply to a device NODE in /dev, and this is a sysfs attribute of a
+# platform device, which has no node. Changing an attribute's mode is
+# only reachable by actually running chgrp/chmod on it. This is the same
+# shape the ThinkPad charge-threshold and ASUS fan-curve rules out in the
+# wild use, for the same reason.
+#
+# DRIVER== rather than KERNEL=="VPC2004:00": the ACPI id varies across
+# IdeaPad models, the driver that binds them does not. The [ -e ] guard
+# covers the models where that driver binds but exposes no
+# conservation_mode, so the rule is a no-op instead of an error there.
+#
+# Installed by scripts/install-hardware.sh (the `./install hardware`
+# phase), which also applies the same chgrp/chmod immediately so the
+# toggle works without waiting for a reboot.
+ACTION=="add|change", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", \
+  RUN+="/bin/sh -c '[ -e /sys%p/conservation_mode ] && chgrp wheel /sys%p/conservation_mode && chmod 0664 /sys%p/conservation_mode'"

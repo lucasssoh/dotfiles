@@ -273,6 +273,12 @@ ShellRoot {
         function previewBatteryConservation(on: bool): void {
             BatteryPreviewState.setConservation(on);
         }
+        // `qs -c bar ipc call bar previewConservationAvailable true` --
+        // pretends the machine exposes conservation_mode, so Balise's
+        // "Charge 60%" toggle can be seen on a non-IdeaPad.
+        function previewConservationAvailable(on: bool): void {
+            BatteryPreviewState.setConservationAvailable(on);
+        }
         // `qs -c bar ipc call bar previewBatteryAtRest true` -- previews
         // the on-AC-but-idle state (UPower FullyCharged/PendingCharge),
         // where the plug glyph replaces the battery gauge.

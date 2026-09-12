@@ -181,6 +181,28 @@ Singleton {
         root.tempCelsius = isNaN(raw) ? 0 : Math.round(raw / 1000);
     }
 
+    // The one WRITE in this file. It lives here because this is where
+    // conservationPath was discovered -- a setter anywhere else would have
+    // to repeat that glob or import it back from here anyway.
+    //
+    // Works without any privilege escalation: config/hyprland/udev/
+    // 99-ideapad-conservation.rules hands the attribute to group wheel at
+    // device-add time (installed by scripts/install-hardware.sh). Without
+    // that rule the attribute is root:root 0644 and this write silently
+    // fails -- hence the re-sample afterwards rather than assuming it took,
+    // so the UI snaps back if the kernel did not accept it.
+    function setConservation(on) {
+        if (root.conservationPath === "") return;
+        conservationWriter.command = ["sh", "-c",
+            "printf '%s' " + (on ? "1" : "0") + " > " + root.conservationPath];
+        conservationWriter.running = true;
+    }
+
+    Process {
+        id: conservationWriter
+        onExited: root.sampleConservation()
+    }
+
     function sampleConservation() {
         if (root.conservationPath === "") return;
         conservationFile.reload();

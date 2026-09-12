@@ -81,6 +81,51 @@ for svc in thermald power-profiles-daemon; do
 done
 
 # ============================================================
+# UDEV RULES
+# ============================================================
+# Hardware-specific permission fixes. Installed here rather than from the
+# Hyprland module because they are a property of the MACHINE, not of the
+# desktop config -- and because `./install hardware` is the thing you
+# re-run after swapping laptops.
+section "Hardware udev rules"
+
+install_udev_rule() {
+    local src="$1" name
+    name="$(basename "$src")"
+    if sudo install -Dm644 "$src" "/etc/udev/rules.d/$name"; then
+        ok "Installed /etc/udev/rules.d/$name"
+        return 0
+    fi
+    warn "Could not install $name"
+    return 1
+}
+
+# Lenovo IdeaPad conservation mode (~60% charge cap). Gated on the
+# attribute actually existing rather than on the vendor string: a Lenovo
+# without ideapad-laptop, or a ThinkPad (which exposes the generic
+# charge_control_*_threshold knobs instead), should not get a rule that
+# can never match.
+CONSERVATION_ATTR="$(find /sys/devices/platform -name conservation_mode 2>/dev/null | head -n1)"
+
+if [ -n "$CONSERVATION_ATTR" ]; then
+    info "IdeaPad conservation mode found at $CONSERVATION_ATTR"
+    if install_udev_rule "$DOTFILES_DIR/config/hyprland/udev/99-ideapad-conservation.rules"; then
+        sudo udevadm control --reload-rules 2>/dev/null || true
+        # The rule only fires on the next add/change event, i.e. the next
+        # boot. Apply the same thing now so the toggle works immediately.
+        if sudo chgrp wheel "$CONSERVATION_ATTR" && sudo chmod 0664 "$CONSERVATION_ATTR"; then
+            ok "conservation_mode is now writable by group wheel."
+        else
+            warn "Rule installed, but the live chgrp/chmod failed — it will take effect on the next boot."
+        fi
+        id -nG | tr ' ' '\n' | grep -qx wheel \
+            || warn "$USER is NOT in the wheel group — the rule grants write to wheel, so add yourself: sudo usermod -aG wheel $USER"
+    fi
+else
+    info "No conservation_mode attribute on this machine — skipping the IdeaPad rule."
+fi
+
+# ============================================================
 # MANUAL FOLLOW-UPS
 # ============================================================
 notes="$(hw_notes)"

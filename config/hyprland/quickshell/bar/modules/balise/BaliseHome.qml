@@ -234,6 +234,31 @@ Item {
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment there.
     Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
 
+    // ---- Lenovo conservation mode (the ~60% charge cap) ----
+    // Read and written through SystemStats, NOT through BaliseState's
+    // socket: this is a sysfs attribute, not something the Rust daemon
+    // knows about or has any business proxying.
+    //
+    // `available` gates the whole row. conservation_mode exists only on
+    // IdeaPads (ThinkPads expose the generic charge_control_*_threshold
+    // knobs instead, and most machines expose nothing) -- everywhere else
+    // the toggle would be a dead control, so it is not drawn at all and
+    // Night mode goes back to full width.
+    readonly property bool conservationAvailable: BatteryPreviewState.active
+        ? BatteryPreviewState.conservationAvailable
+        : SystemStats.conservationPath !== ""
+    readonly property bool conservationOn: BatteryPreviewState.active
+        ? BatteryPreviewState.conservation
+        : SystemStats.conservationMode
+
+    function setConservation(on) {
+        if (BatteryPreviewState.active) {
+            BatteryPreviewState.setConservation(on);
+            return;
+        }
+        SystemStats.setConservation(on);
+    }
+
     // Airplane mode has no single backend flag -- computed the same way
     // ui/home.rs's own refresh_airplane does: both radios off.
     readonly property bool airplaneActive: !BaliseState.wifiEnabled && !BaliseState.bluetoothEnabled
@@ -485,6 +510,18 @@ Item {
         property bool checked: false
         signal toggled(bool value)
 
+        // Half-width variant. At full width the row has ~84px of chrome
+        // (16 left + 12 gap + 40 track + 16 right) against ~290px of row,
+        // which is nothing; halved, that same 84 eats more than half the
+        // row and "Night mode" came out as "Night m…". Compact claws back
+        // 20px of margin and drops the title a point, which is enough for
+        // both labels to render whole -- measured, not guessed.
+        property bool compact: false
+        readonly property int padLeft: trow.compact ? 12 : 16
+        readonly property int padGap: trow.compact ? 8 : 12
+        readonly property int padRight: trow.compact ? 10 : 16
+        readonly property int titleSize: trow.compact ? 13 : 14
+
         height: trow.subtitle !== "" ? 54 : 46
         radius: 12
         color: mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card
@@ -492,9 +529,9 @@ Item {
 
         Column {
             anchors.left: parent.left
-            anchors.leftMargin: 16
+            anchors.leftMargin: trow.padLeft
             anchors.right: track.left
-            anchors.rightMargin: 12
+            anchors.rightMargin: trow.padGap
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -505,7 +542,7 @@ Item {
                 text: trow.title
                 color: "#f2f2f7"
                 font.family: Fonts.ui
-                font.pixelSize: 14
+                font.pixelSize: trow.titleSize
                 font.bold: true
                 elide: Text.ElideRight
             }
@@ -525,7 +562,7 @@ Item {
         Rectangle {
             id: track
             anchors.right: parent.right
-            anchors.rightMargin: 16
+            anchors.rightMargin: trow.padRight
             anchors.verticalCenter: parent.verticalCenter
             width: 40
             height: 22
@@ -770,12 +807,40 @@ Item {
 
             GroupLabel { text: "SYSTEM" }
 
-            ToggleRow {
+            // Night mode and the charge cap sit SIDE BY SIDE (asked for:
+            // "à droite de Night mode"). Both lose their subtitle as the
+            // price of it -- at half width "Warmer screen temperature"
+            // does not fit, and a subtitle on one but not the other reads
+            // as a mistake. ToggleRow already collapses 54 -> 46px high
+            // when subtitle is empty, so the pair stays a tidy band.
+            //
+            // When the machine has no conservation_mode, the second row
+            // is not drawn and the first takes the full width back --
+            // written as an explicit width rather than left to the Row,
+            // because a positioner only reclaims the space, it does not
+            // stretch the survivor into it.
+            Row {
                 width: parent.width
-                title: "Night mode"
-                subtitle: "Warmer screen temperature"
-                checked: BaliseState.nightModeEnabled
-                onToggled: BaliseState.toggleNightMode()
+                spacing: 16
+
+                ToggleRow {
+                    width: root.conservationAvailable
+                        ? (parent.width - parent.spacing) / 2
+                        : parent.width
+                    compact: root.conservationAvailable
+                    title: "Night mode"
+                    checked: BaliseState.nightModeEnabled
+                    onToggled: BaliseState.toggleNightMode()
+                }
+
+                ToggleRow {
+                    visible: root.conservationAvailable
+                    width: (parent.width - parent.spacing) / 2
+                    compact: true
+                    title: "Charge 60%"
+                    checked: root.conservationOn
+                    onToggled: root.setConservation(!root.conservationOn)
+                }
             }
                 ActionRow {
                     width: parent.width

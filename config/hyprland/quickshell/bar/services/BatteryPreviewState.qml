@@ -25,6 +25,13 @@ Singleton {
     // and so the existing two-argument previewBattery call keeps working
     // unchanged.
     property bool conservation: false
+    // Whether the machine HAS the attribute at all, as opposed to whether
+    // it is on. Separate because they answer different questions and the
+    // panel needs both: BaliseHome hides its "Charge 60%" toggle entirely
+    // when there is no conservation_mode to write, which is every machine
+    // that is not an IdeaPad -- including this one, so without this flag
+    // that row could never be seen here to check it renders.
+    property bool conservationAvailable: false
     // "On AC, battery idle" -- previews Battery.qml's plug icon
     // (FullyCharged / PendingCharge). Mutually exclusive with `charging`:
     // a real battery is never both, so each setter clears the other
@@ -40,6 +47,11 @@ Singleton {
 
     function setConservation(on) {
         root.conservation = on;
+        root.active = true;
+    }
+
+    function setConservationAvailable(on) {
+        root.conservationAvailable = on;
         root.active = true;
     }
 
@@ -59,6 +71,7 @@ Singleton {
         root.active = false;
         root.charging = false;
         root.conservation = false;
+        root.conservationAvailable = false;
         root.atRest = false;
     }
 }
