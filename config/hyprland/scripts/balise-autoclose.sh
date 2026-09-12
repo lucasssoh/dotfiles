@@ -4,13 +4,14 @@ set -uo pipefail
 # =========================================================
 # balise-autoclose.sh — closes Balise as soon as another window takes focus.
 #
-# INERT as things stand. It runs `balise hide`, which acts on the Rust
-# crate's LEGACY GTK4 window, and nothing in the session opens that any
-# more -- the panel you see is QML (quickshell/bar/modules/balise/), and
-# it closes on an outside click via a native HyprlandFocusGrab (see
-# shell.qml), which is the mechanism this script existed to substitute
-# for. Still started from hypr/hyprland.lua so the GTK window behaves if
-# it is ever opened by hand.
+# NOT started automatically -- run it by hand if you use the legacy GTK
+# window. It runs `balise hide`, which acts on the Rust crate's LEGACY
+# GTK4 window, and nothing in the session opens that any more: the panel
+# you see is QML (quickshell/bar/modules/balise/), dismissed by shell.qml's
+# own Hyprland raw-event listener (the keybindsDismissEvents list, shared
+# with the notification drawer and the keybinds sheet). So this was a
+# permanent socat + read loop with no effect on anything on screen, and it
+# was dropped from hypr/hyprland.lua's autostart.
 #
 # Why it exists at all: that GTK window is a plain layer-shell surface,
 # and GTK/gtk4-layer-shell never emits a focus-loss event for one (its

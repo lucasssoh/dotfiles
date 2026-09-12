@@ -128,14 +128,19 @@ hl.on("hyprland.start", function()
     -- than via WantedBy=graphical-session.target, for the same reason as
     -- above (this target never activates on its own on this session).
     hl.exec_cmd("systemctl --user start balise.service")
-    -- INERT as things stand -- kept running only so the legacy GTK window
-    -- still behaves if it is ever opened by hand. It watches Hyprland's
-    -- activewindow events and runs `balise hide`, which acts on that GTK
-    -- window and nothing else; the QML panel closes itself on an outside
-    -- click via HyprlandFocusGrab (see shell.qml), the native mechanism
-    -- this script existed to work around, because GTK/gtk4-layer-shell
-    -- never reported focus loss for a layer-shell surface.
-    hl.exec_cmd("bash ~/.config/hypr/scripts/balise-autoclose.sh")
+    -- balise-autoclose.sh is NOT started here any more. It ran `balise
+    -- hide` on every activewindow event, and that acts ONLY on the legacy
+    -- GTK window, which nothing opens -- so it was a permanent socat +
+    -- read loop with no effect on anything on screen. The QML panel is
+    -- dismissed by shell.qml's own Hyprland raw-event listener instead
+    -- (the keybindsDismissEvents list: openwindow/closewindow/workspace/
+    -- movewindow/fullscreen/..., shared with the notification drawer and
+    -- the keybinds sheet). Note that list deliberately EXCLUDES
+    -- `activewindow`: raw focus changes would close the panel just from
+    -- focus-follows-mouse drifting over another window. So clicking on
+    -- another window does not close it -- opening/closing one, or
+    -- changing workspace, does. The script stays in scripts/ for whoever
+    -- still opens the GTK window by hand.
 end)
 
 -- A `hyprctl reload` reloads the static Lua files and clears rules set at
