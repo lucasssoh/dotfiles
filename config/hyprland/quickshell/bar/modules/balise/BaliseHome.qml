@@ -510,28 +510,35 @@ Item {
         property bool checked: false
         signal toggled(bool value)
 
-        // Half-width variant. At full width the row has ~84px of chrome
-        // (16 left + 12 gap + 40 track + 16 right) against ~290px of row,
-        // which is nothing; halved, that same 84 eats more than half the
-        // row and "Night mode" came out as "Night m…". Compact claws back
-        // 20px of margin and drops the title a point, which is enough for
-        // both labels to render whole -- measured, not guessed.
-        property bool compact: false
-        readonly property int padLeft: trow.compact ? 12 : 16
-        readonly property int padGap: trow.compact ? 8 : 12
-        readonly property int padRight: trow.compact ? 10 : 16
-        readonly property int titleSize: trow.compact ? 13 : 14
-
         height: trow.subtitle !== "" ? 54 : 46
         radius: 12
-        color: mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card
+        // The card itself carries the state -- there is no switch. It used
+        // to have a real track+thumb on the right; dropping it and tinting
+        // the card instead is exactly what the WiFi/Bluetooth/Ethernet
+        // tiles above already do, so SYSTEM stops speaking a different
+        // visual language from the grid directly above it, and the ~56px
+        // the track and its margin occupied goes back to the label.
+        //
+        // Those 56px are also what retired the `compact` variant this
+        // briefly carried: at half width the titles fit unaided once
+        // nothing sits to their right, so the tighter margins and the
+        // 13px title are gone again.
+        //
+        // Same four combinations as Tile (off/on x rest/hover) reading the
+        // same tokens, so the two cannot drift apart.
+        color: trow.checked
+            ? (mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium)
+            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card)
+        border.width: 1
+        border.color: trow.checked ? root.accent : Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on border.color { ColorAnimation { duration: 120 } }
 
         Column {
             anchors.left: parent.left
-            anchors.leftMargin: trow.padLeft
-            anchors.right: track.left
-            anchors.rightMargin: trow.padGap
+            anchors.leftMargin: 16
+            anchors.right: parent.right
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -540,9 +547,11 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.title
-                color: "#f2f2f7"
+                // Accent when on, same as Tile.fg -- the label is part of
+                // the highlight, not a neutral sitting inside it.
+                color: trow.checked ? root.accent : "#f2f2f7"
                 font.family: Fonts.ui
-                font.pixelSize: trow.titleSize
+                font.pixelSize: 14
                 font.bold: true
                 elide: Text.ElideRight
             }
@@ -556,28 +565,6 @@ Item {
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight
-            }
-        }
-
-        Rectangle {
-            id: track
-            anchors.right: parent.right
-            anchors.rightMargin: trow.padRight
-            anchors.verticalCenter: parent.verticalCenter
-            width: 40
-            height: 22
-            radius: 11
-            color: trow.checked ? root.accent : Qt.rgba(1, 1, 1, 0.18)
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Rectangle {
-                width: 18
-                height: 18
-                radius: 9
-                color: "#0c0c0e"
-                anchors.verticalCenter: parent.verticalCenter
-                x: trow.checked ? parent.width - width - 2 : 2
-                Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
             }
         }
 
@@ -808,11 +795,12 @@ Item {
             GroupLabel { text: "SYSTEM" }
 
             // Night mode and the charge cap sit SIDE BY SIDE (asked for:
-            // "à droite de Night mode"). Both lose their subtitle as the
-            // price of it -- at half width "Warmer screen temperature"
-            // does not fit, and a subtitle on one but not the other reads
-            // as a mistake. ToggleRow already collapses 54 -> 46px high
-            // when subtitle is empty, so the pair stays a tidy band.
+            // "à droite de Night mode"). Both drop their subtitle: at half
+            // width "Warmer screen temperature" does not fit, and a
+            // subtitle on one but not the other reads as a mistake.
+            // ToggleRow collapses 54 -> 46px when subtitle is empty, so
+            // the pair stays a tidy band -- and with the switch gone (see
+            // ToggleRow) the titles need no tightening to fit.
             //
             // When the machine has no conservation_mode, the second row
             // is not drawn and the first takes the full width back --
@@ -827,7 +815,6 @@ Item {
                     width: root.conservationAvailable
                         ? (parent.width - parent.spacing) / 2
                         : parent.width
-                    compact: root.conservationAvailable
                     title: "Night mode"
                     checked: BaliseState.nightModeEnabled
                     onToggled: BaliseState.toggleNightMode()
@@ -836,7 +823,6 @@ Item {
                 ToggleRow {
                     visible: root.conservationAvailable
                     width: (parent.width - parent.spacing) / 2
-                    compact: true
                     title: "Charge 60%"
                     checked: root.conservationOn
                     onToggled: root.setConservation(!root.conservationOn)
