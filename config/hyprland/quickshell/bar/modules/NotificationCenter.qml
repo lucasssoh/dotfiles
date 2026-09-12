@@ -192,37 +192,28 @@ Item {
         }
 
         // ---- mpris (autohide when nothing's playing, like swaync's own) ----
+        //
+        // No album art. It was a 36px thumbnail that spent most of its life
+        // either empty (players that publish no trackArtUrl) or showing a
+        // postage stamp too small to recognise, and it was the one element
+        // in this drawer pulling a raster image into an otherwise entirely
+        // drawn interface. Dropping it is what makes the row read as part
+        // of the panel rather than as an embedded widget -- asked for
+        // ("miser surtout sur le côté sleek de l'élément").
+        //
+        // radius 16, not the 12 this had: that is NotificationCard.qml's
+        // own corner, and this row sits directly above a stack of them.
         Rectangle {
             width: parent.width
             height: 56
-            radius: 12
-            color: "#14161d"
+            radius: 16
+            color: Surfaces.card
             visible: root.mprisPlayer !== null
 
-            Item {
-                id: iconTile
-                anchors.left: parent.left
-                anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                width: 36
-                height: 36
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 8
-                    color: "#1a1d2a"
-                }
-                Image {
-                    anchors.fill: parent
-                    anchors.margins: 2
-                    fillMode: Image.PreserveAspectCrop
-                    source: root.mprisPlayer ? (root.mprisPlayer.trackArtUrl || "") : ""
-                }
-            }
             Column {
-                anchors.left: iconTile.right
-                anchors.leftMargin: 10
-                anchors.right: parent.right
+                anchors.left: parent.left
+                anchors.leftMargin: 16
+                anchors.right: transport.left
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
@@ -249,10 +240,90 @@ Item {
                     elide: Text.ElideRight
                 }
             }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: if (root.mprisPlayer) root.mprisPlayer.togglePlaying()
+
+            // Transport. Replaces a MouseArea over the WHOLE card that
+            // toggled playback -- with real buttons on it, that made every
+            // stray click on the title pause the music.
+            Row {
+                id: transport
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 0
+
+                TransportButton {
+                    glyph: "\uE5A4"                                  // ph-skip-back
+                    enabled: root.mprisPlayer ? root.mprisPlayer.canGoPrevious : false
+                    onTriggered: root.mprisPlayer.previous()
+                }
+                TransportButton {
+                    // The only one that changes shape, and the reason the
+                    // row needs no play/pause label anywhere else.
+                    glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uE39E" : "\uE3D0"   // ph-pause / ph-play
+                    glyphSize: 17
+                    enabled: root.mprisPlayer ? root.mprisPlayer.canTogglePlaying : false
+                    onTriggered: root.mprisPlayer.togglePlaying()
+                }
+                TransportButton {
+                    glyph: "\uE5A6"                                  // ph-skip-forward
+                    enabled: root.mprisPlayer ? root.mprisPlayer.canGoNext : false
+                    onTriggered: root.mprisPlayer.next()
+                }
             }
+        }
+    }
+
+    // One transport control. Bare glyph, no chrome at rest -- the card it
+    // sits on is already a surface, and stacking a second one per button
+    // would turn a two-line row into a control panel. The hover disc is
+    // what makes it read as pressable, and it only exists while the
+    // pointer is on it.
+    //
+    // Phosphor FILL, not the Bold outline the bar's own icons use: at
+    // 15px a hollow triangle and a hollow pair of bars lose their inside,
+    // and transport symbols are read by silhouette. Checked against both
+    // weights at size before picking.
+    component TransportButton: Item {
+        id: tb
+        required property string glyph
+        property int glyphSize: 15
+        signal triggered()
+
+        width: 30
+        height: 30
+        // Not `opacity`: that would fade the hover disc too on the frame
+        // where a player gains the capability mid-hover. Only the glyph
+        // dims, the geometry never moves -- a player losing canGoNext
+        // must not reflow the row.
+        enabled: true
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: Surfaces.cardHover
+            opacity: (tb.enabled && hover.containsMouse) ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 110 } }
+        }
+
+        Text {
+            anchors.centerIn: parent
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: tb.glyph
+            color: !tb.enabled ? Qt.rgba(1, 1, 1, 0.22)
+                 : hover.containsMouse ? Surfaces.accent : "#f2f2f7"
+            Behavior on color { ColorAnimation { duration: 110 } }
+            font.family: Fonts.iconPhosphorFill
+            font.pixelSize: tb.glyphSize
+        }
+
+        MouseArea {
+            id: hover
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: tb.enabled
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tb.triggered()
         }
     }
 
