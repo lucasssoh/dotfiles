@@ -20,13 +20,13 @@ Item {
     //
     // The `Math.max(..., 32)` floor this replaces read as jitter
     // protection but wasn't: Phosphor is monospaced (every glyph advances
-    // exactly font.pixelSize), so the width already jumped 32 -> 42
-    // whenever the profile went to Performance -- that glyph is TWO
-    // characters (see iconFor below) where the other two are one. The
-    // floor only ever inflated the SINGLE-glyph cases, i.e. balanced and
-    // eco, which is what this module shows nearly all the time, to ~10px
-    // of padding a side. Dropping it leaves the same 15px jump on profile
-    // change as before, at a consistent 6px a side in every state.
+    // exactly font.pixelSize), so back when performance was the bolt
+    // REPEATED, the width jumped 32 -> 42 on every switch into it -- that
+    // state was two characters where the other two were one. The floor
+    // only ever inflated the single-glyph cases, i.e. balanced and eco,
+    // to ~10px of padding a side. Since each profile got its own glyph
+    // (see iconFor below) every state is one character, so there is no
+    // jump left at all: a constant 6px a side, always.
     implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
     // Collapses to nothing without power-profiles-daemon: hasPerformanceProfile
@@ -37,18 +37,23 @@ Item {
     // nothing on click when the daemon isn't installed/running.
     visible: PowerProfiles.hasPerformanceProfile
 
-    // Asked for: a glyph per profile that actually reads as its own
-    // state instead of 3 unrelated icons (was a flame, a low-battery
-    // glyph, and a plain circle). Same bolt glyph (md-lightning_bolt) for
-    // both performance and balanced -- doubled up (two glyphs in one
-    // Text, not a real "double bolt" icon -- Material Design Icons
-    // doesn't have one) + yellow for performance, single + white for
-    // balanced, so the two read as "more/less of the same thing" rather
-    // than unrelated symbols. Eco gets its own real leaf glyph.
+    // One glyph per profile, each its own symbol: ph-lightning for
+    // performance, ph-wind for balanced, ph-leaf for eco. Asked for, and
+    // it replaces a scheme where performance and balanced shared the BOLT
+    // and were told apart by repeating it -- two glyphs in one Text for
+    // performance, one for balanced -- so that "more/less of the same
+    // thing" read as a quantity rather than as a mode. Wind says moderate
+    // airflow on its own terms and matches the roue wheel, which now uses
+    // wind.svg for the same profile (see waybar/scripts/performance.sh).
+    //
+    // Consequence worth knowing, given the width comment above: all three
+    // states are now a SINGLE Phosphor character, and Phosphor is
+    // monospaced, so this module's width no longer jumps 15px when the
+    // profile changes -- it is constant in every state.
     function iconFor(p) {
-        if (p === PowerProfile.Performance) return "";
-        if (p === PowerProfile.PowerSaver) return "";
-        return "";
+        if (p === PowerProfile.Performance) return "\uE2DE";   // ph-lightning
+        if (p === PowerProfile.PowerSaver) return "\uE2DA";    // ph-leaf
+        return "\uE5D2";                                       // ph-wind (balanced)
     }
 
     function colorFor(p) {

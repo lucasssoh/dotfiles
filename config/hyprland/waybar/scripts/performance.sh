@@ -16,7 +16,7 @@ cmd_status() {
     profile=$(powerprofilesctl get)
     # Icons chosen to read at a glance, distinct from the metrics group's
     # gauge/leaf glyphs: flame (intensity), balance scale (matches the
-    # roue wheel's scale.svg for this same profile), battery-with-plus
+    # roue wheel's wind.svg for this same profile), battery-with-plus
     # (headroom saved, clearer than the previous ambiguous leaf).
     case "$profile" in
         performance) icon="󰈸"; label="Performance" ;;
@@ -58,7 +58,7 @@ accent = "yellow"
 $active_performance
 
 [[segment]]
-icon = "scale.svg"
+icon = "wind.svg"
 label = "Balanced"
 action = "powerprofilesctl set balanced && pkill -RTMIN+1 waybar"
 $active_balanced
