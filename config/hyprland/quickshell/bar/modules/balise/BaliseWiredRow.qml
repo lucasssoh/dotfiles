@@ -47,7 +47,7 @@ Rectangle {
             font.hintingPreference: Font.PreferNoHinting
             // ph-plugs-connected / ph-plugs, both already verified in
             // Ethernet.qml.
-            text: row.connected ? String.fromCharCode(0xeb5a) : String.fromCharCode(0xeb56)
+            text: row.connected ? String.fromCharCode(0xedde) : String.fromCharCode(0xedda)   // ph-network / ph-network-x
             color: row.connected ? row.accent : "#f2f2f7"
             font.family: Fonts.iconPhosphor
             font.pixelSize: 17

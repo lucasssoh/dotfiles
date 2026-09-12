@@ -280,12 +280,12 @@ Item {
         return BaliseState.wifiEnabled ? "No network" : "WiFi off";
     }
     // Written as codepoints rather than as the literal PUA characters the
-    // tiles below use: same glyphs (ph-plugs-connected / ph-wifi-low /
+    // tiles below use: same glyphs (ph-network / ph-wifi-low /
     // -medium / -high / -slash, all already verified in Network.qml and
     // Ethernet.qml), just spelled in a form that survives every editor
     // and diff tool unambiguously.
     readonly property string heroGlyph: {
-        if (root.activeWiredProfile) return String.fromCharCode(0xeb5a);   // ph-plugs-connected
+        if (root.activeWiredProfile) return String.fromCharCode(0xedde);   // ph-network
         if (root.connectedWifiAp) {
             const s = root.connectedWifiAp.signal;
             if (s < 33) return String.fromCharCode(0xe4ec);   // ph-wifi-low
@@ -749,7 +749,7 @@ Item {
                     height: 92
                     title: "Ethernet"
                     status: root.ethernetTileStatus
-                    glyph: root.activeWiredProfile ? "" : ""   // ph-plugs-connected / ph-plugs
+                    glyph: root.activeWiredProfile ? "\uEDDE" : "\uEDDA"   // ph-network / ph-network-x
                     active: root.activeWiredProfile !== null
                     // No radio to toggle -- both buttons open the section.
                     onActivated: root.goTo("ethernet")
