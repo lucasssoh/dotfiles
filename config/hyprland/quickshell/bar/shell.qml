@@ -1022,11 +1022,20 @@ ShellRoot {
                         })
                         clickCommand: ["bash", "-c",
                             "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"]
-                        classColors: ({
-                            "display-both": "#f2f2f7",
-                            "display-internal": "#a8b4c4",
-                            "display-external": "#a8b4c4"
-                        })
+                        // No classColors: the glyph stays #f2f2f7 in every
+                        // layout (asked for). ScriptModule already falls
+                        // back to that when a class has no entry, so the
+                        // map is dropped rather than filled with three
+                        // copies of the same white -- there is nothing left
+                        // for a future edit to desynchronise.
+                        //
+                        // It used to tint internal/external with the accent
+                        // and leave "both" white, i.e. accent meant "you are
+                        // not on the default layout". The glyph already says
+                        // which layout is active, so the colour was a second
+                        // encoding of the same fact, and the only one in
+                        // this row that made a steady state look like an
+                        // alert.
                     }
 
                     // Network's rate text re-measures its digit count every
