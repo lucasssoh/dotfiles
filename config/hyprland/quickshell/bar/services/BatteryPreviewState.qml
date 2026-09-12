@@ -49,7 +49,16 @@ Singleton {
         root.active = true;
     }
 
+    // Resets the modifier flags too, not just `active`. Leaving them set
+    // made previews order-dependent: turn conservation on, call this,
+    // then start a plain `previewBattery 62 true` and the stale flag was
+    // still there, so the module came up sky blue instead of green with
+    // nothing on screen explaining why. Every preview now starts from the
+    // same known state.
     function clear() {
         root.active = false;
+        root.charging = false;
+        root.conservation = false;
+        root.atRest = false;
     }
 }
