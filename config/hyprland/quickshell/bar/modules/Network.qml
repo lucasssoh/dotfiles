@@ -54,13 +54,14 @@ Item {
     implicitWidth: Math.max(iconText.implicitWidth + 12, 24)
     implicitHeight: 24
 
-    // ph-plugs-connected (no dedicated "ethernet" glyph in Phosphor,
-    // this is the closest -- a physically plugged-in connection) / ph-
-    // wifi-low/medium/high / ph-wifi-slash. Phosphor only ships 3 wifi-
-    // strength tiers, not waybar's original 5 -- same kind of coarsening
-    // already accepted on Battery's 10 -> 5 tiers earlier.
+    // ph-network (no literal RJ45 glyph in Phosphor; the topology tree is
+    // the conventional stand-in -- replaced ph-plugs once Battery.qml
+    // took a plug for "battery at rest on AC") / ph-wifi-low/medium/high
+    // / ph-wifi-slash. Phosphor only ships 3 wifi-strength tiers, not
+    // waybar's original 5 -- same kind of coarsening already accepted on
+    // Battery's 10 -> 5 tiers earlier.
     function icon() {
-        if (root.kind === "ethernet") return "";
+        if (root.kind === "ethernet") return "\uEDDE";   // ph-network
         if (root.kind === "wifi") {
             const s = root.wifiSignal;
             if (s < 33) return "";

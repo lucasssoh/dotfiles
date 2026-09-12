@@ -25,8 +25,21 @@ pub const BLUETOOTH_CONNECTED: &str = "\u{E0DC}";
 #[allow(dead_code)]
 pub const BLUETOOTH_SLASH: &str = "\u{E0DE}";
 
-pub const PLUGS_CONNECTED: &str = "\u{EB5A}"; // Ethernet row/tile, active/carrier
-pub const PLUGS: &str = "\u{EB56}"; // Ethernet row/tile, no cable (Phase 2)
+// Ethernet. Was the two "plugs" glyphs (EB5A/EB56); moved to the network
+// topology pair because the bar now uses a plug for "battery at rest on
+// AC" (quickshell/bar/modules/Battery.qml) and two plug shapes a click
+// apart read as the same thing.
+//
+// The old pair was also mislabelled AND backwards: EB5A is plugs coming
+// APART, not "connected", so the active state showed an unplugging
+// gesture. The names came from the font's GSUB ligature table, which
+// misattributes them -- render the candidates and look before trusting it.
+//
+// These two also survive at the ~16px the rows draw at, which the plugs
+// did not: their strokes are axis-aligned, where a diagonal plug just
+// turns to mush.
+pub const NETWORK: &str = "\u{EDDE}"; // Ethernet row/tile, active/carrier
+pub const NETWORK_X: &str = "\u{EDDA}"; // Ethernet row/tile, no cable (Phase 2)
 
 // WiFi, high-signal glyph reused as the home tile's static icon (the
 // tile doesn't show a live signal tier the way the bar's own badge

@@ -81,7 +81,7 @@ impl WiredList {
 
         let row = gtk::Box::builder().orientation(Orientation::Horizontal).spacing(12).css_classes(classes).build();
 
-        let glyph = if profile.is_active || profile.has_carrier { super::icon::PLUGS_CONNECTED } else { super::icon::PLUGS };
+        let glyph = if profile.is_active || profile.has_carrier { super::icon::NETWORK } else { super::icon::NETWORK_X };
         let icon = super::icon::icon_label(glyph);
         icon.add_css_class(if profile.is_active { "balise-icon-accent" } else { "balise-signal-icon" });
         icon.set_valign(gtk::Align::Center);

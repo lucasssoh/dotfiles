@@ -75,12 +75,22 @@ Item {
         }
         return 0;
     }
-    // ph-plugs-connected / ph-wifi-low/medium/high, same codepoints as
-    // Network.qml's own icon() (verified against balise-src/src/ui/
+    // ph-network / ph-wifi-low/medium/high, same codepoints as
+    // Network.qml's own icon() (kept in step with balise-src/src/ui/
     // icon.rs's table). "" (no glyph) for "none" -- deliberately not the
     // wifi-slash Network.qml itself falls back to.
+    //
+    // Ethernet was ph-plugs (U+EB5A) until Battery.qml took a plug for
+    // "battery at rest on AC": two plug shapes inches apart in the same
+    // pill read as the same state. It was wrong twice over anyway --
+    // EB5A draws plugs coming APART, so the CONNECTED state showed an
+    // unplugging gesture, and at this size its diagonals never resolved
+    // into anything. ph-network's strokes are axis-aligned and stay
+    // legible at 15px. Codepoint as a \u escape, not a literal glyph:
+    // the old one came from the font's GSUB ligature table, which
+    // misattributes names -- render and look before trusting it.
     function netIcon() {
-        if (root.netKind === "ethernet") return "";
+        if (root.netKind === "ethernet") return "\uEDDE";
         if (root.netKind === "wifi") {
             const s = root.wifiSignal;
             if (s < 33) return "";

@@ -93,7 +93,7 @@ impl HomeView {
 
         let wifi = build_tile(super::icon::WIFI, "WiFi");
         let bluetooth = build_tile(super::icon::BLUETOOTH, "Bluetooth");
-        let ethernet = build_tile(super::icon::PLUGS, "Ethernet");
+        let ethernet = build_tile(super::icon::NETWORK_X, "Ethernet");
         let airplane = build_tile(super::icon::AIRPLANE, "Airplane Mode");
 
         // 2x2 grid via two Rows -- Grid would work too, but these tiles
@@ -257,7 +257,7 @@ impl HomeView {
     /// attached to.
     pub fn set_ethernet_state(&self, state: &str, device_name: Option<&str>) {
         let connected = state == "connected";
-        self.ethernet.icon.set_label(if state == "off" { super::icon::PLUGS } else { super::icon::PLUGS_CONNECTED });
+        self.ethernet.icon.set_label(if state == "off" { super::icon::NETWORK_X } else { super::icon::NETWORK });
         self.ethernet.button.set_css_classes(&tile_classes(connected));
         self.ethernet.status.set_label(&match state {
             "connected" => device_name.unwrap_or("Connected").to_string(),

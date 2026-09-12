@@ -55,13 +55,19 @@ Item {
     // same as Bluetooth's own "on".
     readonly property bool inactive: root.state === "off"
 
-    // No literal "ethernet" glyph in Phosphor (checked against
-    // phosphor-icons/core's codepoint metadata, same source balise-src/
-    // src/ui/icon.rs used) -- ph-plugs-connected / ph-plugs, the same
-    // pair Balise's own Ethernet tab uses.
+    // No literal RJ45 glyph in Phosphor -- ph-network / ph-network-x,
+    // the same pair Balise's own Ethernet tab uses (balise-src/src/ui/
+    // icon.rs's NETWORK / NETWORK_X).
+    //
+    // Was ph-plugs (EB5A/EB56) until Battery.qml took a plug for
+    // "battery at rest on AC". That pair was also REVERSED: EB5A draws
+    // plugs coming apart and sat on "connected", EB56 draws them mated
+    // and sat on the disconnected fallback. The names came from the
+    // font's GSUB ligature table, which misattributes them -- render the
+    // candidates and look before trusting it.
     function icon() {
-        if (root.state === "connected") return "";
-        return "";
+        if (root.state === "connected") return "\uEDDE";   // ph-network
+        return "\uEDDA";              // ph-network-x
     }
 
     Text {
