@@ -25,15 +25,27 @@ Singleton {
     // and so the existing two-argument previewBattery call keeps working
     // unchanged.
     property bool conservation: false
+    // "On AC, battery idle" -- previews Battery.qml's plug icon
+    // (FullyCharged / PendingCharge). Mutually exclusive with `charging`:
+    // a real battery is never both, so each setter clears the other
+    // rather than letting a preview reach a state UPower can't produce.
+    property bool atRest: false
 
     function set(p, isCharging) {
         root.percent = Math.max(0, Math.min(100, p));
         root.charging = isCharging;
+        if (isCharging) root.atRest = false;
         root.active = true;
     }
 
     function setConservation(on) {
         root.conservation = on;
+        root.active = true;
+    }
+
+    function setAtRest(on) {
+        root.atRest = on;
+        if (on) root.charging = false;
         root.active = true;
     }
 

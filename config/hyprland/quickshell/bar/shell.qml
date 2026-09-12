@@ -273,6 +273,12 @@ ShellRoot {
         function previewBatteryConservation(on: bool): void {
             BatteryPreviewState.setConservation(on);
         }
+        // `qs -c bar ipc call bar previewBatteryAtRest true` -- previews
+        // the on-AC-but-idle state (UPower FullyCharged/PendingCharge),
+        // where the plug glyph replaces the battery gauge.
+        function previewBatteryAtRest(on: bool): void {
+            BatteryPreviewState.setAtRest(on);
+        }
         function previewBatteryOff(): void {
             BatteryPreviewState.clear();
         }

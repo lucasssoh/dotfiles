@@ -45,6 +45,26 @@ Item {
         ? BatteryPreviewState.conservation
         : SystemStats.conservationMode
 
+    // "The charger is powering the machine and the battery is at rest" --
+    // neither charging nor discharging. Both UPower states that mean it:
+    //
+    //   FullyCharged   100%, charge terminated (kernel status "Full")
+    //   PendingCharge  on AC, charging inhibited (kernel "Not charging")
+    //
+    // Physically identical -- the power-path controller feeds the system
+    // from the adapter and leaves the cell idle -- so they get one icon.
+    // Both are needed rather than just FullyCharged: with conservation
+    // mode on, the battery NEVER reaches FullyCharged, it parks in
+    // PendingCharge at ~60% for as long as the machine stays docked, so
+    // keying only off "full" would mean this icon essentially never
+    // appears on the one machine it was asked for. It also sidesteps not
+    // knowing which of the two a given IdeaPad's EC actually reports at
+    // the cap -- that varies by model, and covering both makes it moot.
+    readonly property bool atRestOnAC: BatteryPreviewState.active
+        ? BatteryPreviewState.atRest
+        : (realPresent && (device.state === UPowerDeviceState.FullyCharged
+                        || device.state === UPowerDeviceState.PendingCharge))
+
     // The one state-dependent color set this module has -- charging
     // (light green) and low-without-charging (amber if eco's already
     // on, red otherwise) are both genuine STATE, unlike a fixed
@@ -153,6 +173,11 @@ Item {
         // Nerd Font icon() lookup entirely; UPower's own percentage
         // drives the fill directly now, no tier bucketing needed.
         BatteryIcon {
+            // Hidden, not merely covered, when the plug replaces it: a
+            // QtQuick positioner (this Row) drops invisible children from
+            // its layout entirely, so the two icons never both reserve
+            // space.
+            visible: !root.atRestOnAC
             anchors.verticalCenter: parent.verticalCenter
             width: 20
             height: 10
@@ -160,6 +185,42 @@ Item {
             charging: root.isCharging
             outlineColor: root.batteryColor
             fillColor: root.batteryColor
+        }
+
+        // ph-plugs-connected (U+EB56) -- two mated plugs, i.e. "running
+        // off the mains", rather than ph-plug's (U+E946) lone wall pin.
+        //
+        // Written as a \u escape, not a literal PUA character: the
+        // codepoint was first taken from the font's GSUB ligature table
+        // (mapping the icon NAME "plugs-connected" to its glyph) and that
+        // reconstruction put it at U+EB5A, which is a different icon
+        // entirely -- caught only by rendering the candidates and looking
+        // at them. An escape keeps the intended codepoint readable in the
+        // source instead of hiding it inside an invisible glyph, so the
+        // next such mistake is visible in a diff.
+        //
+        // A gauge is
+        // the wrong picture for this state: the cell is idle and its
+        // level says nothing about what's powering the machine. The
+        // PERCENTAGE stays, and carries the part that still matters --
+        // how much you'd actually have if you unplugged, which under a
+        // ~60% cap is not the "100" a plug icon would otherwise imply.
+        //
+        // Pinned to BatteryIcon's own 20px rather than left to the
+        // glyph's advance width, so swapping between the two doesn't
+        // shift this module's width (and with it everything to its right
+        // in the pill) every time the charger goes in or out -- the same
+        // reasoning as the fixed percentage slot above, applied to a
+        // state change instead of a value change.
+        Text {
+            visible: root.atRestOnAC
+            anchors.verticalCenter: parent.verticalCenter
+            text: "\uEB56"
+            color: root.batteryColor
+            font.family: Fonts.iconPhosphorBold
+            font.pixelSize: 15
+            width: 20
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 }
