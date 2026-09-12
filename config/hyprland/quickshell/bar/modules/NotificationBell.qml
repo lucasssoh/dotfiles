@@ -59,6 +59,14 @@ Item {
         if (root.dnd) return "";                          // bell-z (sleeping)
         return root.hasUnseen ? "\uE0D0" : "\uE0CE";   // bell-simple (unseen) / bell (idle)
     }
+    // Solid while unread, outline once read (asked for). This carries the
+    // state far harder than the glyph choice does -- bell-simple and the
+    // idle bell differ by a flat bar versus a clapper, which at 15px is
+    // nearly nothing, whereas filled versus hollow is unmissable.
+    readonly property string iconFamily: root.hasUnseen
+        ? Fonts.iconPhosphorFill
+        : Fonts.iconPhosphor
+
     readonly property color iconColor: {
         if (root.hasUnseen) return "#a8b4c4";
         return root.dnd ? "#48484a" : "#f2f2f7";
@@ -71,7 +79,7 @@ Item {
         anchors.centerIn: parent
         text: root.iconGlyph
         color: root.iconColor
-        font.family: Fonts.iconPhosphorBold
+        font.family: root.iconFamily
         font.pixelSize: 15
     }
 

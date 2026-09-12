@@ -73,6 +73,13 @@ QtObject {
     // widths follow their content, so nothing needed re-measuring.
     readonly property string iconPhosphorBold: "Phosphor-Bold"
 
+    // Fill weight -- solid glyphs, not an outline. Another whole family,
+    // same as Bold above. Used to carry a STATE rather than a hierarchy:
+    // NotificationBell inks solid while something is unread and goes back
+    // to an outline once it is read, which reads at a glance in a way the
+    // outline weights do not differ enough to.
+    readonly property string iconPhosphorFill: "Phosphor-Fill"
+
     // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's
     // clock/message font, downloaded via api.fontshare.com's CSS
     // endpoint (the fonts.com share page itself is a JS app with no
