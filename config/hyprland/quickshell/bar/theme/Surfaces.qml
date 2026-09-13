@@ -23,8 +23,18 @@ import QtQuick
 // not so much that text on it starts fighting the background.
 QtObject {
     // ---- the panel itself: THE only translucent thing ----------------
-    readonly property color panelTop: "#ff000000"      // 85% of #1e2128
-    readonly property color panelBottom: "#ff060608"   // 85% of #060608
+    // Both pure black, and equal on purpose -- asked for: the drawers,
+    // BatteryAlert and the OSD all take the central island's own fill now
+    // ("les mêmes couleurs de fond que center island... càd noir").
+    //
+    // They stay two properties rather than collapsing into one because
+    // DrawerIsland's fill is a two-stop Gradient and the mechanism is
+    // worth keeping available; identical stops simply make it flat. The
+    // depth these surfaces used to get from a vertical ramp now comes
+    // from the convex edge instead, which is a better place for it: a
+    // ramp models a body, and these are panels seen face-on.
+    readonly property color panelTop: "#ff000000"
+    readonly property color panelBottom: "#ff000000"
 
     // ---- everything sitting ON the panel: fully opaque ---------------
     // Plain card/row fill and its hover, the two neutral tiers this bar

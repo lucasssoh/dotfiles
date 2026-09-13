@@ -580,6 +580,67 @@ ShellRoot {
                 }
             }
 
+            // ── THE BAND ──────────────────────────────────────
+            // ONE surface for the whole bar rather than three floating
+            // pills -- asked for: "un seul bloc qui passe en dessous du
+            // center island, donc pas d'effet d'arrondi, juste une bande
+            // de cette même bg", flush against the screen's top, left and
+            // right edges.
+            //
+            // Declared FIRST so it paints behind everything: METRICS,
+            // LAUNCHERS and TOOLS keep their content and give up their
+            // own backgrounds entirely (see each, plus DrawerIsland's
+            // `rowPane`), and the central island rides on top in its own
+            // opaque black.
+            //
+            // No radius and NO edge treatment of any kind. The glass
+            // language needs a silhouette to trace, and a band welded to
+            // three screen edges has only one visible edge left -- so a
+            // rim here would be a line drawn across the screen rather
+            // than light on a pane, which is exactly what the pills'
+            // GlassRim was rejected for in the first place.
+            //
+            // Height 27, not the central island's 31: the island then
+            // hangs 4px below the band with its rounded bottom showing,
+            // so it still reads as an object sitting ON the strip
+            // instead of dissolving into a single full-width rectangle.
+            // Nothing else moves -- the side content keeps its y 3..27.
+            Rectangle {
+                id: barBand
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                // The band's bottom line IS the central island's bottom
+                // edge -- asked for: the island's corner arcs have to
+                // finish exactly on it, and that had to come from raising
+                // the band rather than from pushing the island down
+                // ("pas en descendant excessivement le bloc central mais
+                // en montant un peu plus la bande").
+                //
+                // Bound to the island rather than repeated as a number:
+                // the alignment is the requirement, and a literal would
+                // silently drift the moment rowHeight moved.
+                //
+                // The island stays legible against it even sharing a
+                // bottom line, because it is opaque black over a
+                // translucent band -- and its rounded corners let the
+                // band show through at each end, which is what draws the
+                // shape.
+                height: centerIsland.rowHeight
+                // Flat, not the two-stop gradient the pills carried --
+                // asked for ("juste une bande uni"). The gradient was a
+                // BODY: it gave a floating pane a lit top and a thinner
+                // bottom, which is a reading that only means anything on
+                // something with four visible edges. Welded to three
+                // screen edges this band has no body to model, and a
+                // vertical ramp across it just looked like a smudge.
+                //
+                // The pills' own flat value, which is what the gradient
+                // replaced in the first place; the 0x73 alpha is the one
+                // constant that survived every pass.
+                color: "#730c0c0e"
+            }
+
             // ── ONE BAR ───────────────────────────────────────
             // ActiveWindow, Workspaces and Media, in ONE Row, centered
             // on the screen as a whole -- see DrawerIsland.qml for the
@@ -604,6 +665,25 @@ ShellRoot {
             // asked for.
             Modules.DrawerIsland {
                 id: centerIsland
+                // A little taller than DrawerIsland's own 31, and the
+                // reference the band sizes itself against -- see
+                // `barBand` above for the alignment this serves.
+                //
+                // Set here rather than on the component's default, which
+                // TOOLS reads too. Everything else follows on its own:
+                // `topRow` is bound to rowHeight and re-centres its
+                // modules, the window's implicitHeight is a Math.max over
+                // the islands, and the input mask reads
+                // centerIsland.rowHeight directly. `exclusiveZone` stays
+                // at 24 -- that is what tiled windows reserve, and this
+                // island was already free to overhang it.
+                rowHeight: 31
+                // Convex glass rather than the traced GlassRim it had --
+                // asked for, and it carries onto whatever extends below
+                // (Veille, the keybinds sheet) because with splitDrawer
+                // false that extension is this same block grown tall.
+                // See DrawerIsland's `rowLens`.
+                rowLens: true
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -672,38 +752,18 @@ ShellRoot {
             Modules.Block {
                 id: metrics
 
-                // Thick-glass edge -- see modules/GlassLens.qml. This
-                // replaces the two GlassRim siblings this pane used to
-                // have (topLeft full + bottomRight faint): the shader
-                // draws the same five-stop ramp, now curved and
-                // dispersed, and stacking a real rim on top of it just
-                // doubles the line.
-                //
-                // NOTE this pane's modules DO go through the lens --
-                // Block.qml reparents its children into an inner Row, so
-                // unlike the islands there is no sibling slot that would
-                // keep them out. That is why `band` stays at 6: the text
-                // is vertically centred in 24px, so a band that shallow
-                // reaches the pane's padding and not the glyphs.
-                // Gated on having a size at all: LAUNCHERS is empty
-                // (and so zero-width) whenever nothing matches, and a
-                // zero-size FBO is pure waste. METRICS never hits this,
-                // but the two panes are kept identical on purpose.
-                layer.enabled: width > 0 && height > 0
-                layer.effect: Modules.GlassLens {
-                    radius: metrics.cornerRadius
-                    band: 6
-                    depth: 2.5
-                    aberration: 0.8
-                    rimThickness: 2.2
-                    trough: 0.14
-                }
                 anchors.top: parent.top
-                anchors.topMargin: 3
+                // Centred in the band rather than pinned 3px down: the
+                // band's height is the island's now, so a fixed margin
+                // would leave these sitting high in it. Bound, so they
+                // stay centred whatever it becomes -- and it puts them on
+                // the central island's own content axis, which a fixed 3
+                // did not.
+                anchors.topMargin: Math.round((barBand.height - height) / 2)
                 anchors.left: parent.left
                 anchors.leftMargin: 6
                 flushTop: false
-                color: "#730c0c0e"
+                color: "transparent"
                 // Glass. These three float free of every screen edge, so
                 // all four of their edges are visible -- the one place in
                 // this bar where a pane read is possible at all.
@@ -736,10 +796,12 @@ ShellRoot {
                 // wallpaper alone. Constant alpha means the travel comes
                 // purely from the colour and is the same over any
                 // wallpaper.
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#733f4450" }
-                    GradientStop { position: 1.0; color: "#73060608" }
-                }
+                // No background: `barBand` above carries it now. The
+                // gradient that was here is DELETED rather than set to
+                // null -- Rectangle.gradient is a QJSValue and assigning
+                // null to it is silently dropped, so the old gradient
+                // would have kept painting (the trap NotificationCard.qml
+                // documents, found the hard way once already).
 
                 Item { width: 6; height: 1 }
 
@@ -766,38 +828,18 @@ ShellRoot {
             Modules.Block {
                 id: launchers
 
-                // Thick-glass edge -- see modules/GlassLens.qml. This
-                // replaces the two GlassRim siblings this pane used to
-                // have (topLeft full + bottomRight faint): the shader
-                // draws the same five-stop ramp, now curved and
-                // dispersed, and stacking a real rim on top of it just
-                // doubles the line.
-                //
-                // NOTE this pane's modules DO go through the lens --
-                // Block.qml reparents its children into an inner Row, so
-                // unlike the islands there is no sibling slot that would
-                // keep them out. That is why `band` stays at 6: the text
-                // is vertically centred in 24px, so a band that shallow
-                // reaches the pane's padding and not the glyphs.
-                // Gated on having a size at all: LAUNCHERS is empty
-                // (and so zero-width) whenever nothing matches, and a
-                // zero-size FBO is pure waste. METRICS never hits this,
-                // but the two panes are kept identical on purpose.
-                layer.enabled: width > 0 && height > 0
-                layer.effect: Modules.GlassLens {
-                    radius: launchers.cornerRadius
-                    band: 6
-                    depth: 2.5
-                    aberration: 0.8
-                    rimThickness: 2.2
-                    trough: 0.14
-                }
                 anchors.top: parent.top
-                anchors.topMargin: 3
+                // Centred in the band rather than pinned 3px down: the
+                // band's height is the island's now, so a fixed margin
+                // would leave these sitting high in it. Bound, so they
+                // stay centred whatever it becomes -- and it puts them on
+                // the central island's own content axis, which a fixed 3
+                // did not.
+                anchors.topMargin: Math.round((barBand.height - height) / 2)
                 anchors.right: toolsIsland.left
                 anchors.rightMargin: 6
                 flushTop: false
-                color: "#730c0c0e"
+                color: "transparent"
                 // Glass. These three float free of every screen edge, so
                 // all four of their edges are visible -- the one place in
                 // this bar where a pane read is possible at all.
@@ -830,10 +872,12 @@ ShellRoot {
                 // wallpaper alone. Constant alpha means the travel comes
                 // purely from the colour and is the same over any
                 // wallpaper.
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#733f4450" }
-                    GradientStop { position: 1.0; color: "#73060608" }
-                }
+                // No background: `barBand` above carries it now. The
+                // gradient that was here is DELETED rather than set to
+                // null -- Rectangle.gradient is a QJSValue and assigning
+                // null to it is silently dropped, so the old gradient
+                // would have kept painting (the trap NotificationCard.qml
+                // documents, found the hard way once already).
 
                 Modules.Launchers {
                     opacity: 0.8
@@ -862,13 +906,25 @@ ShellRoot {
             // than just lowering it outright.
             Modules.DrawerIsland {
                 id: toolsIsland
-                // Same thick-glass edge as METRICS/LAUNCHERS, on this
-                // island's own row pane -- see DrawerIsland's `rowGlass`.
-                // Its modules stay out of the lens here (topRow is a
-                // sibling of the pane), so only the glass curves.
-                rowGlass: true
+                // This island's ROW draws no background of its own --
+                // `barBand` above is the surface now, and TOOLS is just
+                // the content sitting at its right end. Only the row:
+                // the drawer below it (the notification centre, Balise)
+                // is a separate block and keeps everything it had.
+                rowPane: false
                 anchors.top: parent.top
-                anchors.topMargin: 3
+                // Centred in the band rather than pinned 3px down: the
+                // band's height is the island's now, so a fixed margin
+                // would leave these sitting high in it. Bound, so they
+                // stay centred whatever it becomes -- and it puts them on
+                // the central island's own content axis, which a fixed 3
+                // did not.
+                // `rowHeight`, NOT `height`: a DrawerIsland's height
+                // INCLUDES its open drawer, so centring on it yanked the
+                // whole island (and Balise / the notification centre with
+                // it) hundreds of px up the moment one opened. Only the
+                // ROW is what sits in the band.
+                anchors.topMargin: Math.round((barBand.height - toolsIsland.rowHeight) / 2)
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 flushTop: false
@@ -920,7 +976,6 @@ ShellRoot {
                 // DrawerIsland's 31px default was tuned for centerIsland's
                 // row, not this one).
                 rowHeight: 24
-                fillColor: "#730c0c0e"
                 // UNPINNED -- the pill tracks its own content again,
                 // asked for: "j'aimerai que ce soit compact et que ça
                 // s'adapte avec le nombre d'element à l'interieur".
@@ -1018,10 +1073,6 @@ ShellRoot {
                 // wallpaper alone. Constant alpha means the travel comes
                 // purely from the colour and is the same over any
                 // wallpaper.
-                fillGradient: Gradient {
-                    GradientStop { position: 0.0; color: "#733f4450" }
-                    GradientStop { position: 1.0; color: "#73060608" }
-                }
 
                     // Left/right breathing room -- asked for, left
                     // especially (Block.qml's own Row has zero built-in
@@ -1215,9 +1266,10 @@ ShellRoot {
             // source. Weaker (0.45, not 1.0) so it reads as fill light,
             // not a second equally-strong highlight competing with the
             // real one.
-            // METRICS' and LAUNCHERS' GlassRim pairs used to sit here.
-            // Both panes now carry GlassLens instead (declared inline on
-            // each, above) -- same ramp, but curved and dispersed.
+            // METRICS' and LAUNCHERS' GlassRim pairs used to sit here,
+            // then a GlassLens each. Both are gone with the pills
+            // themselves: neither block has a background any more, and a
+            // rim needs a silhouette. `barBand` above is the surface.
         }
     }
 

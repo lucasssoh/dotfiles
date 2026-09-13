@@ -163,10 +163,12 @@ Rectangle {
     // #1e2128, bottom left alone) -- asked for ("réduire le spectre",
     // "plus sombre"): less top-to-bottom range AND a darker card
     // overall, not just a flatter one.
-    gradient: Gradient {
-        GradientStop { position: 0.0; color: "#ff1e2128" }
-        GradientStop { position: 1.0; color: "#ff060608" }
-    }
+    // The central island's own black, flat -- asked for. The gradient
+    // that was here is DELETED rather than set to null: Rectangle.gradient
+    // is a QJSValue and assigning null to it is silently dropped, so the
+    // old ramp would have kept painting straight over this colour (the
+    // trap NotificationCard.qml documents, paid for once already).
+    color: "#ff000000"
 
     // The two GlassRim instances that used to sit here are gone -- the
     // edge is drawn by GlassLens' shader now, which reproduces the same

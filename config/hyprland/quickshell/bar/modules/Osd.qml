@@ -86,10 +86,9 @@ Rectangle {
         depth: 5
     }
 
-    gradient: Gradient {
-        GradientStop { position: 0.0; color: "#ff3f4450" }
-        GradientStop { position: 1.0; color: "#ff060608" }
-    }
+    // The central island's own black, flat -- asked for. Deleted rather
+    // than nulled, same reason as BatteryAlert's; see there.
+    color: "#ff000000"
 
     // target left unset (null) -- these are plain CHILDREN of card, not
     // siblings, so GlassRim's own child-mode default (trace `parent`)

@@ -39,7 +39,29 @@ layout(std140, binding = 0) uniform buf {
     // different scales on a 416x600 drawer.
     float srcW;
     float srcH;
-    float radius;
+    // Top and bottom corner radii, separately.
+    //
+    // A single radius was enough while every surface using this was a
+    // free-floating card. The central island is not: it sits flush
+    // against the screen's top edge with SQUARE top corners and rounded
+    // bottom ones, and rounding all four in the shader would carve a
+    // visible notch out of each top corner -- the silhouette the lens
+    // computes has to be the one the Rectangle actually draws.
+    float topRadius;
+    float bottomRadius;
+    // Pushes the traced rectangle's TOP edge this far ABOVE the item, so
+    // that edge -- and everything the lens hangs off it, rim, bevel and
+    // trough -- falls outside the item and is never painted.
+    //
+    // For a surface welded to the screen's top edge, which has no upper
+    // arete anyone can see: lighting one there draws a line across the
+    // screen instead of an edge on a pane, and the shape should simply
+    // dissolve into the border. GlassRim.qml has the same escape hatch
+    // for the same reason; this is its equivalent.
+    //
+    // Must exceed the band plus the rim's own reach, or the treatment
+    // creeps back into the top few rows.
+    float topOverflow;
     // Thickness of the glass: how deep the curved edge reaches before
     // the pane goes flat. Everything inside this is flat glass.
     float band;
@@ -94,7 +116,9 @@ layout(binding = 1) uniform sampler2D source;
 
 // Signed distance to a rounded rectangle centred on the origin.
 // Negative inside, 0 on the silhouette, positive outside.
-float sdRoundRect(vec2 p, vec2 halfSize, float r) {
+float sdRoundRect(vec2 p, vec2 halfSize, float rTop, float rBot) {
+    // y grows downward in Qt, so a positive p.y is the lower half.
+    float r = (p.y > 0.0) ? rBot : rTop;
     vec2 q = abs(p) - halfSize + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
@@ -143,26 +167,31 @@ float rimRamp(float t) {
 
 void main() {
     vec2 size = vec2(srcW, srcH);
-    vec2 c = qt_TexCoord0 * size - size * 0.5;
-    vec2 halfSize = size * 0.5;
+    // The traced box is the item, grown upward by `topOverflow`: it spans
+    // y in [-topOverflow, srcH] rather than [0, srcH], so its centre
+    // moves up by half that and its half-height grows by the same.
+    vec2 halfSize = vec2(srcW, srcH + topOverflow) * 0.5;
+    vec2 c = qt_TexCoord0 * size - vec2(srcW, srcH - topOverflow) * 0.5;
     // Clamped the way Qt clamps a Rectangle's own radius, to half the
     // shorter side. Without this the two silhouettes diverge wherever a
     // caller's radius is larger than the item can actually take -- which
     // the bar hits for real: TOOLS' row pane is 24px tall and carries
     // DrawerIsland's cornerRadius of 18.
-    float r = min(radius, min(halfSize.x, halfSize.y));
+    float lim = min(halfSize.x, halfSize.y);
+    float rt = min(topRadius, lim);
+    float rb = min(bottomRadius, lim);
 
-    float d = sdRoundRect(c, halfSize, r);
+    float d = sdRoundRect(c, halfSize, rt, rb);
 
     // Outward normal of the silhouette, by central difference on the
     // distance field. This is what makes the effect follow the rounded
     // corners for free -- no special-casing, the normal simply rotates
     // through 90 degrees as it travels around each arc, which is also
     // exactly where a real rolled edge bends light most.
-    float dx = sdRoundRect(c + vec2(1.0, 0.0), halfSize, r)
-             - sdRoundRect(c - vec2(1.0, 0.0), halfSize, r);
-    float dy = sdRoundRect(c + vec2(0.0, 1.0), halfSize, r)
-             - sdRoundRect(c - vec2(0.0, 1.0), halfSize, r);
+    float dx = sdRoundRect(c + vec2(1.0, 0.0), halfSize, rt, rb)
+             - sdRoundRect(c - vec2(1.0, 0.0), halfSize, rt, rb);
+    float dy = sdRoundRect(c + vec2(0.0, 1.0), halfSize, rt, rb)
+             - sdRoundRect(c - vec2(0.0, 1.0), halfSize, rt, rb);
     vec2 n = normalize(vec2(dx, dy) + vec2(1e-6));
 
     // Distance from each lit edge, 0 at that edge and 1 at the far one.

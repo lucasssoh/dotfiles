@@ -177,14 +177,32 @@ Item {
     // the two islands is a knob the consumer sets.
     property bool splitDrawer: false
 
-    // Thick-glass edge on the island's own ROW pane (`fill`), for the
-    // translucent floating islands -- see GlassLens.qml. Off by default
-    // and opted into per-island from shell.qml: centerIsland is flush
-    // against the screen's top edge, so it has no visible upper arete to
-    // curve and the whole treatment would be spent on a boundary nobody
-    // can see (the same reasoning GlassRim's `lightOrigin` header gives
-    // for putting its hot spot on a bottom corner there).
-    property bool rowGlass: false
+    // false = this island's ROW draws no background whatever: no fill,
+    // no gloss, no edge. Set by TOOLS, whose surface is now shell.qml's
+    // full-width `barBand` rather than a pill of its own -- the island
+    // is then only its content, plus the drawer below it, which is a
+    // separate block and is untouched by this.
+    //
+    // This replaces a switch that stood the row's GlassRims down in
+    // favour of a GlassLens. That lens is gone with the pill it was
+    // edging, and the whole `!flushTop` rim treatment with it: TOOLS was
+    // its only consumer, so those two rims had already become
+    // unreachable and are deleted rather than kept as dead branches.
+    property bool rowPane: true
+
+    // Convex glass on the island's own block instead of a traced rim --
+    // asked for on the central island: "plus de border classique pour
+    // l'island centre, mais un effet du convexe pour lui et ses
+    // extensions".
+    //
+    // Its extensions come along for free: with `splitDrawer` false the
+    // drawer IS this same `fill` grown tall, so one lens covers the row
+    // and whatever opens below it as a single pane, which is the whole
+    // point of that look.
+    //
+    // Opt-in from shell.qml rather than a changed default, because
+    // DrawerIsland is shared.
+    property bool rowLens: false
 
     // The drawer block's own fill. Overridable per consumer because the
     // two islands want opposite things: TOOLS' drawers (Balise, the
@@ -598,6 +616,7 @@ Item {
     //     `drawerFill` below is the separate block that reacts.
     Rectangle {
         id: fill
+        visible: root.rowPane
         x: 0
         y: 0
         width: parent.width
@@ -609,27 +628,33 @@ Item {
         color: root.fillColor
         gradient: root.fillGradient
 
-        // See `rowGlass` above. Unlike the drawer's own block this one is
-        // always on screen, so the layer is permanent -- but it is only
-        // ever re-rendered when something in the bar actually changes,
-        // which is the same handful of repaints per second the clock was
-        // already causing.
-        //
-        // Only the pane goes through it: the row's modules live in
-        // `topRow`, a SIBLING of this Rectangle, so the icons and text
-        // sit on the glass rather than in it and stay pixel-crisp.
-        layer.enabled: root.rowGlass
+        // See `rowLens`. Square top corners are passed through honestly:
+        // this island is flush against the screen's top edge, and a lens
+        // that rounded them would notch the silhouette the Rectangle
+        // actually draws.
+        layer.enabled: root.rowLens
         layer.effect: GlassLens {
-            radius: root.cornerRadius
-            // Small pane: a 24-31px row cannot carry the popups' 10-14px
-            // band, the two sides would meet in the middle and the pane
-            // would have no flat centre left at all.
-            band: 6
+            topRadius: root.flushTop ? 0 : root.cornerRadius
+            bottomRadius: root.cornerRadius
+            // Flush against the screen's top edge: that edge gets no
+            // treatment at all, the island simply melts into the border.
+            // Comfortably past the 7px band plus the rim's reach.
+            topOverflow: root.flushTop ? 18 : 0
+            // Card values, not the popups': this pane is 31px tall when
+            // shut, and a 14px band would be most of it. It still reads
+            // once a drawer grows it -- the band lives at the edge, and
+            // the edge is where the eye looks either way.
+            band: 7
             depth: 2.5
             aberration: 0.8
-            rimThickness: 2.2
-            trough: 0.14
+            rimThickness: 2.0
+            rimStrength: 0.30
+            trough: 0.13
+            fresnel: 0.0
+            specular: 0.10
+            rimColor: "#8e8e93"
         }
+
     }
 
     // Flush-top treatment (centerIsland's original, only consumer until
@@ -639,7 +664,7 @@ Item {
     // rect's top edge above the surface entirely, so only the bottom arc
     // (the one edge this flush-top shape actually has) ever paints.
     GlassRim {
-        visible: root.flushTop
+        visible: root.flushTop && root.rowPane && !root.rowLens
         target: fill
         cornerRadius: root.cornerRadius - 1
         lightOrigin: "bottomLeft"
@@ -649,31 +674,20 @@ Item {
         topOverflow: root.cornerRadius + 6
     }
 
-    // Floating-pane treatment (all 4 edges visible, nothing to hide) --
-    // the exact topLeft-full + bottomRight-faint pairing METRICS/TOOLS'
-    // own Blocks already use elsewhere in this bar (see shell.qml).
-    // Stood down under `rowGlass`, where the lens draws the edge itself:
-    // stacking a real GlassRim on top of it doubles the line and flattens
-    // the dispersion back out (checked on screen).
-    GlassRim {
-        visible: !root.flushTop && !root.rowGlass
-        target: fill
-        cornerRadius: root.cornerRadius
-    }
-    GlassRim {
-        visible: !root.flushTop && !root.rowGlass
-        target: fill
-        cornerRadius: root.cornerRadius
-        lightOrigin: "bottomRight"
-        strength: 0.45
-    }
+    // The floating-pane rim pair (topLeft full + bottomRight faint) that
+    // used to sit here is gone -- see `rowPane` above for why nothing
+    // could reach it any more.
 
     // Second, fainter glossy catch-light toward the bottom-right, same
     // as before -- a soft RADIAL highlight echoing the diagonal
     // topLeft/bottomRight pairing GlassRim uses elsewhere, baked into
     // the fill since this shape carries no second rim to hang it off.
+    // Stood down under `rowLens` as well: this radial is a PAINTED
+    // convexity, and stacking it under a real one gives the pane two
+    // highlights disagreeing about where the light is.
     Shape {
         id: gloss
+        visible: root.rowPane && !root.rowLens
         anchors.fill: fill
         antialiasing: true
         preferredRendererType: Shape.CurveRenderer

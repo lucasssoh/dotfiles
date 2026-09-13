@@ -32,7 +32,20 @@ ShaderEffect {
     readonly property real srcW: width
     readonly property real srcH: height
 
+    // The common case: one radius for all four corners. `topRadius` and
+    // `bottomRadius` below are what actually reach the shader, and they
+    // default to it -- so nothing that only sets `radius` changes, and a
+    // surface with square top corners (the flush-top central island) can
+    // say so without every other call site learning about it.
     property real radius: 20
+    property real topRadius: radius
+    property real bottomRadius: radius
+
+    // Push the traced top edge out of the item entirely -- see the
+    // shader. For anything flush against the screen's top border, so the
+    // shape dissolves into it instead of being outlined against it.
+    // 0 = the top edge is treated like the other three.
+    property real topOverflow: 0
 
     // Thickness of the glass: how deep the curved edge reaches before
     // the pane goes flat. Tuned per surface -- the same 14px band is a
