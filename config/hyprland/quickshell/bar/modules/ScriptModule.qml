@@ -54,6 +54,21 @@ Item {
     property string iconFont: Fonts.icon
     property real iconPixelSize: 10
 
+    // Per-class override of `iconPixelSize`, keyed exactly like
+    // `classIcons` / `classColors` above. Unset classes fall back to
+    // `iconPixelSize`, so an instance that does not need this never
+    // mentions it.
+    //
+    // This exists because a single size for a module whose glyph CHANGES
+    // is only ever tuned against one of its states. Optical size is not
+    // nominal size: two glyphs at the same pixelSize read as the same
+    // size only if they fill a similar share of their box. Measured on
+    // the three display-layout glyphs (silhouette area, outline plus the
+    // whitespace it encloses, which is what the eye reads as mass):
+    // lu-monitor 64%, lu-laptop 54%, lu-monitor-smartphone 33%. That is a
+    // 2:1 spread inside one module.
+    property var classIconSizes: ({})
+
     property string text: ""
     property string tooltip: ""
     property string moduleClass: ""
@@ -126,7 +141,21 @@ Item {
         id: badge
         anchors.centerIn: parent
         width: Math.max(label.implicitWidth + root.padding, root.minWidth)
-        height: 18
+        // 18 -> 22: the chip stopped being the thing that fits and went
+        // back to being the thing that frames. Every bar icon is one size
+        // now (15px, see Fonts.qml), and a Lucide glyph at 15 inks up to
+        // 16px tall -- inside an 18px chip that left ONE pixel of padding,
+        // so the only way to keep 18 was to shrink the glyph, which is the
+        // wrong end to give (asked for: "plutot agrandir le bouton que de
+        // retrecir l'icon qui s'y trouve"). 22 restores ~3px a side, the
+        // same breathing room the 12px glyphs used to have at 18.
+        // Still fits: modules are 24 tall inside the island's 31px row, so
+        // this grows into slack that was already there -- no module
+        // implicitHeight moved, no row got taller.
+        // Radius stays 6, NOT half the height: a 22px chip capsules at 11,
+        // and "coin arrondi mais pas totalement arrondi comme un pill" is
+        // still the rule these three share.
+        height: 22
         radius: 6
         color: "transparent"
 
@@ -146,15 +175,22 @@ Item {
     // prose -- a future instance that needs real text alongside would
     // need its own Text/Row split, same as e.g. Bluetooth.qml.
     //
-    // 15 -> 12 -> 10: still read as too big (asked for again, "surtout
-    // en mode both") -- display-layout.sh's "both" state uses nf-md-
-    // monitor_multiple specifically (two overlapping monitor shapes),
-    // a visually bulkier glyph at any given pixelSize than the single-
-    // monitor/laptop ones the internal/external states use, on top of
-    // Fonts.icon (a Nerd Font) generally inking wider within its own
-    // em-box than Fonts.iconPhosphor's glyphs do. 10 shrinks all three
-    // states, "both" included, rather than leaving them at a size only
-    // tuned against the two narrower glyphs.
+    // Size history, and why it now lives per class (`classIconSizes`
+    // above) instead of in one number: 15 -> 12 -> 10 -> 15 -> per-state.
+    //
+    // The 12 and the 10 were both "still too big, surtout en mode both",
+    // and both shrank ALL THREE states to fix the one that was worst --
+    // under the Nerd Font, "both" (nf-md-monitor_multiple, two
+    // overlapping monitors) was far the bulkiest of the three. That left
+    // internal/external smaller than they needed to be, which is exactly
+    // what the later 10 -> 14 -> 15 passes were undoing.
+    //
+    // Lucide inverts the premise: lu-monitor-smartphone is the LIGHTEST
+    // of the three now (33% silhouette against lu-monitor's 64%), so a
+    // single number tuned on "both" would make "external" the heavy one
+    // instead -- which is what it did, and what "l'icon de display est un
+    // peu grand par rapport aux autres" was about. Each state carries its
+    // own size now, so no state is tuned against another one's shape.
     Text {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
@@ -173,7 +209,8 @@ Item {
         // harmless on a Phosphor-Bold `iconFont`, which is already the
         // bold cut and has no weight axis to move.
         font.weight: Font.Bold
-        font.pixelSize: root.iconPixelSize
+        font.pixelSize: root.classIconSizes[root.moduleClass] !== undefined
+            ? root.classIconSizes[root.moduleClass] : root.iconPixelSize
         font.letterSpacing: root.letterSpacing
     }
 

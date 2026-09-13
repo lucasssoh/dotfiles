@@ -135,11 +135,18 @@ Item {
     // bordered neighbour keeps ~6px between its own glyph and its edge.
     // The gap was structurally regular and still read as unequal.
     //
-    // Padding on the OUTER side only (leading here, trailing on
-    // AudioInput), never symmetric: headphones+mic are one group, so the
-    // gap BETWEEN them has to stay the tight one. Symmetric padding was
-    // tried first and inverts exactly that -- it grows the inner gap to
-    // twice the outer ones and the pair stops reading as a pair.
+    // Padding on BOTH sides now, but never equal on both: headphones+mic
+    // are one group, so the gap BETWEEN them has to stay the smaller one.
+    // Fully symmetric padding was tried first and inverts exactly that --
+    // it grows the inner gap to twice the outer ones and the pair stops
+    // reading as a pair.
+    //
+    // The outer side stays the bigger number (5 against the inner 2, set
+    // in shell.qml). The inner one used to be 0, which put headphones and
+    // mic 4px apart -- the tightest gap in the whole row, half of any
+    // other, on the one pair with no borders to do the separating. It is
+    // 8px now, still comfortably under the ~14px that shell.qml's
+    // `groupGap` puts on either side of the pair.
     //
     // Asked for as "espacer un peu plus [display] [audio] [balise]", and
     // done here rather than by raising `rowSpacing`: that number is
@@ -156,8 +163,8 @@ Item {
     // ph-speaker-x / ph-headphones / ph-monitor (no dedicated "hdmi"
     // glyph in Phosphor -- monitor/display is the closest stand-in for
     // "audio routed to the screen's own output") / ph-speaker-high
-    readonly property string iconGlyph: root.muted ? ""
-        : (root.isHeadphone ? "" : root.isHdmi ? "" : "")
+    readonly property string iconGlyph: root.muted ? "\uE626"
+        : (root.isHeadphone ? "\uE0F1" : root.isHdmi ? "\uE11D" : "\uE1AB")
     // Icon ONLY -- the numeric level that used to sit before it is gone,
     // asked for: "puisqu'on a deja ce retour, enleve les valeurs devant
     // les icones audio output et input". That retour is the OSD (Osd.qml,

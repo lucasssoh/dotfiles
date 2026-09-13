@@ -68,7 +68,7 @@ Item {
             id: iconGlyph
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: ""   // ph-arrows-down-up
+            text: "\uE046"   // lu-arrow-down-up
             color: SystemStats.netKind === "none" ? "#636366" : "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15

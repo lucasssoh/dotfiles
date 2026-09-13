@@ -20,10 +20,11 @@ Item {
         objects: root.node ? [root.node] : []
     }
 
-    // Outer breathing room, set per-instance from shell.qml -- see
+    // Breathing room, set per-instance from shell.qml -- see
     // AudioOutput.qml's copy of this pair for the whole reasoning. This
-    // is the RIGHT half of that group, so it's `trailingPad` that gets
-    // set here and `leadingPad` that stays 0.
+    // is the RIGHT half of that group, so the numbers arrive mirrored:
+    // `trailingPad` is the bigger outer one here, `leadingPad` the
+    // smaller gap shared with AudioOutput.
     property real leadingPad: 0
     property real trailingPad: 0
 
@@ -31,7 +32,7 @@ Item {
     implicitHeight: 24
     visible: root.node !== null
 
-    readonly property string iconGlyph: root.muted ? "" : ""   // ph-microphone-slash / ph-microphone
+    readonly property string iconGlyph: root.muted ? "\uE119" : "\uE118"   // lu-mic-off / lu-mic
     // Icon ONLY -- see AudioOutput.qml's own note for why the numeric
     // level went away. The "---" this used to show while muted goes with
     // it and loses nothing: the glyph itself already switches to

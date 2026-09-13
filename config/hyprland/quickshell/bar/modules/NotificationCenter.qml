@@ -274,7 +274,7 @@ Item {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: NotificationState.dnd ? "\uE5EE" : "\uE0CE"   // bell-z / bell
+                    text: NotificationState.dnd ? "\uE05A" : "\uE059"   // bell-z / bell
                     color: NotificationState.dnd ? "#0c0c0e" : "#f2f2f7"
                     font.family: NotificationState.dnd ? Fonts.iconPhosphorFill
                                                        : Fonts.iconPhosphorBold
@@ -406,20 +406,20 @@ Item {
                         spacing: 0
 
                         TransportButton {
-                            glyph: "\uE5A4"                                  // ph-skip-back
+                            glyph: "\uE15F"                                  // lu-skip-back
                             enabled: root.mprisPlayer ? root.mprisPlayer.canGoPrevious : false
                             onTriggered: root.mprisPlayer.previous()
                         }
                         TransportButton {
                             // The only one that changes shape, and the reason the
                             // row needs no play/pause label anywhere else.
-                            glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uE39E" : "\uE3D0"   // ph-pause / ph-play
+                            glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uE12E" : "\uE13C"   // lu-pause / lu-play
                             glyphSize: 17
                             enabled: root.mprisPlayer ? root.mprisPlayer.canTogglePlaying : false
                             onTriggered: root.mprisPlayer.togglePlaying()
                         }
                         TransportButton {
-                            glyph: "\uE5A6"                                  // ph-skip-forward
+                            glyph: "\uE160"                                  // lu-skip-forward
                             enabled: root.mprisPlayer ? root.mprisPlayer.canGoNext : false
                             onTriggered: root.mprisPlayer.next()
                         }

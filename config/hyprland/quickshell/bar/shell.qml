@@ -947,6 +947,33 @@ ShellRoot {
                 // value already validated on this row. It now applies to
                 // the whole row instead of a third of it.
                 rowSpacing: 2
+
+                // The row's SECOND number, and deliberately the only
+                // other one: `rowSpacing` above is the gap WITHIN a
+                // group, this is what a group BOUNDARY adds on top of it.
+                // Asked for -- "espacer un peu chaque groupe d'element
+                // sur la partie droite".
+                //
+                // It is a property and not four literal `Item { width: 2 }`
+                // spacers precisely because of what the comment above
+                // says: this row was regularised out of exactly that, a
+                // per-pair hand-tuned spacer set that had drifted to
+                // 0/6/6/2/2/2/2 across three passes. One name, used at
+                // every boundary, so the boundaries cannot drift apart
+                // from each other again either.
+                //
+                // 2 and not more: a spacer of width w inserted into a
+                // Row with spacing 2 widens that gap by w + 2, so 2 turns
+                // a ~9-10px optical gap into ~14. Measured off the real
+                // bar (ink edge to ink edge, not box to box -- every
+                // module carries a different internal margin: 2.5px
+                // inside the three chips, 1px around Battery's, 6px
+                // around Performance/Clock/NotificationBell's). That
+                // lands every boundary in the row at 13-14.5px against
+                // 7-9px within a group -- roughly double, which is what
+                // makes the grouping read without opening the row up.
+                property int groupGap: 2
+
                 twoPhase: false
                 // Snappier stretch+fade than DrawerIsland's defaults --
                 // asked for ("l'animation de elargissement fade se fasse
@@ -1113,7 +1140,7 @@ ShellRoot {
                         //
                         // ph-laptop and ph-monitor are one-for-one with
                         // the two single-screen Nerd Font glyphs.
-                        // \ueba4 is ph-devices: Phosphor has no
+                        // \uE3A2 is lu-monitor-smartphone: Phosphor has no
                         // two-monitors glyph at all (checked the whole
                         // name list -- monitor, monitor-play,
                         // monitor-arrow-up, desktop, television, and
@@ -1126,19 +1153,45 @@ ShellRoot {
                         // more closely but say "duplicate", not "two
                         // displays".
                         iconFont: Fonts.iconPhosphorBold
-                        // 10 -> 14: the size below Fonts.icon was shrunk
-                        // to (see ScriptModule.qml's own note on that
-                        // number) was compensating for the Nerd Font
-                        // inking wide inside its em-box. Phosphor doesn't,
-                        // so at 10 these three came out visibly smaller
-                        // than the Phosphor glyphs on either side of them.
-                        // 14 puts them back on par with the row's other
-                        // icons, which sit at 12-15.
-                        iconPixelSize: 14
+                        // 10 -> 14 -> 15. The 10 below Fonts.icon was
+                        // shrunk to (see ScriptModule.qml's own note on
+                        // that number) was compensating for the Nerd Font
+                        // inking wide inside its em-box; 14 undid that for
+                        // Phosphor. 15 is no longer a per-instance guess
+                        // at all -- it is THE bar icon size, the one every
+                        // icon in the band now shares (Cpu/Temperature/
+                        // Fan/Memory/Traffic, AudioOutput/AudioInput/
+                        // Performance/Battery/NotificationBell, and
+                        // BaliseButton's three glyphs since this pass).
+                        // The row no longer sits "at 12-15": it sits at 15,
+                        // and the chips grew instead (ScriptModule.qml's
+                        // badge, 18 -> 22).
+                        iconPixelSize: 15
                         classIcons: ({
-                            "display-internal": "\ue586",
-                            "display-external": "\ue32e",
-                            "display-both": "\ueba4"
+                            "display-internal": "\uE1CD",
+                            "display-external": "\uE11D",
+                            "display-both": "\uE3A2"
+                        })
+                        // Optically matched to the row, not to each
+                        // other's nominal size -- see ScriptModule.qml's
+                        // note on why this is a per-class map. Ordered by
+                        // how much of its own box each glyph fills:
+                        //   external  lu-monitor             64%  -> 13
+                        //   internal  lu-laptop              54%  -> 14
+                        //   both      lu-monitor-smartphone  33%  -> 15
+                        // "both" keeps the row's standard 15 because it
+                        // is the one that already sat BELOW the row's
+                        // median mass; only the two closed-rectangle
+                        // states come down. Picked by rendering all four
+                        // sizes of each against their real neighbours
+                        // (casque, micro, engrenage, cloche) and looking,
+                        // not by the ratio -- equalising silhouette area
+                        // outright lands lu-monitor at 11.5px, which
+                        // overshoots into visibly small.
+                        classIconSizes: ({
+                            "display-internal": 14,
+                            "display-external": 13,
+                            "display-both": 15
                         })
                         clickCommand: ["bash", "-c",
                             "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"]
@@ -1186,12 +1239,52 @@ ShellRoot {
                     // carries ~6px of internal padding before its edge.
                     // At `rowSpacing: 2` that made headphones/mic sit
                     // visibly tighter against [display] and [balise] than
-                    // those two sit against each other. The pad is on the
-                    // OUTER side of each only, so the pair still reads as
-                    // a pair -- see AudioOutput.qml's own note.
-                    Modules.AudioOutput { leadingPad: 5 }
-                    Modules.AudioInput { trailingPad: 5 }
+                    // those two sit against each other -- hence the pads
+                    // below, see AudioOutput.qml's own note.
+                    // GROUPS. The row reads as six of them now, each
+                    // separated by `groupGap` above and internally by the
+                    // plain `rowSpacing`:
+                    //   ecran     hdr + display
+                    //   son       audio out + audio in
+                    //   reseau    balise
+                    //   energie   performance + battery
+                    //   heure     clock
+                    //   systeme   notification bell + power dot
+                    //
+                    // clock|bell needs no spacer: those two already sit
+                    // 14px apart on their own (both pad themselves 6px a
+                    // side), which is exactly where the spacered
+                    // boundaries land. Adding one there would push it to
+                    // 20 and make the one boundary that was already right
+                    // the odd one out.
+
+                    // ---- ecran | son ----
+                    Item { width: toolsIsland.groupGap; height: 1 }
+
+                    // The audio pair's own two numbers. `leadingPad` /
+                    // `trailingPad` on the OUTER sides is the older fix,
+                    // and it stays: these two are the only bare glyphs in
+                    // the row, with no border or badge of their own, so
+                    // they need padding where every other block gets it
+                    // from its frame. What is new is the INNER pair (2
+                    // each), which is what "audio output et audio input
+                    // sont trop serres" was about -- headphones and mic
+                    // sat 4px apart, the tightest gap in the row by half,
+                    // while reading as two separate controls. 8px now:
+                    // wider than the 7px between the hdr and display
+                    // chips on purpose, because a chip's border does part
+                    // of the separating and a bare glyph has nothing.
+                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2 }
+                    Modules.AudioInput { leadingPad: 2; trailingPad: 5 }
+
+                    // ---- son | reseau ----
+                    Item { width: toolsIsland.groupGap; height: 1 }
+
                     Modules.BaliseButton { screen: bar.screen }
+
+                    // ---- reseau | energie ----
+                    Item { width: toolsIsland.groupGap; height: 1 }
+
 
                     // Performance profile + power, moved here from the main
                     // bar (were next to notif/clock/workspaces), asked for:
@@ -1202,6 +1295,9 @@ ShellRoot {
                     // power-profile and the clock now, grouped with the
                     // other power/status modules instead of CPU/RAM/fan.
                     Modules.Battery {}
+
+                    // ---- energie | heure ----
+                    Item { width: toolsIsland.groupGap; height: 1 }
 
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the

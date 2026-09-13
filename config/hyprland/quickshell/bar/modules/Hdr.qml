@@ -95,7 +95,21 @@ Item {
         id: badge
         anchors.centerIn: parent
         width: 35
-        height: 18
+        // 18 -> 22: the chip stopped being the thing that fits and went
+        // back to being the thing that frames. Every bar icon is one size
+        // now (15px, see Fonts.qml), and a Lucide glyph at 15 inks up to
+        // 16px tall -- inside an 18px chip that left ONE pixel of padding,
+        // so the only way to keep 18 was to shrink the glyph, which is the
+        // wrong end to give (asked for: "plutot agrandir le bouton que de
+        // retrecir l'icon qui s'y trouve"). 22 restores ~3px a side, the
+        // same breathing room the 12px glyphs used to have at 18.
+        // Still fits: modules are 24 tall inside the island's 31px row, so
+        // this grows into slack that was already there -- no module
+        // implicitHeight moved, no row got taller.
+        // Radius stays 6, NOT half the height: a 22px chip capsules at 11,
+        // and "coin arrondi mais pas totalement arrondi comme un pill" is
+        // still the rule these three share.
+        height: 22
         // 8 -> 6: back to the shared 6 (asked for -- "que les boutons hdr
         // et display de tools island soient comme le bouton de balise,
         // c-a-d avec coin arrondi mais pas totalement arrondi comme un
@@ -140,6 +154,11 @@ Item {
             // read as the one signal, not two slightly-off cyans.
             color: root.hdrActive ? "#6be3e8" : "#f2f2f7"
             font.family: Fonts.ui
+            // Stays 13 while the badge around it grew to 22. This is the
+            // one chip in the row whose content is TYPE, not an icon --
+            // the "same size for every icon" rule below does not reach
+            // it, and bumping "hdr" to 15 would make a status badge
+            // louder than the clock. It just gets more padding now.
             font.pixelSize: 13
             font.bold: true
             Behavior on color { ColorAnimation { duration: 200 } }

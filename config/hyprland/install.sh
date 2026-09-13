@@ -520,6 +520,48 @@ else
 fi
 
 # ============================================================
+# LUCIDE ICONS (quickshell bar icons -- Fonts.qml's iconLucide)
+# ============================================================
+# ISC-licensed (verified via its own LICENSE file), not packaged by any
+# distro -- pulled from the `lucide-static` npm package, which is the
+# only official channel shipping Lucide as a real icon FONT rather than
+# per-icon SVGs. ONE file, one family ("lucide"), 2118 glyphs: unlike
+# Phosphor above there is no per-weight family to loop over, because
+# Lucide has no weights at all (see Fonts.qml's own LUCIDE TEST note for
+# what that costs the bar). Copied flat into ~/.local/share/fonts,
+# alongside Phosphor -- both stay installed so Fonts.qml's `lucideTest`
+# can be flipped either way without reinstalling anything.
+section "Checking Lucide Icons font"
+
+if fc-list | grep -qi "lucide"; then
+    ok "Lucide Icons already installed."
+elif ! command -v curl &>/dev/null || ! command -v jq &>/dev/null; then
+    warn "curl/jq not available. Install Lucide Icons manually:"
+    warn "https://github.com/lucide-icons/lucide"
+else
+    info "Downloading Lucide Icons (lucide-static, latest)..."
+    LUCIDE_TMP="$(mktemp -d)"
+    # `|| true`: same reasoning as the Phosphor block above -- a bare
+    # failing assignment outside an if/&&/|| would take the whole script
+    # down via `set -e`, and this download is best-effort.
+    LUCIDE_VERSION="$(curl -fsL https://registry.npmjs.org/lucide-static \
+        | jq -r '."dist-tags".latest' 2>/dev/null)" || true
+
+    if [ -n "$LUCIDE_VERSION" ] && [ "$LUCIDE_VERSION" != "null" ] \
+        && curl -fLo "$LUCIDE_TMP/lucide.tgz" \
+            "https://registry.npmjs.org/lucide-static/-/lucide-static-${LUCIDE_VERSION}.tgz" \
+        && tar -xzf "$LUCIDE_TMP/lucide.tgz" -C "$LUCIDE_TMP" package/font/lucide.ttf; then
+        mkdir -p ~/.local/share/fonts
+        cp "$LUCIDE_TMP/package/font/lucide.ttf" ~/.local/share/fonts/
+        fc-cache -f ~/.local/share/fonts
+        ok "Lucide Icons ($LUCIDE_VERSION) installed."
+    else
+        warn "Lucide Icons download failed. Install manually: https://github.com/lucide-icons/lucide"
+    fi
+    rm -rf "$LUCIDE_TMP"
+fi
+
+# ============================================================
 # SYMLINK CONFIG
 # ============================================================
 

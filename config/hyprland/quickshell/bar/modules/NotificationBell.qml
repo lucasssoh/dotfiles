@@ -50,19 +50,27 @@ Item {
     // won (label is 15 + 20 = 35), putting 12.5px a side here, the widest
     // in TOOLS, and the hole between the clock and this bell is what made
     // it visible. Nothing was riding on the floor either -- Phosphor is
-    // monospaced, so all three bell glyphs below (bell-z / bell-simple /
-    // bell) measure exactly the same and this width never moves anyway.
+    // monospaced, so all three bell glyphs below measure exactly the same
+    // and this width never moves anyway. Still true under the Lucide test:
+    // every Lucide glyph advances a flat 1em too (checked, not assumed).
     implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
 
     readonly property string iconGlyph: {
-        if (root.dnd) return "";                          // bell-z (sleeping)
-        return root.hasUnseen ? "\uE0D0" : "\uE0CE";   // bell-simple (unseen) / bell (idle)
+        if (root.dnd) return "\uE05A";                        // lu-bell-off (sleeping)
+        return root.hasUnseen ? "\uE42B" : "\uE059";   // lu-bell-dot (unseen) / lu-bell (idle)
     }
-    // Solid while unread, outline once read (asked for). This carries the
-    // state far harder than the glyph choice does -- bell-simple and the
-    // idle bell differ by a flat bar versus a clapper, which at 15px is
-    // nearly nothing, whereas filled versus hollow is unmissable.
+    // Unread used to ride the WEIGHT: solid while unread, outline once
+    // read (asked for), which carried the state far harder than the glyph
+    // choice did -- Phosphor's bell-simple and idle bell differ by a flat
+    // bar versus a clapper, nearly nothing at 15px, whereas filled versus
+    // hollow is unmissable. Lucide has no fill weight (no weights at all,
+    // see Fonts.qml), so `iconFamily` now resolves to the same face both
+    // ways and the state moved into the glyph instead: lu-bell-dot puts
+    // a filled dot on the bell's shoulder, which is the one thing in
+    // Lucide's bell family that reads at 15px. The branch below is kept
+    // rather than collapsed so that reverting the Lucide test restores
+    // the filled/hollow version with nothing else to put back.
     readonly property string iconFamily: root.hasUnseen
         ? Fonts.iconPhosphorFill
         : Fonts.iconPhosphor

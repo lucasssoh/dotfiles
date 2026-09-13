@@ -86,8 +86,48 @@ QtObject {
     // Regular weight specifically, chosen to track the UI face's own
     // default (400) body weight -- the same "icon weight should track
     // the type weight next to it" idea SF Symbols itself is built around.
-    readonly property string iconPhosphor: "Phosphor"
+    // LUCIDE TEST ------------------------------------------------------
+    //
+    // Third icon-font POC, asked for as a straight A/B against Phosphor.
+    // Lucide (ISC, the maintained community fork of Feather) ships a
+    // real icon TTF in the `lucide-static` npm package -- family
+    // "lucide", ONE face, 2118 glyphs -- installed to
+    // ~/.local/share/fonts the same way Phosphor was.
+    //
+    // The trade versus Phosphor is a real one, not a wash: Lucide has
+    // exactly ONE weight. Phosphor's whole reason for being picked over
+    // Font Awesome was the SF-Symbols idea of several distinct weights
+    // of the same glyph set, and this bar leans on that -- 17 sites on
+    // Bold, 3 on Fill. Under Lucide all three families below resolve to
+    // the same face, so:
+    //   - the Bold/Regular hierarchy between the METRICS/TOOLS blocks
+    //     and the rest flattens out;
+    //   - NotificationBell's filled-while-unread state is gone, which
+    //     is why its unread glyph moved from bell-simple to lu-bell-dot
+    //     (a dot ON the bell) -- the state now rides the glyph instead
+    //     of the weight;
+    //   - the transport buttons (skip/play/pause) go from solid to
+    //     outline.
+    // Lucide also inks a little wider and thinner inside its em-box than
+    // Phosphor Bold does at the same pixelSize, so glyphs read lighter
+    // at the bar's 11-15px without any size change.
+    // The three properties below keep their `iconPhosphor*` NAMES on
+    // purpose -- ~36 call sites across 20 modules reference them, and
+    // renaming all of those would bury the one thing this test is
+    // actually about (the glyphs) in churn. They now all resolve to the
+    // single Lucide face. There is deliberately NO runtime toggle back
+    // to Phosphor: the per-module glyph literals are Lucide codepoints
+    // now, so swapping only the family would render 36 wrong glyphs.
+    // Going back to Phosphor means reverting this commit, not flipping
+    // a flag.
+    readonly property string iconLucide: "lucide"
 
+    readonly property string iconPhosphor: iconLucide
+
+    // Was Phosphor-Bold; under the Lucide test it is the same single
+    // face as `iconPhosphor`, and the note below is kept only so the
+    // hierarchy it describes can be put back on revert.
+    //
     // Bold weight, same "separate family per weight" deal as above --
     // confirmed via `fc-list` (Phosphor-Bold.ttf -> family "Phosphor-Bold",
     // not "Phosphor" + font.weight: Font.Bold, which does nothing on this
@@ -99,14 +139,18 @@ QtObject {
     // Bold is a whole extra family here, so those modules' glyphs ink a
     // touch wider than the Regular ones did -- the two blocks' pill
     // widths follow their content, so nothing needed re-measuring.
-    readonly property string iconPhosphorBold: "Phosphor-Bold"
+    readonly property string iconPhosphorBold: iconLucide
 
+    // Was Phosphor-Fill; under the Lucide test it too collapses onto the
+    // single face, which is the one substantive thing the test costs --
+    // see NotificationBell.qml for what replaced it there.
+    //
     // Fill weight -- solid glyphs, not an outline. Another whole family,
     // same as Bold above. Used to carry a STATE rather than a hierarchy:
     // NotificationBell inks solid while something is unread and goes back
     // to an outline once it is read, which reads at a glance in a way the
     // outline weights do not differ enough to.
-    readonly property string iconPhosphorFill: "Phosphor-Fill"
+    readonly property string iconPhosphorFill: iconLucide
 
     // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's
     // clock/message font, downloaded via api.fontshare.com's CSS

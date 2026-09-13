@@ -66,8 +66,8 @@ Item {
     // font's GSUB ligature table, which misattributes them -- render the
     // candidates and look before trusting it.
     function icon() {
-        if (root.state === "connected") return "\uEDDE";   // ph-network
-        return "\uEDDA";              // ph-network-x
+        if (root.state === "connected") return "\uE125";   // lu-network
+        return "\uE45D";              // lu-unplug
     }
 
     Text {

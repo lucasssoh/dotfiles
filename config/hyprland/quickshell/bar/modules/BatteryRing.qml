@@ -199,8 +199,8 @@ Item {
                 y: root.charging ? -root.lineHeight : 0
                 Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutCubic } }
 
-                Glyph { id: lowGlyph; glyph: "\ue946"; tone: root.lowColor }      // plug-bold
-                Glyph { id: chargeGlyph; glyph: "\ue2de"; tone: root.chargeColor } // lightning-bold
+                Glyph { id: lowGlyph; glyph: "\uE37F"; tone: root.lowColor }      // plug-bold
+                Glyph { id: chargeGlyph; glyph: "\uE1B4"; tone: root.chargeColor } // lightning-bold
             }
         }
 

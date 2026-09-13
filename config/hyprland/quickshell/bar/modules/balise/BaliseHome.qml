@@ -802,7 +802,7 @@ Item {
                     height: 92
                     title: "WiFi"
                     status: root.wifiTileStatus
-                    glyph: BaliseState.wifiEnabled ? "" : ""   // ph-wifi-high / ph-wifi-slash
+                    glyph: BaliseState.wifiEnabled ? "\uE1AE" : "\uE1AF"   // lu-wifi / lu-wifi-off
                     active: BaliseState.wifiEnabled
                     onActivated: BaliseState.toggleWifi()
                     onActivatedSecondary: root.goTo("wifi")
@@ -812,7 +812,7 @@ Item {
                     height: 92
                     title: "Bluetooth"
                     status: root.bluetoothTileStatus
-                    glyph: BaliseState.bluetoothEnabled ? "" : ""   // ph-bluetooth / ph-bluetooth-slash
+                    glyph: BaliseState.bluetoothEnabled ? "\uE05C" : "\uE1B9"   // lu-bluetooth / lu-bluetooth-slash
                     active: BaliseState.bluetoothEnabled
                     onActivated: BaliseState.toggleBluetooth()
                     onActivatedSecondary: root.goTo("bluetooth")
@@ -826,7 +826,7 @@ Item {
                     height: 92
                     title: "Ethernet"
                     status: root.ethernetTileStatus
-                    glyph: root.activeWiredProfile ? "\uEDDE" : "\uEDDA"   // ph-network / ph-network-x
+                    glyph: root.activeWiredProfile ? "\uE125" : "\uE45D"   // lu-network / lu-network-x
                     active: root.activeWiredProfile !== null
                     // No radio to toggle -- both buttons open the section.
                     onActivated: root.goTo("ethernet")

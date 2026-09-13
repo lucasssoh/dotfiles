@@ -49,7 +49,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: ""   // ph-cpu
+            text: "\uE0A9"   // lu-cpu
             color: SystemStats.cpuUsage >= 90 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15

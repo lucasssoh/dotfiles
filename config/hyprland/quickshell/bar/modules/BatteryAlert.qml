@@ -296,7 +296,7 @@ Rectangle {
                 anchors.centerIn: parent
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
-                text: ""
+                text: "\uE06C"
                 color: card.accentLight
                 font.family: Fonts.iconPhosphorBold
                 font.pixelSize: 16

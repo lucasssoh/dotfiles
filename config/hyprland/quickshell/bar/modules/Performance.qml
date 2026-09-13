@@ -51,9 +51,9 @@ Item {
     // monospaced, so this module's width no longer jumps 15px when the
     // profile changes -- it is constant in every state.
     function iconFor(p) {
-        if (p === PowerProfile.Performance) return "\uE2DE";   // ph-lightning
-        if (p === PowerProfile.PowerSaver) return "\uE2DA";    // ph-leaf
-        return "\uE5D2";                                       // ph-wind (balanced)
+        if (p === PowerProfile.Performance) return "\uE1B4";   // lu-zap
+        if (p === PowerProfile.PowerSaver) return "\uE2DE";    // lu-leaf
+        return "\uE1B0";                                       // lu-wind (balanced)
     }
 
     function colorFor(p) {

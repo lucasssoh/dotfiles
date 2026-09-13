@@ -41,7 +41,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: ""   // ph-fan
+            text: "\uE379"   // lu-fan
             color: "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15

@@ -61,14 +61,14 @@ Item {
     // waybar's original 5 -- same kind of coarsening already accepted on
     // Battery's 10 -> 5 tiers earlier.
     function icon() {
-        if (root.kind === "ethernet") return "\uEDDE";   // ph-network
+        if (root.kind === "ethernet") return "\uE125";   // lu-network
         if (root.kind === "wifi") {
             const s = root.wifiSignal;
-            if (s < 33) return "";
-            if (s < 66) return "";
-            return "";
+            if (s < 33) return "\uE5F8";
+            if (s < 66) return "\uE5F7";
+            return "\uE1AE";
         }
-        return "";
+        return "\uE1AF";
     }
 
     // Point 4 (HIG "clarity": color carries state, not decoration) --

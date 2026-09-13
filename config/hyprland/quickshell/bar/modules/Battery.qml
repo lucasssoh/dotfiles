@@ -215,7 +215,7 @@ Item {
         Text {
             visible: root.atRestOnAC
             anchors.verticalCenter: parent.verticalCenter
-            text: "\uEB56"
+            text: "\uE45C"
             color: root.batteryColor
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15

@@ -90,12 +90,12 @@ Item {
     // the old one came from the font's GSUB ligature table, which
     // misattributes names -- render and look before trusting it.
     function netIcon() {
-        if (root.netKind === "ethernet") return "\uEDDE";
+        if (root.netKind === "ethernet") return "\uE125";
         if (root.netKind === "wifi") {
             const s = root.wifiSignal;
-            if (s < 33) return "";
-            if (s < 66) return "";
-            return "";
+            if (s < 33) return "\uE5F8";
+            if (s < 66) return "\uE5F7";
+            return "\uE1AE";
         }
         return "";
     }
@@ -114,7 +114,7 @@ Item {
     // Bluetooth.qml's own icon(). "" for fully off.
     function btIcon() {
         if (!root.btEnabled) return "";
-        return root.btConnected ? "" : "";
+        return root.btConnected ? "\uE1B8" : "\uE05C";
     }
 
     // Width tracks `content`'s own live width (badge padding: 7px each
@@ -144,7 +144,21 @@ Item {
         id: badge
         anchors.centerIn: parent
         width: Math.max(content.implicitWidth + 14, 24)
-        height: 18
+        // 18 -> 22: the chip stopped being the thing that fits and went
+        // back to being the thing that frames. Every bar icon is one size
+        // now (15px, see Fonts.qml), and a Lucide glyph at 15 inks up to
+        // 16px tall -- inside an 18px chip that left ONE pixel of padding,
+        // so the only way to keep 18 was to shrink the glyph, which is the
+        // wrong end to give (asked for: "plutot agrandir le bouton que de
+        // retrecir l'icon qui s'y trouve"). 22 restores ~3px a side, the
+        // same breathing room the 12px glyphs used to have at 18.
+        // Still fits: modules are 24 tall inside the island's 31px row, so
+        // this grows into slack that was already there -- no module
+        // implicitHeight moved, no row got taller.
+        // Radius stays 6, NOT half the height: a 22px chip capsules at 11,
+        // and "coin arrondi mais pas totalement arrondi comme un pill" is
+        // still the rule these three share.
+        height: 22
         radius: 6
         color: "transparent"
 
@@ -178,10 +192,10 @@ Item {
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: ""
+            text: "\uE154"
             color: "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 12
+            font.pixelSize: 15
         }
     }
 
@@ -338,7 +352,7 @@ Item {
             text: slot.displayGlyph
             color: "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 12
+            font.pixelSize: 15
             opacity: 0
         }
     }

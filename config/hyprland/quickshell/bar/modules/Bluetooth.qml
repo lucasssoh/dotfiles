@@ -62,9 +62,9 @@ Item {
     // real shape-per-state (like the old Nerd Font version had), on top
     // of the color distinction, rather than one shape doing all the work.
     function icon() {
-        if (root.state === "off") return "";
-        if (root.state === "connected") return "";
-        return "";
+        if (root.state === "off") return "\uE1B9";
+        if (root.state === "connected") return "\uE1B8";
+        return "\uE05C";
     }
 
     // Point 4 (HIG "clarity") still applies to color on top of the shape

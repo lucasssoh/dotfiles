@@ -49,7 +49,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
-            text: ""   // ph-thermometer
+            text: "\uE186"   // lu-thermometer
             color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
