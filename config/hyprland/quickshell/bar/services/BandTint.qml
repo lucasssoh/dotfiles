@@ -32,12 +32,13 @@ Singleton {
     //
     // 0x73 is ~45% -- the band blocks less than half of what is behind
     // it, which is the whole reason this machinery exists.
-    readonly property color bandDark: "#730c0c0e"
-    // The light material's band: the same alpha, the opposite end of the
-    // ramp. Alpha is identical at both ends on purpose -- the crossfade
-    // between them then moves colour only, and the amount of wallpaper
-    // coming through never changes mid-transition.
-    readonly property color bandLight: "#73f2f2f7"
+    //
+    // ONE band, and it never changes: flat and translucent, always this
+    // colour. A second, light band was tried and removed -- it worked on
+    // the numbers (worst island 5.57:1 against 4.22:1 here) and was wrong
+    // on the design: a bar whose surface turns white is a different bar.
+    // Only the ink moves now.
+    readonly property color band: "#730c0c0e"
 
     // ---- the profile -------------------------------------------------
     property var profile: null
@@ -124,63 +125,43 @@ Singleton {
                        a * band.b + (1 - a) * behind.b, 1);
     }
 
-    // How much better the challenger must score before the material
-    // actually switches. Without it a slideshow's crossfade walks the
-    // measurement back and forth across the threshold and the bar
-    // strobes. Chosen against the measured curve rather than by feel:
-    // the two materials cross at wallpaper grey 115, where both sit near
-    // 8.7:1, and the curve moves ~0.35:1 per 16 grey levels there -- so
-    // 1.0 is worth about 45 levels of travel, far more than a crossfade's
-    // own wobble and far less than any real wallpaper change.
+    // How much better the other ink must score before the island actually
+    // switches. Without it a slideshow's crossfade walks the measurement
+    // back and forth across the threshold and the bar strobes.
+    //
+    // Measured on the curve it actually rides, not guessed: the two inks
+    // cross at wallpaper grey 201 (composite 116), both at 4.20:1, and
+    // the gap opens by ~1.0 per 15 grey levels either side. So 1.0 leaves
+    // a 29-level band around the crossover where nothing flips -- far
+    // wider than a crossfade's own wobble, far narrower than the distance
+    // between two real wallpapers.
     readonly property real switchMargin: 1.0
 
-    // Single-rect version of recommendBand below. Not what the band
-    // uses -- it is the primitive `describe()` reports with, so one
-    // island's own reading can be inspected without the minimax folding
-    // it into the other two. `current` carries the hysteresis state for
-    // the same reason it does there.
+    // Returns "dark" or "light" -- which INK reads better behind
+    // [x, x+w). Both are scored against the same band, because the band
+    // is the same; this is the whole difference from the material flip
+    // that preceded it.
+    //
+    // Per island, not once for the whole bar. That is only possible
+    // BECAUSE the band no longer moves: three islands with three inks on
+    // one uniform surface have no seam between them, where three
+    // materials would have had to cut the band into three colours. It is
+    // also worth doing -- the islands disagree on 27% of the library, and
+    // a single global ink fixes only 2 of the 7 wallpapers that fail
+    // today, against 4 of 7 when each island chooses for itself.
+    //
+    // `current` is the caller's own previous answer, which is where the
+    // hysteresis state lives: a singleton cannot hold it when three
+    // islands each need their own.
     function recommend(monitor, x, w, current, inkDark, inkLight) {
         const behind = root.backgroundAt(monitor, x, w);
         if (!behind) return current || "dark";
-        const sDark = root.contrast(root.composite(root.bandDark, behind), inkDark);
-        const sLight = root.contrast(root.composite(root.bandLight, behind), inkLight);
+        const surface = root.composite(root.band, behind);
+        const sDark = root.contrast(surface, inkDark);
+        const sLight = root.contrast(surface, inkLight);
         if (current === "light")
             return sDark > sLight + root.switchMargin ? "dark" : "light";
         return sLight > sDark + root.switchMargin ? "light" : "dark";
-    }
-
-    // ONE material for the whole band, chosen by minimax over the islands
-    // that actually carry ink: the material whose WORST island reads best.
-    //
-    // One decision and not three, even though the islands genuinely
-    // disagree -- they do so on 27% of this machine's 56 wallpapers.
-    // Measured before choosing: with a single material picked this way,
-    // the worst island never drops below 5.57:1 on any of those 56
-    // (median 11.12:1, zero below AA), against 12% of them failing AA
-    // today. Three materials would buy contrast nobody can perceive at
-    // the cost of splitting "une bande unie" -- which was an explicit
-    // requirement -- into three colours, or smearing a gradient across
-    // it. The per-island `ink` property the modules carry is what lets
-    // the band differ from the DRAWERS; it is not there to let the three
-    // islands differ from each other, and this is the measurement that
-    // says they need not.
-    //
-    // `rects` is [[x, w], ...] in the monitor's own coordinates. Only
-    // `primary` is scored: it is what nearly every glyph on the band
-    // uses, and a tier that is deliberately faint (see InkLight.qml)
-    // must not get a vote on legibility.
-    function recommendBand(monitor, rects, current, dark, light) {
-        let worstDark = Infinity, worstLight = Infinity;
-        for (let i = 0; i < rects.length; i++) {
-            const behind = root.backgroundAt(monitor, rects[i][0], rects[i][1]);
-            if (!behind) continue;
-            worstDark = Math.min(worstDark, root.contrast(root.composite(root.bandDark, behind), dark.primary));
-            worstLight = Math.min(worstLight, root.contrast(root.composite(root.bandLight, behind), light.primary));
-        }
-        if (!isFinite(worstDark) || !isFinite(worstLight)) return current || "dark";
-        if (current === "light")
-            return worstDark > worstLight + root.switchMargin ? "dark" : "light";
-        return worstLight > worstDark + root.switchMargin ? "light" : "dark";
     }
 
     // Debug: what each island would be told, as one line. Wired to an IPC
@@ -189,12 +170,11 @@ Singleton {
     function describe(monitor, x, w, inkDark, inkLight) {
         const behind = root.backgroundAt(monitor, x, w);
         if (!behind) return "pas de profil";
-        const cd = root.composite(root.bandDark, behind);
-        const cl = root.composite(root.bandLight, behind);
+        const surface = root.composite(root.band, behind);
         const f = v => Math.round(v * 255);
-        return "derriere rgb(" + f(behind.r) + "," + f(behind.g) + "," + f(behind.b) + ")"
-             + "  sombre " + root.contrast(cd, inkDark).toFixed(2) + ":1"
-             + "  clair " + root.contrast(cl, inkLight).toFixed(2) + ":1"
+        return "fond rgb(" + f(surface.r) + "," + f(surface.g) + "," + f(surface.b) + ")"
+             + "  encre claire " + root.contrast(surface, inkDark).toFixed(2) + ":1"
+             + "  encre sombre " + root.contrast(surface, inkLight).toFixed(2) + ":1"
              + "  -> " + root.recommend(monitor, x, w, "dark", inkDark, inkLight);
     }
 }

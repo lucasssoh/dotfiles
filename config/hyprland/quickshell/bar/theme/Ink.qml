@@ -23,11 +23,11 @@ import QtQuick
 // sites were migrated onto it; that was the point, and it was verified as
 // a pixel-identical screenshot rather than assumed.
 QtObject {
-    // Position on the dark<->light axis, so `ink.t` is readable whichever
-    // of the three ramps a module was handed -- InkBlend animates it, these
-    // two are its endpoints. The glass chips need it: their rim is ADDITIVE
-    // light (glass.frag: `emissive += rim`), so it has to fade out as the
-    // material goes light, where added light cannot be seen.
+    // Position on the white<->dark ink axis, so `ink.t` is readable
+    // whichever of the three ramps a module was handed -- InkBlend
+    // animates it between them, these two are its endpoints. Nothing in
+    // the bar reads it today; it is part of the contract that lets the
+    // three be interchangeable.
     readonly property real t: 0.0
 
     // ---- the neutral ramp, brightest first ---------------------------

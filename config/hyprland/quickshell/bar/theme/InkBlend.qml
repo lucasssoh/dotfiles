@@ -17,10 +17,10 @@ import "../services"
 // easing, every glyph and the band underneath them moving together by
 // construction rather than by everyone being given the same duration.
 //
-// `band` is deliberately part of this and not left in shell.qml: it is
-// the surface those inks are read against, and the entire reason the
-// ramps differ. Animating the two separately is exactly the desync this
-// component exists to make impossible.
+// The band is NOT part of this and never was mixed in the end: it stays
+// flat and translucent at one colour, and only the ink moves across it.
+// That is also what lets each island own one of these -- three inks on
+// one uniform surface have no seam between them.
 QtObject {
     id: blend
 
@@ -54,10 +54,4 @@ QtObject {
     readonly property color hdr: blend.mix(Ink.hdr, InkLight.hdr)
     readonly property color onLight: blend.mix(Ink.onLight, InkLight.onLight)
 
-    // The band these inks are read against. Alpha is 0x73 at both ends,
-    // so the lerp moves colour only and the wallpaper never shows through
-    // by a different amount mid-transition -- the same reasoning
-    // shell.qml's barBand records for why its two gradient stops kept a
-    // constant alpha.
-    readonly property color band: blend.mix(BandTint.bandDark, BandTint.bandLight)
 }

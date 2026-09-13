@@ -434,54 +434,36 @@ ShellRoot {
             required property var modelData
             screen: modelData
 
-            // ── MATERIAL ──────────────────────────────────────────────
-            // Which of the two materials the band is wearing right now:
-            // "dark" (#730c0c0e + Ink) or "light" (#73f2f2f7 + InkLight).
-            // Per screen, because each one has its own stretch of
-            // wallpaper behind it.
+            // ── INK ───────────────────────────────────────────────────
+            // One ramp per island, each deciding from the wallpaper behind
+            // ITSELF -- see theme/IslandInk.qml. The band underneath them
+            // does not change at all: it stays flat and translucent at
+            // BandTint.band, and only the ink moves across it.
             //
-            // A function driven by explicit triggers rather than a plain
-            // binding, because the decision reads its OWN previous value:
-            // recommendBand applies hysteresis against it (see
-            // BandTint.switchMargin), and a binding that depends on the
-            // property it assigns is a loop.
-            property string material: "dark"
-            readonly property bool lightMaterial: bar.material === "light"
-            // Rebuilt whenever any island moves or resizes -- metrics
-            // grows with the CPU digits, tools with its own content,
-            // launchers with the running apps -- so the band re-decides
-            // against the stretch of wallpaper it actually covers now.
-            // Cheap enough to do on every one of those: it averages a
-            // handful of pre-computed buckets, it never re-reads a pixel.
-            readonly property var inkRects: [
-                [metrics.x, metrics.width],
-                [launchers.x, launchers.width],
-                [toolsIsland.x, toolsIsland.width],
-            ]
-            onInkRectsChanged: bar.reevaluateMaterial()
-            Component.onCompleted: bar.reevaluateMaterial()
-            Connections {
-                target: BandTint
-                function onSeqChanged() { bar.reevaluateMaterial(); }
+            // The rects are bound live, so an island that grows (metrics
+            // with the CPU digits, tools with its modules, launchers with
+            // the running apps) re-decides against the stretch it actually
+            // covers now. The drawers read Ink directly and never any of
+            // these, which is what keeps them out of it entirely.
+            readonly property string tintMonitor: bar.screen ? bar.screen.name : ""
+
+            IslandInk {
+                id: metricsInk
+                monitor: bar.tintMonitor
+                rectX: metrics.x
+                rectW: metrics.width
             }
-            function reevaluateMaterial(): void {
-                if (!bar.screen || !BandTint.ready) return;
-                bar.material = BandTint.recommendBand(bar.screen.name, bar.inkRects,
-                                                      bar.material, Ink, InkLight);
+            IslandInk {
+                id: launchersInk
+                monitor: bar.tintMonitor
+                rectX: launchers.x
+                rectW: launchers.width
             }
-            // What the modules on the band are handed -- an interpolated
-            // ramp, not Ink or InkLight themselves, so the flip is a fade
-            // (see theme/InkBlend.qml for why an object swap could not
-            // be). The drawers never read this: they take Ink directly,
-            // which is what keeps them out of the flip entirely.
-            readonly property InkBlend bandInk: blendedInk
-            InkBlend {
-                id: blendedInk
-                t: bar.lightMaterial ? 1 : 0
-                // The one clock. 900 ms sits just inside awww's own 1 s
-                // wallpaper transition, so the bar finishes changing with
-                // the picture rather than after it.
-                Behavior on t { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
+            IslandInk {
+                id: toolsInk
+                monitor: bar.tintMonitor
+                rectX: toolsIsland.x
+                rectW: toolsIsland.width
             }
 
             // Normally false, and emphatically so: a bar that accepts
@@ -736,12 +718,9 @@ ShellRoot {
                 // from the value that maths assumed would keep answering
                 // confidently and wrongly. Same value as the literal it
                 // replaces, verified as a pixel-identical capture.
-                // Both the band and every glyph on it come from the same
-                // interpolated ramp, driven by the single animated number
-                // `bandInk.t` -- see theme/InkBlend.qml. No Behavior here
-                // on purpose: a second animation on this colour would run
-                // its own clock against that one.
-                color: bar.bandInk.band
+                // Fixe, et c'est le point: plate et translucide, une seule
+                // couleur, toujours. Seule l'encre posee dessus bascule.
+                color: BandTint.band
             }
 
             // ── ONE BAR ───────────────────────────────────────
@@ -908,15 +887,15 @@ ShellRoot {
 
                 Item { width: 6; height: 1 }
 
-                Modules.Cpu { ink: bar.bandInk }
-                Modules.Temperature { ink: bar.bandInk }
-                Modules.Fan { ink: bar.bandInk }
-                Modules.Memory { ink: bar.bandInk }
+                Modules.Cpu { ink: metricsInk }
+                Modules.Temperature { ink: metricsInk }
+                Modules.Fan { ink: metricsInk }
+                Modules.Memory { ink: metricsInk }
                 // Moved here from Network.qml in TOOLS (asked for) --
                 // the download-rate half of what used to be one combined
                 // wifi/rate module, now grouped with METRICS' other
                 // continuously-updating stats instead.
-                Modules.Traffic { ink: bar.bandInk }
+                Modules.Traffic { ink: metricsInk }
             }
 
             // Launchers -- its own separate floating island (asked for:
@@ -983,7 +962,7 @@ ShellRoot {
                 // documents, found the hard way once already).
 
                 Modules.Launchers {
-                    ink: bar.bandInk
+                    ink: launchersInk
                     opacity: 0.8
                 }
             }
@@ -1243,7 +1222,7 @@ ShellRoot {
                     // HdrLabel.qml. It carries its own trailing gap, so
                     // when HDR is off the whole thing leaves the row
                     // without stranding a spacer behind it.
-                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen); ink: bar.bandInk }
+                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen); ink: toolsInk }
 
                     // The Hdr badge used to open this row (before the
                     // display-layout status, asked for at the time). It
@@ -1257,7 +1236,7 @@ ShellRoot {
                     // still a group, and dropping it would glue the chip
                     // to the audio pair.
                     Modules.ScriptModule {
-                        ink: bar.bandInk
+                        ink: toolsInk
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
                         interval: 5000
                         // minWidth was the real culprit: implicitWidth is
@@ -1416,13 +1395,13 @@ ShellRoot {
                     // wider than the ~7px two chips sit apart on
                     // purpose, because a chip's border does part of the
                     // separating and a bare glyph has nothing.
-                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: bar.bandInk }
-                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: bar.bandInk }
+                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: toolsInk }
+                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: toolsInk }
 
                     // ---- son | reseau ----
                     Item { width: toolsIsland.groupGap; height: 1 }
 
-                    Modules.BaliseButton { screen: bar.screen; ink: bar.bandInk }
+                    Modules.BaliseButton { screen: bar.screen; ink: toolsInk }
 
                     // ---- reseau | energie ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -1431,12 +1410,12 @@ ShellRoot {
                     // Performance profile + power, moved here from the main
                     // bar (were next to notif/clock/workspaces), asked for:
                     // now sit right of connectivity in this pill instead.
-                    Modules.Performance { ink: bar.bandInk }
+                    Modules.Performance { ink: toolsInk }
 
                     // Moved here from METRICS (asked for): sits between
                     // power-profile and the clock now, grouped with the
                     // other power/status modules instead of CPU/RAM/fan.
-                    Modules.Battery { ink: bar.bandInk }
+                    Modules.Battery { ink: toolsInk }
 
                     // ---- energie | heure ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -1444,14 +1423,14 @@ ShellRoot {
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the
                     // power dot, asked for.
-                    Modules.Clock { ink: bar.bandInk }
+                    Modules.Clock { ink: toolsInk }
 
                     // Notification bell -- moved again (asked for:
                     // "entre clock et power", i.e. the literal power dot
                     // below, not the power-PROFILE icon it sat next to
                     // before) -- was leftmost, then next to Hdr, then
                     // between Battery and Clock, before landing here.
-                    Modules.NotificationBell { screen: bar.screen; ink: bar.bandInk }
+                    Modules.NotificationBell { screen: bar.screen; ink: toolsInk }
 
                     Item {
                         // 28 -> 20 -> 16: same space-saving pass as the
@@ -1480,7 +1459,7 @@ ShellRoot {
                             // lieu de vivre dans un module, donc il ne
                             // reçoit pas la rampe par une propriete `ink`
                             // et doit la lire ici.
-                            color: bar.bandInk.danger
+                            color: toolsInk.danger
                         }
 
                         MouseArea {

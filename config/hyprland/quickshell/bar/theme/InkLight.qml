@@ -12,38 +12,40 @@ import QtQuick
 //
 // HOW THESE VALUES WERE PICKED
 // ----------------------------
-// Not by eye, and not by holding them to WCAG AA. Each one reproduces
-// the contrast its Ink counterpart achieves on the DARK material, at the
-// same hue and saturation, with lightness solved for. The light material
-// is meant to be a faithful mirror, not a stricter or a looser palette:
-// `faint` is nearly invisible on the dark band (1.06:1 -- it is the
-// notification bell's do-not-disturb state, deliberately almost gone)
-// and it has to stay nearly invisible here, which a 4.5:1 floor would
-// have destroyed by making it a perfectly readable grey.
+// Not by eye, and not by holding them to WCAG AA. Each one reproduces the
+// contrast its Ink counterpart achieves, at the same hue and saturation,
+// with lightness solved for -- and both are measured on the SAME
+// background, because the band no longer changes: only the ink does.
 //
-// Both materials are measured at their OWN worst case, which is the same
-// wallpaper value for both: they cross at wallpaper grey ~115, so the
-// dark material's hardest job is a background of 69 and the light
-// material's is 172. Every pair below is matched at those two points:
+// That common worst case is the crossover. With the band fixed at
+// `#730c0c0e`, white ink and dark ink score equally at wallpaper grey
+// 201, which composites to 116. Every pair below is matched there:
 //
-//     token       dark            light           delta
-//     primary     #f2f2f7 8.64:1  #0c0c0e 8.65:1  0.01
-//     secondary   #8e8e93 2.96:1  #5c5c60 2.96:1  0.00
-//     muted       #636366 1.61:1  #868689 1.61:1  0.00
-//     faint       #48484a 1.06:1  #a7a7aa 1.06:1  0.00
-//     danger      #ff6e6e 3.54:1  #a60000 3.54:1  0.00
-//     accent      #a8b4c4 4.59:1  #364150 4.59:1  0.00
-//     positive    #a3d9a5 5.98:1  #163517 5.97:1  0.01
-//     play        #237823 1.74:1  #2b942b 1.74:1  0.00
-//     hdr         #6be3e8 6.33:1  #082f31 6.34:1  0.01
+//     token       white ink       dark ink        delta
+//     primary     #f2f2f7 4.20:1  #0c0c0e 4.20:1  0.00
+//     secondary   #8e8e93 1.44:1  #5b5b5f 1.44:1  0.00
+//     danger      #ff6e6e 1.72:1  #a50000 1.72:1  0.00
+//     accent      #a8b4c4 2.23:1  #36404f 2.23:1  0.00
+//     positive    #a3d9a5 2.91:1  #163417 2.91:1  0.00
+//     hdr         #6be3e8 3.07:1  #082f31 3.07:1  0.00
 //
-// One constraint the solver needed beyond matching the ratio: the ink
-// has to stay DARKER than its own background. Matching `muted` and
-// `faint` numerically alone produced colours LIGHTER than the light band
-// -- the same ratio, the wrong side of it, and they would have read as
-// glowing rather than as receding. The de-emphasised tiers fade toward
-// the background from below here, as they fade toward it from above on
-// the dark material.
+// 4.20:1 at the crossover is the honest cost of keeping the band flat and
+// translucent: the material flip reached 5.57:1 at its own worst point by
+// lifting the background too, and was dropped because a band that turns
+// white is not what this bar is. Measured over the 56 wallpapers in the
+// library: worst island 4.22:1, three of them between 4.22 and 4.38,
+// against seven falling to 2.82:1 with white ink alone.
+//
+// `muted`, `faint` and `play` are DELIBERATELY absent below and resolve
+// to Ink's own values. Solving for them returns the colour they already
+// are: on a mid-grey composite they sit below the background already, so
+// there is no twin to have. A tier that does not need to move should not
+// be given a second name that happens to equal the first.
+//
+// One constraint the solver needed beyond matching the ratio: the ink has
+// to stay DARKER than its background. Without it, matching `secondary`
+// numerically returned a colour LIGHTER than the band -- the same ratio,
+// the wrong side of it, reading as a glow rather than as a recession.
 QtObject {
     // See Ink.qml's `t`.
     readonly property real t: 1.0
@@ -53,14 +55,14 @@ QtObject {
     // and Ink already names this colour, so naming it twice with a
     // one-bit difference would be a difference with no meaning.
     readonly property color primary: "#0c0c0e"
-    readonly property color secondary: "#5c5c60"
-    readonly property color muted: "#868689"
-    readonly property color faint: "#a7a7aa"
+    readonly property color secondary: "#5b5b5f"
+    readonly property color muted: Ink.muted
+    readonly property color faint: Ink.faint
 
-    readonly property color danger: "#a60000"
-    readonly property color accent: "#364150"
-    readonly property color positive: "#163517"
-    readonly property color play: "#2b942b"
+    readonly property color danger: "#a50000"
+    readonly property color accent: "#36404f"
+    readonly property color positive: "#163417"
+    readonly property color play: Ink.play
     readonly property color hdr: "#082f31"
 
     // Symmetric counterpart to Ink.onLight: the ink the OTHER material
