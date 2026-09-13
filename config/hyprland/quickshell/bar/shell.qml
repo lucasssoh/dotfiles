@@ -531,6 +531,30 @@ ShellRoot {
                     width: toolsIsland.width
                     height: toolsIsland.height
                 }
+                // FOURTH region -- the TOOLS drawer's own band, which
+                // since `fixedDrawerWidth` is no longer the row's width
+                // and extends LEFT of the island (drawerBandX is
+                // negative). The region above covers the island's own
+                // x-range only, so without this the overhang rendered
+                // but swallowed every click in it -- the left half of
+                // Balise's tile grid, in practice.
+                //
+                // Unioned, not a replacement: Region's own default
+                // `regions` list property unions nested Regions, and the
+                // two bands only partially overlap. Harmlessly identical
+                // to the one above whenever a drawer is not pinned
+                // (drawerBandX 0, drawerBandWidth == island width).
+                //
+                // Separate ints off the island, not a rect: same trap
+                // documented below on Veille's handle -- a Region whose
+                // geometry reads through a rect-typed property never
+                // follows it.
+                Region {
+                    x: toolsIsland.x + toolsIsland.drawerBandX
+                    y: 0
+                    width: toolsIsland.drawerBandWidth
+                    height: toolsIsland.height
+                }
                 // THIRD region, and the only exception to "centerIsland's
                 // drawer never takes clicks": Veille's close handle
                 // (VeilleDrawerContent's own DrawerHandle -- see there for
@@ -570,7 +594,14 @@ ShellRoot {
                 // itself is revealed and is fully closed again whenever
                 // Veille is not on screen.
                 Region {
-                    x: centerIsland.x + centerIsland.margin + veilleDrawer.closeHitX
+                    // `+ drawerBandX` mirrors drawerColumn's own x, which
+                    // gained that term when the drawer's width stopped
+                    // being the row's. It is 0 for centerIsland (no
+                    // fixedDrawerWidth), so this changes nothing today --
+                    // it is here so the derivation stays a derivation
+                    // instead of quietly becoming a coincidence.
+                    x: centerIsland.x + centerIsland.drawerBandX
+                       + centerIsland.margin + veilleDrawer.closeHitX
                     y: centerIsland.rowHeight
                        + centerIsland.drawerGap * centerIsland.opaqueProgress
                        + veilleDrawer.closeHitY
@@ -1003,6 +1034,23 @@ ShellRoot {
                 // DrawerIsland's 31px default was tuned for centerIsland's
                 // row, not this one).
                 rowHeight: 24
+                // The DRAWER, unlike the row, is pinned -- asked for.
+                // 360 is not a fresh guess: it is what this drawer already
+                // measured when the TOOLS row was at its widest (the
+                // panel came to 367px band, ~355 content, with the hdr
+                // badge showing), so the roomier of the two shapes it was
+                // already alternating between is the one that stays. The
+                // narrow end, 284, was the one that made Balise's tile
+                // grid tight -- at 360 the tiles are 172 each, which is
+                // what "Freebox-C76C28" was verified to fit in without
+                // eliding.
+                //
+                // Applies to BOTH entries, since the island owns the
+                // width and the entries reflow into it: Balise's grid and
+                // the notification list are now the same width as each
+                // other, permanently, which they were not before.
+                fixedDrawerWidth: 360
+
                 // UNPINNED -- the pill tracks its own content again,
                 // asked for: "j'aimerai que ce soit compact et que ça
                 // s'adapte avec le nombre d'element à l'interieur".

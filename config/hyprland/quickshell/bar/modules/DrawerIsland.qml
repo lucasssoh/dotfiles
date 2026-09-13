@@ -226,6 +226,28 @@ Item {
     // value, where clipping icons would be worse than a rare nudge.
     property int fixedContentWidth: 0
 
+    // Pins the DRAWER's content width, independently of the row above
+    // it -- asked for ("une largeur fixe pour balise et notif, plus en
+    // fonction de la largeur de tools"). 0 (the default, and what
+    // centerIsland keeps) means the old behaviour exactly: the drawer is
+    // the row, and every expression below collapses to what it was.
+    //
+    // This is the one place the width arrow documented below is allowed
+    // to be cut rather than reversed. The drawer still does not DRIVE the
+    // island -- an entry declaring its own implicitWidth is still not a
+    // thing -- it is simply told a constant instead of being told the
+    // row. That distinction is what keeps the island from snapping to a
+    // different shape on open: the row's own width is untouched by any of
+    // this, so the band above the drawer never moves.
+    //
+    // Why it was needed: the TOOLS row legitimately changes width in
+    // normal use -- the battery module appears when discharging, the
+    // "hdr" word appears when HDR is on -- and the drawer inherited every
+    // one of those. Measured on this machine, the same Balise panel was
+    // 296px wide with both absent and 367px with the hdr badge present:
+    // a 70px swing in a panel whose own content had not changed at all.
+    property int fixedDrawerWidth: 0
+
     // The width arrow points ONE way, and it points from the row down into
     // the drawer: the Instantiator at the bottom of this file forces every
     // entry to `effectiveWidth`, and entries are expected to reflow into
@@ -435,6 +457,30 @@ Item {
     }
 
     implicitWidth: root.effectiveWidth + root.margin * 2
+
+    // ---- drawer geometry -------------------------------------------------
+    //
+    // Three derived numbers, and all three are identities when
+    // `fixedDrawerWidth` is 0 -- drawerContentWidth == effectiveWidth,
+    // drawerBandX == 0, drawerBandWidth == the island's own width -- so
+    // centerIsland goes through exactly the code it went through before.
+    //
+    // The band is RIGHT-aligned on the island, not centred on it: this
+    // island is anchored to the right edge of the bar, so a drawer wider
+    // than its row has to grow leftward or it grows off the screen. It
+    // also keeps the one alignment that was asked for when the row and
+    // the drawer first became two blocks ("aligner le bloc tools et la
+    // largeur des elements tiroir") -- their right edges still line up,
+    // which is the edge both are anchored to.
+    readonly property real drawerContentWidth: root.fixedDrawerWidth > 0
+        ? root.fixedDrawerWidth : root.effectiveWidth
+    // Offset of the drawer band within the island, negative when the
+    // drawer is the wider of the two. Ints, and published, because
+    // shell.qml's input mask has to reproduce this band exactly -- see
+    // the note there about a Region that reads a `rect` never following
+    // it.
+    readonly property int drawerBandX: Math.round(root.effectiveWidth - root.drawerContentWidth)
+    readonly property int drawerBandWidth: Math.round(root.drawerContentWidth + root.margin * 2)
     // drawerColumn's own height is the live sum of its children's
     // (animating) heights -- the Column reflows as each entry grows or
     // shrinks, so entries below a closing one slide up on their own and
@@ -764,9 +810,9 @@ Item {
     Rectangle {
         id: drawerFill
         visible: root.splitDrawer
-        x: 0
+        x: root.drawerBandX
         y: root.rowHeight + root.drawerGap * root.opaqueProgress
-        width: parent.width
+        width: root.drawerBandWidth
         height: drawerColumn.height
         radius: root.drawerRadius
         opacity: root.opaqueProgress
@@ -812,9 +858,17 @@ Item {
     // slide up without any offset arithmetic here.
     Column {
         id: drawerColumn
-        x: root.margin
+        // `drawerBandX + margin`, NOT a bare `margin`. This is the line
+        // that decides whether the drawer's contents sit centred in the
+        // pane or glued to its left: the pane moved (drawerFill above),
+        // and the content inset has to move with it. Leaving this at
+        // `margin` is precisely how a fixed-width drawer ends up with its
+        // cards hanging off one side of the block they are supposed to be
+        // inside -- the pane widens leftward and the column does not
+        // follow, so every entry keeps starting where the ROW starts.
+        x: root.drawerBandX + root.margin
         y: root.rowHeight + root.drawerGap * root.opaqueProgress
-        width: root.effectiveWidth
+        width: root.drawerContentWidth
     }
 
     // One set of bindings per entry. An Instantiator rather than a
@@ -831,7 +885,7 @@ Item {
             property Binding widthBinding: Binding {
                 target: modelData
                 property: "width"
-                value: root.effectiveWidth
+                value: root.drawerContentWidth
             }
             // Closed is height 0; open is its natural implicitHeight --
             // but only once `expanded` says the widen phase is done (see
