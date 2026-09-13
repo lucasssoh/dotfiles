@@ -73,6 +73,19 @@ Rectangle {
     height: 92
     radius: 20
 
+    // Thick-glass edge -- see GlassLens.qml / shaders/glass.frag. The
+    // layer only exists while the OSD is actually up (this window is
+    // torn down between showings), so the pass is as transient as the
+    // popup is.
+    layer.enabled: true
+    layer.effect: GlassLens {
+        radius: card.radius
+        // Shallower band than the taller surfaces: this card is 92px
+        // tall, so a 14px bevel would be nearly a third of its height.
+        band: 10
+        depth: 5
+    }
+
     gradient: Gradient {
         GradientStop { position: 0.0; color: "#ff3f4450" }
         GradientStop { position: 1.0; color: "#ff060608" }
@@ -83,8 +96,11 @@ Rectangle {
     // is correct as-is. `card` is a plain Rectangle here, not a
     // Block.qml instance with content-reparenting, so there's no
     // separate "sibling" wiring to do the way metrics/tools need it.
-    GlassRim { cornerRadius: card.radius }
-    GlassRim { cornerRadius: card.radius; lightOrigin: "bottomRight"; strength: 0.45 }
+    // The two GlassRim instances that used to sit here are gone: the
+    // edge is now drawn by GlassLens' own shader, which reproduces the
+    // same five-stop ramp but curves and disperses it. Keeping a real
+    // GlassRim as well drew the line twice and flattened the fringe
+    // back out -- checked on screen, not assumed.
 
     opacity: OsdState.osdVisible ? 1 : 0
     scale: OsdState.osdVisible ? 1 : 0.9

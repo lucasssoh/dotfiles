@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import ".."   // GlassCard/GlassChip live one level up
 
 // The bar's one and only text field -- built here rather than pulled from
 // QtQuick.Controls for the same reason every other control in this shell
@@ -41,6 +42,17 @@ Rectangle {
     width: parent ? parent.width : 0
     height: 40
     radius: 11
+
+    // Same glass edge every other block in this bar now carries --
+    // see GlassCard.qml. Only the block itself goes through the lens;
+    // any icon tile nested inside it is left plain, or the two
+    // rims would sit 4px apart and read as noise.
+    // Only while this is HOVERED or ON -- asked for: the glass is a
+    // state cue, not decoration, so a zone nobody is touching and
+    // nothing has switched on carries no edge at all. It also means
+    // the layer is allocated only for the one element in play.
+    layer.enabled: input.activeFocus
+    layer.effect: GlassCard { radius: 11 }
     color: input.activeFocus ? Surfaces.cardRaised : Surfaces.card
     border.width: 1
     // The focus ring is the only cue that keystrokes are landing here --

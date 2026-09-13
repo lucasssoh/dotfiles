@@ -48,6 +48,8 @@ ListView {
 
         width: root.cardWidth
         notification: toastDelegate.model.notification
+        // Pure black, no edge -- see NotificationCard's `toast`.
+        toast: true
 
         onDismissRequested: NotificationState.dismissToast(toastDelegate.model.notifId)
         onActionRequested: (action) => NotificationState.invokeAction(toastDelegate.notification, action)

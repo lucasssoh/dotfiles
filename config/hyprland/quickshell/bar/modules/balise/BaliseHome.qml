@@ -382,6 +382,17 @@ Item {
         signal activatedSecondary()
 
         radius: 20
+
+        // Same glass edge every other block in this bar now carries --
+        // see GlassCard.qml. Only the block itself goes through the lens;
+        // any icon tile nested inside it is left plain, or the two
+        // rims would sit 4px apart and read as noise.
+        // Only while this is HOVERED or ON -- asked for: the glass is a
+        // state cue, not decoration, so a zone nobody is touching and
+        // nothing has switched on carries no edge at all. It also means
+        // the layer is allocated only for the one element in play.
+        layer.enabled: tile.active || mouseArea.containsMouse
+        layer.effect: GlassCard { radius: 20 }
         // "On" needed real contrast at rest, not just a tinted icon/status
         // (asked for explicitly: "il faut un contraste lorsque les
         // boutons sont en on") -- a faint accent-tinted fill + an
@@ -392,7 +403,7 @@ Item {
         // slightly from whichever base it's already in.
         color: tile.active
             ? mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium
-            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card)
+            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep)
         border.width: 1
         border.color: tile.active ? root.accent : Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -512,6 +523,17 @@ Item {
 
         height: trow.subtitle !== "" ? 54 : 46
         radius: 12
+
+        // Same glass edge every other block in this bar now carries --
+        // see GlassCard.qml. Only the block itself goes through the lens;
+        // any icon tile nested inside it is left plain, or the two
+        // rims would sit 4px apart and read as noise.
+        // Only while this is HOVERED or ON -- asked for: the glass is a
+        // state cue, not decoration, so a zone nobody is touching and
+        // nothing has switched on carries no edge at all. It also means
+        // the layer is allocated only for the one element in play.
+        layer.enabled: trow.checked || mouseArea.containsMouse
+        layer.effect: GlassCard { radius: 12 }
         // The card itself carries the state -- there is no switch. It used
         // to have a real track+thumb on the right; dropping it and tinting
         // the card instead is exactly what the WiFi/Bluetooth/Ethernet
@@ -525,10 +547,13 @@ Item {
         // 13px title are gone again.
         //
         // Same four combinations as Tile (off/on x rest/hover) reading the
-        // same tokens, so the two cannot drift apart.
+        // same tokens, so the two cannot drift apart. That includes the
+        // off/rest cell, which is `cardDeep` on both: everything in this
+        // panel that is switched off now recedes into it, and only what
+        // is on or under the pointer comes forward.
         color: trow.checked
             ? (mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium)
-            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card)
+            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep)
         border.width: 1
         border.color: trow.checked ? root.accent : Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -586,7 +611,27 @@ Item {
 
         height: 46
         radius: 12
-        color: mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.card
+
+        // Same glass edge every other block in this bar now carries --
+        // see GlassCard.qml. Only the block itself goes through the lens;
+        // any icon tile nested inside it is left plain, or the two
+        // rims would sit 4px apart and read as noise.
+        // Only while this is HOVERED or ON -- asked for: the glass is a
+        // state cue, not decoration, so a zone nobody is touching and
+        // nothing has switched on carries no edge at all. It also means
+        // the layer is allocated only for the one element in play.
+        layer.enabled: mouseArea.containsMouse
+        layer.effect: GlassCard { radius: 12 }
+        // Near-black at rest, same as ToggleRow above -- asked for, and
+        // the two sit next to each other in the SYSTEM group so they
+        // have to match.
+        color: mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep
+        // A hairline this row did NOT have before, matching ToggleRow's
+        // own. Without it a near-black fill on a near-black panel leaves
+        // nothing at all to aim at: the glass edge only arrives on
+        // hover, so at rest the border IS the button.
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Text {
@@ -675,7 +720,13 @@ Item {
                 width: parent.width
                 height: 66
                 radius: 14
-                color: Surfaces.card
+
+                // Near-black at rest -- asked for. This block is pure
+                // display (it names the network you are on), so it has
+                // no active state to brighten into; it simply recedes,
+                // and its border is what keeps the shape. See
+                // Surfaces.cardDeep.
+                color: Surfaces.cardDeep
                 border.width: 1
                 border.color: root.heroConnected ? Qt.rgba(0xa8 / 255, 0xb4 / 255, 0xc4 / 255, 0.35) : Qt.rgba(1, 1, 1, 0.08)
                 Behavior on border.color { ColorAnimation { duration: 160 } }

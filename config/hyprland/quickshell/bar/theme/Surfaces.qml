@@ -34,6 +34,18 @@ QtObject {
     // A step brighter again, for a control that needs to read as raised
     // against a card it sits on (the back button).
     readonly property color cardRaised: "#1f2330"
+    // And a step the OTHER way: a near-black resting fill for the few
+    // surfaces asked to recede until they are actually in play -- Balise's
+    // "CURRENT NETWORK" block and its Night mode / Screenshot rows, and
+    // BatteryAlert's two buttons. Just above `panelBottom` rather than
+    // equal to it, so a row sitting on the darkest end of the panel does
+    // not disappear into it entirely.
+    //
+    // BatteryAlert is not a drawer panel and otherwise keeps its own
+    // hardcoded palette, but it reads THIS token rather than repeating
+    // the hex: the whole reason this file exists is that a value shared
+    // between surfaces cannot be kept straight once it is copied.
+    readonly property color cardDeep: "#070709"
 
     readonly property color accent: "#a8b4c4"
     // Accent tints, PRE-BLENDED over `card` rather than written as

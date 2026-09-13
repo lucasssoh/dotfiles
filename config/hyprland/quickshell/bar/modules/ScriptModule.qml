@@ -129,6 +129,16 @@ Item {
         height: 18
         radius: 6
         color: "transparent"
+
+        // One GlassChip in place of the bottom+top GlassRim pair, same
+        // swap and same 0.40/0.18 balance as Hdr.qml's own -- and a
+        // layer.effect for the same reason, see there.
+        layer.enabled: true
+        layer.effect: GlassChip {
+            radius: 6
+            lightBottom: 1.0
+            lightTop: 0.45
+        }
     }
 
     // Fonts.icon: the one current instantiation (display-layout status,
@@ -189,20 +199,6 @@ Item {
     // 0.40 puts it at 66, below the look it replaces, with the direction
     // still legible; 0.28 was tried too and loses the bottom edge into
     // the other three.
-    GlassRim {
-        target: badge
-        cornerRadius: badge.radius
-        lightOrigin: "bottom"
-        vSpan: 1.0
-        strength: 0.40
-    }
-    GlassRim {
-        target: badge
-        cornerRadius: badge.radius
-        lightOrigin: "top"
-        vSpan: 1.0
-        strength: 0.18
-    }
 
     MouseArea {
         anchors.fill: parent

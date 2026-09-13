@@ -329,6 +329,15 @@ ShellRoot {
         function closeNotificationCenter(): void {
             NotificationState.close();
         }
+        // Balise's own panel has no IPC of its own -- it opens by
+        // clicking BaliseButton and nothing else, which makes every
+        // change to modules/balise/ unverifiable without a mouse in
+        // hand. Same reason simulateBattery/previewBattery above exist
+        // (there is no battery here to trigger them), and the same
+        // shape: `qs -c bar ipc call bar toggleBalise`.
+        function toggleBalise(): void {
+            BaliseState.togglePanel(Quickshell.screens[0]);
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -662,6 +671,33 @@ ShellRoot {
             // overlay, not another equally-weighted bar.
             Modules.Block {
                 id: metrics
+
+                // Thick-glass edge -- see modules/GlassLens.qml. This
+                // replaces the two GlassRim siblings this pane used to
+                // have (topLeft full + bottomRight faint): the shader
+                // draws the same five-stop ramp, now curved and
+                // dispersed, and stacking a real rim on top of it just
+                // doubles the line.
+                //
+                // NOTE this pane's modules DO go through the lens --
+                // Block.qml reparents its children into an inner Row, so
+                // unlike the islands there is no sibling slot that would
+                // keep them out. That is why `band` stays at 6: the text
+                // is vertically centred in 24px, so a band that shallow
+                // reaches the pane's padding and not the glyphs.
+                // Gated on having a size at all: LAUNCHERS is empty
+                // (and so zero-width) whenever nothing matches, and a
+                // zero-size FBO is pure waste. METRICS never hits this,
+                // but the two panes are kept identical on purpose.
+                layer.enabled: width > 0 && height > 0
+                layer.effect: Modules.GlassLens {
+                    radius: metrics.cornerRadius
+                    band: 6
+                    depth: 2.5
+                    aberration: 0.8
+                    rimThickness: 2.2
+                    trough: 0.14
+                }
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.left: parent.left
@@ -729,6 +765,33 @@ ShellRoot {
             // workspaces resize.
             Modules.Block {
                 id: launchers
+
+                // Thick-glass edge -- see modules/GlassLens.qml. This
+                // replaces the two GlassRim siblings this pane used to
+                // have (topLeft full + bottomRight faint): the shader
+                // draws the same five-stop ramp, now curved and
+                // dispersed, and stacking a real rim on top of it just
+                // doubles the line.
+                //
+                // NOTE this pane's modules DO go through the lens --
+                // Block.qml reparents its children into an inner Row, so
+                // unlike the islands there is no sibling slot that would
+                // keep them out. That is why `band` stays at 6: the text
+                // is vertically centred in 24px, so a band that shallow
+                // reaches the pane's padding and not the glyphs.
+                // Gated on having a size at all: LAUNCHERS is empty
+                // (and so zero-width) whenever nothing matches, and a
+                // zero-size FBO is pure waste. METRICS never hits this,
+                // but the two panes are kept identical on purpose.
+                layer.enabled: width > 0 && height > 0
+                layer.effect: Modules.GlassLens {
+                    radius: launchers.cornerRadius
+                    band: 6
+                    depth: 2.5
+                    aberration: 0.8
+                    rimThickness: 2.2
+                    trough: 0.14
+                }
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.right: toolsIsland.left
@@ -799,6 +862,11 @@ ShellRoot {
             // than just lowering it outright.
             Modules.DrawerIsland {
                 id: toolsIsland
+                // Same thick-glass edge as METRICS/LAUNCHERS, on this
+                // island's own row pane -- see DrawerIsland's `rowGlass`.
+                // Its modules stay out of the lens here (topRow is a
+                // sibling of the pane), so only the glass curves.
+                rowGlass: true
                 anchors.top: parent.top
                 anchors.topMargin: 3
                 anchors.right: parent.right
@@ -1147,10 +1215,9 @@ ShellRoot {
             // source. Weaker (0.45, not 1.0) so it reads as fill light,
             // not a second equally-strong highlight competing with the
             // real one.
-            Modules.GlassRim { target: metrics }
-            Modules.GlassRim { target: metrics; lightOrigin: "bottomRight"; strength: 0.45 }
-            Modules.GlassRim { target: launchers }
-            Modules.GlassRim { target: launchers; lightOrigin: "bottomRight"; strength: 0.45 }
+            // METRICS' and LAUNCHERS' GlassRim pairs used to sit here.
+            // Both panes now carry GlassLens instead (declared inline on
+            // each, above) -- same ramp, but curved and dispersed.
         }
     }
 

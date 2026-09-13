@@ -153,6 +153,12 @@ Rectangle {
     height: 292
     radius: 24
 
+    // Thick-glass edge -- see GlassLens.qml / shaders/glass.frag.
+    layer.enabled: true
+    layer.effect: GlassLens {
+        radius: card.radius
+    }
+
     // Narrower and darker than the first pass (top stop #3f4450 ->
     // #1e2128, bottom left alone) -- asked for ("réduire le spectre",
     // "plus sombre"): less top-to-bottom range AND a darker card
@@ -162,8 +168,9 @@ Rectangle {
         GradientStop { position: 1.0; color: "#ff060608" }
     }
 
-    GlassRim { cornerRadius: card.radius }
-    GlassRim { cornerRadius: card.radius; lightOrigin: "bottomRight"; strength: 0.45 }
+    // The two GlassRim instances that used to sit here are gone -- the
+    // edge is drawn by GlassLens' shader now, which reproduces the same
+    // five-stop ramp but curves and disperses it. See Osd.qml.
 
     // Deliberately NOT `visible: alertVisible`: that was tried and is
     // wrong twice over -- it does not zero an item's width/height in QML
@@ -247,7 +254,9 @@ Rectangle {
         // secondaryButton's own plain #14161d -- the two pills are
         // meant to look like one shared style now, not a matched pair
         // with one recolored.
-        color: primaryArea.containsMouse ? "#14161d" : "transparent"
+        // Near-black at rest rather than transparent -- asked for. See
+        // Surfaces.cardDeep; the 1px ring below is what still shapes it.
+        color: primaryArea.containsMouse ? "#14161d" : Surfaces.cardDeep
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -313,7 +322,9 @@ Rectangle {
         anchors.rightMargin: 20
         height: 50
         radius: height / 2
-        color: secondaryArea.containsMouse ? "#14161d" : "transparent"
+        // Near-black at rest, same as primaryButton -- the two are meant
+        // to read as one shared style. See Surfaces.cardDeep.
+        color: secondaryArea.containsMouse ? "#14161d" : Surfaces.cardDeep
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }

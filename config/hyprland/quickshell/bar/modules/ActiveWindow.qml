@@ -181,6 +181,21 @@ Item {
         // (target left unset, traces `parent`) applies directly.
         color: "#34383f00"
 
+        // One GlassChip in place of the topLeft + fainter-bottomRight
+        // GlassRim pair -- see GlassChip.qml. The diagonal is gone
+        // because the lens is vertical-only by design (an angle means
+        // something different on every shape in this bar; GlassRim's own
+        // header makes that case), but the TOP bias is kept here rather
+        // than flipped to the badges' bottom one: this chip belongs to
+        // the central island's pane family, not to TOOLS' small badges.
+        //
+        // `chip` has no fill of its own (#34383f00) -- the rim is the
+        // only thing that draws it, and it survives being fed to a
+        // shader because the emissive term carries its own alpha. See
+        // glass.frag.
+        layer.enabled: true
+        layer.effect: GlassChip { radius: 6 }
+
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
@@ -193,12 +208,6 @@ Item {
             font.bold: true
         }
 
-        // Two sources, like metrics/launchers/tools in shell.qml: full-
-        // strength topLeft (default) plus a fainter bottomRight one
-        // (asked for, extended here from the floating panes to this
-        // chip and the active workspace pill).
-        GlassRim { cornerRadius: chip.radius }
-        GlassRim { cornerRadius: chip.radius; lightOrigin: "bottomRight"; strength: 0.45 }
     }
 
     Text {

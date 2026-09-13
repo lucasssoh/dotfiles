@@ -55,7 +55,21 @@ Rectangle {
     // when the matte variant was still a runtime opt-out; the fix then
     // was two gradient stops collapsing to one colour, and now that both
     // consumers want matte there is simply no gradient to declare.
-    color: "#ff1e2128"
+    // Toast mode: pure black -- asked for ("un fond noir pure sobre sans
+    // bordure"). A popup that appears unbidden over whatever you are
+    // doing has a different job from a card sitting in a panel you
+    // opened on purpose: it has to be read in one glance and then
+    // forgotten, and every gram of decoration on it works against that.
+    property bool toast: false
+
+    color: card.toast ? "#ff000000" : "#ff1e2128"
+
+    // The card itself carries NO glass edge in either mode. It shows
+    // text; it is not a button. The rule the whole bar follows now is
+    // that the glass marks something you can press -- so on this card it
+    // is the action pills and the close button that light up, never the
+    // surface they sit on. `toast` therefore only changes the fill.
+
 
     Column {
         id: layout
@@ -178,9 +192,22 @@ Rectangle {
                     radius: 14
                     width: actionLabel.implicitWidth + 20
                     color: actionArea.containsMouse ? "#14161d" : "transparent"
-                    border.width: 1
-                    border.color: Qt.rgba(1, 1, 1, 0.18)
                     Behavior on color { ColorAnimation { duration: 120 } }
+
+                    // Border and glass SWAP rather than stack: at rest
+                    // the pill keeps the plain 1px ring that has always
+                    // been its only resting shape, and on hover that
+                    // ring steps aside for the lens' own edge. Drawing
+                    // both would put two lines on the same silhouette.
+                    //
+                    // Never in a toast, whichever state it is in -- see
+                    // `toast` at the top of this file.
+                    readonly property bool lit: !card.toast && actionArea.containsMouse
+                    border.width: actionPill.lit ? 0 : 1
+                    border.color: Qt.rgba(1, 1, 1, 0.18)
+
+                    layer.enabled: actionPill.lit
+                    layer.effect: GlassChip { radius: 14 }
 
                     Text {
                         id: actionLabel

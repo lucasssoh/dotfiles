@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import ".."   // GlassCard/GlassChip live one level up
 
 // One row of the Bluetooth section list. `modelData` is exactly one
 // balise-src `BluetoothDevice` (dbus/bluez.rs) as JSON. Same one-action
@@ -19,6 +20,17 @@ Rectangle {
     width: ListView.view ? ListView.view.width : 0
     height: 58
     radius: 14
+
+    // Same glass edge every other block in this bar now carries --
+    // see GlassCard.qml. Only the block itself goes through the lens;
+    // any icon tile nested inside it is left plain, or the two
+    // rims would sit 4px apart and read as noise.
+    // Only while this is HOVERED or ON -- asked for: the glass is a
+    // state cue, not decoration, so a zone nobody is touching and
+    // nothing has switched on carries no edge at all. It also means
+    // the layer is allocated only for the one element in play.
+    layer.enabled: row.connected || rowArea.containsMouse
+    layer.effect: GlassCard { radius: 14 }
     color: row.connected
         ? rowArea.containsMouse ? Surfaces.accentStrong : Surfaces.accentSoft
         : (rowArea.containsMouse ? Surfaces.cardHover : Surfaces.card)

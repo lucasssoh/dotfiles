@@ -107,6 +107,29 @@ Item {
         radius: 6
         color: "transparent"
 
+        // One GlassChip in place of the bottom+top GlassRim pair that
+        // used to be traced around this badge: the shader carries both
+        // sources itself (the same 0.40/0.18 balance those two had) and
+        // adds the curvature and the dispersion a flat ramp could not.
+        //
+        // A layer.effect, not a sibling -- unlike GlassRim this is a
+        // ShaderEffect and is fed the badge itself as its source. The
+        // label below therefore goes through the lens, which at a 4px
+        // band on an 18px chip reaches the padding and not the glyphs.
+        //
+        // The cyan still crossfades as one ramp: `rimColor` is a real
+        // colour property precisely so this Behavior keeps working,
+        // where three separate float uniforms would have needed three
+        // separate animations.
+        layer.enabled: true
+        layer.effect: GlassChip {
+            radius: 6
+            lightBottom: 1.0
+            lightTop: 0.45
+            rimColor: root.hdrActive ? "#6be3e8" : "#e5e5ea"
+            Behavior on rimColor { ColorAnimation { duration: 200 } }
+        }
+
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
@@ -155,24 +178,6 @@ Item {
     // the other three.
     // Both retinted together, as before, since they share the same
     // `highlightColor` expression.
-    GlassRim {
-        target: badge
-        cornerRadius: badge.radius
-        lightOrigin: "bottom"
-        vSpan: 1.0
-        strength: 0.40
-        highlightColor: root.hdrActive ? "#6be3e8" : "#e5e5ea"
-        Behavior on highlightColor { ColorAnimation { duration: 200 } }
-    }
-    GlassRim {
-        target: badge
-        cornerRadius: badge.radius
-        lightOrigin: "top"
-        vSpan: 1.0
-        strength: 0.18
-        highlightColor: root.hdrActive ? "#6be3e8" : "#e5e5ea"
-        Behavior on highlightColor { ColorAnimation { duration: 200 } }
-    }
 
     MouseArea {
         anchors.fill: parent

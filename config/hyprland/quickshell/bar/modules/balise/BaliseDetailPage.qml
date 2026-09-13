@@ -357,6 +357,17 @@ Item {
             width: 28
             height: 28
             radius: 9
+
+            // Same glass edge every other block in this bar now carries --
+            // see GlassChip.qml. Only the block itself goes through the lens;
+            // any icon tile nested inside it is left plain, or the two
+            // rims would sit 4px apart and read as noise.
+            // Only while this is HOVERED or ON -- asked for: the glass is a
+            // state cue, not decoration, so a zone nobody is touching and
+            // nothing has switched on carries no edge at all. It also means
+            // the layer is allocated only for the one element in play.
+            layer.enabled: backArea.containsMouse
+            layer.effect: GlassChip { radius: 9 }
             color: backArea.containsMouse ? Surfaces.cardRaised : Surfaces.card
             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -442,6 +453,7 @@ Item {
             width: parent.width
             height: 44
             radius: 12
+
             color: root.statusConnected ? Surfaces.accentMedium : "#14161d"
             border.width: 1
             border.color: root.statusConnected ? root.accent : Qt.rgba(1, 1, 1, 0.12)
@@ -495,6 +507,7 @@ Item {
                 width: parent.width
                 height: formColumn.implicitHeight + 28
                 radius: 12
+
                 color: Surfaces.card
 
                 Column {
@@ -637,6 +650,17 @@ Item {
                         width: parent.width
                         height: 40
                         radius: 20
+
+                        // Same glass edge every other block in this bar now carries --
+                        // see GlassCard.qml. Only the block itself goes through the lens;
+                        // any icon tile nested inside it is left plain, or the two
+                        // rims would sit 4px apart and read as noise.
+                        // Only while this is HOVERED or ON -- asked for: the glass is a
+                        // state cue, not decoration, so a zone nobody is touching and
+                        // nothing has switched on carries no edge at all. It also means
+                        // the layer is allocated only for the one element in play.
+                        layer.enabled: root.canSubmit || submitArea.containsMouse
+                        layer.effect: GlassCard { radius: 20 }
                         color: {
                             if (!root.canSubmit) return Surfaces.card;
                             return submitArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium;
@@ -689,6 +713,7 @@ Item {
                 width: parent.width
                 height: metaColumn.implicitHeight + 16
                 radius: 12
+
                 color: Surfaces.card
 
                 Column {
@@ -757,6 +782,16 @@ Item {
                 width: parent.width
                 height: 54
                 radius: 12
+
+                // Same glass edge every other block in this bar now carries --
+                // see GlassCard.qml. Only the block itself goes through the lens;
+                // any icon tile nested inside it is left plain, or the two
+                // rims would sit 4px apart and read as noise.
+                // A toggle row, not a text block: it takes a click and
+                // carries an on/off state, so it keeps the glass -- lit
+                // only while it is actually on.
+                layer.enabled: root.optionsValue
+                layer.effect: GlassCard { radius: 12 }
                 color: Surfaces.card
 
                 Column {

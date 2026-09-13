@@ -104,6 +104,22 @@ Item {
                 radius: 6   // 2 -> 6, more pronounced corners (still short of a full pill at 9)
                 color: modelData.active ? "#34383f" : "transparent"
 
+                // One GlassChip in place of the topLeft + bottomRight
+                // GlassRim pair -- see GlassChip.qml, and ActiveWindow's
+                // own note on why the top bias is kept on the central
+                // island rather than flipped to the badges' bottom one.
+                //
+                // The only chip in this set with a real fill, so also
+                // the only one where the trough has a surface to shade
+                // and the convexity reads as a body rather than as an
+                // edge alone.
+                //
+                // Gated on `active` exactly as the two GlassRims were:
+                // the inactive pills, which is most of them most of the
+                // time, allocate nothing at all.
+                layer.enabled: modelData.active
+                layer.effect: GlassChip { radius: 6 }
+
                 // Same GlassRim "verre métal" edge as the bar's other
                 // pills (asked for), on the active pill only -- occupied/
                 // empty stay plain (no fill to rim in the first place).
@@ -111,19 +127,6 @@ Item {
                 // `pill` is a bare Repeater delegate, not wrapped in any
                 // Block/reparenting container, so there's no separate
                 // sibling to hang a `target:` off of.
-                GlassRim {
-                    visible: pill.modelData.active
-                    cornerRadius: pill.radius
-                }
-                // Second, fainter source from bottomRight (asked for),
-                // same pairing as metrics/launchers/tools in shell.qml
-                // and ActiveWindow.qml's own chip.
-                GlassRim {
-                    visible: pill.modelData.active
-                    cornerRadius: pill.radius
-                    lightOrigin: "bottomRight"
-                    strength: 0.45
-                }
 
                 Text {
                     renderType: Text.NativeRendering

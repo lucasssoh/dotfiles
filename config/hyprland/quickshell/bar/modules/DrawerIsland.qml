@@ -177,6 +177,15 @@ Item {
     // the two islands is a knob the consumer sets.
     property bool splitDrawer: false
 
+    // Thick-glass edge on the island's own ROW pane (`fill`), for the
+    // translucent floating islands -- see GlassLens.qml. Off by default
+    // and opted into per-island from shell.qml: centerIsland is flush
+    // against the screen's top edge, so it has no visible upper arete to
+    // curve and the whole treatment would be spent on a boundary nobody
+    // can see (the same reasoning GlassRim's `lightOrigin` header gives
+    // for putting its hot spot on a bottom corner there).
+    property bool rowGlass: false
+
     // The drawer block's own fill. Overridable per consumer because the
     // two islands want opposite things: TOOLS' drawers (Balise, the
     // notification center) put opaque cards on it and can therefore
@@ -599,6 +608,28 @@ Item {
         bottomRightRadius: root.cornerRadius
         color: root.fillColor
         gradient: root.fillGradient
+
+        // See `rowGlass` above. Unlike the drawer's own block this one is
+        // always on screen, so the layer is permanent -- but it is only
+        // ever re-rendered when something in the bar actually changes,
+        // which is the same handful of repaints per second the clock was
+        // already causing.
+        //
+        // Only the pane goes through it: the row's modules live in
+        // `topRow`, a SIBLING of this Rectangle, so the icons and text
+        // sit on the glass rather than in it and stay pixel-crisp.
+        layer.enabled: root.rowGlass
+        layer.effect: GlassLens {
+            radius: root.cornerRadius
+            // Small pane: a 24-31px row cannot carry the popups' 10-14px
+            // band, the two sides would meet in the middle and the pane
+            // would have no flat centre left at all.
+            band: 6
+            depth: 2.5
+            aberration: 0.8
+            rimThickness: 2.2
+            trough: 0.14
+        }
     }
 
     // Flush-top treatment (centerIsland's original, only consumer until
@@ -621,13 +652,16 @@ Item {
     // Floating-pane treatment (all 4 edges visible, nothing to hide) --
     // the exact topLeft-full + bottomRight-faint pairing METRICS/TOOLS'
     // own Blocks already use elsewhere in this bar (see shell.qml).
+    // Stood down under `rowGlass`, where the lens draws the edge itself:
+    // stacking a real GlassRim on top of it doubles the line and flattens
+    // the dispersion back out (checked on screen).
     GlassRim {
-        visible: !root.flushTop
+        visible: !root.flushTop && !root.rowGlass
         target: fill
         cornerRadius: root.cornerRadius
     }
     GlassRim {
-        visible: !root.flushTop
+        visible: !root.flushTop && !root.rowGlass
         target: fill
         cornerRadius: root.cornerRadius
         lightOrigin: "bottomRight"
@@ -726,16 +760,28 @@ Item {
             GradientStop { position: 0.0; color: root.drawerFillTop }
             GradientStop { position: 1.0; color: root.drawerFillBottom }
         }
-    }
-    GlassRim {
-        visible: root.splitDrawer
-        target: drawerFill
-        cornerRadius: root.drawerRadius
-        lightOrigin: "bottomLeft"
-        hSpan: 0
-        strength: 0.35
-        highlightColor: "#8e8e93"
-        opacity: root.opaqueProgress
+
+        // Thick-glass edge -- see GlassLens.qml / shaders/glass.frag.
+        // This replaces the GlassRim that used to be traced around this
+        // block (symmetric light from below, #8e8e93 at 0.35): the same
+        // source and the same ramp, now curved and dispersed.
+        //
+        // Only the PANEL goes through the lens, not the drawer's
+        // contents -- drawerColumn is a sibling, not a child, so the
+        // cards and text sit ON the glass rather than in it. That is
+        // also the physically right answer, and it keeps every card edge
+        // in the notification list crisp.
+        //
+        // Gated rather than left on: an FBO the size of this block is
+        // not something to keep allocated for a drawer that is shut most
+        // of the time.
+        layer.enabled: root.splitDrawer && root.opaqueProgress > 0.01
+        layer.effect: GlassLens {
+            radius: root.drawerRadius
+            // The greyer, fainter edge this block already had.
+            rimStrength: 0.22
+            rimColor: "#8e8e93"
+        }
     }
     // There was a hairline divider drawn across this seam (a 1px rule
     // growing from the centre outward on `opaqueProgress`, added when

@@ -72,6 +72,17 @@ Item {
             width: 28
             height: 28
             radius: 9
+
+            // Same glass edge every other block in this bar now carries --
+            // see GlassChip.qml. Only the block itself goes through the lens;
+            // any icon tile nested inside it is left plain, or the two
+            // rims would sit 4px apart and read as noise.
+            // Only while this is HOVERED or ON -- asked for: the glass is a
+            // state cue, not decoration, so a zone nobody is touching and
+            // nothing has switched on carries no edge at all. It also means
+            // the layer is allocated only for the one element in play.
+            layer.enabled: backArea.containsMouse
+            layer.effect: GlassChip { radius: 9 }
             color: backArea.containsMouse ? Surfaces.cardRaised : Surfaces.card
             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -145,6 +156,17 @@ Item {
         anchors.topMargin: 14
         height: root.showMaster ? 54 : 0
         radius: 12
+
+        // Same glass edge every other block in this bar now carries --
+        // see GlassCard.qml. Only the block itself goes through the lens;
+        // any icon tile nested inside it is left plain, or the two
+        // rims would sit 4px apart and read as noise.
+        // Only while this is HOVERED or ON -- asked for: the glass is a
+        // state cue, not decoration, so a zone nobody is touching and
+        // nothing has switched on carries no edge at all. It also means
+        // the layer is allocated only for the one element in play.
+        layer.enabled: root.masterChecked || masterArea.containsMouse
+        layer.effect: GlassCard { radius: 12 }
         color: masterArea.containsMouse ? Surfaces.cardHover : Surfaces.card
         Behavior on color { ColorAnimation { duration: 120 } }
 
