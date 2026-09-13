@@ -5,6 +5,14 @@
    @import-ed live, not baked into the binary -- see roue-src/prisme-src
    theme.rs, both already load their real CSS at runtime).
 
+   `ui` was Inter until it proved too fragile at the 11-13px the bar
+   runs at on this 2560x1440@1x screen -- see quickshell/bar/theme/
+   Fonts.qml for the full reasoning and, importantly, why the family
+   string is the bare "MiSans Latin" rather than one of the per-weight
+   names fc-list prints. Roue/Prisme/Fuzzel set type a good deal larger
+   than the bar does and were never the problem, but they follow along
+   so the whole desktop stays one typeface.
+
    Quickshell and Fuzzel can't @import a CSS file (QML/ini have no such
    mechanism), so they each keep their own copy of the same value --
    quickshell/bar/theme/Fonts.qml and config/fuzzel/fuzzel.ini's `font=`
@@ -21,7 +29,7 @@
    ============================================================ */
 
 * {
-    font-family: "Inter";
+    font-family: "MiSans Latin";
 }
 
 .mono-text {

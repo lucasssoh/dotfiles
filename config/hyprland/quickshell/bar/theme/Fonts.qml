@@ -4,10 +4,10 @@ import QtQuick
 // Central font definitions for the whole bar -- change `ui` here and
 // every module picks it up, instead of hunting through ~20 individual
 // `font.family:` lines. Cross-referenced with (and kept in sync by hand
-// with) config/theme/fonts.css, the real source of truth for Roue and
-// Prisme -- QML can't @import a CSS file, so this is that value's
-// Quickshell-side copy. See fonts.css's own header comment for the full
-// picture across all 4 apps.
+// with) config/hyprland/theme/fonts.css, the real source of truth for
+// Roue and Prisme -- QML can't @import a CSS file, so this is that
+// value's Quickshell-side copy. See fonts.css's own header comment for
+// the full picture across all 4 apps.
 //
 // `mono` is kept for any spot that genuinely needs fixed-width digits so
 // fast-changing numbers don't jitter the layout -- currently unused
@@ -17,14 +17,42 @@ import QtQuick
 //
 // `icon` is the Nerd Font glyphs (battery/volume/network/cpu icons etc)
 // render with -- those codepoints live in JetBrains Mono's own Nerd Font
-// patch, not in Inter, so leaving `font.family: Fonts.ui` on a Text that
+// patch, not in the UI face, so leaving `font.family: Fonts.ui` on a Text that
 // mixes an icon glyph with real text left the icon's shape/weight up to
 // whatever fontconfig happened to fall back to. Modules that mix an icon
 // with a value now use two Text items side by side (Fonts.icon + Fonts.ui)
 // instead of one Text with both in the same string, so each renders with
 // the font actually meant for it.
 QtObject {
-    readonly property string ui: "Inter"
+    // Was Inter, which holds up at 15px+ but goes mushy at the 11-13px
+    // the bar actually runs at: this screen is 2560x1440 at scale 1
+    // (~109 PPI), so a bar glyph gets barely 5-6 real pixels of x-height
+    // and Inter's tight apertures close up at that size. MiSans Latin
+    // (Xiaomi's HyperOS UI face, free for commercial use, downloaded
+    // from hyperos.mi.com/font-download/MiSans_Latin.zip and installed
+    // by config/fonts/install.sh) was picked for the opposite trade:
+    // open counters, low stroke contrast, slightly narrower advance --
+    // all of which survive being rasterised that small, which is the
+    // whole reason a phone UI face reads at a phone's physical size.
+    //
+    // IMPORTANT: the family string is the bare "MiSans Latin", NOT one
+    // of the per-weight names fc-list also prints ("MiSans Latin
+    // Medium", "MiSans Latin Normal", ...). MiSans ships its 10 weights
+    // the way Inter does -- one family with the whole weight range
+    // reachable through it -- so the bare name keeps `font.bold: true`
+    // working (~20 modules rely on it). Pinning a per-weight family
+    // instead silently kills bold everywhere: that family holds ONE
+    // face, Qt finds nothing bolder, and the ActiveWindow badge just
+    // renders regular. Verified on screen, not guessed.
+    //
+    // The bare name is also not as light as MiSans' own "Regular"
+    // suggests: MiSans splits the middle of its range into Regular
+    // (fc weight 53) AND Normal (68), so the face fontconfig actually
+    // returns for a plain 400 request is Medium (`fc-match "MiSans
+    // Latin"` -> MiSansLatin-Medium.ttf). That lands a touch heavier
+    // than Inter Regular did, which is exactly what the small sizes
+    // wanted -- no per-module weight bump needed.
+    readonly property string ui: "MiSans Latin"
     readonly property string mono: "JetBrains Mono"
     readonly property string icon: "JetBrainsMono Nerd Font"
 
@@ -55,9 +83,9 @@ QtObject {
     // weight axis, unlike the Font Awesome Regular/Solid trick above) --
     // `fc-list` confirms this, so each needs its own `Fonts.` entry
     // rather than a shared name + `font.weight`. `iconPhosphor` is the
-    // Regular weight specifically, chosen to track Inter's own default
-    // (400) body weight -- the same "icon weight should track the type
-    // weight next to it" idea SF Symbols itself is built around.
+    // Regular weight specifically, chosen to track the UI face's own
+    // default (400) body weight -- the same "icon weight should track
+    // the type weight next to it" idea SF Symbols itself is built around.
     readonly property string iconPhosphor: "Phosphor"
 
     // Bold weight, same "separate family per weight" deal as above --
