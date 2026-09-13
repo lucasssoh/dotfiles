@@ -201,7 +201,7 @@ hl.config({
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
         gaps_out         = { top = 14, right = 7, bottom = 6, left = 7 },
-        border_size      = 3,
+        border_size      = 2,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
@@ -232,16 +232,18 @@ hl.config({
                 --     "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
                 -- },
                 colors = {
-                    "rgb(80, 80, 80)"
+                    "rgba(40, 40, 40, 0.5)",
+                    "rgba(20, 20, 20, 0.5)",
+                    "rgba(90,90,90, 0.5)",
                 },
-                angle = 45,
+                angle = 270,
             },
             -- Fully transparent, deliberately: the active-window glass
             -- border is the ONLY visual cue for focus -- no dimming, no
             -- opacity drop on inactive windows (inactive_opacity/dim_inactive
             -- below are both off), so an inactive rim would just compete
             -- with that single signal instead of reinforcing it.
-            inactive_border = "rgba(3E3E3373)",
+            inactive_border = "rgba(3E3E3300)",
 
         },
         layout           = "dwindle",
