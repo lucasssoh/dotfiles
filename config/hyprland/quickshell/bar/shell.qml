@@ -1066,6 +1066,10 @@ ShellRoot {
                     },
                     BaliseHome {
                         drawerOpen: BaliseState.panelOpen && BaliseState.activeScreen === bar.screen
+                        // For the HDR row -- each bar's Balise reflects
+                        // ITS OWN screen, exactly as the Hdr badge did
+                        // when it lived in the row above.
+                        monitor: Hyprland.monitorFor(bar.screen)
                     }
                 ]
                 // Glass. These three float free of every screen edge, so
@@ -1111,10 +1115,26 @@ ShellRoot {
                     // modules is `rowSpacing` above.
                     Item { width: 4; height: 1 }
 
-                    // Hdr before the display-layout status now (asked
-                    // for) -- was the other way around.
-                    Modules.Hdr { monitor: Hyprland.monitorFor(bar.screen) }
+                    // A bare "hdr" word, present only while HDR is on --
+                    // asked for, and deliberately in the slot the badge
+                    // itself used to hold. It is an indicator, not a
+                    // control (the switch is in Balise now); see
+                    // HdrLabel.qml. It carries its own trailing gap, so
+                    // when HDR is off the whole thing leaves the row
+                    // without stranding a spacer behind it.
+                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen) }
 
+                    // The Hdr badge used to open this row (before the
+                    // display-layout status, asked for at the time). It
+                    // moved into Balise's SYSTEM block, next to Night
+                    // mode -- asked for. Modules/Hdr.qml is kept in the
+                    // repo, just unreferenced here, same as Bluetooth/
+                    // Network/Ethernet further down.
+                    //
+                    // So the `ecran` group is the display chip alone now.
+                    // Its boundary spacer below stays: a group of one is
+                    // still a group, and dropping it would glue the chip
+                    // to the audio pair.
                     Modules.ScriptModule {
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
                         interval: 5000
@@ -1244,7 +1264,7 @@ ShellRoot {
                     // GROUPS. The row reads as six of them now, each
                     // separated by `groupGap` above and internally by the
                     // plain `rowSpacing`:
-                    //   ecran     hdr + display
+                    //   ecran     display
                     //   son       audio out + audio in
                     //   reseau    balise
                     //   energie   performance + battery
@@ -1271,9 +1291,9 @@ ShellRoot {
                     // sont trop serres" was about -- headphones and mic
                     // sat 4px apart, the tightest gap in the row by half,
                     // while reading as two separate controls. 8px now:
-                    // wider than the 7px between the hdr and display
-                    // chips on purpose, because a chip's border does part
-                    // of the separating and a bare glyph has nothing.
+                    // wider than the ~7px two chips sit apart on
+                    // purpose, because a chip's border does part of the
+                    // separating and a bare glyph has nothing.
                     Modules.AudioOutput { leadingPad: 5; trailingPad: 2 }
                     Modules.AudioInput { leadingPad: 2; trailingPad: 5 }
 

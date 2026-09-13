@@ -1,5 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
+import Quickshell.Hyprland
 import ".."
 import "../../theme"
 import "../../services"
@@ -19,13 +20,17 @@ import "../../services"
 // NotificationState.toggleNotificationCenter), so only one of them is
 // ever actually open at a time despite sharing the same drawer column.
 //
-// 2x2 grid (WiFi/Bluetooth/Ethernet/Airplane) + 2 full-width rows (Night
-// mode/Capture), porting ui/home.rs's own layout. Icons only where this
-// bar already has a VERIFIED Phosphor codepoint to reuse (WiFi/
-// Bluetooth/Ethernet, copied from BaliseButton.qml/Network.qml/
-// Ethernet.qml's own icon() functions) -- Airplane/Night mode/Capture
-// stay text-only rather than guessing a codepoint (same rule this bar's
-// buttons-grid already follows elsewhere, see NotificationCenter.qml).
+// 2x2 grid (WiFi/Bluetooth/Ethernet/Charge limit) + a SYSTEM block
+// (Night mode + HDR side by side, then Capture), porting ui/home.rs's
+// own layout and then diverging from it: Airplane mode is gone (asked
+// for) and HDR came down from the bar's own badge to sit next to Night
+// mode.
+//
+// Icons only where this bar has a VERIFIED codepoint to reuse -- the
+// four tiles copy theirs from BaliseButton.qml/Network.qml/Ethernet.qml's
+// own icon() functions, and lu-battery-medium was rendered and looked at
+// before use like the rest. The rows stay text-only: a ToggleRow has no
+// glyph slot at all, so nothing there is guessing a codepoint.
 //
 // Second slice (see the project plan): right-click on WiFi/Bluetooth (a
 // plain click on Ethernet, which has no radio to toggle) opens that
@@ -259,15 +264,24 @@ Item {
         SystemStats.setConservation(on);
     }
 
-    // Airplane mode has no single backend flag -- computed the same way
-    // ui/home.rs's own refresh_airplane does: both radios off.
-    readonly property bool airplaneActive: !BaliseState.wifiEnabled && !BaliseState.bluetoothEnabled
-
-    function toggleAirplane() {
-        const target = !root.airplaneActive;
-        if (BaliseState.wifiEnabled !== target) BaliseState.toggleWifi();
-        if (BaliseState.bluetoothEnabled !== target) BaliseState.toggleBluetooth();
-    }
+    // ---- HDR ------------------------------------------------------------
+    //
+    // Moved here from the bar's own Hdr badge (shell.qml no longer
+    // instantiates it) -- asked for, "à côté de night mode". The state
+    // read and the toggle both live in services/HdrState.qml now: this
+    // file held its own copy for exactly one pass, until the "hdr"
+    // indicator in the TOOLS row would have made it a third. See that
+    // singleton's header for why the toggle has to be a real Process.
+    //
+    // The badge's capability check is NOT reinstated, for the same reason
+    // it was dropped there: neither a strike nor a grey fill read
+    // clearly, so the control looks the same regardless of what the EDID
+    // claims. On a row with a real title that matters less than it did on
+    // a 35px badge -- "HDR" is legible either way.
+    //
+    // `monitor` is passed in from shell.qml, because HDR is per screen.
+    property var monitor: Hyprland.focusedMonitor
+    readonly property bool hdrActive: HdrState.activeOn(root.monitor)
 
     // ---- hero card + tile subtitles (mockup-derived layout, see this
     // file's header) ------------------------------------------------------
@@ -412,8 +426,9 @@ Item {
         readonly property color fg: tile.active ? root.accent : "#f2f2f7"
 
         // Vertically centered rather than anchored to `top` with a fixed
-        // margin -- the icon row is only present on 3 of the 4 grid
-        // tiles (Airplane has none, see the `glyph !== ""` gate), so a
+        // margin -- the icon row used to be present on only 3 of the 4
+        // grid tiles (Airplane had none, see the `glyph !== ""` gate,
+        // which no current tile exercises any more), so a
         // fixed top-anchor + guessed tile height either cramped the
         // 3-line tiles' status text against the bottom edge (asked for:
         // "le texte interieur n'est pas ajuster bien") or left the
@@ -436,9 +451,10 @@ Item {
             // mockup's own tile anatomy) rather than floating bare above
             // the label -- accent-tinted while the tile is active, the
             // same `#1a1d2a` neutral NotificationCard.qml's own iconTile
-            // uses otherwise. Tiles with no VERIFIED Phosphor codepoint
-            // (Airplane) keep dropping the badge entirely instead of
-            // showing an empty square or a guessed icon.
+            // uses otherwise. The `visible` gate is kept, though every
+            // tile now has a verified codepoint: it is what lets a future
+            // tile drop the badge rather than show an empty square or a
+            // guessed icon.
             Rectangle {
                 visible: tile.glyph !== ""
                 width: 30
@@ -822,61 +838,88 @@ Item {
                 width: parent.width
                 spacing: 16
                 Tile {
-                    width: (parent.width - 16) / 2
+                    // Full width when the charge cap is not drawn -- the
+                    // same explicit-width idiom the SYSTEM row below
+                    // uses, and for the same reason: a positioner
+                    // reclaims a hidden child's space, it does not
+                    // stretch the survivor into it.
+                    width: root.conservationAvailable
+                        ? (parent.width - 16) / 2
+                        : parent.width
                     height: 92
                     title: "Ethernet"
                     status: root.ethernetTileStatus
-                    glyph: root.activeWiredProfile ? "\uE125" : "\uE45D"   // lu-network / lu-network-x
+                    glyph: root.activeWiredProfile ? "\uE125" : "\uE45D"   // lu-network / lu-unplug
                     active: root.activeWiredProfile !== null
                     // No radio to toggle -- both buttons open the section.
                     onActivated: root.goTo("ethernet")
                     onActivatedSecondary: root.goTo("ethernet")
                 }
+                // Was "Airplane mode" -- dropped outright, asked for
+                // ("je n'en aurais jamais besoin"). It was also the one
+                // tile with no backend flag of its own: it inferred
+                // itself from "both radios off" and toggled the two, so
+                // nothing else depended on it.
+                //
+                // The charge cap takes the slot, moved up from the SYSTEM
+                // row where it sat beside Night mode. As a Tile it gains
+                // the status line the ToggleRow had no room for, which is
+                // where the actual number lives -- the title says what
+                // the control is, "On"/"Off" says what it is doing.
+                //
+                // Still gated on `conservationAvailable`: conservation_mode
+                // is an IdeaPad knob, and drawing a dead switch on a
+                // machine that has no battery at all is worse than drawing
+                // nothing. On such a machine this row is Ethernet alone.
                 Tile {
+                    visible: root.conservationAvailable
                     width: (parent.width - 16) / 2
                     height: 92
-                    title: "Airplane mode"
-                    status: root.airplaneActive ? "On" : "Off"
-                    active: root.airplaneActive
-                    onActivated: root.toggleAirplane()
+                    title: "Charge limit"
+                    status: root.conservationOn ? "60%" : "Off"
+                    glyph: "\uE057"   // lu-battery-medium
+                    active: root.conservationOn
+                    onActivated: root.setConservation(!root.conservationOn)
                 }
             }
             Item { width: 1; height: 4 }
 
             GroupLabel { text: "SYSTEM" }
 
-            // Night mode and the charge cap sit SIDE BY SIDE (asked for:
-            // "à droite de Night mode"). Both drop their subtitle: at half
-            // width "Warmer screen temperature" does not fit, and a
-            // subtitle on one but not the other reads as a mistake.
-            // ToggleRow collapses 54 -> 46px when subtitle is empty, so
-            // the pair stays a tidy band -- and with the switch gone (see
-            // ToggleRow) the titles need no tightening to fit.
+            // Night mode and HDR sit SIDE BY SIDE -- asked for ("à coté
+            // de night mode, ajoute les bouton hdr"). HDR replaces the
+            // charge cap in this slot; the cap moved up into the tile
+            // grid, where the Airplane tile used to be.
             //
-            // When the machine has no conservation_mode, the second row
-            // is not drawn and the first takes the full width back --
-            // written as an explicit width rather than left to the Row,
-            // because a positioner only reclaims the space, it does not
-            // stretch the survivor into it.
+            // The pair is unconditional now, which is what let both
+            // widths go back to a plain half: the cap was gated on
+            // hardware that most machines do not have, so this Row needed
+            // the "survivor takes the full width" dance. HDR has no such
+            // gate (see the hdrActive block up top for why the capability
+            // check is deliberately not reinstated), so there is always
+            // exactly one row of two here.
+            //
+            // Both still drop their subtitle: at half width "Warmer
+            // screen temperature" does not fit, and a subtitle on one but
+            // not the other reads as a mistake. ToggleRow collapses
+            // 54 -> 46px when subtitle is empty, so the pair stays a tidy
+            // band.
             Row {
                 width: parent.width
                 spacing: 16
 
                 ToggleRow {
-                    width: root.conservationAvailable
-                        ? (parent.width - parent.spacing) / 2
-                        : parent.width
+                    width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
                     checked: BaliseState.nightModeEnabled
                     onToggled: BaliseState.toggleNightMode()
                 }
 
                 ToggleRow {
-                    visible: root.conservationAvailable
                     width: (parent.width - parent.spacing) / 2
-                    title: "Charge 60%"
-                    checked: root.conservationOn
-                    onToggled: root.setConservation(!root.conservationOn)
+                    title: "HDR"
+                    checked: root.hdrActive
+                    onToggled: HdrState.toggle()
                 }
             }
                 ActionRow {

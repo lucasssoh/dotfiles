@@ -4,3 +4,4 @@ singleton BatteryAlertState 1.0 BatteryAlertState.qml
 singleton BatteryPreviewState 1.0 BatteryPreviewState.qml
 singleton NotificationState 1.0 NotificationState.qml
 singleton BaliseState 1.0 BaliseState.qml
+singleton HdrState 1.0 HdrState.qml
