@@ -41,7 +41,7 @@ Item {
     signal backRequested()
     signal scanRequested()
 
-    readonly property color accent: "#a8b4c4"
+    readonly property color accent: Ink.accent
 
     // Fixed, like NotificationCenter.qml's own 600px -- a nice-to-have
     // follow-up to make this content-driven is deferred the same way
@@ -94,7 +94,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
-                color: "#f2f2f7"
+                color: Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
                 font.bold: true
@@ -117,7 +117,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.title
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 17
             font.bold: true
@@ -132,7 +132,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Scan"
-            color: scanArea.containsMouse ? "#f2f2f7" : root.accent
+            color: scanArea.containsMouse ? Ink.primary : root.accent
             font.family: Fonts.ui
             font.pixelSize: 13
 
@@ -183,7 +183,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterTitle
-                color: "#f2f2f7"
+                color: Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
                 font.bold: true
@@ -195,7 +195,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterSubtitle
-                color: "#8e8e93"
+                color: Ink.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight

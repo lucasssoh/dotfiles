@@ -1,2 +1,5 @@
 singleton Fonts 1.0 Fonts.qml
 singleton Surfaces 1.0 Surfaces.qml
+singleton Ink 1.0 Ink.qml
+singleton InkLight 1.0 InkLight.qml
+InkBlend 1.0 InkBlend.qml

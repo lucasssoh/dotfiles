@@ -20,6 +20,15 @@ import "../services"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     // The screen this bar instance is on, same contract the badge had:
     // each bar reports ITS OWN monitor, not whichever is focused.
     property var monitor: Hyprland.focusedMonitor
@@ -61,7 +70,7 @@ Item {
         // is #f2f2f7 too, and the only accents left in the band now mean
         // something a word cannot (the power dot's red, a workspace's
         // fill).
-        color: "#f2f2f7"
+        color: root.ink.primary
         font.family: Fonts.ui
         // 13 bold, inherited from the badge's own label. Bold because at
         // 13px a three-letter lowercase word next to 15px icons

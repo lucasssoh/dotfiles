@@ -1,4 +1,5 @@
 import QtQuick
+import "../theme"
 
 // Custom-drawn battery glyph -- a rounded-rect OUTLINE with a small
 // terminal nub on the right (the classic iOS/macOS system battery icon:
@@ -23,8 +24,8 @@ Item {
     id: root
 
     property real percent: 100   // 0-100
-    property color outlineColor: "#f2f2f7"
-    property color fillColor: "#f2f2f7"
+    property color outlineColor: Ink.primary
+    property color fillColor: Ink.primary
     property real outlineOpacity: 0.7
     // Overlays a static '+' when true (see the overlay below) -- two
     // Rectangles, not the ph-lightning glyph earlier passes drew here:

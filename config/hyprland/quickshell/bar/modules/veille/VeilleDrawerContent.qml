@@ -161,7 +161,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             font.family: Fonts.ui
             font.pixelSize: root.dateTextSize
-            color: "#8e8e93"
+            color: Ink.secondary
             text: root.veille ? root.veille.dateString : ""
         }
 

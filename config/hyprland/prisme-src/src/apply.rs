@@ -141,6 +141,38 @@ pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &s
             "1",
         ])
         .status();
+
+    tint_bar(&applied_path);
+}
+
+/// Hands the freshly-applied image to `hypr/scripts/bar-tint.py`, which
+/// writes the luminance profile the quickshell bar reads to keep its ink
+/// legible over a bright wallpaper.
+///
+/// A spawn of the shared script rather than the same maths reimplemented
+/// here, even though Prisme is Rust and already talks to the image
+/// files: the other three setters (restore_wallpaper.sh,
+/// set_wallpaper.sh, wallpaper-slideshow.sh) all need it too, and a
+/// second implementation of a contrast computation is exactly the
+/// duplication this pipeline exists to avoid. Same reasoning as this
+/// module's header -- Prisme is a replacement UI, not a new backend.
+///
+/// `spawn`, not `status`: the profile depends only on the FILE, never on
+/// what the compositor has finished painting, so there is nothing to wait
+/// for. Errors are ignored for the same reason the `awww` call above
+/// ignores them -- a wallpaper must still get applied on a machine where
+/// the bar is not running.
+fn tint_bar(applied_path: &Path) {
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
+        Err(_) => return,
+    };
+    let script = Path::new(&home).join(".config/hypr/scripts/bar-tint.py");
+    let _ = Command::new(script)
+        .arg(applied_path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
 }
 
 /// "Dynamic" (slideshow) mode -- equivalent of step 5: writes the

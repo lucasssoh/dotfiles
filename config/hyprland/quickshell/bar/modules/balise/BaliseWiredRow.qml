@@ -12,7 +12,7 @@ Rectangle {
     signal rowActivated()
 
     readonly property bool connected: !!modelData.is_active
-    readonly property color accent: "#a8b4c4"
+    readonly property color accent: Ink.accent
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
@@ -60,7 +60,7 @@ Rectangle {
             // ph-plugs-connected / ph-plugs, both already verified in
             // Ethernet.qml.
             text: row.connected ? String.fromCharCode(0xedde) : String.fromCharCode(0xedda)   // ph-network / ph-network-x
-            color: row.connected ? row.accent : "#f2f2f7"
+            color: row.connected ? row.accent : Ink.primary
             font.family: Fonts.iconPhosphor
             font.pixelSize: 17
         }
@@ -79,7 +79,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || row.modelData.device_name || ""
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
@@ -92,7 +92,7 @@ Rectangle {
             text: row.connected
                 ? ("Connected" + (row.modelData.ip4_address ? " · " + row.modelData.ip4_address : ""))
                 : (row.modelData.has_carrier ? "Cable plugged in" : "Unplugged")
-            color: row.connected ? row.accent : "#8e8e93"
+            color: row.connected ? row.accent : Ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 11
             elide: Text.ElideRight

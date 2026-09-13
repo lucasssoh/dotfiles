@@ -31,6 +31,15 @@ import "../theme"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     function refresh() { Hyprland.refreshToplevels(); }
 
     Component.onCompleted: refresh()
@@ -131,7 +140,7 @@ Item {
                     anchors.centerIn: parent
                     visible: chip.modelData.image === ""
                     text: chip.modelData.icon
-                    color: "#f2f2f7"
+                    color: root.ink.primary
                     font.family: Fonts.iconBrand
                     font.pixelSize: 12   // 13 -> 11, asked for
                 }

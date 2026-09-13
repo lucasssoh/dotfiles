@@ -72,7 +72,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
-                    color: pill.selected ? Surfaces.accent : "#8e8e93"
+                    color: pill.selected ? Surfaces.accent : Ink.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 11
                     font.bold: pill.selected

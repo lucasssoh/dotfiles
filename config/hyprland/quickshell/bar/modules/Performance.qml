@@ -14,6 +14,15 @@ import "../theme"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     // Padding only, no floor -- 6px a side, the value ScriptModule and
     // Clock use in this same row. Asked for ("les paddings right de
     // powerprofile et horloge sont trop grand par rapport aux autres").
@@ -58,8 +67,8 @@ Item {
 
     function colorFor(p) {
         if (p === PowerProfile.Performance) return "#ffcc00";
-        if (p === PowerProfile.PowerSaver) return "#237823";   // colors.lua "play" token -- same green Media.qml's own playing-state disc uses
-        return "#f2f2f7";
+        if (p === PowerProfile.PowerSaver) return root.ink.play;   // colors.lua "play" token -- same green Media.qml's own playing-state disc uses
+        return root.ink.primary;
     }
 
     // ph-lightning / ph-leaf. Single Text, no adjacent differently-

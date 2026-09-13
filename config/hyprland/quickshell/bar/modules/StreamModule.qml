@@ -103,7 +103,7 @@ Item {
         anchors.centerIn: parent
         text: root.classIcons[root.moduleClass] !== undefined
             ? root.classIcons[root.moduleClass] : root.text
-        color: root.classColors[root.moduleClass] || "#f2f2f7"
+        color: root.classColors[root.moduleClass] || Ink.primary
         font.family: Fonts.iconPhosphor
         font.pixelSize: 15
     }

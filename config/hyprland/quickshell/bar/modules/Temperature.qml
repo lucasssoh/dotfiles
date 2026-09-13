@@ -12,6 +12,15 @@ import "../services"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     // Fixed width, not Math.max(label.implicitWidth, ...) -- that
     // reactive form made the pill visibly grow/shrink every time
     // celsius crossed a digit boundary. valueMetrics measures the
@@ -50,7 +59,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: "\uE186"   // lu-thermometer
-            color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
@@ -62,7 +71,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: String(SystemStats.tempCelsius).padStart(3, " ")
-            color: SystemStats.tempCelsius >= 85 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
         }

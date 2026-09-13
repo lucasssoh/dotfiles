@@ -43,6 +43,10 @@ if [ "$MODE" = "static" ]; then
     # WALL_DIR.
     SRC_DIR=$(python3 -c "import json; d = json.load(open('$PLAYLIST_FILE')); print(d.get('source') or '$WALL_DIR')")
     awww img "$SRC_DIR/$SELECTED_WALL" --transition-type none
+    # Cas de DEMARRAGE en plus du cas "restauration": c'est ce qui donne
+    # son premier profil a la barre, donc pas d'entree d'autostart separee
+    # dans hyprland.lua.
+    "$HOME/.config/hypr/scripts/bar-tint.py" "$SRC_DIR/$SELECTED_WALL" >/dev/null 2>&1 &
 
 elif [ "$MODE" = "dynamic" ]; then
     # Dynamic mode: delegates to the dedicated systemd service (slideshow)
@@ -56,4 +60,8 @@ elif [ "$MODE" = "solid" ]; then
 
     COLOR=$(python3 -c "import json; print(json.load(open('$PLAYLIST_FILE')).get('color', '000000'))")
     awww clear "$COLOR"
+    # Pas de fichier image ici: appele sans argument, bar-tint retombe sur
+    # `awww query` puis sur grim, et mesure donc la couleur reellement
+    # peinte plutot que de deviner a partir de $COLOR.
+    "$HOME/.config/hypr/scripts/bar-tint.py" >/dev/null 2>&1 &
 fi

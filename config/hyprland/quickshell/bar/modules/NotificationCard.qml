@@ -38,7 +38,7 @@ Rectangle {
 
     readonly property bool critical: card.notification
         && card.notification.urgency === NotificationUrgency.Critical
-    readonly property color accent: card.critical ? "#ff6e6e" : "#a8b4c4"
+    readonly property color accent: card.critical ? Ink.danger : Ink.accent
     readonly property bool hasImage: card.notification && card.notification.image !== ""
     readonly property bool hasActions: card.notification && card.notification.actions.length > 0
     readonly property bool hasBody: card.notification && card.notification.body !== ""
@@ -156,7 +156,7 @@ Rectangle {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: card.notification ? card.notification.summary : ""
-                    color: "#f2f2f7"
+                    color: Ink.primary
                     font.family: Fonts.ui
                     font.pixelSize: 14
                     font.bold: true
@@ -215,7 +215,7 @@ Rectangle {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: actionPill.modelData.text
-                        color: "#f2f2f7"
+                        color: Ink.primary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                     }

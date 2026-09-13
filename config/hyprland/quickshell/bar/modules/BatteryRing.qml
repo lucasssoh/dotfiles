@@ -42,8 +42,8 @@ Item {
     // content cross-fades between a low face and a charging face that
     // are on screen at the same time mid-scroll, so both colors have to
     // exist at once.
-    property color lowColor: "#a8b4c4"
-    property color chargeColor: "#a3d9a5"
+    property color lowColor: Ink.accent
+    property color chargeColor: Ink.positive
     property color flowColor: "#d6f7dd"
 
     property real thickness: 7

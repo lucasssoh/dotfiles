@@ -381,7 +381,7 @@ Item {
     // (`.balise-tile.active`) -- same "accent tints the glyph/badge, the
     // pill itself never fills solid" idea BatteryAlert's own checkBadge
     // ring uses, not a new recipe.
-    readonly property color accent: "#a8b4c4"
+    readonly property color accent: Ink.accent
 
     component Tile: Rectangle {
         id: tile
@@ -423,7 +423,7 @@ Item {
         Behavior on color { ColorAnimation { duration: 120 } }
         Behavior on border.color { ColorAnimation { duration: 120 } }
 
-        readonly property color fg: tile.active ? root.accent : "#f2f2f7"
+        readonly property color fg: tile.active ? root.accent : Ink.primary
 
         // Vertically centered rather than anchored to `top` with a fixed
         // margin -- the icon row used to be present on only 3 of the 4
@@ -480,7 +480,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: tile.title
-                color: "#f2f2f7"
+                color: Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
                 font.bold: true
@@ -492,7 +492,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: tile.status
-                color: tile.active ? tile.fg : "#8e8e93"
+                color: tile.active ? tile.fg : Ink.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -590,7 +590,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: trow.checked ? root.accent : "#f2f2f7"
+                color: trow.checked ? root.accent : Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
                 font.bold: true
@@ -602,7 +602,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: "#8e8e93"
+                color: Ink.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -657,7 +657,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: arow.title
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 14
             font.bold: true
@@ -760,7 +760,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroName
-                        color: "#f2f2f7"
+                        color: Ink.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
                         font.bold: true
@@ -771,7 +771,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroStatus
-                        color: root.heroConnected ? root.accent : "#8e8e93"
+                        color: root.heroConnected ? root.accent : Ink.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                         elide: Text.ElideRight
@@ -799,7 +799,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroGlyph
-                        color: root.heroConnected ? root.accent : "#8e8e93"
+                        color: root.heroConnected ? root.accent : Ink.secondary
                         font.family: Fonts.iconPhosphor
                         font.pixelSize: 18
                     }

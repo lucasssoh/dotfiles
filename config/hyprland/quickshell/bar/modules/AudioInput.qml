@@ -12,6 +12,15 @@ import "../theme"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     readonly property var node: Pipewire.defaultAudioSource
     readonly property real volume: node && node.audio ? node.audio.volume : 0
     readonly property bool muted: node && node.audio ? node.audio.muted : false
@@ -55,7 +64,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: root.iconGlyph
-            color: "#f2f2f7"
+            color: root.ink.primary
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }

@@ -136,7 +136,7 @@ Item {
                     // active -> accent text inside the ring, bold; occupied
                     // (not active) -> plain bright text, no weight; empty
                     // -> muted, no weight.
-                    color: pill.modelData.active ? "#a8b4c4" : (pill.occupied ? "#f2f2f7" : "#48484a")
+                    color: pill.modelData.active ? Ink.accent : (pill.occupied ? Ink.primary : Ink.faint)
                     font.family: Fonts.ui
                     font.pixelSize: 13
                     font.bold: pill.modelData.active

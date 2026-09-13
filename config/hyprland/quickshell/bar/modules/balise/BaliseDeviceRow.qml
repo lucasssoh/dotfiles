@@ -15,7 +15,7 @@ Rectangle {
 
     readonly property bool connected: !!modelData.is_connected
     readonly property bool paired: !!modelData.is_paired
-    readonly property color accent: "#a8b4c4"
+    readonly property color accent: Ink.accent
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
@@ -63,7 +63,7 @@ Rectangle {
             // ph-bluetooth-connected / ph-bluetooth, both already verified
             // in Bluetooth.qml.
             text: row.connected ? String.fromCharCode(0xe0dc) : String.fromCharCode(0xe0da)
-            color: row.connected ? row.accent : "#f2f2f7"
+            color: row.connected ? row.accent : Ink.primary
             font.family: Fonts.iconPhosphor
             font.pixelSize: 17
         }
@@ -82,7 +82,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || ""
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
@@ -99,7 +99,7 @@ Rectangle {
                 }
                 return row.paired ? "Paired" : "Not paired";
             }
-            color: row.connected ? row.accent : "#8e8e93"
+            color: row.connected ? row.accent : Ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 11
             elide: Text.ElideRight

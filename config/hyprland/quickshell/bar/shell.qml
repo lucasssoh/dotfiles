@@ -228,6 +228,16 @@ ShellRoot {
         function toggleZen(): void {
             shell.zenMode = !shell.zenMode;
         }
+        // Inspection for hypr/scripts/bar-tint.py's pipeline, end to end,
+        // without anything on screen having to change first: takes the
+        // rect to test rather than reading the islands' own, so it needs
+        // no plumbing into them and can probe a region they do not cover.
+        //   quickshell ipc call -c bar bar tintProbe DP-9 13 390
+        function tintProbe(monitor: string, x: int, w: int): string {
+            return BandTint.ready
+                ? BandTint.describe(monitor, x, w, Ink.primary, Ink.onLight)
+                : "profil pas encore lu (" + BandTint.seq + ")";
+        }
         // Brightness has no DBus/kernel push to react to (see
         // services/OsdState.qml's header) -- keybinds.lua calls this
         // right after brightnessctl so the OSD shows the freshly-set
@@ -423,6 +433,56 @@ ShellRoot {
             id: bar
             required property var modelData
             screen: modelData
+
+            // ── MATERIAL ──────────────────────────────────────────────
+            // Which of the two materials the band is wearing right now:
+            // "dark" (#730c0c0e + Ink) or "light" (#73f2f2f7 + InkLight).
+            // Per screen, because each one has its own stretch of
+            // wallpaper behind it.
+            //
+            // A function driven by explicit triggers rather than a plain
+            // binding, because the decision reads its OWN previous value:
+            // recommendBand applies hysteresis against it (see
+            // BandTint.switchMargin), and a binding that depends on the
+            // property it assigns is a loop.
+            property string material: "dark"
+            readonly property bool lightMaterial: bar.material === "light"
+            // Rebuilt whenever any island moves or resizes -- metrics
+            // grows with the CPU digits, tools with its own content,
+            // launchers with the running apps -- so the band re-decides
+            // against the stretch of wallpaper it actually covers now.
+            // Cheap enough to do on every one of those: it averages a
+            // handful of pre-computed buckets, it never re-reads a pixel.
+            readonly property var inkRects: [
+                [metrics.x, metrics.width],
+                [launchers.x, launchers.width],
+                [toolsIsland.x, toolsIsland.width],
+            ]
+            onInkRectsChanged: bar.reevaluateMaterial()
+            Component.onCompleted: bar.reevaluateMaterial()
+            Connections {
+                target: BandTint
+                function onSeqChanged() { bar.reevaluateMaterial(); }
+            }
+            function reevaluateMaterial(): void {
+                if (!bar.screen || !BandTint.ready) return;
+                bar.material = BandTint.recommendBand(bar.screen.name, bar.inkRects,
+                                                      bar.material, Ink, InkLight);
+            }
+            // What the modules on the band are handed -- an interpolated
+            // ramp, not Ink or InkLight themselves, so the flip is a fade
+            // (see theme/InkBlend.qml for why an object swap could not
+            // be). The drawers never read this: they take Ink directly,
+            // which is what keeps them out of the flip entirely.
+            readonly property InkBlend bandInk: blendedInk
+            InkBlend {
+                id: blendedInk
+                t: bar.lightMaterial ? 1 : 0
+                // The one clock. 900 ms sits just inside awww's own 1 s
+                // wallpaper transition, so the bar finishes changing with
+                // the picture rather than after it.
+                Behavior on t { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
+            }
 
             // Normally false, and emphatically so: a bar that accepts
             // keyboard focus takes it away from whatever the user is
@@ -669,7 +729,19 @@ ShellRoot {
                 // The pills' own flat value, which is what the gradient
                 // replaced in the first place; the 0x73 alpha is the one
                 // constant that survived every pass.
-                color: "#730c0c0e"
+                // Read from BandTint rather than written here, now that
+                // something other than the eye depends on it: every
+                // contrast figure bar-tint.py's consumer computes is a
+                // function of this alpha, and a band whose colour drifted
+                // from the value that maths assumed would keep answering
+                // confidently and wrongly. Same value as the literal it
+                // replaces, verified as a pixel-identical capture.
+                // Both the band and every glyph on it come from the same
+                // interpolated ramp, driven by the single animated number
+                // `bandInk.t` -- see theme/InkBlend.qml. No Behavior here
+                // on purpose: a second animation on this colour would run
+                // its own clock against that one.
+                color: bar.bandInk.band
             }
 
             // ── ONE BAR ───────────────────────────────────────
@@ -836,15 +908,15 @@ ShellRoot {
 
                 Item { width: 6; height: 1 }
 
-                Modules.Cpu {}
-                Modules.Temperature {}
-                Modules.Fan {}
-                Modules.Memory {}
+                Modules.Cpu { ink: bar.bandInk }
+                Modules.Temperature { ink: bar.bandInk }
+                Modules.Fan { ink: bar.bandInk }
+                Modules.Memory { ink: bar.bandInk }
                 // Moved here from Network.qml in TOOLS (asked for) --
                 // the download-rate half of what used to be one combined
                 // wifi/rate module, now grouped with METRICS' other
                 // continuously-updating stats instead.
-                Modules.Traffic {}
+                Modules.Traffic { ink: bar.bandInk }
             }
 
             // Launchers -- its own separate floating island (asked for:
@@ -911,6 +983,7 @@ ShellRoot {
                 // documents, found the hard way once already).
 
                 Modules.Launchers {
+                    ink: bar.bandInk
                     opacity: 0.8
                 }
             }
@@ -1170,7 +1243,7 @@ ShellRoot {
                     // HdrLabel.qml. It carries its own trailing gap, so
                     // when HDR is off the whole thing leaves the row
                     // without stranding a spacer behind it.
-                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen) }
+                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen); ink: bar.bandInk }
 
                     // The Hdr badge used to open this row (before the
                     // display-layout status, asked for at the time). It
@@ -1184,6 +1257,7 @@ ShellRoot {
                     // still a group, and dropping it would glue the chip
                     // to the audio pair.
                     Modules.ScriptModule {
+                        ink: bar.bandInk
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
                         interval: 5000
                         // minWidth was the real culprit: implicitWidth is
@@ -1342,13 +1416,13 @@ ShellRoot {
                     // wider than the ~7px two chips sit apart on
                     // purpose, because a chip's border does part of the
                     // separating and a bare glyph has nothing.
-                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2 }
-                    Modules.AudioInput { leadingPad: 2; trailingPad: 5 }
+                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: bar.bandInk }
+                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: bar.bandInk }
 
                     // ---- son | reseau ----
                     Item { width: toolsIsland.groupGap; height: 1 }
 
-                    Modules.BaliseButton { screen: bar.screen }
+                    Modules.BaliseButton { screen: bar.screen; ink: bar.bandInk }
 
                     // ---- reseau | energie ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -1357,12 +1431,12 @@ ShellRoot {
                     // Performance profile + power, moved here from the main
                     // bar (were next to notif/clock/workspaces), asked for:
                     // now sit right of connectivity in this pill instead.
-                    Modules.Performance {}
+                    Modules.Performance { ink: bar.bandInk }
 
                     // Moved here from METRICS (asked for): sits between
                     // power-profile and the clock now, grouped with the
                     // other power/status modules instead of CPU/RAM/fan.
-                    Modules.Battery {}
+                    Modules.Battery { ink: bar.bandInk }
 
                     // ---- energie | heure ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -1370,14 +1444,14 @@ ShellRoot {
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the
                     // power dot, asked for.
-                    Modules.Clock {}
+                    Modules.Clock { ink: bar.bandInk }
 
                     // Notification bell -- moved again (asked for:
                     // "entre clock et power", i.e. the literal power dot
                     // below, not the power-PROFILE icon it sat next to
                     // before) -- was leftmost, then next to Hdr, then
                     // between Battery and Clock, before landing here.
-                    Modules.NotificationBell { screen: bar.screen }
+                    Modules.NotificationBell { screen: bar.screen; ink: bar.bandInk }
 
                     Item {
                         // 28 -> 20 -> 16: same space-saving pass as the
@@ -1401,7 +1475,12 @@ ShellRoot {
                             width: 8
                             height: 8
                             radius: width / 2
-                            color: "#ff6e6e"
+                            // bandInk, pas Ink: ce disque est pose
+                            // directement sur la bande par shell.qml au
+                            // lieu de vivre dans un module, donc il ne
+                            // reçoit pas la rampe par une propriete `ink`
+                            // et doit la lire ici.
+                            color: bar.bandInk.danger
                         }
 
                         MouseArea {

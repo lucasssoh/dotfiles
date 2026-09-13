@@ -133,7 +133,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: card.titleText
-        color: "#f2f2f7"
+        color: Ink.primary
         font.family: Fonts.ui
         font.pixelSize: 15
         font.bold: true
@@ -148,7 +148,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: card.iconGlyph
-        color: card.muted ? "#ff6e6e" : Qt.rgba(1, 1, 1, 0.55)
+        color: card.muted ? Ink.danger : Qt.rgba(1, 1, 1, 0.55)
         font.family: Fonts.iconPhosphorBold
         font.pixelSize: 14
     }
@@ -161,7 +161,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: card.iconGlyph
-        color: card.muted ? "#ff6e6e" : "#f2f2f7"
+        color: card.muted ? Ink.danger : Ink.primary
         font.family: Fonts.iconPhosphorBold
         font.pixelSize: 22
     }
@@ -188,7 +188,7 @@ Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width * (card.muted ? 0 : card.level)
             radius: height / 2
-            color: card.muted ? "#ff6e6e" : "#f2f2f7"
+            color: card.muted ? Ink.danger : Ink.primary
             // SpringAnimation instead of a plain eased tween (asked for)
             // -- a physical settle instead of an instant/linear jump to
             // the new level.

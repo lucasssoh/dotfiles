@@ -275,7 +275,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: NotificationState.dnd ? "\uE05A" : "\uE059"   // bell-z / bell
-                    color: NotificationState.dnd ? "#0c0c0e" : "#f2f2f7"
+                    color: NotificationState.dnd ? "#0c0c0e" : Ink.primary
                     font.family: NotificationState.dnd ? Fonts.iconPhosphorFill
                                                        : Fonts.iconPhosphorBold
                     font.pixelSize: 18
@@ -301,7 +301,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: Qt.formatDateTime(clock.date, "HH:mm")
-                    color: "#f2f2f7"
+                    color: Ink.primary
                     font.family: Fonts.ui
                     font.pixelSize: 34
                     font.weight: Font.DemiBold
@@ -313,7 +313,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd d MMM")
-                    color: "#8e8e93"
+                    color: Ink.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 13
                 }
@@ -378,7 +378,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.mprisPlayer ? (root.mprisPlayer.trackTitle || root.mprisPlayer.identity || "") : ""
-                            color: "#f2f2f7"
+                            color: Ink.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
                             elide: Text.ElideRight
@@ -563,7 +563,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: tb.glyph
             color: !tb.enabled ? Qt.rgba(1, 1, 1, 0.22)
-                 : hover.containsMouse ? Surfaces.accent : "#f2f2f7"
+                 : hover.containsMouse ? Surfaces.accent : Ink.primary
             Behavior on color { ColorAnimation { duration: 110 } }
             font.family: Fonts.iconPhosphorFill
             font.pixelSize: tb.glyphSize
@@ -603,7 +603,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Clear all"
-            color: NotificationState.trackedNotifications.values.length > 0 ? "#a8b4c4" : "#48484a"
+            color: NotificationState.trackedNotifications.values.length > 0 ? Ink.accent : Ink.faint
             font.family: Fonts.ui
             font.pixelSize: 13
         }

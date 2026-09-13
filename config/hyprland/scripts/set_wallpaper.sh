@@ -35,6 +35,11 @@ apply_wall() {
         --transition-angle 30 \
         --transition-fps 45 \
         --transition-duration 1
+
+    # Profil de luminance pour la barre quickshell (hypr/scripts/bar-tint.py).
+    # En arriere-plan: il ne depend que du FICHIER, pas de l'ecran, donc il
+    # n'a aucune raison d'attendre la fin de la transition awww.
+    "$HOME/.config/hypr/scripts/bar-tint.py" "$1" >/dev/null 2>&1 &
 }
 
 step=1

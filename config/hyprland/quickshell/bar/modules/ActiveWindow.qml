@@ -153,7 +153,7 @@ Item {
         visible: !root.hasWindow
         anchors.centerIn: parent
         text: root.placeholderText
-        color: "#636366"   // colors.lua "muted" -- same token Hdr.qml uses for its own greyed-out state
+        color: Ink.muted   // colors.lua "muted" -- same token Hdr.qml uses for its own greyed-out state
         font.family: Fonts.ui
         font.pixelSize: 13
     }
@@ -202,7 +202,7 @@ Item {
             id: appLabel
             anchors.centerIn: parent
             text: root.appName
-            color: "#a8b4c4"
+            color: Ink.accent
             font.family: Fonts.ui
             font.pixelSize: 14
             font.bold: true
@@ -216,7 +216,7 @@ Item {
         id: titleLabel
         text: root.windowTitle
         visible: root.hasWindow
-        color: "#f2f2f7"
+        color: Ink.primary
         font.family: Fonts.ui
         font.pixelSize: 14
         anchors.left: chip.right

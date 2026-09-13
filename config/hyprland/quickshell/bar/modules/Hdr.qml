@@ -152,7 +152,7 @@ Item {
             // Matches the rim's own cyan when active (asked for) -- same
             // hex as `highlightColor` below, so the label and the edge
             // read as the one signal, not two slightly-off cyans.
-            color: root.hdrActive ? "#6be3e8" : "#f2f2f7"
+            color: root.hdrActive ? Ink.hdr : Ink.primary
             font.family: Fonts.ui
             // Stays 13 while the badge around it grew to 22. This is the
             // one chip in the row whose content is TYPE, not an icon --

@@ -24,6 +24,15 @@ import "../services"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     property var screen: null
 
     // No `maxWidth` hint here (unlike Media.qml) -- DrawerIsland.qml's
@@ -76,8 +85,8 @@ Item {
         : Fonts.iconPhosphor
 
     readonly property color iconColor: {
-        if (root.hasUnseen) return "#a8b4c4";
-        return root.dnd ? "#48484a" : "#f2f2f7";
+        if (root.hasUnseen) return root.ink.accent;
+        return root.dnd ? root.ink.faint : root.ink.primary;
     }
 
     Text {

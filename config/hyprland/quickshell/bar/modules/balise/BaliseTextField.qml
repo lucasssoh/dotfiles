@@ -85,9 +85,9 @@ Rectangle {
         clip: true
         selectByMouse: true
 
-        color: "#f2f2f7"
+        color: Ink.primary
         selectionColor: Surfaces.accentStrongest
-        selectedTextColor: "#f2f2f7"
+        selectedTextColor: Ink.primary
         font.family: Fonts.ui
         font.pixelSize: 13
         renderType: Text.NativeRendering
@@ -121,7 +121,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: field.placeholder
-            color: "#8e8e93"
+            color: Ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 13
             elide: Text.ElideRight
@@ -141,7 +141,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: field.showSecret ? "Hide" : "Show"
-        color: revealArea.containsMouse ? "#f2f2f7" : Surfaces.accent
+        color: revealArea.containsMouse ? Ink.primary : Surfaces.accent
         font.family: Fonts.ui
         font.pixelSize: 11
         font.bold: true

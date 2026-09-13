@@ -161,7 +161,7 @@ Item {
             visible: !root.active
             anchors.centerIn: parent
             text: root.placeholderText
-            color: "#636366"   // colors.lua "muted" -- same token Hdr.qml/ActiveWindow.qml's own placeholder use
+            color: Ink.muted   // colors.lua "muted" -- same token Hdr.qml/ActiveWindow.qml's own placeholder use
             font.family: Fonts.ui
             font.pixelSize: 13
         }
@@ -216,7 +216,7 @@ Item {
                 // (#237823/#ffffff), not just a similar accent pair --
                 // asked for, so the icon reads as part of the same text
                 // rather than its own separate color choice.
-                readonly property color barColor: root.playing ? "#237823" : "#ffffff"
+                readonly property color barColor: root.playing ? Ink.play : "#ffffff"
 
                 Row {
                     id: waveRow
@@ -323,7 +323,7 @@ Item {
                                 // which faded the element, not just this
                                 // color) -- an opacity here too would double
                                 // it up.
-                                color: root.playing ? "#237823" : "#ffffff"
+                                color: root.playing ? Ink.play : "#ffffff"
                                 font.family: Fonts.ui
                                 font.pixelSize: 14
                                 rightPadding: viewport.gap  // each copy carries its own trailing gap

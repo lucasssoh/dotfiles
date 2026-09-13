@@ -44,8 +44,8 @@ Item {
     property var profile: null         // WiredProfile (ethernet)
     signal backRequested()
 
-    readonly property color accent: "#a8b4c4"
-    readonly property color destructive: "#ff6e6e"
+    readonly property color accent: Ink.accent
+    readonly property color destructive: Ink.danger
 
     // ---- WiFi credential entry ------------------------------------------
     // The SSID every WiFi action on this page targets. `ap` and `details`
@@ -377,7 +377,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
-                color: "#f2f2f7"
+                color: Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
                 font.bold: true
@@ -399,7 +399,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.pageTitle
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 17
             font.bold: true
@@ -467,7 +467,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.statusText
-                color: root.statusConnected ? root.accent : "#f2f2f7"
+                color: root.statusConnected ? root.accent : Ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
                 font.bold: true
@@ -556,7 +556,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: (root.credAdvancedOpen ? "▾  " : "▸  ") + "EAP settings"
-                            color: advancedArea.containsMouse ? "#f2f2f7" : "#8e8e93"
+                            color: advancedArea.containsMouse ? Ink.primary : Ink.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                             font.bold: true
@@ -583,7 +583,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Method"
-                            color: "#8e8e93"
+                            color: Ink.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                         }
@@ -606,7 +606,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Phase 2"
-                            color: "#8e8e93"
+                            color: Ink.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                         }
@@ -674,7 +674,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.connecting ? "Connecting…" : "Connect"
-                            color: root.canSubmit ? root.accent : "#8e8e93"
+                            color: root.canSubmit ? root.accent : Ink.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 14
                             font.bold: true
@@ -737,7 +737,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.label
-                                color: "#8e8e93"
+                                color: Ink.secondary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
                             }
@@ -750,7 +750,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.value
-                                color: "#f2f2f7"
+                                color: Ink.primary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
@@ -807,7 +807,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsLabel
-                        color: "#f2f2f7"
+                        color: Ink.primary
                         font.family: Fonts.ui
                         font.pixelSize: 14
                         font.bold: true
@@ -818,7 +818,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsSubtitle
-                        color: "#8e8e93"
+                        color: Ink.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 11
                         elide: Text.ElideRight
@@ -882,7 +882,7 @@ Item {
                     height: 44
                     radius: 22
                     readonly property color tint: actionBtn.modelData.style === "destructive" ? root.destructive
-                        : (actionBtn.modelData.style === "primary" ? root.accent : "#f2f2f7")
+                        : (actionBtn.modelData.style === "primary" ? root.accent : Ink.primary)
                     // Destructive gets a faintly red-tinted fill of its
                     // own (the mockup's "Oublier ce réseau"), primary the
                     // accent tint, everything else the plain bordered

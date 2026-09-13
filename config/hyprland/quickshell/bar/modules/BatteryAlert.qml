@@ -134,7 +134,7 @@ Rectangle {
     // refuses to load with "accentLight is a read-only property"
     // otherwise. The bindings below are still the only thing that ever
     // writes them.
-    property color accent: charging ? "#a3d9a5" : card.warmAccent
+    property color accent: charging ? Ink.positive : card.warmAccent
     property color accentLight: charging ? "#bfe6c0" : Qt.lighter(card.warmAccent, 1.12)
     Behavior on accent { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
     Behavior on accentLight { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
@@ -211,7 +211,7 @@ Rectangle {
         // and the ring needs both colors at once -- its two center
         // faces (plug / lightning) are both on screen during the scroll.
         lowColor: card.warmAccent
-        chargeColor: "#a3d9a5"
+        chargeColor: Ink.positive
     }
 
     Text {
@@ -225,7 +225,7 @@ Rectangle {
         // type, right next to the gauge that means it. This line names
         // the STATE instead -- two words, no number to re-read.
         text: card.charging ? "Charging" : "Battery low"
-        color: "#f2f2f7"
+        color: Ink.primary
         font.family: Fonts.ui
         font.pixelSize: 17
         font.bold: true
@@ -341,7 +341,7 @@ Rectangle {
             // there's nothing left to postpone, so the same pill says
             // what it now does instead.
             text: card.charging ? "Dismiss" : "Not now"
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 15
         }
@@ -357,7 +357,7 @@ Rectangle {
             radius: 18
             color: "transparent"
             border.width: 1.5
-            border.color: "#ff6e6e"
+            border.color: Ink.danger
 
             // Hand-drawn X -- see file header for why (no quick, reliable
             // Phosphor codepoint find for this subset's plain "x" glyph).
@@ -368,7 +368,7 @@ Rectangle {
                 width: 14
                 height: 2
                 radius: 1
-                color: "#ff6e6e"
+                color: Ink.danger
                 rotation: 45
             }
             Rectangle {
@@ -376,7 +376,7 @@ Rectangle {
                 width: 14
                 height: 2
                 radius: 1
-                color: "#ff6e6e"
+                color: Ink.danger
                 rotation: -45
             }
         }

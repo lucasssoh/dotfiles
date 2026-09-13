@@ -82,7 +82,7 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         anchors.centerIn: parent
         text: root.icon()
-        color: root.kind === "none" ? "#636366" : "#f2f2f7"
+        color: root.kind === "none" ? Ink.muted : Ink.primary
         font.family: Fonts.iconPhosphor
         font.pixelSize: 16
     }

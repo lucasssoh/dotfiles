@@ -9,6 +9,15 @@ import "../services"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     // Fixed width, not Math.max(label.implicitWidth, ...) -- that
     // reactive form made the pill visibly grow/shrink as usedGB's digit
     // count changed. valueMetrics measures the worst-case string ONCE
@@ -37,7 +46,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             anchors.verticalCenter: parent.verticalCenter
             text: "\uE445"   // lu-memory-stick
-            color: SystemStats.memUsedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
             font.family: Fonts.iconPhosphorBold
             font.pixelSize: 15
         }
@@ -49,7 +58,7 @@ Item {
             // "G" -> "GB" (asked for, across all of METRICS: an
             // unambiguous unit rather than a bare letter).
             text: SystemStats.memUsedGB.toFixed(1) + "GB"
-            color: SystemStats.memUsedPct >= 90 ? "#ff6e6e" : "#f2f2f7"
+            color: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
         }

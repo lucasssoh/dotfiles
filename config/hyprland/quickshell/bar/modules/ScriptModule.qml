@@ -21,6 +21,15 @@ import "../theme"
 Item {
     id: root
 
+    // The ink ramp this module draws with. Points at the dark-material
+    // singleton by default, which is what every call site below used
+    // directly before this property existed -- so this changes nothing on
+    // its own. It exists so the band's islands can hand a LIGHT ramp to
+    // the modules sitting on them, per island, without touching any of
+    // those call sites again. See theme/Ink.qml's MATERIAL note for why
+    // the material flips rather than the ink alone.
+    property QtObject ink: Ink
+
     property var command: []            // e.g. ["bash", "-c", "...status"]
     property int interval: 5000         // ms, 0 = run once, no polling
     property bool json: true            // parse stdout as {text,class,tooltip} vs raw text
@@ -157,13 +166,42 @@ Item {
         // still the rule these three share.
         height: 22
         radius: 6
-        color: "transparent"
+        // Fill-less on the dark material -- the chip is shaped purely by
+        // its GlassChip edge there. On the light material it has to have
+        // a real surface: the edge treatment that replaces the rim is the
+        // shader's SUBTRACTIVE trough, and glass.frag computes
+        // `emissiveAlpha = max(0.0, mean(emissive))`, so a negative
+        // emissive contributes no alpha at all. With outAlpha also 0 the
+        // final alpha is 0 and the chip does not darken, it VANISHES
+        // (seen on screen before this line existed).
+        //
+        // 10% black is enough for the trough to bite and reads as a
+        // slightly recessed chip on a light band, which is what the rim
+        // was doing on the dark one -- the same shape, lit from the other
+        // side.
+        color: Qt.rgba(0, 0, 0, 0.10 * root.ink.t)
 
         // One GlassChip in place of the bottom+top GlassRim pair, same
         // swap and same 0.40/0.18 balance as Hdr.qml's own -- and a
         // layer.effect for the same reason, see there.
         layer.enabled: true
         layer.effect: GlassChip {
+            // MATERIAL. GlassChip's edge is additive light -- glass.frag
+            // does `emissive += rim` -- so on the light band a rim of any
+            // colour simply stops being visible: a dark rimColor is a
+            // multiplier into an additive term and comes out as zero, not
+            // as a dark line. This chip has no fill either (color:
+            // "transparent" above), so it would vanish entirely rather
+            // than merely lose its highlight.
+            //
+            // What replaces it is the term right below the rim in the
+            // same shader, `emissive -= trough`, which is subtractive.
+            // The edge stops catching light and starts casting shade,
+            // which is what an edge on a light surface actually does.
+            // Both ride `ink.t`, so they cross over during the same 900 ms
+            // fade as everything else rather than on a clock of their own.
+            rimStrength: 0.28 * (1.0 - root.ink.t)
+            trough: 0.10 + 0.26 * root.ink.t
             radius: 6
             lightBottom: 1.0
             lightTop: 0.45
@@ -198,7 +236,7 @@ Item {
         anchors.centerIn: badge
         text: root.classIcons[root.moduleClass] !== undefined
             ? root.classIcons[root.moduleClass] : root.text
-        color: root.classColors[root.moduleClass] || "#f2f2f7"
+        color: root.classColors[root.moduleClass] || root.ink.primary
         opacity: root.textOpacity
         font.family: root.iconFont
         // Bold, same "thicken every icon in METRICS/TOOLS" pass that

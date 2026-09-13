@@ -22,7 +22,7 @@ Rectangle {
 
     readonly property bool connected: !!modelData.is_connected
     readonly property bool secured: modelData.security !== "none"
-    readonly property color accent: "#a8b4c4"
+    readonly property color accent: Ink.accent
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
@@ -75,7 +75,7 @@ Rectangle {
                 if (s < 66) return String.fromCharCode(0xe4ee);
                 return String.fromCharCode(0xe4ea);
             }
-            color: row.connected ? row.accent : "#f2f2f7"
+            color: row.connected ? row.accent : Ink.primary
             font.family: Fonts.iconPhosphor
             font.pixelSize: 17
         }
@@ -98,7 +98,7 @@ Rectangle {
             // this bar yet, and the security type is spelled out on the
             // status line right below anyway.
             text: row.modelData.ssid || ""
-            color: "#f2f2f7"
+            color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
@@ -118,7 +118,7 @@ Rectangle {
                 const saved = row.modelData.is_saved ? " · Saved" : "";
                 return sec + " · " + (row.modelData.signal || 0) + "%" + saved;
             }
-            color: row.connected ? row.accent : "#8e8e93"
+            color: row.connected ? row.accent : Ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 11
             elide: Text.ElideRight

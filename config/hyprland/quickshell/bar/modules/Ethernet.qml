@@ -76,7 +76,7 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         anchors.centerIn: parent
         text: root.icon()
-        color: root.inactive ? "#636366" : "#f2f2f7"
+        color: root.inactive ? Ink.muted : Ink.primary
         font.family: Fonts.iconPhosphor
         font.pixelSize: 16
     }
