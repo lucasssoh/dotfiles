@@ -76,9 +76,18 @@ hl.on("hyprland.start", function()
     -- waybar: one process claiming org.freedesktop.Notifications
     -- instead of two competing for it.
     hl.exec_cmd("quickshell -c bar")
-    -- hypridle disabled on this machine (config present and valid, see
-    -- hypridle.conf, but not enabled). Uncomment to re-enable.
-    -- hl.exec_cmd("hypridle")
+    -- hypridle: enabled now that every listener routes through
+    -- scripts/idle-action.sh, which no-ops on mains. That is what used to
+    -- make it unusable here -- docked and plugged in all day, a 5-minute
+    -- lock and a 30-minute suspend were pure annoyance, so the daemon was
+    -- left off and with it the biggest battery lever a laptop has. On AC
+    -- the behaviour is now byte-for-byte the old "disabled" one; on
+    -- battery the full dim/lock/dpms/suspend ladder runs.
+    hl.exec_cmd("hypridle")
+    -- Follows the power source with the CPU power profile.
+    -- power-profiles-daemon does NOT do this by itself (verified on 0.30:
+    -- it only degrades `performance`, it never selects `power-saver`).
+    hl.exec_cmd("bash ~/.config/hypr/scripts/power-profile.sh")
     -- Restores the previous session's wallpaper, then watches the
     -- thumbnail cache in the background.
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
@@ -320,12 +329,48 @@ hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
 -- ============================================================
 -- ANIMATIONS
 -- ============================================================
-hl.animation({ leaf = "windows", enabled = true, speed = 4, bezier = "smooth", style = "slide" })
+-- `speed` is in ds -- one unit is ~100 ms. Verified on this build rather
+-- than taken from the docs: speed = 30 on `windows` made a window-open
+-- take a measured ~2 s to settle, so 4 really was 400 ms per transition.
+--
+-- Every leaf that matters is set EXPLICITLY below, on purpose. Hyprland
+-- resolves an unset leaf through its parent up to `global`, and `global`
+-- ships at 8 (800 ms) -- which is what `border` and `layers` were
+-- silently running at:
+--   - `border` is the focus transition, and since inactive_border is
+--     fully transparent (see general:col above) that fade IS the entire
+--     focus cue. At 800 ms, focus visibly lagged the keystroke.
+--   - `layers` covers every layer-shell surface: rofi, the quickshell
+--     bar, the notification center. All of them were fading in over
+--     most of a second.
+-- Setting each leaf by hand also means this block no longer depends on
+-- being right about Hyprland's parent tree.
+--
+-- Nothing is disabled: every animation that existed still exists, with
+-- the same curves and styles. They are just no longer slow.
+hl.animation({ leaf = "global", enabled = true, speed = 3, bezier = "smooth" })
+
+hl.animation({ leaf = "windows", enabled = true, speed = 2.5, bezier = "smooth", style = "slide" })
+
+-- Closing is not a transition the eye needs to follow -- the window is
+-- going away -- so it runs faster than opening. This is where most of
+-- the "instant" feeling comes from when closing a burst of windows.
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.8, bezier = "smooth", style = "slide" })
 
 -- Fade (open/close, opacity change)
-hl.animation({ leaf = "fade", enabled = true, speed = 4, bezier = "smooth" })
+hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "smooth" })
 
-hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "snap", style = "slide" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "snap", style = "slide" })
+
+-- Layer surfaces: rofi, the bar, the notification center. These are
+-- summoned on demand and dismissed immediately -- a long fade here reads
+-- as the launcher being slow to open, never as elegance.
+hl.animation({ leaf = "layers", enabled = true, speed = 2, bezier = "smooth" })
+
+-- The focus cue. Linear, not `smooth`: `smooth` overshoots (its control
+-- points go past 1.0), which on a color fade means the border briefly
+-- overshoots its target color instead of settling into it.
+hl.animation({ leaf = "border", enabled = true, speed = 1, bezier = "linear" })
 
 -- ============================================================
 -- LAYOUT & MISC
@@ -367,6 +412,15 @@ hl.config({
         disable_hyprland_logo    = true,
         disable_splash_rendering = true,
         background_color         = "rgba(000000ff)",
+
+        -- Both default to FALSE, which makes `dpms off` a one-way door:
+        -- the panel goes dark and neither moving the mouse nor typing
+        -- brings it back. Harmless as long as nothing ever turns the
+        -- panel off -- but hypridle now does, at the 5m30 listener, so
+        -- these become a safety requirement rather than a convenience.
+        -- Set before wiring that listener up, not after.
+        mouse_move_enables_dpms  = true,
+        key_press_enables_dpms   = true,
     },
 })
 
