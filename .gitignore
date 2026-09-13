@@ -13,6 +13,13 @@ config/hyprland/roue/wheels/powerprofile.toml
 config/hyprland/roue/wheels/audio-output.toml
 config/hyprland/roue/wheels/audio-input.toml
 
+# Bytecode Python des daemons de hypr/scripts (float-smart-place,
+# border-tint, bar-tint). Regenere a chaque import, et importe depuis
+# ~/.config/hypr qui est un symlink vers ce dossier -- donc il reapparait
+# ici tout seul des qu'un script y touche.
+__pycache__/
+*.pyc
+
 # Portfolio content staging: drafted here, copied into my-portfolio by hand
 portfolio-content/
 .claude/
