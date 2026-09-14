@@ -95,6 +95,13 @@ if [ "$DISTRO" = "fedora" ]; then
     # is no longer started but stays installed/in the repo as a fallback.
     sudo dnf copr enable -y errornointernet/quickshell ||
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
+    # satty is NOT in any Fedora repo and never has been, so listing it in
+    # PKGS below only ever got it skipped by --skip-unavailable -- silently,
+    # module still exit=0. It backs Super+S / Super+SHIFT+S (hypr/keybinds.lua
+    # pipes grim into it) and waybar/scripts/screenshot-region.sh; without it
+    # the pipe breaks and a screenshot produces nothing.
+    sudo dnf copr enable -y mineiro/satty ||
+        warn "COPR mineiro/satty could not be enabled — Super+S screenshots will be broken."
 
     PKGS=(
         # Hyprland ecosystem.
@@ -148,7 +155,15 @@ if [ "$DISTRO" = "fedora" ]; then
         fontawesome-6-free-fonts fontawesome-6-brands-fonts
         # System deps (polkit-gnome doesn't exist on Fedora, polkit is pulled in as dep)
         polkit xdg-user-dirs brightnessctl playerctl
-        # Screenshots
+        # hypr/scripts/idle-action.sh's dpms-off/dpms-on. Its header already
+        # explains why the Hyprland dispatcher is not trusted here (it reports
+        # ok without changing .dpmsStatus); wlopm speaks
+        # wlr-output-power-management and does only this. Plain fedora repo,
+        # no copr -- verified wlopm-1.0.0-4.fc44. Absent, the script silently
+        # falls back to the dispatcher that may do nothing.
+        wlopm
+        # Screenshots (satty comes from the mineiro/satty copr enabled above,
+        # not from Fedora proper)
         satty grim slurp grimblast
         # Tools
         bc jq curl git lm_sensors unzip socat
@@ -209,6 +224,10 @@ elif [ "$DISTRO" = "arch" ]; then
         # upstream) for its dialogs. Left out deliberately: pacman runs without
         # a --skip-unavailable equivalent here, so a wrong name would abort the
         # whole transaction. Add it once the current Arch name is confirmed.
+        # NOTE: idle-action.sh's dpms-off prefers wlopm (see the Fedora list).
+        # Not added here: on Arch it lives in the AUR, which pacman does not
+        # read, and an unknown name aborts the whole transaction. The script
+        # already degrades to the Hyprland dispatcher without it.
         # Balise build deps
         rust cargo gtk4-layer-shell libnm bluez-libs
     )
