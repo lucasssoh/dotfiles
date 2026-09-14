@@ -179,6 +179,23 @@ if [ "$DISTRO" = "fedora" ]; then
         satty grim slurp grimblast
         # Tools
         bc jq curl git lm_sensors unzip socat
+        # hypr/scripts/bar-tint.py's two hard imports. It samples the top
+        # strip of the wallpaper and writes ~/.cache/bar-tint.json, which
+        # quickshell/bar/services/BandTint.qml watches -- that file is the
+        # ONLY thing telling the bar whether to draw light or dark ink, and
+        # the band is 55% transparent (#730c0c0e), so getting it wrong leaves
+        # white ink on a light wallpaper, under WCAG AA.
+        #
+        # Both are load-bearing, not optional niceties: numpy does the sRGB
+        # linearisation and the per-bucket means, PIL does the load/resize/
+        # crop. There is no degraded mode without them -- the script dies on
+        # the import, before main() is ever reached.
+        #
+        # Never listed before because the two machines this repo grew on both
+        # had them pulled in by something else; a Fedora "Minimal Install" has
+        # neither, and the failure left no trace at all until the bar-tint.log
+        # redirect in scripts/set_wallpaper.sh (see its comment).
+        python3-numpy python3-pillow
         # Qt theming
         qt5ct qt6ct
         # Qt5Compat.GraphicalEffects -- imported by quickshell/bar/modules/
@@ -227,6 +244,9 @@ elif [ "$DISTRO" = "arch" ]; then
         satty grim slurp
         # Tools
         bc jq curl git lm_sensors unzip socat
+        # bar-tint.py's imports -- see the Fedora list for why these are
+        # mandatory rather than nice-to-have.
+        python-numpy python-pillow
         # Qt
         qt5ct qt6ct
         # Qt5Compat.GraphicalEffects, imported by quickshell/bar/modules/
@@ -265,6 +285,9 @@ elif [ "$DISTRO" = "debian" ]; then
         librsvg2-bin x11-apps
         fonts-noto fonts-noto-color-emoji
         bc jq curl git lm-sensors unzip socat
+        # bar-tint.py's imports -- see the Fedora list for why these are
+        # mandatory rather than nice-to-have. Pillow is python3-pil here.
+        python3-numpy python3-pil
         qt5ct
         # Qt5Compat.GraphicalEffects for quickshell's bar (see the Fedora list).
         # Only useful once quickshell itself is built from source, per the warn

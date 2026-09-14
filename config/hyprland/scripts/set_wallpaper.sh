@@ -39,7 +39,22 @@ apply_wall() {
     # Profil de luminance pour la barre quickshell (hypr/scripts/bar-tint.py).
     # En arriere-plan: il ne depend que du FICHIER, pas de l'ecran, donc il
     # n'a aucune raison d'attendre la fin de la transition awww.
-    "$HOME/.config/hypr/scripts/bar-tint.py" "$1" >/dev/null 2>&1 &
+    #
+    # stderr va dans un LOG, plus vers /dev/null. C'etait `2>&1` ici et aux
+    # trois autres sites d'appel, et bar-tint.py ecrit pourtant bien ses
+    # erreurs sur stderr (voir ses deux print(..., file=sys.stderr)): elles
+    # etaient simplement jetees. Consequence concrete: sur une Fedora
+    # "Installation minimale", numpy et Pillow manquent, le script mourait
+    # sur `import numpy` avant main(), ~/.cache/bar-tint.json n'etait jamais
+    # ecrit, et l'encre de la barre restait figee -- sans une seule trace
+    # nulle part. Un echec de teinte doit laisser une trace.
+    #
+    # `2>` et non `2>>`: le fichier est tronque a chaque changement de fond
+    # d'ecran, donc un succes le VIDE. Un log vide veut dire "la derniere
+    # teinte a reussi", un log non vide donne l'erreur courante, et rien ne
+    # grossit sans fin sous un slideshow qui tourne toute la journee.
+    # stdout reste sur /dev/null: seul stderr porte les erreurs.
+    "$HOME/.config/hypr/scripts/bar-tint.py" "$1" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
 }
 
 step=1

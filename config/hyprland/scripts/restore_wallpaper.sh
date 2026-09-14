@@ -46,7 +46,11 @@ if [ "$MODE" = "static" ]; then
     # Cas de DEMARRAGE en plus du cas "restauration": c'est ce qui donne
     # son premier profil a la barre, donc pas d'entree d'autostart separee
     # dans hyprland.lua.
-    "$HOME/.config/hypr/scripts/bar-tint.py" "$SRC_DIR/$SELECTED_WALL" >/dev/null 2>&1 &
+    # stderr vers un log plutot que /dev/null -- voir le commentaire detaille
+    # dans scripts/set_wallpaper.sh. C'est LE site qui comptait le plus: etant
+    # aussi le chemin de demarrage, son echec silencieux signifiait que la
+    # barre n'avait jamais son premier profil, a chaque session.
+    "$HOME/.config/hypr/scripts/bar-tint.py" "$SRC_DIR/$SELECTED_WALL" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
 
 elif [ "$MODE" = "dynamic" ]; then
     # Dynamic mode: delegates to the dedicated systemd service (slideshow)
@@ -63,5 +67,5 @@ elif [ "$MODE" = "solid" ]; then
     # Pas de fichier image ici: appele sans argument, bar-tint retombe sur
     # `awww query` puis sur grim, et mesure donc la couleur reellement
     # peinte plutot que de deviner a partir de $COLOR.
-    "$HOME/.config/hypr/scripts/bar-tint.py" >/dev/null 2>&1 &
+    "$HOME/.config/hypr/scripts/bar-tint.py" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
 fi
