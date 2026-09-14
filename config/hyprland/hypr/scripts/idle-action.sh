@@ -175,25 +175,30 @@ case "$action" in
     lock)
         loginctl lock-session
         ;;
-    # NOT VERIFIED ON TARGET HARDWARE -- read this before trusting it.
+    # VERIFIED on the IdeaPad Slim 5 14IMH10 (eDP-1), via the wlopm branch.
+    # `hyprctl monitors -j .dpmsStatus` went true -> false -> true across
+    # dpms-off/dpms-on, which is the observable channel that stayed stubbornly
+    # silent on the machine this was originally written on and is why the
+    # block below used to open with "NOT VERIFIED ON TARGET HARDWARE".
     #
-    # `hl.dsp.dpms` exists (a misspelt dispatcher name errors, this one
-    # does not), but its argument shape could not be confirmed on the
-    # machine this was written on: the Lua binding accepts a bogus key
-    # ({ zzz = "off" }) just as happily as { state = "off" }, issuing
-    # either left `hyprctl monitors -j .dpmsStatus` unchanged, and
+    # The DISPATCHER fallback is still unverified, and the original warning
+    # stands for it: `hl.dsp.dpms` exists (a misspelt dispatcher name errors,
+    # this one does not), but its argument shape could never be confirmed --
+    # the Lua binding accepts a bogus key ({ zzz = "off" }) just as happily as
+    # { state = "off" }, issuing either left .dpmsStatus unchanged, and
     # debug:disable_logs defaults to true on this build so the log says
-    # nothing either. Every observable channel was silent, so "it
-    # returned ok" is NOT evidence that the panel turned off.
+    # nothing either. Every observable channel was silent there, so "it
+    # returned ok" is NOT evidence that the panel turned off. It remains a
+    # last resort for a machine without wlopm, not a tested path.
     #
-    # Hence the fallback chain, most-reliable first. wlopm speaks
-    # wlr-output-power-management, which is precisely this feature and
-    # nothing else; it is packaged on Fedora (wlopm-1.0.0-4.fc44) but not
-    # installed here. Install it on the laptop and this stops being a
-    # guess:  sudo dnf install wlopm
+    # So keep wlopm installed: it speaks wlr-output-power-management, which is
+    # precisely this feature and nothing else, and it is the only branch of
+    # this chain anyone has ever actually watched work. It is declared in
+    # config/hyprland/install.sh; if it goes missing this silently degrades to
+    # the guess above.
     #
-    # To verify on the target machine, from a TTY or over SSH so a failure
-    # cannot strand you:
+    # To re-verify after a Hyprland or wlopm upgrade, from a TTY or over SSH
+    # so a failure cannot strand you:
     #   ~/.config/hypr/scripts/idle-action.sh dpms-off   # panel must go dark
     #   ~/.config/hypr/scripts/idle-action.sh dpms-on
     # misc:mouse_move_enables_dpms and key_press_enables_dpms are set true
