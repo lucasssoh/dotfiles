@@ -19,20 +19,71 @@ function M.find_root(source)
     return require("jdtls.setup").find_root(M.root_markers, source)
 end
 
-local function build_config(root_dir)
-    -- Absolute path to Lombok installed by Mason
-    local lombok_path = "/home/lucas/.local/share/nvim/mason/packages/jdtls/lombok.jar"
+--- Finds a usable lombok.jar, or nil.
+---
+--- This used to be a single hardcoded "/home/lucas/.local/share/nvim/mason/
+--- packages/jdtls/lombok.jar", which had two problems on a machine that is
+--- not the one it was written on:
+---
+---   * it bakes in a username, so it is wrong for anyone else and for any
+---     $XDG_DATA_HOME that is not the default;
+---   * it depends on Mason having already installed jdtls. On a fresh
+---     install, opening a .java file before Mason has run points the JVM at
+---     a file that does not exist.
+---
+--- That second case is the one that matters, because a missing javaagent is
+--- not a degraded experience -- it is fatal. `java -javaagent:/nope` makes
+--- the JVM refuse to start at all, so jdtls dies on launch and Java support
+--- is simply gone, with an error that says nothing about Lombok. Hence the
+--- resolver below AND the nil case being handled at the call site: no jar
+--- means no -javaagent flag, which costs the Lombok annotations and keeps
+--- everything else working.
+---
+--- Mason first, since that jar ships with the jdtls it will actually run;
+--- then the stable location scripts/dev_setup.sh downloads to (pinned
+--- version, sha1-verified), which is what covers a machine where Mason has
+--- not run yet.
+local function find_lombok()
+    local candidates = {
+        vim.fn.stdpath("data") .. "/mason/packages/jdtls/lombok.jar",
+        vim.fn.expand("~/.local/share/java/lombok.jar"),
+    }
+    for _, path in ipairs(candidates) do
+        if vim.fn.filereadable(path) == 1 then
+            return path
+        end
+    end
+    return nil
+end
 
+local function build_config(root_dir)
     -- Unique workspace name based on the root folder name
     local project_name = vim.fn.fnamemodify(root_dir, ":p:h:t")
-    local workspace_dir = "/home/lucas/.cache/jdtls/workspace/" .. project_name
+    -- expand("~") rather than the hardcoded /home/lucas it used to be, for
+    -- the same reason as the lombok path above. Deliberately NOT
+    -- stdpath("cache"): that resolves to ~/.cache/nvim, a different folder,
+    -- which would orphan every jdtls workspace already indexed here and
+    -- force a full re-index of each Java project. De-hardcoding the
+    -- username is the fix; moving the data is not part of it.
+    local workspace_dir = vim.fn.expand("~/.cache/jdtls/workspace/") .. project_name
+
+    local cmd = { "jdtls" }
+
+    local lombok_path = find_lombok()
+    if lombok_path then
+        table.insert(cmd, "--jvm-arg=-javaagent:" .. lombok_path)
+    else
+        vim.notify(
+            "jdtls : lombok.jar introuvable, annotations Lombok desactivees.\n"
+                .. "Lancer scripts/dev_setup.sh, ou :MasonInstall jdtls",
+            vim.log.levels.WARN
+        )
+    end
+
+    vim.list_extend(cmd, { "-data", workspace_dir })
 
     return {
-        cmd = {
-            "jdtls",
-            "--jvm-arg=-javaagent:" .. lombok_path,
-            "-data", workspace_dir,
-        },
+        cmd = cmd,
         root_dir = root_dir,
         settings = {
             java = {
