@@ -23,8 +23,8 @@ sudo dnf install -y python3 python3-pip python3-devel
 # Prefer using venv for your projects instead
 python3 -m pip install --user --upgrade pip 2>/dev/null || echo "Pip déjà à jour ou géré par le système."
 
-# 3. Java (LTS 21) + Maven + SDKMAN + Lombok
-echo -e "${GREEN}[3/6] Installation de Java (OpenJDK 21), Maven, SDKMAN et Lombok...${NC}"
+# 3. Java + Maven + SDKMAN + Lombok
+echo -e "${GREEN}[3/6] Installation de Java, Maven, SDKMAN et Lombok...${NC}"
 
 # maven n'etait pas la, et son absence ne se voyait pas sur une machine ou il
 # avait ete installe a la main une fois. Elle casse pourtant Java entier sur une
@@ -32,7 +32,25 @@ echo -e "${GREEN}[3/6] Installation de Java (OpenJDK 21), Maven, SDKMAN et Lombo
 # M.root_markers = { "pom.xml", "mvnw", "gradlew", ... }. Sans build tool, jdtls
 # ne resout aucune dependance -- donc pas de Lombok applique, meme avec le
 # javaagent correctement cable.
-sudo dnf install -y java-21-openjdk-devel maven
+# `java-devel` et non `java-21-openjdk-devel` : ce dernier N'EXISTE PLUS sur
+# Fedora 44, qui est passee au JDK 25 (le LTS courant). Le script echouait
+# donc des la premiere machine neuve avec "introuvable", alors qu'il
+# marchait sur une machine ou le JDK avait ete installe du temps de F43.
+# Un dossier /usr/lib/jvm/java-21-openjdk survit a la mise a niveau et
+# donne l'illusion du contraire : c'est un residu, aucun paquet ne le
+# possede.
+#
+# `java-devel` est un provide virtuel que la distribution fait pointer sur
+# son JDK par defaut (verifie : java-25-openjdk-devel le fournit sur F44).
+# Il suivra donc la 26, la 27 et les suivantes sans edition -- meme
+# raisonnement que les regles de progression de scripts/lib/hardware.sh :
+# on decrit ce qu'on veut, pas un numero qui perime.
+#
+# Ce JDK est la base systeme. Le JDK de travail reste gere par SDKMAN
+# installe juste en dessous (`sdk install java` pour retrouver un Semeru 21
+# ou la version qu'un projet exige) -- c'est la raison d'etre de SDKMAN, et
+# c'est pourquoi les deux coexistent ici sans se contredire.
+sudo dnf install -y java-devel maven
 
 # ── SDKMAN ──────────────────────────────────────────────────────────────
 # .bashrc et .zshrc SOURCENT sdkman-init.sh depuis des mois, mais rien ne
