@@ -105,7 +105,17 @@ install_udev_rule() {
 # without ideapad-laptop, or a ThinkPad (which exposes the generic
 # charge_control_*_threshold knobs instead), should not get a rule that
 # can never match.
-CONSERVATION_ATTR="$(find /sys/devices/platform -name conservation_mode 2>/dev/null | head -n1)"
+# Searched under /sys/bus/platform/devices/, NOT /sys/devices/platform:
+# that second path only holds platform devices parented at the platform bus
+# root, and the IdeaPad's VPC2004:00 is not one -- ideapad-laptop binds an
+# ACPI node, so the device sits under the EC at
+# /sys/devices/pci0000:00/0000:00:1f.0/PNP0C09:00/VPC2004:00. The old path
+# matched nothing on a real IdeaPad, so this whole block took the "not an
+# IdeaPad, skipping" branch below and the rule was never installed -- on the
+# one machine it was written for. -L because the bus entries are symlinks
+# and find will not descend into one without it. Kept identical to
+# SystemStats.qml's own conservationDiscover probe; the two must agree.
+CONSERVATION_ATTR="$(find -L /sys/bus/platform/devices -maxdepth 2 -name conservation_mode 2>/dev/null | head -n1)"
 
 if [ -n "$CONSERVATION_ATTR" ]; then
     info "IdeaPad conservation mode found at $CONSERVATION_ATTR"

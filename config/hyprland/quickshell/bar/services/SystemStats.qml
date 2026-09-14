@@ -274,15 +274,33 @@ Singleton {
         }
     }
 
-    // Same discover-once pattern as the fan/thermal probes above. Globbed
-    // from /sys/devices/platform rather than through
+    // Same discover-once pattern as the fan/thermal probes above. Searched
+    // under /sys/bus/platform/devices/ rather than through
     // /sys/bus/platform/drivers/<name>/: the driver's registered name and
     // its place in the module tree both move between kernel releases
     // (ideapad-laptop moved into a lenovo/ subdirectory in 7.1), the
     // attribute's own name does not.
+    //
+    // NOT /sys/devices/platform, which is what this looked in first and
+    // which found nothing on the actual IdeaPad: that directory only
+    // holds the platform devices whose PARENT is the platform bus root,
+    // and VPC2004:00 is not one of them -- ideapad-laptop binds an ACPI
+    // node, so the device lives at
+    // /sys/devices/pci0000:00/0000:00:1f.0/PNP0C09:00/VPC2004:00 and
+    // never appeared under that path at all. /sys/bus/platform/devices/
+    // is the bus-wide view and lists every platform device by name
+    // wherever it is parented, which is the property actually wanted
+    // here.
+    //
+    // -L is load-bearing: those entries are symlinks back into
+    // /sys/devices, and find without it does not descend into a symlink,
+    // so it silently matches nothing -- the same empty result as the
+    // wrong path, for a completely different reason. -maxdepth 2 keeps
+    // it to one directory level per device instead of walking all of
+    // /sys/devices through the links.
     Process {
         id: conservationDiscover
-        command: ["bash", "-c", "find /sys/devices/platform -name conservation_mode 2>/dev/null | head -n1"]
+        command: ["bash", "-c", "find -L /sys/bus/platform/devices -maxdepth 2 -name conservation_mode 2>/dev/null | head -n1"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {

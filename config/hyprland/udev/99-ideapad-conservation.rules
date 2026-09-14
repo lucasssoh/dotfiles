@@ -20,8 +20,20 @@
 # covers the models where that driver binds but exposes no
 # conservation_mode, so the rule is a no-op instead of an error there.
 #
+# "bind" is in the ACTION list, and it is the one that actually matters.
+# DRIVER== is matched against the device's driver AT THE TIME THE EVENT IS
+# PROCESSED, and the kernel registers a platform device before binding a
+# driver to it: on the "add" event this device has no driver yet, so
+# DRIVER== is empty and an add|change-only rule never matches. The "bind"
+# event is the one emitted after ideapad_acpi has attached, and it is the
+# first moment both DRIVER== and the conservation_mode attribute exist.
+# "add|change" are kept so a coldplug replay (`udevadm trigger`, which
+# defaults to --action=change on already-bound devices) still applies it.
+#
 # Installed by scripts/install-hardware.sh (the `./install hardware`
 # phase), which also applies the same chgrp/chmod immediately so the
-# toggle works without waiting for a reboot.
-ACTION=="add|change", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", \
+# toggle works without waiting for a reboot -- which, until that script's
+# own attribute search was fixed to look under /sys/bus/platform/devices,
+# it never got as far as doing on a real IdeaPad.
+ACTION=="add|change|bind", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", \
   RUN+="/bin/sh -c '[ -e /sys%p/conservation_mode ] && chgrp wheel /sys%p/conservation_mode && chmod 0664 /sys%p/conservation_mode'"

@@ -38,7 +38,14 @@ Singleton {
     readonly property var battDevice: UPower.displayDevice
     readonly property bool battPresent: root.battDevice && root.battDevice.isLaptopBattery && root.battDevice.ready
     readonly property bool battDischarging: root.battPresent && root.battDevice.state === UPowerDeviceState.Discharging
-    readonly property int battPercent: root.battPresent ? Math.round(root.battDevice.percentage) : 100
+    // *100 for the same reason as Battery.qml's own pct -- see the long
+    // note there: UPower's percentage is 0..1, and `tiers` below is
+    // written in whole percent. Unfixed this was worse here than in the
+    // bar: Math.round(0.49) is 0, 0 is at or under every tier, so
+    // check() walked all three in one pass the moment `ready` flipped
+    // and put the CRITICAL card -- the one with no auto-hide, by design
+    // -- on screen at every session start on a discharging laptop.
+    readonly property int battPercent: root.battPresent ? Math.round(root.battDevice.percentage * 100) : 100
 
     readonly property bool battPlugged: root.battPresent
         && (root.battDevice.state === UPowerDeviceState.Charging

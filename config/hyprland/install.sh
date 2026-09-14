@@ -133,6 +133,18 @@ if [ "$DISTRO" = "fedora" ]; then
         # as a side effect of the KDE module, so skipping KDE silently broke
         # that wheel.
         power-profiles-daemon
+        # Backs Quickshell.Services.UPower, i.e. the bar's whole battery
+        # module (quickshell/bar/modules/Battery.qml) and its low-battery
+        # alert -- both read UPower.displayDevice over DBus, never sysfs,
+        # so with no upowerd running there is no device and the module
+        # simply hides itself. Exactly the same story as
+        # power-profiles-daemon above: it is present on the existing
+        # machines only as a transitive dep (of waybar and thermald,
+        # verified with `dnf repoquery --whatrequires`), which is a
+        # guarantee that expires the day waybar is dropped for quickshell
+        # -- and which a Fedora "Minimal Install" with no desktop
+        # environment to drag it in never had in the first place.
+        upower
         # Network
         NetworkManager network-manager-applet nm-connection-editor
         # Bluetooth

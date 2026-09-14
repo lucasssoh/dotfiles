@@ -30,7 +30,24 @@ Item {
     readonly property var device: UPower.displayDevice
     readonly property bool realPresent: device && device.isLaptopBattery && device.ready
     readonly property bool present: BatteryPreviewState.active || realPresent
-    readonly property real pct: BatteryPreviewState.active ? BatteryPreviewState.percent : (realPresent ? device.percentage : 0)
+    // *100: UPowerDevice.percentage is a 0..1 double, NOT an already-
+    // scaled 0-100 percentage -- the same trap Network.qml's
+    // signalStrength and BaliseButton.qml before it both fell into, and
+    // the same fix. Everything downstream of root.pct is on the 0-100
+    // scale: lowBattery's `<= 20` below, BatteryIcon's own `percent`
+    // (documented "0-100", divided by 100 internally), and the
+    // Math.round() that draws the number -- so without this a real 49%
+    // battery arrives as 0.49, rounds to 0, and the module renders a
+    // flat "0" over an empty gauge.
+    //
+    // Never caught before because no machine in this repo had a battery
+    // that enumerates: the desktop and the TUF both have no BAT*, so
+    // realPresent was false everywhere and this branch had literally
+    // never been evaluated. Every previous check of this module went
+    // through BatteryPreviewState instead, whose `percent` is clamped to
+    // 0-100 by its own set() -- the preview path was right and the real
+    // path was wrong, which is exactly why the preview never showed it.
+    readonly property real pct: BatteryPreviewState.active ? BatteryPreviewState.percent : (realPresent ? device.percentage * 100 : 0)
     readonly property bool isCharging: BatteryPreviewState.active
         ? BatteryPreviewState.charging
         : (realPresent && device.state === UPowerDeviceState.Charging)
