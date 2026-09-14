@@ -103,6 +103,10 @@ if [ "$DISTRO" = "fedora" ]; then
         # Fedora install ended up with Super+Esc (hyprlock.conf is linked and
         # bound) pointing at a binary that wasn't there.
         dbus-x11 dbus-daemon hyprland hyprlock hypridle xdg-desktop-portal-hyprland
+        # Backs the dialogs Hyprland shells out to; without it every startup
+        # raises "Your system does not have hyprland-guiutils installed".
+        # Upstream renamed this from hyprland-qtutils.
+        hyprland-guiutils
         # Bar / notifications / launcher
         # quickshell is the active bar AND the active notification daemon
         # (see quickshell/bar/services/NotificationState.qml) -- waybar
@@ -150,6 +154,13 @@ if [ "$DISTRO" = "fedora" ]; then
         bc jq curl git lm_sensors unzip socat
         # Qt theming
         qt5ct qt6ct
+        # Qt5Compat.GraphicalEffects -- imported by quickshell/bar/modules/
+        # balise/BaliseHome.qml. Without it quickshell exits immediately at
+        # startup ("module Qt5Compat.GraphicalEffects is not installed") and
+        # there is simply no bar. It used to arrive as a transitive dep of the
+        # kde module, so a machine that skips KDE (or a Fedora "Minimal
+        # Install") never got it.
+        qt6-qt5compat
         # Balise build deps (the Rust daemon + its legacy GTK window) --
         # no Fedora package, built from source further down in this script.
         # Named Orbit here until Balise replaced it.
@@ -191,6 +202,13 @@ elif [ "$DISTRO" = "arch" ]; then
         bc jq curl git lm_sensors unzip socat
         # Qt
         qt5ct qt6ct
+        # Qt5Compat.GraphicalEffects, imported by quickshell/bar/modules/
+        # balise/BaliseHome.qml -- quickshell won't start without it.
+        qt6-5compat
+        # NOTE: Hyprland also wants hyprland-qtutils (renamed hyprland-guiutils
+        # upstream) for its dialogs. Left out deliberately: pacman runs without
+        # a --skip-unavailable equivalent here, so a wrong name would abort the
+        # whole transaction. Add it once the current Arch name is confirmed.
         # Balise build deps
         rust cargo gtk4-layer-shell libnm bluez-libs
     )
@@ -217,6 +235,10 @@ elif [ "$DISTRO" = "debian" ]; then
         fonts-noto fonts-noto-color-emoji
         bc jq curl git lm-sensors unzip socat
         qt5ct
+        # Qt5Compat.GraphicalEffects for quickshell's bar (see the Fedora list).
+        # Only useful once quickshell itself is built from source, per the warn
+        # above, but harmless to pull in early.
+        qml6-module-qt5compat-graphicaleffects
     )
 fi
 
