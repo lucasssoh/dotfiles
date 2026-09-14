@@ -1,90 +1,163 @@
 #!/usr/bin/env bash
-# idle-action.sh — AC-aware wrapper around every hypridle action.
+# idle-action.sh — the single place that decides whether an idle action
+# should actually happen right now.
 #
-# hypridle has no notion of power source: a listener either fires or it
-# doesn't. That is exactly why hypridle was switched off on the machine
-# this repo grew up on -- docked to an external monitor, on mains, all
-# day, a 5-minute lock and a 30-minute suspend are pure annoyance. So the
-# timings stayed written in hypridle.conf and the daemon stayed disabled,
+# hypridle has no notion of power source or of which machine it is running
+# on: a listener either fires or it doesn't. That is why this daemon spent
+# so long simply switched off -- docked to an external monitor, on mains,
+# all day, a 5-minute lock and a 30-minute suspend are pure annoyance, so
+# the timings stayed written in hypridle.conf and the daemon stayed dead,
 # and with it the single largest battery lever a laptop has.
 #
-# This puts the decision one level down instead. hypridle fires on time,
-# every time; this script decides whether the action is appropriate right
-# now. On mains it is a no-op, which reproduces today's behaviour exactly
-# (hypridle off == nothing happens). On battery the full ladder runs.
+# The decision lives one level down instead. hypridle fires on time, every
+# time; this script answers "is that appropriate, here, now?" against four
+# gates, in this order:
 #
-# Set RUN_ON_AC below if you later want locking while docked -- it is
-# deliberately the only thing standing between "no-op" and "full ladder",
-# so the policy is one line to change, not a rewrite.
+#   1. Restore actions (undim, dpms-on) bypass everything. A screen must
+#      never stay dim or dark because of a policy decision -- see below.
+#   2. The host profile's IDLE_ENABLED (hosts/<machine>.env, resolved by
+#      host-profile.sh). This is machine identity: the development desktop
+#      says no by name.
+#   3. IDLE_REQUIRE_BATTERY, the original capability guard: no battery, no
+#      battery life to save, nothing to do.
+#   4. The ladder tag, --on ac | --on battery. hypridle.conf carries BOTH
+#      ladders at once and each rung declares which power source it is
+#      for; the rungs of the other one no-op here. That is what lets the
+#      laptop lock at 5 minutes unplugged and 15 minutes plugged in from a
+#      single conf, with no daemon restart when the cable moves.
 #
 # Usage: idle-action.sh <dim|undim|lock|dpms-off|dpms-on|suspend>
+#                       [--on ac|battery] [--dry-run]
+#
+# --dry-run prints the verdict instead of acting, which is the only way to
+# exercise the laptop's policy on a machine where it must never run:
+#
+#   HOST_PROFILE=default ./idle-action.sh lock --on ac --dry-run
+#
 # Wired from hypridle.conf; hypridle itself is started from hyprland.lua.
 
 set -u
-
-# Actions still performed while on mains. Empty = do nothing on AC.
-# "lock dpms-off dpms-on" is the usual next step up if you want the
-# screen to lock while docked; suspend is best left out of it.
-RUN_ON_AC=""
 
 # Every command below is parsed or compared, and this session is
 # fr_FR.UTF-8 -- see the rest of this repo for what a localized number
 # format does to shell parsing.
 export LC_ALL=C
 
-action="${1:-}"
-[ -n "$action" ] || { echo "usage: $0 <dim|undim|lock|dpms-off|dpms-on|suspend>" >&2; exit 2; }
+# ---------------------------------------------------------------------------
+# Arguments
+# ---------------------------------------------------------------------------
+action=""
+ladder=""        # "" = this rung applies to any power source
+dry_run=0
 
-# ---------------------------------------------------------------------------
-# HARD GUARD — a machine with no battery does nothing, ever
-# ---------------------------------------------------------------------------
-# Same guard as power-profile.sh, for the same machine. The development
-# desktop has a fault where the CPU dropping below a certain frequency
-# crashes it into a reboot; a suspend/resume cycle on it is not something
-# to trigger from an untested timer. It reports an ACAD mains adapter and
-# no BAT* at all, so keying on the battery's absence makes every action
-# here provably unreachable there -- including `suspend`, which is the
-# one that could not be undone.
-#
-# It also happens to be the honest rule: no battery, no battery life,
-# nothing for an idle ladder to save.
-#
-# Consequence: this script is NOT testable on the development machine.
-# It has to be verified on the laptop, unplugged.
-for _ps in /sys/class/power_supply/*; do
-    [ -r "$_ps/type" ] && [ "$(cat "$_ps/type")" = "Battery" ] && _has_battery=1
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --on)      ladder="${2:-}"; shift 2 || true ;;
+        --dry-run) dry_run=1; shift ;;
+        -*)        echo "unknown option: $1" >&2; exit 2 ;;
+        *)         action="$1"; shift ;;
+    esac
 done
-[ "${_has_battery:-0}" = "1" ] || exit 0
 
-# ---------------------------------------------------------------------------
-# Power source
-# ---------------------------------------------------------------------------
-# Read the mains adapter rather than the battery: a battery reporting
-# "Full" while plugged in and one reporting "Full" while discharging at
-# 0 W are indistinguishable, whereas the adapter's `online` is
-# unambiguous. Glob over the type rather than hardcoding a name -- it is
-# ACAD on the machine this was written on, AC on most others, ADP1 on
-# some ThinkPads.
-# The no-battery case is already handled by the hard guard above, so this
-# only has to answer "is the adapter plugged in". A laptop whose adapter
-# does not register at all reads as "on battery" here, which is the safe
-# direction: the worst case is the idle ladder running while plugged in.
-on_ac() {
-    local ps
-    for ps in /sys/class/power_supply/*; do
-        [ -r "$ps/type" ] || continue
-        [ "$(cat "$ps/type")" = "Mains" ] || continue
-        [ -r "$ps/online" ] || continue
-        [ "$(cat "$ps/online")" = "1" ] && return 0
-    done
-    return 1
+[ -n "$action" ] || {
+    echo "usage: $0 <dim|undim|lock|dpms-off|dpms-on|suspend> [--on ac|battery] [--dry-run]" >&2
+    exit 2
 }
 
-if on_ac; then
-    case " $RUN_ON_AC " in
-        *" $action "*) ;;      # explicitly allowed on mains
-        *) exit 0 ;;           # otherwise: nothing happens while plugged in
-    esac
+case "$ladder" in
+    ""|ac|battery) ;;
+    *) echo "--on takes 'ac' or 'battery', got '$ladder'" >&2; exit 2 ;;
+esac
+
+verdict() {
+    [ "$dry_run" = 1 ] && echo "$action: $1"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# GATE 1 — restore actions are never gated
+# ---------------------------------------------------------------------------
+# undim and dpms-on run unconditionally, before any profile or power check.
+#
+# This is a correctness requirement, not leniency. The gates below all
+# depend on the CURRENT state, and the state can change while the machine
+# is idle: dim at 2m30 on battery, plug the charger in at 3m, and a
+# power-filtered `undim` on resume would decide it belongs to the other
+# ladder and leave the panel at 20% brightness with no way to explain it.
+# The same applies to dpms-on, which general{}'s after_sleep_cmd relies on
+# to bring the panel back after a suspend.
+#
+# Both are idempotent and safe to run when nothing dimmed anything:
+# `brightnessctl -r` with no saved level does nothing, `wlopm --on` on an
+# already-on output does nothing.
+case "$action" in
+    undim|dpms-on) ;;
+    *)
+        # ── GATE 2 — this machine, by name ──────────────────────────────
+        # shellcheck source=host-profile.sh
+        . "$(dirname "$0")/host-profile.sh"
+        host_profile_load
+
+        if [ "${IDLE_ENABLED:-1}" != "1" ]; then
+            verdict "skipped (IDLE_ENABLED=0 in profile ${HOST_PROFILE_ID:-?})"
+            exit 0
+        fi
+
+        # ── GATE 3 — capability: no battery, nothing to save ────────────
+        # Kept from the original version of this script and still the
+        # last line of defence: even a mis-resolved profile cannot make a
+        # batteryless machine suspend itself.
+        if [ "${IDLE_REQUIRE_BATTERY:-1}" = "1" ]; then
+            has_battery=0
+            for _ps in /sys/class/power_supply/*; do
+                [ -r "$_ps/type" ] || continue
+                [ "$(cat "$_ps/type")" = "Battery" ] && has_battery=1
+            done
+            if [ "$has_battery" = 0 ]; then
+                verdict "skipped (no battery on this machine)"
+                exit 0
+            fi
+        fi
+
+        # ── Policy: is this action permitted here at all? ───────────────
+        case " ${IDLE_ALLOW:-} " in
+            *" $action "*) ;;
+            *) verdict "skipped (not in IDLE_ALLOW)"; exit 0 ;;
+        esac
+
+        # ── GATE 4 — the ladder this rung belongs to ────────────────────
+        # Read the mains adapter rather than the battery: a battery
+        # reporting "Full" while plugged in and one reporting "Full" while
+        # discharging at 0 W are indistinguishable, whereas the adapter's
+        # `online` is unambiguous. Glob over the type rather than
+        # hardcoding a name -- it is ACAD on the machine this was written
+        # on, AC on most others, ADP1 on some ThinkPads.
+        #
+        # A laptop whose adapter does not register at all reads as "on
+        # battery", which is the safe direction: the worst case is the
+        # idle ladder running while plugged in, never a machine that
+        # refuses to lock.
+        if [ -n "$ladder" ]; then
+            on_ac=0
+            for _ps in /sys/class/power_supply/*; do
+                [ -r "$_ps/type" ] || continue
+                [ "$(cat "$_ps/type")" = "Mains" ] || continue
+                [ -r "$_ps/online" ] || continue
+                [ "$(cat "$_ps/online")" = "1" ] && on_ac=1
+            done
+
+            [ "$on_ac" = 1 ] && now="ac" || now="battery"
+            if [ "$ladder" != "$now" ]; then
+                verdict "skipped (rung is --on $ladder, machine is on $now)"
+                exit 0
+            fi
+        fi
+        ;;
+esac
+
+if [ "$dry_run" = 1 ]; then
+    echo "$action: would run"
+    exit 0
 fi
 
 # ---------------------------------------------------------------------------
