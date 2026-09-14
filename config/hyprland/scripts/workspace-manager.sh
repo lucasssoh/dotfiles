@@ -223,7 +223,29 @@ done
 [[ "$any_active" != true ]] && active["$internal"]=true   # never zero active screens: fall back to internal
 
 active_internal="${active[$internal]}"
-active_external="${active[$first_external]:-false}"
+
+# The `:-false` here is NOT enough on its own, and this line is why the
+# whole script exited 1 on the first genuinely single-screen machine this
+# repo ever ran on. With no external connected, `externals` is empty and
+# `first_external` is the empty string, so this reads `${active[]}` --
+# and an EMPTY SUBSCRIPT is a hard error for a bash associative array
+# ("bad array subscript"), raised while resolving the subscript, before
+# the `:-false` default is ever consulted. Under `set -e` that killed the
+# run at this line, ~270 lines above the hl.workspace_rule() calls that
+# are the only thing creating the persistent 1-10 set -- so the bar came
+# up with just the workspaces Hyprland had opened natively.
+#
+# Guarded with an explicit branch rather than a cleverer expansion: the
+# subscript must not be evaluated at all when there is no external, which
+# a default value cannot express. Everything else reading `active[...]`
+# is either keyed on $internal (non-empty, guaranteed by the "aucun
+# moniteur détecté" exit above) or already sits behind an
+# `[[ -n "$first_external" ]]` test.
+if [[ -n "$first_external" ]]; then
+    active_external="${active[$first_external]:-false}"
+else
+    active_external=false
+fi
 
 # ---- Workspace target monitors (1-5 / 6-10) -- computed here (used to
 #      live only at the bottom) because the migration step below needs
