@@ -179,6 +179,39 @@ if [ "$DISTRO" = "fedora" ]; then
         satty grim slurp grimblast
         # Tools
         bc jq curl git lm_sensors unzip socat
+        # Found by scripts/check-deps.sh, all four invoked at runtime and
+        # none of them declared until now. They were present on the older
+        # machines as transitive deps of something else, which is why the
+        # gap stayed invisible until a Minimal Install had none of them.
+        #
+        # dbus-tools -> dbus-update-activation-environment, the FIRST line of
+        #   hypr/hyprland.lua's autostart. It pushes WAYLAND_DISPLAY and
+        #   XDG_CURRENT_DESKTOP into the DBus/systemd activation environment;
+        #   without it the XDG portals come up with an empty environment and
+        #   screen sharing and the GTK file picker fail. The failure is
+        #   remote from its cause: nothing along the way says "dbus-tools".
+        # pulseaudio-utils -> pactl, used by quickshell/bar/modules/
+        #   AudioOutput.qml (the bar's whole audio module),
+        #   hypr/scripts/restore-mic-port.sh (autostarted) and
+        #   wireplumber/systemd/bt-audio-switch.sh. This is NOT PulseAudio
+        #   the server -- pipewire-pulseaudio above provides that. pactl is
+        #   only the CLI, and it ships in its own package.
+        # inotify-tools -> inotifywait, the event loop of
+        #   hypr/scripts/wallpaper-cache-watcher.sh, also autostarted.
+        #   Absent, the watcher exits at once and the wallpaper thumbnail
+        #   cache silently stops updating.
+        # libnotify -> notify-send, used by power-profile.sh,
+        #   display-layout.sh and dashboard-toggle.sh. The mildest of the
+        #   four: every call site already tolerates its absence, so it only
+        #   costs the toasts.
+        dbus-tools pulseaudio-utils inotify-tools libnotify
+        # edid-decode, pour la detection de capacite HDR de waybar/scripts/
+        # hdr.sh. Le seul des cinq qui degrade proprement : chaque appel est
+        # garde par `command -v` et son absence fait traiter l'ecran comme
+        # capable plutot que de bloquer (voir le commentaire du script). Il
+        # entre quand meme dans la liste -- une detection qui repond "oui"
+        # faute d'outil n'est pas une detection.
+        v4l-utils
         # hypr/scripts/bar-tint.py's two hard imports. It samples the top
         # strip of the wallpaper and writes ~/.cache/bar-tint.json, which
         # quickshell/bar/services/BandTint.qml watches -- that file is the
