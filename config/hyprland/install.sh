@@ -423,7 +423,18 @@ else
     rm -rf "$COMIX_BUILD"
     if git clone --depth 1 https://gitlab.com/limitland/comixcursors.git "$COMIX_BUILD" 2>/dev/null; then
         sed -i 's/^CURSORTRANS=.*/CURSORTRANS=0/' "$COMIX_BUILD/ComixCursorsConfigs/$COMIX_THEME_NAME.CONFIG"
-        if (cd "$COMIX_BUILD" && MULTISIZE=true THEMENAME="$COMIX_THEME_NAME" ./bin/build-cursors && make && make install); then
+        # THEMENAME has to reach make too, not just build-cursors. A
+        # `VAR=x cmd1 && cmd2` prefix scopes the variable to cmd1 ALONE, so
+        # the previous one-liner built build/White.theme and then ran a make
+        # that fell back to the upstream default (`THEMENAME ?= Custom` in
+        # the Makefile): install went looking for build/Custom.theme, died on
+        # it, and left a half-written ~/.icons/ComixCursors-Custom with 30
+        # cursors and no index.theme. Passed on the command line rather than
+        # exported, so it also beats an inherited THEMENAME.
+        if (cd "$COMIX_BUILD" \
+            && MULTISIZE=true THEMENAME="$COMIX_THEME_NAME" ./bin/build-cursors \
+            && make THEMENAME="$COMIX_THEME_NAME" \
+            && make install THEMENAME="$COMIX_THEME_NAME"); then
             ok "Comix Cursors ($COMIX_THEME_NAME) installed to ~/.icons/ComixCursors-$COMIX_THEME_NAME."
         else
             warn "Comix Cursors build failed — falling back to whatever cursor theme is already installed."
