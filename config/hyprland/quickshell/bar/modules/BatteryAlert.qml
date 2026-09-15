@@ -84,6 +84,29 @@ Rectangle {
     // instead of needing a second surface.
     readonly property bool charging: BatteryAlertState.mode === "charging"
 
+    // Third mode: the charger is still attached and still negotiated, but
+    // it has latched off in overcurrent protection and the machine is
+    // running down the battery without saying so (see
+    // BatteryAlertState's "charger dropped" note). It borrows the "low"
+    // card's whole shape -- same ring, same two pills, same lack of an
+    // auto-hide -- and differs only in the headline, the second pill's
+    // label, and the accent below.
+    readonly property bool adapterLost: BatteryAlertState.mode === "adapter"
+
+    // Amber, flat, regardless of level: this card is not about how much
+    // charge is left, it is about the charger having stopped feeding the
+    // machine, which is equally true at 75% and at 15%. Running it
+    // through warmAccent's level ramp would paint it calm platinum at
+    // exactly the moment it fires most often -- a drop happens while the
+    // battery is still well filled, since charging hard is what trips the
+    // brick in the first place. #ffb454 is the amber Battery.qml already
+    // uses for "low, but eco is on", so no new color enters the palette,
+    // and it is unmistakable against both the platinum of "low" and the
+    // green of "charging".
+    readonly property color levelColor: card.adapterLost
+        ? Qt.rgba(1.0, 0.706, 0.329, 1)   // #ffb454
+        : card.warmAccent
+
     // Warmth ramp -- the unplugged accent is no longer two fixed colors
     // (platinum, then red below the last tier) but a continuous slide
     // from cool to hot as the level drops (asked for: "accentuer un peu
@@ -134,8 +157,8 @@ Rectangle {
     // refuses to load with "accentLight is a read-only property"
     // otherwise. The bindings below are still the only thing that ever
     // writes them.
-    property color accent: charging ? Ink.positive : card.warmAccent
-    property color accentLight: charging ? "#bfe6c0" : Qt.lighter(card.warmAccent, 1.12)
+    property color accent: charging ? Ink.positive : card.levelColor
+    property color accentLight: charging ? "#bfe6c0" : Qt.lighter(card.levelColor, 1.12)
     Behavior on accent { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
     Behavior on accentLight { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
@@ -210,7 +233,7 @@ Rectangle {
         // NOT card.accent: that one already resolves charging -> green,
         // and the ring needs both colors at once -- its two center
         // faces (plug / lightning) are both on screen during the scroll.
-        lowColor: card.warmAccent
+        lowColor: card.levelColor
         chargeColor: Ink.positive
     }
 
@@ -224,7 +247,12 @@ Rectangle {
         // No percentage here anymore: the ring above says it, in bigger
         // type, right next to the gauge that means it. This line names
         // the STATE instead -- two words, no number to re-read.
-        text: card.charging ? "Charging" : "Battery low"
+        // "Charger dropped", not "Charger unplugged": the cable is still
+        // in, which is the whole confusing part, and naming it as an
+        // unplug would send you looking for a cable that is already
+        // there. Two words, so it still fits this card's fixed square.
+        text: card.adapterLost ? "Charger dropped"
+            : (card.charging ? "Charging" : "Battery low")
         color: Ink.primary
         font.family: Fonts.ui
         font.pixelSize: 17
@@ -340,7 +368,11 @@ Rectangle {
             // "Not now" postpones a decision; once you're plugged in
             // there's nothing left to postpone, so the same pill says
             // what it now does instead.
-            text: card.charging ? "Dismiss" : "Not now"
+            // "Not now" postpones a decision the low-battery card is
+            // asking you to make. This card asks nothing -- the fix is
+            // to go replug the charger, which no button here can do --
+            // so it dismisses like the charging one does.
+            text: card.charging || card.adapterLost ? "Dismiss" : "Not now"
             color: Ink.primary
             font.family: Fonts.ui
             font.pixelSize: 15

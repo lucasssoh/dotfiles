@@ -89,6 +89,36 @@ Singleton {
     property string conservationPath: ""
     property bool conservationMode: false
 
+    // ---- BatteryAlertState (chargeur decroche) ----
+    // A 45W USB-C brick on this machine gets asked for 46-53W while the
+    // battery is charging hard (38-44W into the cell plus ~6W of system,
+    // measured), trips its own overcurrent protection after a while, and
+    // LATCHES OFF: the PD contract stays negotiated, the port stays a
+    // sink, the charger is still visibly attached -- but the EC's mains
+    // line goes to 0 and the machine quietly runs down the battery. It
+    // does not come back on its own; only a physical replug clears it.
+    // Observed twice, 18min30 then 5min00 apart (the second trip comes
+    // sooner because the brick never cooled), at 71% and 75% -- which is
+    // exactly what looked like a "cap at 65%" for months: starting from
+    // roughly half charge, the countdown always expired in the mid-60s.
+    //
+    // Distinguishing that from an ordinary unplug is the whole job here,
+    // and `power_role` is NOT the way: it was found stuck at [sink] with
+    // nothing attached at all, minutes after the cable came out. The two
+    // attributes that do track reality are the presence of the port's
+    // `-partner` directory and `power_operation_mode`:
+    //
+    //                      -partner   power_operation_mode   power_role
+    //   unplugged           absent    default                [source]
+    //   charging            present   usb_power_delivery     [sink]
+    //   DROPPED             present   usb_power_delivery     [sink]
+    //   unplugged (later)   absent    default                [sink]   <- stale
+    //
+    // So: mains offline while a PD partner is still attached == dropped.
+    property string mainsPath: ""
+    property bool mainsOnline: false
+    signal adapterDropped()
+
     // ---- Traffic.qml ----
     // Ethernet beats wifi if both happen to be connected -- same
     // priority the old nmcli script used. Reactive: re-evaluates
@@ -130,6 +160,7 @@ Singleton {
     FileView { id: tempFile; blockLoading: true }
     FileView { id: fanFile; blockLoading: true }
     FileView { id: conservationFile; blockLoading: true }
+    FileView { id: mainsFile; blockLoading: true }
     FileView { id: rxFile; blockLoading: true }
 
     function sampleCpu() {
@@ -208,6 +239,51 @@ Singleton {
         conservationFile.reload();
         conservationFile.waitForJob();   // see sampleCpu's note: reload() alone only queues an async re-read
         root.conservationMode = conservationFile.text().trim() === "1";
+    }
+
+    function sampleMains() {
+        if (root.mainsPath === "") return;
+        mainsFile.reload();
+        mainsFile.waitForJob();   // see sampleCpu's note
+        root.mainsOnline = mainsFile.text().trim() === "1";
+    }
+
+    // Edge-triggered, not polled: the ONLY moment worth inspecting the
+    // USB-C side is the mains 1 -> 0 transition. Checking every tick
+    // would fork a shell every 3s for the whole time the laptop runs on
+    // battery -- the exact cost this file's header exists to avoid --
+    // to answer a question that can only change on that edge.
+    //
+    // Two seconds of settle first: on a REAL unplug the typec layer
+    // needs a moment to tear the partner down, and inspecting inside
+    // that window would read the still-present partner and cry wolf.
+    // The latched-off state, by contrast, persists indefinitely -- it
+    // was still readable 14s and again 42s after the drop -- so nothing
+    // is lost by waiting.
+    onMainsOnlineChanged: {
+        if (root.mainsPath === "") return;
+        if (root.mainsOnline) { adapterSettle.stop(); return; }
+        adapterSettle.restart();
+    }
+
+    Timer {
+        id: adapterSettle
+        interval: 2000
+        onTriggered: adapterVerdict.running = true
+    }
+
+    Process {
+        id: adapterVerdict
+        command: ["bash", "-c",
+            "for p in /sys/class/typec/port*; do " +
+            "[ -e \"$p-partner\" ] || continue; " +
+            "[ \"$(cat $p/power_operation_mode 2>/dev/null)\" = usb_power_delivery ] && { echo dropped; exit 0; }; " +
+            "done; echo gone"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text.trim() === "dropped") root.adapterDropped();
+            }
+        }
     }
 
     function sampleFan() {
@@ -313,6 +389,29 @@ Singleton {
         }
     }
 
+    // The AC adapter's own online flag. Matched on type == "Mains"
+    // rather than hardcoding "ADP1": that name is an ACPI artefact and
+    // is "AC"/"ACAD" on plenty of machines. Resolved once, same shape as
+    // every other discovery above; stays empty on a desktop, which
+    // leaves the whole drop detection inert.
+    Process {
+        id: mainsDiscover
+        command: ["bash", "-c",
+            "for d in /sys/class/power_supply/*/; do " +
+            "[ \"$(cat $d/type 2>/dev/null)\" = Mains ] && { echo \"${d}online\"; exit 0; }; " +
+            "done"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.mainsPath = this.text.trim();
+                if (root.mainsPath !== "") {
+                    mainsFile.path = root.mainsPath;
+                    root.sampleMains();
+                }
+            }
+        }
+    }
+
     Timer {
         interval: root.tickMs
         running: true
@@ -324,6 +423,7 @@ Singleton {
             root.sampleTemperature();
             root.sampleFan();
             root.sampleConservation();
+            root.sampleMains();
             root.sampleTraffic();
         }
     }

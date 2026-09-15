@@ -286,6 +286,13 @@ ShellRoot {
         function simulatePlug(percent: int): void {
             BatteryAlertState.simulatePlug(percent);
         }
+        // Preview the dropped-charger card. Reproducing the real thing
+        // means making a 45W brick overheat for several minutes, so this
+        // is the only practical way to look at that card.
+        // `qs -c bar ipc call bar simulateAdapterDrop`.
+        function simulateAdapterDrop(): void {
+            BatteryAlertState.simulateAdapterDrop();
+        }
         // Dismiss it again without clicking Close by hand -- the alert
         // has no auto-hide timer (asked for, matches the reference), so
         // a simulateBattery test run needs an explicit way back down.

@@ -64,7 +64,7 @@ Singleton {
     // in the same card, morphing in place (accent goes green, the glyph
     // grows its charging '+', the headline and both pills re-label)
     // rather than stacking a second popup on top of the first.
-    property string mode: "low"   // "low" | "charging"
+    property string mode: "low"   // "low" | "charging" | "adapter"
 
     // Emitted on every discharging -> plugged edge, whether or not a
     // card is shown for it. The card only appears when it has something
@@ -98,6 +98,41 @@ Singleton {
         // signal above still fires for it, and Battery.qml's pulse in
         // the top bar is the whole acknowledgement it gets.
         if (root.alertVisible) root.showCharging(root.battPercent);
+    }
+
+    // ---- charger dropped ----
+    //
+    // Third mode of the same card. The charger is still plugged in and
+    // still negotiated, but it has latched off in overcurrent protection
+    // and the machine is silently running down the battery -- see
+    // SystemStats' own `adapterDropped` note for the measurements and for
+    // why `power_role` cannot be used to detect it.
+    //
+    // Unlike "charging", this one is NOT gated on an alert already being
+    // on screen: nothing else on the machine says it happened. The bar's
+    // battery module just quietly stops being green, which is precisely
+    // how it went unnoticed for weeks. And unlike "charging" it gets no
+    // auto-hide -- it needs the same acknowledgement the low-battery card
+    // does, because clearing it means physically replugging the charger.
+    //
+    // No dismiss-on-replug branch is needed: a replug fires battPlugged,
+    // plugIn() finds this card already visible, and showCharging() morphs
+    // it into the green "Charging" confirmation in place -- which is
+    // exactly the right answer to it.
+    Connections {
+        target: SystemStats
+        function onAdapterDropped() {
+            if (!root.ready || !root.battPresent) return;
+            root.showAdapterDrop();
+        }
+    }
+
+    function showAdapterDrop() {
+        chargingHide.stop();
+        root.mode = "adapter";
+        root.percent = root.battPercent;
+        root.critical = false;
+        root.alertVisible = true;
     }
 
     function showCharging(p) {
@@ -204,5 +239,11 @@ Singleton {
         // still morphs the card; `simulatePlug` on its own now correctly
         // does nothing but pulse the top bar.
         if (root.alertVisible) root.showCharging(p);
+    }
+
+    // Preview the dropped-charger card without waiting for a 45W brick to
+    // overheat. `qs -c bar ipc call bar simulateAdapterDrop`.
+    function simulateAdapterDrop() {
+        root.showAdapterDrop();
     }
 }
