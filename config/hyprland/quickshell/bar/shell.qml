@@ -228,6 +228,29 @@ ShellRoot {
         function toggleZen(): void {
             shell.zenMode = !shell.zenMode;
         }
+        // Idempotent SETTERS next to the toggle above, added for Liseuse
+        // (config/liseuse/). A reading session has to enter zen/DND and
+        // then leave them exactly as it found them, and a toggle cannot
+        // express that: entering with toggleZen on a bar the user had
+        // already hidden would SHOW it, and the symmetric call on the way
+        // out would hide it for good. SUPER+Z keeps calling toggleZen --
+        // a key press genuinely is a toggle. Only a script bracketing a
+        // span of time needs these.
+        //   qs -c bar ipc call bar setZen true
+        function setZen(on: bool): void {
+            shell.zenMode = on;
+        }
+        function setDnd(on: bool): void {
+            NotificationState.dnd = on;
+        }
+        // The other half of that bracket: what to restore TO. One line
+        // rather than two getters so a caller takes a single snapshot and
+        // can't read the two halves either side of a change.
+        //   qs -c bar ipc call bar focusState   ->   "zen=0 dnd=1"
+        function focusState(): string {
+            return "zen=" + (shell.zenMode ? 1 : 0)
+                 + " dnd=" + (NotificationState.dnd ? 1 : 0);
+        }
         // Inspection for hypr/scripts/bar-tint.py's pipeline, end to end,
         // without anything on screen having to change first: takes the
         // rect to test rather than reading the islands' own, so it needs
