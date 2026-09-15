@@ -24,7 +24,7 @@ mod theme;
 mod wheel;
 
 use gtk4::gdk;
-use gtk4::gio::ApplicationFlags;
+use gtk4::gio::{self, ApplicationFlags};
 use gtk4::prelude::*;
 use gtk4::{glib, graphene, Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -80,6 +80,93 @@ fn cancel(wheel: &RoueWheel, window: &ApplicationWindow) {
     }
 }
 
+/// Closes every OTHER roue wheel currently open, so that opening one is
+/// always a replacement rather than a stack.
+///
+/// The wheels cannot rely on GApplication's single-instance guarantee for
+/// this: that guarantee is per application-id, and roue deliberately has
+/// one id PER WHEEL (`com.roue.<name>`, see the comment on `app_id`) so
+/// that `roue power --commit` can never be routed into a `powerprofile`
+/// that happens to be open. The very thing that makes the routing precise
+/// is what leaves `actions` and `power` free to coexist -- two fullscreen
+/// layer-shell surfaces stacked, both holding the keyboard, Escape closing
+/// only the top one. Reachable by hand (the Copilot key, then SUPER+Delete)
+/// and from the bar (a wheel open, then a click on the audio module).
+///
+/// The list of open wheels is read from the session bus rather than kept in
+/// a pid file or a lock: each wheel holds `com.roue.<name>` there for
+/// exactly as long as its window lives, so the bus is already the authority
+/// and there is no second source of truth to drift. Unique names (`:1.42`)
+/// never match the prefix, and our own id is skipped -- at this point we
+/// are the primary instance, so our name is already up.
+///
+/// Each one is asked to close through `--cancel`, the same path Escape and
+/// right-click take, rather than a signal: a wheel sitting in a
+/// Confirm/Cancel sub-menu then backs out cleanly instead of being killed
+/// mid-state. Fire-and-forget -- we do not wait for them to go, so there is
+/// a short window (the other wheel's own teardown, a few hundred ms) where
+/// both are on screen, one of them fading out. Waiting would mean blocking
+/// the UI build on a D-Bus round trip per wheel, which costs more than the
+/// overlap it removes.
+///
+/// Every failure here is ignored on purpose: no session bus, a malformed
+/// reply, a name that vanished between the listing and the spawn. Not being
+/// able to tidy up must never stop the wheel the user just asked for from
+/// opening.
+fn close_other_wheels(own_app_id: &str) {
+    const PREFIX: &str = "com.roue.";
+
+    let Ok(bus) = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE) else {
+        return;
+    };
+
+    // `None` as the expected reply type: ListNames is "(as)", but spelling
+    // that out buys nothing here -- `get::<(Vec<String>,)>()` below already
+    // returns None if the shape is anything else, and that is the same
+    // "give up quietly" path as every other failure in this function.
+    let Ok(reply) = bus.call_sync(
+        Some("org.freedesktop.DBus"),
+        "/org/freedesktop/DBus",
+        "org.freedesktop.DBus",
+        "ListNames",
+        None,
+        None,
+        gio::DBusCallFlags::NONE,
+        500,
+        gio::Cancellable::NONE,
+    ) else {
+        return;
+    };
+
+    let Some((names,)) = reply.get::<(Vec<String>,)>() else {
+        return;
+    };
+
+    // Resolved rather than assuming "roue" is on PATH: processes launched
+    // by Hyprland do not inherit ~/.local/bin (the reason keybinds.lua
+    // spells out $HOME/.local/bin/roue everywhere), and this spawn happens
+    // inside one of them.
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+
+    for name in names {
+        if name == own_app_id {
+            continue;
+        }
+        let Some(other) = name.strip_prefix(PREFIX) else {
+            continue;
+        };
+        let _ = std::process::Command::new(&exe)
+            .arg(other)
+            .arg("--cancel")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
 /// State of the single open window (at most one, whatever the wheel name)
 /// -- read/written from `connect_command_line`, both for the initial build
 /// and to route `--commit`/`--cancel` from a secondary invocation.
@@ -99,7 +186,7 @@ fn main() -> glib::ExitCode {
     }
 
     let wheel_name = std::env::args().nth(1).unwrap_or_else(|| {
-        eprintln!("usage: roue <wheel-name> [--commit|--cancel]");
+        eprintln!("usage: roue <wheel-name> [--commit|--cancel|--toggle]");
         std::process::exit(1);
     });
 
@@ -115,6 +202,7 @@ fn main() -> glib::ExitCode {
 
     {
         let state = state.clone();
+        let own_app_id = app_id.clone();
         app.connect_command_line(move |app, cmdline| {
             // `cmdline.arguments()` gives the arguments of THIS exact
             // invocation (the primary one at opening, or the one forwarded
@@ -130,6 +218,13 @@ fn main() -> glib::ExitCode {
                 "--cancel" => Some(false),
                 _ => None,
             });
+
+            // `--toggle` is deliberately NOT a third variant of `control`
+            // above: it says nothing about what to do to an open wheel on
+            // its own, it only changes what a PLAIN second press means
+            // (see the `None` arms below). Kept as a separate flag so the
+            // commit/cancel routing keeps the exact shape it had.
+            let toggle = args.iter().skip(2).any(|a| a == "--toggle");
 
             // Cloned out of the RefCell (Ref/RefMut over GObject wrappers,
             // so just one more refcount) before branching: otherwise the
@@ -155,11 +250,47 @@ fn main() -> glib::ExitCode {
                         cancel(&wheel, &window);
                     }
                     // A second plain press (not our release) while the
-                    // wheel is already open -- just brings the window back
-                    // to the foreground (like Prisme, see its doc).
+                    // wheel is already open. Without `--toggle` this just
+                    // brings the window back to the foreground (like
+                    // Prisme, see its doc) -- the right default for a
+                    // wheel opened by a press/release gesture, where the
+                    // key going back up is already spoken for.
+                    //
+                    // With `--toggle`, the same press closes it instead.
+                    // That is for wheels bound to a key that has NO usable
+                    // release edge to close on -- the Copilot key, whose
+                    // firmware drops F23 after ~58ms however long the key
+                    // is held (see hypr/keybinds.lua). Such a bind gets
+                    // one event per press and nothing else, so press-to-
+                    // close is the only way out besides Escape.
+                    //
+                    // Routed through `cancel` rather than a bare
+                    // `window.close()` so it stays identical to Escape and
+                    // right-click, confirmation sub-menu included: on a
+                    // wheel that has `confirm` sectors, a toggling press
+                    // sitting in a Confirm/Cancel backs out to the root
+                    // wheel first, and closes on the press after that.
+                    // (`actions`, the only --toggle wheel today, has no
+                    // confirm sector -- this matters if one is ever added,
+                    // or if --toggle is put on power.toml's bind.)
+                    None if toggle => cancel(&wheel, &window),
                     None => window.present(),
                 }
+            } else if control == Some(false) {
+                // `--cancel` with nothing open. Without this arm it would
+                // fall into build_ui and OPEN the wheel it was sent to
+                // close -- the exact opposite of what it asks for, and
+                // newly reachable now that close_other_wheels sends
+                // `--cancel` to a wheel that may have released its bus name
+                // in the meantime (it was tearing down; our invocation then
+                // becomes that wheel's primary instance instead of being
+                // routed into it). Left deliberately narrow: `--commit` is
+                // NOT guarded the same way, because its own race -- a
+                // release arriving before the press's process has claimed
+                // the name -- predates this and is not this function's to
+                // change.
             } else {
+                close_other_wheels(&own_app_id);
                 build_ui(app, &wheel_name, &state);
             }
             0
