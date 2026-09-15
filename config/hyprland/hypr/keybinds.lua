@@ -244,12 +244,15 @@ bind("+ XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO
 bind("+ XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })
 bind("+ XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),     { locked = true })
 
--- brightnessctl has no DBus/kernel push the bar's OSD can react to on its
--- own (unlike volume/mic, pure Pipewire push -- see
--- quickshell/bar/services/OsdState.qml's header for why), so the bind
--- itself pokes the bar over IPC right after setting the level.
-bind("+ XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+ && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
-bind("+ XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%- && quickshell ipc -c bar call bar pokeBrightness"), { repeating = true })
+-- Backlight goes through a script rather than an inline brightnessctl:
+-- the Down key needs a floor computed from the panel's max (a bare
+-- `5%-` bottoms out at a literal 0, and max is per-host), and the bar's
+-- OSD needs an IPC poke because brightnessctl has no DBus/kernel push it
+-- can react to on its own -- unlike volume/mic, pure Pipewire push, see
+-- quickshell/bar/services/OsdState.qml's header. Both live in
+-- hypr/scripts/brightness.sh, which documents the brightnessctl traps.
+bind("+ XF86MonBrightnessUp",   hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/brightness.sh up"),   { repeating = true })
+bind("+ XF86MonBrightnessDown", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/brightness.sh down"), { repeating = true })
 
 bind("+ XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 bind("+ XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
