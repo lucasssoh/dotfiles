@@ -922,6 +922,23 @@ Item {
                     onToggled: HdrState.toggle()
                 }
             }
+
+            // Full width, and NOT a third cell in the Row above: that pair
+            // is deliberately exactly two half-widths, and this one earns
+            // the subtitle a half-width cannot fit. The scope is the whole
+            // point here -- "Dark mode" on its own would read as a promise
+            // to darken everything, including this bar, which is precisely
+            // what it does not do (see AppearanceState.qml's header: the
+            // bar's own ink comes from the wallpaper, and Qt apps are
+            // knowingly not covered).
+            ToggleRow {
+                width: parent.width
+                title: "Dark mode"
+                subtitle: "GTK, Firefox and Electron apps"
+                checked: AppearanceState.dark
+                onToggled: (value) => AppearanceState.setDark(value)
+            }
+
                 ActionRow {
                     width: parent.width
                     title: "Screenshot"
