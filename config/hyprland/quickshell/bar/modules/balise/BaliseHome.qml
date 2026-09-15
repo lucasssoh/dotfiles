@@ -934,7 +934,7 @@ Item {
             ToggleRow {
                 width: parent.width
                 title: "Dark mode"
-                subtitle: "GTK, Firefox and Electron apps"
+                subtitle: "turn dark mode on"
                 checked: AppearanceState.dark
                 onToggled: (value) => AppearanceState.setDark(value)
             }
