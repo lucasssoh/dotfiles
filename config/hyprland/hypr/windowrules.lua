@@ -410,6 +410,33 @@ hl.window_rule({
 })
 
 -- ============================================================
+-- ZATHURA — Liseuse's reading surface
+-- ============================================================
+-- The renderer behind Liseuse (SUPER+F, see config/liseuse/). Everything
+-- here is in service of one thing: a page and nothing else.
+--
+-- opacity 1.0 override is not cosmetic. Global window opacity means the
+-- desktop shows through the page, and a document recolored to near-pure
+-- #1c1c1e/#e5e5ea (zathurarc's recolor) is precisely the content where a
+-- few percent of a wallpaper bleeding through destroys the contrast the
+-- recolor exists to create. Same reason Firefox has this rule.
+--
+-- fullscreen on open, with zathurarc's `adjust-open "best-fit"` as its
+-- other half: the page is sized to the screen, one page fills it, and
+-- turning a page is the only motion. SUPER+SHIFT+F still toggles out of
+-- it (it is a normal fullscreen, not a forced one).
+--
+-- no_blur: the window is opaque, so there is nothing to blur behind it
+-- -- the pass would cost GPU time per frame for a result no one can see,
+-- which matters on battery for something held open for an hour.
+hl.window_rule({
+    match      = { class = "org.pwmt.zathura" },
+    opacity    = "1.0 override",
+    fullscreen = true,
+    no_blur    = true,
+})
+
+-- ============================================================
 -- LAYER BLUR — Roue
 -- ============================================================
 -- Real compositor blur behind this specific layer-shell surface, not a

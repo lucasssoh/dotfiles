@@ -81,7 +81,11 @@ section "Modules"
 # login-manager is deliberately NOT here: it rewrites system login (greetd)
 # and prompts interactively, which would block this otherwise unattended
 # run. It's a phase of its own -- `./install login-manager`.
-MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox mpv)
+#
+# liseuse after fuzzel: the picker IS fuzzel (SUPER+F, see
+# config/liseuse/liseuse), so installing it first would leave a reading
+# library with no way to open it on a fresh machine.
+MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox mpv liseuse)
 HYPR_MODULE="hyprland"
 KDE_MODULE="kde"
 #

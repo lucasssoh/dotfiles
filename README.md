@@ -15,6 +15,7 @@ A deeper write-up of the design decisions (why Quickshell replaced Waybar, why B
 | **Roue** (`config/hyprland/roue-src/`) | Native GTK4 radial wheel (press/aim/release), drives the power menu, power-profile switcher, and display-layout switcher from the same generic widget |
 | **Prisme** (`config/hyprland/prisme-src/`) | Native GTK4 wallpaper picker + a Rust smart-crop filter (`wallpaper-filter`) that recomposes wallpapers to fit each screen without cropping the subject |
 | **Balise** (`config/hyprland/balise-src/` + `quickshell/bar/modules/balise/`) | WiFi/Bluetooth/Ethernet panel — first-party, replacing the vendored Orbit it started from. Now split in two: a Rust daemon (NetworkManager/BlueZ behind a Unix socket) and a QML panel in the bar that talks to it. The crate's original GTK4 window still builds but nothing opens it. No VPN, by design |
+| **Liseuse** (`config/liseuse/`) | Centralised reading on SUPER+F — a fuzzel picker over `~/Livres` plus the folders in `sources.conf` (course PDFs stay in `~/courses`), ranked so the book you're mid-way through comes first. Renders through zathura + `zathura-pdf-mupdf`, one engine for PDF/EPUB/MOBI/CBZ, recolored dark from `colors.lua`. A session hides the bar, quiets notifications and takes a D-Bus idle inhibitor, then restores exactly what it found |
 | **Rofi / SwayNC / dunst / systemd services** | Launcher, notifications, and background daemons (OLED-protection wallpaper slideshow, per-workspace dashboard) |
 | Everything else in `config/` | bash, tmux, wezterm, nvim, wireplumber, mangohud, nemo, fonts, mpv, firefox, KDE Plasma (alternate session) |
 
@@ -75,6 +76,8 @@ AZERTY layout. The full list is in [`config/hyprland/hypr/keybinds.lua`](config/
 | `Super + Enter` | WezTerm |
 | `Super + Space` | App launcher (fuzzel) |
 | `Super + W` | Prisme (wallpaper picker) |
+| `Super + F` | Liseuse — resume the book you were reading, or pick one (`F1` inside a book for its manual) |
+| `Super + Shift + F` / `Super + Ctrl + F` | Fullscreen / maximise the focused window |
 | `Super + Delete` | Roue power wheel (hold to aim, release to confirm) |
 | `Super + Shift + Delete` | Roue power-profile wheel |
 | `Super + O` | Roue display-layout wheel |

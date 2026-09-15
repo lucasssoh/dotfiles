@@ -1,0 +1,559 @@
+#!/usr/bin/env bash
+# ============================================================
+# liseuse — the library half of Liseuse
+# ============================================================
+# zathura renders pages (see zathurarc next to this file); this script is
+# everything zathura deliberately doesn't do: find the books, rank them
+# so the one you're in the middle of is the first thing you see, and
+# bracket the session with the distraction-free state.
+#
+# Bound to SUPER+F (hypr/keybinds.lua). One key, three outcomes,
+# depending on what's already on screen:
+#
+#   nothing open          -> the picker
+#   a book open elsewhere -> focus it (you meant "back to my book")
+#   a book already focused-> the picker (you're looking at it, so you
+#                            must be after a DIFFERENT one)
+#
+# ---- Why there is no library database ------------------------------
+# zathura already keeps one, at ~/.local/share/zathura/bookmarks.sqlite
+# (see zathurarc's `database "sqlite"`). Its `fileinfo` table holds one
+# row per document with the three columns this script needs -- file,
+# page, and a `time` timestamp of the last open -- so Liseuse keeps NO
+# state of its own about books at all.
+#
+# That is not just less code, it is more correct: zathura writes that row
+# whether the book was opened from SUPER+F, from nemo, from Firefox's
+# download list or from a terminal, and none of those go through this
+# script. A private history here would have been a second copy of the
+# same fact, wrong every time a book was opened any other way.
+#
+# So there is nothing to rebuild and nothing to go stale: every
+# invocation reads the filesystem and that table, and that is all.
+# ============================================================
+set -Eeuo pipefail
+
+LIBRARY_ROOT="${LISEUSE_LIBRARY:-$HOME/Livres}"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/liseuse"
+SOURCES_CONF="$CONFIG_DIR/sources.conf"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/liseuse"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/liseuse"
+PAGES_CACHE="$CACHE_DIR/pages"
+SESSIONS="$STATE_DIR/sessions"
+LOCK="$STATE_DIR/focus.lock"
+PREV_STATE="$STATE_DIR/focus.prev"
+ZATHURA_DB="${XDG_DATA_HOME:-$HOME/.local/share}/zathura/bookmarks.sqlite"
+
+# zathura's Wayland app-id. Also hardcoded in hypr/windowrules.lua --
+# both have to move together if a future zathura ever renames it.
+ZATHURA_CLASS="org.pwmt.zathura"
+
+# Everything zathura can open here: zathura-pdf-mupdf covers pdf/epub/
+# mobi/fb2/oxps, zathura-cb covers cbz/cbr, zathura-djvu covers djvu.
+# azw3 is MOBI8 and the mupdf plugin takes it under the same handler.
+EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps)
+
+# Formats where a page COUNT is a fixed property of the file. The
+# reflowable ones (epub, mobi, azw3, fb2) are deliberately excluded: they
+# have no intrinsic pagination, mutool would report the count for its own
+# default layout box, and that number has nothing to do with the one
+# zathura shows at your font size and window width. A wrong "/312" is
+# worse than no total at all, so those show a bare page number.
+FIXED_LAYOUT=" pdf cbz cbr xps oxps "
+
+mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS"
+
+# ============================================================
+# Library roots
+# ============================================================
+# ~/Livres plus whatever sources.conf adds -- the point of the extra
+# roots being that course PDFs stay in ~/courses next to the rest of the
+# course and still show up here (same motivation and same file format as
+# prisme/wallpapers-extra.conf).
+roots() {
+    [ -d "$LIBRARY_ROOT" ] && printf '%s\n' "$LIBRARY_ROOT"
+    [ -f "$SOURCES_CONF" ] || return 0
+    local line
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        [ -z "$line" ] && continue
+        case "$line" in "~/"*) line="$HOME/${line#\~/}" ;; esac
+        # A root that doesn't exist on this machine is skipped in
+        # silence, so one sources.conf can serve several machines.
+        [ -d "$line" ] && printf '%s\n' "$line"
+    done < "$SOURCES_CONF"
+}
+
+# `mtime<TAB>path` for every readable book under every root.
+#
+# -prune on hidden directories and on the two build-output names that
+# turn a scan of ~/code into a scan of a package cache. Roots can nest or
+# repeat (~/Livres symlinked into ~/courses, say), so the result is
+# deduplicated on the resolved path.
+scan() {
+    local -a roots_arr find_expr
+    mapfile -t roots_arr < <(roots)
+    [ "${#roots_arr[@]}" -eq 0 ] && return 0
+
+    local ext first=1
+    for ext in "${EXTENSIONS[@]}"; do
+        [ "$first" -eq 1 ] || find_expr+=(-o)
+        find_expr+=(-iname "*.${ext}")
+        first=0
+    done
+
+    find -L "${roots_arr[@]}" \
+        \( -name '.*' -o -name node_modules -o -name target \) -prune -o \
+        -type f \( "${find_expr[@]}" \) -readable \
+        -printf '%T@\t%p\n' 2>/dev/null \
+      | awk -F'\t' '!seen[$2]++ { printf "%d\t%s\n", $1, $2 }'
+}
+
+# ============================================================
+# Ranking
+# ============================================================
+# Two groups, and that ordering is the whole product decision: a reader
+# nearly always wants the book they are currently in, and only
+# occasionally wants to start a new one.
+#
+#   group 2 — "en cours": zathura's history has a page > 0 for it
+#   group 1 — everything else
+#
+# Within a group, most recent first: the timestamp is zathura's own
+# `fileinfo.time` for anything ever opened, otherwise the file's mtime,
+# which puts a book downloaded five minutes ago at the top of group 1
+# where you'd reach for it.
+#
+# The sort key is a zero-padded fixed-width number so a plain
+# lexicographic `sort -r` orders it correctly.
+#
+# ---- Why the display label is built HERE, in awk --------------------
+# It used to be a `label_for` shell function called per row, and that one
+# decision cost more than everything else in this script put together:
+# 348ms for a 400-book library, of which the find|awk|sort pipeline below
+# was 10ms. The other 338 were 400 command substitutions -- 400 fork()s
+# -- and nothing else. Building the label inside the pass that is already
+# reading every row makes the same 400 books 12ms.
+#
+# So: one row out per book, `sortkey \t path \t page \t label`, with the
+# label complete EXCEPT for the "/380" total. That part alone stays in
+# the shell, because it needs mutool and a cache lookup -- but it is only
+# ever needed for the handful of books that are actually in progress, so
+# it costs a few forks, not one per book.
+# One sqlite3 call, not one per book: the whole fileinfo table comes out
+# as `path \t page \t epoch` and is joined against the scan inside the
+# same awk pass. sqlite3's own startup is ~3ms, against ~30ms for a
+# python3 that could read the same table -- which would have cost more
+# than everything else in this script combined.
+#
+# strftime('%s', time) reads zathura's stored local-time string as if it
+# were UTC, so these epochs are off by the timezone offset. That is fine
+# and deliberate: they are only ever compared against each other, and the
+# error is the same constant on every row.
+zathura_state() {
+    [ -s "$ZATHURA_DB" ] || return 0
+    sqlite3 -readonly -separator "$(printf '\t')" "$ZATHURA_DB" \
+        "SELECT file, page, CAST(strftime('%s', time) AS INTEGER) FROM fileinfo;" \
+        2>/dev/null || true
+}
+
+ranked() {
+    { zathura_state; printf '\034\n'; scan; } \
+      | awk -F'\t' -v lib="$LIBRARY_ROOT" '
+        # Title: basename, extension dropped, underscores back to spaces.
+        # A book under ~/Livres shows that alone; one pulled in from an
+        # extra root (sources.conf) is prefixed with its own folder, so a
+        # course PDF reads "ACL · DPatterns Intro" instead of competing
+        # on filename alone.
+        function label(path,    n, parts, base) {
+            n = split(path, parts, "/")
+            base = parts[n]
+            sub(/\.[^.]*$/, "", base)
+            gsub(/_/, " ", base)
+            if (index(path, lib "/") == 1) return base
+            return (n > 1 ? parts[n-1] " · " base : base)
+        }
+        # Everything before the \034 separator is zathura'\''s table;
+        # everything after it is the filesystem scan.
+        $0 == "\034" { scanning = 1; next }
+        !scanning { page[$1] = $2 + 0; opened[$1] = $3 + 0; next }
+        {
+            mtime = $1 + 0; path = $2
+            inprog = (path in page && page[path] > 0)
+            ts = (path in opened && opened[path] > 0) ? opened[path] : mtime
+            printf "%d%012d\t%s\t%d\t%s\n", (inprog ? 2 : 1), ts, path,
+                   (inprog ? page[path] : -1), label(path)
+        }
+    ' | sort -r
+}
+
+# Total pages, cached by (path, mtime) so mutool runs once per file ever
+# and never again until the file itself changes. Only ever called for the
+# handful of books that are actually in progress, so a 400-book library
+# costs at most a few mutool calls on the first run and none after.
+page_total() {
+    local path="$1" ext mt n
+    ext="${path##*.}"
+    case "$FIXED_LAYOUT" in *" ${ext,,} "*) ;; *) printf '0'; return ;; esac
+    mt="$(stat -c %Y -- "$path" 2>/dev/null)" || { printf '0'; return; }
+
+    n="$(awk -F'\t' -v p="$path" -v m="$mt" '$3 == p && $1 == m { print $2; exit }' \
+            "$PAGES_CACHE" 2>/dev/null || true)"
+    if [ -z "$n" ]; then
+        n="$(mutool info -- "$path" 2>/dev/null | awk '/^Pages:/ { print $2; exit }' || true)"
+        [ -z "$n" ] && n=0
+        printf '%s\t%s\t%s\n' "$mt" "$n" "$path" >> "$PAGES_CACHE"
+    fi
+    printf '%s' "$n"
+}
+
+# The only part of the label awk can't build: the reading position.
+#
+# Result goes into the global $LABEL rather than stdout, and that is the
+# same fork question as `ranked`'s, one level down: `x="$(decorate ...)"`
+# is a command substitution, so writing this the obvious way would have
+# put back exactly the per-book fork that moving the label into awk just
+# removed. Assigning a global costs nothing, and the only two callers are
+# right below.
+LABEL=""
+decorate() {
+    local path="$1" page="$2" total
+    LABEL="$3"
+    [ "$page" -ge 0 ] || return 0
+    # zathura stores a 0-based page index; humans count from 1.
+    total="$(page_total "$path")"
+    if [ "$total" -gt 0 ]; then
+        LABEL="$LABEL   —   p. $((page + 1))/$total"
+    else
+        LABEL="$LABEL   —   p. $((page + 1))"
+    fi
+}
+
+# ============================================================
+# Reading mode — the distraction-free half
+# ============================================================
+# Three things interrupt reading on this machine, and none of them is
+# zathura's to fix:
+#
+#   the bar        -> shell.qml's setZen
+#   notifications  -> shell.qml's setDnd (quieted, not blocked -- they
+#                     still land in the centre, they just don't pop)
+#   hypridle       -> 5 min to lock on battery, 15 on mains, and reading
+#                     is the one activity that produces NO input for
+#                     minutes at a time. Handled by launching zathura
+#                     under systemd-inhibit rather than from here:
+#                     hypridle.conf keeps ignore_dbus_inhibit = false
+#                     precisely so a D-Bus inhibitor is honoured, the
+#                     same mechanism mpv and Firefox already use.
+#
+# setZen/setDnd are idempotent SETTERS, not the SUPER+Z toggle, because
+# this has to restore what it found: entering reading mode with the bar
+# already hidden must not un-hide it on the way out. $PREV_STATE holds
+# that snapshot.
+#
+# Two books open at once is a normal thing to do, so the enter/leave is
+# reference-counted: one file per session PID under $SESSIONS, and only
+# the first in and the last out touch the bar. flock serialises the
+# check-and-act, since otherwise two sessions starting together can both
+# read an empty directory and both snapshot a state the other has
+# already changed.
+focus_enter() {
+    (
+        flock 9
+        # Drop sessions whose process is gone (SIGKILL, a crash, a
+        # reboot with $SESSIONS on a persistent filesystem). Without
+        # this, one killed reader leaves the count stuck above zero and
+        # the bar hidden forever.
+        local pidfile pid crashed=0
+        for pidfile in "$SESSIONS"/*; do
+            [ -e "$pidfile" ] || continue
+            pid="${pidfile##*/}"
+            kill -0 "$pid" 2>/dev/null || { rm -f "$pidfile"; crashed=1; }
+        done
+
+        if [ -z "$(ls -A "$SESSIONS" 2>/dev/null)" ]; then
+            # Snapshot what to restore to -- but ONLY on a genuinely cold
+            # start. If the directory is empty because a session was just
+            # pruned, the bar is still hidden by that dead session, and
+            # snapshotting NOW would record "zen was already on" and make
+            # a crash-hidden bar permanent: this session would faithfully
+            # restore the wrong thing on its way out, and so would every
+            # session after it. The $PREV_STATE that dead session wrote is
+            # still on disk and is still the right answer, so it is kept.
+            # (Verified: kill -9 on a reader, then open another book --
+            # without this the bar never comes back.)
+            if [ "$crashed" -eq 0 ] || [ ! -s "$PREV_STATE" ]; then
+                qs -c bar ipc call bar focusState > "$PREV_STATE" 2>/dev/null || \
+                    printf 'zen=0 dnd=0\n' > "$PREV_STATE"
+            fi
+            qs -c bar ipc call bar setZen true >/dev/null 2>&1 || true
+            qs -c bar ipc call bar setDnd true >/dev/null 2>&1 || true
+        fi
+        : > "$SESSIONS/$$"
+    ) 9>"$LOCK"
+}
+
+focus_leave() {
+    (
+        flock 9
+        rm -f "$SESSIONS/$$"
+        if [ -z "$(ls -A "$SESSIONS" 2>/dev/null)" ]; then
+            local prev zen dnd
+            prev="$(cat "$PREV_STATE" 2>/dev/null || echo 'zen=0 dnd=0')"
+            case "$prev" in *zen=1*) zen=true ;; *) zen=false ;; esac
+            case "$prev" in *dnd=1*) dnd=true ;; *) dnd=false ;; esac
+            qs -c bar ipc call bar setZen "$zen" >/dev/null 2>&1 || true
+            qs -c bar ipc call bar setDnd "$dnd" >/dev/null 2>&1 || true
+        fi
+    ) 9>"$LOCK"
+}
+
+# ============================================================
+# Opening
+# ============================================================
+open_book() {
+    local path="$1"
+    [ -f "$path" ] || { notify "Not found" "$(basename -- "$path")"; return 1; }
+
+    # Nothing recorded here: zathura writes its own fileinfo row (path,
+    # page, time) the moment it opens the file, and that row is what
+    # ranked() reads back. See the header.
+    focus_enter
+    # EXIT alone isn't enough: `set -e` plus a signal from the session
+    # ending (logout, a killed terminal) would skip the restore and leave
+    # the bar hidden with no window on screen to explain why.
+    trap focus_leave EXIT INT TERM HUP
+    systemd-inhibit --what=idle \
+                    --who=Liseuse \
+                    --why="Reading a book" \
+                    zathura -- "$path" || true
+    focus_leave
+    trap - EXIT INT TERM HUP
+}
+
+notify() {
+    notify-send -a Liseuse "$1" "${2:-}" 2>/dev/null || true
+}
+
+# ============================================================
+# The manual — what to do once a book is open
+# ============================================================
+# The reading window has no menu, no statusbar and no chrome at all (see
+# zathurarc's `guioptions ""`), which is the point of it and also means
+# nothing on screen can teach you that `m` sets a mark or that `42G`
+# jumps to page 42. This is that missing affordance, on F1 from inside
+# the book (zathurarc maps it) and as `liseuse touches` from a terminal.
+#
+# Every key below was read out of zathura 2026.07.18's own default table
+# (config.c, ~150 girara_shortcut_add calls) rather than recalled, after
+# an earlier pass at this file remapped seven keys on the assumption the
+# defaults were thin and destroyed the jumplist, rotation, double-page
+# and Escape-to-cancel in the process.
+touches() {
+    cat <<'FIN'
+  SCROLL
+    j  k              line by line (15 px — see scroll-step)
+    h  l              sideways, when the page overflows
+    arrow keys        same
+    two fingers       continuous, pixel by pixel
+    Ctrl+d  Ctrl+u    half a screen
+    Space             next screen (12% overlap kept)
+    Shift+Space       previous screen
+    Ctrl+f  Ctrl+b    same, vim-style
+    H  L              top / bottom of the current page
+    Alt+j  Alt+k      partial scroll
+
+  TURN PAGES
+    J  K              next / previous page
+    PgDn  PgUp        same
+    Alt+→  Alt+←      same
+
+  GO SOMEWHERE
+    42G               jump to page 42
+    gg                start of the book
+    G                 end of the book
+    Home  End         same
+    Tab               the PDF's outline, if it has one
+                      inside: j k to move, l h to expand/collapse,
+                      Enter to go there, Esc to close
+    Ctrl+o            back to where you came from (jumplist)
+    Ctrl+i            forward again
+
+  MARK YOUR PLACE
+    Your position is already saved on every page turn: reopening the
+    book puts you back. These are for landmarks inside a book.
+
+    ma                set mark "a" here (any letter)
+    'a                jump to mark "a"
+    :mark a           same, as a command
+    :delmarks a       drop it
+
+    :bmark chapter3   NAMED bookmark here (any name)
+    :blist            list this book's bookmarks
+    :bjump chapter3   go to it
+    :bdelete chapter3
+
+  SEARCH
+    /word   Enter     search forward
+    ?word   Enter     search backward
+    n  N              next / previous hit
+    :nohlsearch       stop highlighting
+
+  SEE IT DIFFERENTLY
+    a                 fit the whole page
+    s                 fit the width (bigger text, you scroll)
+    +  -              zoom in / out      (also zi / zo)
+    =  zz             zoom to a value    z0: original zoom
+    d                 two pages side by side, like an open book
+    D                 shift which page sits on the left
+    r                 rotate 90°
+    Ctrl+r            restore the document's own colours — for a
+                      figure a dark background makes unreadable
+    F5                presentation mode
+    F11               leave / enter fullscreen
+
+  ODDS AND ENDS
+    f                 show link numbers, then type one to follow it
+    c                 copy a link
+    Ctrl+p            print
+    :info             file metadata
+    :exec <command>   run a command
+
+  LEAVE
+    q                 close the book (the bar and notifications come
+                      back, the idle lock re-arms)
+    Esc               CANCEL — a search, the outline, a half-typed
+                      command. Does not close the book.
+    F1                this manual
+FIN
+}
+
+# F1 goes through zathura's `:exec`, a foreground spawn, so this hands the
+# window off and returns rather than blocking the reader behind fuzzel.
+#
+# The text reaches fuzzel through a TEMP FILE, and that is not an
+# arbitrary choice -- the obvious `"$0" touches | fuzzel` is a trap this
+# file already fell into once, and it fed a self-replicating loop:
+#
+#   `"$0" touches` re-enters the script, whose stdout is now a PIPE, so
+#   `[ -t 1 ]` is false, so it takes this branch again -- spawning
+#   another background fuzzel and printing NOTHING into the pipe. The
+#   fuzzel actually on screen therefore showed an empty list, and killing
+#   it only let the next one through. Fuzzel also keeps a single-instance
+#   lock in $XDG_RUNTIME_DIR, so the loop could wedge SUPER+Space too.
+#
+# A file has none of that: no re-entry, no pipe, and stdin is at EOF the
+# moment fuzzel opens it. `touches` is called directly, as a function.
+touches_afficher() {
+    if [ -t 1 ]; then
+        touches
+        return
+    fi
+    local tmp
+    tmp="$(mktemp -t liseuse-touches.XXXXXX)" || return 0
+    touches > "$tmp"
+    setsid nohup sh -c '
+        fuzzel --dmenu --lines 22 --width 64 --prompt-only="" \
+               --placeholder="Reading manual — Esc to close" \
+               < "$1" >/dev/null 2>&1
+        rm -f "$1"
+    ' sh "$tmp" >/dev/null 2>&1 </dev/null &
+}
+
+# ============================================================
+# Picker
+# ============================================================
+pick() {
+    local -a paths=() labels=()
+    local key path page label idx
+
+    while IFS=$'\t' read -r key path page label; do
+        [ -n "$path" ] || continue
+        paths+=("$path")
+        decorate "$path" "$page" "$label"
+        labels+=("$LABEL")
+    done < <(ranked)
+
+    if [ "${#paths[@]}" -eq 0 ]; then
+        notify "Empty library" "Nothing under $LIBRARY_ROOT or in sources.conf"
+        return 1
+    fi
+
+    # --index rather than matching the chosen line back against the list:
+    # titles are derived (extension stripped, underscores replaced, a
+    # folder prefix added) and two files can legitimately produce the
+    # same label, so the index is the only unambiguous way back to a
+    # path. Width/lines override fuzzel.ini's launcher geometry -- book
+    # titles are much longer than command names.
+    idx="$(printf '%s\n' "${labels[@]}" \
+            | fuzzel --dmenu --index --lines 14 --width 60 \
+                     --prompt-only='' --placeholder='Read…' --counter \
+            || true)"
+    [ -n "$idx" ] || return 0            # cancelled with Escape
+    open_book "${paths[$idx]}"
+}
+
+# ============================================================
+# What's on screen
+# ============================================================
+zathura_addr() {   # address of any zathura window, empty if none
+    hyprctl -j clients 2>/dev/null \
+        | jq -r --arg c "$ZATHURA_CLASS" 'map(select(.class == $c)) | .[0].address // empty' \
+        2>/dev/null || true
+}
+
+zathura_focused() {
+    [ "$(hyprctl -j activewindow 2>/dev/null | jq -r '.class // empty' 2>/dev/null)" = "$ZATHURA_CLASS" ]
+}
+
+# ============================================================
+# Entry point
+# ============================================================
+case "${1-}" in
+    -h|--help)
+        cat <<EOF
+liseuse — reading library (zathura)
+
+  liseuse              SUPER+F. Resume the open book, or pick one.
+  liseuse pick         Force the picker even with a book already open.
+  liseuse open FILE    Open that file as a reading session.
+  liseuse list         Print the ranked library on stdout.
+  liseuse keys         The manual: what to do once a book is open.
+                       From inside the book itself, that is F1.
+
+Library root : $LIBRARY_ROOT   (\$LISEUSE_LIBRARY)
+Extra sources: $SOURCES_CONF
+EOF
+        ;;
+    keys|touches|help)
+        touches_afficher
+        ;;
+    pick)
+        pick
+        ;;
+    open)
+        [ -n "${2-}" ] || { echo "liseuse open: missing file" >&2; exit 2; }
+        open_book "$2"
+        ;;
+    list)
+        while IFS=$'\t' read -r _ path page label; do
+            [ -n "$path" ] || continue
+            decorate "$path" "$page" "$label"
+            printf '%s\t%s\n' "$LABEL" "$path"
+        done < <(ranked)
+        ;;
+    "")
+        # The three-outcome behaviour described at the top of this file.
+        addr="$(zathura_addr)"
+        if [ -n "$addr" ] && ! zathura_focused; then
+            hyprctl dispatch focuswindow "address:$addr" >/dev/null
+        else
+            pick
+        fi
+        ;;
+    *)
+        # A bare path, so this can also serve as the MIME handler.
+        open_book "$1"
+        ;;
+esac

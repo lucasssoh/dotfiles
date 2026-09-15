@@ -1,0 +1,221 @@
+# ============================================================
+# zathurarc — the rendering half of Liseuse
+# ============================================================
+# Liseuse (the `liseuse` script next to this file) is the library: it
+# indexes, ranks and picks. zathura is the page renderer it hands the
+# file to, and everything below is what turns zathura's default
+# white-paper-on-grey window into a dark, chrome-less reading surface.
+#
+# One renderer for every format, on purpose (see README): the
+# zathura-pdf-mupdf plugin registers itself as the handler for
+# application/pdf, application/epub+zip, application/x-mobipocket-ebook,
+# application/x-fictionbook and application/oxps at once -- verified with
+# `dnf repoquery --provides zathura-pdf-mupdf`. So PDF and EPUB share a
+# single window, a single theme, a single set of keys, and -- the part
+# that actually makes "centralised reading" work -- a single history
+# table, which is where Liseuse reads back how far into each book you
+# are (see the HISTORY section below).
+# zathura-cb adds CBZ/CBR on the same terms; zathura-djvu adds DjVu.
+# ============================================================
+
+# ============================================================
+# COLORS — recolor, not a dark theme
+# ============================================================
+# zathura has no notion of a document theme: a PDF is black ink on a
+# white page and that is what it draws. `recolor` remaps the two ends of
+# the page's tonal range onto the two colors below, which is why this is
+# a real inversion rather than a dimmed backlight.
+#
+# Values are hypr/colors.lua's `background` and `text`, by hand -- the
+# same hand-kept CSS mirror situation fuzzel.ini and rofi/launcher.rasi
+# are in (zathurarc can't require() a Lua file either). If colors.lua
+# moves, this moves with it.
+set recolor true
+set recolor-darkcolor  "#e5e5ea"
+set recolor-lightcolor "#1c1c1e"
+
+# The two options that stop recolor from wrecking the document.
+#
+# recolor-keephue: without it, a naive inversion pushes every coloured
+# element to its complement -- a red warning box in a course PDF comes
+# out cyan, a syntax-highlighted code listing comes out in colors that
+# mean nothing. Keeping the hue inverts only the lightness, so red stays
+# red and just gets legible on a dark ground.
+#
+# recolor-reverse-video: leaves IMAGES at their original colors instead
+# of inverting them. This is the one that matters for books -- covers,
+# photographs, plates and scanned figures are the things an inversion
+# ruins most visibly, and they are exactly the content that has no "ink
+# and paper" reading to remap in the first place.
+set recolor-keephue true
+set recolor-reverse-video true
+
+# The window's own chrome, for the margins around the page and the
+# instant before the first page renders. Without these, opening a book
+# flashes zathura's default light grey.
+set default-bg "#1c1c1e"
+set default-fg "#e5e5ea"
+set statusbar-bg "#1c1c1e"
+set statusbar-fg "#8e8e93"
+set inputbar-bg  "#1c1c1e"
+set inputbar-fg  "#e5e5ea"
+set notification-bg          "#2c2c2e"
+set notification-fg          "#e5e5ea"
+set notification-error-bg    "#2c2c2e"
+set notification-error-fg    "#ff453a"
+set notification-warning-bg  "#2c2c2e"
+set notification-warning-fg  "#ffd60a"
+set completion-bg            "#2c2c2e"
+set completion-fg            "#e5e5ea"
+set completion-highlight-bg  "#3a3a3c"
+set completion-highlight-fg  "#ffffff"
+set completion-group-bg      "#1c1c1e"
+set completion-group-fg      "#a8b4c4"
+# Search hits and text selection -- `accent3` (fox orange) at low alpha,
+# the one palette token nothing else in a page is likely to collide with
+# once recolor has flattened the document to near-monochrome.
+set highlight-color        "rgba(200,130,60,0.35)"
+set highlight-active-color "rgba(200,130,60,0.65)"
+
+# ============================================================
+# CHROME — there isn't any
+# ============================================================
+# guioptions is a set of letters: c command line, s statusbar,
+# h horizontal scrollbar, v vertical scrollbar. Empty = none of them.
+# This is the distraction-free part that lives in zathura itself (the
+# rest -- bar hidden, notifications quieted, idle lock held off -- is the
+# `liseuse` script's job, since none of it is zathura's to control).
+#
+# Nothing is lost by hiding the input bar: typing `:` or `/` summons it
+# for the duration of the command and it goes away again.
+set guioptions ""
+set window-title-basename true
+set window-title-page true
+set statusbar-basename true
+
+# ============================================================
+# LAYOUT AND MOTION
+# ============================================================
+# adjust-open picks the zoom a freshly opened document lands on.
+# "best-fit" = the whole page visible at once, which pairs with the
+# fullscreen window rule (hypr/windowrules.lua): one page, no scrolling
+# inside it, turn with Space. Switch to "width" if you read dense A4
+# course PDFs more than books -- it zooms to the page's width and makes
+# the text noticeably bigger at the cost of scrolling each page.
+set adjust-open "best-fit"
+set page-h-padding 8
+set page-v-padding 8
+
+# ---- Scrolling, within what zathura actually offers ----------------
+# zathura has no animated, eased or kinetic scrolling. Not "none
+# configurable" -- none at all: grepping the 2026.07.18 source for
+# add_tick_callback|frame_clock|animation|ease|interpolat returns
+# nothing. A keypress runs sc_scroll() (shortcuts.c), which computes one
+# position and hands it to position_set() (zathura.c), whose last act is
+# to "trigger a 'change' event for both adjustments". One assignment, one
+# frame, done. Its five scroll options are all about HOW FAR a step goes,
+# never how it gets there.
+#
+# Which is also the answer to why the touchpad feels smooth and hjkl does
+# not, and it is not that one is animated: this zathura is GTK4, whose
+# GtkScrolledWindow consumes libinput's high-resolution deltas directly,
+# so a finger produces 60-120 events a second of a few pixels each. The
+# smoothness is in the INPUT. The keyboard's equivalent of that finger is
+# key repeat -- a real stream too, at hypr/hyprland.lua's repeat_rate of
+# 45/s after a 200ms delay.
+#
+# So on a 60Hz panel, holding j already updates the position nearly every
+# frame; what the eye catches is not the rate but the DISTANCE per
+# update. A touchpad moves 1-10px per event, and scroll-step is the same
+# number for the keyboard:
+#
+#   step 80 -> 3600 px/s -> a 1200px screen in 0.33s   (this file's first try)
+#   step 40 -> 1800 px/s -> 0.67s                      (zathura's default)
+#   step 15 ->  675 px/s -> 1.8s                       (a settled touchpad scroll)
+#
+# 15 it is. A single tap then moves about one line, which is the right
+# granularity for nudging a paragraph into view anyway, and Space still
+# turns a whole screen.
+#
+# scroll-full-overlap 0.12 is the one that matters for Space. At 0 a
+# page-scroll replaces the entire screen with content you have never
+# seen -- a hard cut, with nothing for the eye to land on. Keeping the
+# last ~12% on screen leaves two or three lines of what you just read at
+# the top, which is what makes the next screen feel continuous with the
+# last one rather than a new slide.
+set scroll-step 15
+set scroll-full-overlap 0.12
+
+# The touchpad is the other half of this, and it needs no option at all:
+# this zathura is GTK4 (`ldd /usr/bin/zathura` -> libgtk-4), whose
+# GtkScrolledWindow consumes libinput's high-resolution scroll deltas
+# directly, so two-finger scrolling is already continuous and pixel-wise.
+# The keyboard is the only thing that moves in steps.
+
+# A page not yet rendered is painted with this placeholder, and its
+# default is WHITE -- which on a dark, recolored document means a
+# full-screen flash every time you scroll faster than mupdf can render.
+# Painting it in the page's own background makes an unrendered page
+# simply blank instead of blinding, which does more for how smooth fast
+# scrolling FEELS than either scroll option above.
+set render-loading true
+set render-loading-bg "#1c1c1e"
+set render-loading-fg "#636366"
+
+# Selecting text should land in the clipboard proper (Ctrl+V), not only
+# in the X11-style primary selection that a middle click pastes.
+set selection-clipboard clipboard
+
+# ============================================================
+# HISTORY — the thing Liseuse reads
+# ============================================================
+# NOT "plain", zathura's own documented default: Fedora builds zathura
+# without that backend, and asking for it is not a warning but a silent
+# downgrade to `null` -- no reading position saved for any document,
+# ever, which quietly guts the whole "en cours" ranking Liseuse is built
+# on. zathura says so on startup and nowhere else:
+#
+#   error: Database backend 'plain' is not supported. Using 'null' database.
+#
+# sqlite is the one this build actually has (`ldd /usr/bin/zathura` ->
+# libsqlite3). It writes ~/.local/share/zathura/bookmarks.sqlite, whose
+# `fileinfo` table holds one row per document: file, page, and a `time`
+# timestamp. `liseuse` reads exactly those three columns.
+set database "sqlite"
+
+# Write that entry on every page turn instead of only at a clean exit.
+# Costs an fsync of a small text file per turn; buys a position that
+# survives a crash, a kill, or a laptop that suspends and never comes
+# back -- and Liseuse's whole "pick up where you left off" ordering is
+# built on that entry existing.
+set continuous-hist-save true
+
+# ============================================================
+# KEYS
+# ============================================================
+# Nothing is remapped, and that is a conclusion, not laziness: it comes
+# from reading zathura's actual default table (config.c, ~150
+# girara_shortcut_add calls) instead of assuming it was sparse. An
+# earlier version of this file added seven "convenience" maps and every
+# one of them either duplicated a default or destroyed one:
+#
+#   map u/d scroll half   ->  d is DOUBLE-PAGE mode, and Ctrl+u/Ctrl+d
+#                             were already the half-screen scroll
+#   map D toggle_page_mode->  D is cycle-first-column
+#   map <C-i>/<C-o> zoom  ->  those two are the JUMPLIST, back and
+#                             forward through jumps; +/- and zi/zo zoom
+#   map r reload          ->  r is ROTATE. R was already reload
+#   map i recolor         ->  Ctrl+r was already recolor
+#   map p print           ->  Ctrl+p was already print
+#   map <Escape> quit     ->  Escape is sc_abort in EVERY mode, so this
+#                             turned "cancel my search" into "close the
+#                             book" -- and it never even loaded, girara
+#                             spells it <Esc>
+#
+# The only binding worth adding is the one zathura cannot have on its
+# own: a way back to the manual. This window has no menu, no statusbar
+# and no chrome (guioptions above), so nothing on screen tells you that
+# m sets a mark or that 42G jumps to page 42. F1 is unbound in every
+# mode; `liseuse keys` prints that manual, and spawns its own viewer
+# and returns immediately so :exec never blocks the reader.
+map <F1> feedkeys ":exec liseuse keys<Return>"

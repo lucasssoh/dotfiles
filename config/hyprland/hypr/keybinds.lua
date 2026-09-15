@@ -156,8 +156,17 @@ bind(mod .. "+ Q", function()
     end
 end)
 
-bind(mod .. "+ F",           hl.dsp.window.fullscreen({ mode = 0 }))
-bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 1 }))
+-- SUPER+F was fullscreen and is now Liseuse (config/liseuse/), the
+-- reading library: one key to get back into the book you were in, or to
+-- pick another. The two fullscreen binds each shift one modifier down to
+-- make room -- nothing is lost, and F stays the "fullscreen" letter for
+-- the two of them.
+--
+-- Absolute path, same reason as Prisme and Roue above (commit bbb8f61):
+-- Hyprland-launched processes don't inherit ~/.local/bin in their PATH.
+bind(mod .. "+ F",           hl.dsp.exec_cmd("$HOME/.local/bin/liseuse"))
+bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 0 }))
+bind(mod .. "+ CTRL+ F",     hl.dsp.window.fullscreen({ mode = 1 }))
 bind(mod .. "+ P",           hl.dsp.window.pseudo())
 -- Flips the active split's axis by hand (raw dwindle layoutmsg "togglesplit"
 -- -- there's no hl.dsp.window.toggle_split(), this is the passthrough for
