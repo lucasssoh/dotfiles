@@ -116,13 +116,22 @@ bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh rou
 -- gesture (see roue-src/src/main.rs, the GestureClick and the
 -- "Mouse / <-> aim, Enter / click confirm" hint it draws).
 --
+-- `--toggle` is what closes it again with the same key. It is a roue flag,
+-- not a shell trick around it: a second `roue actions` while the first is
+-- open is already routed into the running instance over D-Bus (same path
+-- as the `--commit` on the powerprofile bind above), and --toggle makes
+-- that arriving press cancel instead of re-presenting the window. Nothing
+-- to pgrep, nothing to pkill, no race between a test and a launch -- and
+-- the other wheels are untouched, since without the flag a second press
+-- still just raises them.
+--
 -- Side effect worth knowing about, harmless: LEFTMETA going down and back
 -- up makes the Super_L release bind at the bottom of this file fire a
 -- `keybindsRelease` on every press of this key. The 58ms chord is far too
 -- short to have opened the cheatsheet via the long_press bind, and
 -- keybindsRelease is idempotent (disarm the timer, hide), so this costs one
 -- short-lived process and changes nothing on screen.
-bind(mod .. "+ SHIFT+ F23", hl.dsp.exec_cmd("$HOME/.local/bin/roue actions"))
+bind(mod .. "+ SHIFT+ F23", hl.dsp.exec_cmd("$HOME/.local/bin/roue actions --toggle"))
 -- Zen/focus mode: was `pkill -SIGUSR1 waybar` (waybar's built-in
 -- "toggle all bars" signal). quickshell has no such signal, so this
 -- calls its own IPC handler instead (see quickshell/bar/shell.qml's
