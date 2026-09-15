@@ -82,20 +82,16 @@ Item {
     // while the height is still 0, DrawerIsland's own height Binding
     // re-reads `implicitHeight` in the same pass, and the page being
     // left stays on screen for the whole close.
-    // `_instantSwap` keeps THIS page change out of the horizontal slide:
-    // the drawer is opening at the same moment, and playing a sideways
-    // push underneath a reveal would run the two animations that were
-    // deliberately separated (drawer for open/close, slide for
-    // navigation) on top of each other. The swap happens while the
-    // island is still collapsing/expanding, so nothing is visible
-    // anyway.
-    property bool _instantSwap: false
+    // The `_instantSwap` flag that used to guard this is gone with the
+    // slide it guarded: it existed only to keep this reset from playing a
+    // sideways push underneath the drawer's own reveal, and there is no
+    // sideways push left to suppress.
     onDrawerOpenChanged: {
         if (root.drawerOpen) {
-            root._instantSwap = true;
             root.currentPage = "home";
             root.detailId = "";
-            root._instantSwap = false;
+            // Only needed when nothing is rebuilt -- see BaliseReveal.replay.
+            BaliseReveal.replay();
         }
     }
 
@@ -383,8 +379,17 @@ Item {
     // ring uses, not a new recipe.
     readonly property color accent: Ink.accent
 
+    // ---- entrance cascade -------------------------------------------
+    // Lives in RevealPop.qml + services/BaliseReveal.qml now: the section
+    // list, the detail page and the three row delegates all animate the
+    // same way, and six files cannot share an inline component.
+    // BaliseReveal's header has the reasoning; the `revealIndex` on each
+    // call site below is just this page's running order.
+
     component Tile: Rectangle {
         id: tile
+        property int revealIndex: 0
+        RevealPop { item: tile; index: tile.revealIndex }
         required property string title
         property string status: ""
         property string glyph: ""
@@ -516,6 +521,9 @@ Item {
     // own "CONNECTIVITÉ"/"OPTIONS" rhythm, same typography
     // BaliseSectionList.qml's own section headers already use.
     component GroupLabel: Text {
+        id: glabel
+        property int revealIndex: 0
+        RevealPop { item: glabel; index: glabel.revealIndex; fromScale: 1.0 }
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         color: Qt.rgba(1, 1, 1, 0.4)
@@ -532,6 +540,8 @@ Item {
     // drawers' switches are literally the same control).
     component ToggleRow: Rectangle {
         id: trow
+        property int revealIndex: 0
+        RevealPop { item: trow; index: trow.revealIndex }
         required property string title
         property string subtitle: ""
         property bool checked: false
@@ -622,6 +632,8 @@ Item {
     // -- no switch, the whole row is the button.
     component ActionRow: Rectangle {
         id: arow
+        property int revealIndex: 0
+        RevealPop { item: arow; index: arow.revealIndex }
         required property string title
         signal activated()
 
@@ -730,9 +742,14 @@ Item {
             // ---- hero: whatever is actually carrying traffic right now
             // (the mockup's own "RÉSEAU ACTUEL" card). Ethernet wins over
             // WiFi, see heroName's own comment.
-            GroupLabel { text: "CURRENT NETWORK" }
+            GroupLabel { text: "CURRENT NETWORK"; revealIndex: 0 }
 
             Rectangle {
+                // The one animated block that is not one of the reusable
+                // components above, so it carries the cascade inline.
+                id: heroCard
+                RevealPop { item: heroCard; index: 1 }
+
                 width: parent.width
                 height: 66
                 radius: 14
@@ -808,7 +825,7 @@ Item {
 
             Item { width: 1; height: 4 }
 
-            GroupLabel { text: "CONNECTIVITY" }
+            GroupLabel { text: "CONNECTIVITY"; revealIndex: 2 }
 
             Row {
                 width: parent.width
@@ -817,6 +834,7 @@ Item {
                     width: (parent.width - 16) / 2
                     height: 92
                     title: "WiFi"
+                    revealIndex: 3
                     status: root.wifiTileStatus
                     glyph: BaliseState.wifiEnabled ? "\uE1AE" : "\uE1AF"   // lu-wifi / lu-wifi-off
                     active: BaliseState.wifiEnabled
@@ -827,6 +845,7 @@ Item {
                     width: (parent.width - 16) / 2
                     height: 92
                     title: "Bluetooth"
+                    revealIndex: 4
                     status: root.bluetoothTileStatus
                     glyph: BaliseState.bluetoothEnabled ? "\uE05C" : "\uE1B9"   // lu-bluetooth / lu-bluetooth-slash
                     active: BaliseState.bluetoothEnabled
@@ -848,6 +867,7 @@ Item {
                         : parent.width
                     height: 92
                     title: "Ethernet"
+                    revealIndex: 5
                     status: root.ethernetTileStatus
                     glyph: root.activeWiredProfile ? "\uE125" : "\uE45D"   // lu-network / lu-unplug
                     active: root.activeWiredProfile !== null
@@ -876,6 +896,7 @@ Item {
                     width: (parent.width - 16) / 2
                     height: 92
                     title: "Charge limit"
+                    revealIndex: 6
                     status: root.conservationOn ? "60%" : "Off"
                     glyph: "\uE057"   // lu-battery-medium
                     active: root.conservationOn
@@ -884,7 +905,7 @@ Item {
             }
             Item { width: 1; height: 4 }
 
-            GroupLabel { text: "SYSTEM" }
+            GroupLabel { text: "SYSTEM"; revealIndex: 7 }
 
             // Night mode and HDR sit SIDE BY SIDE -- asked for ("à coté
             // de night mode, ajoute les bouton hdr"). HDR replaces the
@@ -911,6 +932,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
+                    revealIndex: 8
                     checked: BaliseState.nightModeEnabled
                     onToggled: BaliseState.toggleNightMode()
                 }
@@ -918,6 +940,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "HDR"
+                    revealIndex: 9
                     checked: root.hdrActive
                     onToggled: HdrState.toggle()
                 }
@@ -934,6 +957,7 @@ Item {
             ToggleRow {
                 width: parent.width
                 title: "Dark mode"
+                revealIndex: 10
                 subtitle: "turn dark mode on"
                 checked: AppearanceState.dark
                 onToggled: (value) => AppearanceState.setDark(value)
@@ -942,6 +966,7 @@ Item {
                 ActionRow {
                     width: parent.width
                     title: "Screenshot"
+                    revealIndex: 11
                     onActivated: BaliseState.triggerScreenshot()
                 }
             }
@@ -1078,23 +1103,24 @@ Item {
         anchors.bottomMargin: 20
         clip: true
 
+        // No `Behavior on x` on either Loader any more -- the sideways
+        // push is gone (asked for: "c'est le slide justement que je veux
+        // remplacer par ça"). Both layers now sit at x 0 always and the
+        // swap is instant; what the eye follows is the incoming page's
+        // own cascade, which starts on the same frame. The two Loaders
+        // are still two, though: the outgoing page has to stay alive and
+        // untouched for the frame the swap happens on, and rebuilding it
+        // into the same Loader would throw away its scroll position on
+        // the way out.
         Loader {
             id: loaderA
             width: pageArea.width
             height: pageArea.height
-            Behavior on x {
-                id: behaviorA
-                NumberAnimation { duration: 280; easing.type: Easing.InOutCubic }
-            }
         }
         Loader {
             id: loaderB
             width: pageArea.width
             height: pageArea.height
-            Behavior on x {
-                id: behaviorB
-                NumberAnimation { duration: 280; easing.type: Easing.InOutCubic }
-            }
         }
     }
 
@@ -1111,38 +1137,23 @@ Item {
         default: return homePage;
         }
     }
-    // How deep a page sits: the grid, a section list, then one endpoint's
-    // detail. The direction of the slide falls straight out of comparing
-    // two of these, so "back" never needs its own bookkeeping.
-    function pageDepth(page) {
-        if (page === "home") return 0;
-        if (page === "wifi" || page === "bluetooth" || page === "ethernet") return 1;
-        return 2;
-    }
+    onCurrentPageChanged: root._swapTo(root.currentPage)
 
-    onCurrentPageChanged: root._slideTo(root.currentPage)
-
-    function _slideTo(page) {
+    // Was _slideTo, and the direction bookkeeping went with it: nothing
+    // moves sideways any more, so "forward" and "back" look identical and
+    // pageDepth no longer has a caller. What replaces it is the incoming
+    // page building itself element by element -- every one of them is
+    // constructed fresh here, so RevealPop's own Component.onCompleted
+    // starts the cascade with no signal needed from this function.
+    function _swapTo(page) {
         if (page === root._shownPage) return;
 
         const incoming = root._frontIsA ? loaderB : loaderA;
         const outgoing = root._frontIsA ? loaderA : loaderB;
-        const incomingBehavior = root._frontIsA ? behaviorB : behaviorA;
-        const outgoingBehavior = root._frontIsA ? behaviorA : behaviorB;
-        const forward = root.pageDepth(page) > root.pageDepth(root._shownPage);
-        // Closed, or mid-open-reset: no one is watching a slide behind a
-        // collapsed drawer, and the open-time reset to "home"
-        // deliberately opts out of one entirely (see `_instantSwap`).
-        const animate = root.drawerOpen && !root._instantSwap;
 
-        incomingBehavior.enabled = false;
         incoming.sourceComponent = root.componentFor(page);
-        incoming.x = animate ? (forward ? pageArea.width : -pageArea.width) : 0;
-        incomingBehavior.enabled = animate;
-
-        outgoingBehavior.enabled = animate;
         incoming.x = 0;
-        outgoing.x = animate ? (forward ? -pageArea.width : pageArea.width) : 0;
+        outgoing.x = 0;
 
         root._frontIsA = !root._frontIsA;
         root._shownPage = page;
@@ -1154,7 +1165,12 @@ Item {
     // its scan timer, for a section list) alive for nothing.
     Timer {
         id: cleanupTimer
-        interval: 300
+        // Was 300, to outlast the 280ms slide. Nothing is sliding now, so
+        // this only has to outlast the frame the swap lands on -- kept at
+        // a comfortable 50 rather than 0 so the outgoing page is never
+        // torn down inside the same event loop pass that built its
+        // replacement.
+        interval: 50
         onTriggered: {
             const back = root._frontIsA ? loaderB : loaderA;
             back.sourceComponent = null;

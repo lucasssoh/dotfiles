@@ -60,6 +60,7 @@ Item {
     // edge.
     Item {
         id: header
+        RevealPop { item: header; index: 0 }
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
@@ -149,6 +150,7 @@ Item {
 
     Rectangle {
         id: masterCard
+        RevealPop { item: masterCard; index: 1 }
         visible: root.showMaster
         anchors.left: parent.left
         anchors.right: parent.right
@@ -258,6 +260,12 @@ Item {
         section.criteria: ViewSection.FullString
         section.delegate: Item {
             id: sectionHeader
+            // Fades without zooming (fromScale 1.0), same as the home
+            // page's small-caps labels: NativeRendering glyphs crawl
+            // while scaled. Pinned to the first row's slot rather than
+            // tracking its own position -- a group header sits directly
+            // above its group, so the difference is invisible.
+            RevealPop { item: sectionHeader; index: 2; fromScale: 1.0 }
             required property string section
             width: listView.width
             // Taller above every header except the very first one (no

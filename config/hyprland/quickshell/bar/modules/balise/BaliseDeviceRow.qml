@@ -5,11 +5,21 @@ import ".."   // GlassCard/GlassChip live one level up
 // One row of the Bluetooth section list. `modelData` is exactly one
 // balise-src `BluetoothDevice` (dbus/bluez.rs) as JSON. Same one-action
 // anatomy as BaliseNetworkRow.qml (badge / name / status / chevron):
-// the row opens this device's detail page, and connect/disconnect/
-// forget live there. No pairing anywhere yet -- that needs the BlueZ
-// agent bridged to QML, a separate pass.
+// the row opens this device's detail page, and pair/connect/disconnect/
+// forget live there. Pairing only covers the "Just Works" case (every
+// set of headphones, nearly every speaker); a device that wants a passkey
+// typed or a yes/no confirmed still routes its prompt to the GTK
+// overlay -- see ClientCommand::BtPair in balise-src/src/ipc.rs.
 Rectangle {
     id: row
+
+    // Entrance cascade -- see RevealPop.qml. `index` is the ListView's,
+    // injected because it is declared required; +2 because the section
+    // list's own header and master card take the first two slots ahead of
+    // any row (BaliseSectionList.qml). RevealPop caps the accumulated
+    // delay, so a thirty-network list does not turn into a queue.
+    required property int index
+    RevealPop { item: row; index: row.index + 2 }
     required property var modelData
     signal rowActivated()
 

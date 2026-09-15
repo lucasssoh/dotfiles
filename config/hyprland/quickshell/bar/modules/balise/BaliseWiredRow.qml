@@ -8,6 +8,14 @@ import ".."   // GlassCard/GlassChip live one level up
 // detail page, connect/disconnect lives there.
 Rectangle {
     id: row
+
+    // Entrance cascade -- see RevealPop.qml. `index` is the ListView's,
+    // injected because it is declared required; +2 because the section
+    // list's own header and master card take the first two slots ahead of
+    // any row (BaliseSectionList.qml). RevealPop caps the accumulated
+    // delay, so a thirty-network list does not turn into a queue.
+    required property int index
+    RevealPop { item: row; index: row.index + 2 }
     required property var modelData
     signal rowActivated()
 

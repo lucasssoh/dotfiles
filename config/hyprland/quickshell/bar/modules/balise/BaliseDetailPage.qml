@@ -311,8 +311,14 @@ Item {
             }
             if (root.details && root.details.settings_path !== "") list.push({ label: "Forget this network", style: "destructive", token: "wifi-forget" });
         } else if (root.kind === "bluetooth" && root.device) {
+            // Pair is the branch that was missing, and its absence left
+            // this list EMPTY for any device not already paired: both
+            // entries below are gated on is_paired, so a newly discovered
+            // pair of headphones opened a detail page with no button on
+            // it at all and no way to adopt it from the panel.
             if (root.device.is_connected) list.push({ label: "Disconnect", style: "normal", token: "bt-disconnect" });
             else if (root.device.is_paired) list.push({ label: "Connect", style: "primary", token: "bt-connect" });
+            else list.push({ label: "Pair", style: "primary", token: "bt-pair" });
             if (root.device.is_paired) list.push({ label: "Forget this device", style: "destructive", token: "bt-forget" });
         } else if (root.kind === "ethernet" && root.profile) {
             if (root.profile.is_active) list.push({ label: "Disconnect", style: "normal", token: "eth-disconnect" });
@@ -331,6 +337,7 @@ Item {
         case "wifi-forget": BaliseState.forgetWifi(root.details.settings_path); root.backRequested(); break;
         case "bt-disconnect": BaliseState.disconnectBluetooth(root.device.path); break;
         case "bt-connect": BaliseState.connectBluetooth(root.device.path); break;
+        case "bt-pair": BaliseState.pairBluetooth(root.device.path); break;
         case "bt-forget": BaliseState.forgetBluetooth(root.device.path); root.backRequested(); break;
         case "eth-disconnect": BaliseState.disconnectEthernet(root.profile.device_path); break;
         case "eth-connect": BaliseState.connectEthernet(root.profile.connection_path, root.profile.device_path); break;
@@ -345,6 +352,7 @@ Item {
     // levels 2/3 were doubling it to 40 while level 1 stayed at 20).
     Item {
         id: headerRow
+        RevealPop { item: headerRow; index: 0 }
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
@@ -504,6 +512,8 @@ Item {
             }
 
             Rectangle {
+                id: formCard
+                RevealPop { item: formCard; index: 1 }
                 width: parent.width
                 height: formColumn.implicitHeight + 28
                 radius: 12
@@ -710,6 +720,8 @@ Item {
             }
 
             Rectangle {
+                id: metaCard
+                RevealPop { item: metaCard; index: 2 }
                 width: parent.width
                 height: metaColumn.implicitHeight + 16
                 radius: 12
@@ -779,6 +791,8 @@ Item {
             }
 
             Rectangle {
+                id: optionsCard
+                RevealPop { item: optionsCard; index: 3 }
                 width: parent.width
                 height: 54
                 radius: 12
@@ -878,6 +892,11 @@ Item {
                 delegate: Rectangle {
                     id: actionBtn
                     required property var modelData
+                    // Last in the cascade, after the header and the three
+                    // cards above -- the buttons are what you came here
+                    // to press, so they land once the page is settled.
+                    required property int index
+                    RevealPop { item: actionBtn; index: actionBtn.index + 4 }
                     width: layout.width
                     height: 44
                     radius: 22

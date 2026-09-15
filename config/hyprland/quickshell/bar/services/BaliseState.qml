@@ -147,6 +147,12 @@ Singleton {
     }
     function disconnectWifi(ssid) { root._send({ cmd: "wifi_disconnect", ssid: ssid }); }
     function scanBluetooth() { root._send({ cmd: "bt_scan" }); }
+    // Pair + trust + connect, in one call -- the daemon does all three
+    // (see run_bt_action in balise-src/src/app/mod.rs). Separate from
+    // connectBluetooth because BlueZ itself separates them: Connect on a
+    // device that was never paired fails, which is why the detail page
+    // offers one or the other and never both.
+    function pairBluetooth(path) { root._send({ cmd: "bt_pair", path: path }); }
     function connectBluetooth(path) { root._send({ cmd: "bt_connect", path: path }); }
     function disconnectBluetooth(path) { root._send({ cmd: "bt_disconnect", path: path }); }
     function connectEthernet(connectionPath, devicePath) {

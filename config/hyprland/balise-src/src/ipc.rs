@@ -98,6 +98,24 @@ pub enum ClientCommand {
         ssid: String,
     },
     BtScan,
+    /// Pairing, from the QML frontend. Was deliberately left out of the
+    /// first pass on the grounds that it needs the BlueZ agent bridged to
+    /// QML -- true only for devices that actually ASK something. The
+    /// daemon registers its agent at startup (see app/mod.rs), so a
+    /// "Just Works" pairing, which is what every set of headphones and
+    /// nearly every speaker does, completes with no prompt at all and
+    /// needed nothing bridged. Leaving it out meant an unpaired device's
+    /// detail page offered no action whatsoever: Connect and Forget are
+    /// both gated on `is_paired`, so the page rendered an empty button
+    /// list and there was no way to adopt a new device from the panel.
+    ///
+    /// A device that DOES ask (a keyboard wanting a passkey typed, a
+    /// phone wanting a yes/no confirmed) still routes its prompt to the
+    /// GTK overlay, which is only on screen if the GTK window is open --
+    /// that half remains the separate pass it always was.
+    BtPair {
+        path: String,
+    },
     BtConnect {
         path: String,
     },

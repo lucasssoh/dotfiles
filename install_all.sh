@@ -71,6 +71,13 @@ section "Modules"
 # and ~/.config/ccslide/ccslide.zsh, and those two paths only exist once
 # their own module has run.
 #
+# brave sits next to firefox: it was referenced all over this repo --
+# .bash_aliases' refresh-brave, the HDR tonemap window rule, veille.json's
+# browser list, ActiveWindow.qml's title map -- while having no module at
+# all, so a fresh machine got every piece of Brave integration except
+# Brave. It also needs a third-party rpm repo, which is exactly the kind
+# of step that is never remembered by hand.
+#
 # fuzzel/fastfetch/firefox/mpv were missing from this list for a long time:
 # their modules existed and worked, nothing ever called them, and the gap
 # was invisible on a machine where they'd been installed by hand once. On a
@@ -85,7 +92,7 @@ section "Modules"
 # liseuse after fuzzel: the picker IS fuzzel (SUPER+F, see
 # config/liseuse/liseuse), so installing it first would leave a reading
 # library with no way to open it on a fresh machine.
-MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox mpv liseuse)
+MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox brave mpv liseuse)
 HYPR_MODULE="hyprland"
 KDE_MODULE="kde"
 #

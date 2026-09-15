@@ -719,6 +719,9 @@ impl BaliseApp {
                                     }
                                 });
                             }
+                            ClientCommand::BtPair { path } => {
+                                run_bt_action(bt.clone(), rt.clone(), tx.clone(), path, DeviceAction::Pair);
+                            }
                             ClientCommand::BtConnect { path } => {
                                 run_bt_action(bt.clone(), rt.clone(), tx.clone(), path, DeviceAction::Connect);
                             }
@@ -1076,11 +1079,10 @@ fn run_screenshot(win: Rc<BaliseWindow>) {
     });
 }
 
-/// Connect/Disconnect for one Bluetooth device -- shared shape with
-/// `set_on_action`'s own dispatch in setup_ui_callbacks below, trimmed to
-/// just these two actions (`ClientCommand::BtConnect`/`BtDisconnect`
-/// deliberately never pass `DeviceAction::Pair`/`Forget` here -- pairing
-/// is a separate later slice, see the project plan).
+/// Connect/Disconnect/Pair for one Bluetooth device -- shared shape with
+/// `set_on_action`'s own dispatch in setup_ui_callbacks below. `Forget`
+/// is still the one action that never comes through here (it is a call on
+/// the ADAPTER, not the device, and the QML side routes it separately).
 fn run_bt_action(
     bt: Arc<Mutex<Option<BluetoothManager>>>,
     rt: Arc<tokio::runtime::Runtime>,
@@ -1095,7 +1097,30 @@ fn run_bt_action(
             let res = match action {
                 DeviceAction::Connect => rt.block_on(async { bt_inst.connect_device(&path).await }),
                 DeviceAction::Disconnect => rt.block_on(async { bt_inst.disconnect_device(&path).await }),
-                DeviceAction::Pair | DeviceAction::Forget => return,
+                // Pair, then trust, then connect -- one button, because
+                // pairing alone leaves you with a device that is adopted
+                // and silent, and the two follow-ups are exactly what has
+                // to be typed by hand otherwise (`bluetoothctl pair` then
+                // `trust` then `connect`). Trust is what makes it come
+                // back on its own next time; without it the headphones
+                // reconnect only when something asks them to.
+                //
+                // Both follow-ups are best-effort and their errors are
+                // dropped on purpose: BlueZ frequently auto-connects an
+                // audio device the moment pairing completes, so Connect
+                // here often arrives second and fails with AlreadyExists
+                // -- reporting that as a failure would label a pairing
+                // that fully worked as broken. Only the Pair result is
+                // propagated.
+                DeviceAction::Pair => {
+                    let res = rt.block_on(async { bt_inst.pair_device(&path).await });
+                    if res.is_ok() {
+                        let _ = rt.block_on(async { bt_inst.set_trusted(&path, true).await });
+                        let _ = rt.block_on(async { bt_inst.connect_device(&path).await });
+                    }
+                    res
+                }
+                DeviceAction::Forget => return,
             };
             match res {
                 Ok(()) => {
