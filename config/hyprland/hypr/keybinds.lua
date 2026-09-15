@@ -95,6 +95,34 @@ bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofi
 -- scripts/display-layout.sh). Replaces the old rofi menu
 -- (`display-layout.sh menu`, still available if needed).
 bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
+
+-- Actions wheel -- the Copilot key. This machine's firmware sends it as a
+-- fixed chord, not as a key of its own (libinput debug-events, Lenovo 83V6):
+--
+--   +0.000s  KEY_LEFTMETA (125) pressed
+--   +0.001s  KEY_LEFTSHIFT (42) pressed
+--   +0.001s  KEY_F23 (193) pressed
+--   +0.058s  KEY_F23 (193) released
+--
+-- so the binding target is SUPER+SHIFT+F23, and nothing else in this file
+-- touches F13-F24, so it collides with nothing.
+--
+-- No `release` half here, unlike EVERY other roue bind above, and that is
+-- forced by the capture rather than a preference: F23 comes back UP after
+-- ~58ms no matter how long the key is physically held down, so there is no
+-- hold to aim during and no meaningful release edge to confirm on. The
+-- wheel therefore opens and STAYS open; confirming is click / Enter /
+-- arrows, which roue already supports on equal footing with the release
+-- gesture (see roue-src/src/main.rs, the GestureClick and the
+-- "Mouse / <-> aim, Enter / click confirm" hint it draws).
+--
+-- Side effect worth knowing about, harmless: LEFTMETA going down and back
+-- up makes the Super_L release bind at the bottom of this file fire a
+-- `keybindsRelease` on every press of this key. The 58ms chord is far too
+-- short to have opened the cheatsheet via the long_press bind, and
+-- keybindsRelease is idempotent (disarm the timer, hide), so this costs one
+-- short-lived process and changes nothing on screen.
+bind(mod .. "+ SHIFT+ F23", hl.dsp.exec_cmd("$HOME/.local/bin/roue actions"))
 -- Zen/focus mode: was `pkill -SIGUSR1 waybar` (waybar's built-in
 -- "toggle all bars" signal). quickshell has no such signal, so this
 -- calls its own IPC handler instead (see quickshell/bar/shell.qml's
