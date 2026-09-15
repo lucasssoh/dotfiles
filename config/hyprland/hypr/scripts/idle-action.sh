@@ -69,6 +69,12 @@ case "$ladder" in
     *) echo "--on takes 'ac' or 'battery', got '$ladder'" >&2; exit 2 ;;
 esac
 
+# How far `dim` pulls the backlight down, as a percentage OF THE CURRENT
+# level -- 40 means "keep 40% of whatever is on screen now". Deliberately
+# not a percentage of the panel's maximum: see the dim action below for
+# what that cost. Raise it for a gentler dim, lower it for a starker one.
+DIM_PERCENT=40
+
 verdict() {
     [ "$dry_run" = 1 ] && echo "$action: $1"
     return 0
@@ -167,7 +173,44 @@ case "$action" in
     dim)
         # -s saves the current level so `brightnessctl -r` can restore
         # whatever the user had set, rather than a hardcoded value.
-        brightnessctl -s set 20% >/dev/null 2>&1
+        #
+        # RELATIVE to the current level, not an absolute one. This used to
+        # be `set 20%`, which brightnessctl reads as 20% OF MAX -- a fixed
+        # 80/400 on this panel whatever the screen was actually showing.
+        # That is not a dim, it is "jump to one specific brightness", and
+        # at any working level below 20% it is an UNDIM: measured on this
+        # machine at its normal 20/400 (5%), `idle-action.sh dim` took the
+        # panel to 80 -- four times BRIGHTER -- as the screen's way of
+        # announcing you had stopped typing.
+        #
+        # `set N%-` is not the fix either: brightnessctl subtracts N% of
+        # MAX there too, so from 100/400 a `40%-` lands on 0, i.e. a black
+        # panel. Both of its percent forms are max-relative; only
+        # arithmetic on `get` is current-relative, hence the shell maths.
+        #
+        # Two clamps, and both earn their place:
+        #   floor  -- 1% of max, so a dim from an already-low level stays
+        #             visible instead of reaching 0 and reading as a
+        #             failed screen.
+        #   ceiling -- never above the current level, because at 1-2%
+        #             brightness the floor itself would otherwise be a
+        #             brightening. Below the floor there is simply nothing
+        #             left to dim, and the rung becomes a no-op.
+        dim_cur="$(brightnessctl get 2>/dev/null)"
+        dim_max="$(brightnessctl max 2>/dev/null)"
+        if [ -n "$dim_cur" ] && [ -n "$dim_max" ] && [ "$dim_max" -gt 0 ] 2>/dev/null; then
+            dim_target=$(( dim_cur * DIM_PERCENT / 100 ))
+            dim_floor=$(( dim_max / 100 ))
+            [ "$dim_floor" -lt 1 ] && dim_floor=1
+            [ "$dim_target" -lt "$dim_floor" ] && dim_target="$dim_floor"
+            [ "$dim_target" -gt "$dim_cur" ] && dim_target="$dim_cur"
+            brightnessctl -s set "$dim_target" >/dev/null 2>&1
+        else
+            # brightnessctl could not report a level (no backlight device).
+            # Saving and restoring still works, so keep the old absolute
+            # behaviour rather than skipping the rung entirely.
+            brightnessctl -s set 20% >/dev/null 2>&1
+        fi
         ;;
     undim)
         brightnessctl -r >/dev/null 2>&1
