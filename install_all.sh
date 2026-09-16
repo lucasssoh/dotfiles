@@ -66,68 +66,33 @@ sudo -v || true  # prime the sudo cache once up front; modules run long enough f
 # -----------------------------
 # Run each module
 # -----------------------------
+# The module list and its ordering constraints now live in
+# scripts/lib/modules.sh, together with the reasoning that used to sit in a
+# comment block here. The array itself was never the problem; what was
+# missing was anything checking it against the filesystem. registry_validate
+# supplies that, and it is why the hyprland/kde "special cases" below are
+# gone: they were never special, only last, which MODULE_ORDER now says
+# directly.
+source "$DOTFILES_DIR/scripts/lib/modules.sh"
 section "Modules"
-# ccnote/ccslide right after bash: .zshrc sources ~/.config/ccnote/ccnote.zsh
-# and ~/.config/ccslide/ccslide.zsh, and those two paths only exist once
-# their own module has run.
-#
-# brave sits next to firefox: it was referenced all over this repo --
-# .bash_aliases' refresh-brave, the HDR tonemap window rule, veille.json's
-# browser list, ActiveWindow.qml's title map -- while having no module at
-# all, so a fresh machine got every piece of Brave integration except
-# Brave. It also needs a third-party rpm repo, which is exactly the kind
-# of step that is never remembered by hand.
-#
-# fuzzel/fastfetch/firefox/mpv were missing from this list for a long time:
-# their modules existed and worked, nothing ever called them, and the gap
-# was invisible on a machine where they'd been installed by hand once. On a
-# genuinely fresh install it meant no app launcher at all (fuzzel IS
-# Super+Space, see hypr/keybinds.lua) and an empty workspace dashboard
-# (fastfetch, see scripts/dashboard-fastfetch.sh).
-#
-# login-manager is deliberately NOT here: it rewrites system login (greetd)
-# and prompts interactively, which would block this otherwise unattended
-# run. It's a phase of its own -- `./install login-manager`.
-#
-# liseuse after fuzzel: the picker IS fuzzel (SUPER+F, see
-# config/liseuse/liseuse), so installing it first would leave a reading
-# library with no way to open it on a fresh machine.
-MODULES=(fonts bash ccnote ccslide tmux wezterm nvim wireplumber mangohud nemo fuzzel fastfetch firefox brave mpv liseuse)
-HYPR_MODULE="hyprland"
-KDE_MODULE="kde"
-#
-for module in "${MODULES[@]}"; do
-    MODULE_PATH="$DOTFILES_DIR/config/$module"
-    if [ -d "$MODULE_PATH" ]; then
-        chmod +x "$MODULE_PATH/install.sh"
-        run_step "$module" "$MODULE_PATH/install.sh" || true
+
+if ! registry_validate; then
+    err "Module registry is inconsistent (see above) — refusing to run a partial install."
+fi
+
+for module in "${MODULE_ORDER[@]}"; do
+    # Guard the FILE, not its parent directory. The old `[ -d ]` check was
+    # followed by an unguarded `chmod +x "$MODULE_PATH/install.sh"`, so a
+    # module directory that existed without its script killed the whole user
+    # phase under `set -e` -- skipping status_summary and the exit-code
+    # plumbing at the end of this file entirely.
+    if MODULE_SCRIPT="$(module_script "$module")"; then
+        chmod +x "$MODULE_SCRIPT" 2>/dev/null || true
+        run_step "$module" "$MODULE_SCRIPT" || true
     else
-        skip_step "$module" "directory not found"
+        skip_step "$module" "config/$module/install.sh not found"
     fi
 done
-
-# -----------------------------
-# Install Hyprland last
-# -----------------------------
-HYPR_PATH="$DOTFILES_DIR/config/$HYPR_MODULE"
-if [ -d "$HYPR_PATH" ]; then
-    chmod +x "$HYPR_PATH/install.sh"
-    run_step "$HYPR_MODULE" "$HYPR_PATH/install.sh" || true
-else
-    skip_step "$HYPR_MODULE" "directory not found"
-fi
-
-# -----------------------------
-# Install KDE Plasma
-# -----------------------------
-KDE_PATH="$DOTFILES_DIR/config/$KDE_MODULE"
-if [ -d "$KDE_PATH" ]; then
-    chmod +x "$KDE_PATH/install.sh"
-    # The call to kde/install.sh will handle --allowerasing
-    run_step "$KDE_MODULE" "$KDE_PATH/install.sh" || true
-else
-    skip_step "$KDE_MODULE" "directory not found"
-fi
 
 # -----------------------------
 # Done
