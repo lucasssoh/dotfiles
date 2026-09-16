@@ -22,9 +22,9 @@
 # version in memory; the new one takes effect the next time it starts. What is
 # still running old code is reported, never acted on.
 #
-# Status: step 1 of the plan -- `build` and `clean` only. The remaining verbs
-# are listed in --help as "not yet implemented" rather than hidden, so the
-# shape of the tool is visible from day one.
+# Status: steps 1-5 of the plan. `install` and `verify` are still to come and
+# are listed in --help as such rather than hidden, so the shape of the tool
+# stays visible.
 set -Eeuo pipefail
 
 BOLD="\e[1m"; GREEN="\e[32m"; YELLOW="\e[33m"; RED="\e[31m"; BLUE="\e[34m"; DIM="\e[2m"; RESET="\e[0m"
@@ -41,6 +41,8 @@ export DOTFILES_ROOT
 . "$DOTFILES_ROOT/scripts/lib/rust.sh"
 # shellcheck source=../scripts/lib/modules.sh
 . "$DOTFILES_ROOT/scripts/lib/modules.sh"
+# shellcheck source=../scripts/lib/restart.sh
+. "$DOTFILES_ROOT/scripts/lib/restart.sh"
 
 DRY_RUN=0
 QUIET=0
@@ -59,8 +61,10 @@ Usage: cc-pkg-mng <command> [options]
 Commands:
   status               What has changed since each module was last applied.
                        Read-only, never fetches unless asked, always exit 0.
-  update [-n]          Apply what changed. -n prints the plan and changes
-                       nothing (the only mode implemented so far).
+  update [-n]          Apply what changed, in registry order. -n prints the
+                       plan and changes nothing. Never restarts anything;
+                       reports what is left running an older version.
+  needs-restart        Re-print that report on its own.
   build [crate...]     Build the repo's Rust binaries, skipping any whose
                        sources have not changed since the last build.
                        With no argument, all of them.
@@ -69,7 +73,7 @@ Commands:
   help                 This text.
 
 Not yet implemented:
-  install, verify, needs-restart, log
+  install, verify, log
 
 Options:
   --force              build/update: act even when nothing changed.
@@ -92,6 +96,9 @@ Examples:
   cc-pkg-mng build roue        # just one crate
   cc-pkg-mng build --force     # ignore the staleness check
   cc-pkg-mng clean --cargo     # reclaim the old duplicated build trees
+  cc-pkg-mng update -n         # what would be applied, without doing it
+  cc-pkg-mng update            # apply it (user scope, no password)
+  cc-pkg-mng update --system   # include the root-owned parts
 EOF
 }
 
@@ -430,7 +437,71 @@ cmd_update() {
         return 0
     fi
 
-    err "l'application réelle arrive à l'étape 5 — pour l'instant : cc-pkg-mng update -n"
+    # ---- apply ------------------------------------------------------------
+    # status.sh is sourced only here, not at the top of the file: it defines
+    # info/ok/warn of its own under redirect_output_to_log, and `status`/`build`
+    # have no use for a log file. Sourcing it lazily keeps those two silent and
+    # side-effect free.
+    # shellcheck source=../scripts/lib/status.sh
+    . "$DOTFILES_ROOT/scripts/lib/status.sh"
+    status_init
+
+    # Scope is handed to the modules through the environment. 0 means every
+    # root-owned step is deferred and named instead of prompting.
+    export CCPKG_ALLOW_ROOT="$system"
+    [ "$system" = 1 ] && sudo -v || true
+
+    # Fresh deferral ledger per run, so the closing report describes THIS run
+    # and not every deferral since the machine was built.
+    : > "$STATE_DIR/deferred.ledger" 2>/dev/null || true
+
+    local name script rc secs start
+    for d in "${due[@]}"; do
+        name="${d%%:*}"
+        if ! script="$(module_script "$name")"; then
+            skip_step "$name" "config/$name/install.sh not found"
+            continue
+        fi
+        chmod +x "$script" 2>/dev/null || true
+
+        export CCPKG_MODULE="$name"
+        start="$(date +%s)"
+        if run_step "$name" "$script"; then rc=0; else rc=$?; fi
+        secs=$(( $(date +%s) - start ))
+
+        # Written immediately, not batched at the end: a run interrupted with
+        # Ctrl-C then keeps every module it actually finished. The fingerprint
+        # stored is the one captured BEFORE the module ran.
+        local i fp=""
+        for i in "${!WALK_NAMES[@]}"; do
+            [ "${WALK_NAMES[$i]}" = "$name" ] && fp="${WALK_FP[$i]}"
+        done
+        state_set "mod.$name.fp" "$fp"
+        state_set "mod.$name.rc" "$rc"
+        state_set "mod.$name.secs" "$secs"
+        state_set "mod.$name.applied" "$(date -Iseconds)"
+        state_save
+    done
+
+    state_set run.last "$(date -Iseconds)"
+    state_set run.cmd "update$( [ "$system" = 1 ] && echo ' --system' )"
+    state_save
+
+    local summary_rc=0
+    status_summary || summary_rc=$?
+
+    # Deferrals are reported separately and do NOT fail the run: the files,
+    # links and binaries are all in place; only the root-owned parts are
+    # outstanding.
+    if [ -s "$STATE_DIR/deferred.ledger" ]; then
+        echo
+        echo -e "${YELLOW}Reporte (necessite --system) :${RESET}"
+        sort -u "$STATE_DIR/deferred.ledger" | sed 's/^/  /'
+        echo -e "${DIM}  → cc-pkg-mng update --system${RESET}"
+    fi
+
+    needs_restart_report || true
+    return "$summary_rc"
 }
 
 # ------------------------------------------------------------- dispatch ----
@@ -456,7 +527,8 @@ main() {
         status) cmd_status ${args[@]+"${args[@]}"} ;;
         update) cmd_update ${args[@]+"${args[@]}"} ;;
         help|"") usage ;;
-        install|verify|needs-restart|log)
+        needs-restart) needs_restart_report || true ;;
+        install|verify|log)
             err "'$cmd' is not implemented yet — see --help for what ships today." ;;
         *) usage; err "unknown command '$cmd'" ;;
     esac
