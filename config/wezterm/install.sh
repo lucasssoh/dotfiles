@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# The single safe_link (scripts/lib/link.sh). It replaces the copy that used
+# to live here: that one removed and re-created the link on every run, even
+# when it was already correct. This one returns early, and records what it
+# did so `cc-pkg-mng verify` can check it later.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/link.sh"
+
 # Package helper: queries before it installs, so an already-provisioned
 # machine performs zero package-manager calls and never prompts for sudo.
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
@@ -31,14 +37,6 @@ pkg_ensure wezterm
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/wezterm
 
-safe_link() {
-    local src=$1
-    local dest=$2
-    if [ -L "$dest" ] || [ -f "$dest" ]; then
-        rm -rf "$dest"
-    fi
-    ln -s "$src" "$dest"
-}
 
 # Link the config
 safe_link "$DOTFILES_DIR/config/wezterm/wezterm.lua" ~/.wezterm.lua

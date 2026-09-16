@@ -41,34 +41,11 @@ CONFIG="$HOME/.config"
 
 # ============================================================
 # SYMLINK HELPER
-# safe_link <repo_path> <target_path>
-# - Creates parent dirs as needed
-# - Backs up existing files/dirs (not symlinks) to .bak
-# - Skips if symlink already points to the right place
 # ============================================================
-safe_link() {
-    local src="$1"   # absolute path inside the repo
-    local dst="$2"   # absolute path where the symlink should live
-
-    # Already correct symlink → nothing to do
-    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
-        info "Already linked: $dst"
-        return
-    fi
-
-    # Existing file or dir (not a symlink) → back it up
-    if [ -e "$dst" ] && [ ! -L "$dst" ]; then
-        warn "Backing up existing: $dst → $dst.bak"
-        mv "$dst" "$dst.bak"
-    fi
-
-    # Remove stale symlink pointing elsewhere
-    [ -L "$dst" ] && rm "$dst"
-
-    mkdir -p "$(dirname "$dst")"
-    ln -s "$src" "$dst"
-    ok "Linked: $dst → $src"
-}
+# This module's own safe_link was the only one of the fourteen in this repo
+# that returned early when the link was already correct, so it is the one that
+# became scripts/lib/link.sh -- unchanged apart from the ledger it now writes.
+. "$REPO_DIR/../../scripts/lib/link.sh"
 
 # ============================================================
 # DETECT DISTRO

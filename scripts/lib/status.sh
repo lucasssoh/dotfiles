@@ -25,6 +25,11 @@ STATUS_RESULTS=()
 # status_init — creates the state dir and a fresh timestamped log file for
 # this run, with a "latest.log" symlink pointing at it.
 status_init() {
+    # Idempotent. `./install` used to produce TWO log files per run -- one per
+    # phase, each calling this -- and `latest.log` then pointed only at
+    # whichever phase happened to finish last, leaving the other unreachable
+    # by name. One run, one log.
+    [ -n "${LOG_FILE:-}" ] && [ -f "${LOG_FILE:-/nonexistent}" ] && return 0
     mkdir -p "$STATE_DIR"
     LOG_FILE="$STATE_DIR/install-$(date +%Y%m%d-%H%M%S).log"
     : > "$LOG_FILE"

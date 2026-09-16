@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# The single safe_link (scripts/lib/link.sh). It replaces the copy that used
+# to live here: that one removed and re-created the link on every run, even
+# when it was already correct. This one returns early, and records what it
+# did so `cc-pkg-mng verify` can check it later.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/link.sh"
+
 # Package helper: queries before it installs, so an already-provisioned
 # machine performs zero package-manager calls and never prompts for sudo.
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
@@ -24,12 +30,6 @@ SYSTEMD_TARGET="$HOME/.config/systemd/user"
 
 mkdir -p "$TARGET_DIR" "$SCRIPTS_TARGET" "$SYSTEMD_TARGET"
 
-safe_link() {
-    local src=$1 dest=$2
-    [ -L "$dest" ] || [ -f "$dest" ] && rm -rf "$dest"
-    ln -s "$src" "$dest"
-    info "Linked: $dest -> $src"
-}
 
 safe_link "$SRC_DIR/10-bluetooth-policy.conf"  "$TARGET_DIR/10-bluetooth-policy.conf"
 safe_link "$SRC_DIR/51-bluetooth-auto.conf"    "$TARGET_DIR/51-bluetooth-auto.conf"

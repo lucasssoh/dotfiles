@@ -42,7 +42,7 @@ _modules_lib_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 # hyprland and kde last: the desktop assembles everything above it.
 # ---------------------------------------------------------------------------
 MODULE_ORDER=(
-    fonts bash ccnote ccslide tmux wezterm nvim wireplumber
+    fonts bash ccpkg ccnote ccslide tmux wezterm nvim wireplumber
     mangohud nemo fuzzel fastfetch firefox brave mpv liseuse
     hyprland kde
 )
@@ -57,6 +57,7 @@ declare -A MODULE_OPTIN=(
 # "@last" means "must sit in the trailing block", which is how hyprland and
 # kde were expressed before: as two copy-pasted blocks after the loop.
 declare -A MODULE_AFTER=(
+    [ccpkg]="bash"     # the manager is only useful once ~/.local/bin is on PATH
     [ccnote]="bash"
     [ccslide]="bash"
     [liseuse]="fuzzel"

@@ -22,9 +22,9 @@
 # version in memory; the new one takes effect the next time it starts. What is
 # still running old code is reported, never acted on.
 #
-# Status: steps 1-5 of the plan. `install` and `verify` are still to come and
-# are listed in --help as such rather than hidden, so the shape of the tool
-# stays visible.
+# Everything the plan called for is here: build, status, update, install,
+# verify, needs-restart, clean. `log` is the one verb left, and it is four
+# lines of `less` whenever it is wanted.
 set -Eeuo pipefail
 
 BOLD="\e[1m"; GREEN="\e[32m"; YELLOW="\e[33m"; RED="\e[31m"; BLUE="\e[34m"; DIM="\e[2m"; RESET="\e[0m"
@@ -65,15 +65,18 @@ Commands:
                        plan and changes nothing. Never restarts anything;
                        reports what is left running an older version.
   needs-restart        Re-print that report on its own.
+  verify [--full]      Check the machine against what the modules recorded
+                       doing: links, binaries, packages, units. --fix re-runs
+                       the modules owning any hard problem.
   build [crate...]     Build the repo's Rust binaries, skipping any whose
                        sources have not changed since the last build.
                        With no argument, all of them.
   clean [--cargo]      Remove build caches. --cargo also removes the three
                        legacy ~/.cache/*-build trees this replaced.
+  install [--user]     Fresh-machine path: ignores state, runs every module.
+                       System scope unless --user. This is what ./install
+                       delegates to.
   help                 This text.
-
-Not yet implemented:
-  install, verify, log
 
 Options:
   --force              build/update: act even when nothing changed.
@@ -504,6 +507,238 @@ cmd_update() {
     return "$summary_rc"
 }
 
+# -------------------------------------------------------------- install ----
+# The fresh-machine path, and what `./install` now delegates to. Differences
+# from `update`, all of them deliberate:
+#
+#   * state is ignored entirely (--force): on a machine being built, "already
+#     applied" is a claim nothing has earned yet;
+#   * no pull -- you just cloned;
+#   * system scope by default, because installing a desktop means installing
+#     packages. `--user` is the opt-out, and matches today's `./install user`.
+cmd_install() {
+    local system=1 only=() login_manager=0 phases=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --user)            system=0 ;;
+            --system-only)     phases+=(system) ;;
+            --hardware-only)   phases+=(hardware) ;;
+            --login-manager)   login_manager=1 ;;
+            --only)            shift; only+=("$1") ;;
+            *)                 err "install: unknown option $1" ;;
+        esac
+        shift
+    done
+
+    registry_validate || err "Module registry is inconsistent (see above)."
+
+    # `./install system` / `./install hardware` asked for one phase and nothing
+    # else; honour that rather than quietly doing the full run.
+    if [ "${#phases[@]}" -gt 0 ]; then
+        local ph script
+        for ph in "${phases[@]}"; do
+            case "$ph" in
+                system)   script="$DOTFILES_ROOT/setup_fedora.sh" ;;
+                hardware) script="$DOTFILES_ROOT/scripts/install-hardware.sh" ;;
+            esac
+            [ -f "$script" ] || err "phase '$ph': missing $script — incomplete clone?"
+            if [ "$DRY_RUN" = 1 ]; then dry "$script"; else bash "$script" || err "phase '$ph' failed."; fi
+        done
+        return 0
+    fi
+
+    if [ "$login_manager" = 1 ]; then
+        local sc; sc="$(module_script login-manager)" || err "login-manager module missing."
+        if [ "$DRY_RUN" = 1 ]; then dry "$sc"; else bash "$sc"; fi
+        return 0
+    fi
+
+    if [ "$system" = 1 ]; then
+        if [ "$DRY_RUN" = 1 ]; then
+            dry "$DOTFILES_ROOT/setup_fedora.sh  (phase systeme + materiel)"
+        else
+            info "Phase systeme…"
+            bash "$DOTFILES_ROOT/setup_fedora.sh" || err "phase systeme en echec — corrige, puis relance ./install system"
+        fi
+    fi
+
+    local args=(--force --no-pull)
+    [ "$system" = 1 ] && args+=(--system)
+    local o; for o in ${only[@]+"${only[@]}"}; do args+=(--only "$o"); done
+    cmd_update "${args[@]}"
+}
+
+# --------------------------------------------------------------- verify ----
+# Six checks, cheapest first. Each reports independently; the run's verdict is
+# the worst of them.
+#
+#   hard    something is broken and a module should fix it  -> exit 1
+#   warn    worth knowing, not necessarily wrong            -> exit 0 (1 with --strict)
+#
+# The ledgers this reads (links.ledger, packages.ledger) are written by
+# safe_link and pkg_ensure AS THEY RUN. That is deliberate: a hand-maintained
+# list of what *should* exist is exactly the thing that drifts. These record
+# what actually happened, so the honest scope is "modules that have run at
+# least once on this machine" -- which is stated rather than papered over.
+cmd_verify() {
+    local full=0 strict=0 fix=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --full)   full=1 ;;
+            --strict) strict=1 ;;
+            --fix)    fix=1 ;;
+            *)        err "verify: unknown option $1" ;;
+        esac
+        shift
+    done
+
+    git -C "$DOTFILES_ROOT" rev-parse --git-dir >/dev/null 2>&1 \
+        || { echo "verify: $DOTFILES_ROOT is not a git repo" >&2; return 2; }
+
+    state_load
+    local hard=0 warns=0 broken_modules=()
+
+    # 1 ----------------------------------------------------------- registry
+    echo -e "${BOLD}Registre${RESET}"
+    if registry_validate; then
+        printf "  ${GREEN}✓${RESET} le registre et le disque concordent\n"
+    else
+        hard=$((hard+1))
+    fi
+
+    # 2 ----------------------------------------------------------- symlinks
+    echo -e "\n${BOLD}Liens symboliques${RESET}"
+    if [ ! -s "$STATE_DIR/links.ledger" ]; then
+        printf "  ${DIM}○${RESET} registre vide — aucun module n'a encore pose de lien sur cette machine\n"
+    else
+        local mod src dst bad=0 n=0
+        while IFS=$'\t' read -r mod src dst; do
+            [ -n "$dst" ] || continue
+            n=$((n+1))
+            if [ ! -L "$dst" ]; then
+                printf "  ${RED}✗${RESET} %s : n'est pas un lien (module %s)\n" "$dst" "$mod"
+                bad=$((bad+1)); broken_modules+=("$mod")
+            elif [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
+                printf "  ${RED}✗${RESET} %s : pointe ailleurs que %s\n" "$dst" "$src"
+                bad=$((bad+1)); broken_modules+=("$mod")
+            elif [ ! -e "$src" ]; then
+                printf "  ${RED}✗${RESET} %s : la cible %s a disparu du depot\n" "$dst" "$src"
+                bad=$((bad+1)); broken_modules+=("$mod")
+            fi
+        done < "$STATE_DIR/links.ledger"
+        [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} %s lien(s) corrects\n" "$n" || hard=$((hard+1))
+    fi
+
+    # 3 ----------------------------------------------------------- binaries
+    echo -e "\n${BOLD}Binaires${RESET}"
+    local c spec bins b resolved bad=0
+    for c in "${RUST_CRATE_ORDER[@]}"; do
+        # shellcheck disable=SC2206
+        spec=(${RUST_CRATES[$c]}); bins=("${spec[@]:1}")
+        for b in "${bins[@]}"; do
+            if [ ! -x "$HOME/.local/bin/$b" ]; then
+                printf "  ${RED}✗${RESET} %-18s absent de ~/.local/bin\n" "$b"
+                bad=$((bad+1)); continue
+            fi
+            # A binary that exists but is shadowed earlier in PATH is worse
+            # than a missing one: everything looks fine and the wrong thing
+            # runs. This is the exact failure mode that ruled out naming this
+            # tool `cc`.
+            resolved="$(command -v "$b" 2>/dev/null || true)"
+            if [ "$resolved" != "$HOME/.local/bin/$b" ]; then
+                printf "  ${RED}✗${RESET} %-18s masque par %s\n" "$b" "${resolved:-rien}"
+                bad=$((bad+1))
+            fi
+        done
+        if [ "$(_crate_state "$c")" != current ]; then
+            printf "  ${YELLOW}!${RESET} %-18s source modifiee depuis le dernier build\n" "$c"
+            warns=$((warns+1))
+        fi
+    done
+    [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} tous les binaires presents et resolus depuis ~/.local/bin\n" || hard=$((hard+1))
+
+    # 4 ----------------------------------------------------------- packages
+    echo -e "\n${BOLD}Paquets declares${RESET}"
+    if [ ! -s "$STATE_DIR/packages.ledger" ]; then
+        printf "  ${DIM}○${RESET} registre vide — aucun module n'a encore demande de paquet ici\n"
+    else
+        . "$DOTFILES_ROOT/scripts/lib/pkg.sh"
+        local missing=() p
+        while IFS=$'\t' read -r mod p; do
+            [ -n "$p" ] || continue
+            case "$p" in "cmd: "*) continue ;; esac
+            pkg_installed "$p" || missing+=("$p")
+        done < <(sort -u "$STATE_DIR/packages.ledger")
+        if [ "${#missing[@]}" -eq 0 ]; then
+            printf "  ${GREEN}✓${RESET} tous les paquets enregistres sont installes\n"
+        else
+            printf "  ${RED}✗${RESET} manquants : %s\n" "${missing[*]}"
+            hard=$((hard+1))
+        fi
+    fi
+
+    # 5 ------------------------------------------------------ systemd units
+    echo -e "\n${BOLD}Unites systemd utilisateur${RESET}"
+    local u name any=0
+    for u in "$DOTFILES_ROOT"/config/hyprland/systemd/*.service; do
+        [ -e "$u" ] || continue
+        any=1; name="$(basename "$u")"
+        if [ ! -e "$HOME/.config/systemd/user/$name" ]; then
+            printf "  ${YELLOW}!${RESET} %-34s non liee dans ~/.config/systemd/user\n" "$name"
+            warns=$((warns+1))
+        elif systemctl --user is-failed --quiet "$name" 2>/dev/null; then
+            printf "  ${RED}✗${RESET} %-34s en echec\n" "$name"
+            hard=$((hard+1))
+        else
+            # `is-active` already prints the state; it just exits non-zero for
+            # anything but "active", so no `|| echo` is needed (one produced
+            # the word twice).
+            printf "  ${GREEN}✓${RESET} %-34s %s\n" "$name" "$(systemctl --user is-active "$name" 2>/dev/null || true)"
+        fi
+    done
+    [ "$any" = 0 ] && printf "  ${DIM}○${RESET} aucune unite dans le depot\n"
+
+    # 6 -------------------------------------------------------- runtime deps
+    if [ "$full" = 1 ]; then
+        echo -e "\n${BOLD}Dependances runtime${RESET} ${DIM}(scripts/check-deps.sh)${RESET}"
+        # Its exit 1 is a warning here, not a failure: its own docstring is
+        # candid that a command built from a variable is invisible to it, so
+        # it answers "is this name written in an install script", not "does
+        # the install actually succeed".
+        if python3 "$DOTFILES_ROOT/scripts/check-deps.sh" 2>&1 | sed 's/^/  /'; then
+            :
+        else
+            warns=$((warns+1))
+        fi
+    else
+        echo -e "\n${DIM}(dependances runtime : --full)${RESET}"
+    fi
+
+    # ------------------------------------------------------------- verdict
+    echo
+    if [ "$hard" -gt 0 ]; then
+        echo -e "${RED}${hard} probleme(s) dur(s), ${warns} avertissement(s).${RESET}"
+        if [ "$fix" = 1 ] && [ "${#broken_modules[@]}" -gt 0 ]; then
+            local uniq; uniq="$(printf '%s\n' "${broken_modules[@]}" | sort -u | tr '\n' ' ')"
+            echo -e "${DIM}--fix : rejeu de ${uniq}${RESET}"
+            local m
+            for m in $uniq; do
+                local sc; sc="$(module_script "$m")" || continue
+                CCPKG_MODULE="$m" bash "$sc" >/dev/null 2>&1 || warn "$m : rejeu en echec"
+            done
+            echo -e "${DIM}rejeu termine — relance \`cc-pkg-mng verify\` pour confirmer${RESET}"
+        fi
+        return 1
+    fi
+    if [ "$warns" -gt 0 ]; then
+        echo -e "${YELLOW}Aucun probleme dur, ${warns} avertissement(s).${RESET}"
+        [ "$strict" = 1 ] && return 1
+        return 0
+    fi
+    echo -e "${GREEN}Tout est en ordre.${RESET}"
+    return 0
+}
+
 # ------------------------------------------------------------- dispatch ----
 main() {
     local cmd=""
@@ -528,7 +763,9 @@ main() {
         update) cmd_update ${args[@]+"${args[@]}"} ;;
         help|"") usage ;;
         needs-restart) needs_restart_report || true ;;
-        install|verify|log)
+        verify) cmd_verify ${args[@]+"${args[@]}"} ;;
+        install) cmd_install ${args[@]+"${args[@]}"} ;;
+        log)
             err "'$cmd' is not implemented yet — see --help for what ships today." ;;
         *) usage; err "unknown command '$cmd'" ;;
     esac
