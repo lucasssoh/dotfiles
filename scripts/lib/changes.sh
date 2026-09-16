@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# changes.sh — "has this part of the repo changed since we last applied it?"
+#
+# The answer is a content fingerprint per directory, persisted between runs
+# (see state.sh). Three cheaper-looking approaches were rejected:
+#
+#   * A git SHA (`git rev-parse HEAD`) is blind to uncommitted edits -- which
+#     is precisely the case this exists for ("j'ai mis a jour du config").
+#   * `git diff --name-only OLD..NEW` needs a valid old SHA, breaks across
+#     rebases, amends and shallow clones, and still ignores the worktree.
+#   * mtimes lie. `cp`, `git checkout` and `git stash` all rewrite them, and
+#     `cp -r` does not preserve them at all -- which is exactly how the old
+#     Rust build path defeated cargo's own fingerprinting. This repo already
+#     rejected mtimes once for the same class of reason, in
+#     config/hyprland/scripts/wallpaper-cache-watcher.sh:84-101.
+#
+# The file list comes from `git ls-files`, which buys .gitignore handling for
+# free: config/hyprland/balise-src/target/ (563 MB) is excluded without a
+# single hand-written exclusion, and so are __pycache__/ and the runtime
+# *.json under hypr/. Untracked-but-not-ignored files DO count, so a new file
+# you have not committed yet still triggers a re-apply.
+#
+# Measured on this repo: fingerprinting all 19 module directories takes about
+# 145 ms total, so this is cheap enough to run on every invocation.
+
+[ -n "${_CHANGES_SH_LOADED:-}" ] && return 0
+_CHANGES_SH_LOADED=1
+
+# dotfiles_root — the repo this file lives in, resolved through symlinks
+# (bin/cc-pkg-mng is symlinked into ~/.local/bin, so $0 is not in the repo).
+dotfiles_root() {
+    if [ -z "${DOTFILES_ROOT:-}" ]; then
+        local self
+        self="$(readlink -f "${BASH_SOURCE[0]}")"
+        DOTFILES_ROOT="$(cd "$(dirname "$self")/../.." && pwd)"
+    fi
+    printf '%s' "$DOTFILES_ROOT"
+}
+
+# fp_path <path> -> 64 hex chars, or "empty"
+#
+# <path> may be absolute or relative to the repo root, and may name a
+# directory or a single file.
+#
+# The file LIST is hashed alongside the file CONTENTS on purpose: hashing
+# contents alone would miss a deletion or a rename, since no surviving file's
+# bytes change. Sorting makes the result independent of git's output order.
+fp_path() {
+    local root target list
+    root="$(dotfiles_root)"
+    target="$1"
+    # Normalise an absolute path inside the repo back to a relative one, so
+    # callers may pass either.
+    case "$target" in
+        "$root"/*) target="${target#"$root"/}" ;;
+    esac
+
+    list="$(git -C "$root" ls-files --cached --others --exclude-standard -- "$target" 2>/dev/null | LC_ALL=C sort)"
+    if [ -z "$list" ]; then
+        printf 'empty'
+        return 0
+    fi
+
+    {
+        printf '%s\n' "$list"
+        printf '%s\n' "$list" | tr '\n' '\0' \
+            | ( cd "$root" && xargs -0 -r sha256sum 2>/dev/null )
+    } | sha256sum | cut -d' ' -f1
+}

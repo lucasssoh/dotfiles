@@ -25,6 +25,14 @@ section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$HOME/.config"
 
+# Shared Rust build helper (scripts/lib/rust.sh). It replaces the three
+# copy-to-cache-then-cargo blocks this file used to carry: those did `rm -rf`
+# on the build dir every run, which destroyed cargo's fingerprint database and
+# forced ~460 crate compilations with full LTO on every single install.
+# rust_build keeps one target dir alive instead and skips cargo entirely when
+# the crate's sources and the toolchain are both unchanged.
+. "$REPO_DIR/../../scripts/lib/rust.sh"
+
 # ============================================================
 # SYMLINK HELPER
 # safe_link <repo_path> <target_path>
@@ -382,23 +390,8 @@ fi
 # No VPN support, by design.
 section "Building Balise (WiFi/Bluetooth/Ethernet manager)"
 
-BALISE_BUILD="$HOME/.cache/balise-build"
-
-if ! command -v cargo &>/dev/null; then
-    warn "cargo not found — skipping Balise build. Install a Rust toolchain and re-run this script to get it."
-else
-    rm -rf "$BALISE_BUILD"
-    mkdir -p "$BALISE_BUILD"
-    cp -r "$REPO_DIR/balise-src/." "$BALISE_BUILD/"
-
-    if (cd "$BALISE_BUILD" && cargo build --release); then
-        mkdir -p "$HOME/.local/bin"
-        install -Dm755 "$BALISE_BUILD/target/release/balise" "$HOME/.local/bin/balise"
-        ok "Balise built and installed to ~/.local/bin/balise."
-    else
-        warn "Balise build failed — the bar's WiFi/Bluetooth/Ethernet clicks will fall back to nmtui/blueman-manager until this is fixed."
-    fi
-fi
+rust_build "$REPO_DIR/balise-src" balise \
+    || warn "Balise build failed — the bar's WiFi/Bluetooth/Ethernet clicks will fall back to nmtui/blueman-manager until this is fixed."
 
 # ============================================================
 # PRISME (native Wayland wallpaper picker)
@@ -416,24 +409,8 @@ fi
 # installed to the same place.
 section "Building Prisme (wallpaper picker)"
 
-PRISME_BUILD="$HOME/.cache/prisme-build"
-
-if ! command -v cargo &>/dev/null; then
-    warn "cargo not found — skipping Prisme build. Install a Rust toolchain and re-run this script to get it."
-else
-    rm -rf "$PRISME_BUILD"
-    mkdir -p "$PRISME_BUILD"
-    cp -r "$REPO_DIR/prisme-src/." "$PRISME_BUILD/"
-
-    if (cd "$PRISME_BUILD" && cargo build --release); then
-        mkdir -p "$HOME/.local/bin"
-        install -Dm755 "$PRISME_BUILD/target/release/prisme" "$HOME/.local/bin/prisme"
-        install -Dm755 "$PRISME_BUILD/target/release/wallpaper-filter" "$HOME/.local/bin/wallpaper-filter"
-        ok "Prisme and wallpaper-filter built and installed to ~/.local/bin/."
-    else
-        warn "Prisme build failed — Super+W will fail to launch, and the 'Filtered' wallpaper cache will stop updating, until this is fixed."
-    fi
-fi
+rust_build "$REPO_DIR/prisme-src" prisme wallpaper-filter \
+    || warn "Prisme build failed — Super+W will fail to launch, and the 'Filtered' wallpaper cache will stop updating, until this is fixed."
 
 # ============================================================
 # ROUE (RPG weapon-menu-style radial selection wheel)
@@ -446,23 +423,8 @@ fi
 # directories), so more can be added later without recompiling.
 section "Building Roue (radial selection wheel)"
 
-ROUE_BUILD="$HOME/.cache/roue-build"
-
-if ! command -v cargo &>/dev/null; then
-    warn "cargo not found — skipping Roue build. Install a Rust toolchain and re-run this script to get it."
-else
-    rm -rf "$ROUE_BUILD"
-    mkdir -p "$ROUE_BUILD"
-    cp -r "$REPO_DIR/roue-src/." "$ROUE_BUILD/"
-
-    if (cd "$ROUE_BUILD" && cargo build --release); then
-        mkdir -p "$HOME/.local/bin"
-        install -Dm755 "$ROUE_BUILD/target/release/roue" "$HOME/.local/bin/roue"
-        ok "Roue built and installed to ~/.local/bin/roue."
-    else
-        warn "Roue build failed — Super+Delete and the power profile menu will fail to launch until this is fixed."
-    fi
-fi
+rust_build "$REPO_DIR/roue-src" roue \
+    || warn "Roue build failed — Super+Delete and the power profile menu will fail to launch until this is fixed."
 
 # ============================================================
 # COMIX CURSORS (comic-style cursor theme)

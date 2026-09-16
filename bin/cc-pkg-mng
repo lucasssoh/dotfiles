@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+# cc-pkg-mng — install and update manager for these dotfiles.
+#
+# Why it is bash and not Rust, despite this repo shipping three Rust binaries:
+# bootstrapping. A compiled manager would have to be compiled by something,
+# and the thing that compiles the repo cannot itself require the repo to have
+# been compiled. A bash script symlinked into ~/.local/bin is current the
+# instant `git pull` returns.
+#
+# Why `cc-pkg-mng` and not the `cc` originally wanted: /usr/bin/cc is a
+# symlink to gcc, and ~/.local/bin sits 2nd in this user's PATH against 10th
+# for /usr/bin. A `cc` here would shadow the C compiler for the whole session,
+# which breaks `make` (CC defaults to cc) and any pip build of a native
+# extension.
+#
+# Scope rule, stated once: `update` is user-space unless --system, `install`
+# is system-scope unless --user. `update` must never prompt for a password,
+# because a command you run several times a day must not need one.
+#
+# Reload policy: this tool behaves like dnf/apt/pacman. It puts files and
+# binaries in place and restarts NOTHING. A running process keeps its old
+# version in memory; the new one takes effect the next time it starts. What is
+# still running old code is reported, never acted on.
+#
+# Status: step 1 of the plan -- `build` and `clean` only. The remaining verbs
+# are listed in --help as "not yet implemented" rather than hidden, so the
+# shape of the tool is visible from day one.
+set -Eeuo pipefail
+
+BOLD="\e[1m"; GREEN="\e[32m"; YELLOW="\e[33m"; RED="\e[31m"; BLUE="\e[34m"; DIM="\e[2m"; RESET="\e[0m"
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+DOTFILES_ROOT="$(cd "$(dirname "$SELF")/.." && pwd)"
+export DOTFILES_ROOT
+
+# shellcheck source=../scripts/lib/state.sh
+. "$DOTFILES_ROOT/scripts/lib/state.sh"
+# shellcheck source=../scripts/lib/changes.sh
+. "$DOTFILES_ROOT/scripts/lib/changes.sh"
+# shellcheck source=../scripts/lib/rust.sh
+. "$DOTFILES_ROOT/scripts/lib/rust.sh"
+
+DRY_RUN=0
+QUIET=0
+
+info()  { [ "$QUIET" = 1 ] || echo -e "${BLUE}[INFO]${RESET}  $*"; }
+ok()    { [ "$QUIET" = 1 ] || echo -e "${GREEN}[ OK ]${RESET}  $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
+err()   { echo -e "${RED}[ ERR]${RESET}  $*" >&2; exit 1; }
+step()  { [ "$QUIET" = 1 ] || echo -e "\n${BOLD}── $* ──${RESET}\n"; }
+dry()   { echo -e "${DIM}would:${RESET} $*"; }
+
+usage() {
+    cat <<'EOF'
+Usage: cc-pkg-mng <command> [options]
+
+Commands:
+  build [crate...]     Build the repo's Rust binaries, skipping any whose
+                       sources have not changed since the last build.
+                       With no argument, all of them.
+  clean [--cargo]      Remove build caches. --cargo also removes the three
+                       legacy ~/.cache/*-build trees this replaced.
+  help                 This text.
+
+Not yet implemented (see the plan):
+  update, install, status, verify, needs-restart, log
+
+Options:
+  --force              build: rebuild even when nothing changed.
+  -n, --dry-run        Print what would happen; change nothing.
+  -q, --quiet          Only warnings and errors.
+      --no-color       Plain output.
+  -h, --help           This text.
+  -V, --version        Print the repo revision this script came from.
+
+Examples:
+  cc-pkg-mng build             # rebuild only what changed
+  cc-pkg-mng build roue        # just one crate
+  cc-pkg-mng build --force     # ignore the staleness check
+  cc-pkg-mng clean --cargo     # reclaim the old duplicated build trees
+EOF
+}
+
+version() {
+    local rev
+    rev="$(git -C "$DOTFILES_ROOT" describe --always --dirty 2>/dev/null || echo unknown)"
+    echo "cc-pkg-mng ($rev) — $DOTFILES_ROOT"
+}
+
+# ---------------------------------------------------------------- build ----
+cmd_build() {
+    local force=0 wanted=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --force) force=1 ;;
+            -*)      err "build: unknown option $1" ;;
+            *)       wanted+=("$1") ;;
+        esac
+        shift
+    done
+
+    # No argument means every crate, in table order.
+    [ "${#wanted[@]}" -eq 0 ] && wanted=("${RUST_CRATE_ORDER[@]}")
+
+    local c
+    for c in "${wanted[@]}"; do
+        [ -n "${RUST_CRATES[$c]:-}" ] || \
+            err "build: unknown crate '$c' (known: ${RUST_CRATE_ORDER[*]})"
+    done
+
+    state_load
+    RUST_FORCE="$force"
+
+    local rc=0 built=0 skipped=0
+    for c in "${wanted[@]}"; do
+        # shellcheck disable=SC2206  # deliberate word split: "<dir> <bin>…"
+        local spec=(${RUST_CRATES[$c]})
+        local dir="${spec[0]}"
+        local bins=("${spec[@]:1}")
+
+        if [ "$DRY_RUN" = 1 ]; then
+            local key cur
+            key="$(fp_path "$DOTFILES_ROOT/$dir")|$(cargo --version 2>/dev/null)"
+            cur="$(state_get "crate.$c.key")"
+            if [ "$force" != 1 ] && [ "$key" = "$cur" ] && _rust_bins_present "${bins[@]}"; then
+                echo -e "  ${DIM}$c: up to date${RESET}"
+            else
+                dry "cargo build --release in $dir  → ${bins[*]}"
+            fi
+            continue
+        fi
+
+        # Decide BEFORE the call whether this was already current: afterwards
+        # rust_build has stored the new key, so the comparison would always
+        # match and the counts would be meaningless.
+        local was_current=0
+        if [ "$force" != 1 ] \
+           && [ "$(state_get "crate.$c.key")" = "$(fp_path "$DOTFILES_ROOT/$dir")|$(cargo --version 2>/dev/null)" ] \
+           && _rust_bins_present "${bins[@]}"; then
+            was_current=1
+        fi
+
+        step "$c"
+        if rust_build "$dir" "${bins[@]}"; then
+            if [ "$was_current" = 1 ]; then skipped=$((skipped + 1)); else built=$((built + 1)); fi
+        else
+            rc=1
+        fi
+    done
+
+    [ "$DRY_RUN" = 1 ] && return 0
+
+    if [ "$rc" = 0 ]; then
+        ok "Rust: $built built, $skipped already up to date — target dir $CARGO_TARGET_ROOT"
+    else
+        warn "Rust: at least one crate failed to build — see the output above."
+    fi
+    return "$rc"
+}
+
+# ---------------------------------------------------------------- clean ----
+cmd_clean() {
+    local do_cargo=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --cargo) do_cargo=1 ;;
+            -*)      err "clean: unknown option $1" ;;
+            *)       err "clean: unexpected argument $1" ;;
+        esac
+        shift
+    done
+    [ "$do_cargo" = 0 ] && { usage; err "clean: nothing selected (try --cargo)"; }
+
+    local targets=("${RUST_LEGACY_BUILD_DIRS[@]}")
+    # The in-repo target/ too: it is gitignored, and the old `cp -r` copied it
+    # wholesale into the cache dir on every build for no benefit at all.
+    targets+=("$DOTFILES_ROOT/config/hyprland/balise-src/target")
+
+    local d total=0 sz
+    for d in "${targets[@]}"; do
+        [ -d "$d" ] || continue
+        sz="$(du -sm "$d" 2>/dev/null | cut -f1)"
+        total=$((total + ${sz:-0}))
+        if [ "$DRY_RUN" = 1 ]; then
+            dry "rm -rf $d  (${sz:-?} MB)"
+        else
+            info "removing $d (${sz:-?} MB)"
+            rm -rf "$d"
+        fi
+    done
+
+    if [ "$total" = 0 ]; then
+        ok "Nothing to reclaim — the legacy build trees are already gone."
+    elif [ "$DRY_RUN" = 1 ]; then
+        echo -e "${DIM}total:${RESET} ${total} MB would be reclaimed"
+    else
+        ok "Reclaimed ~${total} MB."
+    fi
+}
+
+# ------------------------------------------------------------- dispatch ----
+main() {
+    local cmd=""
+    local args=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -h|--help)    usage; return 0 ;;
+            -V|--version) version; return 0 ;;
+            -n|--dry-run) DRY_RUN=1 ;;
+            -q|--quiet)   QUIET=1 ;;
+            --no-color)   BOLD=""; GREEN=""; YELLOW=""; RED=""; BLUE=""; DIM=""; RESET="" ;;
+            -*)           if [ -n "$cmd" ]; then args+=("$1"); else err "unknown option $1 (try --help)"; fi ;;
+            *)            if [ -z "$cmd" ]; then cmd="$1"; else args+=("$1"); fi ;;
+        esac
+        shift
+    done
+
+    case "$cmd" in
+        build) cmd_build ${args[@]+"${args[@]}"} ;;
+        clean) cmd_clean ${args[@]+"${args[@]}"} ;;
+        help|"") usage ;;
+        update|install|status|verify|needs-restart|log)
+            err "'$cmd' is not implemented yet — step 1 ships 'build' and 'clean'." ;;
+        *) usage; err "unknown command '$cmd'" ;;
+    esac
+}
+
+main "$@"
