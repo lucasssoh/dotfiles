@@ -39,18 +39,29 @@ _modules_lib_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 # liseuse), so installing it first would leave a reading library with no way
 # to open it on a fresh machine.
 #
-# hyprland and kde last: the desktop assembles everything above it.
+# hyprland last: the desktop assembles everything above it.
 # ---------------------------------------------------------------------------
 MODULE_ORDER=(
     fonts bash ccpkg ccnote ccslide tmux wezterm nvim wireplumber
     mangohud nemo fuzzel fastfetch firefox brave mpv liseuse
-    hyprland kde
+    hyprland
 )
 
 # Opt-in modules: real modules, deliberately never run by default. They must
 # be named explicitly.
 declare -A MODULE_OPTIN=(
     [login-manager]="rewrites system login (greetd) and prompts interactively, which would block an otherwise unattended run"
+    # This machine runs Hyprland; KDE is not wanted (asked for: "pas besoin de
+    # kde"). Kept in the repo rather than deleted, but never run by default.
+    #
+    # It is also broken upstream as of 2026-09-16: the Reversal icon theme it
+    # clones, github.com/vinceliuice/reversal-icon-theme, returns 404 -- the
+    # repo was deleted, not renamed (the author still publishes a dozen other
+    # icon themes, none called Reversal). GitHub answers 401 for a missing
+    # repo so as not to reveal its absence, which makes `git clone` prompt for
+    # a username and fail hard in any unattended run. Whoever re-enables this
+    # module has to pick a replacement theme first.
+    [kde]="not used on this machine, and its Reversal icon theme upstream is a 404"
 )
 
 # Hard ordering constraints, validated against MODULE_ORDER on every run.
@@ -62,11 +73,11 @@ declare -A MODULE_AFTER=(
     [ccslide]="bash"
     [liseuse]="fuzzel"
     [hyprland]="@last"
-    [kde]="@last"
 )
 
-# How many entries form the trailing "@last" block.
-MODULE_LAST_BLOCK=2
+# How many entries form the trailing "@last" block. One, since kde became
+# opt-in: hyprland alone closes the run.
+MODULE_LAST_BLOCK=1
 
 _mod_err() { echo -e "\e[31m[ ERR]\e[0m  $*" >&2; }
 
