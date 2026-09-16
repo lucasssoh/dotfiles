@@ -67,3 +67,43 @@ fp_path() {
             | ( cd "$root" && xargs -0 -r sha256sum 2>/dev/null )
     } | sha256sum | cut -d' ' -f1
 }
+
+# path_target <repo-relative path> -> one of
+#   module:<name>   this module's install.sh applies it
+#   phase:system    setup_fedora.sh territory (needs root)
+#   phase:hardware  the hardware phase (needs root)
+#   meta:manager    changes how the NEXT run behaves; nothing to "apply"
+#   none            documentation and assets nothing consumes at install time
+#   unmapped        nobody claims it -- reported, never silently ignored
+#
+# First match wins, so the order of the cases below is the specificity order.
+# `scripts/lib/hardware.sh` in particular has to be tested before the generic
+# `scripts/lib/*.sh` rule that would otherwise swallow it.
+#
+# `meta:manager` deliberately triggers nothing. Editing install_all.sh or one
+# of these libraries changes how the next run behaves; the scripts are read
+# fresh from disk every time, so there is no "apply" step to perform.
+# Re-running 19 modules because a comment moved in status.sh is exactly the
+# kind of noise that teaches people to stop trusting a tool.
+#
+# `unmapped` is a first-class outcome, not a default. It is what keeps this
+# table honest as the repo grows: `status` lists unmapped paths so a new
+# top-level directory cannot quietly fall outside the manager's world. Same
+# philosophy as scripts/check-deps.sh, which exists precisely because silent
+# gaps cost hours.
+path_target() {
+    case "$1" in
+        scripts/lib/hardware.sh|scripts/install-hardware.sh|scripts/hardware-detect.sh)
+                                       printf 'phase:hardware' ;;
+        setup_fedora.sh)               printf 'phase:system' ;;
+        config/*/*)                    local rest="${1#config/}"; printf 'module:%s' "${rest%%/*}" ;;
+        config/*)                      printf 'none' ;;           # a stray file directly under config/
+        wallpapers/*)                  printf 'module:hyprland' ;;  # consumed by prisme / set_wallpapers.sh
+        bin/*|scripts/lib/*.sh|install|install_all.sh)
+                                       printf 'meta:manager' ;;
+        scripts/*)                     printf 'meta:manager' ;;
+        *.md|*.jpg|*.png|.gitignore|.gitattributes|LICENSE)
+                                       printf 'none' ;;
+        *)                             printf 'unmapped' ;;
+    esac
+}

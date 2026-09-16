@@ -39,6 +39,8 @@ export DOTFILES_ROOT
 . "$DOTFILES_ROOT/scripts/lib/changes.sh"
 # shellcheck source=../scripts/lib/rust.sh
 . "$DOTFILES_ROOT/scripts/lib/rust.sh"
+# shellcheck source=../scripts/lib/modules.sh
+. "$DOTFILES_ROOT/scripts/lib/modules.sh"
 
 DRY_RUN=0
 QUIET=0
@@ -55,6 +57,10 @@ usage() {
 Usage: cc-pkg-mng <command> [options]
 
 Commands:
+  status               What has changed since each module was last applied.
+                       Read-only, never fetches unless asked, always exit 0.
+  update [-n]          Apply what changed. -n prints the plan and changes
+                       nothing (the only mode implemented so far).
   build [crate...]     Build the repo's Rust binaries, skipping any whose
                        sources have not changed since the last build.
                        With no argument, all of them.
@@ -62,11 +68,19 @@ Commands:
                        legacy ~/.cache/*-build trees this replaced.
   help                 This text.
 
-Not yet implemented (see the plan):
-  update, install, status, verify, needs-restart, log
+Not yet implemented:
+  install, verify, needs-restart, log
 
 Options:
-  --force              build: rebuild even when nothing changed.
+  --force              build/update: act even when nothing changed.
+  --adopt              update: record the current fingerprints as "already
+                       applied" WITHOUT installing or checking anything.
+                       For a machine that is already set up.
+  --no-pull            update: do not touch git; apply local work only.
+  --only <module>      update: restrict to one module (repeatable).
+  --system             update: allow the root-owned system phase.
+  --fetch              status: contact origin to report how far behind.
+  --porcelain          status: stable key<TAB>value output for scripting.
   -n, --dry-run        Print what would happen; change nothing.
   -q, --quiet          Only warnings and errors.
       --no-color       Plain output.
@@ -198,6 +212,227 @@ cmd_clean() {
     fi
 }
 
+# ------------------------------------------------------- change detection ----
+# Populates WALK_NAMES / WALK_STATE / WALK_FP in MODULE_ORDER order.
+#
+# A module is due when it is new, when its fingerprint moved, when --force was
+# given, OR when its last run failed. That last rule matters: a failure is
+# often environmental (a copr outage, no network), and without it a single
+# transient failure would be sticky forever -- the fingerprint has not moved,
+# so nothing would ever retry it.
+WALK_NAMES=(); WALK_STATE=(); WALK_FP=()
+walk_modules() {
+    local force="${1:-0}" m fp old rc
+    WALK_NAMES=(); WALK_STATE=(); WALK_FP=()
+    for m in "${MODULE_ORDER[@]}"; do
+        fp="$(fp_path "config/$m")"
+        old="$(state_get "mod.$m.fp")"
+        rc="$(state_get "mod.$m.rc" 0)"
+        WALK_NAMES+=("$m"); WALK_FP+=("$fp")
+        if   [ "$force" = 1 ];      then WALK_STATE+=("forced")
+        elif [ -z "$old" ];         then WALK_STATE+=("new")
+        elif [ "$fp" != "$old" ];   then WALK_STATE+=("changed")
+        elif [ "$rc" != 0 ];        then WALK_STATE+=("retry")
+        else                             WALK_STATE+=("current")
+        fi
+    done
+}
+
+_unmapped_paths() {
+    local f
+    git -C "$DOTFILES_ROOT" ls-files | while read -r f; do
+        if [ "$(path_target "$f")" = unmapped ]; then printf '%s\n' "$f"; fi
+    done
+    # The loop's own status is that of its last iteration's test, which is
+    # false whenever the final file IS mapped -- i.e. almost always. Under
+    # `set -e` that propagated out of the command substitution and killed
+    # `status` halfway through its own output.
+    return 0
+}
+
+# --------------------------------------------------------------- status ----
+cmd_status() {
+    local do_fetch=0 porcelain=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --fetch)     do_fetch=1 ;;
+            --porcelain) porcelain=1 ;;
+            *)           err "status: unknown option $1" ;;
+        esac
+        shift
+    done
+
+    registry_validate || err "Module registry is inconsistent (see above)."
+    state_load
+    walk_modules 0
+
+    local branch head dirty
+    branch="$(git -C "$DOTFILES_ROOT" branch --show-current 2>/dev/null || echo '?')"
+    head="$(git -C "$DOTFILES_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
+    dirty=0
+    [ -n "$(git -C "$DOTFILES_ROOT" status --porcelain 2>/dev/null)" ] && dirty=1
+
+    # Never fetches silently: `status` must be safe to call from a prompt.
+    local behind=""
+    if [ "$do_fetch" = 1 ]; then
+        git -C "$DOTFILES_ROOT" fetch --quiet 2>/dev/null || warn "fetch failed (offline?)"
+        behind="$(git -C "$DOTFILES_ROOT" rev-list --count "HEAD..@{u}" 2>/dev/null || echo '?')"
+    fi
+
+    local i n st
+    if [ "$porcelain" = 1 ]; then
+        printf 'branch\t%s\nhead\t%s\ndirty\t%s\n' "$branch" "$head" "$dirty"
+        [ -n "$behind" ] && printf 'behind\t%s\n' "$behind"
+        for i in "${!WALK_NAMES[@]}"; do printf 'module\t%s\t%s\n' "${WALK_NAMES[$i]}" "${WALK_STATE[$i]}"; done
+        for n in "${RUST_CRATE_ORDER[@]}"; do printf 'crate\t%s\t%s\n' "$n" "$(_crate_state "$n")"; done
+        printf 'last_run\t%s\n' "$(state_get run.last '-')"
+        return 0
+    fi
+
+    echo -e "${BOLD}Dépôt${RESET}    $branch @ $head $( [ "$dirty" = 1 ] && echo -e "${YELLOW}(modifications locales)${RESET}" || echo "(propre)" )"
+    [ -n "$behind" ] && [ "$behind" != 0 ] && echo -e "         ${YELLOW}$behind commit(s) en retard sur origin${RESET}"
+    [ -n "$behind" ] && [ "$behind" = 0 ] && echo "         à jour avec origin"
+
+    echo -e "\n${BOLD}Modules${RESET}"
+    local due=0
+    for i in "${!WALK_NAMES[@]}"; do
+        st="${WALK_STATE[$i]}"
+        case "$st" in
+            current) printf "  ${GREEN}✓${RESET} %-14s à jour\n" "${WALK_NAMES[$i]}" ;;
+            new)     printf "  ${DIM}○${RESET} %-14s jamais appliqué\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
+            changed) printf "  ${YELLOW}●${RESET} %-14s modifié depuis la dernière application\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
+            retry)   printf "  ${RED}✗${RESET} %-14s dernier run en échec (code %s) — sera rejoué\n" "${WALK_NAMES[$i]}" "$(state_get "mod.${WALK_NAMES[$i]}.rc")"; due=$((due+1)) ;;
+        esac
+    done
+
+    echo -e "\n${BOLD}Crates${RESET}"
+    for n in "${RUST_CRATE_ORDER[@]}"; do
+        if [ "$(_crate_state "$n")" = current ]; then
+            printf "  ${GREEN}✓${RESET} %-14s à jour\n" "$n"
+        else
+            printf "  ${YELLOW}●${RESET} %-14s source ou toolchain modifié depuis le build\n" "$n"
+        fi
+    done
+
+    local unmapped; unmapped="$(_unmapped_paths)"
+    if [ -n "$unmapped" ]; then
+        echo -e "\n${BOLD}Chemins non couverts${RESET} ${DIM}(aucun module ne les revendique)${RESET}"
+        printf '  %s\n' $unmapped
+    fi
+
+    echo -e "\n${DIM}dernier run : $(state_get run.last 'jamais')${RESET}"
+    [ "$due" -gt 0 ] && echo -e "${DIM}$due module(s) à appliquer — cc-pkg-mng update -n pour le détail${RESET}"
+    return 0
+}
+
+_crate_state() {
+    local c="$1" spec dir bins key
+    # shellcheck disable=SC2206
+    spec=(${RUST_CRATES[$c]}); dir="${spec[0]}"; bins=("${spec[@]:1}")
+    key="$(fp_path "$DOTFILES_ROOT/$dir")|$(cargo --version 2>/dev/null)"
+    if [ "$(state_get "crate.$c.key")" = "$key" ] && _rust_bins_present "${bins[@]}"; then
+        printf 'current'
+    else
+        printf 'stale'
+    fi
+}
+
+# --------------------------------------------------------------- update ----
+cmd_update() {
+    local force=0 adopt=0 no_pull=0 system=0 only=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --force)   force=1 ;;
+            --adopt)   adopt=1 ;;
+            --no-pull) no_pull=1 ;;
+            --system)  system=1 ;;
+            --only)    shift; only+=("$1") ;;
+            *)         err "update: unknown option $1" ;;
+        esac
+        shift
+    done
+
+    registry_validate || err "Module registry is inconsistent (see above)."
+    state_load
+
+    if [ "$adopt" = 1 ]; then
+        # Adoption is a CLAIM, not a check: it records fingerprints for a
+        # machine nobody verified. It exists so an already-configured machine
+        # does not have to re-run all 18 modules once to become incremental.
+        # Step 6 will gate this behind `verify`; until that exists, the banner
+        # is the whole safeguard.
+        echo -e "${YELLOW}${BOLD}Adoption${RESET} — les empreintes actuelles vont être enregistrées comme"
+        echo -e "«  déjà appliquées  » SANS rien vérifier ni installer. Si cette machine n'est"
+        echo -e "pas réellement à jour, les modules concernés ne seront jamais rejoués."
+        walk_modules 0
+        local i
+        for i in "${!WALK_NAMES[@]}"; do
+            state_set "mod.${WALK_NAMES[$i]}.fp" "${WALK_FP[$i]}"
+            state_set "mod.${WALK_NAMES[$i]}.rc" 0
+            state_set "mod.${WALK_NAMES[$i]}.applied" "$(date -Iseconds)"
+        done
+        state_set run.last "$(date -Iseconds)"
+        state_set run.cmd "update --adopt"
+        state_save
+        ok "${#WALK_NAMES[@]} module(s) adoptés. Prochain \`update\` : incrémental."
+        return 0
+    fi
+
+    # Pull semantics: refuse over local edits rather than surprise the user
+    # with a merge they did not ask for. --no-pull is the way to apply local
+    # work without touching the remote.
+    if [ "$no_pull" = 0 ]; then
+        if [ -n "$(git -C "$DOTFILES_ROOT" status --porcelain 2>/dev/null)" ]; then
+            echo -e "${YELLOW}Modifications locales non commitées :${RESET}"
+            git -C "$DOTFILES_ROOT" status --short | sed 's/^/  /'
+            err "refus de tirer par-dessus. Commite, remise, ou relance avec --no-pull pour n'appliquer que le local."
+        fi
+        info "git pull (fast-forward seulement)…"
+        [ "$DRY_RUN" = 1 ] && dry "git merge --ff-only origin/$(git -C "$DOTFILES_ROOT" branch --show-current)"
+    fi
+
+    walk_modules "$force"
+
+    local i due=()
+    for i in "${!WALK_NAMES[@]}"; do
+        [ "${WALK_STATE[$i]}" = current ] && continue
+        if [ "${#only[@]}" -gt 0 ]; then
+            local wanted=0 o
+            for o in "${only[@]}"; do [ "$o" = "${WALK_NAMES[$i]}" ] && wanted=1; done
+            [ "$wanted" = 1 ] || continue
+        fi
+        due+=("${WALK_NAMES[$i]}:${WALK_STATE[$i]}")
+    done
+
+    if [ "${#due[@]}" -eq 0 ]; then
+        ok "Rien à faire — tout est à jour."
+        return 0
+    fi
+
+    echo -e "\n${BOLD}Modules à appliquer, dans l'ordre${RESET}"
+    local d
+    for d in "${due[@]}"; do printf '  %-16s %s\n' "${d%%:*}" "${d##*:}"; done
+
+    echo -e "\n${BOLD}Crates${RESET}"
+    local n
+    for n in "${RUST_CRATE_ORDER[@]}"; do
+        [ "$(_crate_state "$n")" = current ] && printf "  %-16s à jour\n" "$n" || printf "  %-16s à recompiler\n" "$n"
+    done
+
+    if [ "$system" = 1 ]; then
+        echo -e "\n${DIM}--system : la phase système serait incluse si ses entrées ont changé${RESET}"
+    else
+        echo -e "\n${DIM}portée utilisateur : aucun paquet ne sera installé, aucun sudo demandé${RESET}"
+    fi
+
+    if [ "$DRY_RUN" = 1 ]; then
+        echo -e "\n${DIM}essai à blanc — rien n'a été modifié${RESET}"
+        return 0
+    fi
+
+    err "l'application réelle arrive à l'étape 5 — pour l'instant : cc-pkg-mng update -n"
+}
+
 # ------------------------------------------------------------- dispatch ----
 main() {
     local cmd=""
@@ -216,11 +451,13 @@ main() {
     done
 
     case "$cmd" in
-        build) cmd_build ${args[@]+"${args[@]}"} ;;
-        clean) cmd_clean ${args[@]+"${args[@]}"} ;;
+        build)  cmd_build  ${args[@]+"${args[@]}"} ;;
+        clean)  cmd_clean  ${args[@]+"${args[@]}"} ;;
+        status) cmd_status ${args[@]+"${args[@]}"} ;;
+        update) cmd_update ${args[@]+"${args[@]}"} ;;
         help|"") usage ;;
-        update|install|status|verify|needs-restart|log)
-            err "'$cmd' is not implemented yet — step 1 ships 'build' and 'clean'." ;;
+        install|verify|needs-restart|log)
+            err "'$cmd' is not implemented yet — see --help for what ships today." ;;
         *) usage; err "unknown command '$cmd'" ;;
     esac
 }
