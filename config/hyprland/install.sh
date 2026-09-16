@@ -33,6 +33,12 @@ CONFIG="$HOME/.config"
 # the crate's sources and the toolchain are both unchanged.
 . "$REPO_DIR/../../scripts/lib/rust.sh"
 
+# Package helper. This module's PKGS arrays stay exactly as they are -- they
+# are a curated, heavily commented inventory. What changes is that the ~90
+# names are QUERIED first and only the genuinely missing ones reach dnf, so a
+# provisioned machine performs no package-manager call and no sudo prompt.
+. "$REPO_DIR/../../scripts/lib/pkg.sh"
+
 # ============================================================
 # SYMLINK HELPER
 # safe_link <repo_path> <target_path>
@@ -94,21 +100,25 @@ fi
 # ============================================================
 section "Installing packages"
 
-$PKG_UPDATE
+# Metadata refresh moved down next to the install: it is only worth doing when
+# something is actually missing (see the hypr_missing filter below).
 
 if [ "$DISTRO" = "fedora" ]; then
-    sudo dnf copr enable -y lionheartp/Hyprland ||
+    # Each copr is enabled only when what it provides is genuinely absent.
+    # `copr enable` on an already-enabled repo is harmless, but it still needs
+    # root and still wakes dnf -- on every single run, for nothing.
+    pkg_installed hyprland || sudo_maybe dnf copr enable -y lionheartp/Hyprland ||
         warn "COPR lionheartp/Hyprland could not be enabled — hyprland may fail to install."
     # Quickshell -- the actual bar (see quickshell/bar/), waybar/config.jsonc
     # is no longer started but stays installed/in the repo as a fallback.
-    sudo dnf copr enable -y errornointernet/quickshell ||
+    pkg_installed quickshell || sudo_maybe dnf copr enable -y errornointernet/quickshell ||
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
     # satty is NOT in any Fedora repo and never has been, so listing it in
     # PKGS below only ever got it skipped by --skip-unavailable -- silently,
     # module still exit=0. It backs Super+S / Super+SHIFT+S (hypr/keybinds.lua
     # pipes grim into it) and waybar/scripts/screenshot-region.sh; without it
     # the pipe breaks and a screenshot produces nothing.
-    sudo dnf copr enable -y mineiro/satty ||
+    pkg_installed satty || sudo_maybe dnf copr enable -y mineiro/satty ||
         warn "COPR mineiro/satty could not be enabled — Super+S screenshots will be broken."
 
     PKGS=(
@@ -337,8 +347,26 @@ elif [ "$DISTRO" = "debian" ]; then
     )
 fi
 
-$PKG_INSTALL "${PKGS[@]}"
-ok "Packages installed."
+# Query first, install only what is missing. The PKGS arrays above are left
+# untouched: they are the inventory, this is just how it is consumed.
+hypr_missing=()
+for p in "${PKGS[@]}"; do pkg_installed "$p" || hypr_missing+=("$p"); done
+
+if [ "${#hypr_missing[@]}" -eq 0 ]; then
+    ok "Packages: all ${#PKGS[@]} already present."
+else
+    if [ "${CCPKG_ALLOW_ROOT:-1}" != 1 ]; then
+        # User scope: name what is missing and move on. The symlinks, the Rust
+        # builds and the font downloads below all still run, which is most of
+        # what this module does on an already-provisioned machine.
+        warn "deferred (needs --system): ${#hypr_missing[@]} package(s) — ${hypr_missing[*]}"
+    else
+        info "Packages: ${#hypr_missing[@]} of ${#PKGS[@]} missing — refreshing metadata and installing."
+        eval "$PKG_UPDATE"
+        $PKG_INSTALL "${hypr_missing[@]}"
+        ok "Packages installed."
+    fi
+fi
 
 if [ "$DISTRO" = "fedora" ]; then
     # --skip-unavailable means a COPR failure above can silently drop
@@ -363,7 +391,7 @@ fi
 # rest of PKGS down with it. Debian/Ubuntu: no attempt -- FA6 generally
 # isn't packaged there yet, get it from https://fontawesome.com/download.
 if [ "$DISTRO" = "arch" ]; then
-    sudo pacman -S --noconfirm --needed ttf-font-awesome \
+    sudo_maybe pacman -S --noconfirm --needed ttf-font-awesome \
         || warn "ttf-font-awesome install failed/not found -- get Font Awesome 6 manually: https://fontawesome.com/download (Steam/Discord icons and some bar glyphs need it)."
 elif [ "$DISTRO" = "debian" ]; then
     warn "Font Awesome 6 isn't reliably packaged for Debian/Ubuntu yet -- install manually if Launchers.qml's Steam/Discord icons or other bar glyphs come up blank: https://fontawesome.com/download"
@@ -483,7 +511,7 @@ systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null ||
 ok "Pipewire running."
 
 if [ "$DISTRO" != "debian" ]; then
-    sudo systemctl enable --now bluetooth 2>/dev/null || true
+    sudo_maybe systemctl enable --now bluetooth 2>/dev/null || true
     ok "Bluetooth enabled."
 fi
 
@@ -709,7 +737,7 @@ ok "All directories linked. Changes in the repo are now live."
 section "CPU temperature sensor"
 
 if command -v sensors &>/dev/null; then
-    sudo sensors-detect --auto 2>/dev/null || true
+    sudo_maybe sensors-detect --auto 2>/dev/null || true
     info "Run this to identify your sensor:"
     echo ""
     echo "    bash ~/.config/waybar/scripts/detect-temp.sh"

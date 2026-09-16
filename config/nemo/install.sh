@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BOLD="\e[1m"
 GREEN="\e[32m"
 BLUE="\e[34m"
@@ -13,8 +17,7 @@ section() { echo -e "\n${BOLD}── $* ──${RESET}\n"; }
 section "Nemo Global Installation & Integration"
 
 # 1. Install packages
-info "Installing Nemo and File-Roller..."
-sudo dnf install -y nemo nemo-fileroller xdg-desktop-portal-gtk
+pkg_ensure nemo nemo-fileroller xdg-desktop-portal-gtk
 
 # 2. Configure XDG Desktop Portal
 info "Configuring XDG Desktop Portal..."

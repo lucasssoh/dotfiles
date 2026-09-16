@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BLUE="\e[34m"
 GREEN="\e[32m"
 RESET="\e[0m"
@@ -39,13 +43,7 @@ chmod +x "$DOTFILES_DIR/config/ccslide/ccslide.py"
 #    no Terra either, so the package path cannot be relied on alone.
 build_mdp_from_source() {
     info "Building mdp from source (https://github.com/visit1985/mdp)..."
-    if command -v dnf &> /dev/null; then
-        sudo dnf install -y git make gcc ncurses-devel
-    elif command -v pacman &> /dev/null; then
-        sudo pacman -S --noconfirm --needed git make gcc ncurses
-    elif command -v apt-get &> /dev/null; then
-        sudo apt-get install -y git make gcc libncursesw5-dev
-    fi
+    pkg_ensure git make gcc "$(pkg_pick ncurses-devel ncurses libncursesw5-dev)"
 
     local src_dir
     src_dir="$(mktemp -d)"
@@ -53,22 +51,18 @@ build_mdp_from_source() {
     trap "rm -rf '$src_dir'" RETURN
     git clone --depth 1 https://github.com/visit1985/mdp.git "$src_dir"
     make -C "$src_dir"
-    sudo make -C "$src_dir" install   # lands in /usr/local/bin/mdp
+    sudo_maybe make -C "$src_dir" install   # lands in /usr/local/bin/mdp
 }
 
 if command -v mdp &> /dev/null; then
     ok "mdp already installed ($(command -v mdp))"
 else
     info "Installing mdp..."
-    if command -v dnf &> /dev/null; then
-        sudo dnf install -y mdp || build_mdp_from_source
-    elif command -v pacman &> /dev/null; then
-        sudo pacman -S --noconfirm mdp || build_mdp_from_source
-    elif command -v apt-get &> /dev/null; then
-        sudo apt-get install -y mdp || build_mdp_from_source
-    else
-        build_mdp_from_source
-    fi
+    # pkg_ensure returns 0 even when it could not install, so the fallback is
+    # keyed on the binary actually being there afterwards rather than on an
+    # exit code.
+    pkg_ensure mdp || true
+    command -v mdp &> /dev/null || build_mdp_from_source
     command -v mdp &> /dev/null || { echo "mdp installation failed" >&2; exit 1; }
 fi
 

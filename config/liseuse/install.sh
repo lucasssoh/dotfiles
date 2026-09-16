@@ -8,6 +8,10 @@
 # ============================================================
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 GREEN="\e[32m"
 YELLOW="\e[33m"
 RESET="\e[0m"
@@ -38,16 +42,9 @@ warn() { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
 # Arch name, Fedora ships the same binary in plain `mupdf` and has no
 # `mupdf-tools` at all (`rpm -qf /usr/bin/mutool` -> mupdf-1.28.2). Hence
 # a list per distro rather than one list with a substitution.
-if command -v dnf &> /dev/null; then
-    sudo dnf install -y zathura zathura-pdf-mupdf zathura-cb zathura-djvu \
-                        mupdf libnotify
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm zathura zathura-pdf-mupdf zathura-cb zathura-djvu \
-                               mupdf-tools libnotify
-elif command -v apt-get &> /dev/null; then
-    sudo apt-get install -y zathura zathura-pdf-mupdf zathura-cb zathura-djvu \
-                            mupdf-tools libnotify-bin
-fi
+pkg_ensure zathura zathura-pdf-mupdf zathura-cb zathura-djvu \
+    "$(pkg_pick mupdf mupdf-tools mupdf-tools)" \
+    "$(pkg_pick libnotify libnotify libnotify-bin)"
 
 # ------------------------------------------------------------
 # 2. Symlinks

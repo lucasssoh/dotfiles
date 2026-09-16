@@ -3,6 +3,10 @@
 # Exit immediately if a command exits with a non-zero status
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 # Colors and formatting
 BOLD="\e[1m"
 GREEN="\e[32m"
@@ -31,13 +35,12 @@ read -rp "Continue? [y/N]: " CONFIRM
 # ============================================================
 section "Package Installation"
 
-if command -v dnf &>/dev/null; then
+# The copr is only enabled when greetd is genuinely absent.
+if ! pkg_installed greetd-tuigreet && [ "$(pkg_mgr)" = dnf ]; then
     info "Fedora detected. Enabling COPR for tuigreet..."
-    sudo dnf copr enable -y pennbauman/ports
-    sudo dnf install -y greetd greetd-tuigreet
-elif command -v pacman &>/dev/null; then
-    sudo pacman -S --noconfirm --needed greetd greetd-tuigreet
+    sudo_maybe dnf copr enable -y pennbauman/ports
 fi
+pkg_ensure greetd greetd-tuigreet
 
 # ============================================================
 # USER SETUP

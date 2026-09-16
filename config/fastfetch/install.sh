@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 GREEN="\e[32m"
 RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install fastfetch
-if command -v dnf &> /dev/null; then
-    sudo dnf install -y fastfetch chafa
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm fastfetch chafa
-elif command -v apt-get &> /dev/null; then
-    sudo apt-get update
-    sudo apt-get install -y fastfetch chafa
-fi
+pkg_ensure fastfetch chafa
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 GREEN="\e[32m"
 RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install Tmux
-if command -v dnf &> /dev/null; then
-    sudo dnf install -y tmux wl-clipboard
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm tmux wl-clipboard
-elif command -v apt-get &> /dev/null; then
-    sudo apt-get update
-    sudo apt-get install -y tmux wl-clipboard
-fi
+pkg_ensure tmux wl-clipboard
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BLUE="\e[34m"
 GREEN="\e[32m"
 RESET="\e[0m"
@@ -9,14 +13,7 @@ info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 if ! command -v wireplumber &> /dev/null; then
-    info "Installing WirePlumber..."
-    if command -v dnf &> /dev/null; then
-        sudo dnf install -y wireplumber pipewire-utils
-    elif command -v pacman &> /dev/null; then
-        sudo pacman -S --noconfirm wireplumber pipewire-utils
-    elif command -v apt-get &> /dev/null; then
-        sudo apt-get update && sudo apt-get install -y wireplumber pipewire-utils
-    fi
+    pkg_ensure wireplumber pipewire-utils
 fi
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

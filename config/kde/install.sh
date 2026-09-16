@@ -6,6 +6,10 @@
 
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BOLD="\e[1m"
 GREEN="\e[32m"
 BLUE="\e[34m"
@@ -33,7 +37,18 @@ PKGS=(
     google-noto-sans-fonts google-noto-emoji-fonts
 )
 
-sudo dnf install -y "${PKGS[@]}" --allowerasing
+# --allowerasing is why this one does not go through pkg_ensure: the KDE set
+# deliberately replaces conflicting packages, which is a decision pkg_ensure
+# must never make on its own. It is still gated on there being something
+# missing, so a provisioned machine skips it entirely.
+kde_missing=()
+for p in "${PKGS[@]}"; do pkg_installed "$p" || kde_missing+=("$p"); done
+if [ "${#kde_missing[@]}" -gt 0 ]; then
+    info "KDE: installing ${#kde_missing[@]} missing package(s)…"
+    sudo_maybe dnf install -y "${kde_missing[@]}" --allowerasing
+else
+    info "KDE: all packages already present."
+fi
 ok "KDE Minimal packages installed."
 
 # ============================================================

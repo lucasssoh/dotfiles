@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BLUE="\e[34m"; GREEN="\e[32m"; YELLOW="\e[33m"; RESET="\e[0m"
 info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
@@ -23,13 +27,13 @@ FLAGS_FILE="$DOTFILES_DIR/config/brave/brave-flags.conf"
 # wrong fails loudly rather than silently, but it fails at the one moment
 # a fresh install can least afford it.
 if ! command -v brave-browser &> /dev/null; then
-    if command -v dnf &> /dev/null; then
+    if [ "$(pkg_mgr)" = dnf ]; then
         info "Adding the Brave rpm repo..."
-        sudo dnf install -y dnf-plugins-core
-        sudo dnf config-manager addrepo --overwrite \
+        pkg_ensure dnf-plugins-core
+        sudo_maybe dnf config-manager addrepo --overwrite \
             --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
         info "Installing Brave..."
-        sudo dnf install -y brave-browser
+        pkg_ensure brave-browser
     elif command -v pacman &> /dev/null; then
         # AUR, so not something this script can do unattended.
         warn "Arch: install brave-bin from the AUR by hand, then re-run this module."

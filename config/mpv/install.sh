@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 GREEN="\e[32m"
 RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install mpv
-if command -v dnf &> /dev/null; then
-    sudo dnf install -y mpv
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm mpv
-elif command -v apt-get &> /dev/null; then
-    sudo apt-get install -y mpv
-fi
+pkg_ensure mpv
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BLUE="\e[34m"
 GREEN="\e[32m"
 RESET="\e[0m"
@@ -9,14 +13,7 @@ info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install Neovim if needed
-if ! command -v nvim &> /dev/null; then
-    info "Installing Neovim..."
-    if command -v dnf &> /dev/null; then
-        sudo dnf install -y neovim
-    elif command -v apt-get &> /dev/null; then
-        sudo apt-get install -y neovim
-    fi
-fi
+pkg_ensure neovim
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

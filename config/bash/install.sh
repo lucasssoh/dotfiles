@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 BLUE="\e[34m"
 GREEN="\e[32m"
 RESET="\e[0m"
@@ -13,14 +17,11 @@ info "Installing dependencies..."
 # =========================
 # PACKAGE MANAGER
 # =========================
-if command -v dnf &> /dev/null; then
-    sudo dnf install -y fzf zoxide ripgrep fd-find make gcc zsh
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm fzf zoxide ripgrep fd make gcc zsh
-elif command -v apt-get &> /dev/null; then
-    sudo apt-get update
-    sudo apt-get install -y fzf ripgrep fd-find make gcc zsh
+pkg_ensure fzf ripgrep make gcc zsh "$(pkg_pick fd-find fd fd-find)"
 
+# zoxide separately: Debian/Ubuntu have no usable package for it, so it is
+# the one name here that can need the upstream installer.
+if [ "$(pkg_mgr)" = apt ]; then
     if ! command -v zoxide &> /dev/null; then
         # Download first, then run: a direct `curl | sh` hides a curl
         # failure (network down, 404) behind sh happily exiting 0 on empty
@@ -29,6 +30,8 @@ elif command -v apt-get &> /dev/null; then
         sh /tmp/zoxide-install.sh
         rm -f /tmp/zoxide-install.sh
     fi
+else
+    pkg_ensure zoxide
 fi
 
 # =========================

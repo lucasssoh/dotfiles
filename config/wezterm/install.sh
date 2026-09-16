@@ -1,23 +1,31 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Package helper: queries before it installs, so an already-provisioned
+# machine performs zero package-manager calls and never prompts for sudo.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+
 GREEN="\e[32m"
 RESET="\e[0m"
 
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install WezTerm
-if command -v dnf &> /dev/null; then
-    sudo dnf copr enable wezfurlong/wezterm-nightly -y
-    sudo dnf install -y wezterm
-elif command -v pacman &> /dev/null; then
-    sudo pacman -S --noconfirm wezterm
-elif command -v apt-get &> /dev/null; then
-    curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
-    echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
-    sudo apt-get update
-    sudo apt-get install -y wezterm
+# The third-party repo is only touched when wezterm is actually absent:
+# `dnf copr enable` on an already-enabled copr is harmless but still wakes
+# dnf and needs root, which is exactly what this module must stop doing on
+# every run.
+if ! pkg_installed wezterm; then
+    case "$(pkg_mgr)" in
+        dnf) sudo_maybe dnf copr enable wezfurlong/wezterm-nightly -y ;;
+        apt)
+            curl -fsSL https://apt.fury.io/wez/gpg.key | sudo_maybe gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+            echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo_maybe tee /etc/apt/sources.list.d/wezterm.list
+            sudo_maybe apt-get update
+            ;;
+    esac
 fi
+pkg_ensure wezterm
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
