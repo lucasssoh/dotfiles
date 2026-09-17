@@ -86,6 +86,7 @@ Options:
   --no-pull            update: do not touch git; apply local work only.
   --only <module>      update: restrict to one module (repeatable).
   --system             update: allow the root-owned system phase.
+  --strict             update/verify: treat deferrals and warnings as failure.
   --fetch              status: contact origin to report how far behind.
   --porcelain          status: stable key<TAB>value output for scripting.
   -n, --dry-run        Print what would happen; change nothing.
@@ -349,13 +350,14 @@ _crate_state() {
 
 # --------------------------------------------------------------- update ----
 cmd_update() {
-    local force=0 adopt=0 no_pull=0 system=0 only=()
+    local force=0 adopt=0 no_pull=0 system=0 strict=0 only=()
     while [ $# -gt 0 ]; do
         case "$1" in
             --force)   force=1 ;;
             --adopt)   adopt=1 ;;
             --no-pull) no_pull=1 ;;
             --system)  system=1 ;;
+            --strict)  strict=1 ;;
             --only)    shift; only+=("$1") ;;
             *)         err "update: unknown option $1" ;;
         esac
@@ -501,6 +503,11 @@ cmd_update() {
         echo -e "${YELLOW}Deferred (needs --system):${RESET}"
         sort -u "$STATE_DIR/deferred.ledger" | sed 's/^/  /'
         echo -e "${DIM}  → cc-pkg-mng update --system${RESET}"
+        # Deferrals are not a failure: the files, links and binaries are all in
+        # place and only the root-owned parts are outstanding. --strict is for
+        # callers that need "fully applied or nothing" -- a provisioning check,
+        # a CI job -- and turns them into a non-zero exit.
+        [ "$strict" = 1 ] && summary_rc=1
     fi
 
     needs_restart_report || true

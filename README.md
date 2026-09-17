@@ -27,63 +27,139 @@ cd dotfiles
 ./install
 ```
 
-`./install` exists for one reason: a bare clone has nothing on `PATH` yet. It translates its phases and delegates to [`bin/cc-pkg-mng`](bin/cc-pkg-mng), which holds the logic.
+`./install` delegates to [`bin/cc-pkg-mng`](bin/cc-pkg-mng). Use it for the first install, on a clone where nothing is on `PATH` yet.
 
-| Phase | What it does |
-|---|---|
-| **`system`** | Base Fedora packages and services ([`setup_fedora.sh`](setup_fedora.sh)), then the **hardware phase** — the drivers *this specific machine* needs, detected rather than hardcoded. Wants sudo. |
-| **`user`** | Every module in the registry, Hyprland last. Symlinks the repo into `~/.config`. Asks for nothing already installed. |
+| Command | What it installs | sudo |
+|---|---|---|
+| `./install` | Everything: system phase, then every module | yes |
+| `./install system` | Base Fedora packages and services ([`setup_fedora.sh`](setup_fedora.sh)), then the hardware drivers this machine needs | yes |
+| `./install hardware` | The hardware drivers only | yes |
+| `./install user` | Modules, symlinks, Rust binaries — nothing root-owned | no |
+| `./install login-manager` | greetd + tuigreet. Interactive | yes |
 
-`./install --detect` reports what the hardware detection sees and changes nothing. `./install --dry-run` prints the ordered list of modules that would run. `install_all.sh` and `setup_fedora.sh` still work when called directly.
+Options: `--dry-run` prints the ordered list of what would run; `--detect` prints the hardware detection and exits; `--help`.
 
-Two modules are deliberately **opt-in** and never in the default path: `login-manager` (greetd + tuigreet — it rewrites system login and prompts interactively) and `kde`.
+`install_all.sh`, `setup_fedora.sh` and every `config/*/install.sh` remain executable on their own.
 
-## Day to day — `cc-pkg-mng`
+`login-manager` and `kde` are opt-in: they are never part of a default run and must be named explicitly.
 
-After the first install the repo maintains itself. Two commands cover almost everything:
+## Usage
 
 ```bash
-cc-pkg-mng update     # pull, then apply only what changed
-cc-pkg-mng verify     # check that everything is still in place
+cc-pkg-mng update     # pull, then apply the modules whose contents changed
+cc-pkg-mng verify     # check links, binaries, packages and units
 ```
 
-**`update` never asks for a password.** It queries before it installs — `rpm -q` needs no root and answers in milliseconds, so on a provisioned machine the package manager is not invoked at all. Anything genuinely root-owned is *deferred*: named in the summary, left for an explicit `cc-pkg-mng update --system`.
-
-**It restarts nothing**, on purpose. Like `dnf` or `apt`, it puts files and binaries in place and leaves running processes alone; the new version takes effect the next time each one starts. What is still running old code is reported — read off `/proc`, not guessed:
-
-```
-These are still running an older version:
-  balise               binary replaced since it started
-                       -> systemctl --user restart balise.service
-```
-
-| Command | What it does |
+| Command | Description |
 |---|---|
-| `cc-pkg-mng status` | what changed since each module was last applied — read-only, never fetches unless asked |
-| `cc-pkg-mng update [-n]` | apply it; `-n` prints the plan and changes nothing |
-| `cc-pkg-mng verify [--full]` | links, binaries, packages, systemd units; `--fix` re-runs the modules owning a problem |
-| `cc-pkg-mng build [crate]` | just the Rust binaries, skipping anything unchanged |
-| `cc-pkg-mng needs-restart` | re-print the staleness report |
-| `cc-pkg-mng clean --cargo` | drop the build caches |
+| `status` | Per-module state: up to date, changed, never applied, or last run failed. Also crate staleness and any repo path no module claims. Read-only; contacts the network only with `--fetch`. Always exits 0 |
+| `update` | Pulls fast-forward only, then runs the `install.sh` of every module whose fingerprint moved, in registry order |
+| `verify` | Six checks: registry, symlinks, binaries, declared packages, systemd units, and with `--full` the runtime dependencies |
+| `build [crate]` | Builds the Rust crates, skipping any whose sources and toolchain are unchanged. No argument means all three |
+| `needs-restart` | Lists processes running a binary that has since been replaced |
+| `clean --cargo` | Removes the cargo target directory and the legacy `~/.cache/*-build` trees |
 
-Useful flags: `--only <module>`, `--force`, `--no-pull` (apply uncommitted local work — `update` otherwise refuses to pull over a dirty tree and says so), `--adopt` (record an already-configured machine as current without running anything).
+### Options
 
-### How it knows what changed
-
-A content fingerprint per `config/<module>/`, persisted in `~/.local/state/dotfiles/`. The file list comes from `git ls-files`, which means `.gitignore` does the exclusion work for free — `balise-src/target/` is invisible without a single hand-written rule. It hashes **contents, not mtimes**: `cp`, `git checkout` and `git stash` all rewrite those.
-
-The Rust crates get the same treatment, keyed on the source fingerprint *and* the toolchain version, so a `cargo` upgrade invalidates everything as it should. Cargo's own incremental engine then does the real work. It simply never got the chance before: the old build path deleted its fingerprint database on every single install.
-
-Measured on this machine:
-
-| | Before | Now |
+| Flag | Applies to | Effect |
 |---|---|---|
-| Nothing changed | three full LTO builds, ~460 crates | **0.17 s**, nothing compiled |
-| One crate edited | all three rebuilt | **only that one** |
-| Detecting what changed | didn't exist | **0.33 s** across 18 modules |
-| Build trees on disk | 2.0 GB in four copies | 1.1 GB in one |
+| `-n`, `--dry-run` | all | Print what would happen; change nothing |
+| `--only <module>` | `update`, `install` | Restrict to one module. Repeatable |
+| `--force` | `update`, `build` | Act even when nothing changed |
+| `--no-pull` | `update` | Skip the pull and apply the working tree as it is |
+| `--system` | `update` | Allow root-owned steps |
+| `--adopt` | `update` | Record the current fingerprints as applied, without running anything |
+| `--fetch` | `status` | Contact origin to report how many commits behind |
+| `--porcelain` | `status` | `key<TAB>value` output |
+| `--full` | `verify` | Also run the runtime-dependency scan |
+| `--fix` | `verify` | Re-run the modules owning a hard problem |
+| `--strict` | `verify`, `update` | Treat warnings and deferrals as failures |
+| `-q`, `--quiet`, `--no-color`, `-V` | all | |
 
-The module list and its ordering constraints live in [`scripts/lib/modules.sh`](scripts/lib/modules.sh), and are validated against the filesystem on every invocation. A `config/*/install.sh` that is in no list fails every command immediately, naming the file — this repo once shipped a machine with no application launcher because four working modules were silently called by nothing.
+### Behaviour to know about
+
+- **Privilege scope.** `update` runs in user scope. A package that is already installed is detected with `rpm -q`, which needs no root, so nothing is asked of you. A package that is genuinely missing is *deferred*: listed at the end of the run and left for `cc-pkg-mng update --system`. `install` is the reverse — system scope unless `--user`.
+- **Nothing is restarted.** Files and binaries are put in place; running processes keep the version they started with. `update` ends by listing what is affected, with the command to restart each one.
+- **A dirty worktree stops the pull.** `update` refuses to pull over uncommitted changes and lists them. Use `--no-pull` to apply local work without touching git.
+- **A failed module is retried.** A module whose last run exited non-zero is re-run on the next `update` even if its contents have not changed.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success. Deferred root-owned steps do not fail a run unless `--strict` is given |
+| 1 | `update`: a module failed, or `--strict` with deferrals. `verify`: a hard problem, or `--strict` with warnings. Also an inconsistent registry, a dirty worktree blocking the pull, or a diverged branch |
+| 2 | `verify` only: the check could not run at all (not a git repository) |
+
+`status` always exits 0.
+
+## Configuration
+
+### State and logs
+
+Everything the manager remembers lives in `${XDG_STATE_HOME:-~/.local/state}/dotfiles/`:
+
+| File | Contents |
+|---|---|
+| `state.v1` | `key<TAB>value`: per-module fingerprint, exit code, duration, timestamp; per-crate build key |
+| `links.ledger` | `module<TAB>source<TAB>destination`, written by `safe_link` as it runs. Read by `verify` |
+| `packages.ledger` | `module<TAB>package`, written by `pkg_ensure`. Read by `verify` |
+| `deferred.ledger` | Root-owned steps skipped during the last run |
+| `install-*.log`, `latest.log` | Full output of each run, one file per run |
+
+Deleting `state.v1` makes every module read as never applied; the next `update` re-runs all of them. `cc-pkg-mng update --adopt` is the opposite: it records the current state as applied without running anything.
+
+### Environment variables
+
+| Variable | Default | Effect |
+|---|---|---|
+| `STATE_DIR` | `~/.local/state/dotfiles` | Where state, ledgers and logs are written |
+| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Shared cargo target directory for the three crates |
+| `CCPKG_ALLOW_ROOT` | `1` | `0` defers every root-owned step instead of running it. `update` sets this itself |
+| `CCPKG_MODULE` | directory name | Which module the ledgers attribute an entry to |
+
+### The module registry
+
+[`scripts/lib/modules.sh`](scripts/lib/modules.sh) holds the list and its constraints:
+
+| Name | Purpose |
+|---|---|
+| `MODULE_ORDER` | The modules, in the order they run. The order is the contract |
+| `MODULE_OPTIN` | Modules that exist but are never run by default, with the reason |
+| `MODULE_AFTER` | Ordering constraints — `[liseuse]="fuzzel"`, or `"@last"` for the trailing block |
+| `MODULE_LAST_BLOCK` | How many entries form that trailing block |
+
+`registry_validate` runs on every invocation and checks four things: every registered module has an `install.sh`, every `config/*/install.sh` on disk is registered, no duplicates, and every `MODULE_AFTER` constraint holds. Any failure stops the command and names the module and the file to edit.
+
+**To add a module:** create `config/<name>/install.sh`, then add `<name>` to `MODULE_ORDER` (or to `MODULE_OPTIN` to keep it out of default runs). Until you do, every `cc-pkg-mng` command will fail and tell you so.
+
+Inside a module, source the shared helpers instead of writing your own:
+
+```bash
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/link.sh"
+
+pkg_ensure tmux wl-clipboard                      # installs only what is missing
+pkg_ensure "$(pkg_pick fd-find fd fd-find)"       # dnf / pacman / apt name
+sudo_maybe systemctl enable --now foo             # deferred in user scope
+safe_link "$SRC/file.conf" "$HOME/.config/file.conf"
+```
+
+### Rust crates
+
+`RUST_CRATES` in [`scripts/lib/rust.sh`](scripts/lib/rust.sh) maps each crate to its directory and the binaries it produces:
+
+```bash
+[prisme]="config/hyprland/prisme-src prisme wallpaper-filter"
+```
+
+A crate is rebuilt when its content fingerprint or the `cargo --version` string changes, or when one of its binaries is missing from `~/.local/bin`. `--force` bypasses the check.
+
+### How changes are detected
+
+One content fingerprint per `config/<module>/`, stored in `state.v1` and compared on the next run. The file list comes from `git ls-files`, so `.gitignore` decides what is excluded — build output under `*-src/target/` and `__pycache__/` never counts. Contents are hashed, not modification times, so `touch` alone triggers nothing.
+
+Paths outside `config/` map to a target too: `setup_fedora.sh` to the system phase, `scripts/lib/hardware.sh` to the hardware phase, `wallpapers/` to the hyprland module. Changes to the manager's own scripts trigger nothing, since they are read fresh on each run. Any path matching none of these is listed by `status` under *Unmapped paths*.
 
 ### Hardware detection
 
