@@ -16,8 +16,8 @@
    ============================================================ */
 
 /* ---- The page ----------------------------------------------------
-   240x150mm is 16:10, which is the aspect ratio of the panel this is
-   read on (eDP-1, 1920x1200). That is the whole reason for the size:
+   240x148mm is a hair wider than the 16:10 of the panel this is read on
+   (eDP-1, 1920x1200). That near-match is the whole reason for the size:
    zathurarc opens documents with `adjust-open "best-fit"` inside a
    fullscreen window, so a page in this ratio lands filling the screen
    exactly, with no letterboxing and no scrolling inside a page. One
@@ -27,7 +27,14 @@
    one. Margins are generous for the same reason a book's are: the text
    column wants to stay near 70-80 characters even on a wide page. */
 @page {
-    size: 240mm 150mm;
+    /* 148 and not 150: 240x150 is exactly 16:10, i.e. exactly the shape
+       of the viewport, and "exactly" is the one value that makes
+       zathura's page-turn test (scroll_single_page_full, see zathurarc)
+       sit on its own boundary. 148mm makes the page a touch WIDER than
+       the screen, so best-fit scales it to the width and it lands ~16px
+       short of the viewport height -- invisible, and unambiguously on
+       the "the page fits, turn it" side of that test. */
+    size: 240mm 148mm;
     margin: 14mm 18mm;
     background: #1c1c1e;
 }

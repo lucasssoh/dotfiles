@@ -103,8 +103,60 @@ set statusbar-basename true
 # course PDFs more than books -- it zooms to the page's width and makes
 # the text noticeably bigger at the cost of scrolling each page.
 set adjust-open "best-fit"
-set page-h-padding 8
-set page-v-padding 8
+
+# Zero, not the 8 this file asked for first, and the reason is in
+# scroll_single_page_full() (shortcuts.c). It advances to the next page
+# only once the view is at the bottom of the current one:
+#
+#   maxvalue = upper - page_size        // scrollable slack
+#   if (value < maxvalue - 1.0) scroll; else page_set(page + 1);
+#
+# `upper` is the laid-out document height, padding INCLUDED. So any
+# padding that pushes the page past the viewport leaves a few pixels of
+# slack, and the first Space spends itself nudging through them instead
+# of turning the page -- two presses per page, the second one working.
+#
+# Slides are safe either way (a 16:9 page fits width-first in a 16:10
+# window and comes out ~1071px tall, far under 1200), but the Markdown
+# pages md2pdf.py generates are deliberately 16:10, i.e. exactly the
+# viewport -- and 16px of padding is precisely what would tip them over.
+# Zero removes the whole class of problem, and costs nothing here: in
+# single-page fullscreen the padding separates no adjacent pages, it only
+# eats into the letterbox the centring already provides.
+set page-h-padding 0
+set page-v-padding 0
+
+# ---- One page, centred, and Space moves by exactly one --------------
+# Slides are the case that exposes this, and the geometry is the whole
+# explanation. A deck from a course is 960x540 (`mutool pages`), which is
+# 16:9; this panel is 1920x1200, which is 16:10. best-fit scales the
+# slide to the window width and leaves 120px of nothing on the vertical
+# axis -- and with vertical-center at its default of false, zathura pins
+# the page to the TOP and drops all 120px at the bottom. The slide sits
+# high and off-centre before you have touched anything.
+#
+# vertical-center puts the page at the vertical midpoint instead, which
+# splits that band 60/60. `position_set` (zathura.c) is where this is
+# read: it picks a yalign of 0.5 instead of 0.0.
+set vertical-center true
+set zoom-center true
+
+# single-page-mode changes what Space MEANS. Without it the viewport is a
+# window onto one long continuous strip of pages, so a full-page scroll
+# moves by a screen height and lands wherever that falls -- which between
+# two 16:9 slides in a 16:10 window is a sliver of one and most of the
+# next, needing a manual nudge on every single press. In single-page mode
+# the scroll adjustment spans exactly one page (sc_scroll says so in as
+# many words: "in single page mode the adjustment spans one page so route
+# a full page scroll through the page"), so Space advances one slide and
+# lands centred, every time.
+#
+# scroll-page-aware is the same guarantee for the case where a page IS
+# taller than the viewport -- after pressing `s` to fit the width of a
+# dense A4 handout, say. A half or full page scroll then stops at the
+# page boundary instead of straddling two pages.
+set single-page-mode true
+set scroll-page-aware true
 
 # ---- Scrolling, within what zathura actually offers ----------------
 # zathura has no animated, eased or kinetic scrolling. Not "none
@@ -137,14 +189,17 @@ set page-v-padding 8
 # granularity for nudging a paragraph into view anyway, and Space still
 # turns a whole screen.
 #
-# scroll-full-overlap 0.12 is the one that matters for Space. At 0 a
-# page-scroll replaces the entire screen with content you have never
-# seen -- a hard cut, with nothing for the eye to land on. Keeping the
-# last ~12% on screen leaves two or three lines of what you just read at
-# the top, which is what makes the next screen feel continuous with the
-# last one rather than a new slide.
+# scroll-full-overlap is deliberately left at 0, reversing an earlier
+# 0.12 in this file. That 0.12 was reasoned from a document taller than
+# the screen, where keeping the last few lines visible after a full-page
+# scroll gives the eye something to land on. But this configuration never
+# produces that document: best-fit plus a fullscreen window means one
+# page IS the viewport, so there is no "within the page" to be continuous
+# with -- the overlap only ever offset the next page by 12% and made
+# every Space press need a manual re-centre. On a deck of slides it is
+# not a continuity aid, it is the bug.
 set scroll-step 15
-set scroll-full-overlap 0.12
+set scroll-full-overlap 0
 
 # The touchpad is the other half of this, and it needs no option at all:
 # this zathura is GTK4 (`ldd /usr/bin/zathura` -> libgtk-4), whose
