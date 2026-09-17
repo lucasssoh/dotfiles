@@ -52,6 +52,28 @@ pkg_ensure zathura zathura-pdf-mupdf zathura-cb zathura-djvu \
     "$(pkg_pick mupdf mupdf-tools mupdf-tools)" \
     "$(pkg_pick libnotify libnotify libnotify-bin)"
 
+# The Markdown half (md2pdf.py). mupdf has no markdown parser, so a .md
+# is rendered to a PDF first and everything downstream -- theme, reading
+# position, ranking, F1 -- keeps working on an ordinary document.
+#
+# This stack rather than the obvious ones because the obvious ones are
+# not packaged: GitHub's own parser (cmark-gfm) is absent from Fedora,
+# and so is pandoc. python-markdown plus the pymdown-extensions closes
+# the GFM gap (tables, strikethrough, task lists, autolinks, footnotes),
+# Pygments does the highlighting -- asked for GitHub's own `github-dark`
+# palette by name, so that part is not an approximation -- and WeasyPrint
+# turns the HTML into PDF.
+#
+# Deliberately NOT a headless browser: a survey of the 33 markdown files
+# on this machine found tables in 8 and fenced code in 6, and zero
+# mermaid, zero images and zero task lists. Chromium would have cost
+# ~200MB and a second per render for features none of them use.
+pkg_ensure \
+    "$(pkg_pick python3-markdown python-markdown python3-markdown)" \
+    "$(pkg_pick python3-pymdown-extensions python-pymdown-extensions python3-pymdownx)" \
+    "$(pkg_pick python3-pygments python-pygments python3-pygments)" \
+    "$(pkg_pick python3-weasyprint python-weasyprint weasyprint)"
+
 # ------------------------------------------------------------
 # 2. Symlinks
 # ------------------------------------------------------------
@@ -64,7 +86,7 @@ mkdir -p ~/.config/zathura ~/.config/liseuse ~/.local/bin
 safe_link "$MODULE_DIR/zathurarc"    ~/.config/zathura/zathurarc
 safe_link "$MODULE_DIR/sources.conf" ~/.config/liseuse/sources.conf
 
-chmod +x "$MODULE_DIR/liseuse"
+chmod +x "$MODULE_DIR/liseuse" "$MODULE_DIR/md2pdf.py"
 # Absolute path in the keybind, not a bare `liseuse`: processes launched
 # by Hyprland don't inherit ~/.local/bin in their PATH (see commit
 # bbb8f61 and the Prisme/Roue binds in hypr/keybinds.lua).
@@ -96,6 +118,27 @@ if command -v xdg-mime &> /dev/null; then
         xdg-mime default org.pwmt.zathura.desktop "$mime" 2>/dev/null || true
     done
     ok "zathura set as the default handler for PDF/EPUB/MOBI/CBZ/DjVu."
+
+    # Markdown is the one type that must NOT point at zathura, which
+    # cannot open it. It goes through Liseuse instead, which renders it
+    # first. This entry is also what makes a link BETWEEN two markdown
+    # documents work from inside the reader: md2pdf.py rewrites
+    # `[x](other.md)` into an absolute file:// URI, zathura hands that to
+    # the desktop, and it lands back here. NoDisplay, because this is a
+    # handler and not an app anyone should meet in a launcher.
+    mkdir -p ~/.local/share/applications
+    cat > ~/.local/share/applications/liseuse-markdown.desktop <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Liseuse (Markdown)
+Exec=$HOME/.local/bin/liseuse open %f
+MimeType=text/markdown;
+NoDisplay=true
+Terminal=false
+DESKTOP
+    update-desktop-database ~/.local/share/applications 2>/dev/null || true
+    xdg-mime default liseuse-markdown.desktop text/markdown 2>/dev/null || true
+    ok "Liseuse set as the default handler for Markdown."
 else
     warn "xdg-mime absent -- default handler not set."
 fi

@@ -39,6 +39,12 @@ SOURCES_CONF="$CONFIG_DIR/sources.conf"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/liseuse"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/liseuse"
 PAGES_CACHE="$CACHE_DIR/pages"
+# Rendered Markdown. md2pdf.py writes <sha1-of-abspath>.pdf in here; the
+# name is derived from the source path rather than its contents so that
+# it stays put across edits, because zathura's reading position is keyed
+# on the filename and a per-render name would reset it every time the
+# document changed.
+MD_CACHE="$CACHE_DIR/md"
 SESSIONS="$STATE_DIR/sessions"
 LOCK="$STATE_DIR/focus.lock"
 PREV_STATE="$STATE_DIR/focus.prev"
@@ -51,7 +57,14 @@ ZATHURA_CLASS="org.pwmt.zathura"
 # Everything zathura can open here: zathura-pdf-mupdf covers pdf/epub/
 # mobi/fb2/oxps, zathura-cb covers cbz/cbr, zathura-djvu covers djvu.
 # azw3 is MOBI8 and the mupdf plugin takes it under the same handler.
-EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps)
+EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps md markdown)
+
+# Markdown is the one format zathura cannot open: mupdf has no parser
+# for it. md2pdf.py (next to this script) renders it to a PDF first, so
+# everything downstream -- theme, position, ranking, F1 -- is unchanged
+# because what reaches zathura is an ordinary document.
+MD_EXTENSIONS=" md markdown "
+MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
 
 # Formats where a page COUNT is a fixed property of the file. The
 # reflowable ones (epub, mobi, azw3, fb2) are deliberately excluded: they
@@ -59,9 +72,24 @@ EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps)
 # default layout box, and that number has nothing to do with the one
 # zathura shows at your font size and window width. A wrong "/312" is
 # worse than no total at all, so those show a bare page number.
-FIXED_LAYOUT=" pdf cbz cbr xps oxps "
+FIXED_LAYOUT=" pdf cbz cbr xps oxps md markdown "
 
-mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS"
+mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS" "$MD_CACHE"
+
+# True for a path this script has to render before zathura can open it.
+is_markdown() {
+    local ext="${1##*.}"
+    case "$MD_EXTENSIONS" in *" ${ext,,} "*) return 0 ;; *) return 1 ;; esac
+}
+
+# Renders if needed (md2pdf.py decides, from the mtimes of the source
+# AND of markdown.css) and prints the PDF to open. Empty on failure --
+# every caller treats that as "leave the .md alone", so a missing python
+# dependency degrades to zathura refusing the file rather than to
+# Liseuse breaking.
+md_pdf() {
+    python3 "$MD2PDF" "$1" "$MD_CACHE" 2>/dev/null || true
+}
 
 # ============================================================
 # Library roots
@@ -151,6 +179,15 @@ scan() {
 # were UTC, so these epochs are off by the timezone offset. That is fine
 # and deliberate: they are only ever compared against each other, and the
 # error is the same constant on every row.
+# `<cached pdf>\t<source .md>` for every markdown document ever
+# rendered, read from the sidecars md2pdf.py leaves next to each PDF.
+# One awk over the whole directory rather than a `cat` per file, for the
+# same fork reason `ranked` builds its labels in awk.
+md_map() {
+    awk 'FNR == 1 { pdf = FILENAME; sub(/\.src$/, ".pdf", pdf); print pdf "\t" $0 }' \
+        "$MD_CACHE"/*.src 2>/dev/null || true
+}
+
 zathura_state() {
     [ -s "$ZATHURA_DB" ] || return 0
     sqlite3 -readonly -separator "$(printf '\t')" "$ZATHURA_DB" \
@@ -159,8 +196,8 @@ zathura_state() {
 }
 
 ranked() {
-    { zathura_state; printf '\034\n'; scan; } \
-      | awk -F'\t' -v lib="$LIBRARY_ROOT" '
+    { md_map; printf '\034\n'; zathura_state; printf '\034\n'; scan; } \
+      | awk -F'\t' -v lib="$LIBRARY_ROOT" -v mdcache="$MD_CACHE" '
         # Title: basename, extension dropped, underscores back to spaces.
         # A book under ~/Livres shows that alone; one pulled in from an
         # extra root (sources.conf) is prefixed with its own folder, so a
@@ -174,16 +211,46 @@ ranked() {
             if (index(path, lib "/") == 1) return base
             return (n > 1 ? parts[n-1] " · " base : base)
         }
-        # Everything before the \034 separator is zathura'\''s table;
-        # everything after it is the filesystem scan.
-        $0 == "\034" { scanning = 1; next }
-        !scanning { page[$1] = $2 + 0; opened[$1] = $3 + 0; next }
+        # Three \034-separated sections arrive on stdin, in order:
+        # the rendered-markdown map, zathura'\''s fileinfo table, then the
+        # filesystem scan.
+        $0 == "\034" { section++; next }
+
+        # 0. <cached pdf> -> <source .md>
+        section == 0 { src[$1] = $2; next }
+
+        # 1. zathura'\''s history, re-keyed onto the source. A markdown
+        # document is recorded against the PDF it was rendered to, so
+        # without this translation its page and timestamp would attach to
+        # a cache filename that appears in no listing, and the document
+        # would look untouched forever.
+        section == 1 {
+            key = ($1 in src) ? src[$1] : $1
+            page[key] = $2 + 0; opened[key] = $3 + 0
+            next
+        }
+
+        # 2. the files on disk.
         {
             mtime = $1 + 0; path = $2
             inprog = (path in page && page[path] > 0)
             ts = (path in opened && opened[path] > 0) ? opened[path] : mtime
-            printf "%d%012d\t%s\t%d\t%s\n", (inprog ? 2 : 1), ts, path,
-                   (inprog ? page[path] : -1), label(path)
+            # What to measure a page count against: a markdown file has
+            # none of its own, its rendered PDF does.
+            #
+            # It falls back to `path` rather than to an empty string, and
+            # that is not cosmetic: TAB is an IFS *whitespace* character,
+            # so bash'\''s `read` collapses a run of them into one
+            # separator and an empty field simply vanishes, shifting every
+            # column after it. An un-rendered .md then arrived with its
+            # label in the render slot and no label at all. Nothing
+            # downstream needs the distinction anyway -- page_total
+            # refuses a markdown extension outright.
+            render = path
+            if (path ~ /\.(md|markdown)$/)
+                for (p in src) if (src[p] == path) { render = p; break }
+            printf "%d%012d\t%s\t%d\t%s\t%s\n", (inprog ? 2 : 1), ts, path,
+                   (inprog ? page[path] : -1), render, label(path)
         }
     ' | sort -r
 }
@@ -196,6 +263,9 @@ page_total() {
     local path="$1" ext mt n
     ext="${path##*.}"
     case "$FIXED_LAYOUT" in *" ${ext,,} "*) ;; *) printf '0'; return ;; esac
+    # A markdown path reaching here means it was never rendered, so there
+    # is no PDF to count and no honest total to show.
+    case "$MD_EXTENSIONS" in *" ${ext,,} "*) printf '0'; return ;; esac
     mt="$(stat -c %Y -- "$path" 2>/dev/null)" || { printf '0'; return; }
 
     n="$(awk -F'\t' -v p="$path" -v m="$mt" '$3 == p && $1 == m { print $2; exit }' \
@@ -218,11 +288,14 @@ page_total() {
 # right below.
 LABEL=""
 decorate() {
-    local path="$1" page="$2" total
-    LABEL="$3"
+    local path="$1" page="$2" render="$3" total
+    LABEL="$4"
     [ "$page" -ge 0 ] || return 0
-    # zathura stores a 0-based page index; humans count from 1.
-    total="$(page_total "$path")"
+    # zathura stores a 0-based page index; humans count from 1. The page
+    # TOTAL is measured on the render path, which differs from `path`
+    # only for markdown -- where the pages belong to the generated PDF,
+    # the .md having none of its own.
+    total="$(page_total "${render:-$path}")"
     if [ "$total" -gt 0 ]; then
         LABEL="$LABEL   —   p. $((page + 1))/$total"
     else
@@ -313,8 +386,22 @@ focus_leave() {
 # Opening
 # ============================================================
 open_book() {
-    local path="$1"
+    local path="$1" target
     [ -f "$path" ] || { notify "Not found" "$(basename -- "$path")"; return 1; }
+
+    # Markdown is rendered to a PDF first (md2pdf.py), because mupdf has
+    # no markdown parser. Done BEFORE focus_enter so that the ~450ms of
+    # a first render happens on the normal desktop rather than behind an
+    # already-hidden bar -- and so a render that fails leaves nothing to
+    # restore.
+    target="$path"
+    if is_markdown "$path"; then
+        target="$(md_pdf "$path")"
+        if [ -z "$target" ] || [ ! -f "$target" ]; then
+            notify "Cannot render" "$(basename -- "$path") — is python3-weasyprint installed?"
+            return 1
+        fi
+    fi
 
     # Nothing recorded here: zathura writes its own fileinfo row (path,
     # page, time) the moment it opens the file, and that row is what
@@ -327,7 +414,7 @@ open_book() {
     systemd-inhibit --what=idle \
                     --who=Liseuse \
                     --why="Reading a book" \
-                    zathura -- "$path" || true
+                    zathura -- "$target" || true
     focus_leave
     trap - EXIT INT TERM HUP
 }
@@ -466,12 +553,12 @@ touches_afficher() {
 # ============================================================
 pick() {
     local -a paths=() labels=()
-    local key path page label idx
+    local key path page render label idx
 
-    while IFS=$'\t' read -r key path page label; do
+    while IFS=$'\t' read -r key path page render label; do
         [ -n "$path" ] || continue
         paths+=("$path")
-        decorate "$path" "$page" "$label"
+        decorate "$path" "$page" "$render" "$label"
         labels+=("$LABEL")
     done < <(ranked)
 
@@ -537,9 +624,9 @@ EOF
         open_book "$2"
         ;;
     list)
-        while IFS=$'\t' read -r _ path page label; do
+        while IFS=$'\t' read -r _ path page render label; do
             [ -n "$path" ] || continue
-            decorate "$path" "$page" "$label"
+            decorate "$path" "$page" "$render" "$label"
             printf '%s\t%s\n' "$LABEL" "$path"
         done < <(ranked)
         ;;

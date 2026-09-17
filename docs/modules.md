@@ -124,7 +124,11 @@ One package and one config link each: `~/.config/mpv/mpv.conf`, `~/.config/Mango
 
 ### `liseuse`
 
-Installs the zathura stack (`zathura`, `zathura-pdf-mupdf`, `zathura-cb`, `zathura-djvu`, mupdf, libnotify), links `zathurarc`, `sources.conf` and the `liseuse` launcher into `~/.local/bin`, creates `~/Livres` and registers the document MIME types. `Super + F`.
+Installs the zathura stack (`zathura`, `zathura-pdf-mupdf`, `zathura-cb`, `zathura-djvu`, mupdf, libnotify), links `zathurarc`, `sources.conf` and the `liseuse` launcher into `~/.local/bin`, creates `~/Livres` and registers the document MIME types. `Super + F`, and `F1` inside a book for the reading manual.
+
+Also installs `python3-markdown`, `python3-pymdown-extensions`, `python3-pygments` and `python3-weasyprint` for the Markdown half. mupdf has no markdown parser, so `md2pdf.py` renders a `.md` to a PDF first and everything downstream — dark theme, reading position, ranking — works on an ordinary document. GFM coverage comes from the pymdown extensions (tables, strikethrough, task lists, autolinks, footnotes) and the syntax highlighting is Pygments' `github-dark`, which is GitHub's own palette. Not a headless browser: nothing in these documents needs JavaScript.
+
+Rendered PDFs are cached in `~/.cache/liseuse/md/`, keyed on the mtimes of both the source and `markdown.css`, so editing the stylesheet re-renders everything. A `.src` sidecar next to each one names the source, which is how a reading position zathura recorded against a cache filename finds its way back to the `.md` in the picker. Links between markdown documents work: `md2pdf.py` rewrites them to absolute `file://` URIs and a `liseuse-markdown.desktop` handler brings them back here.
 
 ---
 

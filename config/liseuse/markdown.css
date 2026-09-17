@@ -1,0 +1,173 @@
+/* ============================================================
+   markdown.css — how a .md file looks once Liseuse renders it
+   ============================================================
+   Consumed by md2pdf.py, which hands it to WeasyPrint along with the
+   HTML that python-markdown produced. Editing this file changes every
+   markdown document's appearance on the next open: the rendered PDFs are
+   cached against the SOURCE file's mtime and this stylesheet's, so
+   touching it invalidates the whole cache (see md2pdf.py's cache key).
+
+   The reference is GitHub's rendered view, because that is what these
+   documents were written against and what "finished" means for them.
+   The colors are not GitHub's though -- they are hypr/colors.lua, the
+   same hand-kept mirror zathurarc and fuzzel.ini carry. The one
+   exception is the syntax highlighting, which IS GitHub's: Pygments
+   ships a `github-dark` style and md2pdf.py asks for it by name.
+   ============================================================ */
+
+/* ---- The page ----------------------------------------------------
+   240x150mm is 16:10, which is the aspect ratio of the panel this is
+   read on (eDP-1, 1920x1200). That is the whole reason for the size:
+   zathurarc opens documents with `adjust-open "best-fit"` inside a
+   fullscreen window, so a page in this ratio lands filling the screen
+   exactly, with no letterboxing and no scrolling inside a page. One
+   page is one screenful, and Space turns it.
+
+   A markdown file has no pagination of its own, so this is inventing
+   one. Margins are generous for the same reason a book's are: the text
+   column wants to stay near 70-80 characters even on a wide page. */
+@page {
+    size: 240mm 150mm;
+    margin: 14mm 18mm;
+    background: #1c1c1e;
+}
+
+body {
+    background: #1c1c1e;
+    color: #e5e5ea;
+    font-family: "MiSans Latin", "Noto Sans", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    /* Hyphenation off: it reads as noise in technical prose full of
+       identifiers, and WeasyPrint would happily break `NetworkManager`
+       across two lines. */
+    hyphens: none;
+}
+
+/* ---- Headings ----------------------------------------------------
+   GitHub underlines h1 and h2 and stops there, which is a real
+   hierarchy signal and not decoration: it tells you a section ended.
+   `break-after: avoid` is the pagination equivalent -- without it a
+   heading lands alone at the bottom of a page, orphaned from the
+   paragraph it introduces. */
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+    line-height: 1.25;
+    margin: 1.4em 0 0.6em;
+    break-after: avoid;
+}
+h1 { font-size: 20pt; border-bottom: 1px solid #3a3a3c; padding-bottom: .3em; margin-top: 0; }
+h2 { font-size: 15pt; border-bottom: 1px solid #2c2c2e; padding-bottom: .3em; }
+h3 { font-size: 12.5pt; }
+h4 { font-size: 11pt; color: #e5e5ea; }
+h5, h6 { font-size: 10.5pt; color: #8e8e93; }
+
+p { margin: 0 0 0.9em; }
+
+/* ---- Links -------------------------------------------------------
+   `accent` from colors.lua. No underline on the body link (the color
+   carries it and underlines under inline code look broken), but the
+   link's own box keeps its shape so WeasyPrint still emits a clickable
+   PDF annotation over it. */
+a { color: #a8b4c4; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- Code --------------------------------------------------------
+   Inline code gets a surface tint, exactly as GitHub does, so an
+   identifier in a sentence is readable as one token rather than as odd
+   punctuation. The block form drops the tint (the pygments theme paints
+   its own) and takes a border instead.
+
+   `break-inside: avoid` keeps a short listing whole rather than split
+   across a page turn; a listing taller than a page still splits, which
+   is correct -- the alternative is a page of white space. */
+code, kbd, samp {
+    font-family: "Iosevka Nerd Font", "Noto Sans Mono", monospace;
+    font-size: .88em;
+}
+p code, li code, td code, h1 code, h2 code, h3 code, h4 code {
+    background: #2c2c2e;
+    padding: .12em .28em;
+    border-radius: 4px;
+}
+pre {
+    background: #161618;
+    border: 1px solid #2c2c2e;
+    border-radius: 8px;
+    padding: .75em 1em;
+    margin: 0 0 1em;
+    line-height: 1.5;
+    break-inside: avoid;
+    /* A long line in a listing has nowhere to go in a PDF -- there is no
+       horizontal scrollbar to reach for -- so it wraps rather than being
+       silently clipped at the page edge. */
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+pre code { background: none; padding: 0; border-radius: 0; font-size: .85em; }
+
+/* ---- Quotes ------------------------------------------------------ */
+blockquote {
+    border-left: 3px solid #c8823c;
+    margin: 0 0 1em;
+    padding: .1em 0 .1em 1em;
+    color: #8e8e93;
+}
+blockquote > :last-child { margin-bottom: 0; }
+
+/* ---- Tables ------------------------------------------------------
+   Eight of the repo's markdown files use tables and none use images, so
+   this is the construct that decides whether the result looks finished.
+   Zebra striping rather than GitHub's plain rules: on a dark ground the
+   alternating fill does more to keep a long row readable across a wide
+   page than a hairline does.
+
+   `table-layout: auto` is deliberate -- these tables pair a short label
+   with a long explanation, and a fixed layout would give both columns
+   the same width. */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 1em;
+    font-size: .92em;
+    table-layout: auto;
+}
+th, td {
+    border: 1px solid #3a3a3c;
+    padding: .45em .7em;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #2c2c2e; color: #ffffff; font-weight: 600; }
+tr:nth-child(even) td { background: #242426; }
+/* A row splitting across a page turn loses its header context; a table
+   longer than a page repeats its header instead, which is what the
+   thead/th pair below buys. */
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+
+/* ---- Lists -------------------------------------------------------- */
+ul, ol { margin: 0 0 .9em; padding-left: 1.5em; }
+li { margin: .25em 0; }
+li > ul, li > ol { margin: .25em 0; }
+
+/* Task lists (pymdownx.tasklist). None of the repo's files use them
+   today; they are here so that one written tomorrow does not render as
+   a stray bracket pair. */
+li.task-list-item { list-style: none; margin-left: -1.2em; }
+li.task-list-item input { margin-right: .5em; }
+
+/* ---- Rules, images, the rest -------------------------------------- */
+hr {
+    border: 0;
+    border-top: 1px solid #3a3a3c;
+    margin: 1.6em 0;
+}
+img { max-width: 100%; }
+del { color: #636366; }
+mark { background: rgba(200, 130, 60, .35); color: #e5e5ea; }
+
+/* Footnotes: pushed to the end of the document by python-markdown, and
+   set smaller and quieter so they read as apparatus rather than body. */
+.footnote { font-size: .88em; color: #8e8e93; border-top: 1px solid #2c2c2e; margin-top: 2em; }
+.footnote ol { padding-left: 1.2em; }
