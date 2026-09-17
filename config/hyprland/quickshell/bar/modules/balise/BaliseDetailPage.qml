@@ -65,6 +65,33 @@ Item {
     readonly property bool wifiEnterprise: root.wifiSecurity === "enterprise" || root.wifiSecurity === "wpa3_enterprise"
     readonly property bool wifiSaved: !!(root.details && root.details.settings_path !== "")
 
+    // ---- sharing (fifth slice) ------------------------------------------
+    // Offered only for a network whose profile lives on this machine (the
+    // key is read back out of it -- there is no reading one off the air)
+    // and never for 802.1X: the `WIFI:` format carries no username, no
+    // EAP method and no certificate, so an eduroam code would scan and
+    // then fail to join. The daemon refuses those too; this is what keeps
+    // the button from being offered in the first place.
+    readonly property bool wifiShareable: root.kind === "wifi" && root.wifiSaved && !root.wifiEnterprise
+    property bool shareOpen: false
+    // This network's own code, or null -- BaliseState.wifiShare is a
+    // broadcast slot shared by every Share action (see its own header).
+    readonly property var shareResult: {
+        const r = BaliseState.wifiShare;
+        if (!r || root.kind !== "wifi" || r.ssid !== root.wifiSsid) return null;
+        return r;
+    }
+    readonly property var shareMatrix: root.shareResult && !root.shareResult.error ? root.shareResult.qr : null
+    readonly property string shareError: root.shareResult ? String(root.shareResult.error || "") : ""
+
+    // The grid is a joinable credential: drop it as soon as it is off
+    // screen rather than leaving it in the singleton until something else
+    // overwrites it.
+    onShareOpenChanged: {
+        if (!root.shareOpen) BaliseState.clearWifiShare();
+    }
+    Component.onDestruction: BaliseState.clearWifiShare()
+
     readonly property bool connecting: root.kind === "wifi" && root.wifiSsid !== "" && BaliseState.connectingSsid === root.wifiSsid
     // Only this network's own failure -- BaliseState.connectError is a
     // single slot shared by every attempt (it's a broadcast), so it
@@ -309,6 +336,11 @@ Item {
             if (root.wifiSecured && root.wifiSaved && !root.showCredentials && !root.statusConnected) {
                 list.push({ label: "Change credentials", style: "normal", token: "wifi-credentials" });
             }
+            if (root.wifiShareable) {
+                list.push(root.shareOpen
+                    ? { label: "Hide the QR code", style: "normal", token: "wifi-share-hide" }
+                    : { label: "Share this network", style: "normal", token: "wifi-share" });
+            }
             if (root.details && root.details.settings_path !== "") list.push({ label: "Forget this network", style: "destructive", token: "wifi-forget" });
         } else if (root.kind === "bluetooth" && root.device) {
             // Pair is the branch that was missing, and its absence left
@@ -333,6 +365,8 @@ Item {
         // NetworkManager already holds.
         case "wifi-connect": if (!root.connecting) BaliseState.connectWifi(root.wifiSsid, root.wifiSecurity, null); break;
         case "wifi-credentials": root.credentialsOpen = true; break;
+        case "wifi-share": root.shareOpen = true; BaliseState.shareWifi(root.wifiSsid); break;
+        case "wifi-share-hide": root.shareOpen = false; break;
         case "wifi-disconnect": BaliseState.disconnectWifi(root.wifiSsid); root.backRequested(); break;
         case "wifi-forget": BaliseState.forgetWifi(root.details.settings_path); root.backRequested(); break;
         case "bt-disconnect": BaliseState.disconnectBluetooth(root.device.path); break;
@@ -866,6 +900,115 @@ Item {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.onOptionsToggled(!root.optionsValue)
+                }
+            }
+        }
+
+        // ---- share ----
+        // Between the options and the buttons, mirroring ui/detail.rs's
+        // own placement: pressing Share shouldn't push what appears off
+        // the bottom of the page.
+        Column {
+            width: parent.width
+            spacing: 8
+            visible: root.shareOpen
+
+            Text {
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: "SHARE"
+                color: Qt.rgba(1, 1, 1, 0.4)
+                font.family: Fonts.ui
+                font.pixelSize: 11
+                font.bold: true
+                font.letterSpacing: 1
+            }
+
+            Rectangle {
+                id: shareCard
+                RevealPop { item: shareCard; index: 3 }
+                width: parent.width
+                height: shareColumn.implicitHeight + 28
+                radius: 12
+                color: Surfaces.card
+
+                Column {
+                    id: shareColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: 14
+                    spacing: 10
+
+                    // A QR is read dark-on-light and this panel is dark,
+                    // so the code gets its own white plate rather than
+                    // being tinted to match the card. The quiet zone (the
+                    // light border a scanner needs to find the finder
+                    // patterns) is painted by the Canvas itself, inside
+                    // this plate -- see onPaint.
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 176
+                        height: 176
+                        radius: 8
+                        color: "#ffffff"
+                        visible: !!root.shareMatrix
+
+                        Canvas {
+                            id: qrCanvas
+                            anchors.fill: parent
+                            // Repaint whenever a new code lands: the
+                            // Canvas caches its last frame and would
+                            // otherwise keep showing the previous
+                            // network's.
+                            property var matrix: root.shareMatrix
+                            onMatrixChanged: qrCanvas.requestPaint()
+                            onPaint: {
+                                const ctx = qrCanvas.getContext("2d");
+                                ctx.reset();
+                                ctx.fillStyle = "#ffffff";
+                                ctx.fillRect(0, 0, qrCanvas.width, qrCanvas.height);
+
+                                const m = qrCanvas.matrix;
+                                if (!m || !m.rows || m.rows.length === 0) return;
+
+                                // 4 light modules of border on each side,
+                                // and whole pixels per module -- a
+                                // fractional scale leaves some modules a
+                                // pixel wider than their neighbours and
+                                // the code reads as noise.
+                                const quiet = 4;
+                                const span = m.size + quiet * 2;
+                                const scale = Math.max(1, Math.floor(qrCanvas.width / span));
+                                const origin = Math.floor((qrCanvas.width - scale * span) / 2) + quiet * scale;
+
+                                ctx.fillStyle = "#000000";
+                                for (let y = 0; y < m.rows.length; y++) {
+                                    const row = m.rows[y];
+                                    for (let x = 0; x < row.length; x++) {
+                                        if (row.charCodeAt(x) === 49)   // '1' -- a dark module
+                                            ctx.fillRect(origin + x * scale, origin + y * scale, scale, scale);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        renderType: Text.NativeRendering
+                        font.hintingPreference: Font.PreferNoHinting
+                        // Three states in one label: the code is on its
+                        // way, the daemon said why there isn't one, or
+                        // here is how to use it.
+                        text: root.shareError !== "" ? root.shareError
+                            : (root.shareMatrix ? "Point a phone's camera at this to join" : "Reading the saved key…")
+                        color: root.shareError !== "" ? root.destructive : Ink.secondary
+                        font.family: Fonts.ui
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
                 }
             }
         }

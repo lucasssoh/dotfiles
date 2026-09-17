@@ -279,3 +279,47 @@ pub fn saved() {
         }
     });
 }
+
+/// Headless smoke test for `NetworkManager::wifi_share_uri` + the QR
+/// encoder -- the same "prove the backend against nmcli before building
+/// any UI on top" step every probe above exists for. The reference here
+/// is `nmcli device wifi show-password`, which draws the same code for
+/// the ACTIVE connection only; this one works for any saved profile.
+///
+/// Prints the passphrase in clear, on purpose and unavoidably: it is
+/// what the QR beside it encodes, and a share action that can't be
+/// verified by eye can't be debugged. Same as nmcli's own output.
+pub fn wifi_share(ssid: &str) {
+    runtime().block_on(async {
+        let nm = match NetworkManager::new().await {
+            Ok(nm) => nm,
+            Err(e) => {
+                eprintln!("balise: failed to connect to NetworkManager: {}", e);
+                std::process::exit(1);
+            }
+        };
+
+        let uri = match nm.wifi_share_uri(ssid).await {
+            Ok(uri) => uri,
+            Err(msg) => {
+                // The user-facing sentence the detail page would show --
+                // printed verbatim so the probe and the panel can be
+                // compared without reading the source.
+                eprintln!("balise: {}", msg);
+                std::process::exit(1);
+            }
+        };
+
+        println!("  uri: {}", uri);
+        match crate::qr::encode(&uri) {
+            Some(qr) => {
+                println!("  qr:  {0}x{0} modules\n", qr.size);
+                print!("{}", qr.to_ascii());
+            }
+            None => {
+                eprintln!("balise: the URI does not fit in a QR code");
+                std::process::exit(1);
+            }
+        }
+    });
+}

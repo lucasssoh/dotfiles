@@ -344,6 +344,32 @@ impl NetworkManager {
             .deserialize()
     }
 
+    /// The secrets for ONE settings group of a stored profile --
+    /// `GetSettings`' companion call, and the only way to see a value
+    /// `GetSettings` deliberately blanks out (see its own use above: the
+    /// PSK is absent from what it returns, which is what lets
+    /// `update_wifi_security` write a dict back without clobbering the
+    /// stored key).
+    ///
+    /// Reaching it needs polkit's `settings.modify.own`, which is
+    /// `auth_admin_keep` for a system connection but granted outright to
+    /// a user in an active local seat -- i.e. this returns without any
+    /// prompt for the person sitting at the machine, and fails cleanly
+    /// (an ordinary D-Bus error, surfaced as the share action's message)
+    /// for anyone else.
+    ///
+    /// Only ever called from the share path, and only for
+    /// `802-11-wireless-security`: nothing else in Balise has any
+    /// business reading a passphrase back out.
+    async fn get_connection_secrets(&self, path: &str, setting_name: &str) -> zbus::Result<Settings> {
+        let path_obj: ObjectPath = path.try_into().map_err(|e: zbus::zvariant::Error| zbus::Error::Variant(e))?;
+        self.conn
+            .call_method(Some(NM), &path_obj, Some(CONNECTION_IFACE), "GetSecrets", &(setting_name))
+            .await?
+            .body()
+            .deserialize()
+    }
+
     /// All WiFi profiles (saved connections), used both to answer
     /// "is this SSID already saved" for `access_points()` and as the
     /// basis for `saved_networks()`.
@@ -814,23 +840,7 @@ impl NetworkManager {
                 // AP flags: this half of `wifi_details` is the half that
                 // still resolves when the network is out of range and
                 // there are no flags to read (see WifiDetails::security).
-                let wsec = settings.get("802-11-wireless-security");
-                let key_mgmt = wsec
-                    .and_then(|g| g.get("key-mgmt"))
-                    .and_then(|v| String::try_from(&**v).ok())
-                    .unwrap_or_default();
-                details.security = Some(match key_mgmt.as_str() {
-                    "wpa-eap" => SecurityType::Enterprise,
-                    "wpa-eap-suite-b-192" => SecurityType::Wpa3Enterprise,
-                    "sae" => SecurityType::Wpa3,
-                    "wpa-psk" => SecurityType::Wpa2,
-                    // NM spells WEP as key-mgmt "none" plus a static key,
-                    // which is also how a genuinely open profile with a
-                    // (pointless) security group would look -- the key is
-                    // what tells them apart.
-                    "none" if wsec.map_or(false, |g| g.contains_key("wep-key0")) => SecurityType::Wep,
-                    _ => SecurityType::None,
-                });
+                details.security = Some(security_from_settings(&settings));
             }
             details.settings_path = settings_path;
         }
@@ -877,6 +887,79 @@ impl NetworkManager {
         }
 
         Ok(details)
+    }
+
+    /// The `WIFI:` URI for a saved network -- what the detail page's
+    /// Share action turns into a QR code (see crate::qr).
+    ///
+    /// `Err` is a sentence meant for the user rather than a
+    /// `zbus::Error`: every failure here is a thing to explain (no saved
+    /// profile, an enterprise network, a secret NM wouldn't hand over)
+    /// and the caller's only job is to put it on screen. That is also why
+    /// it doesn't return the `zbus::Result` the rest of this file does.
+    ///
+    /// Reads the SHARED secret, which means this only ever works for a
+    /// network whose profile lives on this machine -- there is no
+    /// scanning-an-AP path here and cannot be one.
+    pub async fn wifi_share_uri(&self, ssid: &str) -> Result<String, String> {
+        let Some(settings_path) = self.find_profile_by_ssid(ssid).await else {
+            return Err(format!("No saved profile for {} -- connect to it first", ssid));
+        };
+
+        let settings = self
+            .get_connection_settings(&settings_path)
+            .await
+            .map_err(|e| format!("Could not read the profile: {}", e))?;
+
+        // The SSID as STORED, not the one we were asked about:
+        // find_profile_by_ssid also matches on connection.id, which can
+        // have been renamed away from the real SSID (the §6.2 bug this
+        // backend was built to avoid), and a QR carrying the profile's
+        // display name instead of its SSID joins nothing.
+        let ssid = ssid_from_settings(&settings).unwrap_or_else(|| ssid.to_string());
+
+        // Without this a phone simply never finds a non-broadcasting
+        // network, however right the rest of the URI is.
+        let hidden = settings
+            .get("802-11-wireless")
+            .and_then(|g| g.get("hidden"))
+            .and_then(|v| bool::try_from(&**v).ok())
+            .unwrap_or(false);
+
+        let security = security_from_settings(&settings);
+        if !crate::qr::is_shareable(&security) {
+            return Err(format!(
+                "{} networks can't be shared as a QR code -- the format carries no username or EAP method",
+                security.label()
+            ));
+        }
+
+        let secret = if security.needs_password() {
+            let secrets = self
+                .get_connection_secrets(&settings_path, "802-11-wireless-security")
+                .await
+                .map_err(|e| format!("NetworkManager would not release the key: {}", e))?;
+            // WEP's key lives under its own name; everything else that
+            // reaches this point is a PSK (enterprise was refused above).
+            let key = if matches!(security, SecurityType::Wep) { "wep-key0" } else { "psk" };
+            let value = secrets
+                .get("802-11-wireless-security")
+                .and_then(|g| g.get(key))
+                .and_then(|v| String::try_from(&**v).ok())
+                .unwrap_or_default();
+            if value.is_empty() {
+                // An agent-owned secret (`psk-flags=1`, "always ask") is
+                // stored nowhere for this to find -- NM answers with the
+                // group present and the key missing rather than failing.
+                return Err("This profile stores no key of its own -- nothing to put in a QR code".to_string());
+            }
+            value
+        } else {
+            String::new()
+        };
+
+        crate::qr::wifi_uri(&ssid, &security, &secret, hidden)
+            .ok_or_else(|| "This network's security has no QR representation".to_string())
     }
 
     async fn list_connections(&self) -> zbus::Result<Vec<String>> {
@@ -926,6 +1009,32 @@ fn ssid_from_settings(settings: &Settings) -> Option<String> {
         None
     } else {
         Some(String::from_utf8_lossy(&bytes).to_string())
+    }
+}
+
+/// A stored profile's own security kind, read back from its `key-mgmt`
+/// rather than from live AP flags -- the half that still resolves when
+/// the network is out of range and there is nothing to scan (see
+/// `WifiDetails::security`). Shared by `wifi_details` and
+/// `wifi_share_uri`, which need exactly the same answer for the same
+/// reason.
+fn security_from_settings(settings: &Settings) -> SecurityType {
+    let wsec = settings.get("802-11-wireless-security");
+    let key_mgmt = wsec
+        .and_then(|g| g.get("key-mgmt"))
+        .and_then(|v| String::try_from(&**v).ok())
+        .unwrap_or_default();
+
+    match key_mgmt.as_str() {
+        "wpa-eap" => SecurityType::Enterprise,
+        "wpa-eap-suite-b-192" => SecurityType::Wpa3Enterprise,
+        "sae" => SecurityType::Wpa3,
+        "wpa-psk" => SecurityType::Wpa2,
+        // NM spells WEP as key-mgmt "none" plus a static key, which is
+        // also how a genuinely open profile with a (pointless) security
+        // group would look -- the key is what tells them apart.
+        "none" if wsec.is_some_and(|g| g.contains_key("wep-key0")) => SecurityType::Wep,
+        _ => SecurityType::None,
     }
 }
 

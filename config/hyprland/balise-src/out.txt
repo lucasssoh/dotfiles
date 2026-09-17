@@ -1,0 +1,2 @@
+nmcli   ordre=lsb-first  EC=L mask=2
+balise  ordre=lsb-first  EC=M mask=3

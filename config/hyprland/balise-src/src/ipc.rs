@@ -97,6 +97,21 @@ pub enum ClientCommand {
     WifiDisconnect {
         ssid: String,
     },
+    /// Hand back this network's own credentials as a QR code, for a phone
+    /// to scan (fifth slice). Only ever for a network with a SAVED
+    /// profile -- the secret comes out of that profile, there is no
+    /// reading one off the air -- and never for an 802.1X one, which the
+    /// `WIFI:` format cannot express (see crate::qr).
+    ///
+    /// Deliberately a command rather than a field on `WifiDetail`: this
+    /// is the one call in the whole surface that makes NetworkManager
+    /// give up a stored passphrase, so it happens when the user asks for
+    /// it and not every time a detail page is opened. The reply carries
+    /// the rendered modules only, never the URI -- see
+    /// `ServerPush::WifiShare`.
+    WifiShare {
+        ssid: String,
+    },
     BtScan,
     /// Pairing, from the QML frontend. Was deliberately left out of the
     /// first pass on the grounds that it needs the BlueZ agent bridged to
@@ -223,6 +238,21 @@ pub enum ServerPush {
     WifiConnectResult {
         ssid: String,
         ok: bool,
+        error: String,
+    },
+    /// The answer to `ClientCommand::WifiShare`: a QR code to draw, or a
+    /// sentence saying why there isn't one (no saved profile, an
+    /// enterprise network, a secret NetworkManager wouldn't release).
+    /// Same `error`-empty-means-success shape as `WifiConnectResult`.
+    ///
+    /// `qr` is a grid of light/dark modules and NOTHING else. The `WIFI:`
+    /// URI it was rendered from holds the network's passphrase in clear,
+    /// and it stays on the daemon thread that built it: putting it on
+    /// this socket would hand the passphrase to every connected client,
+    /// for no gain -- a frontend's job here is to draw squares.
+    WifiShare {
+        ssid: String,
+        qr: crate::qr::QrMatrix,
         error: String,
     },
 }

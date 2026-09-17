@@ -6,6 +6,7 @@ mod dbus;
 mod ipc;
 mod paths;
 mod probe;
+mod qr;
 mod theme;
 mod ui;
 
@@ -74,6 +75,12 @@ enum Commands {
     WifiDetails {
         ssid: String,
     },
+    /// [dev] Print the `WIFI:` share URI for a saved network, and the QR
+    /// code it renders as. PRINTS THE NETWORK'S PASSPHRASE IN CLEAR, same
+    /// as `nmcli device wifi show-password` -- it is what the QR encodes.
+    WifiShare {
+        ssid: String,
+    },
 }
 
 fn main() {
@@ -103,6 +110,7 @@ fn main() {
         Some(Commands::Ethernet) => probe::ethernet(),
         Some(Commands::BluetoothStatus) => probe::bluetooth_status(),
         Some(Commands::WifiDetails { ssid }) => probe::wifi_details(&ssid),
+        Some(Commands::WifiShare { ssid }) => probe::wifi_share(&ssid),
         Some(Commands::BluetoothScan) => probe::bluetooth_scan(),
         None => run_gui(config),
     }

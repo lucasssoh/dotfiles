@@ -37,6 +37,11 @@ pub enum AppEvent {
     /// it touches no GTK widget (the GTK side already learns the same
     /// thing from Notify/Error).
     WifiConnectResult(String, bool, String),
+    /// (ssid, modules, error) -- the answer to a Share action, from
+    /// either frontend. Carries the rendered QR rather than the `WIFI:`
+    /// URI it came from: the URI holds the passphrase in clear and never
+    /// leaves the worker thread that built it (see run_wifi_share).
+    WifiShareResult(String, crate::qr::QrMatrix, String),
 
     // ---- Bluetooth (Phase 3) --------------------------------------------
     BtPowerState(bool),
@@ -439,6 +444,20 @@ impl BaliseApp {
                         AppEvent::WifiConnectResult(ssid, ok, error) => {
                             broadcast_wifi_connect_result(&broadcaster, &ssid, ok, &error);
                         }
+                        AppEvent::WifiShareResult(ssid, qr, error) => {
+                            // Both frontends, unconditionally: the GTK
+                            // detail page only picks it up if it is
+                            // actually showing this SSID (see set_qr),
+                            // and a QML client that didn't ask ignores
+                            // the push the same way it ignores a connect
+                            // result for another network.
+                            if error.is_empty() {
+                                win.detail_view().set_qr(&ssid, Some(qr.clone()));
+                            } else {
+                                win.show_error(&error);
+                            }
+                            broadcast_wifi_share(&broadcaster, &ssid, &qr, &error);
+                        }
                         AppEvent::WiredResult(profiles) => {
                             // Same "connected beats cable-present beats
                             // off" priority Ethernet.qml's own state
@@ -702,6 +721,9 @@ impl BaliseApp {
                                         }
                                     }
                                 });
+                            }
+                            ClientCommand::WifiShare { ssid } => {
+                                run_wifi_share(nm.clone(), rt.clone(), tx.clone(), ssid);
                             }
                             ClientCommand::BtScan => {
                                 let bt = bt.clone();
@@ -1030,6 +1052,22 @@ fn broadcast_wifi_detail(broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast:
     }
 }
 
+fn broadcast_wifi_share(
+    broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>,
+    ssid: &str,
+    qr: &crate::qr::QrMatrix,
+    error: &str,
+) {
+    if let Some(tx) = broadcaster.borrow().as_ref() {
+        let push = ServerPush::WifiShare {
+            ssid: ssid.to_string(),
+            qr: qr.clone(),
+            error: error.to_string(),
+        };
+        let _ = tx.send(push.to_line());
+    }
+}
+
 fn broadcast_wifi_connect_result(
     broadcaster: &Rc<RefCell<Option<tokio::sync::broadcast::Sender<String>>>>,
     ssid: &str,
@@ -1076,6 +1114,53 @@ fn run_screenshot(win: Rc<BaliseWindow>) {
             .arg("-c")
             .arg(r#"grim -g "$(slurp)" - | satty --filename - --fullscreen --output-filename - | wl-copy"#)
             .spawn();
+    });
+}
+
+/// Reads one saved network's credentials back out of NetworkManager and
+/// renders them as a QR code -- the Share action, from the GTK detail
+/// page (`DetailAction::WifiShare`) and from the QML one
+/// (`ClientCommand::WifiShare`) alike, which is why it is a free function
+/// here rather than living in either dispatch.
+///
+/// The `WIFI:` URI exists only inside this thread: it is built, encoded,
+/// and dropped, and what comes back out is a grid of modules. Nothing
+/// else in the process -- no widget, no socket, no log line -- ever sees
+/// the passphrase.
+///
+/// Failures are reported through the same event as successes rather than
+/// being logged and swallowed: "why is there no QR code" always has an
+/// answer worth reading (this network was never saved, eduroam can't be
+/// shared this way, NetworkManager refused).
+fn run_wifi_share(
+    nm: Arc<Mutex<Option<NetworkManager>>>,
+    rt: Arc<tokio::runtime::Runtime>,
+    tx: async_channel::Sender<AppEvent>,
+    ssid: String,
+) {
+    std::thread::spawn(move || {
+        let guard = nm.lock().unwrap();
+        let Some(ref nm_inst) = *guard else {
+            let _ = tx.send_blocking(AppEvent::WifiShareResult(
+                ssid,
+                crate::qr::QrMatrix::default(),
+                "NetworkManager is unavailable".to_string(),
+            ));
+            return;
+        };
+
+        let event = match rt.block_on(async { nm_inst.wifi_share_uri(&ssid).await }) {
+            Ok(uri) => match crate::qr::encode(&uri) {
+                Some(qr) => AppEvent::WifiShareResult(ssid, qr, String::new()),
+                None => AppEvent::WifiShareResult(
+                    ssid,
+                    crate::qr::QrMatrix::default(),
+                    "This network's details don't fit in a QR code".to_string(),
+                ),
+            },
+            Err(msg) => AppEvent::WifiShareResult(ssid, crate::qr::QrMatrix::default(), msg),
+        };
+        let _ = tx.send_blocking(event);
     });
 }
 
@@ -1823,6 +1908,16 @@ fn setup_ui_callbacks(
                             }
                         }
                     });
+                }
+                DetailAction::WifiShare(ssid) => {
+                    run_wifi_share(nm, rt, tx, ssid);
+                }
+                DetailAction::WifiShareHide => {
+                    // Purely local: drop the modules the page is holding
+                    // and rebuild it without the card. Nothing to ask
+                    // NetworkManager, and nothing cached to re-read if
+                    // the user opens it again.
+                    win_action.detail_view().set_qr("", None);
                 }
                 DetailAction::WifiAutoconnect(path, on) => {
                     std::thread::spawn(move || {

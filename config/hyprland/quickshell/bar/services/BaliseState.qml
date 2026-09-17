@@ -60,6 +60,19 @@ Singleton {
     // form. Cleared on the next attempt and on success.
     property var connectError: null
 
+    // ---- network sharing (fifth slice) -----------------------------------
+    // The QR code the daemon rendered for a Share action, as
+    // { ssid, qr: { size, rows }, error } -- or null while none has been
+    // asked for. `qr.rows` is a list of "0101..." strings, one per module
+    // row; see ServerPush::WifiShare for why the daemon sends modules and
+    // not the `WIFI:` URI they were rendered from (that URI carries the
+    // passphrase in clear, and it never leaves the daemon).
+    //
+    // Kept per-SSID for the same reason connectError is: it arrives as a
+    // broadcast, and a code belonging to another network must never be
+    // drawn under this one's name.
+    property var wifiShare: null
+
     // Whether a text field is on screen and expecting keystrokes. The bar
     // is a layer-shell surface with `focusable: false` (shell.qml), which
     // means the compositor never sends it a key event at all -- so this
@@ -176,6 +189,18 @@ Singleton {
         root._send({ cmd: "wifi_detail", ssid: ssid });
     }
     function forgetWifi(settingsPath) { root._send({ cmd: "wifi_forget", settings_path: settingsPath }); }
+    // Asks the daemon to read this network's stored key back out and
+    // render it as a QR code. Cleared first so a previous network's code
+    // can't sit on screen under the new name while this one is in flight
+    // -- same shape as fetchWifiDetail above.
+    function shareWifi(ssid) {
+        root.wifiShare = null;
+        root._send({ cmd: "wifi_share", ssid: ssid });
+    }
+    // Drops the modules the panel is holding. Called when the user closes
+    // the code and when the detail page goes away: the grid is a joinable
+    // credential, so it lives exactly as long as it is on screen.
+    function clearWifiShare() { root.wifiShare = null; }
     function setWifiAutoconnect(ssid, settingsPath, autoconnect) {
         root._send({ cmd: "wifi_autoconnect", ssid: ssid, settings_path: settingsPath, autoconnect: autoconnect });
     }
@@ -330,6 +355,8 @@ Singleton {
             root._assignList("wiredProfiles", msg.profiles);
         } else if (msg.type === "wifi_detail") {
             root.wifiDetail = msg.details || null;
+        } else if (msg.type === "wifi_share") {
+            root.wifiShare = msg;
         } else if (msg.type === "wifi_connect_result") {
             // Ignored unless it's the attempt currently on screen: this is
             // a broadcast, so a connect the user started, backed out of,

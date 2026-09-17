@@ -22,6 +22,12 @@ use std::rc::Rc;
 use super::device_list::DeviceAction;
 use crate::dbus::{AccessPoint, BluetoothDevice, WifiDetails, WiredProfile};
 
+/// Side of the white plate the QR is painted on, in pixels. Sized so the
+/// biggest code this can produce (a long passphrase on a hidden network,
+/// 57 modules plus the 8-module border) still gets 3 whole pixels per
+/// module, which is above what a phone camera needs at arm's length.
+const QR_PLATE: i32 = 200;
+
 /// What the page is currently showing. Carries the full backend record
 /// rather than pre-formatted strings so the page can decide per field
 /// whether there's anything worth rendering.
@@ -57,6 +63,13 @@ impl DetailTarget {
 pub enum DetailAction {
     WifiDisconnect(String),
     WifiForget(String),
+    /// Ask for this SSID's credentials as a QR code. The answer comes
+    /// back asynchronously, through `set_qr` -- this page has no
+    /// NetworkManager of its own.
+    WifiShare(String),
+    /// Put the QR code away again. Local to the page, see the handler in
+    /// app/mod.rs.
+    WifiShareHide,
     WifiAutoconnect(String, bool),
     Bt(String, DeviceAction),
     BtTrust(String, bool),
@@ -70,6 +83,12 @@ pub struct DetailView {
     container: gtk::Box,
     content: gtk::Box,
     target: Rc<RefCell<Option<DetailTarget>>>,
+    /// The QR code currently on display, with the SSID it belongs to.
+    /// Kept beside the target rather than inside it because it arrives
+    /// separately (a round trip through NetworkManager, see
+    /// `DetailAction::WifiShare`) and because it must not survive a move
+    /// to another endpoint -- see `set_target`.
+    qr: Rc<RefCell<Option<(String, crate::qr::QrMatrix)>>>,
     on_action: Rc<RefCell<Option<Rc<dyn Fn(DetailAction)>>>>,
 }
 
@@ -89,7 +108,13 @@ impl DetailView {
         scrolled.set_child(Some(&content));
         container.append(&scrolled);
 
-        Self { container, content, target: Rc::new(RefCell::new(None)), on_action: Rc::new(RefCell::new(None)) }
+        Self {
+            container,
+            content,
+            target: Rc::new(RefCell::new(None)),
+            qr: Rc::new(RefCell::new(None)),
+            on_action: Rc::new(RefCell::new(None)),
+        }
     }
 
     pub fn widget(&self) -> &gtk::Box {
@@ -106,7 +131,45 @@ impl DetailView {
         }
     }
 
+    /// Hands the page a freshly rendered QR code (or `None` to take the
+    /// current one away) and redraws. A no-op when the page has moved on
+    /// to a different endpoint since the request went out: a code
+    /// carrying one network's passphrase has no business appearing under
+    /// another network's name.
+    pub fn set_qr(&self, ssid: &str, qr: Option<crate::qr::QrMatrix>) {
+        match qr {
+            Some(qr) => {
+                let showing = match self.target.borrow().as_ref() {
+                    Some(DetailTarget::Wifi { ap, details }) => {
+                        ap.ssid == ssid || details.ssid == ssid
+                    }
+                    _ => false,
+                };
+                if !showing {
+                    return;
+                }
+                *self.qr.borrow_mut() = Some((ssid.to_string(), qr));
+            }
+            None => *self.qr.borrow_mut() = None,
+        }
+
+        let current = self.target.borrow().clone();
+        if let Some(target) = current {
+            self.set_target(target);
+        }
+    }
+
     pub fn set_target(&self, target: DetailTarget) {
+        // Leaving an endpoint drops its QR code. Without this, opening
+        // another network's page would inherit the previous one's.
+        let keeps_qr = match (&target, self.qr.borrow().as_ref()) {
+            (DetailTarget::Wifi { ap, details }, Some((ssid, _))) => ap.ssid == *ssid || details.ssid == *ssid,
+            _ => false,
+        };
+        if !keeps_qr {
+            *self.qr.borrow_mut() = None;
+        }
+
         *self.target.borrow_mut() = Some(target.clone());
         while let Some(child) = self.content.first_child() {
             self.content.remove(&child);
@@ -154,6 +217,14 @@ impl DetailView {
             });
         }
 
+        // The code itself sits above the buttons, so pressing Share
+        // doesn't push what appears off the bottom of the page.
+        let showing_qr = self.qr.borrow().is_some();
+        if showing_qr {
+            self.append_section("SHARE");
+            self.append_qr_card();
+        }
+
         self.append_section("ACTIONS");
         if ap.is_connected {
             let ssid = ap.ssid.clone();
@@ -161,6 +232,26 @@ impl DetailView {
                 view.emit(DetailAction::WifiDisconnect(ssid.clone()));
             });
         }
+
+        // Sharing reads the SAVED profile's key, so it needs one -- and
+        // 802.1X has no QR representation at all (see crate::qr). The
+        // stored kind wins over the scanned one: it is what the secret
+        // will actually be read out of, and it survives the network being
+        // out of range.
+        let security = details.security.clone().unwrap_or_else(|| ap.security.clone());
+        if !details.settings_path.is_empty() && crate::qr::is_shareable(&security) {
+            if showing_qr {
+                self.append_button("Hide the QR code", &["balise-button", "flat"], move |view| {
+                    view.emit(DetailAction::WifiShareHide);
+                });
+            } else {
+                let ssid = ap.ssid.clone();
+                self.append_button("Share this network", &["balise-button", "flat"], move |view| {
+                    view.emit(DetailAction::WifiShare(ssid.clone()));
+                });
+            }
+        }
+
         if !details.settings_path.is_empty() {
             let path = details.settings_path.clone();
             self.append_button("Forget this network", &["balise-button", "destructive", "flat"], move |view| {
@@ -321,6 +412,75 @@ impl DetailView {
             row.append(&val);
             card.append(&row);
         }
+        self.content.append(&card);
+    }
+
+    /// The QR code itself: a DrawingArea on a white plate, because a QR
+    /// is read as dark-on-light and this panel is dark. Cairo rather
+    /// than an image file -- there is nothing to decode, cache or clean
+    /// up afterwards, and a code that only exists as painted pixels is
+    /// one that never lands on disk.
+    fn append_qr_card(&self) {
+        let Some((_, qr)) = self.qr.borrow().clone() else {
+            return;
+        };
+
+        let card = super::section::section_card(&[]);
+        let area = gtk::DrawingArea::builder()
+            .content_width(QR_PLATE)
+            .content_height(QR_PLATE)
+            .halign(gtk::Align::Center)
+            .margin_top(12)
+            .margin_bottom(12)
+            .build();
+
+        area.set_draw_func(move |_, cr, width, height| {
+            // The 4-module light border is part of the code: without it a
+            // scanner never finds the finder patterns. It is added here
+            // rather than stored in the matrix (see QrMatrix's header).
+            const QUIET: f64 = 4.0;
+            let span = qr.size as f64 + QUIET * 2.0;
+            if span <= 0.0 {
+                return;
+            }
+
+            // Whole pixels per module, or the grid ends up with modules
+            // one pixel wider than their neighbours and reads as noise.
+            let scale = (f64::from(width.min(height)) / span).floor().max(1.0);
+            let side = scale * span;
+            let ox = ((f64::from(width) - side) / 2.0).floor();
+            let oy = ((f64::from(height) - side) / 2.0).floor();
+
+            cr.set_source_rgb(1.0, 1.0, 1.0);
+            cr.rectangle(ox, oy, side, side);
+            let _ = cr.fill();
+
+            cr.set_source_rgb(0.0, 0.0, 0.0);
+            for y in 0..qr.size as usize {
+                for x in 0..qr.size as usize {
+                    if qr.is_dark(x, y) {
+                        cr.rectangle(
+                            ox + (x as f64 + QUIET) * scale,
+                            oy + (y as f64 + QUIET) * scale,
+                            scale,
+                            scale,
+                        );
+                    }
+                }
+            }
+            let _ = cr.fill();
+        });
+
+        card.append(&area);
+
+        let hint = gtk::Label::builder()
+            .label("Point a phone's camera at this to join")
+            .css_classes(["balise-meta-label"])
+            .halign(gtk::Align::Center)
+            .margin_bottom(12)
+            .build();
+        card.append(&hint);
+
         self.content.append(&card);
     }
 

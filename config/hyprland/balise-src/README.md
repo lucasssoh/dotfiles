@@ -40,6 +40,7 @@ l'UI par-dessus :
     balise ethernet
     balise bluetooth-status | bluetooth-scan
     balise wifi-details <ssid>
+    balise wifi-share <ssid>       # URI WIFI: + QR ASCII (voir plus bas)
 
 ## Lignée Orbit
 
@@ -101,6 +102,50 @@ Deux points à savoir :
   `domain-suffix-match`). Il n'y a pas d'UI pour en choisir un ;
   NetworkManager se connecte sans, sans valider le certificat du serveur.
   C'est le même compromis que `nmcli device wifi connect`.
+
+## Partage d'un réseau (QR code)
+
+La page détail d'un réseau **enregistré** propose « Share this
+network » : le daemon relit la clé stockée, en fait une URI `WIFI:` et
+la rend en QR code, que le panneau affiche. Un téléphone le vise et
+rejoint le réseau sans que personne ait à épeler la passphrase.
+
+Trois choses valent d'être sues.
+
+- **La clé ne sort jamais du daemon.** L'URI `WIFI:` contient la
+  passphrase en clair. Elle est construite, encodée et jetée dans le
+  thread de travail (`run_wifi_share`, app/mod.rs) ; ce qui traverse la
+  socket, et ce que QML reçoit, c'est une grille de modules noirs et
+  blancs. Pareil côté GTK : le code est peint au cairo, rien n'atterrit
+  sur le disque.
+- **eduroam n'est pas partageable, et le bouton n'apparaît pas.** Le
+  format `WIFI:` ne sait transporter ni identifiant, ni méthode EAP, ni
+  certificat : un QR eduroam se scannerait puis échouerait à se
+  connecter. Le refus est double — l'UI ne propose pas l'action, et
+  `wifi_share_uri` la refuse aussi, avec une phrase affichable.
+- **Il faut un profil enregistré.** La clé est lue dans le profil local
+  (`Settings.Connection.GetSecrets`), pas captée sur l'air. Sur cette
+  machine l'appel passe sans invite polkit — `settings.modify.own` est
+  accordé à une session locale active — et échoue proprement ailleurs.
+
+Le format lui-même est celui de ZXing, que toutes les caméras de
+téléphone implémentent. Il a été recoupé octet par octet avec celui de
+`nmcli device wifi show-password` (les briques sont lisibles dans le
+binaire : jeu d'échappement `\":;,`, jetons `T:` `S:` `P:` `H:true;`
+`nopass`, même ordre de champs). **Une divergence délibérée** : nmcli
+écrit `T:WPA` pour tout ce qui a une PSK, WPA3 compris ; ici un profil
+en `key-mgmt=sae` reçoit `T:SAE`. Un téléphone à qui l'on annonce `WPA`
+fabrique un profil WPA2-PSK, qui s'associe à un AP en mode transition
+mais pas à un AP WPA3 strict.
+
+Sonde headless, comme pour chaque capacité du backend :
+
+    balise wifi-share <ssid>
+
+Elle imprime l'URI et dessine le QR dans le terminal. **Elle affiche
+donc la passphrase en clair**, comme `nmcli device wifi show-password` —
+c'est ce que le QR encode, et un partage invérifiable à l'œil est
+indébogable.
 
 ## Limite connue
 

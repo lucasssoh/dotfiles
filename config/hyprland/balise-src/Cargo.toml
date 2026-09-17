@@ -42,6 +42,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time"
 # connection.uuid when creating a new WiFi profile via
 # AddAndActivateConnection -- NetworkManager rejects the dict without one.
 uuid = { version = "1", features = ["v4"] }
+qrcode = { version = "0.14.1", default-features = false }
 
 [profile.release]
 opt-level = 3
