@@ -33,11 +33,95 @@
 # would show a stale look with no way to tell.
 # ============================================================
 import hashlib
+import json
 import os
 import re
+import subprocess
 import sys
 
 CSS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "markdown.css")
+
+# Fallback shape, used only when the compositor cannot be asked (no
+# Hyprland, no hyprctl, an empty monitor list). 16:10 because that is the
+# commonest laptop panel, but nothing downstream depends on the value
+# being right -- see page_size().
+FALLBACK_ASPECT = 16 / 10
+
+# The long edge of the generated page. Arbitrary, and it stays arbitrary:
+# the page is always scaled to the window by zathura's best-fit, so this
+# only fixes the ratio of physical size to font size, i.e. how much text
+# lands on one screenful. 240mm against a 10.5pt body is roughly 90
+# characters a line.
+PAGE_LONG_EDGE_MM = 240.0
+
+
+def screen_aspect() -> float:
+    """Width / height of the monitor this will be read on.
+
+    Asked of the compositor at render time rather than written down,
+    because the answer is different on a 16:10 laptop, a 16:9 external, a
+    4:3 projector and a rotated portrait panel -- and the same machine
+    meets several of those in a day. The focused monitor is the right one
+    to ask about: it is where the reader window is about to open.
+
+    `transform` is a 0-7 rotation/flip code; the odd values are the 90
+    and 270 degree rotations, where the reported width and height are of
+    the unrotated panel and have to be swapped.
+    """
+    try:
+        out = subprocess.run(["hyprctl", "-j", "monitors"], capture_output=True,
+                             text=True, timeout=2).stdout
+        monitors = json.loads(out)
+    except Exception:
+        return FALLBACK_ASPECT
+    if not monitors:
+        return FALLBACK_ASPECT
+    mon = next((m for m in monitors if m.get("focused")), monitors[0])
+    w, h = float(mon.get("width", 0)), float(mon.get("height", 0))
+    if int(mon.get("transform", 0)) % 2 == 1:
+        w, h = h, w
+    if w <= 0 or h <= 0:
+        return FALLBACK_ASPECT
+    return w / h
+
+
+def page_size(aspect: float) -> str:
+    """An `@page { size }` matching the screen's shape.
+
+    Matching it is a comfort choice, not a correctness one: zathura
+    best-fits whatever page shape onto whatever window, and zathurarc
+    binds Space to "turn the page, then best-fit" so a mismatch would
+    only mean letterboxing, never a broken page turn. Getting it close
+    just means the letterbox is nearly nothing and a screenful of text is
+    a whole page.
+    """
+    if aspect >= 1.0:
+        w, h = PAGE_LONG_EDGE_MM, PAGE_LONG_EDGE_MM / aspect
+    else:
+        w, h = PAGE_LONG_EDGE_MM * aspect, PAGE_LONG_EDGE_MM
+    return "%.1fmm %.1fmm" % (w, h)
+
+
+def desktop_is_dark() -> bool:
+    """The desktop's own light/dark choice.
+
+    Read from the same gsettings key quickshell's AppearanceState.qml
+    reads and writes, so Liseuse follows the bar's toggle rather than
+    keeping a second switch of its own. Anything that is not exactly
+    'prefer-dark' means light -- the same two-state reading that file
+    documents, and the safe one for a value a future GNOME might add.
+
+    Dark on failure: this reader is dark by default and a document that
+    stays dark when gsettings is missing is far less jarring than one
+    that flashes white.
+    """
+    try:
+        out = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface",
+                              "color-scheme"], capture_output=True, text=True,
+                             timeout=2).stdout
+    except Exception:
+        return True
+    return "prefer-dark" in out
 
 # The GFM delta over plain CommonMark, plus the two niceties (toc,
 # attr_list) that documents written for GitHub tend to assume.
@@ -123,7 +207,24 @@ def cache_path(source: str, cache_dir: str) -> str:
     return os.path.join(cache_dir, digest + ".pdf")
 
 
-def is_fresh(source: str, pdf: str) -> bool:
+def meta_path(pdf: str) -> str:
+    return os.path.splitext(pdf)[0] + ".meta"
+
+
+def render_key(theme: str, aspect: float) -> str:
+    """Everything outside the source file that changes the output.
+
+    Kept in a sidecar rather than folded into the PDF's filename, and
+    that is the whole point: zathura records the reading position against
+    the filename, so a name that moved when the desktop switched to light
+    would drop you back at page 1 every time you flipped the theme.
+    Aspect is rounded because a monitor that reports 1.60000001 is the
+    same screen as one reporting 1.6, and re-rendering on that is waste.
+    """
+    return "%s %.3f" % (theme, aspect)
+
+
+def is_fresh(source: str, pdf: str, key: str) -> bool:
     try:
         out = os.stat(pdf).st_mtime
     except OSError:
@@ -135,10 +236,44 @@ def is_fresh(source: str, pdf: str) -> bool:
             return False
     except OSError:
         return False
+    # The theme and the screen shape are not files, so they cannot be
+    # compared by mtime; the last render wrote what it used.
+    try:
+        with open(meta_path(pdf), encoding="utf-8") as fh:
+            if fh.read().strip() != key:
+                return False
+    except OSError:
+        return False
     return True
 
 
-def render(source: str, pdf: str) -> None:
+# Dark is GitHub's own palette, shipped under that name. Light is NOT:
+# Pygments has `github-dark` and no `github-light` (checked against
+# get_all_styles(); assuming the symmetry cost one crash), so the light
+# side is Pygments' own baseline, which is a close enough relative --
+# grey comments, red strings, bold keywords on an almost-white ground.
+#
+# The fallbacks exist because a style name is a runtime lookup against
+# whatever Pygments happens to ship, and a missing one raises rather than
+# degrades. A document rendering with plain-looking code beats a document
+# that does not render.
+_STYLES = {"dark": ("github-dark", "monokai", "native"),
+           "light": ("default", "friendly", "bw")}
+
+
+def _pygments_style(theme: str) -> str:
+    from pygments.styles import get_style_by_name
+
+    for name in _STYLES.get(theme, _STYLES["dark"]):
+        try:
+            get_style_by_name(name)
+            return name
+        except Exception:
+            continue
+    return "default"
+
+
+def render(source: str, pdf: str, theme: str, aspect: float) -> None:
     import markdown
     from pygments.formatters import HtmlFormatter
     from weasyprint import HTML
@@ -151,7 +286,12 @@ def render(source: str, pdf: str) -> None:
 
     with open(CSS_PATH, encoding="utf-8") as fh:
         css = fh.read()
-    css += "\n" + HtmlFormatter(style="github-dark").get_style_defs(".highlight")
+    # The two things markdown.css deliberately leaves open: the page
+    # shape, which only the live compositor knows, and the syntax
+    # palette, which has to follow the desktop. Both are appended so they
+    # win over anything in the stylesheet.
+    css += "\n@page { size: %s; }\n" % page_size(aspect)
+    css += HtmlFormatter(style=_pygments_style(theme)).get_style_defs(".highlight")
 
     # The document's own H1 is usually its real title; the filename is
     # the fallback. This lands in the PDF metadata, which is what
@@ -159,8 +299,11 @@ def render(source: str, pdf: str) -> None:
     m = re.search(r"^#\s+(.+)$", text, re.M)
     title = m.group(1).strip() if m else os.path.basename(source)
 
+    # markdown.css keys its light palette off this attribute; dark is the
+    # bare default, so nothing is stamped for it.
+    attr = ' data-theme="light"' if theme == "light" else ""
     html = (
-        "<!doctype html><html><head><meta charset='utf-8'>"
+        f"<!doctype html><html{attr}><head><meta charset='utf-8'>"
         f"<title>{title}</title><style>{css}</style></head>"
         f"<body>{body}</body></html>"
     )
@@ -185,6 +328,11 @@ def render(source: str, pdf: str) -> None:
     HTML(string=html, base_url=os.path.abspath(source)).write_pdf(tmp)
     os.replace(tmp, pdf)
 
+    # Written last, so an interrupted render leaves a key that does not
+    # match and the next call redoes the work rather than trusting it.
+    with open(meta_path(pdf), "w", encoding="utf-8") as fh:
+        fh.write(render_key(theme, aspect))
+
 
 def main(argv):
     if len(argv) != 3:
@@ -192,9 +340,11 @@ def main(argv):
         return 2
     source, cache_dir = argv[1], argv[2]
     pdf = cache_path(source, cache_dir)
-    if not is_fresh(source, pdf):
+    theme = "dark" if desktop_is_dark() else "light"
+    aspect = screen_aspect()
+    if not is_fresh(source, pdf, render_key(theme, aspect)):
         try:
-            render(source, pdf)
+            render(source, pdf, theme, aspect)
         except ImportError as exc:
             sys.stderr.write("md2pdf: missing dependency (%s)\n" % exc)
             return 3

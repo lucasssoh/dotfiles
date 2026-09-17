@@ -113,16 +113,14 @@ set adjust-open "best-fit"
 #
 # `upper` is the laid-out document height, padding INCLUDED. So any
 # padding that pushes the page past the viewport leaves a few pixels of
-# slack, and the first Space spends itself nudging through them instead
-# of turning the page -- two presses per page, the second one working.
+# slack, and a full-page scroll spends itself nudging through them
+# instead of turning the page -- two presses, the second one working.
 #
-# Slides are safe either way (a 16:9 page fits width-first in a 16:10
-# window and comes out ~1071px tall, far under 1200), but the Markdown
-# pages md2pdf.py generates are deliberately 16:10, i.e. exactly the
-# viewport -- and 16px of padding is precisely what would tip them over.
-# Zero removes the whole class of problem, and costs nothing here: in
-# single-page fullscreen the padding separates no adjacent pages, it only
-# eats into the letterbox the centring already provides.
+# Space no longer goes through that path at all (it is remapped below to
+# turn the page outright), so this is belt and braces rather than the
+# fix. It still matters for Ctrl+f and Ctrl+b, which do. And it costs
+# nothing: in single-page fullscreen the padding separates no adjacent
+# pages, it only eats into the letterbox the centring already provides.
 set page-h-padding 0
 set page-v-padding 0
 
@@ -274,3 +272,29 @@ set continuous-hist-save true
 # mode; `liseuse keys` prints that manual, and spawns its own viewer
 # and returns immediately so :exec never blocks the reader.
 map <F1> feedkeys ":exec liseuse keys<Return>"
+
+# ---- Space turns the page and re-fits it ---------------------------
+# The one remap that earns its place, and it exists because of zoom.
+# Zoom in to read a detail on a slide and the page is now bigger than the
+# window; zathura keeps that zoom across a page change, so the next slide
+# arrives cropped and scrolled to wherever the old one left the view.
+# Nothing in zathurarc resets zoom on a page turn -- so Space is bound to
+# do both, in order:
+#
+#   J -> next page      (sc_navigate NEXT)
+#   a -> best-fit       (sc_adjust_window ZATHURA_ADJUST_BESTFIT)
+#
+# feedkeys walks the string one character at a time (girara_sc_feedkeys),
+# so "Ja" really is those two shortcuts, not a literal.
+#
+# `a` is also why there is no geometry written down anywhere here. It
+# recomputes the zoom from the LIVE viewport every time it runs
+# (zathura.c: newzoom *= view_height / cell_height), so the same binding
+# fits a 16:9 deck on a 16:10 laptop, a 4:3 scan on an ultrawide, or
+# anything on a rotated panel, with nothing to adjust. A hardcoded page
+# or window size would have been correct on exactly one screen.
+#
+# The trade: Space no longer scrolls WITHIN a zoomed page. j/k, the
+# arrows and Ctrl+f/Ctrl+b still do, and they are the right tools for it.
+map <Space> feedkeys "Ja"
+map <S-Space> feedkeys "Ka"

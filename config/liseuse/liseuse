@@ -65,6 +65,11 @@ EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps md markdown)
 # because what reaches zathura is an ordinary document.
 MD_EXTENSIONS=" md markdown "
 MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
+ZATHURARC="$(dirname -- "$(readlink -f -- "$0")")/zathurarc"
+# Where the themed copy of zathurarc is assembled. Not ~/.config/zathura,
+# which stays a plain symlink to the repo file so that a PDF opened from
+# nemo still gets the (dark) reader.
+ZATHURA_CFG="$CACHE_DIR/zathura"
 
 # Formats where a page COUNT is a fixed property of the file. The
 # reflowable ones (epub, mobi, azw3, fb2) are deliberately excluded: they
@@ -74,7 +79,81 @@ MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
 # worse than no total at all, so those show a bare page number.
 FIXED_LAYOUT=" pdf cbz cbr xps oxps md markdown "
 
-mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS" "$MD_CACHE"
+mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS" "$MD_CACHE" "$ZATHURA_CFG"
+
+# ============================================================
+# Light / dark
+# ============================================================
+# The desktop already has one switch for this -- the gsettings key
+# quickshell's AppearanceState.qml reads and writes, which its bar toggle
+# drives -- so Liseuse follows it rather than adding a second one.
+# Anything that is not exactly 'prefer-dark' means light: the same
+# two-state reading AppearanceState documents, and the safe one for a
+# value some future GNOME adds.
+desktop_is_dark() {
+    case "$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null)" in
+        *prefer-dark*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Assembles the config zathura will actually run with, and prints its
+# directory.
+#
+# Why a generated copy rather than editing zathurarc in place: the file
+# in the repo is the dark reader, and `recolor` -- the setting that
+# inverts a white PDF page onto a dark ground -- is exactly wrong when
+# the desktop is in light mode, where the document's own colours ARE the
+# right ones. zathura has no conditional in its config language and no
+# usable include (`:source` takes a config DIRECTORY, not a file, so it
+# cannot layer), and no command-line flag for setting an option. So the
+# layering is done here, by appending: zathura applies settings in file
+# order, so the last `set` wins.
+#
+# Regenerated on every open rather than cached against a state file. It
+# is one read and one printf of a few kB -- cheaper than the code that
+# would decide whether it is stale, and it cannot drift.
+zathura_config_dir() {
+    local out="$ZATHURA_CFG/zathurarc"
+    if desktop_is_dark; then
+        # The repo file IS the dark configuration; nothing to add.
+        cat -- "$ZATHURARC" > "$out" 2>/dev/null || return 1
+    else
+        {
+            cat -- "$ZATHURARC" 2>/dev/null
+            cat <<'LIGHT'
+
+# ---- appended by liseuse: the desktop is in light mode -------------
+# recolor off is the whole point. A PDF is black ink on white paper and
+# in light mode that is already what you want to look at; inverting it
+# would produce a dark page on a light desktop, which is the one
+# combination nobody asked for. Everything below just moves the window's
+# own chrome -- the letterbox around the page, the loading placeholder --
+# to the light end of the same palette.
+set recolor false
+set default-bg "#f7f7f9"
+set default-fg "#1c1c1e"
+set statusbar-bg "#f7f7f9"
+set statusbar-fg "#636366"
+set inputbar-bg  "#f7f7f9"
+set inputbar-fg  "#1c1c1e"
+set notification-bg         "#ececf0"
+set notification-fg         "#1c1c1e"
+set notification-error-bg   "#ececf0"
+set notification-warning-bg "#ececf0"
+set completion-bg           "#ececf0"
+set completion-fg           "#1c1c1e"
+set completion-highlight-bg "#d1d1d6"
+set completion-highlight-fg "#000000"
+set completion-group-bg     "#f7f7f9"
+set completion-group-fg     "#2f5d8a"
+set render-loading-bg "#f7f7f9"
+set render-loading-fg "#8e8e93"
+LIGHT
+        } > "$out" || return 1
+    fi
+    printf '%s' "$ZATHURA_CFG"
+}
 
 # True for a path this script has to render before zathura can open it.
 is_markdown() {
@@ -411,10 +490,12 @@ open_book() {
     # ending (logout, a killed terminal) would skip the restore and leave
     # the bar hidden with no window on screen to explain why.
     trap focus_leave EXIT INT TERM HUP
+    local cfg
+    cfg="$(zathura_config_dir)" || cfg=""
     systemd-inhibit --what=idle \
                     --who=Liseuse \
                     --why="Reading a book" \
-                    zathura -- "$target" || true
+                    zathura ${cfg:+--config-dir "$cfg"} -- "$target" || true
     focus_leave
     trap - EXIT INT TERM HUP
 }
@@ -445,14 +526,16 @@ touches() {
     arrow keys        same
     two fingers       continuous, pixel by pixel
     Ctrl+d  Ctrl+u    half a screen
-    Space             next screen (12% overlap kept)
-    Shift+Space       previous screen
-    Ctrl+f  Ctrl+b    same, vim-style
+    Ctrl+f  Ctrl+b    a full screen, vim-style
     H  L              top / bottom of the current page
     Alt+j  Alt+k      partial scroll
 
   TURN PAGES
-    J  K              next / previous page
+    Space             next page, re-fitted to the screen
+    Shift+Space       previous page, re-fitted
+                      (the re-fit is the point: after zooming in on a
+                       slide, the next one still arrives whole)
+    J  K              next / previous page, keeping your zoom
     PgDn  PgUp        same
     Alt+→  Alt+←      same
 
@@ -488,7 +571,7 @@ touches() {
     :nohlsearch       stop highlighting
 
   SEE IT DIFFERENTLY
-    a                 fit the whole page
+    a                 fit the whole page (what Space does for you)
     s                 fit the width (bigger text, you scroll)
     +  -              zoom in / out      (also zi / zo)
     =  zz             zoom to a value    z0: original zoom
@@ -496,7 +579,10 @@ touches() {
     D                 shift which page sits on the left
     r                 rotate 90°
     Ctrl+r            restore the document's own colours — for a
-                      figure a dark background makes unreadable
+                      figure a dark background makes unreadable.
+                      The reader already follows the desktop's
+                      light/dark switch, so this is a per-document
+                      override, not the way to change theme
     F5                presentation mode
     F11               leave / enter fullscreen
 
