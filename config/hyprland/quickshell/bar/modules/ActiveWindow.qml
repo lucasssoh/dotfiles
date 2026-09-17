@@ -70,20 +70,62 @@ Item {
     // `class` is what's actually stable/generic here, so known browser
     // classes get a friendly name derived from it instead of trusting
     // initialTitle.
-    readonly property var browserDisplayNames: ({
+    //
+    // zathura has exactly the same pathology for a different reason: it
+    // is never launched as itself here, it is the renderer Liseuse hands
+    // a document to (see config/liseuse/), and it sets a real title --
+    // "Platon-sophiste.pdf [79/293]" -- before Hyprland takes its
+    // snapshot. So `initialTitle` froze a page number into the chip.
+    // "Liseuse" is what that window IS from where the user sits.
+    readonly property var classDisplayNames: ({
         "brave-browser": "Brave",
         "firefox": "Firefox",
         "chromium": "Chromium",
         "google-chrome": "Chrome",
+        "org.pwmt.zathura": "Liseuse",
     })
+    readonly property string readerClass: "org.pwmt.zathura"
     readonly property string appName: {
         if (!root.toplevel) return "";
         const ipc = root.toplevel.lastIpcObject;
         const cls = ipc && ipc.class ? ipc.class : "";
-        if (cls && root.browserDisplayNames[cls]) return root.browserDisplayNames[cls];
+        if (cls && root.classDisplayNames[cls]) return root.classDisplayNames[cls];
         return (ipc && ipc.initialTitle) ? ipc.initialTitle : "";
     }
     readonly property string windowTitle: root.toplevel ? root.toplevel.title : ""
+
+    // What the title line actually shows.
+    //
+    // For everything but the reader it is the window title unchanged.
+    // For a document it is reordered, because the two halves are not
+    // equally useful: zathura titles its window "<file>.pdf [12/340]"
+    // (zathurarc sets window-title-basename and window-title-page), and
+    // the position is the half that changes while you read and the half
+    // you glance at. So it leads: "[12/340] Platon-sophiste".
+    //
+    // The extension goes too. The picker already says what format a
+    // document is with an icon, and ".pdf" on every single row of a
+    // reading session is noise -- especially since a Markdown document
+    // is ALSO a .pdf by the time zathura sees it (Liseuse renders it
+    // first), so the extension would be actively misleading there.
+    //
+    // This is parsed out of the title rather than asked of zathura over
+    // D-Bus, which it does expose: the title is already live in the
+    // toplevel object this module binds to, it updates on every page
+    // turn for free, and it needs no polling and no second source of
+    // truth. If zathura ever stops putting the page there, the regex
+    // simply stops matching and the full title shows -- which is the
+    // right failure.
+    readonly property string displayTitle: {
+        const t = root.windowTitle;
+        if (!t) return "";
+        const ipc = root.toplevel ? root.toplevel.lastIpcObject : null;
+        if (!ipc || ipc.class !== root.readerClass) return t;
+        const m = t.match(/^(.*?)\s*\[(\d+\/\d+)\]\s*$/);
+        if (!m) return t;
+        const name = m[1].replace(/\.[^.]*$/, "");
+        return "[" + m[2] + "]  " + name;
+    }
 
     // 380 -> 258: matches Media.qml's own hard cap -- its `openWidth` is
     // max(viewportWidth + 34 + 24, 84) with viewportWidth clamped to
@@ -133,7 +175,7 @@ Item {
 
     Text {
         id: titleMeasure
-        text: root.windowTitle
+        text: root.displayTitle
         font.family: Fonts.ui
         font.pixelSize: 14
         visible: false
@@ -214,7 +256,7 @@ Item {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         id: titleLabel
-        text: root.windowTitle
+        text: root.displayTitle
         visible: root.hasWindow
         color: Ink.primary
         font.family: Fonts.ui

@@ -421,19 +421,22 @@ hl.window_rule({
 -- few percent of a wallpaper bleeding through destroys the contrast the
 -- recolor exists to create. Same reason Firefox has this rule.
 --
--- fullscreen on open, with zathurarc's `adjust-open "best-fit"` as its
--- other half: the page is sized to the screen, one page fills it, and
--- turning a page is the only motion. SUPER+SHIFT+F still toggles out of
--- it (it is a normal fullscreen, not a forced one).
+-- No `fullscreen` here any more, and that is deliberate. It used to be
+-- forced on every zathura window, which is right for one document and
+-- wrong for two: a second one opened on top of the first instead of
+-- beside it, and a fullscreen window covers the bar, so nothing on
+-- screen could say which document had focus. Liseuse decides instead
+-- (config/liseuse/liseuse, open_book): the first reading session goes
+-- fullscreen, a second one leaves both tiled and brings the bar back.
+-- A rule cannot express "only if it is the only one".
 --
 -- no_blur: the window is opaque, so there is nothing to blur behind it
 -- -- the pass would cost GPU time per frame for a result no one can see,
 -- which matters on battery for something held open for an hour.
 hl.window_rule({
     match      = { class = "org.pwmt.zathura" },
-    opacity    = "1.0 override",
-    fullscreen = true,
-    no_blur    = true,
+    opacity = "1.0 override",
+    no_blur = true,
 })
 
 -- ============================================================

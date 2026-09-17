@@ -197,14 +197,22 @@ def _absolutise_links(html: str, source: str) -> str:
 def cache_path(source: str, cache_dir: str) -> str:
     """Where the rendered PDF for `source` lives.
 
-    Named from a hash of the absolute path so two READMEs in different
-    projects cannot collide, and so the name is stable across renders --
-    zathura stores its reading position against this filename, and a
-    name that changed per render would lose the position every time the
-    document was edited.
+    A hash of the absolute path, as a DIRECTORY, with the document's own
+    name inside it. The hash is what keeps two READMEs in different
+    projects apart and what keeps the path stable across renders --
+    zathura stores the reading position against this filename, so a name
+    that moved per render would lose the position on every edit.
+
+    But the hash used to be the filename itself, and that leaked: zathura
+    titles its window after the basename it was handed, so the bar (see
+    quickshell ActiveWindow.qml, which reads that title) showed
+    "[3/9] 0ee726627caaadcc" for a markdown document. Pushing the hash
+    into a directory keeps every property it had and gives the window a
+    name a human wrote.
     """
     digest = hashlib.sha1(os.path.abspath(source).encode("utf-8")).hexdigest()[:16]
-    return os.path.join(cache_dir, digest + ".pdf")
+    stem = os.path.splitext(os.path.basename(source))[0]
+    return os.path.join(cache_dir, digest, stem + ".pdf")
 
 
 def meta_path(pdf: str) -> str:

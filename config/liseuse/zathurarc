@@ -296,5 +296,20 @@ map <F1> feedkeys ":exec liseuse keys<Return>"
 #
 # The trade: Space no longer scrolls WITHIN a zoomed page. j/k, the
 # arrows and Ctrl+f/Ctrl+b still do, and they are the right tools for it.
+# Return does the same as Space, and Shift+Return the same as
+# Shift+Space -- one hand on the arrow keys reaches Return, the other
+# reaches Space, and a book is read with whichever hand is free. The name
+# is <Return>: girara rejects <Enter> outright ("Invalid special key
+# value or mode: Enter") and, as with the <Escape>/<Esc> mistake this
+# file made once, a rejected mapping is only a warning at startup -- the
+# binding silently never exists.
+#
+# These four are the LANDSCAPE behaviour, which is also the default here.
+# For a portrait document liseuse overrides them in the config it
+# generates (see zathura_config_dir): there, a page turn keeps your zoom
+# instead of re-fitting, because a portrait page read at full width is
+# meant to be scrolled through, not replaced.
 map <Space> feedkeys "Ja"
 map <S-Space> feedkeys "Ka"
+map <Return> feedkeys "Ja"
+map <S-Return> feedkeys "Ka"

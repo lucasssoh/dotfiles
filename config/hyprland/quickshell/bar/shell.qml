@@ -228,14 +228,23 @@ ShellRoot {
         function toggleZen(): void {
             shell.zenMode = !shell.zenMode;
         }
-        // Idempotent SETTERS next to the toggle above, added for Liseuse
-        // (config/liseuse/). A reading session has to enter zen/DND and
-        // then leave them exactly as it found them, and a toggle cannot
-        // express that: entering with toggleZen on a bar the user had
-        // already hidden would SHOW it, and the symmetric call on the way
-        // out would hide it for good. SUPER+Z keeps calling toggleZen --
-        // a key press genuinely is a toggle. Only a script bracketing a
-        // span of time needs these.
+        // Idempotent SETTERS next to the toggle above. A script that
+        // brackets a span of time has to leave a state exactly as it
+        // found it, and a toggle cannot express that: entering with
+        // toggleZen on a bar the user had already hidden would SHOW it,
+        // and the symmetric call on the way out would hide it for good.
+        // SUPER+Z keeps calling toggleZen -- a key press genuinely is a
+        // toggle.
+        //
+        // setDnd is the one with a caller: Liseuse (config/liseuse/)
+        // quiets notifications for the length of a reading session.
+        // setZen was added for it too and turned out to be the wrong
+        // tool -- a fullscreen window already covers this bar, so hiding
+        // it was redundant, and because zen and fullscreen are two
+        // independent states they came apart the moment you left
+        // fullscreen and the bar stayed gone. It is kept as the
+        // symmetric counterpart of setDnd and of toggleZen, not because
+        // anything drives it today.
         //   qs -c bar ipc call bar setZen true
         function setZen(on: bool): void {
             shell.zenMode = on;

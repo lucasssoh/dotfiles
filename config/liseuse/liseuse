@@ -39,11 +39,13 @@ SOURCES_CONF="$CONFIG_DIR/sources.conf"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/liseuse"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/liseuse"
 PAGES_CACHE="$CACHE_DIR/pages"
-# Rendered Markdown. md2pdf.py writes <sha1-of-abspath>.pdf in here; the
-# name is derived from the source path rather than its contents so that
-# it stays put across edits, because zathura's reading position is keyed
-# on the filename and a per-render name would reset it every time the
-# document changed.
+# Rendered Markdown. md2pdf.py writes <sha1-of-abspath>/<name>.pdf in
+# here -- the hash is a DIRECTORY, not the filename. It is derived from
+# the source path rather than its contents so the PDF stays put across
+# edits, because zathura keys the reading position on the filename and a
+# per-render name would reset it every time the document changed. The
+# document keeps its own name inside that directory because zathura
+# titles its window after the basename, and the bar shows that title.
 MD_CACHE="$CACHE_DIR/md"
 SESSIONS="$STATE_DIR/sessions"
 LOCK="$STATE_DIR/focus.lock"
@@ -113,8 +115,30 @@ desktop_is_dark() {
 # Regenerated on every open rather than cached against a state file. It
 # is one read and one printf of a few kB -- cheaper than the code that
 # would decide whether it is stale, and it cannot drift.
+# "landscape" or "portrait", from the first page of the document.
+#
+# The distinction is real and not cosmetic: a 16:9 slide fits a screen
+# whole, so one page IS one screenful and paging is the only motion that
+# makes sense. An A4 page is taller than it is wide, so at any zoom that
+# makes its text comfortable it overflows the screen and wants to be
+# scrolled through -- and forcing it back to whole-page on every turn
+# fights the reader.
+#
+# Page 1 decides for the whole document. A file that changes orientation
+# halfway is rare enough not to pay for, and mutool being absent or the
+# file being unreadable falls back to landscape, which is this module's
+# existing behaviour.
+document_orientation() {
+    local o
+    o="$(mutool pages -- "$1" 1 2>/dev/null \
+         | awk -F'"' '/MediaBox/ { w = $6 - $2; h = $8 - $4;
+                                   print (w > h) ? "landscape" : "portrait"; exit }')"
+    printf '%s' "${o:-landscape}"
+}
+
 zathura_config_dir() {
     local out="$ZATHURA_CFG/zathurarc"
+    local doc="${1:-}"
     if desktop_is_dark; then
         # The repo file IS the dark configuration; nothing to add.
         cat -- "$ZATHURARC" > "$out" 2>/dev/null || return 1
@@ -152,6 +176,36 @@ set render-loading-fg "#8e8e93"
 LIGHT
         } > "$out" || return 1
     fi
+
+    # ---- orientation ------------------------------------------------
+    # Appended last, so it wins over the base file (zathura applies
+    # settings in order).
+    if [ -n "$doc" ] && [ "$(document_orientation "$doc")" = "portrait" ]; then
+        cat >> "$out" <<'PORTRAIT'
+
+# ---- appended by liseuse: this document is portrait ----------------
+# single-page-mode off, so the view is one continuous strip and j/k,
+# Ctrl+d and Ctrl+f carry on across a page boundary instead of stopping
+# dead at it. That is how a book or a handout is read.
+set single-page-mode false
+
+# And the page turn drops the `a` the landscape bindings carry. On a
+# slide, re-fitting is the point -- the next slide must arrive whole. On
+# a portrait page it is the opposite: you have chosen a zoom that makes
+# the text readable (often `s`, fit-width), and forcing whole-page on
+# every turn throws that away.
+#
+# `J`/`K` alone still frame the new page properly rather than dumping you
+# at an arbitrary offset: sc_navigate ends in position_set, and with
+# vertical-center set it puts the page mid-point at the viewport
+# mid-point -- centred on the page you asked for, at the zoom you chose.
+map <Space> feedkeys "J"
+map <S-Space> feedkeys "K"
+map <Return> feedkeys "J"
+map <S-Return> feedkeys "K"
+PORTRAIT
+    fi
+
     printf '%s' "$ZATHURA_CFG"
 }
 
@@ -264,7 +318,7 @@ scan() {
 # same fork reason `ranked` builds its labels in awk.
 md_map() {
     awk 'FNR == 1 { pdf = FILENAME; sub(/\.src$/, ".pdf", pdf); print pdf "\t" $0 }' \
-        "$MD_CACHE"/*.src 2>/dev/null || true
+        "$MD_CACHE"/*/*.src 2>/dev/null || true
 }
 
 zathura_state() {
@@ -443,7 +497,6 @@ decorate() {
 # Three things interrupt reading on this machine, and none of them is
 # zathura's to fix:
 #
-#   the bar        -> shell.qml's setZen
 #   notifications  -> shell.qml's setDnd (quieted, not blocked -- they
 #                     still land in the centre, they just don't pop)
 #   hypridle       -> 5 min to lock on battery, 15 on mains, and reading
@@ -454,10 +507,22 @@ decorate() {
 #                     precisely so a D-Bus inhibitor is honoured, the
 #                     same mechanism mpv and Firefox already use.
 #
-# setZen/setDnd are idempotent SETTERS, not the SUPER+Z toggle, because
-# this has to restore what it found: entering reading mode with the bar
-# already hidden must not un-hide it on the way out. $PREV_STATE holds
-# that snapshot.
+# The bar is NOT in that list, and used to be: this hid it with setZen
+# on the way in and showed it again on the way out. That was redundant
+# and, worse, wrong. Redundant because a fullscreen window already covers
+# the bar -- verified with zen off throughout: tiled, the bar reads
+# "Liseuse [154/293] Platon-so..."; fullscreen, the page covers that
+# strip completely. Wrong because zen is a state and fullscreen is a
+# state, and they came apart the moment you left fullscreen with
+# SUPER+SHIFT+F while still reading: the window shrank, the bar stayed
+# hidden, and you had to bring it back by hand every time.
+#
+# Hiding the bar was also never what stopped the interruptions. That is
+# DND, which is a separate quickshell switch and the one thing kept here.
+#
+# setDnd is an idempotent SETTER, not a toggle, because this has to
+# restore what it found: entering with notifications already quieted must
+# not un-quiet them on the way out. $PREV_STATE holds that snapshot.
 #
 # Two books open at once is a normal thing to do, so the enter/leave is
 # reference-counted: one file per session PID under $SESSIONS, and only
@@ -479,25 +544,46 @@ focus_enter() {
             kill -0 "$pid" 2>/dev/null || { rm -f "$pidfile"; crashed=1; }
         done
 
+        # Whether this session is the only one, which decides both halves
+        # of "immersive or side by side" below.
+        #
+        # PRINTED, not assigned to a global: everything here runs inside
+        # `( flock 9 ... )`, which is a subshell, so a variable set here
+        # is gone by the time the caller reads it -- which is exactly how
+        # the first version of this failed, silently, with the first book
+        # never going fullscreen. stdout crosses that boundary; a
+        # variable does not.
+        local alone=0
         if [ -z "$(ls -A "$SESSIONS" 2>/dev/null)" ]; then
+            alone=1
+        fi
+        if [ "$alone" = "1" ]; then
             # Snapshot what to restore to -- but ONLY on a genuinely cold
             # start. If the directory is empty because a session was just
-            # pruned, the bar is still hidden by that dead session, and
-            # snapshotting NOW would record "zen was already on" and make
-            # a crash-hidden bar permanent: this session would faithfully
+            # pruned, notifications are still quieted by that dead
+            # session, and snapshotting NOW would record "DND was already
+            # on" and make that permanent: this session would faithfully
             # restore the wrong thing on its way out, and so would every
             # session after it. The $PREV_STATE that dead session wrote is
             # still on disk and is still the right answer, so it is kept.
-            # (Verified: kill -9 on a reader, then open another book --
-            # without this the bar never comes back.)
             if [ "$crashed" -eq 0 ] || [ ! -s "$PREV_STATE" ]; then
                 qs -c bar ipc call bar focusState > "$PREV_STATE" 2>/dev/null || \
                     printf 'zen=0 dnd=0\n' > "$PREV_STATE"
             fi
-            qs -c bar ipc call bar setZen true >/dev/null 2>&1 || true
             qs -c bar ipc call bar setDnd true >/dev/null 2>&1 || true
+        else
+            # A second document: drop the first one out of fullscreen so
+            # the two tile side by side. That also brings the bar back on
+            # its own, which is the case where you most need it -- it is
+            # the only thing saying which of the two has focus and what
+            # page it is on (quickshell ActiveWindow.qml shows
+            # "Liseuse  [12/340] name"). Notifications stay quiet: that
+            # part of not being disturbed still holds.
+            local a
+            for a in $(zathura_addrs); do set_fullscreen "$a" off; done
         fi
         : > "$SESSIONS/$$"
+        printf '%s' "$alone"
     ) 9>"$LOCK"
 }
 
@@ -506,11 +592,9 @@ focus_leave() {
         flock 9
         rm -f "$SESSIONS/$$"
         if [ -z "$(ls -A "$SESSIONS" 2>/dev/null)" ]; then
-            local prev zen dnd
+            local prev dnd
             prev="$(cat "$PREV_STATE" 2>/dev/null || echo 'zen=0 dnd=0')"
-            case "$prev" in *zen=1*) zen=true ;; *) zen=false ;; esac
             case "$prev" in *dnd=1*) dnd=true ;; *) dnd=false ;; esac
-            qs -c bar ipc call bar setZen "$zen" >/dev/null 2>&1 || true
             qs -c bar ipc call bar setDnd "$dnd" >/dev/null 2>&1 || true
         fi
     ) 9>"$LOCK"
@@ -540,13 +624,38 @@ open_book() {
     # Nothing recorded here: zathura writes its own fileinfo row (path,
     # page, time) the moment it opens the file, and that row is what
     # ranked() reads back. See the header.
-    focus_enter
+    local alone
+    alone="$(focus_enter)"
+
+    # Fullscreen only when this is the only book open, and done here
+    # rather than by a window rule because a rule cannot count windows
+    # (see hypr/windowrules.lua). The wait is for the window to exist:
+    # zathura has not been launched yet at this point, so the address is
+    # found by polling for one that was not there before. Backgrounded,
+    # so a window that never appears costs five seconds of a detached
+    # subshell and nothing else.
+    if [ "$alone" = "1" ]; then
+        local before
+        before="$(zathura_addrs | tr '\n' ' ')"
+        (
+            for _ in $(seq 1 100); do
+                for a in $(zathura_addrs); do
+                    case " $before " in
+                        *" $a "*) ;;
+                        *) set_fullscreen "$a" on; exit 0 ;;
+                    esac
+                done
+                sleep 0.05
+            done
+        ) >/dev/null 2>&1 &
+    fi
+
     # EXIT alone isn't enough: `set -e` plus a signal from the session
     # ending (logout, a killed terminal) would skip the restore and leave
     # the bar hidden with no window on screen to explain why.
     trap focus_leave EXIT INT TERM HUP
     local cfg
-    cfg="$(zathura_config_dir)" || cfg=""
+    cfg="$(zathura_config_dir "$target")" || cfg=""
     systemd-inhibit --what=idle \
                     --who=Liseuse \
                     --why="Reading a book" \
@@ -586,13 +695,22 @@ touches() {
     Alt+j  Alt+k      partial scroll
 
   TURN PAGES
-    Space             next page, re-fitted to the screen
-    Shift+Space       previous page, re-fitted
-                      (the re-fit is the point: after zooming in on a
-                       slide, the next one still arrives whole)
-    J  K              next / previous page, keeping your zoom
-    PgDn  PgUp        same
-    Alt+→  Alt+←      same
+    Space  Return              next page
+    Shift+Space  Shift+Return  previous page
+    J  K                       same, always keeping your zoom
+    PgDn  PgUp                 same
+    Alt+→  Alt+←               same
+
+    What a page turn does depends on the shape of the document, and
+    Liseuse picks that from its first page:
+
+      landscape (slides)  the next one arrives whole, re-fitted to the
+                          screen — so zooming in on a detail does not
+                          leave the following slide cropped
+      portrait  (books)   the document scrolls as one continuous strip,
+                          j/k and Ctrl+d carry on across a page break,
+                          and a page turn centres the new page WITHOUT
+                          touching the zoom you chose
 
   GO SOMEWHERE
     42G               jump to page 42
@@ -648,9 +766,18 @@ touches() {
     :info             file metadata
     :exec <command>   run a command
 
+  TWO AT ONCE
+    Opening a second book from SUPER+F drops the first out of fullscreen
+    and puts the two side by side, which brings the bar back -- it is
+    what tells you which of them has focus and what page it is on. One
+    book on its own stays fullscreen, which hides the bar by covering it.
+    SUPER+SHIFT+F leaves fullscreen at any time and the bar returns.
+
   LEAVE
-    q                 close the book (the bar and notifications come
-                      back, the idle lock re-arms)
+    q                 close the book (notifications come back, the
+                      idle lock re-arms). The bar needs nothing: a
+                      fullscreen window covers it and leaving
+                      fullscreen brings it back by itself
     Esc               CANCEL — a search, the outline, a half-typed
                       command. Does not close the book.
     F1                this manual
@@ -870,10 +997,52 @@ pick() {
 # ============================================================
 # What's on screen
 # ============================================================
-zathura_addr() {   # address of any zathura window, empty if none
+# ---- Talking to the compositor -------------------------------------
+# Every dispatch below goes through hl.dsp.*, and that is not a style
+# choice. This Hyprland is configured in Lua (hypr/*.lua), so `hyprctl
+# dispatch` evaluates its argument AS LUA: the classic
+# `hyprctl dispatch focuswindow address:0x...` does not merely misbehave,
+# it fails to parse --
+#
+#   error: return hl.dispatch(focuswindow address:0x...):1: ) expected
+#
+# which is exactly what this script used to send, with stderr discarded.
+# The "return to the book you were reading" half of SUPER+F therefore
+# never once worked. The Lua API surface was found by enumerating
+# `pairs(hl.dsp)` through an exec_cmd dispatch; note it has window.close
+# and window.fullscreen but NO window.focus -- focusing lives one level
+# up, on hl.dsp.focus.
+zathura_addrs() {  # every zathura window address, newest last
     hyprctl -j clients 2>/dev/null \
-        | jq -r --arg c "$ZATHURA_CLASS" 'map(select(.class == $c)) | .[0].address // empty' \
+        | jq -r --arg c "$ZATHURA_CLASS" 'map(select(.class == $c)) | .[].address' \
         2>/dev/null || true
+}
+
+zathura_addr() {   # address of any zathura window, empty if none
+    zathura_addrs | head -1
+}
+
+focus_window() {
+    [ -n "${1:-}" ] || return 0
+    hyprctl dispatch "hl.dsp.focus({ window = 'address:$1' })" >/dev/null 2>&1 || true
+}
+
+# SET fullscreen, rather than toggle it. hl.dsp.window.fullscreen is a
+# toggle, so firing it blind would undo the state it was asked to
+# establish half the time; the current state is read back first and the
+# dispatch only happens when it actually differs. Hyprland reports 0 for
+# "not fullscreen" and a non-zero mode otherwise.
+set_fullscreen() {
+    local addr="$1" want="$2" cur
+    [ -n "$addr" ] || return 0
+    cur="$(hyprctl -j clients 2>/dev/null \
+            | jq -r --arg a "$addr" 'map(select(.address == $a)) | .[0].fullscreen // 0' \
+            2>/dev/null || echo 0)"
+    if [ "$want" = "on" ] && [ "$cur" = "0" ]; then
+        hyprctl dispatch "hl.dsp.window.fullscreen({ mode = 0, window = 'address:$addr' })" >/dev/null 2>&1 || true
+    elif [ "$want" = "off" ] && [ "$cur" != "0" ]; then
+        hyprctl dispatch "hl.dsp.window.fullscreen({ mode = 0, window = 'address:$addr' })" >/dev/null 2>&1 || true
+    fi
 }
 
 zathura_focused() {
@@ -927,7 +1096,7 @@ EOF
         # The three-outcome behaviour described at the top of this file.
         addr="$(zathura_addr)"
         if [ -n "$addr" ] && ! zathura_focused; then
-            hyprctl dispatch focuswindow "address:$addr" >/dev/null
+            focus_window "$addr"
         else
             pick
         fi
