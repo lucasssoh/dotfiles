@@ -26,13 +26,28 @@
 # the page's tonal range onto the two colors below, which is why this is
 # a real inversion rather than a dimmed backlight.
 #
-# Values are hypr/colors.lua's `background` and `text`, by hand -- the
-# same hand-kept CSS mirror situation fuzzel.ini and rofi/launcher.rasi
-# are in (zathurarc can't require() a Lua file either). If colors.lua
-# moves, this moves with it.
+# The ink is hypr/colors.lua's `text`, by hand -- the same hand-kept CSS
+# mirror situation fuzzel.ini and rofi/launcher.rasi are in (zathurarc
+# can't require() a Lua file either). If colors.lua moves, that value
+# moves with it.
+#
+# The paper is NOT colors.lua's `background`, and that is deliberate.
+# The palette's #1c1c1e is designed for a bar and a launcher: small
+# surfaces, seen for a second, floating over a wallpaper, where a
+# near-black is what makes them read as SURFACES at all. A book is the
+# opposite -- the whole screen, for an hour, in a dark room. There a
+# ground that is not quite black is a faint grey glow behind every line,
+# and the page's ink is spread over the top 89% of the tonal range
+# instead of all of it.
+#
+# One consequence, and it is the wanted one: with default-bg below set
+# to the same black, the page EDGE disappears. In fullscreen best-fit a
+# slide stops sitting on a visible sheet and simply floats, which is the
+# distraction-free half of this file doing its job. Put default-bg back
+# to "#1c1c1e" if you would rather still see where the paper stops.
 set recolor true
 set recolor-darkcolor  "#e5e5ea"
-set recolor-lightcolor "#1c1c1e"
+set recolor-lightcolor "#000000"
 
 # The two options that stop recolor from wrecking the document.
 #
@@ -53,23 +68,29 @@ set recolor-reverse-video true
 # The window's own chrome, for the margins around the page and the
 # instant before the first page renders. Without these, opening a book
 # flashes zathura's default light grey.
-set default-bg "#1c1c1e"
+#
+# Everything that is BEHIND the page is the same black as the page, so
+# the two never separate. Everything that floats IN FRONT of it -- the
+# `:` completion list, a notification -- is #1c1c1e instead: one step up
+# from black is enough to read as a raised panel once the ground is 0,
+# and the palette value gets to be exactly what it was designed for.
+set default-bg "#000000"
 set default-fg "#e5e5ea"
-set statusbar-bg "#1c1c1e"
+set statusbar-bg "#000000"
 set statusbar-fg "#8e8e93"
-set inputbar-bg  "#1c1c1e"
+set inputbar-bg  "#000000"
 set inputbar-fg  "#e5e5ea"
-set notification-bg          "#2c2c2e"
+set notification-bg          "#1c1c1e"
 set notification-fg          "#e5e5ea"
-set notification-error-bg    "#2c2c2e"
+set notification-error-bg    "#1c1c1e"
 set notification-error-fg    "#ff453a"
-set notification-warning-bg  "#2c2c2e"
+set notification-warning-bg  "#1c1c1e"
 set notification-warning-fg  "#ffd60a"
-set completion-bg            "#2c2c2e"
+set completion-bg            "#1c1c1e"
 set completion-fg            "#e5e5ea"
 set completion-highlight-bg  "#3a3a3c"
 set completion-highlight-fg  "#ffffff"
-set completion-group-bg      "#1c1c1e"
+set completion-group-bg      "#000000"
 set completion-group-fg      "#a8b4c4"
 # Search hits and text selection -- `accent3` (fox orange) at low alpha,
 # the one palette token nothing else in a page is likely to collide with
@@ -210,9 +231,11 @@ set scroll-full-overlap 0
 # full-screen flash every time you scroll faster than mupdf can render.
 # Painting it in the page's own background makes an unrendered page
 # simply blank instead of blinding, which does more for how smooth fast
-# scrolling FEELS than either scroll option above.
+# scrolling FEELS than either scroll option above. It has to track
+# recolor-lightcolor exactly, or a fast scroll flashes a rectangle one
+# shade off the page it is about to become.
 set render-loading true
-set render-loading-bg "#1c1c1e"
+set render-loading-bg "#000000"
 set render-loading-fg "#636366"
 
 # Selecting text should land in the clipboard proper (Ctrl+V), not only

@@ -26,24 +26,44 @@
 
 /* ---- Palette -----------------------------------------------------
    Dark is the default, and its values are hypr/colors.lua -- the same
-   hand-kept mirror zathurarc and fuzzel.ini carry. The light set is the
-   Adwaita-ish neutral the desktop switches GTK apps to, kept slightly
-   off-white rather than pure white so a full page of it is not a lamp.
+   hand-kept mirror zathurarc and fuzzel.ini carry -- with one deliberate
+   exception, `--bg`. The page is pure black, matching zathurarc's
+   recolor-lightcolor rather than the palette's #1c1c1e, for the reason
+   written out at length there: the palette is tuned for small surfaces
+   glimpsed over a wallpaper, and a document is the whole screen for an
+   hour. A .md and a .pdf opened back to back have to sit on the same
+   ground, or the switch between them is a visible flash.
+
+   That inverts the elevation scale. When the page was #1c1c1e, a code
+   block sank BELOW it (#161618); against black there is no below, so
+   everything raised now goes UP from 0 instead:
+
+       #000000  the page
+       #141416  recessed-looking blocks: listings, alternate table rows
+       #242426  hairlines
+       #2c2c2e  real surfaces: inline code, table headers, <mark>
+       #3a3a3c  strong rules, blockquote bars
+
+   The light set is the Adwaita-ish neutral the desktop switches GTK apps
+   to, kept slightly off-white rather than pure white so a full page of
+   it is not a lamp, and it is untouched by any of this -- black paper is
+   a dark-mode idea, its light-mode counterpart would be a migraine.
 
    Syntax highlighting is NOT here: md2pdf.py appends a Pygments
    stylesheet, choosing `github-dark` or `github-light` to match. Those
-   are GitHub's own palettes, by name. */
+   are GitHub's own palettes, by name. Its `.highlight` background never
+   shows: the <pre> inside it paints --code-bg over the whole area. */
 :root {
-    --bg:        #1c1c1e;
+    --bg:        #000000;
     --fg:        #e5e5ea;
     --heading:   #ffffff;
     --muted:     #8e8e93;
     --faint:     #636366;
     --rule:      #3a3a3c;
-    --rule-soft: #2c2c2e;
+    --rule-soft: #242426;
     --surface:   #2c2c2e;
-    --surface-2: #242426;
-    --code-bg:   #161618;
+    --surface-2: #141416;
+    --code-bg:   #141416;
     --link:      #a8b4c4;
     --accent:    #c8823c;
 }
