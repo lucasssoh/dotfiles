@@ -45,7 +45,7 @@ needs_restart_scan() {
 
         if [ "${exe% (deleted)}" != "$exe" ]; then
             bin="${exe% (deleted)}"
-            printf '%s\t%s\t%s\n' "$pid" "$bin" "binaire remplace depuis le demarrage"
+            printf '%s\t%s\t%s\n' "$pid" "$bin" "binary replaced since it started"
             continue
         fi
 
@@ -53,7 +53,7 @@ needs_restart_scan() {
         bmtime="$(stat -c %Y "$exe" 2>/dev/null)" || continue
         pstart="$(stat -c %Y "$p" 2>/dev/null)" || continue
         if [ "$bmtime" -gt "$pstart" ]; then
-            printf '%s\t%s\t%s\n' "$pid" "$exe" "binaire plus recent que le processus"
+            printf '%s\t%s\t%s\n' "$pid" "$exe" "binary newer than the running process"
         fi
     done
     return 0
@@ -79,7 +79,7 @@ needs_restart_report() {
     [ -z "$rows" ] && return 0
 
     echo
-    echo "Ces elements tournent encore sur une version anterieure :"
+    echo "These are still running an older version:"
     local pid bin reason unit name
     while IFS=$'\t' read -r pid bin reason; do
         [ -n "$pid" ] || continue
@@ -87,14 +87,14 @@ needs_restart_report() {
         unit="$(_unit_for_pid "$pid")"
         if [ -n "$unit" ]; then
             printf '  %-20s %s\n' "$name" "$reason"
-            printf '  %-20s → systemctl --user restart %s\n' "" "$unit"
+            printf '  %-20s -> systemctl --user restart %s\n' "" "$unit"
         else
             printf '  %-20s %s (pid %s)\n' "$name" "$reason" "$pid"
-            printf '  %-20s → a relancer quand ca t arrange\n' ""
+            printf '  %-20s -> restart it whenever suits you\n' ""
         fi
     done <<< "$rows"
     echo
-    echo "Rien n a ete redemarre : les fichiers sont en place, la nouvelle version"
-    echo "prendra effet au prochain demarrage de chacun."
+    echo "Nothing was restarted: the files are in place, and the new version"
+    echo "takes effect the next time each one starts."
     return 1
 }

@@ -299,39 +299,39 @@ cmd_status() {
         return 0
     fi
 
-    echo -e "${BOLD}Dépôt${RESET}    $branch @ $head $( [ "$dirty" = 1 ] && echo -e "${YELLOW}(modifications locales)${RESET}" || echo "(propre)" )"
-    [ -n "$behind" ] && [ "$behind" != 0 ] && echo -e "         ${YELLOW}$behind commit(s) en retard sur origin${RESET}"
-    [ -n "$behind" ] && [ "$behind" = 0 ] && echo "         à jour avec origin"
+    echo -e "${BOLD}Repo${RESET}     $branch @ $head $( [ "$dirty" = 1 ] && echo -e "${YELLOW}(local changes)${RESET}" || echo "(clean)" )"
+    [ -n "$behind" ] && [ "$behind" != 0 ] && echo -e "         ${YELLOW}$behind commit(s) behind origin${RESET}"
+    [ -n "$behind" ] && [ "$behind" = 0 ] && echo "         up to date with origin"
 
     echo -e "\n${BOLD}Modules${RESET}"
     local due=0
     for i in "${!WALK_NAMES[@]}"; do
         st="${WALK_STATE[$i]}"
         case "$st" in
-            current) printf "  ${GREEN}✓${RESET} %-14s à jour\n" "${WALK_NAMES[$i]}" ;;
-            new)     printf "  ${DIM}○${RESET} %-14s jamais appliqué\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
-            changed) printf "  ${YELLOW}●${RESET} %-14s modifié depuis la dernière application\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
-            retry)   printf "  ${RED}✗${RESET} %-14s dernier run en échec (code %s) — sera rejoué\n" "${WALK_NAMES[$i]}" "$(state_get "mod.${WALK_NAMES[$i]}.rc")"; due=$((due+1)) ;;
+            current) printf "  ${GREEN}✓${RESET} %-14s up to date\n" "${WALK_NAMES[$i]}" ;;
+            new)     printf "  ${DIM}○${RESET} %-14s never applied\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
+            changed) printf "  ${YELLOW}●${RESET} %-14s changed since it was last applied\n" "${WALK_NAMES[$i]}"; due=$((due+1)) ;;
+            retry)   printf "  ${RED}✗${RESET} %-14s last run failed (exit %s) — will be retried\n" "${WALK_NAMES[$i]}" "$(state_get "mod.${WALK_NAMES[$i]}.rc")"; due=$((due+1)) ;;
         esac
     done
 
     echo -e "\n${BOLD}Crates${RESET}"
     for n in "${RUST_CRATE_ORDER[@]}"; do
         if [ "$(_crate_state "$n")" = current ]; then
-            printf "  ${GREEN}✓${RESET} %-14s à jour\n" "$n"
+            printf "  ${GREEN}✓${RESET} %-14s up to date\n" "$n"
         else
-            printf "  ${YELLOW}●${RESET} %-14s source ou toolchain modifié depuis le build\n" "$n"
+            printf "  ${YELLOW}●${RESET} %-14s source or toolchain changed since the build\n" "$n"
         fi
     done
 
     local unmapped; unmapped="$(_unmapped_paths)"
     if [ -n "$unmapped" ]; then
-        echo -e "\n${BOLD}Chemins non couverts${RESET} ${DIM}(aucun module ne les revendique)${RESET}"
+        echo -e "\n${BOLD}Unmapped paths${RESET} ${DIM}(no module claims them)${RESET}"
         printf '  %s\n' $unmapped
     fi
 
-    echo -e "\n${DIM}dernier run : $(state_get run.last 'jamais')${RESET}"
-    [ "$due" -gt 0 ] && echo -e "${DIM}$due module(s) à appliquer — cc-pkg-mng update -n pour le détail${RESET}"
+    echo -e "\n${DIM}last run: $(state_get run.last 'never')${RESET}"
+    [ "$due" -gt 0 ] && echo -e "${DIM}$due module(s) to apply — cc-pkg-mng update -n for the detail${RESET}"
     return 0
 }
 
@@ -371,9 +371,9 @@ cmd_update() {
         # does not have to re-run all 18 modules once to become incremental.
         # Step 6 will gate this behind `verify`; until that exists, the banner
         # is the whole safeguard.
-        echo -e "${YELLOW}${BOLD}Adoption${RESET} — les empreintes actuelles vont être enregistrées comme"
-        echo -e "«  déjà appliquées  » SANS rien vérifier ni installer. Si cette machine n'est"
-        echo -e "pas réellement à jour, les modules concernés ne seront jamais rejoués."
+        echo -e "${YELLOW}${BOLD}Adoption${RESET} — the current fingerprints will be recorded as"
+        echo -e "\"already applied\" WITHOUT checking or installing anything. If this machine"
+        echo -e "is not genuinely up to date, those modules will never be re-run."
         walk_modules 0
         local i
         for i in "${!WALK_NAMES[@]}"; do
@@ -384,7 +384,7 @@ cmd_update() {
         state_set run.last "$(date -Iseconds)"
         state_set run.cmd "update --adopt"
         state_save
-        ok "${#WALK_NAMES[@]} module(s) adoptés. Prochain \`update\` : incrémental."
+        ok "${#WALK_NAMES[@]} module(s) adopted. Next \`update\` will be incremental."
         return 0
     fi
 
@@ -393,11 +393,11 @@ cmd_update() {
     # work without touching the remote.
     if [ "$no_pull" = 0 ]; then
         if [ -n "$(git -C "$DOTFILES_ROOT" status --porcelain 2>/dev/null)" ]; then
-            echo -e "${YELLOW}Modifications locales non commitées :${RESET}"
+            echo -e "${YELLOW}Uncommitted local changes:${RESET}"
             git -C "$DOTFILES_ROOT" status --short | sed 's/^/  /'
-            err "refus de tirer par-dessus. Commite, remise, ou relance avec --no-pull pour n'appliquer que le local."
+            err "refusing to pull over them. Commit, stash, or re-run with --no-pull to apply local work only."
         fi
-        info "git pull (fast-forward seulement)…"
+        info "git pull (fast-forward only)…"
         [ "$DRY_RUN" = 1 ] && dry "git merge --ff-only origin/$(git -C "$DOTFILES_ROOT" branch --show-current)"
     fi
 
@@ -415,28 +415,28 @@ cmd_update() {
     done
 
     if [ "${#due[@]}" -eq 0 ]; then
-        ok "Rien à faire — tout est à jour."
+        ok "Nothing to do — everything is up to date."
         return 0
     fi
 
-    echo -e "\n${BOLD}Modules à appliquer, dans l'ordre${RESET}"
+    echo -e "\n${BOLD}Modules to apply, in order${RESET}"
     local d
     for d in "${due[@]}"; do printf '  %-16s %s\n' "${d%%:*}" "${d##*:}"; done
 
     echo -e "\n${BOLD}Crates${RESET}"
     local n
     for n in "${RUST_CRATE_ORDER[@]}"; do
-        [ "$(_crate_state "$n")" = current ] && printf "  %-16s à jour\n" "$n" || printf "  %-16s à recompiler\n" "$n"
+        [ "$(_crate_state "$n")" = current ] && printf "  %-16s up to date\n" "$n" || printf "  %-16s to rebuild\n" "$n"
     done
 
     if [ "$system" = 1 ]; then
-        echo -e "\n${DIM}--system : la phase système serait incluse si ses entrées ont changé${RESET}"
+        echo -e "\n${DIM}--system: the system phase would be included if its inputs changed${RESET}"
     else
-        echo -e "\n${DIM}portée utilisateur : aucun paquet ne sera installé, aucun sudo demandé${RESET}"
+        echo -e "\n${DIM}user scope: no package will be installed, no sudo requested${RESET}"
     fi
 
     if [ "$DRY_RUN" = 1 ]; then
-        echo -e "\n${DIM}essai à blanc — rien n'a été modifié${RESET}"
+        echo -e "\n${DIM}dry run — nothing was changed${RESET}"
         return 0
     fi
 
@@ -498,7 +498,7 @@ cmd_update() {
     # outstanding.
     if [ -s "$STATE_DIR/deferred.ledger" ]; then
         echo
-        echo -e "${YELLOW}Reporte (necessite --system) :${RESET}"
+        echo -e "${YELLOW}Deferred (needs --system):${RESET}"
         sort -u "$STATE_DIR/deferred.ledger" | sed 's/^/  /'
         echo -e "${DIM}  → cc-pkg-mng update --system${RESET}"
     fi
@@ -555,10 +555,10 @@ cmd_install() {
 
     if [ "$system" = 1 ]; then
         if [ "$DRY_RUN" = 1 ]; then
-            dry "$DOTFILES_ROOT/setup_fedora.sh  (phase systeme + materiel)"
+            dry "$DOTFILES_ROOT/setup_fedora.sh  (system + hardware phase)"
         else
-            info "Phase systeme…"
-            bash "$DOTFILES_ROOT/setup_fedora.sh" || err "phase systeme en echec — corrige, puis relance ./install system"
+            info "System phase…"
+            bash "$DOTFILES_ROOT/setup_fedora.sh" || err "system phase failed — fix it, then re-run ./install system"
         fi
     fi
 
@@ -599,45 +599,45 @@ cmd_verify() {
     local hard=0 warns=0 broken_modules=()
 
     # 1 ----------------------------------------------------------- registry
-    echo -e "${BOLD}Registre${RESET}"
+    echo -e "${BOLD}Registry${RESET}"
     if registry_validate; then
-        printf "  ${GREEN}✓${RESET} le registre et le disque concordent\n"
+        printf "  ${GREEN}✓${RESET} registry and filesystem agree\n"
     else
         hard=$((hard+1))
     fi
 
     # 2 ----------------------------------------------------------- symlinks
-    echo -e "\n${BOLD}Liens symboliques${RESET}"
+    echo -e "\n${BOLD}Symlinks${RESET}"
     if [ ! -s "$STATE_DIR/links.ledger" ]; then
-        printf "  ${DIM}○${RESET} registre vide — aucun module n'a encore pose de lien sur cette machine\n"
+        printf "  ${DIM}○${RESET} ledger empty — no module has placed a link on this machine yet\n"
     else
         local mod src dst bad=0 n=0
         while IFS=$'\t' read -r mod src dst; do
             [ -n "$dst" ] || continue
             n=$((n+1))
             if [ ! -L "$dst" ]; then
-                printf "  ${RED}✗${RESET} %s : n'est pas un lien (module %s)\n" "$dst" "$mod"
+                printf "  ${RED}✗${RESET} %s: not a symlink (module %s)\n" "$dst" "$mod"
                 bad=$((bad+1)); broken_modules+=("$mod")
             elif [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
-                printf "  ${RED}✗${RESET} %s : pointe ailleurs que %s\n" "$dst" "$src"
+                printf "  ${RED}✗${RESET} %s: points somewhere other than %s\n" "$dst" "$src"
                 bad=$((bad+1)); broken_modules+=("$mod")
             elif [ ! -e "$src" ]; then
-                printf "  ${RED}✗${RESET} %s : la cible %s a disparu du depot\n" "$dst" "$src"
+                printf "  ${RED}✗${RESET} %s: its target %s is gone from the repo\n" "$dst" "$src"
                 bad=$((bad+1)); broken_modules+=("$mod")
             fi
         done < "$STATE_DIR/links.ledger"
-        [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} %s lien(s) corrects\n" "$n" || hard=$((hard+1))
+        [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} %s link(s) correct\n" "$n" || hard=$((hard+1))
     fi
 
     # 3 ----------------------------------------------------------- binaries
-    echo -e "\n${BOLD}Binaires${RESET}"
+    echo -e "\n${BOLD}Binaries${RESET}"
     local c spec bins b resolved bad=0
     for c in "${RUST_CRATE_ORDER[@]}"; do
         # shellcheck disable=SC2206
         spec=(${RUST_CRATES[$c]}); bins=("${spec[@]:1}")
         for b in "${bins[@]}"; do
             if [ ! -x "$HOME/.local/bin/$b" ]; then
-                printf "  ${RED}✗${RESET} %-18s absent de ~/.local/bin\n" "$b"
+                printf "  ${RED}✗${RESET} %-18s missing from ~/.local/bin\n" "$b"
                 bad=$((bad+1)); continue
             fi
             # A binary that exists but is shadowed earlier in PATH is worse
@@ -646,21 +646,21 @@ cmd_verify() {
             # tool `cc`.
             resolved="$(command -v "$b" 2>/dev/null || true)"
             if [ "$resolved" != "$HOME/.local/bin/$b" ]; then
-                printf "  ${RED}✗${RESET} %-18s masque par %s\n" "$b" "${resolved:-rien}"
+                printf "  ${RED}✗${RESET} %-18s shadowed by %s\n" "$b" "${resolved:-nothing}"
                 bad=$((bad+1))
             fi
         done
         if [ "$(_crate_state "$c")" != current ]; then
-            printf "  ${YELLOW}!${RESET} %-18s source modifiee depuis le dernier build\n" "$c"
+            printf "  ${YELLOW}!${RESET} %-18s source changed since the last build\n" "$c"
             warns=$((warns+1))
         fi
     done
-    [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} tous les binaires presents et resolus depuis ~/.local/bin\n" || hard=$((hard+1))
+    [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} all binaries present and resolving from ~/.local/bin\n" || hard=$((hard+1))
 
     # 4 ----------------------------------------------------------- packages
-    echo -e "\n${BOLD}Paquets declares${RESET}"
+    echo -e "\n${BOLD}Declared packages${RESET}"
     if [ ! -s "$STATE_DIR/packages.ledger" ]; then
-        printf "  ${DIM}○${RESET} registre vide — aucun module n'a encore demande de paquet ici\n"
+        printf "  ${DIM}○${RESET} ledger empty — no module has requested a package here yet\n"
     else
         . "$DOTFILES_ROOT/scripts/lib/pkg.sh"
         local missing=() p
@@ -670,24 +670,24 @@ cmd_verify() {
             pkg_installed "$p" || missing+=("$p")
         done < <(sort -u "$STATE_DIR/packages.ledger")
         if [ "${#missing[@]}" -eq 0 ]; then
-            printf "  ${GREEN}✓${RESET} tous les paquets enregistres sont installes\n"
+            printf "  ${GREEN}✓${RESET} every recorded package is installed\n"
         else
-            printf "  ${RED}✗${RESET} manquants : %s\n" "${missing[*]}"
+            printf "  ${RED}✗${RESET} missing: %s\n" "${missing[*]}"
             hard=$((hard+1))
         fi
     fi
 
     # 5 ------------------------------------------------------ systemd units
-    echo -e "\n${BOLD}Unites systemd utilisateur${RESET}"
+    echo -e "\n${BOLD}User systemd units${RESET}"
     local u name any=0
     for u in "$DOTFILES_ROOT"/config/hyprland/systemd/*.service; do
         [ -e "$u" ] || continue
         any=1; name="$(basename "$u")"
         if [ ! -e "$HOME/.config/systemd/user/$name" ]; then
-            printf "  ${YELLOW}!${RESET} %-34s non liee dans ~/.config/systemd/user\n" "$name"
+            printf "  ${YELLOW}!${RESET} %-34s not linked into ~/.config/systemd/user\n" "$name"
             warns=$((warns+1))
         elif systemctl --user is-failed --quiet "$name" 2>/dev/null; then
-            printf "  ${RED}✗${RESET} %-34s en echec\n" "$name"
+            printf "  ${RED}✗${RESET} %-34s failed\n" "$name"
             hard=$((hard+1))
         else
             # `is-active` already prints the state; it just exits non-zero for
@@ -696,11 +696,11 @@ cmd_verify() {
             printf "  ${GREEN}✓${RESET} %-34s %s\n" "$name" "$(systemctl --user is-active "$name" 2>/dev/null || true)"
         fi
     done
-    [ "$any" = 0 ] && printf "  ${DIM}○${RESET} aucune unite dans le depot\n"
+    [ "$any" = 0 ] && printf "  ${DIM}○${RESET} no unit in the repo\n"
 
     # 6 -------------------------------------------------------- runtime deps
     if [ "$full" = 1 ]; then
-        echo -e "\n${BOLD}Dependances runtime${RESET} ${DIM}(scripts/check-deps.sh)${RESET}"
+        echo -e "\n${BOLD}Runtime dependencies${RESET} ${DIM}(scripts/check-deps.sh)${RESET}"
         # Its exit 1 is a warning here, not a failure: its own docstring is
         # candid that a command built from a variable is invisible to it, so
         # it answers "is this name written in an install script", not "does
@@ -711,31 +711,31 @@ cmd_verify() {
             warns=$((warns+1))
         fi
     else
-        echo -e "\n${DIM}(dependances runtime : --full)${RESET}"
+        echo -e "\n${DIM}(runtime dependencies: --full)${RESET}"
     fi
 
     # ------------------------------------------------------------- verdict
     echo
     if [ "$hard" -gt 0 ]; then
-        echo -e "${RED}${hard} probleme(s) dur(s), ${warns} avertissement(s).${RESET}"
+        echo -e "${RED}${hard} hard problem(s), ${warns} warning(s).${RESET}"
         if [ "$fix" = 1 ] && [ "${#broken_modules[@]}" -gt 0 ]; then
             local uniq; uniq="$(printf '%s\n' "${broken_modules[@]}" | sort -u | tr '\n' ' ')"
-            echo -e "${DIM}--fix : rejeu de ${uniq}${RESET}"
+            echo -e "${DIM}--fix: re-running ${uniq}${RESET}"
             local m
             for m in $uniq; do
                 local sc; sc="$(module_script "$m")" || continue
-                CCPKG_MODULE="$m" bash "$sc" >/dev/null 2>&1 || warn "$m : rejeu en echec"
+                CCPKG_MODULE="$m" bash "$sc" >/dev/null 2>&1 || warn "$m: re-run failed"
             done
-            echo -e "${DIM}rejeu termine — relance \`cc-pkg-mng verify\` pour confirmer${RESET}"
+            echo -e "${DIM}re-run done — run \`cc-pkg-mng verify\` again to confirm${RESET}"
         fi
         return 1
     fi
     if [ "$warns" -gt 0 ]; then
-        echo -e "${YELLOW}Aucun probleme dur, ${warns} avertissement(s).${RESET}"
+        echo -e "${YELLOW}No hard problems, ${warns} warning(s).${RESET}"
         [ "$strict" = 1 ] && return 1
         return 0
     fi
-    echo -e "${GREEN}Tout est en ordre.${RESET}"
+    echo -e "${GREEN}Everything is in order.${RESET}"
     return 0
 }
 
