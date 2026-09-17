@@ -276,19 +276,74 @@ zathura_state() {
 
 ranked() {
     { md_map; printf '\034\n'; zathura_state; printf '\034\n'; scan; } \
-      | awk -F'\t' -v lib="$LIBRARY_ROOT" -v mdcache="$MD_CACHE" '
+      | awk -F'\t' -v lib="$LIBRARY_ROOT" -v mdcache="$MD_CACHE" -v home="$HOME" '
         # Title: basename, extension dropped, underscores back to spaces.
         # A book under ~/Livres shows that alone; one pulled in from an
         # extra root (sources.conf) is prefixed with its own folder, so a
         # course PDF reads "ACL · DPatterns Intro" instead of competing
         # on filename alone.
+        # What the picker SEARCHES, as opposed to what it shows.
+        #
+        # fuzzel already does fzf-style matching (its default match-mode),
+        # so the gap was never the matching -- it was the haystack. The
+        # label shows a title and at most its immediate parent, so
+        # ~/code/dotfiles/docs/modules.md reads "docs · modules" and
+        # typing "dotfiles" found nothing, though that is exactly the word
+        # you remember when you do not remember the filename.
+        #
+        # So the whole path below $HOME goes in, twice: once as written,
+        # so "docs/modules" matches with the slash typed, and once with
+        # every separator flattened to a space, so "dotfiles modules" also
+        # matches as two independent fzf tokens. Flattening puts the
+        # extension in as a bare word too, which makes typing "md" a
+        # type filter for free.
+        #
+        # None of this is displayed -- fuzzel is given the label in column
+        # 1 and this in column 2, with --with-nth=1 --match-nth=2.
+        function haystack(path,    rel, norm) {
+            rel = path
+            if (index(rel, home "/") == 1) rel = substr(rel, length(home) + 2)
+            norm = rel
+            gsub(/[\/_.-]+/, " ", norm)
+            return rel " " norm
+        }
+        # The format, as a leading icon. A title alone never says which
+        # of two things you are about to open -- the .md notes of a course
+        # and its .pdf slides both render as "RESEAUX · Routage" -- and
+        # this is what the eye scans a 51-row list by.
+        #
+        # All five glyphs come from ONE Nerd Font set (Material Design),
+        # which is the only reason they sit together: mixing a Font
+        # Awesome page with an Octicons M-mark puts two different weights
+        # and two different optical sizes in the same column. They also
+        # share one advance width, so every title starts at the same x --
+        # which the "PDF"/"MD" text tags this replaced could not do, the
+        # UI font of the picker being proportional.
+        #
+        # fuzzel draws them through fontconfig fallback (MiSans has no
+        # such glyph); fuzzel.ini leans on the same mechanism and says so.
+        # Presence verified with `fc-list :charset=f0226`.
+        #
+        # NOTE: no apostrophes anywhere in this awk program. It is held in
+        # a single-quoted shell string, so one would end it -- which is
+        # exactly how this block first failed to parse.
+        function typeicon(path,    e) {
+            e = path
+            sub(/^.*\./, "", e)
+            e = tolower(e)
+            if (e == "pdf") return "󰈦"
+            if (e == "md" || e == "markdown") return "󰍔"
+            if (e == "epub" || e == "mobi" || e == "azw3" || e == "fb2") return "󰂽"
+            if (e == "cbz" || e == "cbr") return "󰋩"
+            return "󰈙"
+        }
         function label(path,    n, parts, base) {
             n = split(path, parts, "/")
             base = parts[n]
             sub(/\.[^.]*$/, "", base)
             gsub(/_/, " ", base)
-            if (index(path, lib "/") == 1) return base
-            return (n > 1 ? parts[n-1] " · " base : base)
+            if (index(path, lib "/") != 1 && n > 1) base = parts[n-1] " · " base
+            return typeicon(path) "  " base
         }
         # Three \034-separated sections arrive on stdin, in order:
         # the rendered-markdown map, zathura'\''s fileinfo table, then the
@@ -328,8 +383,8 @@ ranked() {
             render = path
             if (path ~ /\.(md|markdown)$/)
                 for (p in src) if (src[p] == path) { render = p; break }
-            printf "%d%012d\t%s\t%d\t%s\t%s\n", (inprog ? 2 : 1), ts, path,
-                   (inprog ? page[path] : -1), render, label(path)
+            printf "%d%012d\t%s\t%d\t%s\t%s\t%s\n", (inprog ? 2 : 1), ts, path,
+                   (inprog ? page[path] : -1), render, haystack(path), label(path)
         }
     ' | sort -r
 }
@@ -627,7 +682,7 @@ touches_afficher() {
     tmp="$(mktemp -t liseuse-touches.XXXXXX)" || return 0
     touches > "$tmp"
     setsid nohup sh -c '
-        fuzzel --dmenu --lines 22 --width 64 --prompt-only="" \
+        fuzzel --dmenu --lines 22 --width 64 --prompt="" \
                --placeholder="Reading manual — Esc to close" \
                < "$1" >/dev/null 2>&1
         rm -f "$1"
@@ -635,15 +690,137 @@ touches_afficher() {
 }
 
 # ============================================================
+# Converting what nothing here can render
+# ============================================================
+# Word, PowerPoint and their open equivalents are not readable by mupdf
+# and never will be. Unlike Markdown, they are NOT rendered transparently
+# on open: LibreOffice headless takes seconds per document and the suite
+# is several hundred megabytes, so making every SUPER+F depend on it
+# would be the wrong trade for a format that shows up twice in this
+# library. It is an explicit command instead, and the PDF it produces
+# lands NEXT TO the source -- which is the whole trick, because the next
+# scan then finds that PDF like any other book, with no special case
+# anywhere else in this script.
+CONVERTIBLE=" doc docx odt rtf ppt pptx odp xls xlsx ods "
+
+is_convertible() {
+    local ext="${1##*.}"
+    case "$CONVERTIBLE" in *" ${ext,,} "*) return 0 ;; *) return 1 ;; esac
+}
+
+soffice_bin() {
+    command -v soffice 2>/dev/null || command -v libreoffice 2>/dev/null || true
+}
+
+# One document -> one PDF beside it. Returns 0 when a PDF is in place.
+convert_one() {
+    local src="$1" out dir bin
+    out="${src%.*}.pdf"
+    dir="$(dirname -- "$src")"
+
+    # Already converted and still current. Same freshness rule as the
+    # Markdown cache: a source edited after its PDF gets redone, one that
+    # has not been touched is left alone. This matters here because the
+    # PDF sits beside the source rather than in a cache, so blindly
+    # overwriting could destroy a PDF that was never generated from it.
+    if [ -f "$out" ] && [ ! "$src" -nt "$out" ]; then
+        printf 'unchanged  %s\n' "${out#"$HOME"/}"
+        return 0
+    fi
+
+    bin="$(soffice_bin)"
+    if [ -z "$bin" ]; then
+        echo "liseuse convert: LibreOffice is not installed." >&2
+        echo "  sudo dnf install libreoffice-writer libreoffice-impress libreoffice-calc" >&2
+        return 3
+    fi
+
+    # A private profile under the cache, for one reason: headless
+    # LibreOffice refuses to start against a profile an interactive
+    # LibreOffice already holds, so without this the command fails
+    # whenever the suite happens to be open.
+    "$bin" --headless --norestore \
+           -env:UserInstallation="file://$CACHE_DIR/soffice" \
+           --convert-to pdf --outdir "$dir" -- "$src" >/dev/null 2>&1
+
+    if [ -f "$out" ]; then
+        printf 'converted  %s\n' "${out#"$HOME"/}"
+        return 0
+    fi
+    echo "liseuse convert: failed on ${src#"$HOME"/}" >&2
+    return 1
+}
+
+# Everything convertible under the library roots, newest first, as
+# `path` lines. Used when `liseuse convert` is called with no argument.
+convertible_docs() {
+    local -a roots_arr find_expr
+    mapfile -t roots_arr < <(roots)
+    [ "${#roots_arr[@]}" -eq 0 ] && return 0
+    local ext first=1
+    for ext in $CONVERTIBLE; do
+        [ "$first" -eq 1 ] || find_expr+=(-o)
+        find_expr+=(-iname "*.${ext}")
+        first=0
+    done
+    find -L "${roots_arr[@]}" \
+        \( -name '.*' -o -name node_modules -o -name target \) -prune -o \
+        -type f \( "${find_expr[@]}" \) -readable -printf '%T@\t%p\n' 2>/dev/null \
+      | sort -rn | cut -f2-
+}
+
+convert() {
+    local f rc=0
+    if [ "$#" -gt 0 ]; then
+        for f in "$@"; do
+            if [ ! -f "$f" ]; then
+                echo "liseuse convert: no such file: $f" >&2; rc=1; continue
+            fi
+            is_convertible "$f" || { echo "liseuse convert: not an office document: $f" >&2; rc=1; continue; }
+            convert_one "$f" || rc=$?
+        done
+        return "$rc"
+    fi
+
+    # No argument: pick one, the same way everything else here is picked.
+    # The label says whether a PDF is already sitting beside it, because
+    # that is the only thing you need to know before choosing.
+    local -a docs=() labels=()
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        docs+=("$f")
+        if [ -f "${f%.*}.pdf" ] && [ ! "$f" -nt "${f%.*}.pdf" ]; then
+            labels+=("done   ${f#"$HOME"/}")
+        else
+            labels+=("       ${f#"$HOME"/}")
+        fi
+    done < <(convertible_docs)
+
+    if [ "${#docs[@]}" -eq 0 ]; then
+        notify "Nothing to convert" "No .doc/.docx/.pptx/... under the library roots"
+        return 0
+    fi
+
+    local idx
+    idx="$(printf '%s\n' "${labels[@]}" \
+            | fuzzel --dmenu --index --lines 14 --width 70 \
+                     --prompt='' --placeholder='Convert to PDF…' --counter \
+            || true)"
+    [ -n "$idx" ] || return 0
+    convert_one "${docs[$idx]}"
+}
+
+# ============================================================
 # Picker
 # ============================================================
 pick() {
-    local -a paths=() labels=()
-    local key path page render label idx
+    local -a paths=() labels=() hays=()
+    local key path page render hay label idx i
 
-    while IFS=$'\t' read -r key path page render label; do
+    while IFS=$'\t' read -r key path page render hay label; do
         [ -n "$path" ] || continue
         paths+=("$path")
+        hays+=("$hay")
         decorate "$path" "$page" "$render" "$label"
         labels+=("$LABEL")
     done < <(ranked)
@@ -653,15 +830,38 @@ pick() {
         return 1
     fi
 
+    # Two columns per line: what to show, and what to search.
+    #
+    # fuzzel has done fzf-style matching all along (that is its default
+    # match-mode), so nothing here is adding fuzzy search -- it is giving
+    # that search something worth matching against. --with-nth=1 displays
+    # the title, --match-nth=2 matches the hidden path haystack, so typing
+    # "dotfiles keybind", "courses reseaux" or just "md" finds documents
+    # whose displayed title contains none of those words.
+    #
     # --index rather than matching the chosen line back against the list:
     # titles are derived (extension stripped, underscores replaced, a
-    # folder prefix added) and two files can legitimately produce the
-    # same label, so the index is the only unambiguous way back to a
-    # path. Width/lines override fuzzel.ini's launcher geometry -- book
-    # titles are much longer than command names.
-    idx="$(printf '%s\n' "${labels[@]}" \
-            | fuzzel --dmenu --index --lines 14 --width 60 \
-                     --prompt-only='' --placeholder='Read…' --counter \
+    # folder prefix added) and two files can legitimately produce the same
+    # label, so the index is the only unambiguous way back to a path.
+    # Width/lines override fuzzel.ini's launcher geometry -- book titles
+    # are much longer than command names.
+    #
+    # The loop below is printf-only: no forks, for the reason `ranked`'s
+    # own header explains at length.
+    #
+    # --prompt='' and NOT --prompt-only=''. They read as the same thing
+    # and are not: per fuzzel's man page, --prompt-only in dmenu mode
+    # "does not read anything from STDIN" and "sets --lines to 0". This
+    # picker carried it from its first version, which meant every SUPER+F
+    # opened an empty one-line box that had never read the library at
+    # all -- the ranking, the page numbers and the search haystack were
+    # all computed correctly and then thrown away, unseen.
+    idx="$(for i in "${!paths[@]}"; do
+               printf '%s\t%s\n' "${labels[$i]}" "${hays[$i]}"
+           done \
+            | fuzzel --dmenu --index --with-nth=1 --match-nth=2 \
+                     --lines 14 --width 60 \
+                     --prompt='' --placeholder='Read…' --counter \
             || true)"
     [ -n "$idx" ] || return 0            # cancelled with Escape
     open_book "${paths[$idx]}"
@@ -694,6 +894,9 @@ liseuse — reading library (zathura)
   liseuse list         Print the ranked library on stdout.
   liseuse keys         The manual: what to do once a book is open.
                        From inside the book itself, that is F1.
+  liseuse convert [F]  Render .doc/.docx/.odt/.ppt/.pptx/.xls... to a PDF
+                       beside the original, so the library picks it up.
+                       With no argument, pick one. Needs LibreOffice.
 
 Library root : $LIBRARY_ROOT   (\$LISEUSE_LIBRARY)
 Extra sources: $SOURCES_CONF
@@ -705,12 +908,16 @@ EOF
     pick)
         pick
         ;;
+    convert)
+        shift
+        convert "$@"
+        ;;
     open)
         [ -n "${2-}" ] || { echo "liseuse open: missing file" >&2; exit 2; }
         open_book "$2"
         ;;
     list)
-        while IFS=$'\t' read -r _ path page render label; do
+        while IFS=$'\t' read -r _ path page render _hay label; do
             [ -n "$path" ] || continue
             decorate "$path" "$page" "$render" "$label"
             printf '%s\t%s\n' "$LABEL" "$path"
