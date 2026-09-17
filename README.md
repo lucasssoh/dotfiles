@@ -17,7 +17,7 @@ A deeper write-up of the design decisions (why Quickshell replaced Waybar, why B
 | **Balise** (`config/hyprland/balise-src/` + `quickshell/bar/modules/balise/`) | WiFi/Bluetooth/Ethernet panel — first-party, replacing the vendored Orbit it started from. Now split in two: a Rust daemon (NetworkManager/BlueZ behind a Unix socket) and a QML panel in the bar that talks to it. The crate's original GTK4 window still builds but nothing opens it. No VPN, by design |
 | **Liseuse** (`config/liseuse/`) | Centralised reading on SUPER+F — a fuzzel picker over `~/Livres` plus the folders in `sources.conf` (course PDFs stay in `~/courses`), ranked so the book you're mid-way through comes first. Renders through zathura + `zathura-pdf-mupdf`, one engine for PDF/EPUB/MOBI/CBZ, recolored dark from `colors.lua`. A session hides the bar, quiets notifications and takes a D-Bus idle inhibitor, then restores exactly what it found |
 | **Rofi / SwayNC / dunst / systemd services** | Launcher, notifications, and background daemons (OLED-protection wallpaper slideshow, per-workspace dashboard) |
-| Everything else in `config/` | bash, tmux, wezterm, nvim, wireplumber, mangohud, nemo, fonts, mpv, firefox, KDE Plasma (alternate session) |
+| Everything else in `config/` | bash, tmux, wezterm, nvim, wireplumber, mangohud, nemo, fonts, mpv, firefox, brave — plus KDE Plasma as an opt-in alternate session |
 
 ## Installation
 
@@ -27,16 +27,63 @@ cd dotfiles
 ./install
 ```
 
-`./install` is the single entry point. It runs two phases, in order:
+`./install` exists for one reason: a bare clone has nothing on `PATH` yet. It translates its phases and delegates to [`bin/cc-pkg-mng`](bin/cc-pkg-mng), which holds the logic.
 
 | Phase | What it does |
 |---|---|
 | **`system`** | Base Fedora packages and services ([`setup_fedora.sh`](setup_fedora.sh)), then the **hardware phase** — the drivers *this specific machine* needs, detected rather than hardcoded. Wants sudo. |
-| **`user`** | Every `config/*/install.sh` module, then Hyprland, then KDE ([`install_all.sh`](install_all.sh)). Symlinks the repo into `~/.config`. |
+| **`user`** | Every module in the registry, Hyprland last. Symlinks the repo into `~/.config`. Asks for nothing already installed. |
 
-Phases can be run on their own — `./install user` after a `git pull`, `./install hardware` after swapping machines. `./install --detect` reports what the hardware detection sees and changes nothing. `./install --dry-run` lists what would run. The two phase scripts still work when called directly; `install` orchestrates them rather than replacing them.
+`./install --detect` reports what the hardware detection sees and changes nothing. `./install --dry-run` prints the ordered list of modules that would run. `install_all.sh` and `setup_fedora.sh` still work when called directly.
 
-One thing is deliberately **not** in the default path: `./install login-manager` (greetd + tuigreet) rewrites system login and prompts interactively, so it is opt-in.
+Two modules are deliberately **opt-in** and never in the default path: `login-manager` (greetd + tuigreet — it rewrites system login and prompts interactively) and `kde`.
+
+## Day to day — `cc-pkg-mng`
+
+After the first install the repo maintains itself. Two commands cover almost everything:
+
+```bash
+cc-pkg-mng update     # pull, then apply only what changed
+cc-pkg-mng verify     # check that everything is still in place
+```
+
+**`update` never asks for a password.** It queries before it installs — `rpm -q` needs no root and answers in milliseconds, so on a provisioned machine the package manager is not invoked at all. Anything genuinely root-owned is *deferred*: named in the summary, left for an explicit `cc-pkg-mng update --system`.
+
+**It restarts nothing**, on purpose. Like `dnf` or `apt`, it puts files and binaries in place and leaves running processes alone; the new version takes effect the next time each one starts. What is still running old code is reported — read off `/proc`, not guessed:
+
+```
+These are still running an older version:
+  balise               binary replaced since it started
+                       -> systemctl --user restart balise.service
+```
+
+| Command | What it does |
+|---|---|
+| `cc-pkg-mng status` | what changed since each module was last applied — read-only, never fetches unless asked |
+| `cc-pkg-mng update [-n]` | apply it; `-n` prints the plan and changes nothing |
+| `cc-pkg-mng verify [--full]` | links, binaries, packages, systemd units; `--fix` re-runs the modules owning a problem |
+| `cc-pkg-mng build [crate]` | just the Rust binaries, skipping anything unchanged |
+| `cc-pkg-mng needs-restart` | re-print the staleness report |
+| `cc-pkg-mng clean --cargo` | drop the build caches |
+
+Useful flags: `--only <module>`, `--force`, `--no-pull` (apply uncommitted local work — `update` otherwise refuses to pull over a dirty tree and says so), `--adopt` (record an already-configured machine as current without running anything).
+
+### How it knows what changed
+
+A content fingerprint per `config/<module>/`, persisted in `~/.local/state/dotfiles/`. The file list comes from `git ls-files`, which means `.gitignore` does the exclusion work for free — `balise-src/target/` is invisible without a single hand-written rule. It hashes **contents, not mtimes**: `cp`, `git checkout` and `git stash` all rewrite those.
+
+The Rust crates get the same treatment, keyed on the source fingerprint *and* the toolchain version, so a `cargo` upgrade invalidates everything as it should. Cargo's own incremental engine then does the real work. It simply never got the chance before: the old build path deleted its fingerprint database on every single install.
+
+Measured on this machine:
+
+| | Before | Now |
+|---|---|---|
+| Nothing changed | three full LTO builds, ~460 crates | **0.17 s**, nothing compiled |
+| One crate edited | all three rebuilt | **only that one** |
+| Detecting what changed | didn't exist | **0.33 s** across 18 modules |
+| Build trees on disk | 2.0 GB in four copies | 1.1 GB in one |
+
+The module list and its ordering constraints live in [`scripts/lib/modules.sh`](scripts/lib/modules.sh), and are validated against the filesystem on every invocation. A `config/*/install.sh` that is in no list fails every command immediately, naming the file — this repo once shipped a machine with no application launcher because four working modules were silently called by nothing.
 
 ### Hardware detection
 
@@ -60,12 +107,12 @@ An unlisted CPU is reported as *matched by forward rule* rather than by name: th
 [`config/hyprland/install.sh`](config/hyprland/install.sh) does the heavy lifting of the user phase on its own:
 
 - Detects the distro (Fedora/Arch/Debian) and installs the matching package set.
-- Builds **Balise, Prisme, and Roue from source** (`cargo build --release`) straight from the sources in this repo, no external clone.
+- Builds **Balise, Prisme, and Roue from source** straight from this repo, no external clone — and skips any crate whose sources and toolchain are unchanged (see above).
 - Symlinks every config directory into `~/.config` (`hypr`, `waybar`, `quickshell`, `rofi`, `balise`, `prisme`, `roue`, `khal`, `theme`) — editing a file in the repo changes the live config immediately, no re-run needed.
 - Enables the custom `systemd --user` services found under `systemd/`.
 - Falls back gracefully where a distro lacks a package (e.g. Quickshell isn't in apt — the script warns and points at a manual build).
 
-Run it again anytime after pulling changes; `safe_link` skips anything already correctly linked and backs up real files instead of overwriting them. Pass `--reset` to wipe the previously-linked config directories first.
+Safe to re-run anytime, though `cc-pkg-mng update` is the usual way in: `safe_link` ([`scripts/lib/link.sh`](scripts/lib/link.sh), shared by every module) returns early on anything already correctly linked, and backs real files up to `.bak` rather than overwriting them. Pass `--reset` to wipe the previously-linked config directories first.
 
 ## Key bindings
 
