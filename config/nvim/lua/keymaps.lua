@@ -2,6 +2,7 @@
 -- KEYMAPS.LUA
 -- ============================================================
 local key = vim.keymap
+local buffers = require("buffers")
 
 vim.g.mapleader = " "
 
@@ -19,11 +20,16 @@ key.set("n", "<leader>k", "<C-w>k", { desc = "Go to top window" })
 key.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true, desc = "Toggle file explorer" })
 
 -- Navigate between tabs (buffers)
-key.set("n", "<Tab>", ":bnext<CR>", { silent = true, desc = "Next buffer" })
-key.set("n", "<S-Tab>", ":bprevious<CR>", { silent = true, desc = "Previous buffer" })
+-- BufferLineCycle* plutot que :bnext/:bprevious : Tab suit alors
+-- l'ordre affiche dans la bufferline (y compris apres un
+-- BufferLineMove*), la ou :bnext suit l'ordre des numeros de buffer.
+key.set("n", "<Tab>", "<Cmd>BufferLineCycleNext<CR>", { silent = true, desc = "Next buffer" })
+key.set("n", "<S-Tab>", "<Cmd>BufferLineCyclePrev<CR>", { silent = true, desc = "Previous buffer" })
 
--- Close current tab
-key.set("n", "<leader>x", ":bdelete<CR>", { silent = true, desc = "Close buffer" })
+-- Close current tab -- voir lua/buffers.lua : ferme le buffer (donc
+-- l'onglet) sans emporter la fenetre avec lui, comme le X de bufferline.
+key.set("n", "<leader>x", function() buffers.close() end, { silent = true, desc = "Close buffer" })
+key.set("n", "<leader>X", function() buffers.close(nil, true) end, { silent = true, desc = "Close buffer (discard changes)" })
 
 -- Navigate by position (Optional: Alt + number
 key.set("n", "<A-1>", "<Cmd>BufferLineGoToBuffer 1<CR>", { silent = true })
@@ -43,17 +49,8 @@ key.set("n", "<leader>q", function()
     end
 end, { desc = "Close floating windows" })
 
-key.set("n", "<leader>Q", function()
-    local bufname = vim.api.nvim_buf_get_name(0)
-
-    if bufname == "" then
-        vim.cmd("q")
-        return
-    end
-
-    -- fallback normal buffer close
-    vim.cmd("bd")
-end, { desc = "Smart quit buffer" })
+-- Alias historique de <leader>x, meme comportement.
+key.set("n", "<leader>Q", function() buffers.close() end, { desc = "Smart quit buffer" })
 
 -- ============================================================
 -- MOUSE: Block drag in Normal mode to avoid entering Visual mode

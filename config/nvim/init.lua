@@ -45,6 +45,11 @@ vim.opt.listchars = {
 require("keymaps")
 
 -- =======================
+-- BUFFERS (:q ferme aussi l'onglet)
+-- =======================
+require("buffers")
+
+-- =======================
 -- FLOATING WINDOWS
 -- =======================
 require("float")
