@@ -142,9 +142,9 @@ def main():
         for path in files:
             if not path.endswith(".py"):
                 continue
-            # `from X import Y` exige le mot-cle import sur la meme ligne,
-            # sinon toute phrase en prose commencant par "from the ..." est
-            # lue comme un import du module "the".
+            # `from X import Y` requires the `import` keyword on the SAME
+            # line, otherwise any prose sentence starting with "from the ..."
+            # reads as an import of a module called "the".
             for line in strip_prose(open(path, encoding="utf-8", errors="replace").read()).splitlines():
                 m = re.match(r'\s*import\s+([a-zA-Z_]\w*)', line) or \
                     re.match(r'\s*from\s+([a-zA-Z_]\w*)[\w.]*\s+import\s', line)
@@ -152,7 +152,7 @@ def main():
                     found.setdefault(m.group(1), set()).add(os.path.relpath(path, REPO))
         for mod, where in sorted(found.items()):
             print(f"  {mod:<16} {', '.join(sorted(where))}")
-        print("\nVerifier a la main que chacun est installe par un module "
+        print("\nCheck by hand that a module installs each of these "
               "(numpy -> python3-numpy, PIL -> python3-pillow).")
         return 0
 
@@ -183,14 +183,14 @@ def main():
             print(f"  OK   {name:<22} {pkg}")
 
     if not gaps:
-        print(f"Aucun manque. {len(known)} commandes hors paquets de base, toutes declarees.")
+        print(f"No gaps. {len(known)} command(s) outside the base packages, all declared.")
         return 0
 
-    print(f"{len(gaps)} commande(s) invoquee(s) mais declaree(s) nulle part :\n")
+    print(f"{len(gaps)} command(s) invoked but declared nowhere:\n")
     for name, pkg, where in gaps:
-        print(f"  {name:<22} paquet: {pkg:<22} <- {', '.join(where[:3])}")
-    print("\nAjouter le paquet a la liste PKGS de config/hyprland/install.sh, "
-          "ou a setup_fedora.sh selon la couche concernee.")
+        print(f"  {name:<22} package: {pkg:<22} <- {', '.join(where[:3])}")
+    print("\nAdd the package to the PKGS list in config/hyprland/install.sh, "
+          "or to setup_fedora.sh, depending on which layer it belongs to.")
     return 1
 
 
