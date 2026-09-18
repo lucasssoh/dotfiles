@@ -19,6 +19,52 @@ return {
             return "Comment"
         end
 
+        -- Compteur de selection : en mode visuel, affiche le nombre de mots et
+        -- de caracteres selectionnes (pratique pour la redaction academique).
+        -- Le nombre de lignes s'ajoute en visuel ligne ou bloc. Libelles en
+        -- anglais pour rester coherent avec le reste de la statusline.
+        -- Reserve au Markdown : inutile dans du code.
+        local function in_markdown()
+            return vim.bo.filetype == "markdown"
+        end
+
+        local function selection_stats()
+            local mode = vim.fn.mode(true)
+            if not mode:match("^[vV\22]") then
+                return ""
+            end
+
+            local ok, region = pcall(
+                vim.fn.getregion,
+                vim.fn.getpos("v"),
+                vim.fn.getpos("."),
+                { type = mode }
+            )
+            if not ok then
+                return ""
+            end
+
+            local chars, words = 0, 0
+            for _, line in ipairs(region) do
+                chars = chars + vim.fn.strchars(line)
+                words = words + #vim.split(line, "%s+", { trimempty = true })
+            end
+
+            local function plural(n, word)
+                return string.format("%d %s", n, n > 1 and word .. "s" or word)
+            end
+
+            if #region > 1 then
+                return string.format(
+                    "󰏫 %s · %s · %s",
+                    plural(#region, "line"),
+                    plural(words, "word"),
+                    plural(chars, "char")
+                )
+            end
+            return string.format("󰏫 %s · %s", plural(words, "word"), plural(chars, "char"))
+        end
+
         -- Current folder name
         local function get_current_folder()
             local cwd = vim.fn.getcwd()
@@ -70,6 +116,11 @@ return {
                     {
                         ccslide_gauge,
                         color = ccslide_color,
+                    },
+
+                    {
+                        selection_stats,
+                        cond = in_markdown,
                     },
                 },
 
