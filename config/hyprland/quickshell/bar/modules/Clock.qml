@@ -5,9 +5,9 @@ import "../theme"
 // Native port of waybar's `clock` module (format {:%H:%M}), moved out of
 // dead-center (was sharing centerRow with Workspaces -- see shell.qml)
 // into the tools pill, right before the power dot -- asked for. Briefly
-// a macOS-menu-bar-style "Fri Aug 28 20:32" string, simplified back to a
-// plain time -- the day/date now live in Balise's own home header
-// instead (see ui/home.rs's clock header comment).
+// a macOS-menu-bar-style "Fri Aug 28 20:32" string, then a plain time
+// while the day/date lived elsewhere, and now a date again -- but AFTER
+// the time ("ajouter Fri Sep 18 à droite de 22:11"), not before it.
 
 Item {
     id: root
@@ -24,8 +24,9 @@ Item {
     // paddings right de powerprofile et horloge sont trop grand par
     // rapport aux autres"). 6 is what ScriptModule already uses in the
     // same row, and what Performance.qml now lands on too. "HH:mm" is
-    // fixed-width in practice (the leading zero is kept), so there is
-    // nothing here for the extra padding to have been absorbing.
+    // fixed-width in practice (the leading zero is kept); the date that
+    // follows it is not (one- vs two-digit days), but it only moves the
+    // pill's LEFT edge -- toolsIsland is anchored by its right one.
     implicitWidth: label.implicitWidth + 12
     implicitHeight: 24
 
@@ -39,7 +40,11 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         id: label
         anchors.centerIn: parent
-        text: Qt.formatDateTime(clock.date, "HH:mm")
+        // en_US locale rather than Qt.formatDateTime, which would follow
+        // this session's fr_FR one and render "ven. 18 sept." -- same
+        // reasoning, and the same "Fri Sep 18" shape, as
+        // NotificationCenter.qml's own header clock.
+        text: Qt.formatDateTime(clock.date, "HH:mm") + "  " + clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
         color: root.ink.primary
         font.family: Fonts.ui
         font.pixelSize: 14

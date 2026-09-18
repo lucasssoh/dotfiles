@@ -312,7 +312,7 @@ Item {
                     horizontalAlignment: Text.AlignRight
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd d MMM")
+                    text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
                     color: Ink.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 13
