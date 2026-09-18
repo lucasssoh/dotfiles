@@ -51,6 +51,14 @@ emit_json() {
         pkgs+="\"$p\""
     done < <(hw_packages)
 
+    local swaps="" from to
+    first=1
+    while read -r from to; do
+        [ -z "$from" ] && continue
+        [ "$first" = 1 ] && first=0 || swaps+=", "
+        swaps+="{\"from\": \"$from\", \"to\": \"$to\"}"
+    done < <(hw_codec_swaps)
+
     cat <<EOF
 {
   "cpu": {
@@ -68,7 +76,8 @@ emit_json() {
     "product": "$HW_PRODUCT",
     "laptop": $([ "$HW_IS_LAPTOP" = yes ] && echo true || echo false)
   },
-  "packages": [$pkgs]
+  "packages": [$pkgs],
+  "codec_swaps": [$swaps]
 }
 EOF
 }
@@ -80,6 +89,18 @@ emit_report() {
 
     echo -e "\n${BOLD}── Packages for this machine ──${RESET}\n"
     hw_packages | sed 's/^/  /'
+
+    # Listed apart from the packages above because they are not installed
+    # the same way: these come from RPM Fusion and replace a package
+    # Fedora already shipped. Printed as "from → to" for that reason.
+    local swaps
+    swaps="$(hw_codec_swaps)"
+    if [ -n "$swaps" ]; then
+        echo -e "\n${BOLD}── Codec swaps (RPM Fusion) ──${RESET}\n"
+        echo "$swaps" | while read -r from to; do
+            printf '  %s → %s\n' "$from" "$to"
+        done
+    fi
 
     local notes
     notes="$(hw_notes)"

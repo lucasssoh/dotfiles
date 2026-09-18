@@ -60,6 +60,85 @@ else
 fi
 
 # ============================================================
+# MEDIA CODECS (RPM Fusion)
+# ============================================================
+# Separate from the package block above because these need third-party
+# repos, and separate from hw_notes (where the NVIDIA driver lives,
+# unautomated) because unlike that one this is safe to automate: no kmod
+# rebuild, no reboot, no Secure Boot interaction. See hw_codec_swaps in
+# lib/hardware.sh for the pair table and why each half is what it is.
+section "Media codecs"
+
+mapfile -t SWAPS < <(hw_codec_swaps)
+
+if [ "${#SWAPS[@]}" -eq 0 ]; then
+    info "No codec swap for this machine (profile: ${HW_CPU_PROFILE:-generic})."
+else
+    # Both repos, not just free: ffmpeg is in RPM Fusion free,
+    # intel-media-driver is in nonfree. The rpm -q guard is what makes a
+    # re-run a no-op instead of a failed reinstall of the release package.
+    repos_ok=yes
+    for repo in free nonfree; do
+        if rpm -q "rpmfusion-$repo-release" >/dev/null 2>&1; then
+            info "RPM Fusion $repo already enabled."
+            continue
+        fi
+        info "Enabling RPM Fusion $repo..."
+        if ! sudo dnf install -y \
+            "https://mirrors.rpmfusion.org/$repo/fedora/rpmfusion-$repo-release-$(rpm -E %fedora).noarch.rpm"
+        then
+            warn "Could not enable RPM Fusion $repo."
+            repos_ok=no
+        fi
+    done
+
+    if [ "$repos_ok" != "yes" ]; then
+        warn "Skipping the codec swaps — hardware H.264/HEVC decode will not be available."
+    else
+        for pair in "${SWAPS[@]}"; do
+            read -r from to <<<"$pair"
+
+            if rpm -q "$to" >/dev/null 2>&1; then
+                ok "$to already installed."
+            elif rpm -q "$from" >/dev/null 2>&1; then
+                # ffmpeg Conflicts: ffmpeg-free, so a plain install cannot
+                # work here; --allowerasing lets dnf drop the stripped
+                # build along with whatever depends on it by name.
+                info "Swapping $from → $to..."
+                sudo dnf swap -y "$from" "$to" --allowerasing \
+                    || warn "Swap $from → $to failed."
+            else
+                # Nothing to replace on this release (the mesa case).
+                info "$from not installed — installing $to directly..."
+                sudo dnf install -y "$to" \
+                    || warn "Install of $to failed."
+            fi
+        done
+
+        # The deliverable here is a CAPABILITY, not a set of packages --
+        # the whole reason this step exists is that the broken state looks
+        # perfectly healthy at the package level. vainfo comes from
+        # libva-utils in _HW_PKGS_COMMON, and the H264 VLD entrypoint is
+        # precisely what is missing when Fedora's stripped driver is the
+        # one libva picks up.
+        if ! command -v vainfo >/dev/null 2>&1; then
+            warn "vainfo not available — cannot verify hardware decode."
+        elif vainfo 2>/dev/null | grep -q 'VAProfileH264.*VAEntrypointVLD'; then
+            ok "VAAPI decodes H.264 in hardware."
+            if vainfo 2>/dev/null | grep -q 'VAProfileHEVCMain.*VAEntrypointVLD'; then
+                ok "HEVC too."
+            fi
+            info "Already-running apps keep whatever driver they dlopen'd at"
+            info "startup — restart Firefox/mpv before expecting the change."
+        else
+            warn "vainfo still reports no H.264 decode entrypoint; video will decode on the CPU."
+            warn "Check: vainfo 2>&1 | grep -i 'trying to open'  — it should name"
+            warn "/usr/lib64/dri-nonfree (Intel) or /usr/lib64/dri-freeworld (AMD)."
+        fi
+    fi
+fi
+
+# ============================================================
 # SERVICES
 # ============================================================
 # Both are installed by the profiles above but ship disabled; neither does

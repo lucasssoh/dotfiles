@@ -275,12 +275,17 @@ hw_detect() {
 
 # ── Profile → packages ──────────────────────────────────────────────────
 # Every name below was verified against Fedora 44's own repos with
-# `dnf repoquery` — none of them need RPM Fusion. Two traps worth keeping
-# in mind if this list is ever edited:
+# `dnf repoquery` — none of them need RPM Fusion. The CODEC SWAPS further
+# down do, which is exactly why they are a separate step. Two traps worth
+# keeping in mind if this list is ever edited:
 #
-#   * The iHD VAAPI driver is `libva-intel-media-driver` on Fedora, NOT
-#     `intel-media-driver` (which is the upstream/Arch name and does not
-#     resolve here).
+#   * The iHD VAAPI driver is `libva-intel-media-driver` in Fedora's own
+#     repos. `intel-media-driver` is the SAME driver with the patented
+#     codecs left in, and it only resolves once RPM Fusion nonfree is
+#     enabled — hw_codec_swaps below upgrades the one installed here into
+#     the other. Keeping the Fedora name in this array is deliberate: a
+#     machine whose swap fails still gets VP9/AV1 acceleration rather
+#     than nothing at all.
 #   * `intel_gpu_top` ships in `igt-gpu-tools`, not `intel-gpu-tools`.
 #
 # There is deliberately no `mesa-va-drivers` / `mesa-vdpau-drivers`: as of
@@ -333,6 +338,78 @@ _HW_PKGS_AMD_LEGACY=(
 )
 
 _HW_PKGS_GENERIC=()
+
+# ── Codec swaps (RPM Fusion) ────────────────────────────────────────────
+# Fedora builds its whole media stack without the patent-encumbered
+# codecs, and the failure mode is SILENT: every package installs, vainfo
+# reports a working driver, and H.264/HEVC video decodes on the CPU
+# anyway. Measured on this laptop (IdeaPad Slim 5 14IMH10) in a Firefox
+# video tab: the RDD process sat at ~18% of a core with no /dev/dri fd
+# open at all, and the fan ran on an otherwise idle machine. Nothing logs
+# an error — heat is the only symptom, which is why install-hardware.sh
+# verifies the CAPABILITY (vainfo's H264 VLD entrypoint) and not just
+# that the packages landed.
+#
+# Each entry is a "stripped-package full-package" pair. The install side
+# treats a pair as a swap when the stripped half is present and as a
+# plain install when it is not, because both cases are real:
+#
+#   * `ffmpeg` carries `Conflicts: ffmpeg-free`, so `dnf install ffmpeg`
+#     on a stock Fedora FAILS outright. It has to be `dnf swap`.
+#   * `mesa-va-drivers` does not exist on Fedora 44 at all (folded into
+#     mesa-dri-drivers, see the note above), so the AMD pair has nothing
+#     to remove and `mesa-va-drivers-freeworld` is simply added. It lands
+#     in /usr/lib64/dri-freeworld, which libva searches BEFORE
+#     /usr/lib64/dri, so it wins without anything being uninstalled. The
+#     pair is written out anyway so this keeps working if Fedora ever
+#     re-splits the package.
+#   * `intel-media-driver` likewise has no conflict — it Provides
+#     libva-intel-media-driver and installs to /usr/lib64/dri-nonfree,
+#     searched first for the same reason — but the stripped half IS
+#     installed here, so swapping avoids leaving 40MB of shadowed driver
+#     behind.
+#
+# Which repo holds what, verified with `dnf repoquery --qf '%{reponame}'`
+# on Fedora 44: ffmpeg and mesa-va-drivers-freeworld are in RPM Fusion
+# FREE, intel-media-driver is in NONFREE. Both repos, not just free.
+_HW_CODECS_COMMON=(
+    "ffmpeg-free ffmpeg"
+)
+
+_HW_CODECS_INTEL=(
+    "libva-intel-media-driver intel-media-driver"
+)
+
+_HW_CODECS_AMD=(
+    "mesa-va-drivers mesa-va-drivers-freeworld"
+)
+
+# hw_codec_swaps — echoes the "stripped full" package pairs this machine
+# needs, one per line, deduplicated. Same profile/GPU dispatch as
+# hw_packages: the CPU profile covers the iGPU, the HW_GPUS loop covers a
+# dGPU from the other vendor. intel-legacy is deliberately absent — pre-
+# Gen8 has no VAAPI driver on Fedora 44 in the first place (see hw_notes),
+# so there is nothing to upgrade.
+hw_codec_swaps() {
+    [ -n "$HW_CPU_PROFILE" ] || hw_detect
+
+    local pairs=("${_HW_CODECS_COMMON[@]}")
+
+    case "$HW_CPU_PROFILE" in
+        intel-modern)            pairs+=("${_HW_CODECS_INTEL[@]}") ;;
+        amd-zen|amd-legacy)      pairs+=("${_HW_CODECS_AMD[@]}") ;;
+    esac
+
+    local gpu
+    for gpu in ${HW_GPUS[@]+"${HW_GPUS[@]}"}; do
+        case "$gpu" in
+            intel-gpu) pairs+=("${_HW_CODECS_INTEL[@]}") ;;
+            amd-gpu)   pairs+=("${_HW_CODECS_AMD[@]}") ;;
+        esac
+    done
+
+    printf '%s\n' "${pairs[@]}" | LC_ALL=C sort -u
+}
 
 # hw_packages — echoes the Fedora package list for the detected machine,
 # one per line, deduplicated. Calls hw_detect if it hasn't run yet.
