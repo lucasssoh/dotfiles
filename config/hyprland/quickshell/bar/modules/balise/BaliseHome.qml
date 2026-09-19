@@ -235,30 +235,16 @@ Item {
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment there.
     Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
 
-    // ---- Lenovo conservation mode (the ~60% charge cap) ----
-    // Read and written through SystemStats, NOT through BaliseState's
-    // socket: this is a sysfs attribute, not something the Rust daemon
-    // knows about or has any business proxying.
-    //
-    // `available` gates the whole row. conservation_mode exists only on
-    // IdeaPads (ThinkPads expose the generic charge_control_*_threshold
-    // knobs instead, and most machines expose nothing) -- everywhere else
-    // the toggle would be a dead control, so it is not drawn at all and
-    // Night mode goes back to full width.
-    readonly property bool conservationAvailable: BatteryPreviewState.active
-        ? BatteryPreviewState.conservationAvailable
-        : SystemStats.conservationPath !== ""
-    readonly property bool conservationOn: BatteryPreviewState.active
-        ? BatteryPreviewState.conservation
-        : SystemStats.conservationMode
-
-    function setConservation(on) {
-        if (BatteryPreviewState.active) {
-            BatteryPreviewState.setConservation(on);
-            return;
-        }
-        SystemStats.setConservation(on);
-    }
+    // ---- Lenovo conservation mode ----
+    // Gone from this drawer: the ~60% charge cap is a BATTERY control,
+    // and it lived in this tile grid only because dropping "Airplane
+    // mode" had freed the slot. It now sits in the power drawer
+    // (modules/power/PowerHome.qml) next to the power profile and the
+    // consumption curve, which is where someone goes to think about
+    // charge at all. The state reads and the sysfs write moved with it
+    // verbatim, still through SystemStats rather than BaliseState's
+    // socket -- a sysfs attribute is not something the Rust daemon has
+    // any business proxying.
 
     // ---- HDR ------------------------------------------------------------
     //
@@ -386,152 +372,18 @@ Item {
     // BaliseReveal's header has the reasoning; the `revealIndex` on each
     // call site below is just this page's running order.
 
-    component Tile: Rectangle {
-        id: tile
-        property int revealIndex: 0
-        RevealPop { item: tile; index: tile.revealIndex }
-        required property string title
-        property string status: ""
-        property string glyph: ""
-        property bool active: false
-        signal activated()
-        // Right-click opens this tile's section list (WiFi/Bluetooth);
-        // Ethernet has no radio to toggle so it routes both to the same
-        // place (see below).
-        signal activatedSecondary()
-
-        radius: 20
-
-        // Same glass edge every other block in this bar now carries --
-        // see GlassCard.qml. Only the block itself goes through the lens;
-        // any icon tile nested inside it is left plain, or the two
-        // rims would sit 4px apart and read as noise.
-        // Only while this is HOVERED or ON -- asked for: the glass is a
-        // state cue, not decoration, so a zone nobody is touching and
-        // nothing has switched on carries no edge at all. It also means
-        // the layer is allocated only for the one element in play.
-        layer.enabled: tile.active || mouseArea.containsMouse
-        layer.effect: GlassCard { radius: 20 }
-        // "On" needed real contrast at rest, not just a tinted icon/status
-        // (asked for explicitly: "il faut un contraste lorsque les
-        // boutons sont en on") -- a faint accent-tinted fill + an
-        // accent-colored border, same idea as NotificationCenter.qml's
-        // own DND toggle track (`#a8b4c4` when on, a plain neutral ring
-        // when off), just subtle enough here to still read as a card
-        // rather than a solid switch. Hover still darkens/brightens
-        // slightly from whichever base it's already in.
-        color: tile.active
-            ? mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium
-            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep)
-        border.width: 1
-        border.color: tile.active ? root.accent : Qt.rgba(1, 1, 1, 0.18)
-        Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
-
-        readonly property color fg: tile.active ? root.accent : Ink.primary
-
-        // Vertically centered rather than anchored to `top` with a fixed
-        // margin -- the icon row used to be present on only 3 of the 4
-        // grid tiles (Airplane had none, see the `glyph !== ""` gate,
-        // which no current tile exercises any more), so a
-        // fixed top-anchor + guessed tile height either cramped the
-        // 3-line tiles' status text against the bottom edge (asked for:
-        // "le texte interieur n'est pas ajuster bien") or left the
-        // 2-line ones looking top-heavy -- centering makes both cases
-        // sit correctly without hand-tuning height per tile.
-        // Anchored on BOTH sides, not just the left: `elide` needs a real
-        // width to work against, and without one a long value (a WiFi
-        // tile showing a 30-character SSID as its status line) simply ran
-        // past the tile's own edge instead of ellipsizing.
-        Column {
-            id: tileText
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: 16
-            anchors.rightMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
-
-            // The glyph now sits in its own rounded-square badge (the
-            // mockup's own tile anatomy) rather than floating bare above
-            // the label -- accent-tinted while the tile is active, the
-            // same `#1a1d2a` neutral NotificationCard.qml's own iconTile
-            // uses otherwise. The `visible` gate is kept, though every
-            // tile now has a verified codepoint: it is what lets a future
-            // tile drop the badge rather than show an empty square or a
-            // guessed icon.
-            Rectangle {
-                visible: tile.glyph !== ""
-                width: 30
-                height: 30
-                radius: 9
-                color: tile.active
-                    ? Surfaces.accentStrong
-                    : Surfaces.cardHover
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                Text {
-                    anchors.centerIn: parent
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: tile.glyph
-                    color: tile.fg
-                    font.family: Fonts.iconPhosphor
-                    font.pixelSize: 17
-                }
-            }
-            Text {
-                width: tileText.width
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                text: tile.title
-                color: Ink.primary
-                font.family: Fonts.ui
-                font.pixelSize: 13
-                font.bold: true
-                elide: Text.ElideRight
-            }
-            Text {
-                width: tileText.width
-                visible: tile.status !== ""
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                text: tile.status
-                color: tile.active ? tile.fg : Ink.secondary
-                font.family: Fonts.ui
-                font.pixelSize: 11
-                elide: Text.ElideRight
-            }
-        }
-
-        MouseArea {
-            id: mouseArea
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            cursorShape: Qt.PointingHandCursor
-            onClicked: (mouse) => {
-                if (mouse.button === Qt.RightButton) tile.activatedSecondary();
-                else tile.activated();
-            }
-        }
-    }
+    // Moved out to modules/DrawerTile.qml, unchanged, when PowerHome.qml
+    // became the third drawer on this island and needed the same card.
+    // Kept as an alias so every `Tile { ... }` below reads exactly as it
+    // did -- see that file's header for the one difference (`accent` is a
+    // property there instead of reaching into this file's `root.accent`,
+    // and defaults to the same Ink.accent).
+    component Tile: DrawerTile {}
 
     // Small-caps group label above a block of tiles/rows -- the mockup's
     // own "CONNECTIVITÉ"/"OPTIONS" rhythm, same typography
     // BaliseSectionList.qml's own section headers already use.
-    component GroupLabel: Text {
-        id: glabel
-        property int revealIndex: 0
-        RevealPop { item: glabel; index: glabel.revealIndex; fromScale: 1.0 }
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        color: Qt.rgba(1, 1, 1, 0.4)
-        font.family: Fonts.ui
-        font.pixelSize: 11
-        font.bold: true
-        font.letterSpacing: 1
-    }
+    component GroupLabel: DrawerGroupLabel {}
 
     // Full-width settings row (Night mode) -- a filled card with a real
     // track+thumb switch on the right rather than the bordered pill
@@ -857,14 +709,13 @@ Item {
                 width: parent.width
                 spacing: 16
                 Tile {
-                    // Full width when the charge cap is not drawn -- the
-                    // same explicit-width idiom the SYSTEM row below
-                    // uses, and for the same reason: a positioner
-                    // reclaims a hidden child's space, it does not
-                    // stretch the survivor into it.
-                    width: root.conservationAvailable
-                        ? (parent.width - 16) / 2
-                        : parent.width
+                    // Full width, unconditionally: the charge cap that
+                    // used to take the other half of this row moved to
+                    // the power drawer, and Ethernet is alone here now.
+                    // Still an explicit width rather than a stretch -- a
+                    // positioner reclaims a hidden child's space, it does
+                    // not stretch the survivor into it.
+                    width: parent.width
                     height: 92
                     title: "Ethernet"
                     revealIndex: 5
@@ -874,33 +725,6 @@ Item {
                     // No radio to toggle -- both buttons open the section.
                     onActivated: root.goTo("ethernet")
                     onActivatedSecondary: root.goTo("ethernet")
-                }
-                // Was "Airplane mode" -- dropped outright, asked for
-                // ("je n'en aurais jamais besoin"). It was also the one
-                // tile with no backend flag of its own: it inferred
-                // itself from "both radios off" and toggled the two, so
-                // nothing else depended on it.
-                //
-                // The charge cap takes the slot, moved up from the SYSTEM
-                // row where it sat beside Night mode. As a Tile it gains
-                // the status line the ToggleRow had no room for, which is
-                // where the actual number lives -- the title says what
-                // the control is, "On"/"Off" says what it is doing.
-                //
-                // Still gated on `conservationAvailable`: conservation_mode
-                // is an IdeaPad knob, and drawing a dead switch on a
-                // machine that has no battery at all is worse than drawing
-                // nothing. On such a machine this row is Ethernet alone.
-                Tile {
-                    visible: root.conservationAvailable
-                    width: (parent.width - 16) / 2
-                    height: 92
-                    title: "Charge limit"
-                    revealIndex: 6
-                    status: root.conservationOn ? "60%" : "Off"
-                    glyph: "\uE057"   // lu-battery-medium
-                    active: root.conservationOn
-                    onActivated: root.setConservation(!root.conservationOn)
                 }
             }
             Item { width: 1; height: 4 }

@@ -91,6 +91,8 @@ Singleton {
             return;
         }
         NotificationState.close();
+        // ...and the power drawer -- see NotificationState.toggleNotificationCenter.
+        PowerState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // The panel just became visible -- refresh right away rather

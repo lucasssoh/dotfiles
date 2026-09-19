@@ -27,6 +27,13 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
+    // Which bar instance this module belongs to, handed down by shell.qml
+    // exactly as BaliseButton/NotificationBell take theirs -- the power
+    // drawer opens on the monitor whose bar was clicked. Null on any
+    // caller that doesn't set it, which simply means the drawer opens on
+    // no particular screen rather than crashing.
+    property var screen: null
+
     readonly property var device: UPower.displayDevice
     readonly property bool realPresent: device && device.isLaptopBattery && device.ready
     readonly property bool present: BatteryPreviewState.active || realPresent
@@ -248,5 +255,23 @@ Item {
             width: 20
             horizontalAlignment: Text.AlignHCenter
         }
+    }
+
+    // This module IS the affordance for the power drawer (modules/power/
+    // PowerHome.qml): the battery readout is the thing whose detail the
+    // drawer shows, so clicking it is where a user looks first -- and it
+    // costs the TOOLS pill no extra width, which a dedicated button
+    // beside it would have. Same togglePanel(screen) contract Balise and
+    // the notification center are opened with.
+    //
+    // Last child on purpose: a MouseArea only receives what is not taken
+    // above it, and declaring it after the Row above means nothing in
+    // that Row can shadow it.
+    MouseArea {
+        id: hit
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: PowerState.togglePanel(root.screen)
     }
 }

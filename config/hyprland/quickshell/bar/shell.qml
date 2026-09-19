@@ -6,6 +6,7 @@ import Quickshell.Hyprland
 import "modules" as Modules
 import "modules/veille"
 import "modules/balise"
+import "modules/power"
 import "services"
 import "theme"
 
@@ -387,6 +388,14 @@ ShellRoot {
         function toggleBalise(): void {
             BaliseState.togglePanel(Quickshell.screens[0]);
         }
+        // Same reasoning as toggleBalise directly above, for the same
+        // reason: the power drawer opens by clicking the Battery module
+        // and nothing else, so without this every change to
+        // modules/power/ needs a mouse in hand to look at.
+        // `qs -c bar ipc call bar togglePower`.
+        function togglePower(): void {
+            PowerState.togglePanel(Quickshell.screens[0]);
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -443,6 +452,15 @@ ShellRoot {
             if (BaliseState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 BaliseState.close();
+            }
+
+            // ...and the power drawer. Closing it also stops its
+            // GetHistory timer (PowerState's fetch is gated on
+            // panelOpen), so an outside click is what puts the whole
+            // thing back to costing nothing.
+            if (PowerState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                PowerState.close();
             }
         }
     }
@@ -1209,6 +1227,13 @@ ShellRoot {
                         // ITS OWN screen, exactly as the Hdr badge did
                         // when it lived in the row above.
                         monitor: Hyprland.monitorFor(bar.screen)
+                    },
+                    // Third entry, same contract as the two above. It is
+                    // opened by the Battery module in the row rather than
+                    // by a button of its own, so nothing was added to
+                    // TOOLS' width for it.
+                    PowerHome {
+                        drawerOpen: PowerState.panelOpen && PowerState.activeScreen === bar.screen
                     }
                 ]
                 // Glass. These three float free of every screen edge, so
@@ -1454,7 +1479,11 @@ ShellRoot {
                     // Moved here from METRICS (asked for): sits between
                     // power-profile and the clock now, grouped with the
                     // other power/status modules instead of CPU/RAM/fan.
-                    Modules.Battery { ink: toolsInk }
+                    // `screen` is what lets a click here open the power
+                    // drawer on THIS bar's monitor -- see Battery.qml's
+                    // own MouseArea, and BaliseButton/NotificationBell
+                    // for the same contract.
+                    Modules.Battery { ink: toolsInk; screen: bar.screen }
 
                     // ---- energie | heure ----
                     Item { width: toolsIsland.groupGap; height: 1 }
