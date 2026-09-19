@@ -1,0 +1,498 @@
+# coucou.script -- the boot splash: a word mark that breathes, and one
+# thin progress bar near the bottom edge.
+#
+# Read this next to make-assets.py, which produces every PNG named here.
+# Plymouth's script plugin has no drawing primitives at all: no text, no
+# rectangle, no rounded corner. It composites PNGs and that is the whole
+# API. So the design lives in two halves -- the pixels in make-assets.py,
+# the placement and the motion here.
+#
+# Three constraints shaped the code below.
+#
+# Scaling is crude. Image.Scale() is a plain resample, so anything it
+# touches loses the antialiasing make-assets.py worked for. The assets
+# are therefore cut for REF_WIDTH and the runtime only scales when the
+# panel actually differs; on the reference panel, nothing is resampled.
+# The exception is the progress fill, which is scaled every time its
+# width changes and has to be -- it is a flat white bar with round caps,
+# and resampling a flat bar costs nothing visible.
+#
+# Nothing here may depend on a font. The label plugin may or may not have
+# a usable font inside the initramfs, so the password bullets are dots
+# (bullet.png), not glyphs, and the only Image.Text() call is guarded and
+# purely additive.
+#
+# The refresh callback runs at FPS, which is why the pulse can count
+# frames instead of asking for a clock -- the script language has no
+# clock to ask.
+
+# ---------------------------------------------------------------------
+# Design constants. Everything you would want to nudge is here.
+# ---------------------------------------------------------------------
+REF_WIDTH    = 1920;      # the panel make-assets.py cut the PNGs for
+LOGO_CENTRE  = 0.50;      # vertical centre of the word, as a fraction of height
+BAR_CENTRE   = 0.895;     # vertical centre of the progress bar
+PROMPT_Y     = 0.60;      # passphrase prompts, under the logo
+BULLET_GAP   = 6;         # px between password dots, at REF_WIDTH
+STATUS_Y     = 0.935;     # the one-line boot log, just under the bar
+STATUS_FADE  = 6;         # frames a new status line takes to appear
+
+# The family in these strings does two jobs, and only one of them is the
+# obvious one.
+#
+# On a booted system the label plugin is label-pango, which honours the
+# family: "JetBrains Mono" means JetBrains Mono. Inside the initramfs the
+# only plugin dracut ships is label-freetype, which ignores the family
+# entirely and keeps exactly two faces -- a default and a monospace one.
+# It picks between them by substring:
+#
+#     if (strstr (font, "Mono") || strstr (font, "mono"))
+#             font_path = find_default_monospace_font_path ();
+#
+# So naming JetBrains Mono here is also what selects the monospace slot at
+# boot, and that slot resolves through `fc-match monospace` run as root at
+# dracut time. Pointing it at JetBrains Mono is what
+# /etc/fonts/conf.d/70-mono-font.conf is for; see mono-fontconfig.conf.
+# Rename these to something without "Mono" in it and the boot silently
+# falls back to the proportional face, while the preview keeps looking
+# right -- which is exactly the kind of divergence worth a comment.
+#
+# The number is POINTS AT 96 DPI in both plugins, not pixels:
+#
+#     size.as_points_unit.points = parsed_size;   /* points: 26 bits */
+#     FT_Set_Char_Size (face, size.as_integer, 0, dpi * scale, 0);
+#
+# with dpi = 96, so 15 here is 20px on screen. A "px" suffix switches to
+# FT_Set_Pixel_Sizes and means literal pixels; nothing below uses it.
+#
+# Everything else on screen scales by layout.k. Text cannot: a font
+# description is a string, and this language has no way to build one from
+# a number. So the size comes off a ladder instead, which is why the
+# thresholds are constants rather than literals -- simulate.py reads them
+# and applies the same ladder.
+STATUS_FONT     = "JetBrains Mono 15";   # the reference panel, REF_WIDTH wide
+STATUS_FONT_XS  = "JetBrains Mono 11";   # 1366x768 and below
+STATUS_FONT_M   = "JetBrains Mono 20";   # 2560-wide
+STATUS_FONT_L   = "JetBrains Mono 29";   # 4K
+STATUS_K_XS     = 0.75;
+STATUS_K_M      = 1.30;
+STATUS_K_L      = 1.80;
+
+PULSE_PERIOD = 2.0;       # seconds for one full breath
+PULSE_FLOOR  = 0.35;      # dimmest the word gets
+BAR_EASE     = 0.10;      # per-frame catch-up towards the reported progress
+BAR_CEILING  = 0.995;     # never show a full bar while still booting
+FPS          = 50;
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+Plymouth.SetRefreshRate(FPS);
+
+# ---------------------------------------------------------------------
+# The word depends on which direction the machine is going.
+#
+# Plymouth.GetMode() answers "boot", "shutdown", "reboot", "updates",
+# "system-upgrade", "firmware-upgrade" or "system-reset". Greeting
+# someone on the way out reads backwards, so shutdown and reboot get a
+# farewell instead. Reboot counts as leaving: the boot that follows will
+# say coucou on its own.
+#
+# The update modes deliberately keep the greeting. The machine is neither
+# arriving nor leaving there, it is working, and inventing a third word
+# for a screen seen twice a year is more vocabulary than the splash can
+# carry.
+#
+# Guarded on the image rather than assumed: a missing logo-bye.png would
+# otherwise make every sprite downstream NULL, and the failure would only
+# show on a shutdown, which is the worst place to discover it.
+# ---------------------------------------------------------------------
+masters.logo   = Image("logo.png");
+mode           = Plymouth.GetMode();
+
+state.leaving = 0;
+
+if (mode == "shutdown" || mode == "reboot") {
+    state.leaving = 1;
+    farewell = Image("logo-bye.png");
+    if (farewell) masters.logo = farewell;
+}
+masters.track  = Image("bar-track.png");
+masters.fill   = Image("bar-fill.png");
+masters.bullet = Image("bullet.png");
+
+# ---------------------------------------------------------------------
+# Every hash a function will write to has to be created HERE, at the top
+# level, and this is not a style preference -- it is the language.
+# script_evaluate_var() resolves a bare name by looking in local, then
+# this, then global, and if it is in none of them it CREATES IT IN LOCAL:
+#
+#     obj = peek (state->local,  name);  if (obj) return obj;
+#     obj = peek (state->this,   name);  if (obj) return obj;
+#     obj = peek (state->global, name);  if (obj) return obj;
+#     obj = get  (state->local,  name);        /* creates it, locally */
+#
+# So a `logo.sprite = ...` inside build_layout(), with no global `logo`
+# already in existence, would build the sprite into a hash that dies when
+# the function returns -- and refresh() would then be drawing into a
+# different, empty `logo` of its own. The splash would come up black,
+# which is precisely the failure this module exists to fix. Upstream's own
+# example theme shows both halves of the rule: it creates logo.image at
+# the top level to mutate it from a callback, and writes `local.box;`
+# before `box.image = ...` when it wants the opposite.
+# ---------------------------------------------------------------------
+screen.x        = 0;             # the rectangle every display can show,
+screen.y        = 0;             # filled in by measure_screen()
+screen.w        = 0;
+screen.h        = 0;
+screen.heads    = 0;
+layout.k        = 1;
+logo.sprite     = NULL;
+bar.drawn       = -1;
+prompt.sprite   = NULL;
+
+progress.target = 0;
+progress.shown  = 0;
+pulse.frame     = 0;
+state.password  = 0;
+bullets.drawn   = 0;
+status.text     = "";
+status.sprite   = NULL;          # read by refresh() before anything draws
+status.fade     = STATUS_FADE;
+
+fun scaled (image, k) {
+    if (k == 1) return image;
+    return image.Scale(Math.Int(image.GetWidth() * k), Math.Int(image.GetHeight() * k));
+}
+
+# ---------------------------------------------------------------------
+# measure_screen -- the rectangle that every display can show.
+#
+# Plymouth does not lay displays out side by side, and a splash is not
+# something you place per head. update_displays() in script-lib-sprite.c
+# builds ONE virtual canvas, as wide as the widest display and as tall as
+# the tallest, CENTRES every display inside it, and then draws every
+# sprite on every display at (sprite.x - display.x). Two screens are not
+# two canvases: they are two centred windows onto the same one.
+#
+# So the safe area is the intersection of those windows -- and since they
+# are all centred, that intersection is exactly the smallest width by the
+# smallest height, centred on the canvas. Laying out inside it is what
+# puts the bar at 0.895 of the height on screen on a 1200px laptop panel
+# as well as on the 2160px monitor docked next to it; laying out against
+# the canvas would push it off the smaller one entirely.
+#
+# Window.GetWidth(i) returns display i's width, and NULL once i runs past
+# the end -- which is the only way to count them. With no argument at all
+# it returns the canvas instead. Both forms are used here.
+# ---------------------------------------------------------------------
+fun measure_screen () {
+    local.canvas_w = Window.GetWidth();
+    local.canvas_h = Window.GetHeight();
+    local.min_w = local.canvas_w;
+    local.min_h = local.canvas_h;
+
+    local.i = 0;
+    local.w = Window.GetWidth(0);
+    # The cap is a guard, not a limit anyone is meant to reach: a surprise
+    # from Window.GetWidth() must not become an endless loop inside the
+    # boot splash, where nothing can be attached to debug it.
+    while (local.w && local.i < 8) {
+        local.h = Window.GetHeight(local.i);
+        if (local.w < local.min_w) local.min_w = local.w;
+        if (local.h < local.min_h) local.min_h = local.h;
+        local.i = local.i + 1;
+        local.w = Window.GetWidth(local.i);
+    }
+
+    screen.heads = local.i;
+    screen.w = local.min_w;
+    screen.h = local.min_h;
+    screen.x = Math.Int((local.canvas_w - local.min_w) / 2);
+    screen.y = Math.Int((local.canvas_h - local.min_h) / 2);
+}
+
+# ---------------------------------------------------------------------
+# build_layout -- (re)create every sprite for the current screen.
+#
+# Called once at load and again on hotplug. Reassigning the sprite
+# globals is what releases the previous ones; there is no destructor to
+# call.
+# ---------------------------------------------------------------------
+fun build_layout () {
+    measure_screen();
+
+    layout.k = screen.w / REF_WIDTH;
+    # Treat "close enough" as exact, so a 1920-wide panel never resamples.
+    if (layout.k > 0.99 && layout.k < 1.01) layout.k = 1;
+
+    logo.image  = scaled(masters.logo, layout.k);
+    logo.sprite = Sprite(logo.image);
+    logo.sprite.SetX(screen.x + Math.Int((screen.w - logo.image.GetWidth()) / 2));
+    logo.sprite.SetY(screen.y + Math.Int(screen.h * LOGO_CENTRE - logo.image.GetHeight() / 2));
+    logo.sprite.SetZ(10);
+    logo.sprite.SetOpacity(1);
+
+    bar.track_image = scaled(masters.track, layout.k);
+    bar.fill_image  = scaled(masters.fill, layout.k);
+    bar.w = bar.track_image.GetWidth();
+    bar.h = bar.track_image.GetHeight();
+    bar.x = screen.x + Math.Int((screen.w - bar.w) / 2);
+    bar.y = screen.y + Math.Int(screen.h * BAR_CENTRE - bar.h / 2);
+
+    bar.track_sprite = Sprite(bar.track_image);
+    bar.track_sprite.SetX(bar.x);
+    bar.track_sprite.SetY(bar.y);
+    bar.track_sprite.SetZ(10);
+
+    bar.fill_sprite = Sprite();
+    bar.fill_sprite.SetX(bar.x);
+    bar.fill_sprite.SetY(bar.y);
+    bar.fill_sprite.SetZ(11);
+    bar.drawn = -1;                  # force the first fill to be built
+
+    bullets.image = scaled(masters.bullet, layout.k);
+    bullets.y = screen.y + Math.Int(screen.h * PROMPT_Y);
+    bullets.step = bullets.image.GetWidth() + Math.Int(BULLET_GAP * layout.k);
+
+    status.y = screen.y + Math.Int(screen.h * STATUS_Y);
+    status.font = STATUS_FONT;
+    if (layout.k <= STATUS_K_XS) status.font = STATUS_FONT_XS;
+    if (layout.k >= STATUS_K_M)  status.font = STATUS_FONT_M;
+    if (layout.k >= STATUS_K_L)  status.font = STATUS_FONT_L;
+    # Re-draw whatever line is currently up, at its new position. Without
+    # this, a hotplug mid-boot would leave the last status stranded at the
+    # old screen's coordinates.
+    local.current = status.text;
+    status.text = "";
+    show_status(local.current);
+
+    if (state.password) hide_bar(); else show_bar();
+}
+
+# The bar is hidden on the way out, and the reason is not aesthetic.
+#
+# Plymouth's progress estimate is elapsed time over the duration of the
+# PREVIOUS run of the same operation, read from /var/lib/plymouth. That
+# is a fair guess for a boot, which does roughly the same work every
+# time. A shutdown is not: it takes as long as whatever is still holding
+# a mount or a session, which is exactly what varies. A bar there fills
+# at a rate unrelated to what is happening and finishes early or hangs
+# near the end -- it is a decoration shaped like a measurement, and that
+# is worse than no measurement.
+#
+# So on shutdown and reboot the word is the whole splash: it breathes,
+# and it says nothing it cannot back up.
+fun show_bar () {
+    if (state.leaving) {
+        hide_bar();
+        return;
+    }
+    bar.track_sprite.SetOpacity(1);
+    bar.fill_sprite.SetOpacity(1);
+}
+
+# A boot that is waiting on a human is not making progress; a bar still
+# creeping behind the prompt would be lying about that.
+fun hide_bar () {
+    bar.track_sprite.SetOpacity(0);
+    bar.fill_sprite.SetOpacity(0);
+}
+
+# ---------------------------------------------------------------------
+# Motion
+# ---------------------------------------------------------------------
+fun refresh () {
+    if (!state.password) {
+        pulse.frame = pulse.frame + 1;
+        local.phase = pulse.frame / (FPS * PULSE_PERIOD);
+        local.phase = local.phase - Math.Int(local.phase);       # wrap to 0..1
+        # Cosine, so the breath starts and ends bright and eases at both
+        # ends. A linear ramp reads as a blink.
+        local.wave = (1 + Math.Cos(local.phase * 2 * Math.Pi)) / 2;
+        logo.sprite.SetOpacity(PULSE_FLOOR + (1 - PULSE_FLOOR) * local.wave);
+    }
+
+    # Nothing below draws the bar when it is hidden: rescaling a sprite
+    # nobody can see is a few hundred allocations a second spent on the
+    # frame that is meant to be the calmest.
+    if (state.leaving) return;
+
+    # Ease towards the reported progress, and only ever forwards. Plymouth
+    # derives its estimate from the previous boot's timings, so it jumps
+    # around -- and on the first boot after an install there is no previous
+    # boot to derive it from.
+    if (progress.target > progress.shown)
+        progress.shown = progress.shown + (progress.target - progress.shown) * BAR_EASE;
+
+    local.w = Math.Int(bar.w * progress.shown);
+    if (local.w < bar.h) local.w = bar.h;    # keep a round pip, never a sliver
+    if (local.w != bar.drawn) {
+        bar.fill_sprite.SetImage(bar.fill_image.Scale(local.w, bar.h));
+        bar.drawn = local.w;
+    }
+
+    # A new status line fades in rather than snapping: during early boot
+    # these can replace each other several times a second, and hard cuts
+    # at that rate read as flicker.
+    if (status.fade < STATUS_FADE) {
+        status.fade = status.fade + 1;
+        if (status.sprite != NULL) status.sprite.SetOpacity(status.fade / STATUS_FADE);
+    }
+}
+
+fun on_boot_progress (duration, fraction) {
+    local.p = Math.Clamp(fraction, 0, BAR_CEILING);
+    if (local.p > progress.target) progress.target = local.p;
+}
+
+# Offline updates (`dnf offline-upgrade`) reboot into this same splash and
+# report a real percentage, which beats the boot-time estimate.
+fun on_system_update (percent) {
+    local.p = Math.Clamp(percent / 100, 0, 1);
+    if (local.p > progress.target) progress.target = local.p;
+}
+
+# The last frame a person sees should be a finished bar, not one frozen
+# at 87%. This matters with `plymouth quit --retain-splash`, where that
+# frame stays on screen until the greeter draws over it.
+fun on_quit () {
+    logo.sprite.SetOpacity(1);
+    show_status("");                 # no half-finished unit name left frozen
+    if (state.leaving) return;
+
+    progress.target = 1;
+    progress.shown = 1;
+    bar.fill_sprite.SetImage(bar.fill_image);
+    bar.drawn = bar.w;
+}
+
+# ---------------------------------------------------------------------
+# Prompts. Unused on a machine without full-disk encryption, but a theme
+# that draws nothing when Plymouth asks for a passphrase turns an
+# encrypted boot into an apparently dead machine -- the exact failure
+# this whole module exists to fix.
+# ---------------------------------------------------------------------
+fun draw_bullets (count) {
+    local.i = 0;
+    while (local.i < bullets.drawn) {
+        bullets.sprite[local.i] = NULL;
+        local.i = local.i + 1;
+    }
+    bullets.drawn = 0;
+    if (count < 1) return;
+
+    local.n = count;
+    if (local.n > 32) local.n = 32;          # a row of dots, not a second bar
+    local.total = local.n * bullets.step - Math.Int(BULLET_GAP * layout.k);
+    local.x = screen.x + Math.Int((screen.w - local.total) / 2);
+
+    local.i = 0;
+    while (local.i < local.n) {
+        local.dot = Sprite(bullets.image);
+        local.dot.SetX(local.x + local.i * bullets.step);
+        local.dot.SetY(bullets.y);
+        local.dot.SetZ(12);
+        bullets.sprite[local.i] = local.dot;
+        local.i = local.i + 1;
+    }
+    bullets.drawn = local.n;
+}
+
+# ---------------------------------------------------------------------
+# Text. Both of these are guarded: Image.Text() needs the label plugin AND
+# a font reachable from wherever Plymouth is running, and neither is
+# guaranteed. A NULL result is therefore not an error -- the splash simply
+# carries on without the words, which is the whole point of the bullets
+# below being dots rather than glyphs.
+# ---------------------------------------------------------------------
+
+# The passphrase prompt, above the bullets, under the logo.
+fun show_prompt (text) {
+    prompt.sprite = NULL;
+    if (text == "") return;
+    local.image = Image.Text(text, 0.78, 0.78, 0.78, 1, status.font);
+    if (local.image == NULL) return;
+    prompt.sprite = Sprite(local.image);
+    prompt.sprite.SetX(screen.x + Math.Int((screen.w - local.image.GetWidth()) / 2));
+    prompt.sprite.SetY(screen.y + Math.Int(screen.h * PROMPT_Y) - local.image.GetHeight() - Math.Int(24 * layout.k));
+    prompt.sprite.SetZ(12);
+}
+
+# The boot log: one line at a time, under the bar, replaced in place.
+#
+# Nothing feeds this for free. systemd does not talk to Plymouth at all --
+# on this machine only systemd-storagetm even links plymouth_send_msg --
+# and the `update --status` channel carries just three messages, all from
+# Plymouth's own units. The lines come from status-feed.sh, installed as a
+# unit alongside this theme; the initramfs phase, which that unit is too
+# late for, still shows Plymouth's own switch-root messages.
+#
+# Re-rendering identical text every frame would be pure cost, so a line
+# that has not changed is left alone -- which also keeps its fade from
+# restarting.
+fun show_status (text) {
+    if (text == status.text) return;
+    status.text = text;
+    status.sprite = NULL;
+    if (text == "") return;
+    local.image = Image.Text(text, 0.55, 0.55, 0.57, 1, status.font);
+    if (local.image == NULL) return;
+    status.sprite = Sprite(local.image);
+    status.sprite.SetX(screen.x + Math.Int((screen.w - local.image.GetWidth()) / 2));
+    status.sprite.SetY(status.y - Math.Int(local.image.GetHeight() / 2));
+    status.sprite.SetZ(11);
+    status.sprite.SetOpacity(0);
+    status.fade = 0;                 # refresh() ramps it in
+}
+
+fun on_status (text) {
+    show_status(text);
+}
+
+fun on_password (prompt_text, bullet_count) {
+    state.password = 1;
+    logo.sprite.SetOpacity(1);       # stop breathing: the machine is waiting on you
+    hide_bar();
+    show_prompt(prompt_text);
+    draw_bullets(bullet_count);
+}
+
+fun on_question (prompt_text, entry) {
+    state.password = 1;
+    logo.sprite.SetOpacity(1);
+    hide_bar();
+    show_prompt(prompt_text + " " + entry);
+    draw_bullets(0);
+}
+
+fun on_normal () {
+    state.password = 0;
+    show_bar();
+    show_prompt("");
+    draw_bullets(0);
+}
+
+# Messages (fsck progress, and anything `plymouth display-message` sends)
+# belong on the same line as the boot log: there is one place for a line
+# of running commentary and this is it.
+fun on_message (text) {
+    if (!state.password) show_status(text);
+}
+
+fun on_hide_message (text) {
+    if (!state.password) show_status("");
+}
+
+build_layout();
+
+Plymouth.SetRefreshFunction(refresh);
+Plymouth.SetBootProgressFunction(on_boot_progress);
+Plymouth.SetSystemUpdateFunction(on_system_update);
+Plymouth.SetQuitFunction(on_quit);
+Plymouth.SetDisplayPasswordFunction(on_password);
+Plymouth.SetDisplayQuestionFunction(on_question);
+Plymouth.SetDisplayNormalFunction(on_normal);
+Plymouth.SetUpdateStatusFunction(on_status);
+Plymouth.SetDisplayMessageFunction(on_message);
+Plymouth.SetHideMessageFunction(on_hide_message);
+Plymouth.SetDisplayHotplugFunction(build_layout);

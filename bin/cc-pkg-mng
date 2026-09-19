@@ -524,13 +524,13 @@ cmd_update() {
 #   * system scope by default, because installing a desktop means installing
 #     packages. `--user` is the opt-out, and matches today's `./install user`.
 cmd_install() {
-    local system=1 only=() login_manager=0 phases=()
+    local system=1 only=() greeter=0 phases=()
     while [ $# -gt 0 ]; do
         case "$1" in
             --user)            system=0 ;;
             --system-only)     phases+=(system) ;;
             --hardware-only)   phases+=(hardware) ;;
-            --login-manager)   login_manager=1 ;;
+            --greeter|--login-manager) greeter=1 ;;   # old name kept working
             --only)            shift; only+=("$1") ;;
             *)                 err "install: unknown option $1" ;;
         esac
@@ -554,8 +554,8 @@ cmd_install() {
         return 0
     fi
 
-    if [ "$login_manager" = 1 ]; then
-        local sc; sc="$(module_script login-manager)" || err "login-manager module missing."
+    if [ "$greeter" = 1 ]; then
+        local sc; sc="$(module_script boot/login)" || err "boot/login module missing."
         if [ "$DRY_RUN" = 1 ]; then dry "$sc"; else bash "$sc"; fi
         return 0
     fi

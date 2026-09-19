@@ -16,8 +16,10 @@ The order is part of the contract, not an accident:
 
 ```
 fonts  bash  ccpkg  ccnote  ccslide  tmux  wezterm  nvim  wireplumber
-mangohud  nemo  fuzzel  fastfetch  firefox  brave  mpv  liseuse  hyprland
+mangohud  nemo  fuzzel  fastfetch  firefox  brave  mpv  liseuse  boot/plymouth  hyprland
 ```
+
+A module name may carry **one level of nesting**. `config/boot/` groups the two pieces that own the screen before the desktop exists — the splash and the greeter — because that is one subject, and splitting it across a flat list next to `mpv` lost it. A grouping directory has no `install.sh` of its own; `registry_validate` checks both depths, and also refuses a directory under `config/` that is neither a module nor a group, since nothing would ever run it.
 
 | Constraint | Why |
 |---|---|
@@ -29,7 +31,7 @@ Two modules are **opt-in** — never part of a default run, and must be named ex
 
 | Module | Status |
 |---|---|
-| `login-manager` | Rewrites system login (greetd) and prompts interactively |
+| `boot/login` | Rewrites system login (ly, with greetd+tuigreet kept as the fallback) and prompts interactively |
 | `kde` | Not used on this machine. Its Reversal icon theme upstream is a 404 as of 2026-09-16; whoever re-enables it needs to pick a replacement first |
 
 ---
@@ -104,6 +106,72 @@ Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`,
 
 Installs no package. Downloads JetBrains Mono, Iosevka and Cascadia Code Nerd Fonts plus MiSans Latin into `~/.local/share/fonts/`, each guarded by an `fc-list` check so nothing is re-fetched. Links the fontconfig rule, then applies the UI font through `gsettings` and `kwriteconfig6`. `fc-cache` runs only if something was actually added.
 
+### `boot/plymouth`
+
+The boot splash, from GRUB's hand-off to the greeter: the word mark breathes on black and one thin bar fills near the bottom edge.
+
+It exists because that stretch of the boot used to draw *nothing*. The cause was not the theme but a missing package: `plymouth-graphics-libs` owns `/usr/lib64/plymouth/renderers/{drm,frame-buffer}.so`, which is every renderer Plymouth has, and without one the daemon cannot put a pixel on a screen whatever theme is selected. The selected theme was `text`, which draws nothing under `rhgb quiet` anyway. On an OLED panel the result was several seconds of a laptop that looked switched off.
+
+**The boot splash never appeared for weeks, and it came down to a comment.** Fedora ships `/etc/plymouth/plymouthd.conf` with its example commented out — `#Theme=fade-in` — and `plymouth-set-default-theme` reads the theme back out with an *unanchored* regex and an empty output separator:
+
+```awk
+BEGIN { FS="[=[:space:]]+"; ORS="" }
+$1 ~ /Theme/ { print $2 }
+```
+
+`#Theme` matches `/Theme/`, so with `Theme=coucou` set the file reads back as `fade-incoucou`. No such theme exists, so it falls through to `plymouthd.defaults` (`bgrt`, not installed), then to the `default.plymouth` symlink (which that same tool deletes), and lands on its last resort: **`text`**.
+
+`plymouth-populate-initrd` asks exactly that command which theme to bake in. It got `text`, and dutifully baked in the text theme and `text.so` — while `plymouthd` at boot read `Theme=coucou` from the same file with its own, correct parser, found no such theme in the initramfs, and fell back to the text splash, which under `quiet` draws nothing. The shutdown splash worked the whole time, because by then the real root is mounted and the theme is simply there. So the module deletes the commented line: it is an example nobody needs and a landmine for a parser that cannot tell a comment from a setting. The module also declares the theme files and `script.so` to dracut through `install_items`, as a backstop — not because that is the fix, but because the failure was invisible, and stating the dependency outright means the splash no longer rests on a chain that answered wrongly for months without a single error message.
+
+**A new kernel keeps the splash on its own, and is checked anyway.** Nothing about the fix is tied to a kernel: `/etc/dracut.conf.d/90-coucou-splash.conf` is read by every `dracut` run, and `kernel-install`'s `50-dracut.install` invokes a plain `dracut -f` with no `--no-conf` or `--confdir`, so a kernel installed by `dnf update` picks the theme up unassisted. What was missing was never the building — it was the noticing, since dracut runs `plymouth-populate-initrd` with `2> /dev/null` and that script silently baked in the wrong theme for weeks. So the module installs `/etc/kernel/install.d/99-coucou-splash.install`, numbered after the dracut plugin: it builds nothing, it reads the initramfs that was just produced and reports into the output of the very `dnf` transaction that produced it. It also re-checks that `plymouth-set-default-theme` still answers `coucou`, because a plymouth package update restoring the stock `plymouthd.conf` would reintroduce the commented-`Theme=` regression, and the symptom of that gives no clue at all. It always exits 0: a check has no business aborting a kernel install. `install.sh` verifies every `/boot/initramfs-*.img` for the same reason — the older GRUB entry is the one that matters on the day something has already gone wrong.
+
+**The rebuild decision is a stamp, not a diff of the current run**, and that distinction cost a black boot. The old logic skipped `dracut` when nothing had changed *during this run*. `preview.sh` calls the installer with `--no-initramfs`; that run installed the packages, deployed the theme and selected it, consuming every "changed" signal. The next full run saw four zeroes and concluded the initramfs was current — when dracut had never run once. The boot said so precisely:
+
+```
+Trying to load /etc/plymouth/plymouthd.conf
+key file has comments but no groups
+failed to load /etc/plymouth/plymouthd.conf
+```
+
+That is Fedora's pristine file, the one where `[Daemon]` is commented out, still inside an initramfs built before the theme existed. With no `Theme=` to read and no `default.plymouth` symlink to fall back on — `plymouth-set-default-theme` deletes it — plymouthd loaded the `text` splash, which under `quiet` draws nothing. The renderer was never implicated: the same log shows `drm.so` opening card1 and creating a 1920x1200 head half a second earlier. So the question asked is now "does the initramfs match what we would build now?", answered by a stamp that only a *successful* dracut writes, and the build is verified afterwards with `lsinitrd` — both that the theme is in there and that the copied `plymouthd.conf` still has a `Theme=` line. A build that fails either check writes no stamp and fails the module, so the next run retries instead of believing itself done.
+
+The module installs the renderers, the script plugin and the label plugin, deploys `theme/` to `/usr/share/plymouth/themes/coucou`, selects it, and rebuilds the initramfs — the splash starts before `/` is mounted, so the theme rides inside it. `--regenerate-all` covers every installed kernel, not just the running one: the second GRUB entry is the one booted when something is already wrong. The rebuild is the only slow step, so it is skipped unless something that ends up inside the initramfs actually changed. In user scope the whole module defers, being system-wide.
+
+Plymouth's script plugin has no drawing primitives — no text, no rectangle, no rounded corner — so every pixel is a PNG. [`make-assets.py`](../config/boot/plymouth/make-assets.py) generates them (the word in JetBrains Mono Light, the bar, the password dots) and the results are committed beside it, so a fresh machine needs no font to boot prettily; re-run it by hand, with `--width` for a panel that is not 1920 wide. The face is resolved through `fc-match` rather than a hardcoded path, and checked against what came back — fc-match answers with its nearest match and never fails, so a missing family would otherwise ship a word mark quietly set in the wrong typeface. One family runs through the whole splash: the mark, the status line, and the console the greeter draws on. The word depends on which way the machine is going. `Plymouth.GetMode()` answers `boot`, `shutdown`, `reboot` and a few update modes; shutdown and reboot load `logo-bye.png` (**byebye**) instead, because greeting someone on the way out reads backwards — the thing that prompted it was noticing "coucou" on a power-off. Reboot counts as leaving, since the boot that follows says coucou on its own. The update modes keep the greeting: the machine is neither arriving nor leaving there, and a third word for a screen seen twice a year is more vocabulary than a splash can carry. The load is guarded on the image rather than assumed — a missing `logo-bye.png` would make every sprite downstream NULL, and that would only ever show on a shutdown.
+
+This is also the half of the theme that has been *seen* working: the shutdown splash reads the theme from the real root rather than the initramfs, so it came up correctly while the boot splash was still falling back to text. That is what localised the boot failure to the initramfs and nothing else.
+
+[`coucou.script`](../config/boot/plymouth/theme/coucou.script) owns placement and motion: a cosine breath counted in frames (the language has no clock), and a bar that eases towards Plymouth's progress estimate and never runs backwards. The passphrase prompt draws its bullets as dots rather than glyphs, since no font is guaranteed to exist inside the initramfs.
+
+Under the bar runs the boot log, one line at a time. Nothing feeds that for free: systemd does not talk to Plymouth at all — on Fedora 44 the only shipped binary calling `plymouth_send_msg` is `systemd-storagetm` — and the `update --status` channel carries just the three messages Plymouth's own switch-root and read-write units send. So the module installs [`status-feed.sh`](../config/boot/plymouth/status-feed.sh) as `coucou-splash-status.service`, which polls systemd's job list five times a second and pushes the most recently started running unit. It polls rather than subscribing because the event-driven route is a D-Bus match, and the system bus is one of the services it would be narrating. It lives in `/etc` and `/usr/local`, not in the initramfs, so changing it costs no dracut run — and the initramfs phase, which it is too late for, shows Plymouth's own messages alone.
+
+**One splash, not two.** Left alone, the splash appears at ~1.07s on simpledrm, the screen goes black for ~1.8s while i915 claims the panel, then it comes back — `card0` is removed at 01.806 and `card1` arrives at 03.573, and between them there is no display device for any theme to draw on. Upstream describes the same thing in the commit that added Fedora's `UseSimpledrmNoLuks` default: *"the unlock screen will briefly show and then the screen goes black while the native GPU driver loads leading to a jarring experience"*. The module sets `UseSimpledrm=0`, which `load_settings()` reads *before* `UseSimpledrmNoLuks` and which short-circuits it, so this beats the distribution default rather than fighting it. The trade is a 0.7s flash at 1.1s exchanged for nothing until ~3.6s; both reach a stable splash at the same moment, but the machine now goes from black to the word once and stays there. The file is copied into the initramfs, so its hash is part of the rebuild stamp.
+
+**No progress bar on the way out.** On shutdown and reboot the bar is hidden and the word is the whole splash. Plymouth's estimate is elapsed time over the duration of the previous run of the same operation: a fair guess for a boot, which does roughly the same work every time, and a poor one for a shutdown, whose length is set by whatever is still holding a mount or a session — exactly the part that varies. A bar there fills at a rate unrelated to what is happening and either finishes early or hangs near the end. It is a decoration shaped like a measurement, which is worse than no measurement.
+
+**Resolutions.** Placement is fractional — the word at 0.50 of the height, the bar at 0.895, the log at 0.935, all centred horizontally on the screen's own width — so the composition holds at any resolution and any aspect ratio, and `SetDisplayHotplugFunction` re-lays it out if the mode changes mid-boot. The assets are scaled by `layout.k`, the panel's width over `REF_WIDTH`, with a snap to exactly 1 so the reference panel is never resampled. Two things do not follow from that:
+
+- **Sharpness off the reference width.** Scaling goes through Plymouth's `Image.Scale`, not through `make-assets.py`'s. The layout stays right, the word mark just gets softer than it needs to be. `install.sh` reads the connected panel out of `/sys/class/drm/*/status` and says so when it differs, with the `make-assets.py --width` line to fix it.
+- **Text.** A font description is a string and this language cannot build one from a number, so the status line's size comes off a four-rung ladder (`STATUS_FONT*` / `STATUS_K_*`) instead of scaling continuously. `simulate.py` reads the same ladder and applies it, so `--width 3840 --height 2160` is a real preview of a 4K panel.
+
+**Two screens.** Plymouth does not lay displays out side by side, and this is the part that is easy to get backwards. `update_displays()` in `script-lib-sprite.c` builds one virtual canvas as wide as the widest display and as tall as the tallest, *centres* every display inside it, and draws every sprite on every display at `sprite.x - display.x`. Two screens are not two canvases; they are two centred windows onto the same one, and duplicating sprites per head would double-draw rather than help.
+
+So `measure_screen()` lays out inside the intersection of those windows, which — since they are all centred — is exactly the smallest width by the smallest height, centred on the canvas. `Window.GetWidth(i)` returns display *i*'s width and NULL past the end, which is the only way to count them; with no argument it returns the canvas. Both forms are used. The consequence worth knowing: the splash is sized for the *smallest* attached display, so it is guaranteed to fit on every screen and looks correspondingly smaller on a large one. `simulate.py --heads 1920x1200,3840x2160` renders what each screen actually shows, stacked, so this is checkable without owning a second monitor.
+
+One ordering dependency this creates: `plymouth-plugin-label` has to be installed *before* dracut runs, or `plymouth-populate-initrd` finds no `label-freetype.so` to copy and skips the font symlink with it — leaving the status line blank at boot and nowhere else. `install.sh` does the packages first for that reason.
+
+[`simulate.py`](../config/boot/plymouth/simulate.py) renders the motion to a video and plays it full screen — the fast loop for judging the pulse and the easing, since it costs nothing but a few seconds of CPU. It composites the real PNGs and reads every constant out of `coucou.script` rather than carrying its own copy, so it cannot drift from the theme; what it does *not* reproduce is Plymouth's scaler, its timing under load, or the panel itself. The boot log is faked from a list of plausible unit names, and `--print-schedule` hands that same list to `preview.sh --status`, so the fake boot log is defined once rather than twice.
+
+**The status line's font** is `JetBrains Mono`, and the family string is doing two jobs. On a booted system the plugin is `label-pango`, which honours the family. Inside the initramfs it is `label-freetype`, which ignores the family entirely and keeps two faces, a default and a monospace one, choosing between them by substring — `strstr(font, "Mono")`. So naming JetBrains Mono is also what selects the monospace slot at boot; rename it to something without "Mono" in it and the boot silently falls back to the proportional face while the preview keeps looking right.
+
+That slot is filled by `fc-match monospace` run **as root at dracut time**, which is why the module installs a system-wide `/etc/fonts/conf.d/70-mono-font.conf` ([`mono-fontconfig.conf`](../config/boot/plymouth/mono-fontconfig.conf)) rather than a user rule: a user rule cannot reach root's query, and an environment override passed to one dracut run would be undone by the next kernel update rebuilding the initramfs on its own. It is numbered **55**, and the numbering is the whole mechanism — running backwards from the obvious guess. `mode="prepend"` inserts before the element the test *matched*, and every package rule tests the same generic `monospace`, so a rule running later lands closer to `monospace` and further from the head of the list: the earliest rule wins. Shipped at 70 it was loaded, reported active by `fc-conflist`, and changed nothing — `FC_DEBUG=1 fc-match monospace` showed JetBrains Mono sitting in last place. 55 puts it after `50-user.conf`, so a per-user file can still override, and before `56-google-noto-sans-mono-vf.conf`, which is the one to beat. (`config/fonts/70-ui-font.conf` wins for a different reason: per-user files are all pulled in at position 50.) Deliberate side effect: this changes the generic monospace default for the whole machine, so the terminal and the editor — which name JetBrains Mono explicitly — stop being contradicted by it. `install.sh` checks the *result* (`fc-match` as root) rather than just the file copy, and counts the rule as an initramfs-relevant change even though it is not copied into one: it decides which font file is.
+
+The size is **points at 96 dpi** in both plugins, not pixels — `FT_Set_Char_Size(face, points * 64, 0, 96, 0)` — so 15 is 20px on screen. A `px` suffix would switch to literal pixels; nothing uses it. The simulator converts before handing the size to PIL, and prints the family it resolved, so a mismatch with the boot shows up rather than hiding.
+
+[`preview.sh`](../config/boot/plymouth/preview.sh) shows the splash without rebooting — **on hardware where that is possible, which this laptop is not**. Plymouth renders to whatever DRM device it can open; at boot that is simpledrm on `/dev/dri/card0`, and once i915 claims the panel as `card1` simpledrm is released, so after boot card0 is gone. A hand-started `plymouthd` then opens no device, cannot start a graphical splash, and falls back to the text one — indistinguishable on screen from a theme that draws nothing. The script now reads the daemon log for exactly that failure and says so, instead of letting the tool's limit be blamed on the theme. When it fires, the real diagnosis is a real boot: `plymouth.debug` on the kernel command line writes `/var/log/plymouth-debug.log`.
+
+Mechanically it works like this: it deploys the theme, starts `plymouthd` on a spare VT, switches to it and switches back — with a detached watchdog that returns the screen even if the script is killed. `--sweep` drives the bar through a known 0→100 ramp, `--password` exercises the prompt.
+
 ---
 
 ## Applications
@@ -150,13 +218,43 @@ Rendered PDFs are cached in `~/.cache/liseuse/md/`, keyed on the mtimes of both 
 
 ## Opt-in
 
-### `login-manager`
+### `boot/login`
 
-greetd + tuigreet, replacing the display manager. Interactive: it asks before touching system login. Creates the `greeter` user, disables gdm/sddm/lightdm, and **copies** `greetd/config.toml` to `/etc/greetd/` rather than linking it, so repo edits do not go live by themselves.
+**greetd + tuigreet** on VT1, replacing the display manager. Interactive: it asks before touching system login.
 
 ```bash
-./install login-manager
+./install greeter        # `./install login-manager` still works
 ```
+
+**The console draws in JetBrains Mono.** A Linux VT does not render through fontconfig — it draws from a PSF bitmap font handed to the kernel by `setfont` — so [`make-console-font.py`](../config/boot/login/make-console-font.py) rasterises the outlines into one and `console/` carries the result. It writes PSF2 directly rather than piping through `otf2bdf | bdf2psf`, because those are two conversions and two chances to lose the one decision that decides whether a 1-bit rasterisation is legible: where the threshold sits. `--preview` renders the font back out of its own bytes, which is also the only check that the packing and glyph order are right.
+
+The box-drawing glyphs are **drawn, not rasterised**, and the measurement says why. At 24px JetBrains Mono has a 14.4px advance and a 33px line height, but `U+2502` draws 37 rows of ink and `U+2500` draws 16 columns: the box glyphs deliberately overhang so they tile, on a cell whose aspect ratio is about 2.57. A cell wide enough to match would need more rows than the kernel's 32 — so there is no legal cell where those glyphs join, and rasterising them gives a border in disconnected fragments. Generating them puts the arms on the cell edges by construction. The dashed and double-line variants are deliberately absent rather than approximated: nothing here draws with them, and a missing glyph shows as the kernel's fallback, where one built wrong shows as a border that almost lines up.
+
+**The glyph order is a contract, and breaking it produced the strangest screen of the whole module**: a greeter whose background was a solid field of `@`. The console's screen buffer stores *glyph indices*, not characters, so text painted before a font swap keeps its indices and is re-rendered with the new font. tuigreet had drawn its background of spaces under the kernel's built-in font, where space is glyph 32 — and this font's glyph 32 was `@`, because ASCII started at index 0 (`chars[32] = 0x20 + 32 = 0x40`). Fedora's own fonts avoid this by convention: `latarcyrheb-sun32` maps glyph 32 to U+0020, 65 to U+0041, 97 to U+0061 — identity for Latin-1, extras above 255. The generator now does the same, which pushes the count to 512 (the other legal size); 512-glyph mode spends the intensity bit on glyph selection, leaving eight background colours, and the greeter draws named ANSI colours on black so it never notices. The repair script also clears VT1 after loading the font — harmless now, but it removes the class of problem rather than the instance.
+
+**The count is exactly 256 or 512, and that is a hard requirement, not a round number.** `fbcon` accepts a console font of 256 or 512 glyphs and refuses anything else, with a message that names neither the count nor the rule: `setfont: ERROR kdfontop.c:240 put_font_kdfontop: ioctl(KDFONTOP): Invalid argument`. This font first came to 238 and was rejected for that alone — its geometry was already the shape Fedora's own 16x32 font uses. What found it was measuring every console font on the system: 512, 512, 256, and ours at 238. The generator pads to the next legal count with blank glyphs carrying an empty Unicode entry, so nothing can land on them.
+
+The cell is **8x16**, the size a Linux console has always been, which on this 1920x1200 panel gives 240x75 characters. `--cell WxH` changes it and the output filename follows, so `vconsole.conf`'s `FONT=` follows too — and `install.sh` reads the name back out of that file rather than keeping its own copy, since a second copy could drift and the console would quietly fall back to the kernel default. The rasterisation size and baseline are derived from the cell rather than fixed, so a different cell needs no second adjustment.
+
+**It also repairs the keyboard**, which it did not break. `systemd-vconsole-setup` applies the font and the keymap together and abandons *both* when `setfont` fails — logging `Configuration of first virtual console failed, ignoring remaining ones`. It fails on every early attempt here because Plymouth holds VT1 in `KD_GRAPHICS` mode and a font cannot be written to a console in that state. The keymap only ever landed because one late retry happened to win a race against greetd starting. `console-setup-late.service` removes the race: it runs after `plymouth-quit-wait`, applies the keymap **first**, and cannot fail the boot.
+
+Its ordering is `After=plymouth-quit-wait.service` and `Before=greetd.service`, and nothing else — which is the second half of the lesson. An earlier version also said `Before=systemd-user-sessions.service`, which looks harmless and is not: `plymouth-quit-wait` is itself ordered *after* `systemd-user-sessions`, so that one extra word closed a cycle, and systemd broke it the only way it can — `Job console-setup-late.service/start deleted to break ordering cycle`. The unit was enabled, reported itself enabled, and never ran once. `greetd` is already ordered after `plymouth-quit-wait`, so `Before=greetd.service` alone places it exactly where it needs to be. A font that will not load now costs a typeface instead of a layout.
+
+**Two greeters were tried here and both reverted**, which is recorded so neither gets tried a third time by someone reading only the result.
+
+**regreet** (GTK4, under `cage`) was too rigid, and it cost a near-lockout: cage takes its keyboard layout from XKB rather than from `/etc/vconsole.conf`, so with nothing setting `XKB_DEFAULT_LAYOUT` the greeter came up in US QWERTY on an AZERTY machine, at a masked password prompt.
+
+**ly** had the better argument — Fedora packages it, where tuigreet comes from a COPR, one more thing that has to still exist the day this repo is cloned onto a new machine. It cost three separate lockouts before it ran at all, and each one is a lesson that outlived it:
+
+- A `•` in `asterisk` made ly **discard its entire config file** and run on defaults. It does not skip an option it cannot parse, and says so nowhere except `/var/log/ly.log`. Three bytes of UTF-8 where the option takes one character.
+- `session_log` then defaulted back into `$HOME`, which `xdm_t` may not create files in, and ly treats failing to open that log as fatal to the session. A login authenticated correctly and vanished in the same second, reported at the prompt as `AccessDenied`.
+- A hand-written minimal config dropped the `/bin/sh` Fedora puts in front of its non-executable `setup.sh`. Keys omitted from a config do not fall back to the *distribution's* defaults — they fall back to the program's **compiled-in** defaults, and those differ.
+
+It also raised a real question worth keeping: `ly-kmsconvt@.service` runs ly inside **kmscon**, which replaces the VT and renders through pango — a real vector font at any size, no 512-glyph ceiling, no synthesised box drawing. The catch is that kmscon takes its keyboard from XKB, exactly the trap regreet fell into, though there it is a deliberate option (`--xkb-layout fr --xkb-variant oss`) rather than an invisible default. That remains the one route to a properly-rendered font at the login screen, and it is a step onto the login path, so it is not taken by accident.
+
+tuigreet asks the console keymap for its layout, like everything else on a VT, and greetd passes the session command straight through. What the experiments left behind is kept: the console renders in JetBrains Mono, the keymap repair survives Plymouth holding the VT, and the word stays on screen through the gap before the first frame.
+
+**The black gap when Hyprland starts** is closed by [`session-splash.sh`](../config/boot/login/session-splash.sh), which greetd's `--cmd` points at. A VT keeps showing whatever was last drawn on it until something takes the display away, and what takes it away is Hyprland's first modeset — so writing the word to the console immediately before `exec`ing the session leaves it up for exactly the length of the gap, and it disappears because the desktop replaced it rather than because anything timed out. It is text in the console font, placed at `LOGO_CENTRE`, where `coucou.script` puts the word mark, so the continuity is real even though the mechanism is trivial. No second Plymouth: re-showing the animated splash would mean a daemon holding DRM master while the compositor is trying to take it, which is a fight over the device to save a second.
 
 ### `kde`
 

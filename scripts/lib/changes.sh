@@ -91,12 +91,44 @@ fp_path() {
 # top-level directory cannot quietly fall outside the manager's world. Same
 # philosophy as scripts/check-deps.sh, which exists precisely because silent
 # gaps cost hours.
+# _module_owning <repo-relative path under config/> -> module name
+#
+# Modules are normally config/<name>/, but may be nested one level
+# (config/boot/plymouth). Rather than keep a list of which prefixes are
+# grouping directories -- a list that would rot the first time one was
+# added -- this asks the filesystem which prefix actually carries the
+# install.sh, longest match losing to shortest so a nested module wins over
+# its group.
+_module_owning() {
+    local root rest first second
+    root="$(dotfiles_root)"
+    rest="${1#config/}"
+    first="${rest%%/*}"
+
+    [ -f "$root/config/$first/install.sh" ] && { printf '%s' "$first"; return 0; }
+
+    rest="${rest#*/}"
+    second="${rest%%/*}"
+    if [ -n "$second" ] && [ -f "$root/config/$first/$second/install.sh" ]; then
+        printf '%s/%s' "$first" "$second"
+        return 0
+    fi
+
+    # Nothing owns it: a file sitting directly in a grouping directory
+    # (config/boot/README.md), or the remains of a deleted module. Empty,
+    # so path_target can answer 'none' rather than name a module that does
+    # not exist and would be handed to a runner that cannot run it.
+    printf ''
+}
+
 path_target() {
     case "$1" in
         scripts/lib/hardware.sh|scripts/install-hardware.sh|scripts/hardware-detect.sh)
                                        printf 'phase:hardware' ;;
         setup_fedora.sh)               printf 'phase:system' ;;
-        config/*/*)                    local rest="${1#config/}"; printf 'module:%s' "${rest%%/*}" ;;
+        config/*/*)                    local owner; owner="$(_module_owning "$1")"
+                                       if [ -n "$owner" ]; then printf 'module:%s' "$owner"
+                                       else printf 'none'; fi ;;
         config/*)                      printf 'none' ;;           # a stray file directly under config/
         wallpapers/*)                  printf 'module:hyprland' ;;  # consumed by prisme / set_wallpapers.sh
         bin/*|scripts/lib/*.sh|install|install_all.sh)

@@ -39,18 +39,30 @@ _modules_lib_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 # liseuse), so installing it first would leave a reading library with no way
 # to open it on a fresh machine.
 #
+# boot/plymouth sits with the desktop modules and carries no constraint of
+# its own: it is the only module whose output is seen before any of this is
+# running, and nothing it touches is shared with the rest. It is listed
+# here rather than as an opt-in because a fresh machine without it boots
+# to a black screen, which on an OLED panel is indistinguishable from a
+# machine that failed to start.
+#
+# Module names may carry ONE level of nesting, as config/boot/ uses: the
+# two things that own the screen before the desktop exists (the splash and
+# the greeter) are one subject, and burying that in a flat list next to
+# `mpv` lost it. A grouping directory has no install.sh of its own.
+#
 # hyprland last: the desktop assembles everything above it.
 # ---------------------------------------------------------------------------
 MODULE_ORDER=(
     fonts bash ccpkg ccnote ccslide tmux wezterm nvim wireplumber
     mangohud nemo fuzzel fastfetch firefox brave mpv liseuse
-    hyprland
+    boot/plymouth hyprland
 )
 
 # Opt-in modules: real modules, deliberately never run by default. They must
 # be named explicitly.
 declare -A MODULE_OPTIN=(
-    [login-manager]="rewrites system login (greetd) and prompts interactively, which would block an otherwise unattended run"
+    [boot/login]="rewrites system login (greetd + tuigreet) and prompts interactively, which would block an otherwise unattended run"
     # This machine runs Hyprland; KDE is not wanted (asked for: "pas besoin de
     # kde"). Kept in the repo rather than deleted, but never run by default.
     #
@@ -114,13 +126,27 @@ registry_validate() {
 
     # 2. Everything on disk must be registered. THIS is the check that matters
     #    -- it is the one whose absence shipped a machine with no launcher.
-    for dir in "$root"/config/*/; do
-        m="$(basename "$dir")"
+    # Both depths, because a module may be nested one level (config/boot/*).
+    # A directory with no install.sh is not a module; if it also holds no
+    # nested one it is a stray, which case 2b below catches.
+    for dir in "$root"/config/*/ "$root"/config/*/*/; do
+        [ -d "$dir" ] || continue
+        m="${dir#"$root"/config/}"; m="${m%/}"
         [ -f "$dir/install.sh" ] || continue
         _mod_registered "$m" || {
             _mod_err "registry: config/$m/install.sh exists but is in no list — add '$m' to MODULE_ORDER (or MODULE_OPTIN) in scripts/lib/modules.sh"
             errs=1
         }
+    done
+
+    # 2b. A directory directly under config/ that is neither a module nor a
+    #     grouping directory is a stray: nothing would ever run it, which is
+    #     the same class of silent gap as case 2, one level up.
+    for dir in "$root"/config/*/; do
+        [ -f "$dir/install.sh" ] && continue
+        compgen -G "$dir*/install.sh" >/dev/null && continue
+        _mod_err "registry: config/$(basename "$dir")/ has no install.sh and groups no module — nothing would ever run it"
+        errs=1
     done
 
     # 3. No duplicates: a module listed twice would be installed twice, and

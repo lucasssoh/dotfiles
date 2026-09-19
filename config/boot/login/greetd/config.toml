@@ -1,0 +1,92 @@
+# /etc/greetd/config.toml -- deployed by config/boot/greetd/install.sh.
+#
+# greetd owns VT1 and runs one command there: tuigreet, on the bare
+# console.
+#
+# ── Two greeters were tried and reverted ───────────────────────────────
+#
+# regreet (GTK4, under cage) was too rigid, and cost a near-lockout: cage
+# takes its keyboard layout from XKB rather than from /etc/vconsole.conf,
+# so with nothing setting XKB_DEFAULT_LAYOUT the greeter came up in US
+# QWERTY on an AZERTY machine, at a masked password prompt.
+#
+# ly was packaged by Fedora, which was the good argument for it. It cost
+# three separate lockouts before it ran -- a bullet character that made it
+# discard its entire config file, a session log path SELinux refuses, and
+# a minimal config that dropped the `/bin/sh` Fedora puts in front of its
+# non-executable setup.sh -- and once it ran, it was not better than this.
+#
+# tuigreet asks the console keymap for its layout, like everything else on
+# a VT, and greetd passes the session command straight through. What the
+# experiments left behind is kept: the console renders in JetBrains Mono,
+# and the word stays on screen through the gap before the first frame.
+#
+# ── Theme: monochrome silver/white ─────────────────────────────────────
+# Echoes the "verre givré" palette used across hyprlock/quickshell
+# (platinum accent, white highlights, no saturated color). Named ANSI
+# colors only -- the Linux VT console can't be trusted to render
+# truecolor/hex well, and tuigreet's --theme spec only guarantees the
+# ANSI-named set anyway (see apognu/tuigreet README).
+#   white    = typed input (brightest)
+#   gray     = border/prompt labels/button hints (structural accent)
+#   darkgray = base text/footer action text (deemphasized, matches the
+#              dim date label under the clock in hyprlock.conf)
+# No banner: --issue dropped, just the bare login prompt.
+#
+# ── --cmd points at a wrapper, and why ─────────────────────────────────
+#
+# /usr/local/libexec/coucou-session-splash does two things and then execs
+# the real session, so both live in one place instead of being spelled out
+# on this line.
+#
+# It writes the word to the console first. A VT keeps showing whatever was
+# last drawn on it until something takes the display away, and what takes
+# it away is Hyprland's first modeset -- so the word covers the black gap
+# between the greeter exiting and the desktop appearing, and it vanishes
+# because the desktop replaced it rather than because anything timed out.
+#
+# Then it execs `systemd-cat -t hyprland /usr/bin/start-hyprland`, which
+# is what this line used to carry directly. greetd(5): "The command-line
+# is run by sh(1)". greetd owns VT1, and a session started from here
+# inherits that VT as its stdout -- nothing sits in between. Hyprland does
+# silence its own stdout, but only once it has read its config; the ~15
+# lines it emits before that -- rlimit bumps, manager construction, the
+# config path -- would land on VT1 in the gap this splash is covering.
+# systemd-cat execvp()s, so it replaces itself and start-hyprland stays
+# greetd's direct child: watchdog, signal handling and session tracking
+# are all untouched. Read the lines back with:
+#
+#     journalctl -t hyprland -b
+#
+# `>/dev/null 2>&1` would work too and would normally lose nothing (the
+# same lines are duplicated into $XDG_RUNTIME_DIR/hypr/<id>/hyprland.log).
+# It was not used because it also swallows start-hyprland's OWN failure
+# output on the one boot where Hyprland never comes up -- precisely when a
+# black screen leaves nothing else to read.
+#
+# ── Both multi-word values below are single-quoted, and must stay so ────
+# sh(1) splits on `;`, and --theme's value is full of them. Unquoted, the
+# line ended at the first semicolon: tuigreet was handed `--theme
+# border=gray` and nothing else, while `text=darkgray`, `time=white`,
+# `prompt=gray`, `input=white`, `action=darkgray` and `button=gray` were
+# parsed as six shell variable assignments to be run AFTER tuigreet exits.
+# Only one key out of seven ever reached the greeter. Verified by replaying
+# the exact line through sh before quoting it.
+#
+# What is NOT established: that this tuigreet build honours all seven key
+# NAMES. `border`, `button` and `answer` cannot be found anywhere in the
+# 0.9.1 binary (grep -a, while the colour-name table IS findable), so some
+# of them may be silently dropped. Checked that this is harmless: tuigreet
+# parses an invented key without error or non-zero exit, exactly as it has
+# been doing with `border` all along. So this change is an improvement or
+# a no-op, never a regression -- but do not trust the palette comment
+# above until someone has actually LOOKED at the greeter.
+#
+# Same reason for the quotes around --cmd: without them `systemd-cat`
+# would be the session and the rest of the words would be lost.
+[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --cmd /usr/local/libexec/coucou-session-splash --remember --asterisks --theme 'border=gray;text=darkgray;time=white;prompt=gray;input=white;action=darkgray;button=gray'"
+user = "greeter"

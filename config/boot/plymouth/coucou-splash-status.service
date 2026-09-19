@@ -1,0 +1,24 @@
+[Unit]
+Description=Feed unit names to the boot splash, one line at a time
+Documentation=file:///usr/local/libexec/coucou-splash-status
+# Early boot, before the ordering that ordinary services get. The splash
+# is already up by the time this starts and takes itself down when the
+# splash goes, so the only ordering that matters is "inside that window".
+DefaultDependencies=no
+After=plymouth-start.service
+Before=plymouth-quit.service
+# No graphical boot was asked for: nothing to narrate.
+ConditionKernelCommandLine=rhgb
+
+[Service]
+Type=exec
+ExecStart=/usr/local/libexec/coucou-splash-status
+# It exits on its own when the splash quits; this only covers the case
+# where it somehow does not.
+TimeoutStopSec=2
+# Decoration must never be the reason a boot stalls or is marked failed.
+Restart=no
+SuccessExitStatus=0 1 143
+
+[Install]
+WantedBy=sysinit.target

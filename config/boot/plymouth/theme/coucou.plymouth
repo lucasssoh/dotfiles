@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=coucou
+Description=Pulsing word mark and a thin macOS-style progress bar, on black
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/coucou
+ScriptFile=/usr/share/plymouth/themes/coucou/coucou.script

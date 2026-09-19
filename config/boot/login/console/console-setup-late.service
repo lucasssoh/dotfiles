@@ -1,0 +1,34 @@
+[Unit]
+Description=Re-apply console keymap and font once Plymouth has released the console
+Documentation=man:loadkeys(1) man:setfont(8)
+# systemd-vconsole-setup runs far too early to win: Plymouth owns VT1 in
+# graphics mode from the initramfs onward, setfont cannot write a font to
+# a console in that state, and systemd abandons the keymap with it. This
+# runs after the splash is gone and before anything asks for a password.
+# After plymouth-quit-wait and before greetd, and NOTHING ELSE. An earlier
+# version also said Before=systemd-user-sessions.service, which looks
+# harmless and is not: plymouth-quit-wait is itself ordered After
+# systemd-user-sessions, so that one extra word closed a cycle
+#
+#   console-setup-late -> plymouth-quit-wait -> systemd-user-sessions
+#                      -> console-setup-late
+#
+# and systemd broke it the only way it can, by deleting the job:
+#
+#   Job console-setup-late.service/start deleted to break ordering cycle
+#
+# The unit was enabled, showed as enabled, and never ran once. greetd is
+# also ordered after plymouth-quit-wait, so naming the greeter alone
+# already places this exactly where it needs to be.
+After=plymouth-quit-wait.service
+Before=greetd.service
+# Nothing to re-apply on a boot that never had a splash holding the VT.
+ConditionKernelCommandLine=rhgb
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/libexec/console-setup-late
+
+[Install]
+WantedBy=multi-user.target

@@ -35,7 +35,7 @@ Phases (default: everything -- system packages, then every module):
   hardware       Only the CPU/GPU-specific drivers, auto-detected.
   user           All config modules, Hyprland, KDE. No sudo prompt for
                  anything already installed.
-  login-manager  greetd + tuigreet. Opt-in and interactive.
+  greeter        greetd + tuigreet on VT1. Opt-in and interactive.
 
 Options:
   --detect     Print the hardware detection and exit. Changes nothing.
@@ -55,7 +55,7 @@ for a in "$@"; do
         system)        args+=(--system-only) ;;
         hardware)      args+=(--hardware-only) ;;
         user)          args+=(--user) ;;
-        login-manager) args+=(--login-manager) ;;
+        greeter|login-manager) args+=(--greeter) ;;   # old name kept working
         --detect)      exec "$DOTFILES_DIR/scripts/hardware-detect.sh" --report ;;
         --dry-run|-n)  args=(-n "${args[@]+${args[@]}}") ;;
         -h|--help)     usage; exit 0 ;;

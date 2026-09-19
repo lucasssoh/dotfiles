@@ -16,7 +16,7 @@ cd dotfiles
 | `./install system` | Base Fedora packages and services ([`setup_fedora.sh`](../setup_fedora.sh)), then the hardware drivers this machine needs | yes |
 | `./install hardware` | The hardware drivers only | yes |
 | `./install user` | Modules, symlinks, Rust binaries — nothing root-owned | no |
-| `./install login-manager` | greetd + tuigreet. Interactive | yes |
+| `./install greeter` | greetd + tuigreet, console in JetBrains Mono. Interactive | yes |
 
 | Option | |
 |---|---|
@@ -24,7 +24,7 @@ cd dotfiles
 | `--detect` | Print the hardware detection and exit |
 | `--help` | Usage |
 
-`login-manager` and `kde` are [opt-in](modules.md#opt-in): never part of a default run.
+`boot/login` (the `greeter` verb) and `kde` are [opt-in](modules.md#opt-in): never part of a default run.
 
 ## What the phases do
 
