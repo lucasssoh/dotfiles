@@ -159,6 +159,13 @@ Item {
         anchors.top: handle.bottom
         anchors.leftMargin: 20
         anchors.rightMargin: 20
+        // 20, the same as BaliseHome's own page area -- no special case
+        // needed here. The headline used to sit 5px under the handle
+        // against Balise's 31, but this margin was never the cause: see
+        // bigDuration below, whose Texts were anchored to the Row's own
+        // baseline and so drew their ink above the box entirely. With
+        // that fixed this measures 36px, five MORE than Balise, which is
+        // the right amount of air under a 28px display number.
         anchors.topMargin: 20
         spacing: 16
 
@@ -173,12 +180,27 @@ Item {
             Item {
                 id: bigRow
                 width: parent.width
-                height: 34
+                // 38, not 34: a 28px line box measures ~37, so the old
+                // value made the Row overflow its own container and the
+                // headline sat proud of the box it was centred in.
+                height: 38
 
                 // Digits large, units small beside them -- the shape a
                 // phone's battery screen uses, and the reason is that
                 // "5 h 15 min" at one size reads as five separate tokens
                 // while this reads as one duration.
+                // The small unit suffixes align on the BIG digits'
+                // baseline, by id -- never on `parent.baseline`.
+                //
+                // That was the original spelling and it is a trap: the
+                // parent here is the Row, a positioner whose own baseline
+                // is its top edge, so every Text got pinned by its
+                // baseline to y=0 and drew its entire ink ABOVE the box.
+                // Measured, the headline started 15px below the panel top
+                // where the layout said 38 -- which is the whole of the
+                // "collé au top" this fixes. The digits themselves take
+                // no vertical anchor at all: left alone they sit at y=0
+                // and give the Row its height.
                 Row {
                     id: bigDuration
                     anchors.left: parent.left
@@ -187,7 +209,7 @@ Item {
                     visible: root.estParts !== null
 
                     Text {
-                        anchors.baseline: parent.baseline
+                        id: hoursDigits
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.estParts ? root.estParts.h : ""
@@ -197,7 +219,7 @@ Item {
                         font.bold: true
                     }
                     Text {
-                        anchors.baseline: parent.baseline
+                        anchors.baseline: hoursDigits.baseline
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "h"
@@ -207,7 +229,6 @@ Item {
                         rightPadding: 4
                     }
                     Text {
-                        anchors.baseline: parent.baseline
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         // Zero-padded: the minutes are the second half of
@@ -221,7 +242,7 @@ Item {
                         font.bold: true
                     }
                     Text {
-                        anchors.baseline: parent.baseline
+                        anchors.baseline: hoursDigits.baseline
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "min"
@@ -240,7 +261,7 @@ Item {
                     visible: root.estParts === null
 
                     Text {
-                        anchors.baseline: parent.baseline
+                        id: levelDigits
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: PowerState.present ? Math.round(PowerState.pct) : "—"
@@ -250,7 +271,7 @@ Item {
                         font.bold: true
                     }
                     Text {
-                        anchors.baseline: parent.baseline
+                        anchors.baseline: levelDigits.baseline
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "%"
