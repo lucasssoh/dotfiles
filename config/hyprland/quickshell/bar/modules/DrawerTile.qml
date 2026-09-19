@@ -73,27 +73,13 @@ Rectangle {
         spacing: 8
 
         // The glyph sits in its own rounded-square badge rather than
-        // floating bare above the label -- accent-tinted while the tile is
-        // active, the same neutral NotificationCard.qml's own iconTile
-        // uses otherwise. The `visible` gate is what lets a tile drop the
-        // badge rather than show an empty square.
-        Rectangle {
-            visible: tile.glyph !== ""
-            width: 30
-            height: 30
-            radius: 9
-            color: tile.active ? Surfaces.accentStrong : Surfaces.cardHover
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                text: tile.glyph
-                color: tile.fg
-                font.family: Fonts.iconPhosphor
-                font.pixelSize: 17
-            }
+        // floating bare above the label. Moved out to
+        // DrawerIconBadge.qml when BaliseHome's SYSTEM rows needed the
+        // same badge -- see that file.
+        DrawerIconBadge {
+            glyph: tile.glyph
+            active: tile.active
+            accent: tile.accent
         }
         Text {
             width: tileText.width

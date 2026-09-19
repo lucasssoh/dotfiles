@@ -396,6 +396,7 @@ Item {
         RevealPop { item: trow; index: trow.revealIndex }
         required property string title
         property string subtitle: ""
+        property string glyph: ""
         property bool checked: false
         signal toggled(bool value)
 
@@ -437,9 +438,26 @@ Item {
         Behavior on color { ColorAnimation { duration: 120 } }
         Behavior on border.color { ColorAnimation { duration: 120 } }
 
-        Column {
+        // The same badge the connectivity tiles above carry -- asked
+        // for, so that SYSTEM reads as the same kind of control as the
+        // grid rather than as a list of bare labels. One shared
+        // component, see DrawerIconBadge.qml.
+        DrawerIconBadge {
+            id: trowBadge
             anchors.left: parent.left
             anchors.leftMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: trow.glyph
+            active: trow.checked
+            accent: root.accent
+        }
+
+        Column {
+            // Anchored to the badge when there is one and to the card
+            // edge when there is not, so a row without an icon keeps the
+            // layout it had before this existed.
+            anchors.left: trow.glyph !== "" ? trowBadge.right : parent.left
+            anchors.leftMargin: trow.glyph !== "" ? 12 : 16
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
@@ -454,7 +472,14 @@ Item {
                 // the highlight, not a neutral sitting inside it.
                 color: trow.checked ? root.accent : Ink.primary
                 font.family: Fonts.ui
-                font.pixelSize: 14
+                // 13, matching DrawerTile's own title, not the 14 these
+                // rows used before they had icons. Two reasons and they
+                // point the same way: the badge these gained takes 42px
+                // out of a 152px half-width cell, which left 78px against
+                // the 80px "Night mode" measures at 14 -- it elided. And
+                // "same style as the connectivity tiles" is about the
+                // type as much as the badge.
+                font.pixelSize: 13
                 font.bold: true
                 elide: Text.ElideRight
             }
@@ -487,6 +512,7 @@ Item {
         property int revealIndex: 0
         RevealPop { item: arow; index: arow.revealIndex }
         required property string title
+        property string glyph: ""
         signal activated()
 
         height: 46
@@ -514,16 +540,27 @@ Item {
         border.color: Qt.rgba(1, 1, 1, 0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
 
-        Text {
+        // Never `active`: a one-shot action has no on-state to tint,
+        // so this badge stays the neutral tier permanently.
+        DrawerIconBadge {
+            id: arowBadge
             anchors.left: parent.left
             anchors.leftMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: arow.glyph
+            accent: root.accent
+        }
+
+        Text {
+            anchors.left: arow.glyph !== "" ? arowBadge.right : parent.left
+            anchors.leftMargin: arow.glyph !== "" ? 12 : 16
             anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: arow.title
             color: Ink.primary
             font.family: Fonts.ui
-            font.pixelSize: 14
+            font.pixelSize: 13   // matches ToggleRow and DrawerTile
             font.bold: true
         }
 
@@ -756,6 +793,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
+                    glyph: "\uE11E"   // lu-moon
                     revealIndex: 8
                     checked: BaliseState.nightModeEnabled
                     onToggled: BaliseState.toggleNightMode()
@@ -764,6 +802,11 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "HDR"
+                    // lu-monitor: HDR is a per-DISPLAY capability here (this
+                    // page binds `monitor: Hyprland.monitorFor(...)`), so a
+                    // screen is the honest picture -- and it collides with
+                    // none of the other three glyphs in this group.
+                    glyph: "\uE11D"
                     revealIndex: 9
                     checked: root.hdrActive
                     onToggled: HdrState.toggle()
@@ -781,6 +824,7 @@ Item {
             ToggleRow {
                 width: parent.width
                 title: "Dark mode"
+                glyph: "\uE09D"   // lu-contrast
                 revealIndex: 10
                 subtitle: "turn dark mode on"
                 checked: AppearanceState.dark
@@ -790,6 +834,7 @@ Item {
                 ActionRow {
                     width: parent.width
                     title: "Screenshot"
+                    glyph: "\uE064"   // lu-camera
                     revealIndex: 11
                     onActivated: BaliseState.triggerScreenshot()
                 }
