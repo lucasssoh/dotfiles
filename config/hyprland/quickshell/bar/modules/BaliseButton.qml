@@ -239,6 +239,7 @@ Item {
     // BaliseState owns the toggle/mutual-exclusion-with-notifications
     // logic, same shape as NotificationBell.qml's own click handler.
     MouseArea {
+        cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         onClicked: BaliseState.togglePanel(root.screen)
     }

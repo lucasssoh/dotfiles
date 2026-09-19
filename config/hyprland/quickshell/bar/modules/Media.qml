@@ -400,6 +400,7 @@ Item {
     }
 
     MouseArea {
+        cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         onClicked: if (root.player) root.player.togglePlaying()
     }

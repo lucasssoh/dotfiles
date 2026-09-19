@@ -143,6 +143,7 @@ Item {
                 }
 
                 MouseArea {
+                    cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
                     // Hyprland.dispatch() sends the raw request string
                     // over Quickshell's own internal Hyprland IPC path,

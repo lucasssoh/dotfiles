@@ -247,6 +247,8 @@ Item {
     // the other three.
 
     MouseArea {
+        cursorShape: (root.clickCommand.length > 0 || root.rightClickCommand.length > 0)
+            ? Qt.PointingHandCursor : Qt.ArrowCursor
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {

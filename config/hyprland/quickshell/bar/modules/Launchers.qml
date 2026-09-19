@@ -168,6 +168,7 @@ Item {
                 }
 
                 MouseArea {
+                    cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
                     // Plain `hyprctl dispatch`, not the hl.dispatch Lua
                     // detour -- pip-daemon.sh already proves address-

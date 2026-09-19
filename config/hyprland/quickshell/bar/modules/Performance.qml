@@ -85,6 +85,7 @@ Item {
     }
 
     MouseArea {
+        cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         onClicked: Quickshell.execDetached(["bash", "-c",
             "$HOME/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"])

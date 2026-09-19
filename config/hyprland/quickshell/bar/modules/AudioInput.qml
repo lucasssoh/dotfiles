@@ -71,6 +71,7 @@ Item {
     }
 
     MouseArea {
+        cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {

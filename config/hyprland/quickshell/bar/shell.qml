@@ -1531,6 +1531,7 @@ ShellRoot {
                         }
 
                         MouseArea {
+                            cursorShape: Qt.PointingHandCursor
                             anchors.fill: parent
                             onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.local/bin/roue power"])
                         }
