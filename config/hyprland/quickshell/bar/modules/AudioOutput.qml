@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "../theme"
+import "../services"
 
 // Native port of waybar's `pulseaudio#output`. Zero exec, zero poll for
 // volume/mute: Pipewire.defaultAudioSink is a live DBus/pipewire-backed
@@ -165,6 +166,13 @@ Item {
     property real leadingPad: 0
     property real trailingPad: 0
 
+    // Which bar instance this module belongs to, handed down by shell.qml
+    // exactly as Battery/BaliseButton/NotificationBell take theirs -- the
+    // mixer opens on the monitor whose bar was clicked. Null on any caller
+    // that doesn't set it, which means the drawer opens on no particular
+    // screen rather than crashing.
+    property var screen: null
+
     implicitWidth: label.implicitWidth + 2 + root.leadingPad + root.trailingPad   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
     implicitHeight: 24
     visible: root.node !== null
@@ -218,10 +226,22 @@ Item {
         cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        // Left click used to regenerate a wheel config from `pactl list
+        // sinks` and launch the external `roue` process to draw it, purely
+        // to pick an output. It opens the mixer drawer instead now
+        // (modules/mixer/), which does the same job as a property write
+        // on Pipewire.preferredDefaultAudioSink and carries the per-app
+        // sliders that had no in-bar path at all. audio.sh's roue-gen and
+        // the wheel itself are untouched in the repo, just unreferenced
+        // from here -- same as Bluetooth/Network/Ethernet.qml.
+        //
+        // Right click still opens pavucontrol. Kept deliberately: this
+        // drawer does levels and routing, not per-stream device moves or
+        // card profile switching, and the escape hatch to the full app is
+        // one click either way.
         onClicked: (mouse) => {
             if (mouse.button === Qt.LeftButton)
-                Quickshell.execDetached(["bash", "-c",
-                    "$HOME/.config/waybar/scripts/audio.sh roue-gen && $HOME/.local/bin/roue audio-output"]);
+                MixerState.togglePanel(root.screen);
             else
                 Quickshell.execDetached(["pavucontrol"]);
         }

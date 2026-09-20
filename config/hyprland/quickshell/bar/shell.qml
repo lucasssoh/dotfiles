@@ -7,6 +7,7 @@ import "modules" as Modules
 import "modules/veille"
 import "modules/balise"
 import "modules/power"
+import "modules/mixer"
 import "services"
 import "theme"
 
@@ -396,6 +397,12 @@ ShellRoot {
         function togglePower(): void {
             PowerState.togglePanel(Quickshell.screens[0]);
         }
+        // Same reasoning again for the mixer, which opens by clicking one
+        // of the two audio pills and nothing else.
+        // `qs -c bar ipc call bar toggleMixer`.
+        function toggleMixer(): void {
+            MixerState.togglePanel(Quickshell.screens[0]);
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -461,6 +468,16 @@ ShellRoot {
             if (PowerState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 PowerState.close();
+            }
+
+            // ...and the mixer. Closing it also drops the PwObjectTracker
+            // holding every audio node and stops both peak monitors
+            // (MixerState gates all three on panelOpen), so an outside
+            // click is what takes the drawer back to costing nothing --
+            // the same shape as the line above it.
+            if (MixerState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                MixerState.close();
             }
         }
     }
@@ -1234,6 +1251,14 @@ ShellRoot {
                     // TOOLS' width for it.
                     PowerHome {
                         drawerOpen: PowerState.panelOpen && PowerState.activeScreen === bar.screen
+                    },
+                    // Fourth entry, same contract as the three above. Like
+                    // PowerHome it is opened by modules already in the row
+                    // (both audio pills) rather than by a button of its
+                    // own, so nothing was added to TOOLS' width for it
+                    // either.
+                    MixerHome {
+                        drawerOpen: MixerState.panelOpen && MixerState.activeScreen === bar.screen
                     }
                 ]
                 // Glass. These three float free of every screen edge, so
@@ -1459,8 +1484,11 @@ ShellRoot {
                     // wider than the ~7px two chips sit apart on
                     // purpose, because a chip's border does part of the
                     // separating and a bare glyph has nothing.
-                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: toolsInk }
-                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: toolsInk }
+                    // `screen` is what tells the mixer drawer which bar was
+                    // clicked -- same hand-down Battery/BaliseButton/
+                    // NotificationBell already take.
+                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: toolsInk; screen: bar.screen }
+                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: toolsInk; screen: bar.screen }
 
                     // ---- son | reseau ----
                     Item { width: toolsIsland.groupGap; height: 1 }

@@ -2,12 +2,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.Pipewire
 import "../theme"
+import "../services"
 
 // Native port of waybar's `pulseaudio#input` (mic). See AudioOutput.qml.
-// Left click regenerates and opens the "audio-input" roue wheel
-// (audio.sh roue-gen-input, one sector per source -- see
-// waybar/scripts/audio.sh), same pattern as AudioOutput.qml's
-// audio-output wheel.
+// Left click opens the mixer drawer (modules/mixer/) -- the same one the
+// output module opens, scrolled to nothing in particular because the
+// panel holds both directions at once. It used to regenerate and launch
+// the "audio-input" roue wheel (audio.sh roue-gen-input, one sector per
+// source); see AudioOutput.qml's own click handler for why that went.
 
 Item {
     id: root
@@ -36,6 +38,9 @@ Item {
     // smaller gap shared with AudioOutput.
     property real leadingPad: 0
     property real trailingPad: 0
+
+    // Handed down by shell.qml -- see AudioOutput.qml's copy of this.
+    property var screen: null
 
     implicitWidth: label.implicitWidth + 2 + root.leadingPad + root.trailingPad   // tight fit, no floor -- same fix Battery.qml got, TOOLS' icon-only modules don't need METRICS' square-pill padding
     implicitHeight: 24
@@ -76,8 +81,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
             if (mouse.button === Qt.LeftButton)
-                Quickshell.execDetached(["bash", "-c",
-                    "$HOME/.config/waybar/scripts/audio.sh roue-gen-input && $HOME/.local/bin/roue audio-input"]);
+                MixerState.togglePanel(root.screen);
             else
                 Quickshell.execDetached(["pavucontrol"]);
         }

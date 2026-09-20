@@ -15,7 +15,7 @@ Run that way it may install packages and will ask for sudo if something is missi
 The order is part of the contract, not an accident:
 
 ```
-fonts  bash  ccpkg  ccnote  ccslide  tmux  wezterm  nvim  wireplumber
+fonts  bash  ccpkg  ccnote  ccslide  tmux  wezterm  nvim  pipewire  wireplumber
 mangohud  nemo  fuzzel  fastfetch  firefox  brave  mpv  liseuse  boot/plymouth  hyprland
 ```
 
@@ -25,6 +25,7 @@ A module name may carry **one level of nesting**. `config/boot/` groups the two 
 |---|---|
 | `ccpkg`, `ccnote`, `ccslide` after `bash` | `.zshrc` sources `~/.config/ccnote/ccnote.zsh` and `~/.config/ccslide/ccslide.zsh`, and `~/.local/bin` reaches `PATH` through `.bashrc` |
 | `liseuse` after `fuzzel` | its picker *is* fuzzel |
+| `pipewire` before `wireplumber` | the equalizer is a filter chain loaded by the pipewire daemon, and `wireplumber` ends by restarting the audio stack — the other order links the chain, then restarts the stack underneath it |
 | `hyprland` last | the desktop assembles everything above it |
 
 Two modules are **opt-in** — never part of a default run, and must be named explicitly:
@@ -90,9 +91,86 @@ Config directories are linked, not copied: editing a file in the repo changes th
 
 Each copr is enabled only when the package it provides is actually missing.
 
+### The bar's drawers
+
+The bar is quickshell, linked by `hyprland` and living in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). Most of it is a row of pills, but four panels drop out of the **TOOLS** island on the right, and they are the part worth describing because they are where the desktop's settings actually live.
+
+| Drawer | Opened by | What it holds |
+|---|---|---|
+| Notification centre | the bell | clock, do-not-disturb, MPRIS transport with a seek bar, history, clear all |
+| [Balise](../config/hyprland/quickshell/bar/modules/balise/) | its own button | WiFi / Bluetooth / Ethernet with real device lists, night mode, HDR, dark mode, screenshot |
+| [Power](../config/hyprland/quickshell/bar/modules/power/) | the battery pill | time remaining, charge limit, power profile, and a charge curve |
+| [Mixer](../config/hyprland/quickshell/bar/modules/mixer/) | either audio pill | output and input levels with live meters, every device listed under each, per-application volume, and a page per application for its equalizer |
+
+Two more drawers hang off the **central** island — the sleep clock (`veille`) and the keybindings sheet — but those two stack, while the four above are **mutually exclusive**: each one's `togglePanel` closes the other three before opening. They also all close on the same Hyprland events the keybindings sheet watches, which is how a layer-shell surface that never receives a focus-loss event still dismisses on an outside click.
+
+Two of the four cost the TOOLS island nothing. Balise and the notification centre have a button apiece — that is all `BaliseButton` and `NotificationBell` are — but Power and the Mixer are opened by pills that were already in the row for another purpose: the battery readout and the two audio icons. Clicking the thing you want the detail of is the same affordance either way, and for those two it needed no new pixel.
+
+Each drawer is an entry in `DrawerIsland`'s `drawerItems` and satisfies a three-line contract: a `drawerOpen` bound from outside, an `implicitHeight` it computes itself, and a `Behavior on height` matching the island's reveal duration. The island owns everything else — the stretch, the staged fade, the clipping.
+
+**They cost nothing while shut**, and that is deliberate in each case. Power's `GetHistory` calls are gated on the panel being open. The mixer's device bindings and both its level meters are too — a `PwNodePeakMonitor` is not a property read, it opens a real capture stream. Closing a drawer is what takes it back to zero.
+
+#### The mixer
+
+It replaced the last place in the bar where a control shelled out to an external UI for something the process already had live handles on. Picking an output ran `audio.sh roue-gen && roue audio-output` — a script that regenerated a wheel config from `pactl list sinks`, then launched a separate process to draw it. Per-application volume had no in-bar path at all; right click opened pavucontrol. Both are now property writes on `Quickshell.Services.Pipewire`. Right click still opens pavucontrol, kept as the escape hatch for card profiles and per-stream moves the drawer does not do.
+
+**Dead entries are filtered out.** With nothing plugged in, this laptop enumerates four sinks of which three are unselectable (HDMI ports reporting "not available") and two sources of which one is (the analog headset mic). Selecting a dead one is not merely ineffective — wireplumber accepts the request, refuses it, and writes the old device straight back, so the tick visibly fails to move. Pipewire cannot answer the question, since availability belongs to the device *route*, one level below `PwNode`; so `MixerState` makes one `pactl` read and hides them. A row that does nothing when clicked is worse than no row, and with the filter in place a single-output machine correctly lists nothing at all — the master row above already names the only device there is.
+
+The devices are simply **listed** under each master, not folded behind a chevron. They were, and unfolding one changed the drawer's height, which the drawer then animated: the panel moved every time anyone went looking for a device. The same reasoning retired the preset picker below. The only chevron left in the drawer is on an application row, where it means "there is a page behind this" — so it points right, the way a page is.
+
+**A newly connected device takes the sound**, in both directions when it has an input worth using. This has to live here rather than in wireplumber, and the reason is caused by the drawer itself: WirePlumber picks the default by `priority.session` only while nothing has been *configured*, and the moment anything writes `default.configured.audio.sink` the choice is pinned. `pactl set-default-sink` writes it, and so does choosing an output by hand — so the act of ever picking a device is what switches the automatic behaviour off. The rule is narrow on purpose: follow only a device that has just **joined the selectable set**, which covers both shapes a connection takes, a new node (USB, Bluetooth) and a port going from unavailable to available (jack, HDMI). A device leaving needs nothing; wireplumber falls back on its own.
+
+**The equalizer is per application, on a page of its own.** The chevron on an application's row opens it — the same navigation Balise uses for a WiFi network or a bluetooth device, and for the same reason: five faders, a preset list and a switch came to about 260 px, which on the home page sat between INPUT and PLAYING and pushed the list of what is actually playing off the bottom of the drawer, for a control adjusted once per application and then left for weeks. The row keeps level and mute, and shows an `EQ` badge while that application is going through a chain.
+
+The choice is filed under the **application name**, not a node id, so it survives the application closing and the bar restarting. A film in mpv can be equalized while a video in the browser is left exactly alone, which was the point: the concern was never "how do I equalize everything", it was "how do I not equalize a YouTube video".
+
+**Ten presets**, listed under the faders and always on screen. There were twenty-eight, which was too many to choose from and too many to draw — the page had to hide them behind a chevron to fit, and unfolding it changed the page height by a couple of hundred pixels, which the drawer then animated. Ten fit, so the list is simply there and the page never changes height. What went were the near-duplicates and the raw tone-shapers, which a fader does better than a preset: pulling the 12k band down *is* "treble cut", in one gesture on a control already on screen. What stayed is one entry per shape the curve can usefully take, including Vocal — the one that matters for a series, where the dialogue needs lifting out of the effects.
+
+They are written for five bands rather than transposed from a ten-band table, because dropping every other entry of one lands the wrong gain on a shelf covering an octave more than the peak it replaced. Flat is the first chip and doubles as the reset, so there is no separate reset link either. Moving any fader clears the label to **Custom**: the curve is no longer Rock, it is Rock with one band pulled, and calling it Rock would be the page lying about what you hear.
+
+Switching an application off moves its stream back out of the chain rather than zeroing its bands. Zeroing would be one write instead of a move, and it would leave ten biquads running on every sample to multiply it by one — half a percent of a core, indefinitely, for no audible difference. Emptied, the chain suspends.
+
+The curves reach pipewire through **one resident `pw-cli`** fed by its stdin, because nothing in `Quickshell.Services.Pipewire` can write a node's Props and a filter's control ports are Props. Both arrangements were measured on this machine:
+
+| | per parameter write |
+|---|---|
+| a fresh `pw-cli` each time | 8 ms |
+| one resident `pw-cli`, fed by a pipe | 83 µs |
+
+Two orders of magnitude, and it is what makes a band audible *while* its fader is dragged rather than only when it is released. At rest it costs nothing measurable: 0 ms of CPU over 3 s idle, 7.5 MB resident, flat across 600 writes. **The one trap**: if that process's stdin reaches EOF it does not exit, it spins — measured at 1 s of CPU in 10 s. `stdinEnabled` is set once, declaratively, and must never be turned off to "tidy up".
+
+The parameter names are identical in every slot — they are scoped to their own graph — so only the target node id changes between them, and a slot that changes hands gets the new occupant's whole curve re-pushed.
+
+Profiles persist to `~/.local/state/bar-equalizer.json` — `state`, not the `~/.cache` the wallpaper tint uses, because a cache is something a daemon can regenerate and a curve dialled in by ear is not.
+
+### `pipewire`
+
+Installs `pipewire pipewire-utils` and links one file: [`50-equalizer.conf`](../config/pipewire/50-equalizer.conf), **four** independent five-band filter chains loaded by the pipewire daemon itself. **Restarts the audio stack at the end**, because `pipewire.conf.d` is read at startup only.
+
+It is a module of its own rather than a file inside `wireplumber` because the two configure different daemons, and because this one is a hard dependency of the bar: the mixer drawer routes applications into the chains it creates, and drives their curves through `pw-cli`.
+
+`pw-cli` is why `pipewire-utils` is named here **unconditionally**. `wireplumber`'s own module asks for it too, but behind `if ! command -v wireplumber`, so on a machine that already had wireplumber the whole line was skipped — which is how this one ran for months with no `pw-cli` and no `pw-dump`, and took `bt-audio-switch.service` down with it: that script needs `pw-dump` and had been exiting after 6 ms ever since. `pkg_ensure` queries before it installs, so naming it in both places costs nothing.
+
+Each chain is ten biquads — five bands (60 / 250 / 1k / 4k / 12k) across two channels — rather than one `param_eq`, which chains them more efficiently but reads its curve from a `config` section once at load. The individual `bq_*` filters expose `Freq`, `Q` and `Gain` as **control ports**, and a control port can be written while the graph runs. That is the whole requirement: the curve is driven from a page with faders on it.
+
+**Why four, and why pre-declared.** The equalizer is per application, so two applications playing at once with different curves need two chains — a chain is a sink, and a stream is in one sink or another. Creating them on demand does work: `load-module libpipewire-module-filter-chain` typed into the resident `pw-cli` is loaded into the *daemon*, so it outlives the client that asked for it. That is exactly the problem. Destroying one again needs `unload-module` and a pw-cli *variable* naming the module, recoverable only by parsing pw-cli's own output back out of the pipe — get it wrong, or restart the bar, and chains accumulate in the daemon with nothing able to name them again. Measured once by accident, with a test chain still present after the process that made it had exited. Four fixed slots have no lifecycle at all; the application's page says so when they are all taken.
+
+Unused slots cost nothing: with no stream routed in, a chain suspends and stops being scheduled. Measured with `pw-top` on one chain carrying one stream, 1024-frame quantum at 48 kHz (21.3 ms of audio):
+
+| node | BUSY per quantum |
+|---|---|
+| the ten biquads | 18–26 µs |
+| output stream + resampling | 72–84 µs |
+
+≈ 0.5 % of one core, per chain actually carrying audio.
+
+**The `eq_slot_` / `eq_out_` prefixes are load-bearing.** `MixerState.qml` identifies everything belonging to the equalizer by them, and uses that to keep the chains out of the output list *and* out of the "a device was just connected" rule. Without it a chain is an `Audio/Sink` like any other: found during development when a test chain appeared and the bar made it the default output within the second — which means the chain feeding itself. Any node added to that file must carry one of the two prefixes.
+
 ### `wireplumber`
 
-Installs `wireplumber pipewire-utils` and links five files: the Bluetooth policy drop-ins, a `bt-audio-switch.sh` script, and its `systemd --user` unit. **Restarts `wireplumber`, `pipewire` and `pipewire-pulse` at the end**, which cuts audio for a moment — the one module with a visible side effect on a running session.
+Installs `wireplumber pipewire-utils` and links five files: the Bluetooth policy drop-ins, a `bt-audio-switch.sh` script, and its `systemd --user` unit. **Restarts `wireplumber`, `pipewire` and `pipewire-pulse` at the end**, which cuts audio for a moment — one of the two modules with a visible side effect on a running session.
+
+One of its drop-ins is dead weight: `10-bluetooth-policy.conf` sets `wireplumber.policy.switch-on-connect`, a 0.4-era key that does not appear in `wpctl settings` on 0.5.14 and does nothing. Following a newly connected device is handled in the bar instead — see [the mixer](#the-bars-drawers) for why it has to be.
 
 ### `nemo`
 

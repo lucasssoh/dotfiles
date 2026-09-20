@@ -77,6 +77,8 @@ Singleton {
         // ...and the power drawer, the third occupant of this island --
         // same mutual-exclusion rule, extended rather than re-argued.
         PowerState.close();
+        // ...and the mixer, the fourth. Same rule again.
+        MixerState.close();
         root.activeScreen = screen;
         root.centerOpen = true;
         root.hasUnseen = false;

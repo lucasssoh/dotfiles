@@ -5,11 +5,12 @@ import Quickshell.Io
 import Quickshell.Services.UPower
 import "."
 
-// Third drawer on toolsIsland, beside NotificationState and BaliseState
-// and built to the same shape: panelOpen/activeScreen/togglePanel/close,
-// with the other two closed pre-emptively so the three are mutually
-// exclusive rather than stacking (see NotificationState.qml's own note on
-// why that rule exists for this island and not for centerIsland's).
+// Third drawer on toolsIsland, beside NotificationState, BaliseState and
+// MixerState, and built to the same shape: panelOpen/activeScreen/
+// togglePanel/close, with the other three closed pre-emptively so the
+// four are mutually exclusive rather than stacking (see
+// NotificationState.qml's own note on why that rule exists for this
+// island and not for centerIsland's).
 //
 // What it adds over those two is a HISTORY, and the reason this file is
 // short is that nothing here samples anything. upowerd already keeps a
@@ -60,6 +61,7 @@ Singleton {
         }
         NotificationState.close();
         BaliseState.close();
+        MixerState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Same "just opened" refresh BaliseState.togglePanel does, and for

@@ -51,10 +51,16 @@ _modules_lib_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 # the greeter) are one subject, and burying that in a flat list next to
 # `mpv` lost it. A grouping directory has no install.sh of its own.
 #
+# pipewire before wireplumber: the equalizer it installs is a filter chain
+# loaded by the pipewire daemon, and wireplumber's own module ends by
+# restarting the audio stack. Running pipewire second would mean the chain
+# was linked, then the stack restarted under it for a bluetooth policy that
+# has nothing to do with it.
+#
 # hyprland last: the desktop assembles everything above it.
 # ---------------------------------------------------------------------------
 MODULE_ORDER=(
-    fonts bash ccpkg ccnote ccslide tmux wezterm nvim wireplumber
+    fonts bash ccpkg ccnote ccslide tmux wezterm nvim pipewire wireplumber
     mangohud nemo fuzzel fastfetch firefox brave mpv liseuse
     boot/plymouth hyprland
 )
