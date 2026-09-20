@@ -1690,6 +1690,32 @@ ShellRoot {
             // top of regular application windows.
             aboveWindows: true
 
+            // Unmap the surface while nothing is showing, instead of
+            // leaving a permanent transparent 280x92 pane on the screen.
+            // `opacity: 0` (Osd.qml:104) hides the CONTENT; the layer
+            // surface underneath stayed mapped for the session, and a
+            // mapped wlr-layer-shell surface keeps taking frame callbacks
+            // whether or not it paints anything. Measured on this laptop:
+            // quickshell's two WaylandEventThreads together woke 686
+            // times/s with these popups mapped, against ~1099 wakeups/s
+            // for the whole system -- which is what pins the SoC in
+            // package C0 84% of the time (pmc_core: C10 only 6.1%).
+            //
+            // The `|| opacity > 0` half is what keeps the 120ms fade
+            // intact. Binding to `osdVisible` alone would yank the
+            // surface out on the first frame of the hide, cutting the
+            // Behavior; opacity only reaches 0 once that animation has
+            // finished, so the window outlives it and leaves silently.
+            // The `osdVisible` half drives the SHOW, and deliberately
+            // does not wait on the animation: it flips the surface back
+            // the instant state changes, so nothing depends on Qt
+            // ticking a Behavior for an unmapped window.
+            //
+            // Cost of the trade: showing now needs a Wayland map
+            // round-trip, so the OSD can land a frame or two late. Judged
+            // worth it -- one wakeup to display beats polling forever.
+            visible: OsdState.osdVisible || osd.opacity > 0
+
             anchors { bottom: true }
             margins.bottom: 48
             implicitWidth: osd.width
@@ -1744,6 +1770,22 @@ ShellRoot {
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
 
+            // Same unmap-while-idle treatment as osdWindow above, and
+            // the same reasoning -- see that window's comment for the
+            // wakeup measurements. It applies harder here: the mask
+            // comment below already records that this card "sits 292x292
+            // dead center on the screen at all times". That was fixed
+            // for INPUT (the mask) and left alone for PAINT, because the
+            // cost of a permanently mapped surface wasn't known yet.
+            // It is now, so the surface goes away too.
+            //
+            // The mask stays as it is. It is not redundant: it governs
+            // the window WHILE it is mapped, which is exactly the window
+            // of time this binding does not cover -- during the 120ms
+            // dismiss fade the surface is still up, and without the mask
+            // it would swallow clicks all the way through that fade.
+            visible: BatteryAlertState.alertVisible || batteryAlert.opacity > 0
+
             implicitWidth: batteryAlert.width
             implicitHeight: batteryAlert.height
 
@@ -1796,7 +1838,46 @@ ShellRoot {
             // drawing it twice). `shell.toastScreen === null` is the
             // can't-resolve fallback and deliberately maps all of them,
             // so no notification can ever go unseen.
-            visible: shell.toastScreen === null || shell.toastScreen === modelData
+            //
+            // ...AND only while there is actually something to show. The
+            // header below used to say "Always mapped, like OSD, so
+            // NotificationCard's own state can drive fades later without
+            // a window remap" -- that choice is reversed here, now that
+            // the price of it is measured: a mapped surface keeps taking
+            // frame callbacks whether or not it paints, and quickshell's
+            // two Wayland threads were waking 686 times/s across these
+            // popups. See osdWindow's comment for the full numbers.
+            //
+            // This one cannot use OSD's `|| opacity > 0` trick. Toasts
+            // do not fade one card in and out: a card leaving keeps
+            // animating for 180ms AFTER its model row is gone (see
+            // NotificationToast.qml's `remove` transition), and both
+            // `toasts.count` and the stack's contentHeight drop the
+            // instant that row goes. Binding straight to either would
+            // unmap the surface out from under the exit animation --
+            // precisely the guillotine that `implicitHeight: 640` below
+            // was introduced to prevent, reintroduced one level up.
+            // Hence the linger below: the surface outlives the last
+            // toast by 260ms, comfortably past that 180ms transition.
+            visible: (shell.toastScreen === null || shell.toastScreen === modelData) && mapped
+
+            // `hasToasts` is the raw truth, `mapped` the lingering one
+            // the window actually binds to.
+            readonly property bool hasToasts: NotificationState.toasts.count > 0
+            property bool mapped: false
+            onHasToastsChanged: {
+                if (hasToasts) {
+                    unmapDelay.stop();
+                    mapped = true;
+                } else {
+                    unmapDelay.restart();
+                }
+            }
+            Timer {
+                id: unmapDelay
+                interval: 260
+                onTriggered: notifToastWindow.mapped = false
+            }
 
             focusable: false
             color: "transparent"
