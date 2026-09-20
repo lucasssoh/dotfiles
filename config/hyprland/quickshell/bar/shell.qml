@@ -1233,6 +1233,42 @@ ShellRoot {
                 drawerFillTop: Surfaces.panelTop
                 drawerFillBottom: Surfaces.panelBottom
                 drawerRadius: 20
+                // These two together replace the old 8px gap, and the
+                // pair is the point -- neither alone gives the result.
+                //
+                // `splitDrawer` deliberately stays true. It is what
+                // keeps `drawerFill` alive, and with `rowPane: false`
+                // above, that pane is the ONLY thing painting a
+                // background behind the notification cards; turning it
+                // off leaves them floating on the wallpaper (tried).
+                //
+                // `drawerGap: 0` drops the island's own spacer, asked
+                // for as "enlever la ligne imaginaire" -- the same
+                // thing centerIsland was already given ("il ne doit pas
+                // partir d'une ligne imaginaire mais directement c'est
+                // l'island qui s'etend").
+                //
+                // `drawerTop` then answers where the pane actually
+                // belongs. This island's row is 24px but the band
+                // behind it is 31 (barBand is sized on centerIsland's
+                // row, not this one), so with the gap gone the pane sat
+                // 7px up INSIDE the band. That overlap is invisible
+                // while the pane is opaque and was not, briefly, when
+                // both carried the same translucent tint: the two 45%
+                // layers stacked to roughly 70% and drew a darker strip
+                // along the seam ("deux translucide accentue l'opacité
+                // ... un fond plus prononcé sur l'intersection").
+                //
+                // Starting at the band's own bottom edge butts the two
+                // instead of overlapping them. Those 7px do not vanish,
+                // they move: they now read as clear space between the
+                // TOOLS row and its drawer, which is why the pane keeps
+                // `drawerRadius` on all four corners rather than
+                // squaring the top pair -- a block with air above it
+                // wants a rounded top ("arrondi les coins du dessus ...
+                // vu qu'il y a un espace").
+                drawerGap: 0
+                drawerTop: centerIsland.rowHeight
 
                 drawerItems: [
                     Modules.NotificationCenter {

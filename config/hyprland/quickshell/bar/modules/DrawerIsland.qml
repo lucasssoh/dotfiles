@@ -134,7 +134,35 @@ Item {
     // there are no two blocks to separate in the first place, the island
     // is one continuous shape, and any gap here would just be a band of
     // its own fill nothing is ever drawn into.
-    readonly property int drawerGap: root.splitDrawer ? 8 : 0
+    // Settable, not readonly any more: the split look does not have to
+    // mean a VISIBLE split. TOOLS now sets this to 0 to sit its drawer
+    // flush under the row ("enlever la ligne imaginaire"), keeping
+    // `splitDrawer` true only for the mechanism it really needs --
+    // `drawerFill`, the pane that carries the drawer's own background.
+    // Dropping splitDrawer instead would have left that drawer with no
+    // background at all: TOOLS also sets `rowPane: false`, so the
+    // island's own `fill` is invisible and there would be nothing left
+    // to paint behind the notification cards.
+    property int drawerGap: root.splitDrawer ? 8 : 0
+
+
+    // Where the drawer BLOCK starts, in island-local coordinates.
+    // Defaults to this island's own row, which is what it always
+    // implicitly was -- so centerIsland is unaffected.
+    //
+    // TOOLS needs it to differ. Its row is 24px, but the bar band behind
+    // it (shell.qml's `barBand`) is 31 -- sized on centerIsland's row,
+    // not on this island's. With the gap removed, the drawer pane
+    // therefore started 7px INSIDE the band, and since both are now the
+    // same translucent BandTint.band, those 7px stacked two 45% layers
+    // into roughly 70% and drew a visibly darker strip right at the
+    // seam. Reported live: "deux translucide accentue l'opacité et du
+    // coup il y a un fond plus prononcé sur l'intersection".
+    //
+    // Stacking is the whole hazard of tinting a surface the same colour
+    // as the one behind it, and the answer is to butt the two edges
+    // rather than overlap them: the drawer starts where the band ends.
+    property real drawerTop: root.rowHeight
 
     // Visual chrome, generalized for a second consumer with a different
     // look (TOOLS' own floating pane, unlike centerIsland which is flush
@@ -490,7 +518,7 @@ Item {
     // discontinuous 8px jump on the very first frame of a grow/shrink
     // instead of easing in with the other thing the same progress
     // already drives (drawerFill's own opacity).
-    implicitHeight: root.rowHeight + root.drawerGap * root.opaqueProgress + drawerColumn.height
+    implicitHeight: root.drawerTop + root.drawerGap * root.opaqueProgress + drawerColumn.height
     width: root.implicitWidth
     height: root.implicitHeight
 
@@ -811,7 +839,7 @@ Item {
         id: drawerFill
         visible: root.splitDrawer
         x: root.drawerBandX
-        y: root.rowHeight + root.drawerGap * root.opaqueProgress
+        y: root.drawerTop + root.drawerGap * root.opaqueProgress
         width: root.drawerBandWidth
         height: drawerColumn.height
         radius: root.drawerRadius
@@ -867,7 +895,7 @@ Item {
         // inside -- the pane widens leftward and the column does not
         // follow, so every entry keeps starting where the ROW starts.
         x: root.drawerBandX + root.margin
-        y: root.rowHeight + root.drawerGap * root.opaqueProgress
+        y: root.drawerTop + root.drawerGap * root.opaqueProgress
         width: root.drawerContentWidth
     }
 
