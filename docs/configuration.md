@@ -10,7 +10,7 @@ Everything the manager remembers lives in `${XDG_STATE_HOME:-~/.local/state}/dot
 |---|---|
 | `state.v1` | `key<TAB>value`: per-module fingerprint, exit code, duration and timestamp; per-crate build key |
 | `links.ledger` | `module<TAB>source<TAB>destination`, written by `safe_link` as it runs. Read by `verify` |
-| `packages.ledger` | `module<TAB>package`, written by `pkg_ensure`. Read by `verify` |
+| `packages.ledger` | `module<TAB>package`, written by `pkg_ensure`. **Rewritten per module on each run**, not appended: it answers *what does this module depend on now*, so a package dropped from a module stops being demanded. Read by `verify`, which also skips any module no longer in the registry |
 | `deferred.ledger` | Root-owned steps skipped during the last run. Truncated at the start of each one |
 | `install-*.log`, `latest.log` | Full output of each run, one file per run |
 
@@ -39,7 +39,7 @@ The `schema` key is the reset lever: bumping `STATE_SCHEMA` in [`scripts/lib/sta
 | `STATE_DIR` | `~/.local/state/dotfiles` | Where state, ledgers and logs are written |
 | `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Shared cargo target directory for the three crates |
 | `CCPKG_ALLOW_ROOT` | `1` | `0` defers every root-owned step instead of running it. `update` sets this itself |
-| `CCPKG_MODULE` | the module's directory name | Which module the ledgers attribute an entry to |
+| `CCPKG_MODULE` | the module's path under `config/` | Which module the ledgers attribute an entry to. The path, not the basename, so a nested module (`boot/login`) records the same name whether it was run by `cc-pkg-mng` or by hand |
 
 ## The module registry
 

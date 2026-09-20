@@ -31,7 +31,19 @@ _PKG_SH_LOADED=1
 : "${CCPKG_ALLOW_ROOT:=1}"
 # Which module is asking, for the ledgers. The runner exports it; a module run
 # by hand falls back to its own directory name.
-: "${CCPKG_MODULE:=$(basename "$(dirname "$(readlink -f "${BASH_SOURCE[1]:-$0}")")")}"
+# Relative to config/, not just the directory's name, because a module may
+# be nested one level (config/boot/login). cc-pkg-mng exports the nested
+# name when it runs a module; a basename here would write `login` for the
+# same module a moment later, and the two would not be the same module as
+# far as the ledger -- or `verify`'s registry check -- is concerned.
+if [ -z "${CCPKG_MODULE:-}" ]; then
+    _pkg_caller_dir="$(dirname "$(readlink -f "${BASH_SOURCE[1]:-$0}")")"
+    case "$_pkg_caller_dir" in
+        */config/*) CCPKG_MODULE="${_pkg_caller_dir##*/config/}" ;;
+        *)          CCPKG_MODULE="$(basename "$_pkg_caller_dir")" ;;
+    esac
+    unset _pkg_caller_dir
+fi
 
 PKG_LEDGER="$STATE_DIR/packages.ledger"
 PKG_DEFERRED="$STATE_DIR/deferred.ledger"
@@ -78,8 +90,35 @@ pkg_installed() {
 # ledger paths are resolved once when this file is sourced, while STATE_DIR is
 # an ordinary variable a caller may set only for the duration of the `source`.
 # Deriving the directory from the file removes the question entirely.
+# The ledger answers "what does this module depend on NOW", not "what has
+# it ever mentioned". Appending forever made it answer the second, and the
+# difference is not academic: a package dropped from a module went on being
+# reported missing by `verify` for good, and a renamed module left its old
+# name still demanding packages nobody asks for. Both happened here -- ly
+# was tried and removed, and greetd became boot/login -- and `verify`
+# ended up printing one real problem next to two ghosts, which is how a
+# check stops being read.
+#
+# So the first record of a run replaces everything this module declared
+# before. Tracked per module name rather than per process, because one
+# process may run several modules.
 _pkg_record() {
     mkdir -p "$(dirname "$PKG_LEDGER")"
+
+    case " ${_PKG_LEDGER_RESET:-} " in
+        *" $CCPKG_MODULE "*) ;;
+        *)
+            if [ -f "$PKG_LEDGER" ]; then
+                local tmp; tmp="$(mktemp)"
+                # Exact field match: -F on "name\t" would also strike a
+                # module whose name merely ends with this one.
+                awk -F'\t' -v m="$CCPKG_MODULE" '$1 != m' "$PKG_LEDGER" > "$tmp"
+                mv "$tmp" "$PKG_LEDGER"
+            fi
+            _PKG_LEDGER_RESET="${_PKG_LEDGER_RESET:-} $CCPKG_MODULE"
+            ;;
+    esac
+
     printf '%s\t%s\n' "$CCPKG_MODULE" "$1" >> "$PKG_LEDGER"
 }
 

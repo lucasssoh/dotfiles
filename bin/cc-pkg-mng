@@ -674,8 +674,17 @@ cmd_verify() {
         while IFS=$'\t' read -r mod p; do
             [ -n "$p" ] || continue
             case "$p" in "cmd: "*) continue ;; esac
+            # A module that is no longer in the registry cannot still need
+            # anything. Without this, every rename leaves its old name
+            # demanding packages for good -- the ledger is only rewritten
+            # for modules that still run.
+            _mod_registered "$mod" || continue
             pkg_installed "$p" || missing+=("$p")
         done < <(sort -u "$STATE_DIR/packages.ledger")
+        # One package can be declared by several modules; say it once.
+        if [ "${#missing[@]}" -gt 0 ]; then
+            mapfile -t missing < <(printf '%s\n' "${missing[@]}" | sort -u)
+        fi
         if [ "${#missing[@]}" -eq 0 ]; then
             printf "  ${GREEN}✓${RESET} every recorded package is installed\n"
         else
