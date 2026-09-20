@@ -325,6 +325,13 @@ hl.config({
 hl.curve("smooth", { type = "bezier", points = { {0.05, 0.9}, {0.1, 1.05} } })
 hl.curve("linear", { type = "bezier", points = { {0.0, 0.0}, {1.0, 1.0} } })
 hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
+-- The window open/close curve. Deliberately NOT `smooth`: `smooth`'s
+-- second control point sits at y = 1.05, so it overshoots its target.
+-- On a slide that overshoot is invisible (a few px past the edge), but
+-- on a scale it means the window grows past its tile and snaps back --
+-- which reads as a glitch, not as a pop. This one decelerates hard and
+-- lands exactly on 1.0: the window fills its tile and stops there.
+hl.curve("zoom",   { type = "bezier", points = { {0.16, 1.0}, {0.3, 1.0} } })
 
 -- ============================================================
 -- ANIMATIONS
@@ -350,12 +357,21 @@ hl.curve("snap",   { type = "bezier", points = { {0.2, 1.0}, {0.2, 1.0} } })
 -- the same curves and styles. They are just no longer slow.
 hl.animation({ leaf = "global", enabled = true, speed = 3, bezier = "smooth" })
 
-hl.animation({ leaf = "windows", enabled = true, speed = 2.5, bezier = "smooth", style = "slide" })
+-- `popin 0%` instead of `slide`: the window is born as a point at the
+-- CENTER of the tile it is about to occupy and scales up from there
+-- until it exactly fills that tile. `slide` made every window fly in
+-- from the nearest screen edge, which on a tiling layout meant the
+-- direction changed depending on where the tile happened to land. The
+-- 0% is the starting size -- anything higher pops in already partly
+-- grown, which loses the "from a single point" reading.
+hl.animation({ leaf = "windows", enabled = true, speed = 2.5, bezier = "zoom", style = "popin 0%" })
 
 -- Closing is not a transition the eye needs to follow -- the window is
 -- going away -- so it runs faster than opening. This is where most of
 -- the "instant" feeling comes from when closing a burst of windows.
-hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.8, bezier = "smooth", style = "slide" })
+-- Same `popin 0%`, run backwards: the window collapses back into the
+-- point it grew from, so open and close are one gesture reversed.
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.8, bezier = "zoom", style = "popin 0%" })
 
 -- Fade (open/close, opacity change)
 hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "smooth" })
