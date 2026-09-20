@@ -36,6 +36,16 @@ STATE_FILE="$STATE_DIR/state.v1"
 STATE_SCHEMA=1
 
 declare -A ST=()
+
+# Which keys THIS process has written or removed. state_save applies only
+# these to the file and leaves every other line alone -- see its comment for
+# why that distinction is the whole point.
+declare -A _ST_DIRTY=()
+
+# Whether this process has read the file. Only state_load and state_save set
+# it; state_set deliberately does not, because having written a key is not
+# the same as having read the others, and rust_build keys off this to decide
+# whether it still has to load.
 _STATE_LOADED=0
 
 # state_load — reads STATE_FILE into ST. Safe to call when the file does not
@@ -43,6 +53,7 @@ _STATE_LOADED=0
 # so every module reads as "never applied".
 state_load() {
     ST=()
+    _ST_DIRTY=()
     _STATE_LOADED=1
     mkdir -p "$STATE_DIR"
     [ -f "$STATE_FILE" ] || return 0
@@ -71,32 +82,87 @@ state_get() { printf '%s' "${ST[$1]:-${2-}}"; }
 # timestamps, exit codes, `cargo --version`), and stripping keeps the reader
 # a plain `while IFS=$'\t' read`.
 state_set() {
-    _STATE_LOADED=1
     local v="$2"
     v="${v//$'\t'/ }"
     v="${v//$'\n'/ }"
     ST["$1"]="$v"
+    _ST_DIRTY["$1"]='set'
 }
 
-state_unset() { unset 'ST[$1]'; }
+# A removal has to be remembered as a removal: state_save reads the file back
+# before writing, so a key merely dropped from ST would come straight back.
+state_unset() { unset 'ST[$1]'; _ST_DIRTY["$1"]='unset'; }
 
-# state_save — atomic rewrite. Callers save eagerly (right after each module
-# or crate finishes) rather than once at the end, so a run interrupted with
-# Ctrl-C keeps everything it actually accomplished.
+# state_save — merge this process's changes into the file, atomically.
+#
+# ── Why a merge and not a rewrite ───────────────────────────────────────
+# The writers are not one process. Every module runs as its own script (see
+# run_step in bin/cc-pkg-mng), with its own copy of ST, and rust_build
+# writes the crate.* keys from inside that child while the parent still
+# holds an ST that predates them. A save that wrote ST wholesale therefore
+# had the parent erase, at its very next save, every key the child had just
+# written: on the first machine to install this, the three crate.* keys were
+# recorded during the Hyprland module at 15:13, 15:15 and 15:16, and were
+# gone again at 15:16:58 when the module's own bookkeeping was saved. The
+# binaries were current; `verify` reported all three crates as never built,
+# and no amount of rebuilding could clear it.
+#
+# So a save claims only the keys THIS process actually touched (_ST_DIRTY),
+# and reads everything else back off the file untouched. The order in which
+# parent and child save stops mattering, which is the property the previous
+# version lacked -- and which is why the old guard below is gone rather than
+# repaired. It refused to write for a caller that had not called state_load,
+# to stop exactly this truncation; it never fired, because state_set marked
+# the state as loaded, and a caller that writes one key is now harmless
+# anyway.
+#
+# No lock: parent and child never write at once (run_step waits for the
+# module to exit before saving). The read-modify-write below would still
+# lose an update against a genuinely concurrent writer, which nothing here
+# is.
+#
+# Callers save eagerly (right after each module or crate finishes) rather
+# than once at the end, so a run interrupted with Ctrl-C keeps everything it
+# actually accomplished.
 state_save() {
-    # Without this guard a caller that forgot state_load would silently
-    # truncate real state to whatever few keys it happened to set.
-    if [ "$_STATE_LOADED" != 1 ]; then
-        echo "state_save: refusing to write — state_load was never called" >&2
-        return 1
-    fi
     mkdir -p "$STATE_DIR"
-    ST[schema]="$STATE_SCHEMA"
+
+    # The file as it stands, including anything written since this process
+    # loaded. An unrecognised schema is dropped rather than merged -- the
+    # same rule state_load applies, for the same reason: never carry forward
+    # values whose meaning we no longer know.
+    declare -A merged=()
+    local k v
+    if [ -f "$STATE_FILE" ]; then
+        while IFS=$'\t' read -r k v; do
+            [ -n "$k" ] && merged["$k"]="$v"
+        done < "$STATE_FILE"
+        [ "${merged[schema]:-0}" = "$STATE_SCHEMA" ] || merged=()
+    fi
+
+    # Our own changes on top, removals included: a tombstone has to be
+    # applied here, or state_unset would be undone by the read above.
+    for k in "${!_ST_DIRTY[@]}"; do
+        if [ "${_ST_DIRTY[$k]}" = 'unset' ]; then
+            unset 'merged[$k]'
+        else
+            merged["$k"]="${ST[$k]}"
+        fi
+    done
+    merged[schema]="$STATE_SCHEMA"
 
     local tmp="$STATE_FILE.tmp.$$"
-    local k
-    for k in "${!ST[@]}"; do
-        printf '%s\t%s\n' "$k" "${ST[$k]}"
+    for k in "${!merged[@]}"; do
+        printf '%s\t%s\n' "$k" "${merged[$k]}"
     done | LC_ALL=C sort > "$tmp" || { rm -f "$tmp"; return 1; }
     mv -f "$tmp" "$STATE_FILE"
+
+    # Memory now matches the file -- which tells this process more than it
+    # knew a moment ago: a parent that never saw the child's crate.* keys
+    # picks them up here. The dirty set is cleared because those values have
+    # landed.
+    ST=()
+    for k in "${!merged[@]}"; do ST["$k"]="${merged[$k]}"; done
+    _ST_DIRTY=()
+    _STATE_LOADED=1
 }

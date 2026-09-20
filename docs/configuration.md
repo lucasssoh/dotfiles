@@ -16,6 +16,8 @@ Everything the manager remembers lives in `${XDG_STATE_HOME:-~/.local/state}/dot
 
 `state.v1` is plain text, sorted, and never sourced — it is data, not code.
 
+It also has more than one writer: a module runs as its own process and records its crate build keys from there, while the manager that launched it is holding an older copy. So a save **merges** — it re-reads the file and rewrites only the keys that process itself touched, removals included. Whoever saves last no longer wins the whole file, which is what used to silently drop the `crate.*` keys a module had just written.
+
 ```
 schema	1
 mod.nvim.applied	2026-09-17T09:39:49+02:00

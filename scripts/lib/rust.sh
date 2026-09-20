@@ -108,6 +108,19 @@ rust_build() {
         return 0
     fi
 
+    # The staleness key lives in the state file, so this process has to have
+    # read it. cc-pkg-mng's own `build` loads before calling here; the other
+    # caller, config/hyprland/install.sh, sources this library and nothing
+    # else, so without this line state_get returned empty for every crate:
+    # three full LTO builds on each update, and a "source changed since the
+    # last build" that no build could clear, because the answer was never
+    # being read in the first place.
+    #
+    # Conditional rather than unconditional: state_load discards whatever the
+    # caller holds in memory, and a library has no business doing that to a
+    # parent that has already loaded.
+    [ "${_STATE_LOADED:-0}" = 1 ] || state_load
+
     # The staleness key is the source fingerprint AND the toolchain version: a
     # cargo upgrade invalidates every artifact, and a key that ignored it would
     # happily report "up to date" against binaries built by a compiler that is
