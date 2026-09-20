@@ -312,6 +312,21 @@ _HW_PKGS_COMMON=(
     # Inventory + sensors, used by the bar and by this very script's
     # GPU detection.
     pciutils usbutils lm_sensors dmidecode
+    # Power diagnostics. Neither is a tuning daemon -- they only measure,
+    # which is the point: `power-saver` and thermald above are set blind
+    # otherwise, and on a modern SoC the last few watts are never in the
+    # CPU governor. They are in the PACKAGE C-states, where one device
+    # that refuses to idle costs more than every userspace setting put
+    # together, and nothing else on this list can see that.
+    #   * powertop      -- per-device wakeup and tunable report.
+    #   * kernel-tools  -- ships `turbostat` (Pkg%pc8/pc10 residency and
+    #     PkgWatt/GFXWatt straight from RAPL) and `cpupower`. Named for
+    #     the kernel, not for Intel: turbostat reads RAPL on Zen too, so
+    #     this belongs in the common set rather than the Intel one, even
+    #     though its C-state columns are richest on Intel.
+    # Both need root to read the MSRs, so they install here and are run
+    # by hand -- there is no service to enable.
+    powertop kernel-tools
 )
 
 # Intel Gen8 (Broadwell) and newer.
