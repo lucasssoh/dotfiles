@@ -10,9 +10,11 @@
 # so with no XKB_DEFAULT_LAYOUT set the greeter came up in US QWERTY on an
 # AZERTY machine, at a masked password prompt.
 #
-# ly was packaged by Fedora, which was the good argument for it, and its
-# session_log looked like a cleaner answer than wrapping the session in
-# systemd-cat. In practice it cost three separate lockouts -- a bullet
+# ly's good argument was that Fedora packaged it where tuigreet came from
+# a copr -- which turned out to be stale: Fedora ships tuigreet too, and
+# this module was simply asking for the wrong package name. Its
+# session_log also looked like a cleaner answer than wrapping the session
+# in systemd-cat. In practice it cost three separate lockouts -- a bullet
 # character that made it discard its whole config file, a session log path
 # SELinux refuses, and a minimal config that dropped the `/bin/sh` Fedora
 # puts in front of its non-executable setup.sh -- and when it finally
@@ -63,13 +65,18 @@ read -rp "Continue? [y/N]: " CONFIRM
 # ============================================================
 section "Packages"
 
-if ! pkg_installed greetd-tuigreet && [ "$(pkg_mgr)" = dnf ]; then
-    info "Fedora detected. Enabling COPR for tuigreet..."
-    sudo_maybe dnf copr enable -y pennbauman/ports
-fi
-
+# The package is `tuigreet`, and it is in Fedora proper -- no copr.
+#
+# This module asked for `greetd-tuigreet` from pennbauman/ports for a long
+# time, which is a name that does not exist in any enabled repository; the
+# binary on this machine is owned by tuigreet-0.9.1-7.fc44 from `fedora`.
+# `verify` reported it missing forever and nobody read the line.
+#
+# It also retires the one real argument for replacing tuigreet. ly was
+# considered mainly because Fedora packaged it where tuigreet supposedly
+# did not -- that has not been true for some time.
 case "$(pkg_mgr)" in
-    dnf)    PKGS=(greetd greetd-tuigreet kbd jetbrains-mono-fonts) ;;
+    dnf)    PKGS=(greetd tuigreet kbd jetbrains-mono-fonts) ;;
     pacman) PKGS=(greetd greetd-tuigreet kbd ttf-jetbrains-mono) ;;
     apt)    PKGS=(greetd kbd fonts-jetbrains-mono) ;;
     *)      PKGS=(greetd) ;;

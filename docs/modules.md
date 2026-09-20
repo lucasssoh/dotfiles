@@ -244,7 +244,7 @@ Its ordering is `After=plymouth-quit-wait.service` and `Before=greetd.service`, 
 
 **regreet** (GTK4, under `cage`) was too rigid, and it cost a near-lockout: cage takes its keyboard layout from XKB rather than from `/etc/vconsole.conf`, so with nothing setting `XKB_DEFAULT_LAYOUT` the greeter came up in US QWERTY on an AZERTY machine, at a masked password prompt.
 
-**ly** had the better argument — Fedora packages it, where tuigreet comes from a COPR, one more thing that has to still exist the day this repo is cloned onto a new machine. It cost three separate lockouts before it ran at all, and each one is a lesson that outlived it:
+**ly** had what looked like the better argument — Fedora packages it, where tuigreet supposedly came from a copr. That turned out to be stale: Fedora ships `tuigreet` too, and this module had simply been asking for `greetd-tuigreet`, a name no enabled repository provides. `verify` had been reporting it missing for as long as anyone could remember, next to two ghosts left by a renamed module, which is how a check stops being read. It cost three separate lockouts before it ran at all, and each one is a lesson that outlived it:
 
 - A `•` in `asterisk` made ly **discard its entire config file** and run on defaults. It does not skip an option it cannot parse, and says so nowhere except `/var/log/ly.log`. Three bytes of UTF-8 where the option takes one character.
 - `session_log` then defaulted back into `$HOME`, which `xdm_t` may not create files in, and ly treats failing to open that log as fatal to the session. A login authenticated correctly and vanished in the same second, reported at the prompt as `AccessDenied`.
