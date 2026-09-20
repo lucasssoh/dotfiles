@@ -379,30 +379,39 @@ Item {
     // same fine-grained control instead of double-spacing on top of it.
     property int rowSpacing: 6
 
-    // The FULL height this could ever need -- every entry's
-    // `implicitHeight` summed (i.e. all of them open at once), not their
-    // current (possibly mid-animation, possibly closed) `height`. The
-    // PARENT PanelWindow (shell.qml's
-    // `bar`) sizes its own real Wayland surface off THIS, not off
-    // `root.height` below -- so the surface itself is allocated once at
-    // its maximum and never actually resized at the compositor level
-    // while the drawer animates open/closed; only in-scene geometry
-    // (this Item's own height, the fill Rectangle, GlassRim) changes
-    // frame to frame. Real wl_surface resizes on every frame of a 300ms
-    // animation is a plausible source of exactly the kind of hitch
-    // reported ("l'island se retracte un peu" right at the start/end of
-    // a transition) -- a live buffer renegotiation with the compositor
-    // is a fundamentally heavier operation than an in-scene repaint.
-    readonly property real maxHeight: {
-        let total = root.rowHeight;
-        // Only relevant once something can actually be open (an empty
-        // stack never shows the gap either) -- matches implicitHeight's
-        // own `drawerColumn.height > 0` gate below.
-        if (root.drawerItems.length > 0) total += root.drawerGap;
+    // The height this island needs with its TALLEST single entry open.
+    // A genuine constant, not a live snapshot: it reads each entry's
+    // `implicitHeight`, never their current (possibly mid-animation,
+    // possibly zero) `height`.
+    //
+    // The PARENT PanelWindow (shell.qml's `bar`) sizes its own real
+    // Wayland surface off THIS, not off `root.height` below -- so the
+    // surface is allocated once and never resized at the compositor
+    // level while a drawer animates. Only in-scene geometry (this
+    // Item's own height, the fill Rectangle, GlassRim) changes frame to
+    // frame. That matters: a live wl_surface renegotiation is a
+    // fundamentally heavier operation than an in-scene repaint, and
+    // sizing this dynamically was tried and produced a hitch visible on
+    // the opening frame of every drawer.
+    //
+    // `max`, not `sum`. This replaced a version that totalled EVERY
+    // entry -- the honest answer to "how tall could this ever get", but
+    // the wrong question: entries only take height when their own
+    // `drawerOpen` is set (see heightBinding further down,
+    // `(drawerOpen && expanded) ? implicitHeight : 0`) and exactly one
+    // is ever open at a time. The sum was unreachable by construction,
+    // and asking the compositor for 2250px to show a ~600px
+    // notification centre cost real work every frame -- see shell.qml's
+    // implicitHeight for the WAYLAND_DEBUG capture and the numbers.
+    //
+    // The gap is included only when there is something to separate: an
+    // empty stack never shows it either.
+    readonly property real openHeight: {
+        let tallest = 0;
         for (let i = 0; i < root.drawerItems.length; i++) {
-            total += root.drawerItems[i].implicitHeight;
+            tallest = Math.max(tallest, root.drawerItems[i].implicitHeight);
         }
-        return total;
+        return tallest > 0 ? root.drawerTop + root.drawerGap + tallest : root.rowHeight;
     }
 
     // The row's width at its OWN theoretical widest -- not a live

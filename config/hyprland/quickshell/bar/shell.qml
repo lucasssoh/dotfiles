@@ -582,30 +582,56 @@ ShellRoot {
             // unused now but kept for the same "still correct if it ever
             // reaches an edge" reason).
             margins { top: 0; left: 0; right: 0 }
-            // centerIsland's own maxHeight (a DrawerIsland -- see that
-            // component's own comment), NOT its current/animated
-            // `height` -- the real Wayland surface is allocated ONCE at
-            // the tallest it could ever need to be and never actually
-            // resized at the compositor level while the drawer opens/
-            // closes, only the in-scene content within it does (a real
-            // per-frame surface resize was a plausible source of visible
-            // hitches right at the start/end of that transition). Always
-            // >= rowHeight (31) even with no drawer content at all --
-            // still implicitly >= metrics' own bottom extent too (3 top
-            // gap + its content, ~27, less than rowHeight). The main
-            // bar's Row stays flush at y:0 regardless (anchors.top);
-            // metrics/the drawers use the extra space below, which just
-            // renders as empty/transparent (and stays outside the input
-            // mask below) whenever a drawer isn't fully open.
+            // `openHeight`, not the islands' live `height` -- the real
+            // Wayland surface is allocated ONCE, at the tallest a single
+            // open drawer can need, and is never resized at the
+            // compositor level. Only the in-scene content within it
+            // moves while a drawer opens or closes.
             //
-            // Math.max, not just centerIsland's own -- toolsIsland now
-            // grows a drawer too (NotificationCenter), and its own
-            // maxHeight (rowHeight + a 600px-tall entry) is taller than
-            // centerIsland's ever gets. Sizing off centerIsland alone
-            // would clip the notification drawer at whatever height
-            // centerIsland happened to need instead of the drawer's own
-            // real full-open height.
-            implicitHeight: Math.max(centerIsland.maxHeight, toolsIsland.maxHeight)
+            // That "never resize" half was always the right instinct and
+            // is kept verbatim from the version before this one, which
+            // predicted a per-frame surface resize would be "a plausible
+            // source of visible hitches right at the start/end of that
+            // transition". It is not a prediction any more: sizing this
+            // dynamically was tried, and the hitch was reported live on
+            // the very first drawer ("un petit sursaut avant que les
+            // tiroirs ne s'ouvrent"). Reverted to a constant.
+            //
+            // What WAS wrong was the constant itself. `maxHeight` summed
+            // every entry the island could ever show, so this surface
+            // stood at 1920x2250 for the whole session -- 1.9x the
+            // height of a 1200px screen -- to display one ~600px drawer
+            // at a time. That is not free the way empty transparent
+            // space looks like it should be: captured with
+            // WAYLAND_DEBUG, every commit this surface makes carries
+            // `damage_buffer(0, 0, 2147483647, 2147483647)`, 48 of 48 in
+            // the sample and not one partial rect. Hyprland therefore
+            // re-composited all 4.3 megapixels on each of ~9 repaints a
+            // second, and its render engine sat at 16% busy doing it.
+            //
+            // `openHeight` is the same kind of constant sized on `max`
+            // instead of `sum` -- one entry is ever open at a time, so
+            // the sum was never reachable. Measured on this laptop,
+            // 15s samples, same workspace:
+            //
+            //     2250 (sum)   Hyprland render 16.1%
+            //      696 (max)   Hyprland render  8.6%
+            //       31 (live)  Hyprland render  7.8%   <- and it hitches
+            //
+            // So the last 665px are worth 0.8 points and cost the
+            // visible glitch. Not a trade worth making.
+            //
+            // Math.max over both islands: TOOLS grows a drawer of its
+            // own (NotificationCenter) taller than anything centerIsland
+            // hosts, and sizing off centerIsland alone would clip it.
+            // Always >= rowHeight (31) with no drawer content at all,
+            // which also covers metrics' own bottom extent (3px top gap
+            // + ~27 of content, under rowHeight either way). The main
+            // bar's Row stays flush at y:0 regardless (anchors.top);
+            // metrics and the drawers use the space below, which renders
+            // as empty/transparent -- and stays outside the input mask
+            // just below -- whenever a drawer isn't open.
+            implicitHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight)
 
             // Input stays restricted to the NORMAL bar's own height
             // (centerIsland.rowHeight, 31) regardless of how tall the
