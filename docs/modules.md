@@ -176,6 +176,8 @@ One of its drop-ins is dead weight: `10-bluetooth-policy.conf` sets `wireplumber
 
 Installs `nemo nemo-fileroller xdg-desktop-portal-gtk`, sets the file-manager MIME defaults, writes a D-Bus service file and restarts the xdg portals.
 
+Also carries the GTK3 theming, linked to `~/.config/gtk-3.0/` (`settings.ini` + `gtk.css`). Nemo is GTK3, not Qt, so `qt6ct` never sees it. Two separate things live there: `settings.ini` is what makes it *dark* — the session asked for `gtk-theme='Adwaita-dark'`, which is not a GTK3 theme name, so GTK3 fell back to light Adwaita — and `gtk.css` is what makes it *ours*, redefining Adwaita's colour names with the tokens from `quickshell/bar/theme/{Ink,Surfaces}.qml`. The install also rewrites that one stale `gtk-theme` value in dconf, because the portal serves it to GTK3 ahead of `settings.ini`. The link reaches every GTK3 app, which here means Nemo and the GTK file-chooser portal this module installs.
+
 ### `fuzzel`
 
 Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`, and also the picker `liseuse` is built on.

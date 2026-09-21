@@ -1,0 +1,444 @@
+/* ============================================================
+   Nemo in the bar's palette.
+
+   Nemo is GTK3 (`ldd /usr/bin/nemo` -> libgtk-3.so.0), not Qt -- worth
+   stating up front because the toolkit decides where the fix lives:
+   qt6ct, which QT_QPA_PLATFORMTHEME already points at for the Qt side of
+   this desktop, has no say over this window at all.
+
+   settings.ini next to this file makes Nemo DARK (see its header for why
+   it was white). This file makes it OURS: it repaints Adwaita's dark
+   variant in the same tokens the bar draws itself with, so a Nemo window
+   sitting under the band reads as the same material as the drawers, the
+   notification cards and the OSD rather than as a stock GTK app that
+   happens to also be dark.
+
+   Mechanism, since it is not obvious: ~/.config/gtk-3.0/gtk.css is loaded
+   AFTER the theme, and GTK resolves a named colour at use time against its
+   last definition. So redefining Adwaita's own @define-color names below
+   reaches every rule inside the compiled theme that references them --
+   including the ones this file never mentions -- without forking or
+   vendoring a theme. Only the places Adwaita hardcodes (headerbars,
+   sidebars, selection shape) need the explicit rules further down.
+
+   PALETTE SYNC: the values in the first block are copies of
+   quickshell/bar/theme/Surfaces.qml and theme/Ink.qml. Same "one value, a
+   few hand-kept copies across incompatible syntaxes" convention the rest
+   of this desktop already runs on (shell.qml's header states it, and
+   colors.lua carries a CSS mirror for waybar/rofi for the same reason):
+   GTK CSS cannot read a QML singleton any more than QML can @import a CSS
+   file. Change a token in Surfaces/Ink and it has to be carried here by
+   hand -- the comment on each line below says which token it is, so the
+   mapping stays checkable instead of remembered.
+   ============================================================ */
+
+/* ---- the bar's tokens, verbatim ---------------------------------- */
+@define-color bar_pane_top     #1e2128;  /* DrawerIsland.drawerFillTop   */
+@define-color bar_pane_bottom  #060608;  /* DrawerIsland.drawerFillBottom*/
+@define-color bar_card         #14161d;  /* Surfaces.card                */
+@define-color bar_card_hover   #1a1d2a;  /* Surfaces.cardHover           */
+@define-color bar_card_raised  #1f2330;  /* Surfaces.cardRaised          */
+@define-color bar_card_deep    #070709;  /* Surfaces.cardDeep            */
+@define-color bar_accent       #a8b4c4;  /* Surfaces.accent / Ink.accent */
+@define-color bar_accent_soft  #262931;  /* Surfaces.accentSoft          */
+@define-color bar_accent_med   #292c34;  /* Surfaces.accentMedium        */
+@define-color bar_accent_str   #2f323b;  /* Surfaces.accentStrong        */
+@define-color bar_accent_max   #353941;  /* Surfaces.accentStrongest     */
+@define-color bar_ink          #f2f2f7;  /* Ink.primary                  */
+@define-color bar_ink_second   #8e8e93;  /* Ink.secondary                */
+@define-color bar_ink_muted    #636366;  /* Ink.muted                    */
+@define-color bar_ink_faint    #48484a;  /* Ink.faint                    */
+@define-color bar_on_light     #0c0c0e;  /* Ink.onLight                  */
+@define-color bar_danger       #ff6e6e;  /* Ink.danger                   */
+@define-color bar_positive     #a3d9a5;  /* Ink.positive                 */
+
+/* The one value that is a ratio rather than a colour: every card in the
+   bar that is not lit carries a 1px rgba(1,1,1,0.18) rim (DrawerTile,
+   NotificationCard's action pill, BatteryAlert). Same rim here, so the
+   separators and frame weights match across the two toolkits. */
+@define-color bar_rim          alpha(#ffffff, 0.18);
+
+/* ---- mapped onto Adwaita's public names -------------------------- */
+/* `theme_bg_color` is the chrome (toolbars, sidebar gutter) and
+   `theme_base_color` the content well the file list sits in. The bar
+   makes the same split -- a drawer pane (#1e2128 -> #060608) with cards
+   (#14161d) on it -- so chrome takes the pane's top stop and the well
+   takes the card fill. That is also why the list is DARKER than the
+   toolbar above it, which is the opposite of stock Adwaita: the bar's
+   panes always sit above their content, not below. */
+@define-color theme_bg_color            @bar_pane_top;
+@define-color theme_base_color          @bar_card;
+@define-color content_view_bg           @bar_card;
+@define-color text_view_bg              @bar_card;
+@define-color theme_fg_color            @bar_ink;
+@define-color theme_text_color          @bar_ink;
+
+/* Selection is deliberately NOT a flat accent flood. Nothing in the bar
+   fills a surface with #a8b4c4 -- an active DrawerTile keeps its card
+   fill and takes an accent BORDER, and BaliseTextField selects text with
+   accentStrongest. So: accentStrong as the fill, ink on top, and the
+   accent itself spent on the 1px rim the explicit rules further down add.
+   Flooding would have been the louder, less faithful choice. */
+@define-color theme_selected_bg_color   @bar_accent_str;
+@define-color theme_selected_fg_color   @bar_ink;
+@define-color theme_unfocused_selected_bg_color @bar_accent_soft;
+@define-color theme_unfocused_selected_fg_color @bar_ink_second;
+
+@define-color theme_unfocused_bg_color  @bar_pane_top;
+@define-color theme_unfocused_base_color @bar_card;
+@define-color theme_unfocused_fg_color  @bar_ink_second;
+@define-color theme_unfocused_text_color @bar_ink_second;
+
+/* Ink's four tiers were already a hierarchy (primary/secondary/muted/
+   faint); insensitive takes the bottom two rather than a new grey. */
+@define-color insensitive_fg_color      @bar_ink_faint;
+@define-color insensitive_bg_color      @bar_pane_top;
+@define-color insensitive_base_color    @bar_card;
+
+@define-color borders                   @bar_rim;
+@define-color unfocused_borders         alpha(#ffffff, 0.10);
+
+/* The three state colours the bar already owns. `warning_color` has no
+   Ink token -- the bar's own warning is colors.lua's #ffd60a, which is
+   the palette this file's siblings (waybar, rofi) mirror, so it comes
+   from there rather than being invented here. */
+@define-color error_color               @bar_danger;
+@define-color success_color             @bar_positive;
+@define-color warning_color             #ffd60a;
+
+/* wm_* drive the CSD title bar Nemo draws when it is not tiled. */
+@define-color wm_bg                     @bar_pane_top;
+@define-color wm_title                  @bar_ink;
+@define-color wm_unfocused_title        @bar_ink_second;
+@define-color wm_border                 @bar_rim;
+
+/* ============================================================
+   The explicit rules: everything Adwaita hardcodes past the names above.
+   ============================================================ */
+
+/* ---- header bar / tool bar / path bar ---------------------------- */
+/* Adwaita paints its headerbar with a compiled-in gradient and its own
+   border, neither of which reads @define-color. The bar's panes are a
+   two-stop vertical gradient (drawerFillTop -> drawerFillBottom), so the
+   chrome gets the same one instead of a flat fill -- it is the single
+   cheapest thing that makes the window look like it belongs. */
+headerbar,
+.titlebar,
+.nemo-window toolbar,
+toolbar.primary-toolbar {
+    background-image: linear-gradient(to bottom, @bar_pane_top, @bar_pane_bottom);
+    background-color: @bar_pane_top;
+    border-bottom: 1px solid @bar_rim;
+    box-shadow: none;
+    color: @bar_ink;
+}
+
+headerbar:backdrop,
+.titlebar:backdrop,
+.nemo-window toolbar:backdrop {
+    background-image: linear-gradient(to bottom, @bar_pane_top, @bar_pane_bottom);
+    color: @bar_ink_second;
+}
+
+/* Nemo still ships a real menubar (File/Edit/View...), which no other app
+   on this desktop has -- easy to forget and it showed: it kept Adwaita's
+   own #303030 and sat as a visibly lighter strip above a repainted
+   toolbar. It is the topmost strip of the chrome, so it takes the top of
+   the pane gradient rather than the whole ramp. */
+menubar,
+.menubar {
+    background-color: @bar_pane_top;
+    background-image: none;
+    border-bottom: none;
+    color: @bar_ink;
+}
+menubar > menuitem {
+    color: @bar_ink;
+    border-radius: 6px;
+}
+menubar > menuitem:hover {
+    background-color: @bar_card_hover;
+    color: @bar_ink;
+}
+
+headerbar .title { color: @bar_ink; font-weight: bold; }
+headerbar .subtitle { color: @bar_ink_second; }
+
+/* ---- buttons ------------------------------------------------------ */
+/* Radius 6 is Workspaces'/ActiveWindow's chip radius (GlassChip radius:
+   6) -- the bar's smallest interactive shape, which is what a toolbar
+   button is. The larger radii in the bar (10-16) belong to cards and
+   panes and are used for those below, not here. */
+button,
+button.flat,
+.path-bar button,
+.nemo-pathbar button {
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: @bar_ink;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+button:hover,
+.path-bar button:hover,
+.nemo-pathbar button:hover {
+    background-color: @bar_card_hover;
+    border-color: @bar_rim;
+}
+
+button:active,
+button:checked,
+.path-bar button:checked,
+.nemo-pathbar button:checked {
+    background-color: @bar_accent_str;
+    border-color: @bar_accent;
+    color: @bar_ink;
+}
+
+button:disabled {
+    background-color: transparent;
+    border-color: transparent;
+    color: @bar_ink_faint;
+}
+
+/* The one place a flat accent flood IS right: a dialog's affirmative
+   button is the only element on screen asking to be pressed, and the
+   accent is light, so the label goes to Ink.onLight -- the same pairing
+   the band uses when it flips to the light material. */
+button.suggested-action {
+    background-color: @bar_accent;
+    border-color: @bar_accent;
+    color: @bar_on_light;
+}
+button.suggested-action:hover { background-color: shade(@bar_accent, 1.08); }
+button.destructive-action {
+    background-color: @bar_danger;
+    border-color: @bar_danger;
+    color: @bar_on_light;
+}
+
+/* ---- the file list / icon view ------------------------------------ */
+treeview.view,
+iconview,
+.nemo-window .view {
+    background-color: @bar_card;
+    color: @bar_ink;
+    border: none;
+}
+
+treeview.view:hover,
+iconview:hover {
+    background-color: @bar_card_hover;
+}
+
+/* Rows and icons get the accent rim the selection fill gave up above.
+   It is an INSET BOX-SHADOW, not `outline`, and that is not a style
+   preference: GTK3 reserves `outline` for the keyboard-focus ring and
+   only paints it on the row that actually holds focus, so the first pass
+   -- which used it -- rendered the fill with no rim at all on every
+   selected row, which was checked on screen and is why this reads the way
+   it does. `box-shadow: inset` is drawn for the selected state itself,
+   costs no layout, and lands on the same 1px border-box. */
+treeview.view:selected,
+iconview:selected,
+treeview.view:selected:focus,
+iconview:selected:focus {
+    background-color: @bar_accent_str;
+    color: @bar_ink;
+    box-shadow: inset 0 0 0 1px @bar_accent;
+}
+
+treeview.view:selected:backdrop,
+iconview:selected:backdrop {
+    background-color: @bar_accent_soft;
+    color: @bar_ink_second;
+    box-shadow: none;
+}
+
+/* Column headers are chrome sitting on top of the well, same as the
+   toolbar sits on top of the window -- so they take the pane fill, and
+   the ink drops a tier because a header is a label, not content. */
+treeview.view header button {
+    background-color: @bar_pane_top;
+    background-image: none;
+    border-radius: 0;
+    border-bottom: 1px solid @bar_rim;
+    border-right: 1px solid @bar_rim;
+    color: @bar_ink_second;
+    font-weight: normal;
+}
+treeview.view header button:hover { background-color: @bar_card_hover; }
+
+/* ---- sidebar ------------------------------------------------------ */
+/* Deliberately AFTER the view rules above, and matched one class deeper
+   than they are. Nemo's places sidebar is not a GtkPlacesSidebar: it is a
+   plain treeview carrying `.view`, so `treeview.view` above matches it
+   too, at equal specificity -- whichever of the two is written last wins.
+   Writing this first (the obvious order, chrome before content) is what
+   the first pass did, and it silently handed the sidebar the content
+   well's fill; the symptom was a sidebar that read as part of the file
+   list instead of as part of the toolbar above it. Both the order and the
+   extra class below are load-bearing, so leave them.
+
+   The sidebar is chrome, so it takes the pane, like the toolbar. */
+.nemo-places-sidebar,
+.nemo-places-sidebar.view,
+.nemo-places-sidebar treeview.view,
+.nemo-window .sidebar,
+.sidebar,
+placessidebar {
+    background-color: @bar_pane_top;
+    background-image: none;
+    color: @bar_ink;
+    border-right: 1px solid @bar_rim;
+}
+
+.nemo-places-sidebar treeview.view:hover,
+.sidebar row:hover {
+    background-color: @bar_card_hover;
+}
+
+.nemo-places-sidebar treeview.view:selected,
+.sidebar row:selected {
+    background-color: @bar_accent_str;
+    color: @bar_ink;
+    box-shadow: inset 0 0 0 1px @bar_accent;
+}
+
+/* ---- entries (search, rename, location bar) ----------------------- */
+/* BaliseTextField is the bar's own text input and this mirrors it line
+   for line: card fill, radius 11, a 10% rim at rest that becomes the
+   full accent on focus, and accentStrongest behind selected text. */
+entry,
+.nemo-window entry {
+    background-color: @bar_card;
+    background-image: none;
+    border: 1px solid alpha(#ffffff, 0.10);
+    border-radius: 11px;
+    color: @bar_ink;
+    box-shadow: none;
+}
+entry:focus { border-color: @bar_accent; box-shadow: none; }
+entry selection { background-color: @bar_accent_max; color: @bar_ink; }
+entry:disabled { color: @bar_ink_faint; }
+
+/* ---- menus, popovers, dialogs -------------------------------------- */
+/* Radius 12 is NotificationCenter's card radius -- a context menu is the
+   same kind of object as a notification card (a small floating surface
+   over other windows), and the bar gives those a rim rather than a
+   shadow. */
+menu,
+.menu,
+popover,
+popover.background {
+    background-color: @bar_card_raised;
+    border: 1px solid @bar_rim;
+    border-radius: 12px;
+    color: @bar_ink;
+    padding: 4px;
+}
+
+menuitem,
+popover modelbutton {
+    border-radius: 6px;
+    color: @bar_ink;
+}
+menuitem:hover,
+popover modelbutton:hover {
+    background-color: @bar_accent_str;
+    color: @bar_ink;
+}
+menuitem:disabled { color: @bar_ink_faint; }
+menu separator,
+popover separator { background-color: @bar_rim; }
+
+dialog,
+messagedialog,
+window.background {
+    background-color: @bar_pane_top;
+    color: @bar_ink;
+}
+
+/* ---- notebook (Nemo's tabs) ---------------------------------------- */
+notebook > header {
+    background-color: @bar_pane_bottom;
+    border-color: @bar_rim;
+}
+notebook > header tab {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: @bar_ink_second;
+}
+notebook > header tab:checked {
+    background-color: @bar_card;
+    border-color: @bar_rim;
+    color: @bar_ink;
+}
+
+/* ---- status bar, progress, scrollbars ------------------------------ */
+/* `.nemo-statusbar` is only the LABEL in the middle of the bottom bar,
+   not the bar itself -- the view-mode buttons on the left and the zoom
+   slider on the right are siblings in an untagged box. Giving the class a
+   fill therefore painted a dark rectangle across the middle third and
+   left the two ends on the window fill, which is what the first pass did.
+   There is no selector for that box, so the fix is to paint neither: the
+   bar inherits `window.background` (the pane) as one continuous strip,
+   and only the rim above it says where it starts. */
+.nemo-statusbar,
+statusbar {
+    background-color: transparent;
+    border-top: 1px solid @bar_rim;
+    color: @bar_ink_second;
+}
+
+progressbar progress { background-color: @bar_accent; }
+progressbar trough { background-color: @bar_card_deep; }
+
+/* The zoom slider at the right end of the status bar -- the last widget
+   in the window still wearing stock Adwaita after the pass above, because
+   a GtkScale's trough is painted by the theme and reads none of the
+   colour names. Modelled on MixerSlider: a deep trough, the accent as the
+   filled part, and the knob in Ink.primary. */
+scale trough {
+    background-color: @bar_card_deep;
+    border: 1px solid @bar_rim;
+    box-shadow: none;
+}
+scale highlight { background-color: @bar_accent; }
+scale slider {
+    background-color: @bar_ink;
+    border: 1px solid @bar_rim;
+    box-shadow: none;
+}
+scale slider:hover { background-color: #ffffff; }
+
+scrollbar {
+    background-color: transparent;
+    border: none;
+}
+scrollbar slider {
+    background-color: @bar_ink_faint;
+    border: none;
+    border-radius: 6px;
+    min-width: 6px;
+    min-height: 6px;
+}
+scrollbar slider:hover { background-color: @bar_ink_muted; }
+
+/* ---- check/radio --------------------------------------------------- */
+check, radio {
+    background-color: @bar_card;
+    border: 1px solid @bar_rim;
+    color: @bar_ink;
+}
+check:checked, radio:checked {
+    background-color: @bar_accent;
+    border-color: @bar_accent;
+    color: @bar_on_light;
+}
+
+/* ---- links --------------------------------------------------------- */
+link, *:link { color: @bar_accent; }
