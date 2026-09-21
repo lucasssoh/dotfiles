@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# tex2utf — stdin : une formule LaTeX, stdout : son rendu unicode.
+#
+# C'est utftex (libtexprintf-tools) qui fait le travail. Ce script existe
+# uniquement pour la poignée de commandes qu'utftex ne connaît pas et sur
+# lesquelles il sort en code 1 : sans réécriture, render-markdown bascule
+# alors sur latex2text, dont la sortie garde les « ^ » et les « _ » en
+# clair — exactement ce que le rendu est censé faire disparaître.
+#
+# Mesuré sur 29 constructions courantes : utftex en refuse 5, dont trois
+# se réécrivent sans rien perdre (les deux autres, \substack et
+# \xrightarrow, sont laissées à latex2text). Le tableau ci-dessous est
+# donc court par construction, pas par manque de travail — utftex couvre
+# déjà \frac, \sqrt, \sum, \int, \binom, les matrices, \mathbb, \vec,
+# \lfloor, \underbrace, et les exposants/indices en ¹²ₙ.
+#
+# Le script n'est pas dans bin/ : ce n'est pas une commande qu'on tape,
+# c'est une dépendance interne de la config nvim, et la référencer par
+# chemin absolu (voir lua/plugins/markdown.lua) évite au passage toute
+# question d'ordre de PATH.
+
+set -Eeuo pipefail
+
+# Sans utftex, échouer tout de suite et en silence : render-markdown
+# enchaîne alors sur le convertisseur suivant de sa liste.
+command -v utftex >/dev/null 2>&1 || exit 1
+
+# Pas de « \; » (espace fine) dans les remplacements : GNU sed avale le
+# backslash devant une ponctuation et un « ; » nu se retrouverait dans la
+# formule rendue. Une espace ordinaire suffit, utftex la conserve.
+sed -E \
+    -e 's/\\(display|text|script)style//g' \
+    -e 's/\\limits//g' \
+    -e 's/\\pmod\{([^{}]*)\}/ (\\mathrm{mod} \1)/g' \
+    -e 's/\\pod\{([^{}]*)\}/ (\1)/g' \
+    -e 's/\\bmod\b/\\mathrm{mod}/g' \
+    -e 's/\\(gcd|lcm|sup|inf|dim|ker|Pr|hom)\b/\\mathrm{\1}/g' \
+  | utftex

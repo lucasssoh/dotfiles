@@ -2,6 +2,92 @@ return {
     "nvim-tree/nvim-tree.lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
+        -- Own namespace for the elision extmarks below: nvim-tree clears
+        -- its own namespaces on every redraw, and the cursor-pin autocmd
+        -- scans every namespace, so ours has to be identifiable.
+        local elide_ns = vim.api.nvim_create_namespace("NvimTreeElide")
+        local ELLIPSIS = "…"
+
+        -- Pick where to cut `name` so that head .. "…" .. tail fits in
+        -- `avail` display cells. The tail keeps the extension plus a few
+        -- characters of stem -- "foo.ts" and "foo.test.ts" must not elide
+        -- to the same thing -- and the head takes everything left over,
+        -- since that is where sibling names diverge most.
+        -- Returns byte offsets into `name`, or nil when there is nothing
+        -- worth cutting (name already fits, or the budget is so small
+        -- that no split stays inside it).
+        local function split_name(name, avail)
+            local nchars = vim.fn.strchars(name)
+            local ext = name:match("%.[%w_%-]+$") or ""
+            local tail = math.min(vim.fn.strchars(ext) + 3, math.floor((avail - 1) / 2))
+            local head = avail - 1 - tail
+
+            -- Budget is in display cells but the split is in characters;
+            -- for a CJK/emoji name those differ, so shrink the head until
+            -- the rendered result really fits instead of assuming 1:1.
+            while head >= 1 and tail >= 1 and head + tail < nchars do
+                local head_b = vim.fn.byteidx(name, head)
+                local tail_b = vim.fn.byteidx(name, nchars - tail)
+                local shown = name:sub(1, head_b) .. ELLIPSIS .. name:sub(tail_b + 1)
+                if vim.fn.strdisplaywidth(shown) <= avail then
+                    return head_b, tail_b
+                end
+                head = head - 1
+            end
+        end
+
+        -- Conceal the middle of every name that overflows the tree window.
+        -- The buffer text itself is never touched -- only its *display* --
+        -- which is what makes both halves of the behaviour come for free:
+        --   * 'concealcursor' is empty, so Neovim un-conceals the cursor
+        --     line on its own: the entry you are sitting on always reads
+        --     in full, with no code and no re-render on CursorMoved.
+        --   * renderer.full_name (below) floats that full line out over
+        --     the editor when even un-concealed it is wider than the
+        --     window, so nothing is ever unreachable.
+        -- Net effect: the window no longer has to be as wide as its single
+        -- longest entry -- everything else stays narrow.
+        local function elide_long_names(bufnr, winnr)
+            vim.api.nvim_buf_clear_namespace(bufnr, elide_ns, 0, -1)
+
+            local core = require("nvim-tree.core")
+            local explorer = core.get_explorer()
+            local wininfo = vim.fn.getwininfo(winnr)[1]
+            if not explorer or not wininfo then
+                return
+            end
+
+            -- Columns actually available for text: the window minus its
+            -- gutter (the sign column carrying the git glyphs, etc.).
+            -- Same figure nvim-tree's own full_name popup compares
+            -- against, so the two hand over to each other exactly.
+            local budget = vim.api.nvim_win_get_width(winnr) - wininfo.textoff
+
+            for lnum, node in pairs(explorer:get_nodes_by_line(core.get_nodes_starting_line())) do
+                local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1]
+                -- Grouped folders render as "a/b/c", so ask the node for
+                -- the string that was actually drawn rather than using
+                -- node.name. The name is the tail of the line; if it is
+                -- not (a decorator drew an icon after it), skip the line
+                -- rather than cut the wrong bytes.
+                local name = line and node:highlighted_name().str
+                if name and #name > 0 and line:sub(-#name) == name then
+                    local prefix = line:sub(1, #line - #name)
+                    local avail = budget - vim.fn.strdisplaywidth(prefix)
+                    if avail >= 6 and vim.fn.strdisplaywidth(name) > avail then
+                        local head_b, tail_b = split_name(name, avail)
+                        if head_b then
+                            vim.api.nvim_buf_set_extmark(bufnr, elide_ns, lnum - 1, #prefix + head_b, {
+                                end_col = #prefix + tail_b,
+                                conceal = ELLIPSIS,
+                                hl_group = "NvimTreeIndentMarker",
+                            })
+                        end
+                    end
+                end
+            end
+        end
+
         local function my_on_attach(bufnr)
             local api = require("nvim-tree.api")
 
@@ -37,7 +123,11 @@ return {
                     local icon_col
                     for _, m in ipairs(marks) do
                         local col, details = m[3], m[4]
-                        if details.hl_group and details.hl_group ~= "NvimTreeIndentMarker" then
+                        -- The elision marks sit inside the name, well past
+                        -- the icon, so they never win the math.min below —
+                        -- but skip them explicitly so that stays true if
+                        -- their highlight group ever changes.
+                        if details.hl_group and details.hl_group ~= "NvimTreeIndentMarker" and details.ns_id ~= elide_ns then
                             if not icon_col or col < icon_col then
                                 icon_col = col
                             end
@@ -67,21 +157,29 @@ return {
             },
             -- =================================================================
 
-            -- Dynamic width instead of a fixed one: the window grows to fit
-            -- the longest currently-visible line (capped at max) instead of
-            -- truncating deeply-nested names off the right edge. This is
-            -- what removes the "scroll right to read the filename" problem
-            -- entirely — no manual centering/scrolling needed.
+            -- Dynamic width, but capped tight. The window still shrinks to
+            -- fit a shallow tree; what it no longer does is stretch to the
+            -- width of its single longest entry, because past `max` the
+            -- overflow is handled by eliding the middle of the name
+            -- (elide_long_names above) instead of by widening the window.
+            -- Set width to a plain number here for a fixed-width tree —
+            -- nothing else in this file depends on it being dynamic.
             view = {
                 width = {
                     min = 30,
-                    max = 60,
+                    max = 40,
                     padding = 1,
                 },
             },
 
             renderer = {
                 root_folder_label = false,
+                -- Float the whole line over the editor when the cursor is
+                -- on an entry too wide for the window. This is what makes
+                -- the elision lossless: 'concealcursor' already expands
+                -- the cursor line in place, and this catches the case
+                -- where even expanded it runs off the right edge.
+                full_name = true,
                 -- ├ / └ guide lines between parent and child entries
                 -- (like `tree`), coloured NvimTreeIndentMarker (coucou:
                 -- p.muted) so they stay discreet.
@@ -129,6 +227,8 @@ return {
                     -- what naturally groups every status glyph in its own
                     -- column, separated from "icon name" by the gutter's
                     -- own gap, with zero manual spacing logic needed.
+                    -- It also keeps the status out of the text, so the
+                    -- elision above never has to budget around it.
                     git_placement = "signcolumn",
                     -- One space between the file/folder icon and the name,
                     -- but nothing else is inline any more to space out.
@@ -137,10 +237,8 @@ return {
                         folder_arrow = "",
                     },
                     -- Plain ASCII signs instead of nerd-font icon shapes —
-                    -- the status now reads from the whole row's tinted
-                    -- background (see the TreeRendered hook below), so
-                    -- the glyph itself only needs to be a compact,
-                    -- legible mark, not a distinct pictogram per status.
+                    -- the glyph only needs to be a compact, legible mark
+                    -- in the gutter, not a distinct pictogram per status.
                     glyphs = {
                         git = {
                             staged = "+",
@@ -174,6 +272,26 @@ return {
                 },
             },
         })
+
+        -- Re-elide after every draw: nvim-tree has already resized the
+        -- window by the time TreeRendered fires (renderer/init.lua calls
+        -- view.grow_from_content() just before dispatching), so the width
+        -- we budget against is the final one.
+        do
+            local api = require("nvim-tree.api")
+            api.events.subscribe(api.events.Event.TreeRendered, function(data)
+                if not data.bufnr or not data.winnr or not vim.api.nvim_win_is_valid(data.winnr) then
+                    return
+                end
+                -- conceallevel 2: a concealed block collapses to its
+                -- replacement character. concealcursor empty: never
+                -- conceal the line the cursor is on — that single option
+                -- is the whole "selected entry shows in full" behaviour.
+                vim.wo[data.winnr].conceallevel = 2
+                vim.wo[data.winnr].concealcursor = ""
+                elide_long_names(data.bufnr, data.winnr)
+            end)
+        end
 
         -- Root-level (depth 0) entries never get an indent-marker column
         -- at all — nvim-tree's padding code skips it entirely there, so

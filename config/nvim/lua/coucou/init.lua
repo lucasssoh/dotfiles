@@ -361,6 +361,14 @@ function M.set_plugin_groups(p)
     hl("RenderMarkdownH5Bg", { bg = p.overlay })
     hl("RenderMarkdownH6Bg", { bg = p.overlay })
     hl("RenderMarkdownCode",       { bg = p.surface })
+    -- Math : l'inline reste du texte coloré -- un fond au milieu d'une
+    -- phrase le ferait lire comme du code inline. Le bloc $$, lui, prend
+    -- le fond de RenderMarkdownCode pour se lire comme un conteneur, et
+    -- un bleu distinct du cyan du code pour dire « ce n'est pas du code ».
+    -- MathBlock n'est pas un groupe du plugin : il est posé par
+    -- lua/plugins/markdown.lua sur les lignes du bloc rendu.
+    hl("RenderMarkdownMath",       { fg = p.blue })
+    hl("RenderMarkdownMathBlock",  { fg = p.blue, bg = p.surface })
     hl("RenderMarkdownCodeInline", { fg = p.cyan_light, bg = p.surface })
     hl("RenderMarkdownUnchecked",  { fg = p.muted })
     hl("RenderMarkdownChecked",    { fg = p.green })

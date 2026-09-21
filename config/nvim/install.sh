@@ -21,6 +21,23 @@ ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 # 1. Install Neovim if needed
 pkg_ensure neovim
 
+# 1b. Rendu des formules mathématiques dans le markdown (render-markdown.nvim
+# délègue la conversion LaTeX -> unicode à un binaire externe).
+#
+# utftex rend en 2D -- a^2 devient a², \frac trace une vraie barre -- et c'est
+# lui qui fait disparaître les « ^ », les « _ » et les « $ » du texte affiché.
+# C'est la vraie dépendance ; sans elle, les formules restent en clair.
+pkg_ensure libtexprintf-tools
+
+# latex2text (pylatexenc) n'est dans aucun dépôt Fedora, d'où pipx plutôt que
+# pkg_ensure. Il ne sert que de filet : sur les quelques commandes qu'utftex
+# refuse, il sort une ligne d'unicode approximative plutôt que rien. Purement
+# optionnel, donc jamais bloquant -- la liste de convertisseurs de
+# lua/plugins/markdown.lua se filtre toute seule sur vim.fn.executable().
+if command -v pipx >/dev/null 2>&1; then
+    pipx install pylatexenc >/dev/null 2>&1 || true
+fi
+
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/nvim
@@ -30,4 +47,8 @@ safe_link "$DOTFILES_DIR/config/nvim/init.lua" ~/.config/nvim/init.lua
 safe_link "$DOTFILES_DIR/config/nvim/lua" ~/.config/nvim/lua
 safe_link "$DOTFILES_DIR/config/nvim/ftplugin" ~/.config/nvim/ftplugin
 safe_link "$DOTFILES_DIR/config/nvim/colors" ~/.config/nvim/colors
+# bin/ : tex2utf, référencé par chemin absolu depuis lua/plugins/markdown.lua
+# (vim.fn.stdpath("config") .. "/bin/tex2utf"), donc le lien est ce qui le rend
+# atteignable -- il n'est volontairement pas dans ~/.local/bin.
+safe_link "$DOTFILES_DIR/config/nvim/bin" ~/.config/nvim/bin
 ok "Neovim configured."
