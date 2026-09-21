@@ -8,12 +8,23 @@
 # bracket the session with the distraction-free state.
 #
 # Bound to SUPER+F (hypr/keybinds.lua). One key, three outcomes,
-# depending on what's already on screen:
+# depending on what's already on screen -- and "on screen" means ON THIS
+# WORKSPACE, which is the whole subtlety:
 #
-#   nothing open          -> the picker
-#   a book open elsewhere -> focus it (you meant "back to my book")
+#   nothing open here     -> the picker
+#   a book behind something here -> focus it (you meant "back to my book")
 #   a book already focused-> the picker (you're looking at it, so you
 #                            must be after a DIFFERENT one)
+#
+# A book on ANOTHER workspace is none of those. It does not get focused
+# and it does not count as "a book is open": a workspace is how a desk is
+# kept separate from another desk, so answering SUPER+F by yanking you
+# out of the one you are on is never what was meant -- you pressed it to
+# read something HERE. That is a bug this file shipped with: the branch
+# below matched any zathura anywhere, so opening a second document meant
+# being thrown to the first one's workspace and pressing SUPER+F again to
+# finally get the picker. Everything that asks "is a book already open?"
+# is scoped by current_workspace() for the same reason.
 #
 # ---- Why there is no library database ------------------------------
 # zathura already keeps one, at ~/.local/share/zathura/bookmarks.sqlite
@@ -517,6 +528,12 @@ decorate() {
 # SUPER+SHIFT+F while still reading: the window shrank, the bar stayed
 # hidden, and you had to bring it back by hand every time.
 #
+# Since a book now opens tiled (see open_book), the bar is normally
+# VISIBLE while reading, and that is the right default rather than a
+# concession: it is the only thing on screen saying which document has
+# focus and what page it is on. Fullscreen covers it, on request, for as
+# long as you want it covered.
+#
 # Hiding the bar was also never what stopped the interruptions. That is
 # DND, which is a separate quickshell switch and the one thing kept here.
 #
@@ -544,15 +561,14 @@ focus_enter() {
             kill -0 "$pid" 2>/dev/null || { rm -f "$pidfile"; crashed=1; }
         done
 
-        # Whether this session is the only one, which decides both halves
-        # of "immersive or side by side" below.
+        # `alone` -- is this the only reading session anywhere? -- is the
+        # only question left here, and it is about NOT BEING DISTURBED,
+        # which has no geometry: notifications and the idle lock are
+        # global, so the first session in quiets them and the last
+        # session out restores them, wherever the windows happen to be.
         #
-        # PRINTED, not assigned to a global: everything here runs inside
-        # `( flock 9 ... )`, which is a subshell, so a variable set here
-        # is gone by the time the caller reads it -- which is exactly how
-        # the first version of this failed, silently, with the first book
-        # never going fullscreen. stdout crosses that boundary; a
-        # variable does not.
+        # This function used to decide LAYOUT as well. It no longer does,
+        # and neither does anything else in this file -- see open_book.
         local alone=0
         if [ -z "$(ls -A "$SESSIONS" 2>/dev/null)" ]; then
             alone=1
@@ -571,19 +587,9 @@ focus_enter() {
                     printf 'zen=0 dnd=0\n' > "$PREV_STATE"
             fi
             qs -c bar ipc call bar setDnd true >/dev/null 2>&1 || true
-        else
-            # A second document: drop the first one out of fullscreen so
-            # the two tile side by side. That also brings the bar back on
-            # its own, which is the case where you most need it -- it is
-            # the only thing saying which of the two has focus and what
-            # page it is on (quickshell ActiveWindow.qml shows
-            # "Liseuse  [12/340] name"). Notifications stay quiet: that
-            # part of not being disturbed still holds.
-            local a
-            for a in $(zathura_addrs); do set_fullscreen "$a" off; done
         fi
+
         : > "$SESSIONS/$$"
-        printf '%s' "$alone"
     ) 9>"$LOCK"
 }
 
@@ -624,31 +630,30 @@ open_book() {
     # Nothing recorded here: zathura writes its own fileinfo row (path,
     # page, time) the moment it opens the file, and that row is what
     # ranked() reads back. See the header.
-    local alone
-    alone="$(focus_enter)"
+    focus_enter
 
-    # Fullscreen only when this is the only book open, and done here
-    # rather than by a window rule because a rule cannot count windows
-    # (see hypr/windowrules.lua). The wait is for the window to exist:
-    # zathura has not been launched yet at this point, so the address is
-    # found by polling for one that was not there before. Backgrounded,
-    # so a window that never appears costs five seconds of a detached
-    # subshell and nothing else.
-    if [ "$alone" = "1" ]; then
-        local before
-        before="$(zathura_addrs | tr '\n' ' ')"
-        (
-            for _ in $(seq 1 100); do
-                for a in $(zathura_addrs); do
-                    case " $before " in
-                        *" $a "*) ;;
-                        *) set_fullscreen "$a" on; exit 0 ;;
-                    esac
-                done
-                sleep 0.05
-            done
-        ) >/dev/null 2>&1 &
-    fi
+    # ---- A book opens as an ordinary window ------------------------
+    # It is not fullscreened here, and nothing else fullscreens it
+    # either: windowrules.lua has no rule, and this function no longer
+    # has the poller that used to wait for the new window and set the
+    # mode behind your back.
+    #
+    # Fullscreen is a MODE, not a default. It is right for a deck of
+    # slides in a dark room and wrong for almost everything else this
+    # library holds -- a reference PDF you read next to an editor, a
+    # course handout you copy from, two documents you compare. Forcing it
+    # on open meant every one of those started with SUPER+SHIFT+F to undo
+    # it, which is a default that is wrong more often than it is right.
+    # SUPER+SHIFT+F still turns it on the moment it IS what you want, and
+    # a tiled window is what the bar's page counter is for.
+    #
+    # Nothing is needed to keep a second document visible next to a book
+    # you fullscreened by hand, either: this Hyprland drops a fullscreen
+    # window out of the mode by itself when another window opens on its
+    # workspace (checked on this build -- `misc:new_window_takes_over_
+    # fullscreen`, which used to make that configurable, no longer
+    # exists). The un-fullscreen loop that used to live in focus_enter
+    # was duplicating the compositor.
 
     # EXIT alone isn't enough: `set -e` plus a signal from the session
     # ending (logout, a killed terminal) would skip the restore and leave
@@ -766,18 +771,32 @@ touches() {
     :info             file metadata
     :exec <command>   run a command
 
+  FULLSCREEN
+    A book opens as an ordinary tiled window. Nothing puts it fullscreen
+    for you -- that is SUPER+SHIFT+F, when you want it, and it is a mode
+    worth having for slides and worth not having for a handout you are
+    copying from next to an editor.
+
+    Tiled is also the state in which the bar can help: it names the
+    window Liseuse and shows [page/total] and the document, updated on
+    every page turn. Fullscreen covers that strip; SUPER+SHIFT+F again
+    brings it back.
+
   TWO AT ONCE
-    Opening a second book from SUPER+F drops the first out of fullscreen
-    and puts the two side by side, which brings the bar back -- it is
-    what tells you which of them has focus and what page it is on. One
-    book on its own stays fullscreen, which hides the bar by covering it.
-    SUPER+SHIFT+F leaves fullscreen at any time and the bar returns.
+    Just open the second one. Both tile side by side, and if the first
+    was fullscreen the compositor drops it out of the mode by itself to
+    make room.
+
+    On ANOTHER workspace, SUPER+F ignores this book entirely and goes
+    straight to the picker. This one stays exactly as you left it, mode
+    included. Workspaces keep reading separate the way they keep anything
+    else separate -- one desk per subject.
 
   LEAVE
     q                 close the book (notifications come back, the
-                      idle lock re-arms). The bar needs nothing: a
-                      fullscreen window covers it and leaving
-                      fullscreen brings it back by itself
+                      idle lock re-arms). The bar needs nothing: it is
+                      never hidden, only covered when you ask for
+                      fullscreen yourself
     Esc               CANCEL — a search, the outline, a half-typed
                       command. Does not close the book.
     F1                this manual
@@ -1012,14 +1031,24 @@ pick() {
 # `pairs(hl.dsp)` through an exec_cmd dispatch; note it has window.close
 # and window.fullscreen but NO window.focus -- focusing lives one level
 # up, on hl.dsp.focus.
-zathura_addrs() {  # every zathura window address, newest last
+# The workspace SUPER+F was pressed on. Empty when the compositor cannot
+# be asked, and the lookup below treats empty as "no restriction", i.e.
+# the pre-fix global behaviour -- a degraded answer rather than no answer.
+current_workspace() {
+    hyprctl -j activeworkspace 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true
+}
+
+zathura_addrs() {  # zathura windows on workspace $1, newest last
     hyprctl -j clients 2>/dev/null \
-        | jq -r --arg c "$ZATHURA_CLASS" 'map(select(.class == $c)) | .[].address' \
+        | jq -r --arg c "$ZATHURA_CLASS" --arg w "${1-}" \
+              'map(select(.class == $c
+                          and ($w == "" or (.workspace.id | tostring) == $w)))
+               | .[].address' \
         2>/dev/null || true
 }
 
-zathura_addr() {   # address of any zathura window, empty if none
-    zathura_addrs | head -1
+zathura_addr() {   # address of one of them, empty if there are none
+    zathura_addrs "${1-}" | head -1
 }
 
 focus_window() {
@@ -1027,23 +1056,14 @@ focus_window() {
     hyprctl dispatch "hl.dsp.focus({ window = 'address:$1' })" >/dev/null 2>&1 || true
 }
 
-# SET fullscreen, rather than toggle it. hl.dsp.window.fullscreen is a
-# toggle, so firing it blind would undo the state it was asked to
-# establish half the time; the current state is read back first and the
-# dispatch only happens when it actually differs. Hyprland reports 0 for
-# "not fullscreen" and a non-zero mode otherwise.
-set_fullscreen() {
-    local addr="$1" want="$2" cur
-    [ -n "$addr" ] || return 0
-    cur="$(hyprctl -j clients 2>/dev/null \
-            | jq -r --arg a "$addr" 'map(select(.address == $a)) | .[0].fullscreen // 0' \
-            2>/dev/null || echo 0)"
-    if [ "$want" = "on" ] && [ "$cur" = "0" ]; then
-        hyprctl dispatch "hl.dsp.window.fullscreen({ mode = 0, window = 'address:$addr' })" >/dev/null 2>&1 || true
-    elif [ "$want" = "off" ] && [ "$cur" != "0" ]; then
-        hyprctl dispatch "hl.dsp.window.fullscreen({ mode = 0, window = 'address:$addr' })" >/dev/null 2>&1 || true
-    fi
-}
+# There is deliberately no set_fullscreen() here any more. This script
+# does not put windows into or out of fullscreen at all: a book opens as
+# an ordinary window and SUPER+SHIFT+F is the only thing that changes
+# that. The helper it used to need was careful for a good reason --
+# hl.dsp.window.fullscreen is a TOGGLE, so it had to read the current
+# mode back before firing or it would undo the state it was asked to
+# establish half the time -- which is worth remembering if anything here
+# ever needs to drive the mode again.
 
 zathura_focused() {
     [ "$(hyprctl -j activewindow 2>/dev/null | jq -r '.class // empty' 2>/dev/null)" = "$ZATHURA_CLASS" ]
@@ -1057,7 +1077,9 @@ case "${1-}" in
         cat <<EOF
 liseuse — reading library (zathura)
 
-  liseuse              SUPER+F. Resume the open book, or pick one.
+  liseuse              SUPER+F. Back to the book open on THIS workspace,
+                       or the picker. A book on another workspace is left
+                       where it is and does not answer for the keypress.
   liseuse pick         Force the picker even with a book already open.
   liseuse open FILE    Open that file as a reading session.
   liseuse list         Print the ranked library on stdout.
@@ -1094,7 +1116,9 @@ EOF
         ;;
     "")
         # The three-outcome behaviour described at the top of this file.
-        addr="$(zathura_addr)"
+        # Scoped to this workspace: a book on another one is somebody
+        # else's desk and must not answer for this keypress.
+        addr="$(zathura_addr "$(current_workspace)")"
         if [ -n "$addr" ] && ! zathura_focused; then
             focus_window "$addr"
         else

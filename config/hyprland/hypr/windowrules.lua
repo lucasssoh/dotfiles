@@ -422,13 +422,14 @@ hl.window_rule({
 -- recolor exists to create. Same reason Firefox has this rule.
 --
 -- No `fullscreen` here any more, and that is deliberate. It used to be
--- forced on every zathura window, which is right for one document and
--- wrong for two: a second one opened on top of the first instead of
--- beside it, and a fullscreen window covers the bar, so nothing on
--- screen could say which document had focus. Liseuse decides instead
--- (config/liseuse/liseuse, open_book): the first reading session goes
--- fullscreen, a second one leaves both tiled and brings the bar back.
--- A rule cannot express "only if it is the only one".
+-- forced on every zathura window, which is right for a deck of slides
+-- and wrong for most of what gets read here -- a reference PDF beside an
+-- editor, a handout being copied from, two documents compared -- and it
+-- covers the bar, so nothing on screen could say which document had
+-- focus or what page it was on. Liseuse briefly took the decision over
+-- (fullscreen the first book, tile the second); it now takes no decision
+-- at all. A book opens as an ordinary window and SUPER+SHIFT+F is the
+-- one thing that changes that, which is what a mode should be.
 --
 -- no_blur: the window is opaque, so there is nothing to blur behind it
 -- -- the pass would cost GPU time per frame for a result no one can see,

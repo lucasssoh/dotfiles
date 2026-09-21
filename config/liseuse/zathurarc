@@ -118,11 +118,14 @@ set statusbar-basename true
 # LAYOUT AND MOTION
 # ============================================================
 # adjust-open picks the zoom a freshly opened document lands on.
-# "best-fit" = the whole page visible at once, which pairs with the
-# fullscreen window rule (hypr/windowrules.lua): one page, no scrolling
-# inside it, turn with Space. Switch to "width" if you read dense A4
-# course PDFs more than books -- it zooms to the page's width and makes
-# the text noticeably bigger at the cost of scrolling each page.
+# "best-fit" = the whole page visible at once, whatever the window is:
+# one page, no scrolling inside it, turn with Space. It is written
+# against the WINDOW and not against the screen, which is why nothing
+# here had to change when books stopped opening fullscreen -- tiled to
+# half a monitor, the page is simply half the size, still whole, still
+# centred. Switch to "width" if you read dense A4 course PDFs more than
+# books: it zooms to the page's width and makes the text noticeably
+# bigger at the cost of scrolling each page.
 set adjust-open "best-fit"
 
 # Zero, not the 8 this file asked for first, and the reason is in
@@ -140,8 +143,8 @@ set adjust-open "best-fit"
 # Space no longer goes through that path at all (it is remapped below to
 # turn the page outright), so this is belt and braces rather than the
 # fix. It still matters for Ctrl+f and Ctrl+b, which do. And it costs
-# nothing: in single-page fullscreen the padding separates no adjacent
-# pages, it only eats into the letterbox the centring already provides.
+# nothing: in single-page mode the padding separates no adjacent pages,
+# it only eats into the letterbox the centring already provides.
 set page-h-padding 0
 set page-v-padding 0
 
@@ -211,12 +214,13 @@ set scroll-page-aware true
 # scroll-full-overlap is deliberately left at 0, reversing an earlier
 # 0.12 in this file. That 0.12 was reasoned from a document taller than
 # the screen, where keeping the last few lines visible after a full-page
-# scroll gives the eye something to land on. But this configuration never
-# produces that document: best-fit plus a fullscreen window means one
-# page IS the viewport, so there is no "within the page" to be continuous
-# with -- the overlap only ever offset the next page by 12% and made
-# every Space press need a manual re-centre. On a deck of slides it is
-# not a continuity aid, it is the bug.
+# scroll gives the eye something to land on. But best-fit never produces
+# that document at the zoom it opens at: the page IS the viewport, so
+# there is no "within the page" to be continuous with -- the overlap only
+# ever offset the next page by 12% and made every Space press need a
+# manual re-centre. On a deck of slides it is not a continuity aid, it is
+# the bug. Zoom in past the fit and Ctrl+f/Ctrl+b do have somewhere to
+# go, which is what page-aware scrolling above is for.
 set scroll-step 15
 set scroll-full-overlap 0
 
