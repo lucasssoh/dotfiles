@@ -6,6 +6,12 @@
 # pip_classes list loses focus, it's shrunk and pushed into the bottom-right
 # corner of the screen; as soon as it regains focus, it's restored to its
 # normal size/position. No autostart: launched as needed.
+#
+# Only FLOATING windows can be placed this way -- a tiled window's
+# geometry belongs to the layout, and both dispatchers below are no-ops
+# on one. windowrules.lua's `float = true` rule for mpv is currently
+# commented out, so mpv opens tiled and has to be floated (SUPER+SHIFT+SPACE)
+# before PIP has anything to move.
 # =========================================================
 
 # Waits up to 30s for the Hyprland event socket to appear (useful if this
@@ -53,27 +59,53 @@ PIP_Y=$(( SCREEN_H - PIP_H - PIP_MARGIN_Y ))
 FULL_W=$(( SCREEN_W * 2 / 3 ))
 FULL_H=$(( SCREEN_H * 2 / 3 ))
 
-# Window classes affected by PIP behavior
+# Window classes affected by PIP behavior. This array is the only place
+# the list lives: it used to be repeated as a Python literal inside the
+# client query below, so editing one and not the other silently kept the
+# old behaviour. It is passed to that query as arguments instead.
 pip_classes=("mpv" "com.gabm.satty")
 
-is_pip_class() {
-    local class=$1
-    for c in "${pip_classes[@]}"; do
-        [ "$c" = "$class" ] && return 0
-    done
-    return 1
-}
-
+# ---- Talking to the compositor -------------------------------------
+# Every dispatch goes through hl.dsp.*, and that is not a style choice.
+# This Hyprland is configured in Lua (hypr/*.lua), so `hyprctl dispatch`
+# evaluates its argument AS LUA, and the classic syntax this script
+# shipped with does not merely misbehave -- it fails to parse:
+#
+#   $ hyprctl dispatch movewindowpixel "exact 100 100,address:0x5..."
+#   error: [string "return hl.dispatch(movewindowpixel exact 100
+#          100,address:0x5...)"]:1: ')' expected near 'exact'
+#
+# Nothing checked that return value, so PIP has never once moved a
+# window. The argument names below came from the error the call returns
+# when handed an empty table, which is the fastest way to read this API:
+#
+#   hl.window.move: unrecognized arguments. Expected one of:
+#   direction, x+y(+relative), workspace, into_group, out_of_group
+#
+# x/y are absolute pixels -- the `exact` of the old syntax; `relative =
+# true` is the other form.
+#
+# ---- Resize first, THEN move ---------------------------------------
+# The reverse of the order this script used, and it is not arbitrary:
+# hl.dsp.window.resize keeps the window's CENTRE fixed, not its
+# top-left corner. Measured, from 1920x1200 at [0,24]:
+#
+#   move to [1420,870] then resize to 480x300  ->  lands at [2140,1320]
+#   resize to 480x300 then move to [1420,870]  ->  lands at [1420,870]
+#
+# 2140 is 1420 + (1920-480)/2: the shrink pushed the corner out by half
+# the width it lost, off the right edge of the screen. Sizing first and
+# placing second makes the last word the one that matters.
 shrink_window() {
     local addr=$1
-    hyprctl dispatch movewindowpixel "exact ${PIP_X} ${PIP_Y},address:${addr}"
-    hyprctl dispatch resizewindowpixel "exact ${PIP_W} ${PIP_H},address:${addr}"
+    hyprctl dispatch "hl.dsp.window.resize({ x = ${PIP_W}, y = ${PIP_H}, window = 'address:${addr}' })" >/dev/null
+    hyprctl dispatch "hl.dsp.window.move({ x = ${PIP_X}, y = ${PIP_Y}, window = 'address:${addr}' })" >/dev/null
 }
 
 restore_window() {
     local addr=$1
-    hyprctl dispatch movewindowpixel "exact $(( (SCREEN_W - FULL_W) / 2 )) $(( (SCREEN_H - FULL_H) / 2 )),address:${addr}"
-    hyprctl dispatch resizewindowpixel "exact ${FULL_W} ${FULL_H},address:${addr}"
+    hyprctl dispatch "hl.dsp.window.resize({ x = ${FULL_W}, y = ${FULL_H}, window = 'address:${addr}' })" >/dev/null
+    hyprctl dispatch "hl.dsp.window.move({ x = $(( (SCREEN_W - FULL_W) / 2 )), y = $(( (SCREEN_H - FULL_H) / 2 )), window = 'address:${addr}' })" >/dev/null
 }
 
 declare -A pip_state  # window address -> 0 (normal size) | 1 (shrunk to PIP)
@@ -84,7 +116,6 @@ socat -u UNIX-CONNECT:"$SOCKET" STDOUT | while IFS= read -r line; do
 
     case "$EVENT" in
         activewindow)
-            ACTIVE_CLASS=$(echo "$DATA" | cut -d',' -f1)
             ACTIVE_ADDR=$(hyprctl activewindow -j | python3 -c "
 import json, sys
 w = json.load(sys.stdin)
@@ -109,18 +140,28 @@ print(w.get('address', ''))
                 fi
             done < <(hyprctl clients -j | python3 -c "
 import json, sys
-clients = json.load(sys.stdin)
-pip = ['mpv', 'com.gabm.satty']
-for c in clients:
+pip = set(sys.argv[1:])
+for c in json.load(sys.stdin):
     if c.get('class') in pip:
         print(c.get('address'), c.get('class'))
-")
+" "${pip_classes[@]}")
             ;;
         closewindow)
             # Clears the state to prevent a closed address from being
-            # reused by Hyprland and inherited by another window
+            # reused by Hyprland and inherited by another window.
+            #
+            # The 0x is added back, and without it this never once fired.
+            # The event stream and the JSON API disagree about the shape
+            # of an address: socket2 emits it BARE
+            #
+            #   closewindow>>557b8ebbe3f0
+            #
+            # while `hyprctl clients -j` -- where every key in pip_state
+            # comes from -- reports 0x557b8ebbe3f0. So the unset below was
+            # always deleting a key that did not exist, and the stale
+            # entry it was meant to remove stayed until this daemon died.
             ADDR=$(echo "$DATA" | tr -d '[:space:]')
-            unset "pip_state[$ADDR]"
+            unset "pip_state[0x${ADDR#0x}]"
             ;;
     esac
 done

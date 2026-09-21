@@ -170,16 +170,25 @@ Item {
                 MouseArea {
                     cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
-                    // Plain `hyprctl dispatch`, not the hl.dispatch Lua
-                    // detour -- pip-daemon.sh already proves address-
-                    // targeted dispatchers (movewindowpixel,
-                    // resizewindowpixel) work fine as vanilla hyprctl
-                    // dispatch on this system; focuswindow is Hyprland's
-                    // own native dispatcher, not part of the custom
-                    // hl.dsp.* set, so there's no Lua-quoting quirk to
-                    // route around here.
+                    // hl.dsp.focus, not the plain `focuswindow`. The
+                    // comment that used to sit here reasoned that
+                    // pip-daemon.sh "already proves" address-targeted
+                    // dispatchers work as vanilla hyprctl dispatch on
+                    // this system -- but pip-daemon.sh's own dispatches
+                    // were broken the whole time, so it proved nothing,
+                    // and this chip never focused anything either.
+                    // hyprland.lua configures this compositor in Lua, so
+                    // `hyprctl dispatch` evaluates its argument AS LUA
+                    // and a native dispatcher name is not a parse error
+                    // away from working, it IS one:
+                    //
+                    //   error: [string "return hl.dispatch(focuswindow
+                    //   address:0x5...)"]:1: ')' expected near 'address'
+                    //
+                    // Being Hyprland's own dispatcher is irrelevant: the
+                    // Lua layer is in front of all of them.
                     onClicked: Quickshell.execDetached(["hyprctl", "dispatch",
-                        "focuswindow", "address:" + chip.modelData.address])
+                        "hl.dsp.focus({ window = 'address:" + chip.modelData.address + "' })"])
                 }
             }
         }
