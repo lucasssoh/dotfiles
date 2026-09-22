@@ -8,6 +8,7 @@ import "modules/veille"
 import "modules/balise"
 import "modules/power"
 import "modules/mixer"
+import "modules/launcher"
 import "services"
 import "theme"
 
@@ -415,6 +416,17 @@ ShellRoot {
         function toggleMixer(): void {
             MixerState.togglePanel(Quickshell.screens[0]);
         }
+        // Same reasoning once more for the Launchers actions panel, which
+        // opens on a RIGHT click on an app chip -- and which, unlike the
+        // four above, cannot be opened at all unless one of the five known
+        // apps happens to be running. Targets the first chip in the row,
+        // which is the only one a call with no click position can name.
+        // `qs -c bar ipc call bar toggleLauncherActions`.
+        function toggleLauncherActions(): void {
+            const apps = LauncherActionsState.matches;
+            if (apps.length === 0) return;
+            LauncherActionsState.toggleFor(Quickshell.screens[0], apps[0]);
+        }
     }
 
     // Same belt-and-suspenders safety net as Hdr.qml's own onRawEvent
@@ -490,6 +502,16 @@ ShellRoot {
             if (MixerState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 MixerState.close();
+            }
+
+            // ...and the Launchers actions panel. Same list, same
+            // reason -- and it matters more here than for the others:
+            // this one is opened by a right click on a chip and has no
+            // second click on that chip waiting to shut it, since a
+            // right click on a DIFFERENT chip re-targets it instead.
+            if (LauncherActionsState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                LauncherActionsState.close();
             }
         }
     }
@@ -643,7 +665,8 @@ ShellRoot {
             // metrics and the drawers use the space below, which renders
             // as empty/transparent -- and stays outside the input mask
             // just below -- whenever a drawer isn't open.
-            implicitHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight)
+            implicitHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight,
+                                     launchers.openHeight)
 
             // Input stays restricted to the NORMAL bar's own height
             // (centerIsland.rowHeight, 31) regardless of how tall the
@@ -762,6 +785,26 @@ ShellRoot {
                     width: veilleDrawer.closeHitWidth
                     height: Math.max(0, Math.min(veilleDrawer.closeHitHeight,
                                                  veilleDrawer.height - veilleDrawer.closeHitY))
+                }
+                // FIFTH and SIXTH, and the same pair TOOLS needs, for
+                // the same island that now has a drawer of its own: the
+                // first strip above stops at rowHeight and covers the
+                // Launchers chips, but the actions panel hangs below that
+                // line and its rows have to be clickable, and the pane is
+                // 252px wide over a row that is rarely 100 -- so the
+                // second of these reproduces its (negative) drawerBandX
+                // overhang, exactly as TOOLS' own does.
+                Region {
+                    x: launchers.x
+                    y: 0
+                    width: launchers.width
+                    height: launchers.height
+                }
+                Region {
+                    x: launchers.x + launchers.drawerBandX
+                    y: 0
+                    width: launchers.drawerBandWidth
+                    height: launchers.height
                 }
             }
 
@@ -1019,8 +1062,26 @@ ShellRoot {
             // screen's right edge, same as METRICS/TOOLS themselves,
             // rather than sliding around whenever ActiveWindow/Media/
             // workspaces resize.
-            Modules.Block {
+            // A DrawerIsland rather than the plain Block it was until
+            // now, for one reason: a chip's right click opens an actions
+            // panel under it (Focus / Close window / Quit -- see
+            // services/LauncherActionsState.qml for why one click was not
+            // enough for an app that hides instead of quitting). Same
+            // mechanism centerIsland and toolsIsland already use, rather
+            // than a fifth PanelWindow of its own: one fewer layer-shell
+            // surface, and it inherits the widen-then-lengthen timing and
+            // the outside-click dismissal that are already tuned here.
+            Modules.DrawerIsland {
                 id: launchers
+
+                // Its ROW draws no background of its own -- `barBand`
+                // carries it, exactly as the Block before it did with
+                // `color: "transparent"`. Only the row: the drawer below
+                // is a separate block and keeps its own pane.
+                rowPane: false
+                // Matches the Block's own 24px height, so the chips sit
+                // where they always did.
+                rowHeight: 24
 
                 anchors.top: parent.top
                 // Centred in the band rather than pinned 3px down: the
@@ -1029,11 +1090,23 @@ ShellRoot {
                 // stay centred whatever it becomes -- and it puts them on
                 // the central island's own content axis, which a fixed 3
                 // did not.
-                anchors.topMargin: Math.round((barBand.height - height) / 2)
+                // `rowHeight`, NOT `height`: a DrawerIsland's height
+                // INCLUDES its open drawer, so centring on it would yank
+                // the whole island (chips and all) up the band the moment
+                // the actions panel opened -- the same trap toolsIsland
+                // documents on its own topMargin.
+                anchors.topMargin: Math.round((barBand.height - launchers.rowHeight) / 2)
                 anchors.right: toolsIsland.left
-                anchors.rightMargin: 6
+                // 6 -> 0, and the chips do not move: a DrawerIsland insets
+                // its row by its own `margin` (6, and readonly) where a
+                // Block had none at all, so the island's own edge now
+                // holds exactly the gap this margin used to. Measured
+                // rather than reasoned: keeping the 6 here put the chips
+                // 6px further left than the Block had them (first inked
+                // column 1445 against 1451 on this screen), which is the
+                // two insets stacking.
+                anchors.rightMargin: 0
                 flushTop: false
-                color: "transparent"
                 // Glass. These three float free of every screen edge, so
                 // all four of their edges are visible -- the one place in
                 // this bar where a pane read is possible at all.
@@ -1073,9 +1146,51 @@ ShellRoot {
                 // would have kept painting (the trap NotificationCard.qml
                 // documents, found the hard way once already).
 
+                // Same split/geometry settings toolsIsland lands on, and
+                // for the same reasons documented there: the row stays
+                // put and the pane grows into the space under it
+                // (`splitDrawer`), butted against the band's bottom edge
+                // rather than overlapping it (`drawerGap: 0` +
+                // `drawerTop`), and opening does not widen the row
+                // (`widenOnOpen: false` -- this row is five chips that
+                // come and go, and widening it would shove them sideways
+                // under the pointer that just clicked one).
+                splitDrawer: true
+                drawerGap: 0
+                drawerTop: centerIsland.rowHeight
+                drawerRadius: 20
+                widenOnOpen: false
+                // Pinned, not "whatever the row happens to be": the row
+                // here is 22 to 122px wide depending on how many of the
+                // five apps are running, and a panel that changed width
+                // with it would be a different shape every time. Well
+                // short of TOOLS' 360 because this one holds four
+                // one-line rows, not a notification list -- 210 is the
+                // longest of them ("Close window" plus its glyph) plus
+                // the room "SIGTERM" needs at the other end.
+                fixedDrawerWidth: 210
+                // FLAT, where every other pane in this bar is a vertical
+                // gradient: this one holds three lines of bare text, not
+                // a stack of cards, and a ramp behind them is a light
+                // source with nothing to light. One colour, and it is
+                // the gradient's own midpoint rather than a new value --
+                // the panel reads as the same material as the others,
+                // just without the modelling. See LauncherActions.qml's
+                // header for the rest of the pass this belongs to.
+                drawerFillTop: "#ff121419"
+                drawerFillBottom: "#ff121419"
+
+                drawerItems: [
+                    LauncherActions {
+                        drawerOpen: LauncherActionsState.panelOpen
+                            && LauncherActionsState.activeScreen === bar.screen
+                    }
+                ]
+
                 Modules.Launchers {
                     ink: launchersInk
                     opacity: 0.8
+                    screen: bar.screen
                 }
             }
 

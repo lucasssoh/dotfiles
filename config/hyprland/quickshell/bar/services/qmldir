@@ -10,3 +10,4 @@ singleton AppearanceState 1.0 AppearanceState.qml
 singleton BaliseReveal 1.0 BaliseReveal.qml
 singleton PowerState 1.0 PowerState.qml
 singleton MixerState 1.0 MixerState.qml
+singleton LauncherActionsState 1.0 LauncherActionsState.qml

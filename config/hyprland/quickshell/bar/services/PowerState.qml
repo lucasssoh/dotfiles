@@ -62,6 +62,10 @@ Singleton {
         NotificationState.close();
         BaliseState.close();
         MixerState.close();
+        // ...and the Launchers panel, which lives on its own island
+        // but whose drawer band overlaps this one's -- see
+        // LauncherActionsState.toggleFor.
+        LauncherActionsState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Same "just opened" refresh BaliseState.togglePanel does, and for

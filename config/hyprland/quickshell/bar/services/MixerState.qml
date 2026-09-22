@@ -58,6 +58,10 @@ Singleton {
         NotificationState.close();
         BaliseState.close();
         PowerState.close();
+        // ...and the Launchers panel, which lives on its own island
+        // but whose drawer band overlaps this one's -- see
+        // LauncherActionsState.toggleFor.
+        LauncherActionsState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Availability can change while the drawer is shut (a cable goes

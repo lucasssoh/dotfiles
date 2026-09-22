@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import "../theme"
+import "../services"
 
 // Native replacement for waybar/scripts/apps.sh: instead of a pgrep-based
 // script producing a flat icon string, this reads Hyprland.toplevels
@@ -18,15 +18,12 @@ import "../theme"
 // SVGs (assets/lutris.svg, assets/heroic.svg -- pulled from Simple
 // Icons, CC0), rendered as Image rather than Text for those two.
 //
-// Same lastIpcObject staleness issue Hdr.qml already hit and fixed:
-// a toplevel's `lastIpcObject` (needed here for `.class`) doesn't
-// update on its own when a new window opens -- it only reflects
-// whatever hyprctl reported the last time Hyprland.refreshToplevels()
-// was called. Without forcing that refresh, a freshly-launched app's
-// class field stays empty/stale until *something else* happens to
-// trigger it (a full shell reload re-evaluates everything from
-// scratch, which is why that "fixed" it). Same fix as Hdr.qml: force
-// a refresh on every Hyprland IPC event.
+// The matching itself (which classes count as which app, each one's
+// window address and pid, and the refreshToplevels that has to happen
+// before any of it can be read) moved to services/
+// LauncherActionsState.qml -- see there, including the lastIpcObject
+// staleness trap Hdr.qml hit first. What is left here is the drawing
+// and the two click actions.
 
 Item {
     id: root
@@ -40,67 +37,22 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
-    function refresh() { Hyprland.refreshToplevels(); }
+    // Which screen this instance is on -- one Launchers exists per
+    // monitor, and the actions drawer opens on the one whose chip was
+    // clicked, same `screen` plumbing BaliseButton/NotificationBell
+    // already carry for their own drawers.
+    property var screen: null
 
-    Component.onCompleted: refresh()
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) { root.refresh(); }
-    }
-
-    // fa-brands steam / fa-brands discord -- kept on Font Awesome
-    // Brands rather than moved to Phosphor: Phosphor is a generic UI
-    // icon set with no product/protocol logos at all (checked -- no
-    // "steam"/"discord" entries), so a real brand mark still needs the
-    // one font actually built for that job. Lutris/Heroic stay real SVG
-    // assets either way (no font has those logos).
-    // `yOffset`: heroic.svg's shield tapers to a point at the bottom --
-    // its path bounding box is measured PERFECTLY centered in the 24x24
-    // viewBox (checked directly, not eyeballed), yet it still visibly
-    // read as sitting low next to the others. That's an optical-
-    // centering issue, not a real one: a shape whose "mass" is
-    // concentrated toward one end (same idea as the icon-font optical-
-    // size passes earlier) needs a small manual nudge to look centered
-    // -- the mathematical center isn't the same thing as the perceived
-    // one.
-    readonly property var knownApps: [
-        { pattern: /steam/i, icon: "" },
-        { pattern: /lutris/i, image: "../assets/lutris.svg" },
-        // -2 -> -1: the icon itself shrank (14 -> 11px) since this was
-        // tuned, so the same raw offset overshot -- asked for.
-        { pattern: /heroic/i, image: "../assets/heroic.svg", yOffset: -1 },
-        { pattern: /discord/i, icon: "" },
-        { pattern: /vesktop/i, icon: "" }
-    ]
-
-    // One chip per known app type (not per window -- if an app has
-    // several windows, only the first one found is used as the focus
-    // target, same "one icon per app" spirit apps.sh had, just now with
-    // something real behind the icon to click on).
-    readonly property var matches: {
-        const tops = Hyprland.toplevels.values;
-        const seen = [];
-        const out = [];
-        for (let i = 0; i < tops.length; i++) {
-            const t = tops[i];
-            const ipc = t.lastIpcObject;
-            if (!ipc || !ipc.class || t.address === "") continue;
-            for (let k = 0; k < knownApps.length; k++) {
-                if (seen.indexOf(k) !== -1) continue;
-                if (knownApps[k].pattern.test(ipc.class)) {
-                    seen.push(k);
-                    out.push({
-                        icon: knownApps[k].icon || "",
-                        image: knownApps[k].image || "",
-                        yOffset: knownApps[k].yOffset || 0,
-                        address: t.address
-                    });
-                    break;
-                }
-            }
-        }
-        return out;
-    }
+    // The app list, the window addresses and the pids all live in
+    // services/LauncherActionsState.qml now, not here. Moved rather than
+    // copied when the actions drawer arrived: this module is
+    // instantiated once PER MONITOR, so the toplevel scan (and the
+    // refreshToplevels that has to precede it) was being done twice on a
+    // two-screen setup to produce two identical lists -- and the drawer
+    // needed the same list from outside this module anyway. Same
+    // argument SystemStats.qml's header makes for centralizing the
+    // samplers. Everything this file draws below is unchanged.
+    readonly property var matches: LauncherActionsState.matches
 
     implicitWidth: row.implicitWidth
     // Animated width change, asked for -- even a single chip appearing/
@@ -124,6 +76,15 @@ Item {
                 id: chip
                 required property var modelData
 
+                // Which app's actions drawer is currently open, if any.
+                // Compared on the ADDRESS rather than the index: the
+                // matches list is rebuilt on every refresh and an app
+                // closing a window reshuffles it, which would move the
+                // highlight onto the neighbouring chip.
+                readonly property bool menuOpen: LauncherActionsState.panelOpen
+                    && LauncherActionsState.address === chip.modelData.address
+                    && LauncherActionsState.activeScreen === root.screen
+
                 width: 22
                 height: 22   // was 18 -- more vertical padding around the icon inside the chip
                 anchors.verticalCenter: parent.verticalCenter
@@ -132,7 +93,15 @@ Item {
                 // inside the metrics pill (see shell.qml), which already
                 // has its own background. Was #34383f, back when each chip
                 // sat directly on the bar with no wrapping Block behind it.
-                color: "transparent"
+                //
+                // The ONE exception is the chip whose drawer is open: the
+                // panel below names the app it is about, but the chip it
+                // came out of is what the pointer is still sitting on, and
+                // an unmarked chip leaves five identical candidates above
+                // an open menu. Same accent fill a DrawerTile carries when
+                // it is on, at the chip's own scale.
+                color: chip.menuOpen ? Surfaces.accentStrong : "transparent"
+                Behavior on color { ColorAnimation { duration: 120 } }
 
                 Text {
                     renderType: Text.NativeRendering
@@ -170,6 +139,7 @@ Item {
                 MouseArea {
                     cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     // hl.dsp.focus, not the plain `focuswindow`. The
                     // comment that used to sit here reasoned that
                     // pip-daemon.sh "already proves" address-targeted
@@ -187,8 +157,32 @@ Item {
                     //
                     // Being Hyprland's own dispatcher is irrelevant: the
                     // Lua layer is in front of all of them.
-                    onClicked: Quickshell.execDetached(["hyprctl", "dispatch",
-                        "hl.dsp.focus({ window = 'address:" + chip.modelData.address + "' })"])
+                    //
+                    // RIGHT click opens the actions drawer for this app
+                    // instead -- focus is the common case and stays on
+                    // the plain click, while "close this window" and
+                    // "quit this app" live one level in, where a misfire
+                    // costs nothing. See LauncherActionsState.qml for why
+                    // an app chip needed those two at all.
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            LauncherActionsState.toggleFor(root.screen, chip.modelData);
+                            return;
+                        }
+                        // An open panel is about ONE app, and a plain
+                        // click here is the user moving on to another
+                        // one -- so it closes, rather than being left
+                        // behind naming the app they just navigated away
+                        // from. shell.qml's event-based dismissal does
+                        // not cover this case: focusing a window on the
+                        // CURRENT workspace only emits `activewindow`,
+                        // which is deliberately not in
+                        // keybindsDismissEvents (it also fires on plain
+                        // focus-follows-mouse -- see there).
+                        LauncherActionsState.close();
+                        Quickshell.execDetached(["hyprctl", "dispatch",
+                            "hl.dsp.focus({ window = 'address:" + chip.modelData.address + "' })"]);
+                    }
                 }
             }
         }

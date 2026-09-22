@@ -95,6 +95,10 @@ Singleton {
         PowerState.close();
         // ...and the mixer.
         MixerState.close();
+        // ...and the Launchers panel, which lives on its own island
+        // but whose drawer band overlaps this one's -- see
+        // LauncherActionsState.toggleFor.
+        LauncherActionsState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // The panel just became visible -- refresh right away rather
