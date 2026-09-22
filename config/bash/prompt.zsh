@@ -25,17 +25,38 @@ zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr " %F{$_prompt_dim_red}✗%f"
 zstyle ':vcs_info:*' stagedstr " %F{$_prompt_orange}●%f"
 
+# --- Fichiers non suivis (%m) ---
+# + : au moins un fichier non suivi par git. check-for-changes ne voit que
+#     l'index et l'arbre de travail, les nouveaux fichiers lui échappent.
++vi-git-untracked() {
+  # --directory s'arrête au premier dossier non suivi au lieu de le parcourir,
+  # et head coupe dès la première ligne : rien ne dépend de la taille du dépôt.
+  local untracked
+  untracked=$(command git ls-files --others --exclude-standard \
+                --directory --no-empty-directory 2>/dev/null | head -n 1)
+  # `return 0`, jamais `return` tout court : vcs_info interrompt la chaîne
+  # de hooks dès que l'un d'eux renvoie non-zéro, et un `return` nu rend
+  # le statut du test au-dessus -- donc 1 quand il n'y a rien de non
+  # suivi, ce qui faisait disparaître le ↑N du hook suivant.
+  [[ -n "$untracked" ]] || return 0
+
+  # Colle au marqueur précédent (✗/●) s'il y en a un, sinon s'en sépare.
+  local sep=" "
+  [[ -n "${hook_com[unstaged]}${hook_com[staged]}" ]] && sep=""
+  hook_com[misc]+="${sep}%F{$_prompt_blue}+%f"
+}
+
 # --- Commits locaux non poussés (%m) ---
 # ↑N  : N commits d'avance sur l'upstream, donc pas encore poussés.
 # ↑?  : branche sans upstream, jamais poussée.
 # Volontairement pas de ↓ : le retard sur le remote ne serait exact
 # qu'après un fetch, et le prompt ne doit rien faire passer sur le réseau.
-zstyle ':vcs_info:git*+set-message:*' hooks git-push-status
+zstyle ':vcs_info:git*+set-message:*' hooks git-untracked git-push-status
 
 +vi-git-push-status() {
-  # Colle au marqueur précédent (✗/●) s'il y en a un, sinon s'en sépare.
+  # Colle au marqueur précédent (✗/●/+) s'il y en a un, sinon s'en sépare.
   local sep=" "
-  [[ -n "${hook_com[unstaged]}${hook_com[staged]}" ]] && sep=""
+  [[ -n "${hook_com[unstaged]}${hook_com[staged]}${hook_com[misc]}" ]] && sep=""
 
   local ahead
   if ! ahead=$(command git rev-list --count '@{upstream}..HEAD' 2>/dev/null); then
@@ -44,6 +65,7 @@ zstyle ':vcs_info:git*+set-message:*' hooks git-push-status
   fi
 
   (( ahead > 0 )) && hook_com[misc]+="${sep}%F{$_prompt_orange}↑${ahead}%f"
+  return 0   # même raison que ci-dessus : (( ahead > 0 )) faux rend 1.
 }
 
 # --- Projet (langage/framework du dossier courant) ---
