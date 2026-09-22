@@ -77,6 +77,28 @@ Item {
         SystemStats.setConservation(on);
     }
 
+    // ---- fast charge -------------------------------------------------
+    //
+    // Same shape as the cap above, and the same preview override, but a
+    // different attribute on a different device: the cap is
+    // ideapad_acpi's conservation_mode, this is the ACPI battery's
+    // charge_types (see SystemStats.qml for both). A machine can have
+    // either, both, or neither, so the two tiles gate independently.
+    readonly property bool fastChargeAvailable: BatteryPreviewState.active
+        ? BatteryPreviewState.fastChargeAvailable
+        : SystemStats.fastChargeAvailable
+    readonly property bool fastChargeOn: BatteryPreviewState.active
+        ? BatteryPreviewState.fastCharge
+        : SystemStats.fastCharge
+
+    function setFastCharge(on) {
+        if (BatteryPreviewState.active) {
+            BatteryPreviewState.setFastCharge(on);
+            return;
+        }
+        SystemStats.setFastCharge(on);
+    }
+
     // ---- power profile ----------------------------------------------
     //
     // Cycles eco -> balanced -> performance. A three-state cycle rather
@@ -328,9 +350,25 @@ Item {
             }
         }
 
-        // ---- the two controls ----------------------------------------
+        // ---- the three controls --------------------------------------
+        //
+        // Two rows, not one row of three. DrawerIsland pins this drawer
+        // to 360 and `content` insets 20 a side, so tileRow is 320: a
+        // third tile on it would get 96px, of which DrawerTile's own
+        // 16/12 margins leave 68 for the label -- which elides both
+        // "Charge limit" and "Fast charge" at 13px bold. Pairing the two
+        // BATTERY controls at 152 each and dropping the profile to full
+        // width below keeps every label whole, and a full-width
+        // DrawerTile is already this design's idiom (Balise's Ethernet
+        // tile is exactly one, see this file's header).
+        //
+        // It also groups better than the old split did: the cap and the
+        // rate are two answers to "how should this pack be charged", and
+        // they now sit together instead of one of them being paired with
+        // a CPU control.
         Row {
             id: tileRow
+            visible: root.conservationAvailable || root.fastChargeAvailable
             width: parent.width
             height: 92
             spacing: 16
@@ -339,9 +377,14 @@ Item {
             // stretch the survivor into it -- so the survivor has to be
             // told, the same explicit-width idiom BaliseHome's own rows
             // use.
+            readonly property real tileWidth:
+                (root.conservationAvailable && root.fastChargeAvailable)
+                    ? (width - spacing) / 2
+                    : width
+
             DrawerTile {
                 visible: root.conservationAvailable
-                width: (tileRow.width - 16) / 2
+                width: tileRow.tileWidth
                 height: parent.height
                 title: "Charge limit"
                 revealIndex: 1
@@ -352,19 +395,49 @@ Item {
             }
 
             DrawerTile {
-                visible: PowerProfiles.hasPerformanceProfile
-                width: root.conservationAvailable ? (tileRow.width - 16) / 2 : tileRow.width
+                visible: root.fastChargeAvailable
+                width: tileRow.tileWidth
                 height: parent.height
-                title: "Profile"
+                title: "Fast charge"
                 revealIndex: 2
-                status: root.profileLabel(PowerProfiles.profile)
-                glyph: root.profileGlyph(PowerProfiles.profile)
-                // Balanced is the resting state, so lighting the tile up
-                // for it would leave it permanently on and say nothing.
-                // Only the two deliberate choices read as active.
-                active: PowerProfiles.profile !== PowerProfile.Balanced
-                onActivated: root.cycleProfile()
+                // The measured watts rather than "On"/"Off". The whole
+                // reason this toggle exists is that the EC's two modes
+                // are 28 W apart on this pack (41.5 W Standard, 69.9 W
+                // Fast, integrated over 4-minute windows -- power_now
+                // agrees but is too noisy to quote); "On" would say
+                // nothing about what the tap is worth. Approximate
+                // because the rate is a function of cell temperature and
+                // state of charge, and collapses into the CV taper past
+                // roughly 80% whichever mode is selected.
+                status: root.fastChargeOn ? "~70 W" : "~42 W"
+                // One bolt for the EC's standard rate, two for Fast --
+                // asked for directly, and it reads better than the
+                // battery-charging glyph this started with: at 30px that
+                // one is a battery outline with a bolt INSIDE it, which
+                // shrinks to an indistinct blob and, worse, says
+                // "battery" next to a tile whose neighbour is already a
+                // battery. A bare bolt is about the RATE, which is what
+                // the tile switches, and doubling it says "more of the
+                // same thing" without needing a second concept.
+                glyph: root.fastChargeOn ? "" : ""   // lu-zap x2 / lu-zap
+                active: root.fastChargeOn
+                onActivated: root.setFastCharge(!root.fastChargeOn)
             }
+        }
+
+        DrawerTile {
+            visible: PowerProfiles.hasPerformanceProfile
+            width: parent.width
+            height: 92
+            title: "Profile"
+            revealIndex: 3
+            status: root.profileLabel(PowerProfiles.profile)
+            glyph: root.profileGlyph(PowerProfiles.profile)
+            // Balanced is the resting state, so lighting the tile up
+            // for it would leave it permanently on and say nothing.
+            // Only the two deliberate choices read as active.
+            active: PowerProfiles.profile !== PowerProfile.Balanced
+            onActivated: root.cycleProfile()
         }
 
         // ---- the chart -----------------------------------------------
@@ -381,7 +454,7 @@ Item {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: "HISTORY"
-                    revealIndex: 3
+                    revealIndex: 4
                 }
 
                 // The generic segmented control, which happens to live

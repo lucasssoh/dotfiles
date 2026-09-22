@@ -330,6 +330,18 @@ ShellRoot {
         function previewConservationAvailable(on: bool): void {
             BatteryPreviewState.setConservationAvailable(on);
         }
+        // `qs -c bar ipc call bar previewFastCharge true` and
+        // `previewFastChargeAvailable true` -- the charge-current policy
+        // (charge_types) behind PowerHome's "Fast charge" tile. Two calls
+        // for the same reason conservation has two: this desktop has no
+        // battery exposing charge_types, so the tile has to be made to
+        // APPEAR before its on state can be looked at.
+        function previewFastCharge(on: bool): void {
+            BatteryPreviewState.setFastCharge(on);
+        }
+        function previewFastChargeAvailable(on: bool): void {
+            BatteryPreviewState.setFastChargeAvailable(on);
+        }
         // `qs -c bar ipc call bar previewBatteryAtRest true` -- previews
         // the on-AC-but-idle state (UPower FullyCharged/PendingCharge),
         // where the plug glyph replaces the battery gauge.

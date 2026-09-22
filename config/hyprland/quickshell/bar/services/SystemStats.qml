@@ -89,6 +89,28 @@ Singleton {
     property string conservationPath: ""
     property bool conservationMode: false
 
+    // ---- Battery.qml (Lenovo fast charge) ----
+    // The EC's charge-current policy, a separate attribute from the cap
+    // above and on a DIFFERENT device: conservation_mode belongs to the
+    // ideapad_acpi platform device, charge_types to the ACPI battery.
+    // Hence a second discovery below rather than a second read off the
+    // same path.
+    //
+    // sysfs "list with the active entry in brackets" -- reading it gives
+    // `Fast [Standard] Long_Life`, and writing takes one bare word. The
+    // EC picks Standard on its own; Fast is worth ~68% more charge power
+    // (41.5 W -> 69.9 W measured, see 99-ideapad-fastcharge.rules), at
+    // ~1.0C instead of ~0.7C, which is why it is a deliberate toggle and
+    // not something set once at boot.
+    //
+    // fastChargeAvailable is its own property rather than
+    // `chargeTypesPath !== ""`: a battery can expose charge_types while
+    // offering only Standard and Long_Life, and a tile that cannot reach
+    // the mode it is named after should not be drawn.
+    property string chargeTypesPath: ""
+    property bool fastChargeAvailable: false
+    property bool fastCharge: false
+
     // ---- BatteryAlertState (chargeur decroche) ----
     // A 45W USB-C brick on this machine gets asked for 46-53W while the
     // battery is charging hard (38-44W into the cell plus ~6W of system,
@@ -160,6 +182,7 @@ Singleton {
     FileView { id: tempFile; blockLoading: true }
     FileView { id: fanFile; blockLoading: true }
     FileView { id: conservationFile; blockLoading: true }
+    FileView { id: chargeTypesFile; blockLoading: true }
     FileView { id: mainsFile; blockLoading: true }
     FileView { id: rxFile; blockLoading: true }
 
@@ -239,6 +262,44 @@ Singleton {
         conservationFile.reload();
         conservationFile.waitForJob();   // see sampleCpu's note: reload() alone only queues an async re-read
         root.conservationMode = conservationFile.text().trim() === "1";
+    }
+
+    // The file's second write, and it works the same way as the first:
+    // 99-ideapad-fastcharge.rules hands charge_types to group wheel, so
+    // no escalation happens here either, and the re-sample afterwards is
+    // what makes the UI snap back if the kernel refused the value.
+    //
+    // Refusal is a live possibility rather than a theoretical one: the EC
+    // rejects a mode it does not currently allow (-EINVAL out of sysfs's
+    // own match against the bracketed list), and it is also free to drop
+    // back to Standard by itself -- on unplug, on resume, or when the
+    // pack gets hot. Nothing here latches the toggle on; the tick below
+    // re-reads the attribute every 3s and the tile follows whatever the
+    // EC actually settled on.
+    function setFastCharge(on) {
+        if (!root.fastChargeAvailable) return;
+        chargeTypesWriter.command = ["sh", "-c",
+            "printf '%s' " + (on ? "Fast" : "Standard") + " > " + root.chargeTypesPath];
+        chargeTypesWriter.running = true;
+    }
+
+    Process {
+        id: chargeTypesWriter
+        onExited: root.sampleFastCharge()
+    }
+
+    function sampleFastCharge() {
+        if (root.chargeTypesPath === "") return;
+        chargeTypesFile.reload();
+        chargeTypesFile.waitForJob();   // see sampleCpu's note
+        const text = chargeTypesFile.text();
+        // Only the BRACKETED word is the active mode. A plain
+        // indexOf("Fast") would be true permanently, since Fast is listed
+        // whether or not it is selected -- the tile would light up at
+        // boot and never go out.
+        const active = text.match(/\[([^\]]+)\]/);
+        root.fastCharge = active !== null && active[1] === "Fast";
+        root.fastChargeAvailable = text.indexOf("Fast") !== -1;
     }
 
     function sampleMains() {
@@ -412,6 +473,34 @@ Singleton {
         }
     }
 
+    // charge_types, on the BATTERY rather than on the mains supply or on
+    // the ideapad platform device -- so this is a third discovery, not a
+    // reuse of either path above. Same shape as mainsDiscover: walk
+    // /sys/class/power_supply and match on `type` rather than trusting
+    // "BAT0" to be the name, since it is an ACPI artefact.
+    //
+    // The [ -e ] test is the real filter. Every laptop has a Battery
+    // here; almost none expose charge_types, and on those the path stays
+    // empty and the tile is never drawn.
+    Process {
+        id: chargeTypesDiscover
+        command: ["bash", "-c",
+            "for d in /sys/class/power_supply/*/; do " +
+            "[ \"$(cat $d/type 2>/dev/null)\" = Battery ] && [ -e \"$d/charge_types\" ] " +
+            "&& { echo \"${d}charge_types\"; exit 0; }; " +
+            "done"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.chargeTypesPath = this.text.trim();
+                if (root.chargeTypesPath !== "") {
+                    chargeTypesFile.path = root.chargeTypesPath;
+                    root.sampleFastCharge();
+                }
+            }
+        }
+    }
+
     Timer {
         interval: root.tickMs
         running: true
@@ -423,6 +512,7 @@ Singleton {
             root.sampleTemperature();
             root.sampleFan();
             root.sampleConservation();
+            root.sampleFastCharge();
             root.sampleMains();
             root.sampleTraffic();
         }

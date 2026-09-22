@@ -32,6 +32,15 @@ Singleton {
     // that is not an IdeaPad -- including this one, so without this flag
     // that row could never be seen here to check it renders.
     property bool conservationAvailable: false
+    // Fast charge (the EC's charge-current policy, ~42 W -> ~70 W). Two
+    // flags for the same reason conservation has two: whether the machine
+    // OFFERS the mode and whether it is ON are different questions, and
+    // the panel hides the tile entirely on a battery whose charge_types
+    // does not list Fast -- which is every machine that is not this one,
+    // so without the availability flag the tile could never be seen here
+    // to check it renders.
+    property bool fastCharge: false
+    property bool fastChargeAvailable: false
     // "On AC, battery idle" -- previews Battery.qml's plug icon
     // (FullyCharged / PendingCharge). Mutually exclusive with `charging`:
     // a real battery is never both, so each setter clears the other
@@ -55,6 +64,16 @@ Singleton {
         root.active = true;
     }
 
+    function setFastCharge(on) {
+        root.fastCharge = on;
+        root.active = true;
+    }
+
+    function setFastChargeAvailable(on) {
+        root.fastChargeAvailable = on;
+        root.active = true;
+    }
+
     function setAtRest(on) {
         root.atRest = on;
         if (on) root.charging = false;
@@ -72,6 +91,8 @@ Singleton {
         root.charging = false;
         root.conservation = false;
         root.conservationAvailable = false;
+        root.fastCharge = false;
+        root.fastChargeAvailable = false;
         root.atRest = false;
     }
 }

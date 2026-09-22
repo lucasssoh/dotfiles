@@ -34,6 +34,23 @@ Rectangle {
         text: badge.glyph
         color: badge.active ? badge.accent : Ink.primary
         font.family: Fonts.iconPhosphor
-        font.pixelSize: 17
+        // A TWO-glyph badge -- PowerHome's double bolt, the only one so
+        // far -- does not fit at the single-glyph size. Every Lucide
+        // glyph carries a full 1.0em advance (verified in the font's own
+        // hmtx: advance == unitsPerEm for zap, battery-charging and the
+        // rest), so a pair at 17px spans 34 inside a 30px square and
+        // spills out of the rounded corners.
+        //
+        // Tightening the pair rather than just shrinking it is what keeps
+        // it looking like the other badges: Lucide inks thin, and taking
+        // the glyphs down far enough to fit on advance alone would make
+        // these two strokes visibly lighter than every neighbouring icon.
+        // At 14 with -2 the pair measures 26 and the stroke stays close.
+        font.pixelSize: badge.glyph.length > 1 ? 14 : 17
+        // Qt adds letterSpacing after the LAST character too, so the
+        // Text is 2px wider than the ink and centerIn would sit the pair
+        // 1px left. Given back here.
+        font.letterSpacing: badge.glyph.length > 1 ? -2 : 0
+        anchors.horizontalCenterOffset: badge.glyph.length > 1 ? 1 : 0
     }
 }

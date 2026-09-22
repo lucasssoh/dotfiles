@@ -214,6 +214,40 @@ else
     info "No conservation_mode attribute on this machine — skipping the IdeaPad rule."
 fi
 
+# Lenovo fast charge (charge_types). Gated separately from the cap above,
+# and NOT on the same attribute: conservation_mode is ideapad_acpi's, on
+# the platform bus, while charge_types belongs to the ACPI battery under
+# /sys/class/power_supply. A machine can expose one without the other.
+#
+# The second test is the one that matters. Plenty of batteries expose
+# charge_types while offering only Standard and Long_Life, and granting
+# write on a knob that cannot reach Fast would install a rule for a tile
+# PowerHome will never draw (it gates on the same string).
+CHARGE_TYPES_ATTR=""
+for d in /sys/class/power_supply/*/; do
+    [ "$(cat "$d/type" 2>/dev/null)" = Battery ] || continue
+    [ -e "$d/charge_types" ] || continue
+    grep -q Fast "$d/charge_types" 2>/dev/null || continue
+    CHARGE_TYPES_ATTR="${d}charge_types"
+    break
+done
+
+if [ -n "$CHARGE_TYPES_ATTR" ]; then
+    info "Fast charge found at $CHARGE_TYPES_ATTR ($(cat "$CHARGE_TYPES_ATTR"))"
+    if install_udev_rule "$DOTFILES_DIR/config/hyprland/udev/99-ideapad-fastcharge.rules"; then
+        sudo udevadm control --reload-rules 2>/dev/null || true
+        # Same as above: the rule fires on the next add/change event, so
+        # apply it now too and the tile works without a reboot.
+        if sudo chgrp wheel "$CHARGE_TYPES_ATTR" && sudo chmod 0664 "$CHARGE_TYPES_ATTR"; then
+            ok "charge_types is now writable by group wheel."
+        else
+            warn "Rule installed, but the live chgrp/chmod failed — it will take effect on the next boot."
+        fi
+    fi
+else
+    info "No battery offering a Fast charge_types here — skipping the fast-charge rule."
+fi
+
 # ============================================================
 # MANUAL FOLLOW-UPS
 # ============================================================
