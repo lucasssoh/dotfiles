@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Builds ~/Images/Wallpapers as the union of the repo's own wallpapers/
-# folder (4 defaults, public, versioned with dotfiles) and whatever extra
-# folders are listed in prisme/wallpapers-extra.conf (e.g. a private repo
-# holding the bulk of the collection -- see that file for the format).
-# ~/Images/Wallpapers itself becomes a real directory full of symlinks (one
-# per image), so everything downstream (prisme/wallpapers.conf and the
-# scripts that follow it) keeps reading a single flat folder unchanged.
+# folder (the GNOME default designs, public, versioned with dotfiles) and
+# whatever extra folders are listed in prisme/wallpapers-extra.conf (e.g. a
+# private repo holding the bulk of the collection -- see that file for the
+# format). ~/Images/Wallpapers itself becomes a real directory full of
+# symlinks (one per image), so everything downstream
+# (prisme/wallpapers.conf and the scripts that follow it) keeps reading a
+# single flat folder unchanged.
 #
 # One-shot/manual entry point: wallpaper-cache-watcher.sh keeps this same
 # merge in sync live (watching every source folder), so this script only

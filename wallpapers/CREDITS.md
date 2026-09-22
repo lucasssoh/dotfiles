@@ -1,16 +1,21 @@
 # Credits
 
 - `gnome-*` — GNOME default background designs, from
-  [GNOME/gnome-backgrounds](https://gitlab.gnome.org/GNOME/gnome-backgrounds)
-  (light variant of each), kept as the original JPEG XL (`.jxl`) except
-  `gnome-morphogenesis.jpg` (upstream only ships that one as SVG,
-  rasterized here). Decoded by wallpaper-filter.rs/thumbs.rs via
-  `jxl-oxide`. Licensed
+  [GNOME/gnome-backgrounds](https://gitlab.gnome.org/GNOME/gnome-backgrounds),
+  each in both variants: `gnome-<design>.jxl` is upstream's light (`-l`),
+  `gnome-<design>-dark.jxl` its dark (`-d`). Kept as the original JPEG XL
+  (`.jxl`) except the `gnome-morphogenesis*.jpg` pair (upstream only ships
+  that one as SVG, rasterized here at 4096x4096). The light `.jxl` files
+  are a bare JXL codestream, the dark ones upstream's current ISOBMFF
+  container — `jxl-oxide` reads both, so wallpaper-filter.rs/thumbs.rs
+  need no change. Licensed
   [CC BY-SA 3.0 US](https://gitlab.gnome.org/GNOME/gnome-backgrounds/-/raw/main/COPYING) —
   kept here under the same license.
 - All `gnome-*` and `macos-*` (private repo) files use "fill" mode in
   wallpaper-filter.rs (plain cover + center-crop, no blur) — see
   `prisme/wallpaper-fill-mode.conf`.
-- Everything else in this folder: personal picks, kept to a handful of
-  defaults on purpose — see `~/code/wallpapers-private` (not public) for
-  the full collection.
+- Nothing else lives here on purpose: this folder is the GNOME set and
+  only that, so the public repo carries one coherent, uniformly licensed
+  collection. Personal picks (and the `macos-*` files) live in
+  `~/code/wallpapers-private` (not public), merged into the same wallpaper
+  folder at runtime via `prisme/wallpapers-extra.conf`.

@@ -8,13 +8,13 @@
 # (hyprland.lua), runs continuously.
 #
 # Also owns keeping WALL_DIR itself in sync: it's a generated symlink farm
-# merging the dotfiles repo's wallpapers/ (4 defaults) with whatever extra
-# folders are listed in prisme/wallpapers-extra.conf (e.g. a private repo
-# holding the bulk of the collection -- see that file for the format; same
-# merge set_wallpapers.sh builds for the initial/manual setup). Watching
-# the SOURCE folders instead of WALL_DIR itself means dropping a new image
-# straight into any of them is enough -- no need to rerun set_wallpapers.sh
-# by hand.
+# merging the dotfiles repo's wallpapers/ (the GNOME default designs) with
+# whatever extra folders are listed in prisme/wallpapers-extra.conf (e.g. a
+# private repo holding the bulk of the collection -- see that file for the
+# format; same merge set_wallpapers.sh builds for the initial/manual
+# setup). Watching the SOURCE folders instead of WALL_DIR itself means
+# dropping a new image straight into any of them is enough -- no need to
+# rerun set_wallpapers.sh by hand.
 #
 # The per-image processing itself (wallpaper-filter, ~/.local/bin/) is
 # native -- a Rust binary built from prisme-src/src/bin/wallpaper-
