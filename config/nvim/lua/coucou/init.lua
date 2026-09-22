@@ -252,6 +252,26 @@ function M.set_plugin_groups(p)
     hl("BufferLineDuplicate",          { fg = p.muted, bg = p.surface, italic = true })
     hl("BufferLineDuplicateSelected",  { fg = p.subtle, bg = p.bg, italic = true })
     hl("BufferLineDuplicateVisible",   { fg = p.muted, bg = p.surface, italic = true })
+    -- Diagnostics dans l'onglet. bufferline applique le groupe de la
+    -- pire sévérité au segment du *nom* (diagnostics.lua, attr.extends),
+    -- et lua/plugins/bufferline.lua préfixe le compteur dans ce même
+    -- segment via name_formatter : les deux prennent donc la couleur
+    -- d'un coup, « 3 Main.java » entier en rouge.
+    -- Mêmes teintes que DiagnosticError/Warn plus haut, pour qu'un
+    -- fichier fautif se lise pareil dans l'onglet, dans nvim-tree et
+    -- sous le texte.
+    hl("BufferLineError",            { fg = p.red_soft, bg = p.surface })
+    hl("BufferLineErrorSelected",    { fg = p.red_soft, bg = p.bg, bold = true })
+    hl("BufferLineErrorVisible",     { fg = p.red_soft, bg = p.surface })
+    hl("BufferLineWarning",          { fg = p.yellow, bg = p.surface })
+    hl("BufferLineWarningSelected",  { fg = p.yellow, bg = p.bg, bold = true })
+    hl("BufferLineWarningVisible",   { fg = p.yellow, bg = p.surface })
+    hl("BufferLineInfo",             { fg = p.blue, bg = p.surface })
+    hl("BufferLineInfoSelected",     { fg = p.blue, bg = p.bg, bold = true })
+    hl("BufferLineInfoVisible",      { fg = p.blue, bg = p.surface })
+    hl("BufferLineHint",             { fg = p.cyan, bg = p.surface })
+    hl("BufferLineHintSelected",     { fg = p.cyan, bg = p.bg, bold = true })
+    hl("BufferLineHintVisible",      { fg = p.cyan, bg = p.surface })
 
     -- telescope
     hl("TelescopeNormal",        { fg = p.text, bg = p.surface })
