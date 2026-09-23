@@ -77,10 +77,15 @@ return {
                     if avail >= 6 and vim.fn.strdisplaywidth(name) > avail then
                         local head_b, tail_b = split_name(name, avail)
                         if head_b then
+                            -- No hl_group: on a conceal extmark it colours
+                            -- the "…" AND the hidden text under it, so the
+                            -- middle of the name came back grey (and lost
+                            -- its git/diagnostic colour) as soon as the
+                            -- cursor line un-concealed it. Without one, the
+                            -- "…" takes `Conceal`, remapped per window below.
                             vim.api.nvim_buf_set_extmark(bufnr, elide_ns, lnum - 1, #prefix + head_b, {
                                 end_col = #prefix + tail_b,
                                 conceal = ELLIPSIS,
-                                hl_group = "NvimTreeIndentMarker",
                             })
                         end
                     end
@@ -123,10 +128,9 @@ return {
                     local icon_col
                     for _, m in ipairs(marks) do
                         local col, details = m[3], m[4]
-                        -- The elision marks sit inside the name, well past
-                        -- the icon, so they never win the math.min below —
-                        -- but skip them explicitly so that stays true if
-                        -- their highlight group ever changes.
+                        -- The elision marks carry no hl_group, so they are
+                        -- already out of the running; the ns check keeps it
+                        -- that way if one is ever given back to them.
                         if details.hl_group and details.hl_group ~= "NvimTreeIndentMarker" and details.ns_id ~= elide_ns then
                             if not icon_col or col < icon_col then
                                 icon_col = col
@@ -289,8 +293,33 @@ return {
                 -- is the whole "selected entry shows in full" behaviour.
                 vim.wo[data.winnr].conceallevel = 2
                 vim.wo[data.winnr].concealcursor = ""
+                -- The "…" in the discreet guide-line grey, in this window
+                -- only. Appended to nvim-tree's own winhighlight, once.
+                local winhl = vim.wo[data.winnr].winhighlight
+                if not winhl:find("Conceal:", 1, true) then
+                    vim.wo[data.winnr].winhighlight = (winhl ~= "" and winhl .. "," or "") .. "Conceal:NvimTreeIndentMarker"
+                end
                 elide_long_names(data.bufnr, data.winnr)
             end)
+
+            -- TreeRendered only fires when the tree redraws, not when its
+            -- window is resized by hand (mouse drag, <C-w>>): a widened
+            -- tree kept eliding names that now fit, a narrowed one let them
+            -- overflow. Re-budget on the new width instead.
+            vim.api.nvim_create_autocmd("WinResized", {
+                group = vim.api.nvim_create_augroup("NvimTreeElideResize", { clear = true }),
+                -- Every tree window rather than v:event.windows: there is
+                -- rarely more than one, and a resized neighbour shrinks it
+                -- just as well.
+                callback = function()
+                    for _, win in ipairs(vim.api.nvim_list_wins()) do
+                        local buf = vim.api.nvim_win_get_buf(win)
+                        if vim.bo[buf].filetype == "NvimTree" then
+                            elide_long_names(buf, win)
+                        end
+                    end
+                end,
+            })
         end
 
         -- Root-level (depth 0) entries never get an indent-marker column
