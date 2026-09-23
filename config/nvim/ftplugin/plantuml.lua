@@ -5,6 +5,7 @@
 --
 --   1. Aperçu   <A-p> aperçu en direct (lua/umlive.lua), sans :w.
 --               :PumlLiseuse ouvre le fichier dans la liseuse.
+--               :PumlExport [png|svg] l'exporte noir sur blanc.
 --   2. Lint     plantuml -syntax, erreurs en vim.diagnostic.
 --   3. LSP      plantuml-lsp pour la complétion et le survol.
 --
@@ -31,6 +32,52 @@ if vim.fn.executable(liseuse) == 1 then
         vim.system({ liseuse, "open", vim.api.nvim_buf_get_name(buf) }, { detach = true })
     end, { desc = "Ouvrir ce .puml dans la liseuse" })
 end
+
+-- Export pour un rendu (dossier, rapport) : l'aperçu et la liseuse
+-- suivent le thème sombre, un document imprimé veut du noir sur blanc.
+-- monochrome plutôt que la palette par défaut de PlantUML (jaune pâle),
+-- et 200 dpi pour qu'un PNG reste net une fois imprimé. Le fichier sort
+-- à côté du .puml, nommé comme le fait plantuml : d'après @startuml
+-- <nom>, sinon d'après le fichier.
+local PAPER = [[
+skinparam monochrome true
+skinparam shadowing false
+skinparam dpi 200
+skinparam defaultFontName sans-serif
+]]
+
+vim.api.nvim_buf_create_user_command(buf, "PumlExport", function(opts)
+    local fmt = opts.args ~= "" and opts.args or "png"
+    vim.cmd("silent update")
+    local file = vim.api.nvim_buf_get_name(buf)
+    local dir = vim.fs.dirname(file)
+    local cfg = vim.fn.tempname() .. ".puml"
+    vim.fn.writefile(vim.split(PAPER, "\n"), cfg)
+    local started = os.time()
+    vim.system({ "plantuml", "-t" .. fmt, "-config", cfg, file }, { text = true }, function(res)
+        vim.schedule(function()
+            os.remove(cfg)
+            -- plantuml ne dit pas ce qu'il a écrit : on relève ce qui vient
+            -- d'apparaître dans le dossier.
+            local made = {}
+            for name, kind in vim.fs.dir(dir) do
+                local st = vim.uv.fs_stat(dir .. "/" .. name)
+                if kind == "file" and name:match("%." .. fmt .. "$") and st and st.mtime.sec >= started then
+                    made[#made + 1] = name
+                end
+            end
+            if res.code ~= 0 and #made == 0 then
+                vim.notify("PumlExport : échec\n" .. (res.stderr or ""), vim.log.levels.ERROR)
+            else
+                vim.notify("PumlExport : " .. table.concat(made, ", "))
+            end
+        end)
+    end)
+end, {
+    nargs = "?",
+    complete = function() return { "png", "svg" } end,
+    desc = "Exporter en PNG ou SVG noir sur blanc, à côté du fichier",
+})
 
 -- ============================================================
 -- 2. Lint : plantuml -syntax
