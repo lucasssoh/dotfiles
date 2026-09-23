@@ -16,6 +16,11 @@ sudo dnf install -y curl wget git cmake gcc-c++ gdb clang lldb libstdc++-devel
 # Libs for Manim
 sudo dnf install -y fribidi-devel harfbuzz-devel pango-devel cairo-devel
 
+# Go : la toolchain, et ce qui fournit plantuml-lsp (complétion des .puml
+# dans nvim), qui ne s'installe QUE par `go install` -- ni Mason, ni dépôt,
+# ni binaire publié. config/nvim/install.sh fait ce `go install`.
+sudo dnf install -y golang
+
 # 2. Python (System wide + venv)
 echo -e "${GREEN}[2/6] Configuration Python...${NC}"
 sudo dnf install -y python3 python3-pip python3-devel
