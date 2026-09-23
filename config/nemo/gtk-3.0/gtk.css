@@ -258,6 +258,51 @@ iconview:selected:backdrop {
     box-shadow: none;
 }
 
+/* ---- icon view items --------------------------------------------- */
+/* The `iconview` element above is NOT what Nemo's icon view is made of,
+   which is why the first pass left a selected icon with no highlight at
+   all while the status bar cheerfully said "README.md est sélectionné".
+   Nemo draws icons on an EelCanvas and gives each item the node
+   `.nemo-canvas-item` -- no GtkIconView anywhere, so no selector above
+   could ever have reached it.
+
+   This is also exactly what Nemo means by a theme having "nemo support",
+   and why it logs `The theme appears to have no nemo support. Adding
+   some...` under Adwaita: its own stylesheet (gresource
+   /org/nemo/nemo-style-application.css, readable with `gresource extract
+   /usr/lib64/libnemo-extension.so.1 ...`) styles
+   `.nemo-canvas-item:selected` for the DESKTOP variant only --
+   `.nemo-desktop.nemo-canvas-item:selected` -- and leaves the in-window
+   one to the theme. Mint-Y ships that rule; Adwaita has never heard of
+   the class. So the highlight is ours to draw, and this block is the
+   whole of "nemo support" as far as this desktop needs it.
+   
+   Same fill/rim pairing as the list rows above, so selecting a file looks
+   identical in both views. Radius 6 -- the bar's chip radius -- rather
+   than the 3px Nemo's own sheet sets, because an icon item is the same
+   size of object as a Workspaces chip. */
+.nemo-canvas-item {
+    border-radius: 6px;
+}
+
+.nemo-canvas-item:hover {
+    background-color: @bar_card_hover;
+    background-image: none;
+}
+
+.nemo-canvas-item:selected {
+    background-color: @bar_accent_str;
+    background-image: none;
+    color: @bar_ink;
+    box-shadow: inset 0 0 0 1px @bar_accent;
+}
+
+.nemo-canvas-item:selected:backdrop {
+    background-color: @bar_accent_soft;
+    color: @bar_ink_second;
+    box-shadow: none;
+}
+
 /* Column headers are chrome sitting on top of the well, same as the
    toolbar sits on top of the window -- so they take the pane fill, and
    the ink drops a tier because a header is a label, not content. */

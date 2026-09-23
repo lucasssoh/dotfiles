@@ -178,6 +178,8 @@ Installs `nemo nemo-fileroller xdg-desktop-portal-gtk`, sets the file-manager MI
 
 Also carries the GTK3 theming, linked to `~/.config/gtk-3.0/` (`settings.ini` + `gtk.css`). Nemo is GTK3, not Qt, so `qt6ct` never sees it. Two separate things live there: `settings.ini` is what makes it *dark* — the session asked for `gtk-theme='Adwaita-dark'`, which is not a GTK3 theme name, so GTK3 fell back to light Adwaita — and `gtk.css` is what makes it *ours*, redefining Adwaita's colour names with the tokens from `quickshell/bar/theme/{Ink,Surfaces}.qml`. The install also rewrites that one stale `gtk-theme` value in dconf, because the portal serves it to GTK3 ahead of `settings.ini`. The link reaches every GTK3 app, which here means Nemo and the GTK file-chooser portal this module installs.
 
+One Nemo-specific trap is worth knowing before editing that file: the icon view is an EelCanvas, not a `GtkIconView`, and each icon is a `.nemo-canvas-item`. Nemo's own stylesheet styles `:selected` on that class for the *desktop* variant only and leaves the in-window one to the theme — that is what it means by a theme having "nemo support", and why it logs `The theme appears to have no nemo support` under Adwaita. Without an explicit `.nemo-canvas-item:selected` rule, selecting a file in icon view highlights nothing at all.
+
 ### `fuzzel`
 
 Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`, and also the picker `liseuse` is built on.
