@@ -43,6 +43,9 @@ fi
 # publie aucun binaire : seul `go install` le fournit. GOBIN vers
 # ~/.local/bin plutôt que ~/go/bin, qui n'est pas dans le PATH.
 pkg_ensure plantuml "$(pkg_pick golang go golang-go)"
+# imv : la fenêtre de l'aperçu en direct (bin/umlive), ~85 Mo contre ~180
+# pour une fenêtre Firefox. Facultatif : sans lui, umlive retombe sur Firefox.
+pkg_ensure imv
 if ! command -v plantuml-lsp >/dev/null 2>&1 && [ ! -x ~/.local/bin/plantuml-lsp ]; then
     GOBIN="$HOME/.local/bin" go install github.com/ptdewey/plantuml-lsp@latest \
         && ok "plantuml-lsp installed." \

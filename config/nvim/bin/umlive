@@ -18,12 +18,27 @@
 # garde la JVM chaude et rend le même diagramme en ~45 ms (mesuré ici,
 # PlantUML 1.2026.2, ~150 Mo de RSS). Il ne vit que le temps de l'aperçu.
 #
-# ---- Pourquoi un navigateur ------------------------------------------
-# Aucune visionneuse d'images n'est installée, et une page reçoit les
-# mises à jour en poussée (Server-Sent Events) sans rien recharger :
-# zoom et position survivent à chaque frappe. La fenêtre Firefox se range
-# à côté du terminal comme le panneau d'aperçu de VS Code, le focus est
-# rendu à nvim, et elle est refermée quand l'aperçu s'arrête.
+# ---- Visionneuse : imv, Firefox en secours ---------------------------
+# Un aperçu n'est qu'un SVG qui change : pas besoin d'un navigateur. imv
+# (visionneuse Wayland, SVG par librsvg, net à tout zoom) coûte ~85 Mo,
+# une fenêtre de plus dans Firefox ~180 Mo (mesuré, Firefox déjà ouvert).
+# imv recharge un fichier modifié EN PLACE, mais pas un fichier remplacé
+# -- et une écriture en place peut se lire à moitié faite. Donc :
+# remplacement atomique, puis `imv-msg <pid> open` (3 ms). Le zoom est
+# réinitialisé à chaque rendu (ajusté à la fenêtre), c'est le prix.
+#
+# Sans imv, la page web d'avant : Firefox, mises à jour poussées en
+# Server-Sent Events, zoom conservé et bandeau d'erreur. `--browser` la
+# force. Dans les deux cas le focus revient à nvim, et la fenêtre se
+# ferme avec l'aperçu. Fermer imv à la main arrête l'aperçu.
+#
+# ---- La JVM, réglée -----------------------------------------------------
+# Par défaut elle monte à ~240 Mo pour un diagramme de cours. Avec
+# JAVA_TOOL_OPTIONS (lu par toute JVM HotSpot, quel que soit le lanceur
+# de la distribution) : -Xmx192m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+# -> ~105 Mo, et ~35 ms par rendu au lieu de ~42. 192 Mo de plafond, pas
+# 96 : 96 suffisait encore à 150 classes, mais le tas ne grossit qu'à la
+# demande, donc la marge ne coûte rien aux petits diagrammes.
 #
 # ---- Cycle de vie -----------------------------------------------------
 # stdin fermé (bascule <A-p>, ou nvim qui quitte) = fin : la page est
@@ -33,6 +48,7 @@
 # les mesures.
 # ============================================================
 import ctypes
+import shutil
 import json
 import os
 import queue
@@ -272,6 +288,68 @@ def make_handler(page: bytes):
 
 
 # ============================================================
+# imv : abonné aux rendus comme une page, sans serveur HTTP
+# ============================================================
+class Imv:
+    def __init__(self, bg: str):
+        self.bg = bg.lstrip("#")
+        self.dir = tempfile.mkdtemp(prefix="umlive-")
+        self.proc = None
+        self.quitting = False
+        self.q = queue.Queue()
+        with STATE.lock:
+            STATE.clients.append(self.q)
+        threading.Thread(target=self.loop, daemon=True).start()
+
+    def loop(self):
+        last = None
+        while True:
+            ev = self.q.get()
+            if ev.get("bye"):
+                return
+            svg = ev.get("svg")
+            # Une erreur garde le dernier SVG valide : rien à redessiner.
+            if not svg or svg == last:
+                continue
+            last = svg
+            # Nommé d'après le .puml : c'est ce que montre le titre d'imv.
+            name = os.path.splitext(ev.get("name") or "apercu")[0] + ".svg"
+            path = os.path.join(self.dir, name)
+            with open(path + ".tmp", "w", encoding="utf-8") as fh:
+                fh.write(svg)
+            os.replace(path + ".tmp", path)
+            if self.proc is None:
+                self.spawn(path)
+            else:
+                subprocess.run(["imv-msg", str(self.proc.pid), "close all"], capture_output=True)
+                subprocess.run(["imv-msg", str(self.proc.pid), "open " + path], capture_output=True)
+
+    def spawn(self, path: str):
+        back = (hypr_json("activewindow") or {}).get("address")
+        self.proc = subprocess.Popen(["imv", "-b", self.bg, path], stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
+        threading.Thread(target=self.watch, daemon=True).start()
+        if back:
+            for _ in range(40):
+                if any(c.get("pid") == self.proc.pid for c in hypr_json("clients") or []):
+                    hypr_dispatch("hl.dsp.focus({ window = 'address:%s' })" % back)
+                    break
+                time.sleep(0.15)
+
+    def watch(self):
+        # imv fermé à la main = aperçu fermé : même fin qu'une bascule.
+        self.proc.wait()
+        if not self.quitting:
+            os.kill(os.getpid(), signal.SIGTERM)
+
+    def close(self):
+        self.quitting = True
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+
+# ============================================================
 # Fenêtre (Hyprland, configuré en Lua : dispatch en hl.dsp.*)
 # ============================================================
 def hypr_json(what: str):
@@ -322,25 +400,31 @@ def main():
     cfg.close()
 
     jport = free_port()
-    jvm = subprocess.Popen(["plantuml", "-picoweb:%d:127.0.0.1" % jport],
+    env = dict(os.environ)
+    env["JAVA_TOOL_OPTIONS"] = (env.get("JAVA_TOOL_OPTIONS", "") +
+                                " -Xmx192m -XX:+UseSerialGC -XX:TieredStopAtLevel=1").strip()
+    jvm = subprocess.Popen(["plantuml", "-picoweb:%d:127.0.0.1" % jport], env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            preexec_fn=die_with_parent)
+    threading.Thread(target=render_loop, args=(jport, cfg.name), daemon=True).start()
 
     # Un jeton unique dans le titre : c'est par lui qu'on retrouve SA
     # fenêtre Firefox parmi les autres, pour lui rendre le focus puis la
     # fermer.
     token = "umlive:%d" % os.getpid()
-    page = (PAGE % dict(colors, title="Aperçu UML — " + token)).encode()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(page))
-    server.daemon_threads = True
-    url = "http://127.0.0.1:%d/" % server.server_address[1]
-
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    threading.Thread(target=render_loop, args=(jport, cfg.name), daemon=True).start()
-    if "--no-window" in sys.argv:
-        print(url, flush=True)       # pour tester sans ouvrir Firefox
+    imv = None
+    if "--no-window" in sys.argv or "--browser" in sys.argv or not shutil.which("imv"):
+        page = (PAGE % dict(colors, title="Aperçu UML — " + token)).encode()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(page))
+        server.daemon_threads = True
+        url = "http://127.0.0.1:%d/" % server.server_address[1]
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        if "--no-window" in sys.argv:
+            print(url, flush=True)   # pour tester sans ouvrir de fenêtre
+        else:
+            threading.Thread(target=open_window, args=(url, token), daemon=True).start()
     else:
-        threading.Thread(target=open_window, args=(url, token), daemon=True).start()
+        imv = Imv(colors["bg"])
 
     try:
         stdin_loop()                  # bloque jusqu'à la fermeture de stdin
@@ -351,7 +435,10 @@ def main():
         STATE.wake.set()
         STATE.publish({"bye": True})
         time.sleep(0.2)               # le temps que l'événement parte
-        close_window(token)
+        if imv:
+            imv.close()
+        else:
+            close_window(token)
         jvm.terminate()
         try:
             jvm.wait(timeout=3)
