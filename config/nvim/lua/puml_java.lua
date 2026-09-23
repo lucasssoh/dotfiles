@@ -34,7 +34,12 @@
 --       @Embedded, @ElementCollection
 --     sans JPA, rien ne dit qu'un objet meurt avec son propriétaire : la
 --     composition reste une décision de conception, à prendre en relisant.
---   type du projet utilisé ailleurs (paramètre, retour, corps)
+--   JPA bidirectionnel : @OneToMany(mappedBy = "x") d'un côté, le champ x
+--   de l'autre -> UNE association, sans flèche, rôle et multiplicité à
+--   chaque bout. Sans mappedBy, deux références croisées restent deux
+--   flèches : rien ne dit que c'est la même association.
+--   type du projet utilisé ailleurs (paramètre, retour, corps, ou argument
+--   d'un supertype : JpaRepository<User, Long> -> Repo ..> User)
 --                            A ..> T          dépendance
 --   visibilité : private -, protected #, public +, rien ~ (paquetage) ;
 --   dans une interface, rien = public (règle Java).
@@ -176,6 +181,17 @@ local function composite(annots)
     return false
 end
 
+--- mappedBy = "x" : ce champ est l'autre bout de l'association que porte
+--- le champ x du type cible.
+local function mapped_by(annots)
+    for _, rel in ipairs({ "OneToMany", "OneToOne", "ManyToMany" }) do
+        local name = annots[rel] and annots[rel]:match('mappedBy%s*=%s*"([%w_]+)"')
+        if name then
+            return name
+        end
+    end
+end
+
 local KINDS = {
     class_declaration = "class",
     interface_declaration = "interface",
@@ -208,6 +224,14 @@ local function collect(src, types)
             uses = {}, outer = outer,
         }
         types[#types + 1] = ty
+
+        -- Les arguments génériques d'un supertype sont des utilisations :
+        -- sans ça, `UserRepository extends JpaRepository<User, Long>` perd
+        -- son seul lien avec User, JpaRepository étant hors du projet. Le
+        -- supertype lui-même y passe aussi, mais il est déjà une
+        -- généralisation et n'en deviendra pas une dépendance.
+        names_under(node:field("superclass")[1], src, ty.uses)
+        names_under(node:field("interfaces")[1] or child_of_type(node, "extends_interfaces"), src, ty.uses)
 
         local sc = node:field("superclass")[1]
         if sc then
@@ -275,6 +299,7 @@ local function collect(src, types)
                         vis = visibility(fm, in_iface), name = text(d:field("name")[1], src),
                         type = flat(text(tnode, src)), target = target(tnode, src), mods = fm,
                         composite = composite(fa),
+                        mapped_by = mapped_by(fa),
                     }
                     names_under(d:field("value")[1], src, ty.uses)
                 end
@@ -314,12 +339,17 @@ local function emit(types)
     for _, t in ipairs(types) do
         count[t.name] = (count[t.name] or 0) + 1
     end
-    local known = {}
+    local known, by_id = {}, {}
     for _, t in ipairs(types) do
         local id = count[t.name] > 1 and (t.pkg .. "." .. t.name) or t.name
         t.id = id:gsub("%.", "_")
+        by_id[t.id] = t
         -- Un type imbriqué est aussi désigné par son nom court.
-        for _, key in ipairs({ t.name, t.name:match("[^.]+$") }) do
+        -- Pour un type de premier niveau, les deux clés sont le même nom :
+        -- l'inscrire deux fois le rendait « ambigu » et coupait toute
+        -- relation venue d'un autre paquet.
+        local short = t.name:match("[^.]+$")
+        for _, key in ipairs(short == t.name and { t.name } or { t.name, short }) do
             known[key] = known[key] or {}
             table.insert(known[key], t)
         end
@@ -337,6 +367,20 @@ local function emit(types)
             end
         end
         return #cands == 1 and cands[1].id or nil
+    end
+
+    -- Appariement des deux bouts d'une association JPA bidirectionnelle :
+    -- le côté mappedBy dessine la ligne, l'autre côté (`partner`) ne
+    -- dessine plus rien, ni flèche ni attribut.
+    for _, t in ipairs(types) do
+        for _, f in ipairs(t.fields) do
+            local other = f.mapped_by and f.target and by_id[resolve(f.target.base, t.pkg) or ""]
+            for _, g in ipairs(other and other.fields or {}) do
+                if g.name == f.mapped_by and g.target and resolve(g.target.base, other.pkg) == t.id then
+                    f.partner, g.merged = g, true
+                end
+            end
+        end
     end
 
     local L = {
@@ -397,7 +441,19 @@ local function emit(types)
             for _, f in ipairs(t.fields) do
                 local tg = f.target
                 local to = tg and resolve(tg.base, t.pkg)
-                if to and not f.mods.static and f.composite then
+                if f.merged then
+                    -- Dessiné par l'autre bout (celui qui porte mappedBy).
+                    assoc[to] = true
+                elseif to and f.partner then
+                    -- Un bout = son rôle (le nom sous lequel l'autre classe le
+                    -- voit) et sa multiplicité. Une partie a un seul tout.
+                    local g = f.partner
+                    local near = string.format("%s %s\\n%s", g.vis, g.name, f.composite and "1" or g.target.mult)
+                    local far = string.format("%s %s\\n%s", f.vis, f.name, tg.mult)
+                    table.insert(rel.assoc, string.format('%s "%s" %s "%s" %s', t.id, near,
+                        f.composite and "*--" or "--", far, to))
+                    assoc[to] = true
+                elseif to and not f.mods.static and f.composite then
                     -- Une partie a exactement un tout : le "1" est sûr.
                     table.insert(rel.assoc, string.format('%s "1" *-- "%s" %s : %s %s', t.id, tg.mult, to, f.vis, f.name))
                     assoc[to] = true
