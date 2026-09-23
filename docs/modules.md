@@ -180,6 +180,8 @@ Also carries the GTK3 theming, linked to `~/.config/gtk-3.0/` (`settings.ini` + 
 
 One Nemo-specific trap is worth knowing before editing that file: the icon view is an EelCanvas, not a `GtkIconView`, and each icon is a `.nemo-canvas-item`. Nemo's own stylesheet styles `:selected` on that class for the *desktop* variant only and leaves the in-window one to the theme — that is what it means by a theme having "nemo support", and why it logs `The theme appears to have no nemo support` under Adwaita. Without an explicit `.nemo-canvas-item:selected` rule, selecting a file in icon view highlights nothing at all.
 
+The install also raises `org.nemo.preferences thumbnail-limit` from Nemo's 1 MiB default to 32 MiB. That default is a hard cut — anything over it shows the generic mimetype icon — and it reads as a *format* problem rather than a size one, because both of the only two `.jpg` in `wallpapers/` happen to sit just above it while the `.jxl` below it thumbnail fine. gdk-pixbuf here handles jpeg and jxl alike.
+
 ### `fuzzel`
 
 Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`, and also the picker `liseuse` is built on.

@@ -102,4 +102,30 @@ if command -v gsettings &> /dev/null; then
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
 fi
 
+# 7. Thumbnails
+#
+# Nemo's own default for `thumbnail-limit` is 1 MiB, and it is a hard cut:
+# any image over it gets the generic mimetype icon, never a thumbnail. On
+# this machine that lands badly on wallpapers/ -- 13 of its 43 files are
+# over 1 MiB, INCLUDING both of the only two .jpg in the folder (the
+# 4096x4096 morphogenesis pair, ~1.7 MiB each). The result reads as "Nemo
+# cannot thumbnail JPEG", which is what it looked like from the outside and
+# is not what is happening: `GdkPixbuf.Pixbuf.get_formats()` lists jpeg AND
+# jxl here, and every .jxl UNDER the limit thumbnails fine. It is a size
+# cut-off wearing a format's clothes.
+#
+# 32 MiB clears everything in wallpapers/ with room to spare (the largest
+# is 4.3 MiB) while still refusing the genuinely pathological file the
+# setting exists to guard against.
+#
+# Only raised when it is still sitting on Nemo's default, same rule as the
+# gtk-theme rewrite above: a value somebody chose is a value we leave.
+if command -v gsettings &> /dev/null; then
+    CUR_THUMB_LIMIT="$(gsettings get org.nemo.preferences thumbnail-limit 2>/dev/null || echo "")"
+    if [ "$CUR_THUMB_LIMIT" = "uint64 1048576" ]; then
+        info "Raising Nemo's 1 MiB thumbnail limit to 32 MiB..."
+        gsettings set org.nemo.preferences thumbnail-limit 33554432
+    fi
+fi
+
 ok "Nemo is now fully integrated into the system."
