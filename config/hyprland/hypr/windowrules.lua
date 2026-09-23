@@ -471,3 +471,14 @@ hl.window_rule({
 -- + sidebar). On-demand, shown for seconds at a time -- see
 -- hyprland.lua's decoration.blur.enabled comment.
 hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xray = true, ignore_alpha = 0.5 })
+
+-- ============================================================
+-- LAYER FADE — awww wallpaper
+-- ============================================================
+-- The `layers` animation (hyprland.lua) has no explicit style, so every
+-- layer slides in from its nearest edge -- right for rofi or the bar,
+-- wrong for a full-screen wallpaper, which should never look like it's
+-- moving. Only this layer is switched to a plain fade: at session start
+-- the wallpaper rises out of the black misc:background_color instead of
+-- popping or sliding in. Speed and curve stay those of the `layers` leaf.
+hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fade" })

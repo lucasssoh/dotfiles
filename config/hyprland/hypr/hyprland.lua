@@ -383,6 +383,15 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "snap"
 -- as the launcher being slow to open, never as elegance.
 hl.animation({ leaf = "layers", enabled = true, speed = 2, bezier = "smooth" })
 
+-- The one leaf that IS disabled. `monitorAdded` zooms the whole output in
+-- when a monitor appears -- which includes the first frame of every
+-- session. Left unset it inherited `global` (300 ms of `smooth`, which
+-- overshoots), and the wallpaper visibly swelled ~2.5% off-center, then
+-- undershot, before settling: filmed at login with grim at ~30 fps,
+-- frames 336-511 ms after start. The wallpaper fades in on its own
+-- instead (layer rule in windowrules.lua), so nothing is lost.
+hl.animation({ leaf = "monitorAdded", enabled = false })
+
 -- The focus cue. Linear, not `smooth`: `smooth` overshoots (its control
 -- points go past 1.0), which on a color fade means the border briefly
 -- overshoots its target color instead of settling into it.
