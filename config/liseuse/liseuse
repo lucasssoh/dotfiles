@@ -70,13 +70,16 @@ ZATHURA_CLASS="org.pwmt.zathura"
 # Everything zathura can open here: zathura-pdf-mupdf covers pdf/epub/
 # mobi/fb2/oxps, zathura-cb covers cbz/cbr, zathura-djvu covers djvu.
 # azw3 is MOBI8 and the mupdf plugin takes it under the same handler.
-EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps md markdown)
+EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps md markdown puml plantuml)
 
 # Markdown is the one format zathura cannot open: mupdf has no parser
 # for it. md2pdf.py (next to this script) renders it to a PDF first, so
 # everything downstream -- theme, position, ranking, F1 -- is unchanged
-# because what reaches zathura is an ordinary document.
-MD_EXTENSIONS=" md markdown "
+# because what reaches zathura is an ordinary document. A PlantUML
+# source goes down the same road: md2pdf.py draws it one diagram per
+# page, and saving the .puml re-renders it (nvim's ftplugin/plantuml.lua),
+# which zathura picks up on its own -- a live preview for free.
+MD_EXTENSIONS=" md markdown puml plantuml "
 MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
 ZATHURARC="$(dirname -- "$(readlink -f -- "$0")")/zathurarc"
 # Where the themed copy of zathurarc is assembled. Not ~/.config/zathura,
@@ -90,7 +93,7 @@ ZATHURA_CFG="$CACHE_DIR/zathura"
 # default layout box, and that number has nothing to do with the one
 # zathura shows at your font size and window width. A wrong "/312" is
 # worse than no total at all, so those show a bare page number.
-FIXED_LAYOUT=" pdf cbz cbr xps oxps md markdown "
+FIXED_LAYOUT=" pdf cbz cbr xps oxps md markdown puml plantuml "
 
 mkdir -p "$STATE_DIR" "$CACHE_DIR" "$SESSIONS" "$MD_CACHE" "$ZATHURA_CFG"
 
@@ -398,6 +401,7 @@ ranked() {
             e = tolower(e)
             if (e == "pdf") return "󰈦"
             if (e == "md" || e == "markdown") return "󰍔"
+            if (e == "puml" || e == "plantuml") return "󰙅"
             if (e == "epub" || e == "mobi" || e == "azw3" || e == "fb2") return "󰂽"
             if (e == "cbz" || e == "cbr") return "󰋩"
             return "󰈙"
@@ -446,7 +450,7 @@ ranked() {
             # downstream needs the distinction anyway -- page_total
             # refuses a markdown extension outright.
             render = path
-            if (path ~ /\.(md|markdown)$/)
+            if (path ~ /\.(md|markdown|puml|plantuml)$/)
                 for (p in src) if (src[p] == path) { render = p; break }
             printf "%d%012d\t%s\t%d\t%s\t%s\t%s\n", (inprog ? 2 : 1), ts, path,
                    (inprog ? page[path] : -1), render, haystack(path), label(path)

@@ -74,6 +74,12 @@ pkg_ensure \
     "$(pkg_pick python3-pygments python-pygments python3-pygments)" \
     "$(pkg_pick python3-weasyprint python-weasyprint weasyprint)"
 
+# UML diagrams in markdown (```plantuml blocks, see md2pdf.py). PlantUML
+# rather than mermaid because it writes SVG from a JVM, where mermaid's
+# renderer (mmdc) is the headless Chromium ruled out just above. Same
+# name on the three distros; it pulls in java and graphviz for layout.
+pkg_ensure plantuml
+
 # ------------------------------------------------------------
 # 2. Symlinks
 # ------------------------------------------------------------

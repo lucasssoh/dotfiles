@@ -25,6 +25,11 @@
 # have cost ~200MB and a second of start-up per render to provide a
 # feature none of these documents use.
 #
+# UML diagrams are PlantUML (```plantuml blocks) for the same reason:
+# it is a JVM that writes SVG, which WeasyPrint inlines as-is, where
+# mermaid would have brought the Chromium back through mmdc. See
+# _Plantuml below.
+#
 # ---- Caching --------------------------------------------------------
 # A render costs ~450ms for a document the size of the repo's README, so
 # it happens once per (source, stylesheet) state and never again. The
@@ -33,6 +38,7 @@
 # would show a stale look with no way to tell.
 # ============================================================
 import hashlib
+from html import escape as html_escape
 import json
 import os
 import re
@@ -95,11 +101,14 @@ def page_size(aspect: float) -> str:
     just means the letterbox is nearly nothing and a screenful of text is
     a whole page.
     """
+    return "%.1fmm %.1fmm" % page_dims(aspect)
+
+
+def page_dims(aspect: float) -> tuple:
+    """(width, height) of the page in mm; see page_size()."""
     if aspect >= 1.0:
-        w, h = PAGE_LONG_EDGE_MM, PAGE_LONG_EDGE_MM / aspect
-    else:
-        w, h = PAGE_LONG_EDGE_MM * aspect, PAGE_LONG_EDGE_MM
-    return "%.1fmm %.1fmm" % (w, h)
+        return PAGE_LONG_EDGE_MM, PAGE_LONG_EDGE_MM / aspect
+    return PAGE_LONG_EDGE_MM * aspect, PAGE_LONG_EDGE_MM
 
 
 def desktop_is_dark() -> bool:
@@ -150,6 +159,127 @@ EXTENSION_CONFIGS = {
     },
     "pymdownx.tasklist": {"custom_checkbox": False},
 }
+
+# ---- PlantUML --------------------------------------------------------
+# A ```plantuml (or ```uml) block becomes an inline SVG. The fence
+# formatter does NOT run plantuml itself: it hands back a placeholder and
+# queues the source, and render() then sends every diagram of the
+# document through ONE `plantuml -pipe`. The JVM start-up is the whole
+# cost of a diagram, so one process per block would make a course's
+# notes with ten diagrams take ten times as long to open.
+#
+# The palette is markdown.css's, so a UML class box looks like the rest
+# of the page instead of PlantUML's default yellow, and follows the
+# light/dark toggle like the code does. It goes in through `-config`
+# rather than being pasted into each diagram: pasted lines shifted every
+# error's line number by their own count. A diagram's own skinparams
+# come after the config and still win.
+_UML_PALETTE = {
+    "dark":  {"fg": "#e5e5ea", "line": "#8e8e93", "fill": "#2c2c2e", "note": "#141416"},
+    "light": {"fg": "#1c1c1e", "line": "#636366", "fill": "#ececf0", "note": "#f7f7f9"},
+}
+_UML_CONFIG = """skinparam backgroundColor transparent
+skinparam defaultFontName sans-serif
+skinparam defaultFontColor {fg}
+skinparam ArrowColor {line}
+skinparam ArrowFontColor {fg}
+skinparam BorderColor {line}
+<style>
+element {{ BackGroundColor {fill}; LineColor {line}; FontColor {fg}; }}
+note {{ BackGroundColor {note}; }}
+</style>
+"""
+# Characters base64 never produces, so no SVG can contain it -- and
+# -nometadata drops the base64 copy of the source PlantUML would
+# otherwise embed in every SVG anyway.
+_UML_DELIM = "@@liseuse-uml@@"
+_UML_SLOT = re.compile(r"<!--liseuse-uml:(\d+)-->")
+_UML_START = re.compile(r"^\s*@start\w*", re.M)
+# On a syntax error PlantUML still writes an SVG -- a picture of the
+# source with its own upgrade nag on top -- and says what went wrong
+# only on stderr, as "ERROR / <0-based line> / <message>", once per
+# failed diagram and in order. A real diagram is told apart by the
+# data-diagram-type attribute its <svg> carries and the error one lacks.
+# A .puml file opened on its own: no markdown around it, one diagram
+# per page, each drawn as large as the page allows. A file may hold
+# several @startuml...@enduml; the text between them is ignored, as
+# plantuml itself does.
+PUML_EXTENSIONS = (".puml", ".plantuml", ".pu", ".iuml")
+_UML_BLOCK = re.compile(r"^\s*@start\w*.*?^\s*@end\w*[^\n]*", re.M | re.S)
+_UML_ERROR = re.compile(r"^ERROR\n(\d+)\n(.*)$", re.M)
+
+
+class _Plantuml:
+    def __init__(self, theme: str):
+        self.config = _UML_CONFIG.format(**_UML_PALETTE.get(theme, _UML_PALETTE["dark"]))
+        self.sources = []   # what plantuml gets
+        self.written = []   # what the document says
+        self.offsets = []   # lines added in front, to report the document's line numbers
+
+    def fence(self, source, language, class_name, options, md, **kwargs):
+        self.written.append(source)
+        # Bare diagrams (no @startuml) are accepted, as on most renderers.
+        if _UML_START.search(source):
+            self.sources.append(source)
+            self.offsets.append(0)
+        else:
+            self.sources.append("@startuml\n%s\n@enduml" % source)
+            self.offsets.append(1)
+        return '<div class="uml"><!--liseuse-uml:%d--></div>' % (len(self.sources) - 1)
+
+    def fill(self, html: str) -> str:
+        if not self.sources:
+            return html
+        svgs, errors = self._run()
+        errors = iter(errors)
+
+        def repl(m):
+            i = int(m.group(1))
+            svg = svgs[i] if i < len(svgs) else ""
+            if "data-diagram-type" in svg:
+                # PlantUML pins the size twice over: an inline
+                # style="width:..px;height:..px", which beats any stylesheet
+                # (a tall diagram then ran off the bottom of the page), and
+                # preserveAspectRatio="none", which stretches the drawing to
+                # whatever box it lands in. Both go; the width/height
+                # attributes stay as the natural size, and the default
+                # ratio (centred, uniform scale) lets markdown.css size the
+                # box freely -- a whole page, for a .puml.
+                svg = svg[svg.index("<svg"):]
+                head, rest = svg.split(">", 1)
+                head = re.sub(r' (?:style|preserveAspectRatio)="[^"]*"', "", head)
+                return head + ">" + rest
+            # plantuml missing, dead, or the diagram does not parse: its
+            # source, readable, with the reason on top rather than a hole
+            # in the page.
+            err = next(errors, None) if svg else None
+            if err:
+                line = int(err[0]) + 1 - self.offsets[i]
+                why = "PlantUML, line %d: %s" % (line, err[1])
+            else:
+                why = "PlantUML did not render this diagram"
+            return '<p class="uml-error">%s</p><pre><code>%s</code></pre>' % (
+                html_escape(why), html_escape(self.written[i]))
+
+        return _UML_SLOT.sub(repl, html)
+
+    def _run(self):
+        import tempfile
+
+        with tempfile.NamedTemporaryFile("w", suffix=".puml", encoding="utf-8") as cfg:
+            cfg.write(self.config)
+            cfg.flush()
+            try:
+                proc = subprocess.run(
+                    ["plantuml", "-tsvg", "-nometadata", "-config", cfg.name,
+                     "-pipe", "-pipedelimitor", _UML_DELIM],
+                    input="\n".join(self.sources), capture_output=True,
+                    text=True, timeout=60)
+            except Exception as exc:
+                sys.stderr.write("md2pdf: plantuml unavailable (%s)\n" % exc)
+                return [], []
+        return proc.stdout.split(_UML_DELIM), _UML_ERROR.findall(proc.stderr)
+
 
 # Relative links between documents -- `[Installation](docs/installation.md)`
 # -- are the backbone of a docs/ directory, and a PDF viewer has no
@@ -289,8 +419,22 @@ def render(source: str, pdf: str, theme: str, aspect: float) -> None:
     with open(source, encoding="utf-8", errors="replace") as fh:
         text = fh.read()
 
-    md = markdown.Markdown(extensions=EXTENSIONS, extension_configs=EXTENSION_CONFIGS)
-    body = _drop_empty_theads(_absolutise_links(md.convert(text), source))
+    uml = _Plantuml(theme)
+    configs = dict(EXTENSION_CONFIGS)
+    configs["pymdownx.superfences"] = {"custom_fences": [
+        {"name": lang, "class": "uml", "format": uml.fence}
+        for lang in ("plantuml", "uml")
+    ]}
+    standalone = source.lower().endswith(PUML_EXTENSIONS)
+    if standalone:
+        blocks = _UML_BLOCK.findall(text) or [text]
+        body = uml.fill("".join(
+            '<section class="uml-page">%s</section>' % uml.fence(b, "plantuml", "uml", {}, None)
+            for b in blocks))
+    else:
+        md = markdown.Markdown(extensions=EXTENSIONS, extension_configs=configs)
+        body = uml.fill(md.convert(text))
+        body = _drop_empty_theads(_absolutise_links(body, source))
 
     with open(CSS_PATH, encoding="utf-8") as fh:
         css = fh.read()
@@ -299,12 +443,24 @@ def render(source: str, pdf: str, theme: str, aspect: float) -> None:
     # palette, which has to follow the desktop. Both are appended so they
     # win over anything in the stylesheet.
     css += "\n@page { size: %s; }\n" % page_size(aspect)
+    # A diagram is one image, so it cannot break across pages: taller
+    # than a page, it was cut off at the bottom -- and `break-inside:
+    # avoid` pushed it past its own heading first, leaving that alone on
+    # an empty page. Capped at the page's text height (the @page margins
+    # in markdown.css are 9% of the page WIDTH, top and bottom), less
+    # room for the heading above it; the SVG keeps its ratio and shrinks.
+    w, h = page_dims(aspect)
+    text_h = h - 2 * 0.09 * w
+    css += ".uml svg { max-height: %.1fmm; }\n" % (text_h * 0.8)
+    # Alone on its page, a diagram gets the page's whole text box -- a
+    # small one grows to fill it rather than sitting in a corner.
+    css += ".uml-page .uml svg { width: 100%%; height: %.1fmm; max-height: none; }\n" % (text_h * 0.97)
     css += HtmlFormatter(style=_pygments_style(theme)).get_style_defs(".highlight")
 
     # The document's own H1 is usually its real title; the filename is
     # the fallback. This lands in the PDF metadata, which is what
     # zathura puts in the window title.
-    m = re.search(r"^#\s+(.+)$", text, re.M)
+    m = None if standalone else re.search(r"^#\s+(.+)$", text, re.M)
     title = m.group(1).strip() if m else os.path.basename(source)
 
     # markdown.css keys its light palette off this attribute; dark is the

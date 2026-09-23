@@ -231,6 +231,17 @@ hr {
     margin: 1.6em 0;
 }
 img { max-width: 100%; }
+
+/* PlantUML diagrams (md2pdf.py, _Plantuml): inline SVG, centred, and
+   shrunk to the text column when PlantUML drew them wider than it. */
+.uml { margin: 1.2em 0; text-align: center; break-inside: avoid; }
+.uml svg { max-width: 100%; width: auto; height: auto; }
+.uml pre { text-align: left; }
+/* A .puml opened on its own: one diagram per page, nothing around it. */
+.uml-page { break-after: page; }
+.uml-page:last-child { break-after: auto; }
+.uml-page .uml { margin: 0; }
+.uml-error { color: var(--accent); font-size: .85em; margin: 1.2em 0 .3em; }
 del { color: var(--faint); }
 mark { background: var(--surface); color: var(--fg); }
 
