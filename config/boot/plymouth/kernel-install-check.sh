@@ -35,9 +35,11 @@ THEME_FILE="/usr/share/plymouth/themes/$THEME_NAME/$THEME_NAME.plymouth"
 say() { echo "coucou-splash: $*" >&2; }
 
 # The initramfs may arrive as an argument, or sit where Fedora puts it.
-# Take the first one that exists rather than assuming a layout.
+# Take the first one that exists rather than assuming a layout. The
+# initrds start at $5: $4 is the kernel image, which also exists, and
+# taking it once had this hook report every new kernel as splash-less.
 IMAGE=""
-for candidate in "${@:4}" \
+for candidate in "${@:5}" \
                  "/boot/initramfs-$KERNEL_VERSION.img" \
                  "$ENTRY_DIR/initrd"; do
     [ -n "$candidate" ] && [ -f "$candidate" ] && { IMAGE="$candidate"; break; }
