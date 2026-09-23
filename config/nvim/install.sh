@@ -38,6 +38,17 @@ if command -v pipx >/dev/null 2>&1; then
     pipx install pylatexenc >/dev/null 2>&1 || true
 fi
 
+# 1c. PlantUML (ftplugin/plantuml.lua) : plantuml pour le lint, plantuml-lsp
+# pour la complétion. Ce dernier n'est ni dans Mason ni dans un dépôt, et ne
+# publie aucun binaire : seul `go install` le fournit. GOBIN vers
+# ~/.local/bin plutôt que ~/go/bin, qui n'est pas dans le PATH.
+pkg_ensure plantuml "$(pkg_pick golang go golang-go)"
+if ! command -v plantuml-lsp >/dev/null 2>&1 && [ ! -x ~/.local/bin/plantuml-lsp ]; then
+    GOBIN="$HOME/.local/bin" go install github.com/ptdewey/plantuml-lsp@latest \
+        && ok "plantuml-lsp installed." \
+        || info "plantuml-lsp: go install failed, PlantUML completion disabled."
+fi
+
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p ~/.config/nvim

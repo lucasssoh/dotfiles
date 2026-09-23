@@ -39,6 +39,12 @@ vim.opt.listchars = {
     precedes = "‹",
     nbsp = "␣"
 }
+-- nvim ne connaît pas .puml (vim.filetype.match renvoie nil) : sans ça,
+-- ftplugin/plantuml.lua (aperçu dans la liseuse) ne se chargerait jamais.
+vim.filetype.add({
+    extension = { puml = "plantuml", plantuml = "plantuml", pu = "plantuml", iuml = "plantuml" },
+})
+
 -- =======================
 -- KEYMAPS
 -- =======================
