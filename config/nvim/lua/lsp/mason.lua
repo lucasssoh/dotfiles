@@ -37,6 +37,11 @@ return {
             -- jdtls which needs its own workspace/lombok wiring below.
             ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd", "omnisharp"},
             handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
+            -- mason-lspconfig v2 ignores `handlers` and vim.lsp.enable()s
+            -- every installed server itself, so the noop above no longer
+            -- keeps jdtls out: each Java buffer got a second jdtls, without
+            -- Lombok or a workspace, beside the one from lsp/java.lua.
+            automatic_enable = { exclude = { "jdtls" } },
         })
 
         -- =========================================================
