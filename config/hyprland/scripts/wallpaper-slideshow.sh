@@ -28,10 +28,10 @@ fi
 
 apply_wall() {
     awww img "$1" \
-        --transition-type wipe \
-        --transition-angle 30 \
+        --transition-type fade \
+        --transition-bezier .4,0,.2,1 \
         --transition-fps 60 \
-        --transition-duration 1
+        --transition-duration 1.5
 
     # Profil de luminance pour la barre quickshell (hypr/scripts/bar-tint.py).
     # En arriere-plan: il ne depend que du FICHIER, pas de l'ecran, donc il

@@ -132,13 +132,13 @@ pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &s
         .arg(&applied_path)
         .args([
             "--transition-type",
-            "wipe",
-            "--transition-angle",
-            "30",
+            "fade",
+            "--transition-bezier",
+            ".4,0,.2,1",
             "--transition-fps",
-            "45",
+            "60",
             "--transition-duration",
-            "1",
+            "1.5",
         ])
         .status();
 
