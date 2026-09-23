@@ -13,9 +13,20 @@ local M = {}
 
 M.root_markers = { "pom.xml", "mvnw", "gradlew", ".git", "build.gradle" }
 
+-- leetcode.nvim's solutions folder (its default storage.home). It has no
+-- build file, so it gets rooted by hand: each file there is a standalone
+-- `class Solution`. jdtls treats them as non-project files -- their names
+-- ("1.two-sum.java") are not valid class names -- which is what keeps the
+-- dozens of `class Solution` from clashing as duplicates, while still
+-- giving completion and semantic errors (checked on jdtls 1.60, Java 25).
+M.leetcode_root = vim.fn.stdpath("data") .. "/leetcode"
+
 --- @param source string file path to search upward from
 --- @return string? root_dir
 function M.find_root(source)
+    if vim.startswith(source, M.leetcode_root .. "/") then
+        return M.leetcode_root
+    end
     return require("jdtls.setup").find_root(M.root_markers, source)
 end
 
@@ -93,6 +104,17 @@ local function build_config(root_dir)
                 maven = { downloadSources = true },
             },
         },
+        handlers = root_dir == M.leetcode_root and {
+            -- Drop the "<file> is a non-project file, only syntax errors are
+            -- reported" warning jdtls pins on line 1 of every solution. It
+            -- is expected there, and wrong anyway: semantic errors do show.
+            ["textDocument/publishDiagnostics"] = function(err, result, ctx)
+                result.diagnostics = vim.tbl_filter(function(d)
+                    return not d.message:find("is a non-project file", 1, true)
+                end, result.diagnostics)
+                vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
+            end,
+        } or nil,
         on_attach = function(client, bufnr)
             require("lsp-zero").default_keymaps({ buffer = bufnr })
         end,
