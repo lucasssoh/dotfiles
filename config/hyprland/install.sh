@@ -293,7 +293,7 @@ elif [ "$DISTRO" = "arch" ]; then
     )
 
 elif [ "$DISTRO" = "debian" ]; then
-    warn "Debian/Ubuntu: hyprland, swww and hyprlock may need manual install."
+    warn "Debian/Ubuntu: hyprland, awww and hyprlock may need manual install."
     warn "quickshell (the active bar AND notification daemon, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
     warn "Balise build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
