@@ -77,8 +77,8 @@ EXTENSIONS=(pdf epub mobi azw3 fb2 cbz cbr djvu xps oxps md markdown puml plantu
 # everything downstream -- theme, position, ranking, F1 -- is unchanged
 # because what reaches zathura is an ordinary document. A PlantUML
 # source goes down the same road: md2pdf.py draws it one diagram per
-# page, and saving the .puml re-renders it (nvim's ftplugin/plantuml.lua),
-# which zathura picks up on its own -- a live preview for free.
+# page. That is for reading one back; the preview while WRITING it is
+# nvim's own (lua/umlive.lua), live and without a save.
 MD_EXTENSIONS=" md markdown puml plantuml "
 MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
 ZATHURARC="$(dirname -- "$(readlink -f -- "$0")")/zathurarc"

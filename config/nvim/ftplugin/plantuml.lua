@@ -3,7 +3,8 @@
 -- ============================================================
 -- Trois pièces indépendantes, chacune ignorée si son binaire manque :
 --
---   1. Aperçu   <A-p> ouvre le .puml dans la liseuse, :w le re-rend.
+--   1. Aperçu   <A-p> aperçu en direct (lua/umlive.lua), sans :w.
+--               :PumlLiseuse ouvre le fichier dans la liseuse.
 --   2. Lint     plantuml -syntax, erreurs en vim.diagnostic.
 --   3. LSP      plantuml-lsp pour la complétion et le survol.
 --
@@ -13,45 +14,22 @@
 local buf = vim.api.nvim_get_current_buf()
 
 -- ============================================================
--- 1. Aperçu dans la liseuse
+-- 1. Aperçu
 -- ============================================================
--- <A-p> ouvre le .puml dans la liseuse (zathura), un diagramme par page.
--- Ensuite chaque :w refait le PDF en arrière-plan, et zathura recharge
--- tout seul un fichier qui change : c'est un aperçu en direct, sans
--- plugin ni serveur.
---
--- Le rendu est md2pdf.py (config/liseuse) : même cache, même thème,
--- même page que ce que la liseuse ouvre, donc ce que :w régénère est
--- EXACTEMENT le fichier que zathura affiche.
+-- En direct : une fenêtre à côté du terminal, redessinée à chaque
+-- frappe à partir du buffer en mémoire. Voir lua/umlive.lua et bin/umlive.
+vim.keymap.set("n", "<A-p>", function()
+    require("umlive").toggle()
+end, { buffer = buf, silent = true, desc = "plantuml: aperçu en direct" })
 
--- Résolu depuis le lien ~/.local/bin/liseuse plutôt qu'écrit en dur :
--- md2pdf.py vit à côté du script, où que soit cloné le dépôt.
+-- La liseuse, elle, lit le FICHIER (elle le rend en PDF, un diagramme
+-- par page) : pour relire ou imprimer, pas pour écrire. D'où le :update.
 local liseuse = vim.fn.expand("~/.local/bin/liseuse")
-
 if vim.fn.executable(liseuse) == 1 then
-    local md2pdf = vim.fn.fnamemodify(vim.fn.resolve(liseuse), ":h") .. "/md2pdf.py"
-    local cache = (vim.env.XDG_CACHE_HOME or vim.fn.expand("~/.cache")) .. "/liseuse/md"
-
-    vim.keymap.set("n", "<A-p>", function()
+    vim.api.nvim_buf_create_user_command(buf, "PumlLiseuse", function()
         vim.cmd("silent update")
         vim.system({ liseuse, "open", vim.api.nvim_buf_get_name(buf) }, { detach = true })
-    end, { buffer = buf, silent = true, desc = "plantuml: ouvrir dans la liseuse" })
-
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        buffer = buf,
-        group = vim.api.nvim_create_augroup("plantuml_liseuse_" .. buf, { clear = true }),
-        callback = function(ev)
-            -- La JVM de plantuml met ~1,5 s à démarrer : en asynchrone,
-            -- pour que :w rende la main tout de suite.
-            vim.system({ "python3", md2pdf, ev.file, cache }, { text = true }, function(res)
-                if res.code ~= 0 then
-                    vim.schedule(function()
-                        vim.notify("plantuml : rendu échoué\n" .. (res.stderr or ""), vim.log.levels.WARN)
-                    end)
-                end
-            end)
-        end,
-    })
+    end, { desc = "Ouvrir ce .puml dans la liseuse" })
 end
 
 -- ============================================================

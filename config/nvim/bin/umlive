@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+# ============================================================
+# umlive — aperçu PlantUML en direct, piloté par nvim
+# ============================================================
+# Lancé par lua/umlive.lua, qui lui écrit sur stdin, une ligne JSON par
+# changement du buffer :
+#
+#     {"source": "<le diagramme sous le curseur>", "first": 12, "name": "x.puml"}
+#
+# `first` est la ligne (1-based) du @startuml dans le buffer : elle sert
+# à traduire la ligne d'une erreur, relative au diagramme, en ligne du
+# fichier. Le contenu vient de la MÉMOIRE de nvim, jamais du disque : ce
+# qui est tapé et pas encore sauvé s'affiche quand même.
+#
+# ---- Pourquoi un serveur plantuml qui reste allumé ------------------
+# `plantuml` lancé à chaque rendu coûte ~1,5 s, presque tout en démarrage
+# de la JVM : inutilisable pour suivre la frappe. `plantuml -picoweb`
+# garde la JVM chaude et rend le même diagramme en ~45 ms (mesuré ici,
+# PlantUML 1.2026.2, ~150 Mo de RSS). Il ne vit que le temps de l'aperçu.
+#
+# ---- Pourquoi un navigateur ------------------------------------------
+# Aucune visionneuse d'images n'est installée, et une page reçoit les
+# mises à jour en poussée (Server-Sent Events) sans rien recharger :
+# zoom et position survivent à chaque frappe. La fenêtre Firefox se range
+# à côté du terminal comme le panneau d'aperçu de VS Code, le focus est
+# rendu à nvim, et elle est refermée quand l'aperçu s'arrête.
+#
+# ---- Cycle de vie -----------------------------------------------------
+# stdin fermé (bascule <A-p>, ou nvim qui quitte) = fin : la page est
+# prévenue, la fenêtre fermée, la JVM tuée. La JVM porte en plus
+# PR_SET_PDEATHSIG : même si ce script est tué net, elle meurt avec lui
+# plutôt que de rester orpheline sur un port -- ce qui est arrivé pendant
+# les mesures.
+# ============================================================
+import ctypes
+import json
+import os
+import queue
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+# La palette de config/liseuse/markdown.css, pour qu'un diagramme ait la
+# même tête dans l'aperçu et dans la liseuse.
+PALETTE = {
+    "dark":  {"bg": "#000000", "fg": "#e5e5ea", "line": "#8e8e93", "fill": "#2c2c2e",
+              "note": "#141416", "muted": "#8e8e93", "accent": "#c8823c"},
+    "light": {"bg": "#f7f7f9", "fg": "#1c1c1e", "line": "#636366", "fill": "#ececf0",
+              "note": "#f7f7f9", "muted": "#636366", "accent": "#b06a22"},
+}
+CONFIG = """skinparam backgroundColor transparent
+skinparam defaultFontName sans-serif
+skinparam defaultFontColor {fg}
+skinparam ArrowColor {line}
+skinparam ArrowFontColor {fg}
+skinparam BorderColor {line}
+<style>
+element {{ BackGroundColor {fill}; LineColor {line}; FontColor {fg}; }}
+note {{ BackGroundColor {note}; }}
+</style>
+"""
+
+
+def theme() -> str:
+    # Même clé que la liseuse et la barre ; sombre si on ne peut pas savoir.
+    try:
+        out = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                             capture_output=True, text=True, timeout=2).stdout
+    except Exception:
+        return "dark"
+    return "dark" if "prefer-dark" in out or not out else "light"
+
+
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def die_with_parent():
+    # Exécuté dans le fils juste avant exec ; survit à l'exec du lanceur
+    # /usr/bin/plantuml, qui fait lui-même `exec java`.
+    PR_SET_PDEATHSIG = 1
+    ctypes.CDLL("libc.so.6", use_errno=True).prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+
+
+# ============================================================
+# État partagé
+# ============================================================
+class State:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.last = None            # dernier événement envoyé, pour une page qui (re)arrive
+        self.clients = []           # une queue par page connectée
+        self.pending = None         # dernière requête de nvim pas encore rendue
+        self.wake = threading.Event()
+        self.done = threading.Event()
+
+    def publish(self, event: dict):
+        with self.lock:
+            if event.get("svg") or event.get("bye"):
+                self.last = event
+            elif self.last and self.last.get("svg"):
+                # Erreur : on garde le dernier diagramme valide à l'écran.
+                self.last = dict(self.last, error=event["error"], line=event.get("line"))
+            else:
+                self.last = event
+            payload = self.last
+            for q in self.clients:
+                q.put(payload)
+
+
+STATE = State()
+
+
+# ============================================================
+# Rendu
+# ============================================================
+def render_loop(port: int, cfg: str):
+    url = "http://127.0.0.1:%d/render" % port
+    while not STATE.done.is_set():
+        STATE.wake.wait()
+        STATE.wake.clear()
+        with STATE.lock:
+            req, STATE.pending = STATE.pending, None
+        if req is None:
+            continue
+        body = json.dumps({"source": req["source"], "options": ["-tsvg", "-config", cfg]}).encode()
+        # Le serveur peut encore démarrer (~0,8 s) : on réessaie plutôt que
+        # de perdre le premier rendu.
+        for _ in range(60):
+            try:
+                with urllib.request.urlopen(urllib.request.Request(url, data=body), timeout=10) as r:
+                    svg, err = r.read().decode("utf-8", "replace"), r.headers.get("X-PlantUML-Diagram-Error")
+                    eline = r.headers.get("X-PlantUML-Diagram-Error-Line")
+                break
+            except (ConnectionError, urllib.error.URLError):
+                if STATE.done.is_set():
+                    return
+                time.sleep(0.25)
+        else:
+            STATE.publish({"error": "le serveur PlantUML ne répond pas", "name": req.get("name")})
+            continue
+        if err:
+            line = req.get("first", 1) + int(eline) if eline and eline.isdigit() else None
+            STATE.publish({"error": err, "line": line, "name": req.get("name")})
+        else:
+            STATE.publish({"svg": svg[svg.find("<svg"):], "error": None, "name": req.get("name")})
+
+
+def stdin_loop():
+    for raw in sys.stdin:
+        try:
+            req = json.loads(raw)
+        except ValueError:
+            continue
+        with STATE.lock:
+            STATE.pending = req     # le plus récent gagne, les autres sont périmés
+        STATE.wake.set()
+    STATE.done.set()
+    STATE.wake.set()
+
+
+# ============================================================
+# Page
+# ============================================================
+PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>%(title)s</title><style>
+:root { --bg:%(bg)s; --fg:%(fg)s; --muted:%(muted)s; --accent:%(accent)s; --surface:%(fill)s; }
+html, body { margin:0; height:100%%; background:var(--bg); color:var(--fg);
+  font: 13px "MiSans Latin", "Noto Sans", sans-serif; overflow:hidden; }
+#stage { position:absolute; inset:0; cursor:grab; }
+#stage.drag { cursor:grabbing; }
+#view { position:absolute; inset:24px; transform-origin:0 0; }
+#view svg { width:100%%; height:100%%; }
+#err { position:absolute; left:16px; right:16px; bottom:16px; padding:10px 14px; display:none;
+  background:var(--surface); color:var(--accent); border-left:3px solid var(--accent); border-radius:4px; }
+#status { position:absolute; top:8px; right:12px; color:var(--muted); font-size:11px; }
+</style></head><body>
+<div id="stage"><div id="view"></div></div><div id="err"></div><div id="status"></div>
+<script>
+const view = document.getElementById("view"), stage = document.getElementById("stage"),
+      err = document.getElementById("err"), status = document.getElementById("status");
+let s = 1, x = 0, y = 0;
+const apply = () => view.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+stage.addEventListener("wheel", e => {
+  e.preventDefault();
+  // Zoom autour du pointeur : le point sous la souris ne bouge pas.
+  const k = Math.exp(-e.deltaY * 0.0015);
+  x += (e.clientX - 24 - x) * (1 - k); y += (e.clientY - 24 - y) * (1 - k); s *= k; apply();
+}, { passive: false });
+let drag = null;
+stage.addEventListener("mousedown", e => { drag = [e.clientX - x, e.clientY - y]; stage.classList.add("drag"); });
+addEventListener("mouseup", () => { drag = null; stage.classList.remove("drag"); });
+addEventListener("mousemove", e => { if (drag) { x = e.clientX - drag[0]; y = e.clientY - drag[1]; apply(); } });
+const reset = () => { s = 1; x = 0; y = 0; apply(); };
+stage.addEventListener("dblclick", reset);
+addEventListener("keydown", e => { if (e.key === "0") reset(); });
+
+const es = new EventSource("/events");
+es.onmessage = m => {
+  const d = JSON.parse(m.data);
+  if (d.bye) { status.textContent = "aperçu fermé"; es.close(); window.close(); return; }
+  status.textContent = d.name || "";
+  if (d.svg) {
+    view.innerHTML = d.svg;
+    const svg = view.querySelector("svg");
+    // PlantUML fixe sa taille en pixels et étire le dessin : on garde le
+    // viewBox, la page décide de la taille, le ratio est respecté.
+    svg.removeAttribute("style"); svg.removeAttribute("width"); svg.removeAttribute("height");
+    svg.removeAttribute("preserveAspectRatio");
+  }
+  if (d.error) { err.textContent = (d.line ? "ligne " + d.line + " : " : "") + d.error; err.style.display = "block"; }
+  else err.style.display = "none";
+};
+es.onerror = () => { status.textContent = "déconnecté"; };
+</script></body></html>"""
+
+
+def make_handler(page: bytes):
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path == "/":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(page)))
+                self.end_headers()
+                self.wfile.write(page)
+            elif self.path == "/events":
+                self.events()
+            else:
+                self.send_error(404)
+
+        def events(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            q = queue.Queue()
+            with STATE.lock:
+                STATE.clients.append(q)
+                if STATE.last:
+                    q.put(STATE.last)
+            try:
+                while True:
+                    try:
+                        ev = q.get(timeout=15)
+                    except queue.Empty:
+                        # Garde la connexion en vie, et détecte une page fermée.
+                        self.wfile.write(b": ping\n\n")
+                        self.wfile.flush()
+                        continue
+                    self.wfile.write(b"data: " + json.dumps(ev).encode() + b"\n\n")
+                    self.wfile.flush()
+                    if ev.get("bye"):
+                        break
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            finally:
+                with STATE.lock:
+                    STATE.clients.remove(q)
+
+    return Handler
+
+
+# ============================================================
+# Fenêtre (Hyprland, configuré en Lua : dispatch en hl.dsp.*)
+# ============================================================
+def hypr_json(what: str):
+    try:
+        return json.loads(subprocess.run(["hyprctl", "-j", what], capture_output=True,
+                                         text=True, timeout=2).stdout)
+    except Exception:
+        return None
+
+
+def hypr_dispatch(lua: str):
+    subprocess.run(["hyprctl", "dispatch", lua], capture_output=True, timeout=2)
+
+
+def window_with(token: str):
+    for c in hypr_json("clients") or []:
+        if token in c.get("title", ""):
+            return c["address"]
+    return None
+
+
+def open_window(url: str, token: str):
+    # Le terminal de nvim, pour lui rendre le focus : l'aperçu se regarde,
+    # c'est dans nvim qu'on tape.
+    back = (hypr_json("activewindow") or {}).get("address")
+    subprocess.Popen(["firefox", "--new-window", url], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+    if not back:
+        return
+    for _ in range(40):
+        if window_with(token):
+            hypr_dispatch("hl.dsp.focus({ window = 'address:%s' })" % back)
+            return
+        time.sleep(0.15)
+
+
+def close_window(token: str):
+    addr = window_with(token)
+    if addr:
+        hypr_dispatch("hl.dsp.window.close({ window = 'address:%s' })" % addr)
+
+
+# ============================================================
+def main():
+    colors = PALETTE[theme()]
+    cfg = tempfile.NamedTemporaryFile("w", suffix=".puml", prefix="umlive-", delete=False)
+    cfg.write(CONFIG.format(**colors))
+    cfg.close()
+
+    jport = free_port()
+    jvm = subprocess.Popen(["plantuml", "-picoweb:%d:127.0.0.1" % jport],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           preexec_fn=die_with_parent)
+
+    # Un jeton unique dans le titre : c'est par lui qu'on retrouve SA
+    # fenêtre Firefox parmi les autres, pour lui rendre le focus puis la
+    # fermer.
+    token = "umlive:%d" % os.getpid()
+    page = (PAGE % dict(colors, title="Aperçu UML — " + token)).encode()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(page))
+    server.daemon_threads = True
+    url = "http://127.0.0.1:%d/" % server.server_address[1]
+
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    threading.Thread(target=render_loop, args=(jport, cfg.name), daemon=True).start()
+    if "--no-window" in sys.argv:
+        print(url, flush=True)       # pour tester sans ouvrir Firefox
+    else:
+        threading.Thread(target=open_window, args=(url, token), daemon=True).start()
+
+    try:
+        stdin_loop()                  # bloque jusqu'à la fermeture de stdin
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        STATE.done.set()
+        STATE.wake.set()
+        STATE.publish({"bye": True})
+        time.sleep(0.2)               # le temps que l'événement parte
+        close_window(token)
+        jvm.terminate()
+        try:
+            jvm.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            jvm.kill()
+        os.unlink(cfg.name)
+
+
+if __name__ == "__main__":
+    # jobstop() de nvim envoie SIGTERM : même nettoyage qu'une fin de stdin.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    main()
