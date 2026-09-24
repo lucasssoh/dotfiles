@@ -137,19 +137,19 @@ function M.login(on_done)
         return on_done(now)
     end
     if polling then
-        return vim.notify("LeetCode : connexion déjà en cours dans Firefox", vim.log.levels.INFO)
+        return vim.notify("LeetCode : connection already in progress in Firefox", vim.log.levels.INFO)
     end
 
     local cmd = query_cmd()
     if not cmd then
-        vim.notify("LeetCode : profil Firefox introuvable", vim.log.levels.ERROR)
+        vim.notify("LeetCode : Firefox profile Firefox not found", vim.log.levels.ERROR)
         return on_done(nil)
     end
 
     -- Hands the URL to the running Firefox if there is one, detached so
     -- that closing nvim does not take the browser with it.
     vim.system({ "firefox", "--new-window", LOGIN_URL }, { detach = true })
-    vim.notify("LeetCode : connecte-toi dans Firefox, nvim récupère la session tout seul")
+    vim.notify("LeetCode : Log in in Firefox, and nvim will pick up the session automatically.")
 
     polling = true
     local deadline = vim.uv.now() + TIMEOUT_MS

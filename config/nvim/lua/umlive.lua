@@ -59,7 +59,7 @@ local function send()
     end
     local source, first = current_diagram(buf)
     local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
-    local msg = vim.json.encode({ source = source, first = first, name = name ~= "" and name or "[sans nom]" })
+    local msg = vim.json.encode({ source = source, first = first, name = name ~= "" and name or "[no name]" })
     -- Déplacer le curseur DANS le même diagramme ne change rien : pas de
     -- rendu pour rien.
     if msg == last then
@@ -91,7 +91,7 @@ function M.start()
         return
     end
     if vim.fn.executable(SERVER) == 0 or vim.fn.executable("plantuml") == 0 then
-        vim.notify("umlive : plantuml ou bin/umlive introuvable", vim.log.levels.ERROR)
+        vim.notify("umlive : plantuml ou bin/umlive not found", vim.log.levels.ERROR)
         return
     end
     last = nil
@@ -113,7 +113,7 @@ function M.start()
     })
     if job <= 0 then
         job = nil
-        vim.notify("umlive : échec du lancement", vim.log.levels.ERROR)
+        vim.notify("umlive : failed to launch", vim.log.levels.ERROR)
         return
     end
 

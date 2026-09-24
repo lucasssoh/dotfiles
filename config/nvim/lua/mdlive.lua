@@ -48,7 +48,7 @@ local function send_text()
     send({
         text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"),
         cursor = line,
-        name = name ~= "" and vim.fs.basename(name) or "[sans nom]",
+        name = name ~= "" and vim.fs.basename(name) or "[no name]",
         -- Les images et liens relatifs se résolvent depuis le dossier du
         -- fichier ; un buffer jamais sauvé prend le dossier courant.
         dir = name ~= "" and vim.fs.dirname(name) or vim.fn.getcwd(),
@@ -88,7 +88,7 @@ function M.start()
         return
     end
     if vim.fn.executable(VIEWER) == 0 then
-        vim.notify("mdlive : bin/mdview introuvable", vim.log.levels.ERROR)
+        vim.notify("mdlive : bin/mdview not found", vim.log.levels.ERROR)
         return
     end
     sent = { buf = nil, tick = nil, line = nil }
@@ -112,7 +112,7 @@ function M.start()
     })
     if job <= 0 then
         job = nil
-        vim.notify("mdlive : échec du lancement", vim.log.levels.ERROR)
+        vim.notify("mdlive : failed to launch", vim.log.levels.ERROR)
         return
     end
 

@@ -46,7 +46,7 @@ function M.close(buf, force)
 
     if vim.bo[buf].modified and not force then
         vim.notify(
-            "Buffer modifie : :w d'abord, ou <leader>X pour fermer sans sauver.",
+            "Buffer modified : :w first, or <leader>X to close without saving.",
             vim.log.levels.WARN
         )
         return false
