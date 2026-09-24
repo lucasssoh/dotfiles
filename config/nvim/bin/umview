@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+# ============================================================
+# umview — la fenêtre de l'aperçu PlantUML en direct
+# ============================================================
+# Lancée par bin/umlive, qui lui écrit sur stdin une ligne JSON par rendu :
+#
+#     {"svg": "<svg…>", "error": null | "message", "line": 12, "name": "x.puml"}
+#
+# Une erreur arrive avec le dernier SVG valide : le diagramme reste, un
+# bandeau dit ce qui ne va pas. stdin fermé = fermer la fenêtre ; fermer
+# la fenêtre = fin du processus, qu'umlive prend pour « aperçu fermé ».
+#
+# ---- Pourquoi une fenêtre à nous plutôt qu'imv ----------------------
+# imv remet zoom et position à zéro à CHAQUE image chargée, quel que soit
+# son mode d'échelle, et ses commandes ne savent ni fixer un zoom absolu
+# ni lire la position : impossible à contourner (mesuré, imv 5.0.1). Ici
+# la vue est à nous :
+#   - tant qu'on n'a pas touché à la vue, chaque rendu est ajusté à la
+#     fenêtre (un diagramme qui grandit reste entier) ;
+#   - dès qu'on zoome ou déplace, l'échelle et le point au centre sont
+#     gardés d'un rendu à l'autre. 0 ou double-clic : retour à l'ajusté.
+# Pas de clignotement : le nouveau SVG est lu en mémoire, et ne remplace
+# l'ancien qu'une fois lu sans erreur, puis un seul redessin.
+#
+# ---- Coût (mesuré) ----------------------------------------------------
+# ~75 Mo avec le moteur de rendu cairo de GTK (110 Mo avec celui par
+# défaut, GL, sans rien de plus à afficher qu'une image). Lecture du SVG
+# 0,6 ms (librsvg), dessin plein écran 15 ms (cairo) ; la part de Python
+# à chaque redessin est de 0,007 ms, d'où Python plutôt qu'un binaire à
+# compiler.
+# ============================================================
+import argparse
+import json
+import os
+import sys
+import threading
+
+os.environ.setdefault("GSK_RENDERER", "cairo")
+
+try:
+    import gi
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Gdk", "4.0")
+    gi.require_version("Rsvg", "2.0")
+    from gi.repository import Gdk, Gio, GLib, Gtk, Rsvg
+except (ImportError, ValueError) as exc:
+    # umlive teste `umview --check` et passe à imv si ceci échoue.
+    sys.stderr.write("umview: GTK 4 / librsvg indisponibles (%s)\n" % exc)
+    sys.exit(3)
+
+MARGIN = 0.96          # l'ajusté laisse un liseré autour du diagramme
+ZOOM_STEP = 1.12       # un cran de molette
+
+
+class Viewer:
+    def __init__(self, app, args):
+        self.args = args
+        self.handle = None
+        self.size = (1.0, 1.0)
+        # auto : ajusté à la fenêtre. Sinon : échelle absolue `scale` et
+        # point du document au centre de la fenêtre (cx, cy).
+        self.auto = True
+        self.scale, self.cx, self.cy = 1.0, 0.0, 0.0
+        self.pointer = (0.0, 0.0)
+
+        self.win = Gtk.ApplicationWindow(application=app, title="Aperçu UML")
+        self.win.set_default_size(900, 1000)
+
+        self.area = Gtk.DrawingArea()
+        self.area.set_draw_func(self.draw)
+        self.area.set_focusable(True)
+
+        self.banner = Gtk.Label(xalign=0, wrap=True)
+        self.banner.add_css_class("umview-error")
+        self.banner.set_valign(Gtk.Align.END)
+        self.banner.set_visible(False)
+
+        overlay = Gtk.Overlay()
+        overlay.set_child(self.area)
+        overlay.add_overlay(self.banner)
+        self.win.set_child(overlay)
+
+        css = Gtk.CssProvider()
+        css.load_from_string(
+            ".umview-error { background: %s; color: %s; padding: 10px 14px; margin: 16px;"
+            " border-left: 3px solid %s; border-radius: 4px; }" % (args.surface, args.accent, args.accent))
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.bg = Gdk.RGBA()
+        self.bg.parse(args.bg)
+
+        self.controls()
+        self.win.present()
+
+    # ---- Géométrie --------------------------------------------------
+    def view(self):
+        """(échelle, décalage x, décalage y) pour la taille actuelle."""
+        w, h = self.area.get_width(), self.area.get_height()
+        iw, ih = self.size
+        if self.auto:
+            s = min(w / iw, h / ih) * MARGIN
+            return s, (w - iw * s) / 2, (h - ih * s) / 2
+        return self.scale, w / 2 - self.cx * self.scale, h / 2 - self.cy * self.scale
+
+    def to_manual(self):
+        # Fige la vue ajustée courante avant de la modifier : zoomer part
+        # de ce qu'on voit, pas d'une échelle 1 arbitraire.
+        if self.auto:
+            s, tx, ty = self.view()
+            w, h = self.area.get_width(), self.area.get_height()
+            self.scale, self.cx, self.cy = s, (w / 2 - tx) / s, (h / 2 - ty) / s
+            self.auto = False
+
+    def zoom_at(self, k, px, py):
+        self.to_manual()
+        w, h = self.area.get_width(), self.area.get_height()
+        # Le point du document sous le pointeur ne bouge pas.
+        dx = (px - w / 2) / self.scale + self.cx
+        dy = (py - h / 2) / self.scale + self.cy
+        self.scale = max(0.05, min(self.scale * k, 40))
+        self.cx = dx - (px - w / 2) / self.scale
+        self.cy = dy - (py - h / 2) / self.scale
+        self.area.queue_draw()
+
+    def reset(self):
+        self.auto = True
+        self.area.queue_draw()
+
+    # ---- Contrôles --------------------------------------------------
+    def controls(self):
+        motion = Gtk.EventControllerMotion()
+        motion.connect("motion", lambda _c, x, y: setattr(self, "pointer", (x, y)))
+        self.area.add_controller(motion)
+
+        scroll = Gtk.EventControllerScroll(flags=Gtk.EventControllerScrollFlags.VERTICAL)
+        scroll.connect("scroll", lambda _c, _dx, dy: (self.zoom_at(ZOOM_STEP ** -dy, *self.pointer), True)[1])
+        self.area.add_controller(scroll)
+
+        drag = Gtk.GestureDrag()
+        drag.connect("drag-begin", self.drag_begin)
+        drag.connect("drag-update", self.drag_update)
+        self.area.add_controller(drag)
+
+        click = Gtk.GestureClick()
+        click.connect("pressed", lambda _g, n, _x, _y: self.reset() if n == 2 else None)
+        self.area.add_controller(click)
+
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self.key)
+        self.win.add_controller(keys)
+
+    def drag_begin(self, _g, _x, _y):
+        self.to_manual()
+        self.drag_from = (self.cx, self.cy)
+
+    def drag_update(self, _g, dx, dy):
+        self.cx = self.drag_from[0] - dx / self.scale
+        self.cy = self.drag_from[1] - dy / self.scale
+        self.area.queue_draw()
+
+    def key(self, _c, keyval, _code, _state):
+        name = Gdk.keyval_name(keyval) or ""
+        w, h = self.area.get_width(), self.area.get_height()
+        if name in ("0", "KP_0", "agrave"):      # agrave : le 0 de l'AZERTY
+            self.reset()
+        elif name in ("plus", "KP_Add", "equal"):
+            self.zoom_at(ZOOM_STEP, w / 2, h / 2)
+        elif name in ("minus", "KP_Subtract"):
+            self.zoom_at(1 / ZOOM_STEP, w / 2, h / 2)
+        elif name in ("q", "Escape"):
+            self.win.close()
+        else:
+            return False
+        return True
+
+    # ---- Dessin ------------------------------------------------------
+    def draw(self, _area, cr, _w, _h):
+        Gdk.cairo_set_source_rgba(cr, self.bg)
+        cr.paint()
+        if not self.handle:
+            return
+        s, tx, ty = self.view()
+        cr.translate(tx, ty)
+        cr.scale(s, s)
+        rect = Rsvg.Rectangle()
+        rect.x, rect.y = 0, 0
+        rect.width, rect.height = self.size
+        self.handle.render_document(cr, rect)
+
+    # ---- Mises à jour ------------------------------------------------
+    def update(self, msg):
+        svg = msg.get("svg")
+        if svg:
+            try:
+                handle = Rsvg.Handle.new_from_data(svg.encode("utf-8"))
+                ok, iw, ih = handle.get_intrinsic_size_in_pixels()
+            except GLib.Error:
+                handle, ok = None, False
+            if handle and ok and iw > 0 and ih > 0:
+                self.handle, self.size = handle, (iw, ih)
+        err = msg.get("error")
+        if err:
+            self.banner.set_text((("ligne %d : " % msg["line"]) if msg.get("line") else "") + err)
+        self.banner.set_visible(bool(err))
+        if msg.get("name"):
+            self.win.set_title("Aperçu UML — " + msg["name"])
+        self.area.queue_draw()
+        return False
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--check", action="store_true")
+    p.add_argument("--bg", default="#000000")
+    p.add_argument("--surface", default="#2c2c2e")
+    p.add_argument("--accent", default="#c8823c")
+    args = p.parse_args()
+    if args.check:
+        return 0
+
+    # NON_UNIQUE : deux nvim, deux aperçus. Sans ça, le second lancement
+    # réveillerait la fenêtre du premier au lieu d'ouvrir la sienne.
+    app = Gtk.Application(application_id="fr.dotfiles.umview",
+                          flags=Gio.ApplicationFlags.NON_UNIQUE)
+    state = {}
+
+    def activate(app):
+        try:
+            state["viewer"] = Viewer(app, args)
+        except Exception:
+            # Sans fenêtre, GTK garderait le processus en vie pour rien :
+            # on sort, umlive le voit et ferme l'aperçu.
+            import traceback
+            traceback.print_exc()
+            state["failed"] = True
+            app.quit()
+            return
+
+        def read():
+            for raw in sys.stdin:
+                try:
+                    msg = json.loads(raw)
+                except ValueError:
+                    continue
+                GLib.idle_add(state["viewer"].update, msg)
+            GLib.idle_add(app.quit)
+
+        threading.Thread(target=read, daemon=True).start()
+
+    app.connect("activate", activate)
+    code = app.run(None)
+    return 1 if state.get("failed") else code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -2,7 +2,8 @@
 -- UMLIVE.LUA — aperçu PlantUML en direct (côté nvim)
 -- ============================================================
 -- Le serveur est bin/umlive (voir son en-tête) : il garde une JVM
--- plantuml chaude, et affiche chaque rendu dans imv (Firefox à défaut).
+-- plantuml chaude, et affiche chaque rendu dans bin/umview, une fenêtre
+-- GTK 4 qui garde zoom et position (imv, puis Firefox, à défaut).
 -- Ce module ne fait que lui envoyer, sur son stdin, le diagramme sous
 -- le curseur à chaque changement du buffer -- depuis la mémoire de nvim,
 -- donc sans :w.
