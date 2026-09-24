@@ -31,6 +31,7 @@
 # ============================================================
 import argparse
 import json
+import math
 import os
 import sys
 import threading
@@ -50,6 +51,8 @@ except (ImportError, ValueError) as exc:
 
 MARGIN = 0.96          # l'ajusté laisse un liseré autour du diagramme
 ZOOM_STEP = 1.12       # un cran de molette
+ZOOM_SMOOTH = 0.01     # Ctrl + deux doigts : zoom par pixel glissé
+SCALE_MIN, SCALE_MAX = 0.05, 40
 
 
 class Viewer:
@@ -111,15 +114,31 @@ class Viewer:
             self.scale, self.cx, self.cy = s, (w / 2 - tx) / s, (h / 2 - ty) / s
             self.auto = False
 
-    def zoom_at(self, k, px, py):
-        self.to_manual()
+    def doc_point(self, px, py):
+        """Le point du document sous (px, py) de la fenêtre."""
         w, h = self.area.get_width(), self.area.get_height()
+        return (px - w / 2) / self.scale + self.cx, (py - h / 2) / self.scale + self.cy
+
+    def place(self, scale, doc, px, py):
+        """Échelle `scale`, avec le point `doc` du document sous (px, py)."""
+        w, h = self.area.get_width(), self.area.get_height()
+        self.scale = max(SCALE_MIN, min(scale, SCALE_MAX))
+        self.cx = doc[0] - (px - w / 2) / self.scale
+        self.cy = doc[1] - (py - h / 2) / self.scale
+        self.area.queue_draw()
+
+    def zoom_at(self, k, px, py):
         # Le point du document sous le pointeur ne bouge pas.
-        dx = (px - w / 2) / self.scale + self.cx
-        dy = (py - h / 2) / self.scale + self.cy
-        self.scale = max(0.05, min(self.scale * k, 40))
-        self.cx = dx - (px - w / 2) / self.scale
-        self.cy = dy - (py - h / 2) / self.scale
+        self.to_manual()
+        self.place(self.scale * k, self.doc_point(px, py), px, py)
+
+    def pan(self, dx, dy):
+        # Comme une page qu'on fait défiler : glisser vers le bas descend
+        # dans le diagramme (le sens « naturel » est déjà appliqué par le
+        # système dans dx, dy).
+        self.to_manual()
+        self.cx += dx / self.scale
+        self.cy += dy / self.scale
         self.area.queue_draw()
 
     def reset(self):
@@ -132,9 +151,21 @@ class Viewer:
         motion.connect("motion", lambda _c, x, y: setattr(self, "pointer", (x, y)))
         self.area.add_controller(motion)
 
-        scroll = Gtk.EventControllerScroll(flags=Gtk.EventControllerScrollFlags.VERTICAL)
-        scroll.connect("scroll", lambda _c, _dx, dy: (self.zoom_at(ZOOM_STEP ** -dy, *self.pointer), True)[1])
+        # Pavé tactile et molette n'envoient pas le même défilement : GTK
+        # distingue le continu, en pixels (deux doigts), des crans d'une
+        # molette. Deux doigts déplacent la vue dans tous les sens, comme
+        # une carte ; la molette, qui ne sait pas aller en diagonale,
+        # zoome ; Ctrl + deux doigts zoome aussi.
+        scroll = Gtk.EventControllerScroll(flags=Gtk.EventControllerScrollFlags.BOTH_AXES)
+        scroll.connect("scroll", self.on_scroll)
         self.area.add_controller(scroll)
+
+        # Pincer / écarter : zoom autour du point pincé. Le centre du
+        # pincement peut glisser en même temps, et la vue le suit.
+        pinch = Gtk.GestureZoom()
+        pinch.connect("begin", self.pinch_begin)
+        pinch.connect("scale-changed", self.pinch_update)
+        self.area.add_controller(pinch)
 
         drag = Gtk.GestureDrag()
         drag.connect("drag-begin", self.drag_begin)
@@ -148,6 +179,31 @@ class Viewer:
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self.key)
         self.win.add_controller(keys)
+
+    def on_scroll(self, ctl, dx, dy):
+        touchpad = ctl.get_unit() == Gdk.ScrollUnit.SURFACE
+        ctrl = ctl.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK
+        if touchpad and not ctrl:
+            self.pan(dx, dy)
+        elif touchpad:
+            self.zoom_at(math.exp(-dy * ZOOM_SMOOTH), *self.pointer)
+        elif dy:
+            self.zoom_at(ZOOM_STEP ** -dy, *self.pointer)
+        return True
+
+    def pinch_begin(self, gesture, _seq):
+        self.to_manual()
+        ok, x, y = gesture.get_bounding_box_center()
+        if not ok:
+            x, y = self.pointer
+        self.pinch_from = (self.scale, self.doc_point(x, y))
+
+    def pinch_update(self, gesture, factor):
+        ok, x, y = gesture.get_bounding_box_center()
+        if not ok:
+            x, y = self.pointer
+        scale0, doc = self.pinch_from
+        self.place(scale0 * factor, doc, x, y)
 
     def drag_begin(self, _g, _x, _y):
         self.to_manual()

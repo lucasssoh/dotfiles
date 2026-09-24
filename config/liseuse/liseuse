@@ -889,15 +889,21 @@ convert_one() {
     # LibreOffice refuses to start against a profile an interactive
     # LibreOffice already holds, so without this the command fails
     # whenever the suite happens to be open.
-    "$bin" --headless --norestore \
+    # soffice has no `--` end-of-options marker (it rejects it as an
+    # unknown option), so a name starting with a dash is guarded by
+    # making it a relative path instead.
+    local arg="$src" log
+    case "$arg" in -*) arg="./$arg" ;; esac
+    log="$("$bin" --headless --norestore \
            -env:UserInstallation="file://$CACHE_DIR/soffice" \
-           --convert-to pdf --outdir "$dir" -- "$src" >/dev/null 2>&1
+           --convert-to pdf --outdir "$dir" "$arg" 2>&1)"
 
     if [ -f "$out" ]; then
         printf 'converted  %s\n' "${out#"$HOME"/}"
         return 0
     fi
     echo "liseuse convert: failed on ${src#"$HOME"/}" >&2
+    [ -n "$log" ] && printf '%s\n' "$log" | tail -n 5 | sed 's/^/  /' >&2
     return 1
 }
 
