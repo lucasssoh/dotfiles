@@ -1,21 +1,21 @@
 //! wallpaper-filter <image> — recomposes an image to exactly fill the
 //! active screen's resolution. Two modes, picked per-file (see
-//! `is_fill_mode`):
+//! `is_safe_mode`):
 //!
-//! - "safe" (default): never crops the axis that would carry the main
-//!   subject (height in landscape, width in portrait) -- that axis is only
-//!   scaled. Only the remaining ("free") axis is adjusted: cropped if too
-//!   large, or extended (blurred background -- dominant color of the 4
-//!   corners if the image has a near-uniform background, otherwise the
-//!   whole image stretched, darkened further when it covers a large share
-//!   of the canvas to disguise it as a duplicate of the sharp subject --
-//!   with a gradient fade on the edges) if too short. Meant for images with
-//!   a subject that must stay fully visible (portraits, character art).
-//! - "fill": plain cover + center-crop, no safe axis, no blur, no
-//!   background compositing -- both axes are cropped as needed to fill the
-//!   canvas exactly. Meant for abstract/pattern art and landscape photos,
-//!   where cropping doesn't lose anything worth protecting and a fake
-//!   blurred backdrop would only be a distraction.
+//! - "fill" (default): plain cover + center-crop, no safe axis, no blur,
+//!   no background compositing -- both axes are cropped as needed to fill
+//!   the canvas exactly. Meant for abstract/pattern art and landscape
+//!   photos, where cropping doesn't lose anything worth protecting and a
+//!   fake blurred backdrop would only be a distraction.
+//! - "safe": never crops the axis that would carry the main subject
+//!   (height in landscape, width in portrait) -- that axis is only scaled.
+//!   Only the remaining ("free") axis is adjusted: cropped if too large,
+//!   or extended (blurred background -- dominant color of the 4 corners if
+//!   the image has a near-uniform background, otherwise the whole image
+//!   stretched, darkened further when it covers a large share of the
+//!   canvas to disguise it as a duplicate of the sharp subject -- with a
+//!   gradient fade on the edges) if too short. Meant for images with a
+//!   subject that must stay fully visible (portraits, character art).
 //!
 //! Native rewrite of the old wallpaper-filter-one.sh (ImageMagick): same
 //! algorithm, but all decoding/processing stays in memory in a single
@@ -173,14 +173,13 @@ fn open_image(path: &Path) -> Option<DynamicImage> {
 }
 
 /// User config file listing filename glob patterns (one per line, `#`
-/// comments, blank lines ignored) that should use "fill" mode (plain
-/// cover + center-crop, no blur) instead of the default "safe" mode --
-/// see the module doc comment. Only a single `*` wildcard per pattern is
-/// supported (prefix/suffix/exact match), which is enough for the
-/// prefix-based naming this repo's wallpapers use (`gnome-*`, `macos-*`).
+/// comments, blank lines ignored) that should use "safe" mode (subject
+/// axis never cropped, blurred background) instead of the default "fill"
+/// mode -- see the module doc comment. Only a single `*` wildcard per
+/// pattern is supported (prefix/suffix/exact match).
 /// Symlinked by install.sh like wallpapers.conf and wallpapers-extra.conf.
-fn fill_mode_conf_path() -> PathBuf {
-    home().join(".config/prisme/wallpaper-fill-mode.conf")
+fn safe_mode_conf_path() -> PathBuf {
+    home().join(".config/prisme/wallpaper-safe-mode.conf")
 }
 
 fn glob_match(pattern: &str, name: &str) -> bool {
@@ -194,11 +193,10 @@ fn glob_match(pattern: &str, name: &str) -> bool {
     }
 }
 
-/// Whether `filename` should use "fill" mode, per wallpaper-fill-mode.conf.
-/// Missing/empty file -> nothing uses fill mode (every image keeps the
-/// current "safe" behavior, unaffected by this feature until opted in).
-fn is_fill_mode(filename: &str) -> bool {
-    let Ok(content) = std::fs::read_to_string(fill_mode_conf_path()) else {
+/// Whether `filename` should use "safe" mode, per wallpaper-safe-mode.conf.
+/// Missing/empty file -> every image uses the default "fill" mode.
+fn is_safe_mode(filename: &str) -> bool {
+    let Ok(content) = std::fs::read_to_string(safe_mode_conf_path()) else {
         return false;
     };
     content
@@ -448,7 +446,7 @@ fn main() {
     let (target_w, target_h) = target_resolution();
     let landscape = target_w >= target_h;
 
-    let result = if is_fill_mode(&filename.to_string_lossy()) {
+    let result = if !is_safe_mode(&filename.to_string_lossy()) {
         // Fill mode: plain cover + center-crop, no safe axis, no
         // background -- see the module doc comment.
         let (cover_w, cover_h) = cover_dims(src_w, src_h, target_w, target_h);

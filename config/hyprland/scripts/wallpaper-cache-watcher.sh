@@ -89,7 +89,7 @@ sync_merged_dir
 # thumbnail cache -- same binary, same version, purged together) --
 # targeted purge (not an `rm -rf` of the whole folder) to never touch the
 # marker itself or step outside these two cache dirs.
-FILTER_VERSION=7
+FILTER_VERSION=8
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
     find "$CACHE_DIR" -maxdepth 1 -type f \
