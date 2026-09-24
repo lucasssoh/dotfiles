@@ -51,6 +51,12 @@ pkg_ensure "$(pkg_pick python3-gobject python-gobject python3-gi)" \
     "$(pkg_pick gtk4 gtk4 gir1.2-gtk-4.0)" \
     "$(pkg_pick librsvg2 librsvg gir1.2-rsvg-2.0)" \
     imv
+# L'aperçu markdown en direct, bin/mdview : même base GTK 4, plus la chaîne
+# markdown de la liseuse (il lit config/liseuse/md2pdf.py sans le modifier),
+# à installer ici aussi pour qu'il marche sans le module liseuse.
+pkg_ensure "$(pkg_pick python3-markdown python-markdown python3-markdown)" \
+    "$(pkg_pick python3-pymdown-extensions python-pymdown-extensions python3-pymdownx)" \
+    "$(pkg_pick python3-pygments python-pygments python3-pygments)"
 if ! command -v plantuml-lsp >/dev/null 2>&1 && [ ! -x ~/.local/bin/plantuml-lsp ]; then
     GOBIN="$HOME/.local/bin" go install github.com/ptdewey/plantuml-lsp@latest \
         && ok "plantuml-lsp installed." \

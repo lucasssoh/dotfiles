@@ -1,0 +1,912 @@
+#!/usr/bin/env python3
+# ============================================================
+# mdview — aperçu markdown en direct, fenêtre GTK 4 native
+# ============================================================
+# Lancé par lua/mdlive.lua, qui lui écrit sur stdin une ligne JSON :
+#
+#     {"text": "<tout le buffer>", "cursor": 42, "name": "x.md", "dir": "/abs"}
+#     {"cursor": 42}                       (le curseur seul a bougé)
+#
+# Le texte vient de la mémoire de nvim : pas besoin de :w. stdin fermé =
+# fenêtre fermée ; fenêtre fermée = fin du processus, et nvim le voit.
+#
+# ---- Pourquoi natif plutôt qu'un navigateur (mesuré) -----------------
+#   Firefox       ~225 Mo, WebKitGTK réglé 380 Mo, inlyne 118 Mo + GPU
+#                 et perd la position au rechargement ; ceci ~80 Mo.
+# CPU et GPU ne départageaient pas (même ~62 ms d'affichage par mise à
+# jour complète, GPU nul ici) : ce qui compte, c'est de ne PAS tout
+# refaire à chaque frappe -- d'où la mise à jour par bloc ci-dessous.
+#
+# ---- Mise à jour par bloc ----------------------------------------------
+# 1. Le source est découpé en blocs (split_blocks). Un bloc inchangé n'est
+#    jamais reconverti : la conversion est en cache, indexée par son texte.
+# 2. Chaque bloc donne des éléments HTML de premier niveau, chacun un
+#    widget. Ancienne et nouvelle liste sont comparées (difflib) : seuls
+#    les widgets des blocs modifiés sont recréés, les autres restent en
+#    place -- la position de lecture ne bouge pas.
+# 3. Chaque widget connaît ses lignes source : le curseur de nvim est
+#    suivi ligne à ligne.
+#
+# ---- Style : celui de la liseuse ----------------------------------------
+# La palette est LUE dans config/liseuse/markdown.css (ses variables
+# --bg, --fg...), et la conversion reprend les extensions de md2pdf.py :
+# retoucher une couleur de la liseuse la retouche ici. Les tailles et
+# espacements, eux, sont traduits à la main dans CSS plus bas : GTK ne
+# comprend qu'un sous-ensemble du CSS web. La liseuse n'est pas modifiée.
+# ============================================================
+import collections
+import difflib
+import html
+import json
+import os
+import re
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+import urllib.request
+from html.parser import HTMLParser
+
+# Moteur de rendu cairo : ~50 Mo de moins que le moteur GPU par défaut
+# (104 contre 153 ici, mesuré). Mais il sous-estime la zone qu'il signale
+# comme modifiée quand un contenu arrivé après coup (un diagramme) pousse
+# la suite vers le bas : Hyprland gardait alors des bouts de l'ancien
+# affichage. full-redraw lui fait signaler toute la fenêtre -- restes
+# supprimés, même mémoire, +6 % de CPU au défilement (30,5 ms par image
+# contre 28,8), et rien au repos puisque rien ne se redessine.
+os.environ.setdefault("GSK_RENDERER", "cairo")
+os.environ.setdefault("GSK_DEBUG", "full-redraw")
+
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("Gsk", "4.0")
+gi.require_version("Graphene", "1.0")
+gi.require_version("Rsvg", "2.0")
+from gi.repository import Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk, Pango, Rsvg
+
+# La liseuse, en lecture seule : ses extensions markdown et son CSS. Dans
+# le dépôt d'abord (config/liseuse, voisin de config/nvim), qui existe même
+# si le module liseuse n'a jamais été installé ; son lien sinon.
+LISEUSE = next((d for d in (
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "liseuse"),
+    os.path.dirname(os.path.realpath(os.path.expanduser("~/.local/bin/liseuse"))),
+) if os.path.exists(os.path.join(d, "md2pdf.py"))), None)
+if not LISEUSE:
+    sys.stderr.write("mdview: config/liseuse/md2pdf.py introuvable\n")
+    sys.exit(3)
+sys.path.insert(0, os.path.normpath(LISEUSE))
+import markdown                                     # noqa: E402
+import md2pdf                                       # noqa: E402
+from pygments.styles import get_style_by_name       # noqa: E402
+from pygments.token import STANDARD_TYPES           # noqa: E402
+
+MAX_WIDTH = 860          # colonne de texte, comme la page de la liseuse
+SCROLL_AT = 0.25         # un bloc suivi est amené au quart de la hauteur
+
+
+# ============================================================
+# Palette : lue dans markdown.css
+# ============================================================
+def palette(dark: bool) -> dict:
+    """Les variables de markdown.css : :root (sombre), puis le bloc clair
+    par-dessus si le bureau est en clair -- la même cascade que la
+    liseuse. Clés en tirets bas (rule_soft) : str.format n'accepte pas
+    les tirets."""
+    css = open(md2pdf.CSS_PATH, encoding="utf-8").read()
+    pick = lambda sel: dict(re.findall(r"--([\w-]+)\s*:\s*([^;]+);",
+                                       (re.search(sel + r"\s*\{([^}]*)\}", css) or [None, ""])[1]))
+    out = pick(r":root")
+    if not dark:
+        out.update(pick(r'html\[data-theme="light"\]'))
+    return {k.replace("-", "_"): v.strip() for k, v in out.items()}
+
+
+# ============================================================
+# Découpage du source en blocs
+# ============================================================
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+LIST_ITEM = re.compile(r"^ {0,3}([-*+]|\d{1,9}[.)])\s")
+REF_DEF = re.compile(r"^ {0,3}\[(?!\^)[^\]]+\]:\s*\S")
+WHOLE_DOC = re.compile(r"\[\^[^\]]+\]|^\s*\[TOC\]\s*$", re.M)
+HTML_OPEN = re.compile(r"<(details|div)\b", re.I)
+HTML_CLOSE = re.compile(r"</(details|div)\s*>", re.I)
+
+
+def split_blocks(text: str):
+    """[(début, fin exclue, texte)] en lignes 0-based.
+
+    Règle de sûreté : fusionner deux blocs n'est jamais faux (juste moins
+    incrémental), les couper au mauvais endroit l'est. Donc on ne coupe
+    qu'à une ligne vide suivie d'une ligne en colonne 0 qui ne prolonge
+    ni une liste, ni une citation, hors bloc de code et hors bloc HTML.
+    Notes de bas de page et [TOC] dépendent du document entier (la
+    numérotation, la table) : alors un seul bloc, et c'est juste.
+    """
+    lines = text.split("\n")
+    if WHOLE_DOC.search(text):
+        return [(0, len(lines), text)]
+    nxt = [None] * (len(lines) + 1)
+    for i in range(len(lines) - 1, -1, -1):
+        nxt[i] = i if lines[i].strip() else nxt[i + 1]
+
+    blocks, start, fence, depth = [], None, None, 0
+    for i, line in enumerate(lines):
+        if fence:
+            m = FENCE.match(line)
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not line.strip().strip(fence[0]):
+                fence = None
+            continue
+        m = FENCE.match(line)
+        if m:
+            fence = m.group(1)
+            start = i if start is None else start
+            continue
+        if line.strip():
+            start = i if start is None else start
+            depth = max(0, depth + len(HTML_OPEN.findall(line)) - len(HTML_CLOSE.findall(line)))
+            continue
+        # Ligne vide : couper ici ?
+        if start is None or depth:
+            continue
+        j = nxt[i]
+        if j is None:
+            break
+        after = lines[j]
+        first = lines[start]
+        if after[:1] in (" ", "\t"):
+            continue                                  # suite indentée
+        if LIST_ITEM.match(after) and LIST_ITEM.match(first):
+            continue                                  # la liste continue
+        if after.startswith(">") and first.startswith(">"):
+            continue
+        blocks.append((start, i, "\n".join(lines[start:i])))
+        start = None
+    if start is not None:
+        blocks.append((start, len(lines), "\n".join(lines[start:])))
+    return blocks
+
+
+# ============================================================
+# HTML -> petit arbre
+# ============================================================
+VOID = {"br", "hr", "img", "input", "meta", "link", "wbr", "col"}
+
+
+class Node:
+    __slots__ = ("tag", "attrs", "children")
+
+    def __init__(self, tag, attrs):
+        self.tag, self.attrs, self.children = tag, dict(attrs), []
+
+    def cls(self):
+        return self.attrs.get("class", "") or ""
+
+    def elements(self):
+        return [c for c in self.children if isinstance(c, Node)]
+
+
+class Tree(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.root = Node("root", {})
+        self.stack = [self.root]
+
+    def handle_starttag(self, tag, attrs):
+        n = Node(tag, attrs)
+        self.stack[-1].children.append(n)
+        if tag not in VOID:
+            self.stack.append(n)
+
+    def handle_startendtag(self, tag, attrs):
+        self.stack[-1].children.append(Node(tag, attrs))
+
+    def handle_endtag(self, tag):
+        for k in range(len(self.stack) - 1, 0, -1):
+            if self.stack[k].tag == tag:
+                del self.stack[k:]
+                return
+
+    def handle_data(self, data):
+        self.stack[-1].children.append(data)
+
+
+def parse(fragment: str) -> Node:
+    t = Tree()
+    t.feed(fragment)
+    t.close()
+    return t.root
+
+
+# ============================================================
+# Conversion d'un bloc (en cache)
+# ============================================================
+class Converter:
+    def __init__(self):
+        configs = dict(md2pdf.EXTENSION_CONFIGS)
+        configs["pymdownx.superfences"] = {"custom_fences": [
+            {"name": n, "class": "uml", "format": self.uml_fence} for n in ("plantuml", "uml")]}
+        self.md = markdown.Markdown(extensions=md2pdf.EXTENSIONS, extension_configs=configs)
+        self.cache = collections.OrderedDict()
+
+    @staticmethod
+    def uml_fence(source, language, class_name, options, md, **kwargs):
+        return '<div class="uml" data-src="%s"></div>' % html.escape(source, quote=True)
+
+    def convert(self, text: str) -> list:
+        hit = self.cache.get(text)
+        if hit is not None:
+            self.cache.move_to_end(text)
+            return hit
+        self.md.reset()
+        root = parse(self.md.convert(text))
+        elems = [c for c in root.children if isinstance(c, Node)]
+        self.cache[text] = elems
+        if len(self.cache) > 4000:
+            self.cache.popitem(last=False)
+        return elems
+
+
+# ============================================================
+# Coloration du code : les classes Pygments -> Pango
+# ============================================================
+class CodeColors:
+    def __init__(self, dark: bool):
+        styles = getattr(md2pdf, "_STYLES", {"dark": ("github-dark", "monokai"), "light": ("default",)})
+        name = next((n for n in styles["dark" if dark else "light"] if self._exists(n)), "default")
+        style = get_style_by_name(name)
+        self.map = {}
+        for ttype, cls in STANDARD_TYPES.items():
+            if not cls:
+                continue
+            s = style.style_for_token(ttype)
+            attrs = []
+            if s.get("color"):
+                attrs.append('foreground="#%s"' % s["color"])
+            if s.get("bold"):
+                attrs.append('weight="bold"')
+            if s.get("italic"):
+                attrs.append('style="italic"')
+            if attrs:
+                self.map[cls] = " ".join(attrs)
+
+    @staticmethod
+    def _exists(name):
+        try:
+            get_style_by_name(name)
+            return True
+        except Exception:
+            return False
+
+    def markup(self, node) -> str:
+        if isinstance(node, str):
+            return GLib.markup_escape_text(node)
+        inner = "".join(self.markup(c) for c in node.children)
+        attrs = [self.map[c] for c in node.cls().split() if c in self.map]
+        return "<span %s>%s</span>" % (" ".join(attrs), inner) if attrs and inner else inner
+
+
+# ============================================================
+# Rendu vectoriel d'un SVG (PlantUML) : un Gdk.Paintable
+# ============================================================
+class SvgPaintable(GObject.Object, Gdk.Paintable):
+    def __init__(self, svg: str):
+        super().__init__()
+        self.handle = Rsvg.Handle.new_from_data(svg.encode("utf-8"))
+        ok, self.w, self.h = self.handle.get_intrinsic_size_in_pixels()
+        if not ok:
+            self.w, self.h = 400, 300
+
+    def do_get_intrinsic_width(self):
+        return int(self.w)
+
+    def do_get_intrinsic_height(self):
+        return int(self.h)
+
+    def do_get_intrinsic_aspect_ratio(self):
+        return self.w / self.h if self.h else 1.0
+
+    def do_snapshot(self, snapshot, width, height):
+        cr = snapshot.append_cairo(Graphene.Rect().init(0, 0, width, height))
+        r = Rsvg.Rectangle()
+        r.x, r.y, r.width, r.height = 0, 0, width, height
+        self.handle.render_document(cr, r)
+
+
+# ============================================================
+# PlantUML : une JVM chaude, lancée au premier bloc ```plantuml
+# (même réglage et même raisonnement que bin/umlive)
+# ============================================================
+UML_CONFIG = """skinparam backgroundColor transparent
+skinparam defaultFontName sans-serif
+skinparam defaultFontColor {fg}
+skinparam ArrowColor {muted}
+skinparam ArrowFontColor {fg}
+skinparam BorderColor {muted}
+<style>
+element {{ BackGroundColor {surface}; LineColor {muted}; FontColor {fg}; }}
+note {{ BackGroundColor {code_bg}; }}
+</style>
+"""
+
+
+class Plantuml:
+    def __init__(self, colors):
+        self.colors = colors
+        self.port = None
+        self.cfg = None
+        self.jvm = None
+        self.cache = {}
+        self.lock = threading.Lock()
+
+    def _start(self):
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            self.port = s.getsockname()[1]
+        self.cfg = os.path.join(GLib.get_user_runtime_dir(), "mdview-%d.puml" % os.getpid())
+        with open(self.cfg, "w", encoding="utf-8") as fh:
+            fh.write(UML_CONFIG.format(**self.colors))
+        env = dict(os.environ)
+        env["JAVA_TOOL_OPTIONS"] = (env.get("JAVA_TOOL_OPTIONS", "") +
+                                    " -Xmx192m -XX:+UseSerialGC -XX:TieredStopAtLevel=1").strip()
+
+        def die_with_parent():
+            import ctypes
+            ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)      # PR_SET_PDEATHSIG
+
+        self.jvm = subprocess.Popen(["plantuml", "-picoweb:%d:127.0.0.1" % self.port], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    preexec_fn=die_with_parent)
+
+    def render(self, source: str, done):
+        """done(svg, erreur) est appelé dans le fil GTK."""
+        if source in self.cache:
+            done(*self.cache[source])
+            return
+
+        def work():
+            with self.lock:
+                if self.jvm is None:
+                    try:
+                        self._start()
+                    except OSError as exc:
+                        GLib.idle_add(done, None, "plantuml introuvable (%s)" % exc)
+                        return
+            body = json.dumps({"source": source, "options": ["-tsvg", "-config", self.cfg]}).encode()
+            url = "http://127.0.0.1:%d/render" % self.port
+            for _ in range(80):
+                try:
+                    with urllib.request.urlopen(urllib.request.Request(url, data=body), timeout=30) as r:
+                        svg = r.read().decode("utf-8", "replace")
+                        err = r.headers.get("X-PlantUML-Diagram-Error")
+                        line = r.headers.get("X-PlantUML-Diagram-Error-Line")
+                    break
+                except OSError:
+                    time.sleep(0.25)
+            else:
+                GLib.idle_add(done, None, "le serveur PlantUML ne répond pas")
+                return
+            res = (None, ("ligne %s : %s" % (line, err)) if line else err) if err else (svg[svg.find("<svg"):], None)
+            self.cache[source] = res
+            GLib.idle_add(done, *res)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def close(self):
+        if self.jvm and self.jvm.poll() is None:
+            self.jvm.terminate()
+        if self.cfg and os.path.exists(self.cfg):
+            os.unlink(self.cfg)
+
+
+# ============================================================
+# Largeur de colonne bornée, centrée (l'équivalent d'un max-width)
+# ============================================================
+class Clamp(Gtk.Widget):
+    def __init__(self, child, maximum):
+        super().__init__()
+        self.child, self.maximum = child, maximum
+        child.set_parent(self)
+
+    def do_get_request_mode(self):
+        return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+    def do_measure(self, orientation, for_size):
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            mn, nat, _, _ = self.child.measure(orientation, -1)
+            return mn, max(mn, min(nat, self.maximum)), -1, -1
+        w = min(for_size, self.maximum) if for_size >= 0 else -1
+        mn, nat, _, _ = self.child.measure(orientation, w)
+        return mn, nat, -1, -1
+
+    def do_size_allocate(self, width, height, baseline):
+        w = min(width, self.maximum)
+        t = Gsk.Transform().translate(Graphene.Point().init((width - w) / 2, 0))
+        self.child.allocate(w, height, baseline, t)
+
+    def do_dispose(self):
+        if self.child:
+            self.child.unparent()
+            self.child = None
+
+
+# ============================================================
+# HTML -> widgets
+# ============================================================
+BLOCK_TAGS = {"p", "ul", "ol", "pre", "div", "blockquote", "table", "hr", "details",
+              "h1", "h2", "h3", "h4", "h5", "h6", "dl"}
+MONO = "Iosevka Nerd Font, Noto Sans Mono, monospace"
+
+
+class Renderer:
+    def __init__(self, colors, code, uml, base_dir_fn):
+        self.c, self.code, self.uml, self.base_dir = colors, code, uml, base_dir_fn
+
+    # ---- en ligne -----------------------------------------------------
+    def inline(self, node, pre=False) -> str:
+        if isinstance(node, str):
+            text = node if pre else re.sub(r"\s+", " ", node)
+            return GLib.markup_escape_text(text)
+        t, inner = node.tag, lambda: "".join(self.inline(c, pre) for c in node.children)
+        if t in ("strong", "b"):
+            return "<b>%s</b>" % inner()
+        if t in ("em", "i"):
+            return "<i>%s</i>" % inner()
+        if t in ("del", "s"):
+            return '<s><span foreground="%s">%s</span></s>' % (self.c["faint"], inner())
+        if t in ("code", "kbd", "samp"):
+            return '<span font_family="%s" size="88%%" background="%s"> %s </span>' % (
+                MONO, self.c["surface"], "".join(self.inline(c, True) for c in node.children))
+        if t == "a":
+            return '<a href="%s">%s</a>' % (GLib.markup_escape_text(node.attrs.get("href", "")), inner())
+        if t == "br":
+            return "\n"
+        if t == "img":
+            return "<i>[%s]</i>" % GLib.markup_escape_text(node.attrs.get("alt", "image"))
+        if t == "mark":
+            return '<span background="%s">%s</span>' % (self.c["surface"], inner())
+        if t in ("sup", "sub"):
+            return "<%s>%s</%s>" % (t, inner(), t)
+        if t == "input" and node.attrs.get("type") == "checkbox":
+            return "☑ " if "checked" in node.attrs else "☐ "
+        return inner()
+
+    @staticmethod
+    def set_markup(lbl, markup):
+        # Un markup invalide donnerait un label VIDE : le texte brut vaut mieux.
+        # La vérification se fait sans les <a> : les liens sont une extension
+        # de Gtk.Label que Pango.parse_markup, lui, refuse.
+        try:
+            Pango.parse_markup(re.sub(r"</?a\b[^>]*>", "", markup), -1, "\0")
+            lbl.set_markup(markup)
+        except GLib.Error:
+            lbl.set_use_markup(False)
+            lbl.set_text(html.unescape(re.sub(r"<[^>]+>", "", markup)))
+
+    def label(self, markup, *classes, xalign=0.0):
+        lbl = Gtk.Label(wrap=True, wrap_mode=Pango.WrapMode.WORD_CHAR,
+                        xalign=xalign, selectable=True, css_classes=list(classes))
+        self.set_markup(lbl, markup.strip())
+        lbl.connect("activate-link", self.open_link)
+        return lbl
+
+    def open_link(self, _label, uri):
+        if not re.match(r"^[a-z][a-z0-9+.-]*:", uri):
+            if uri.startswith("#"):
+                return True
+            uri = "file://" + os.path.normpath(os.path.join(self.base_dir(), uri.split("#")[0]))
+        Gio.AppInfo.launch_default_for_uri(uri, None)
+        return True
+
+    # ---- blocs --------------------------------------------------------
+    def flow(self, children, box):
+        """Des enfants mêlés (texte, en-ligne, blocs) dans une boîte verticale."""
+        pending = []
+
+        def flush():
+            markup = "".join(self.inline(c) for c in pending).strip()
+            if markup:
+                box.append(self.label(markup, "p"))
+            pending.clear()
+
+        for c in children:
+            if isinstance(c, Node) and c.tag in BLOCK_TAGS:
+                flush()
+                box.append(self.block(c))
+            else:
+                pending.append(c)
+        flush()
+
+    def vbox(self, *classes):
+        return Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=list(classes))
+
+    def block(self, n: Node) -> Gtk.Widget:
+        t = n.tag
+        if t in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            return self.label("".join(self.inline(c) for c in n.children), t)
+        if t == "p":
+            imgs = [c for c in n.elements() if c.tag == "img"]
+            text = "".join(c for c in n.children if isinstance(c, str)).strip()
+            if imgs and len(n.elements()) == len(imgs) and not text:
+                box = self.vbox("p")
+                for img in imgs:
+                    box.append(self.image(img))
+                return box
+            return self.label("".join(self.inline(c) for c in n.children), "p")
+        if t in ("ul", "ol"):
+            return self.list(n, t == "ol")
+        if t == "pre" or (t == "div" and "highlight" in n.cls().split()):
+            return self.codeblock(n)
+        if t == "div" and "uml" in n.cls().split():
+            return self.plantuml(n.attrs.get("data-src", ""))
+        if t == "blockquote":
+            box = self.vbox("quote")
+            self.flow(n.children, box)
+            return box
+        if t == "table":
+            return self.table(n)
+        if t == "hr":
+            return Gtk.Separator(css_classes=["hr"])
+        if t == "details":
+            summary = next((c for c in n.elements() if c.tag == "summary"), None)
+            exp = Gtk.Expander(label="".join(self.inline(c) for c in summary.children) if summary else "Détails",
+                               use_markup=True, css_classes=["details"])
+            box = self.vbox()
+            self.flow([c for c in n.children if c is not summary], box)
+            exp.set_child(box)
+            return exp
+        if t == "img":
+            return self.image(n)
+        box = self.vbox()
+        self.flow(n.children, box)
+        return box
+
+    def list(self, n, ordered):
+        box = self.vbox("list")
+        k = int(n.attrs.get("start", "1") or 1)
+        for li in (c for c in n.elements() if c.tag == "li"):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box_li = self.vbox("li")
+            box_li.set_hexpand(True)
+            first = next((c for c in li.children if not (isinstance(c, str) and not c.strip())), None)
+            task = isinstance(first, Node) and first.tag == "input" and first.attrs.get("type") == "checkbox"
+            if task:
+                marker = "☑" if "checked" in first.attrs else "☐"
+                self.flow([c for c in li.children if c is not first], box_li)
+            else:
+                marker = ("%d." % k) if ordered else "•"
+                self.flow(li.children, box_li)
+            bullet = Gtk.Label(label=marker, xalign=1, valign=Gtk.Align.START, css_classes=["bullet"])
+            bullet.set_size_request(24 if ordered else 14, -1)
+            row.append(bullet)
+            row.append(box_li)
+            box.append(row)
+            k += 1
+        return box
+
+    def codeblock(self, n):
+        pre = n if n.tag == "pre" else next((c for c in self.walk(n) if isinstance(c, Node) and c.tag == "pre"), n)
+        markup = "".join(self.code.markup(c) for c in pre.children).strip("\n")
+        lbl = Gtk.Label(wrap=True, wrap_mode=Pango.WrapMode.CHAR, xalign=0,
+                        selectable=True, css_classes=["code"])
+        self.set_markup(lbl, markup)
+        box = self.vbox("pre")
+        box.append(lbl)
+        return box
+
+    def walk(self, n):
+        for c in n.children:
+            yield c
+            if isinstance(c, Node):
+                yield from self.walk(c)
+
+    def table(self, n):
+        grid = Gtk.Grid(css_classes=["table"])
+        rows = [c for c in self.walk(n) if isinstance(c, Node) and c.tag == "tr"]
+        r = 0
+        for tr in rows:
+            cells = [c for c in tr.elements() if c.tag in ("th", "td")]
+            if all(c.tag == "th" for c in cells) and not "".join(self.inline(c) for c in cells).strip():
+                continue          # l'en-tête vide d'un tableau `| | |` (même règle que md2pdf)
+            for col, cell in enumerate(cells):
+                align = re.search(r"text-align:\s*(\w+)", cell.attrs.get("style", "") or "")
+                xa = {"right": 1.0, "center": 0.5}.get(align.group(1) if align else "", 0.0)
+                classes = ["th"] if cell.tag == "th" else (["td", "even"] if r % 2 == 0 else ["td"])
+                lbl = self.label("".join(self.inline(c) for c in cell.children), *classes, xalign=xa)
+                lbl.set_hexpand(True)
+                grid.attach(lbl, col, r, 1, 1)
+            r += 1
+        return grid
+
+    def image(self, n):
+        src = n.attrs.get("src", "")
+        path = src if os.path.isabs(src) else os.path.join(self.base_dir(), src)
+        if re.match(r"^[a-z]+://", src) or not os.path.exists(path):
+            return self.label("<i>[%s]</i>" % GLib.markup_escape_text(n.attrs.get("alt", src)), "p")
+        pic = Gtk.Picture.new_for_filename(path)
+        pic.set_can_shrink(True)
+        pic.set_content_fit(Gtk.ContentFit.SCALE_DOWN)
+        pic.set_halign(Gtk.Align.START)
+        return pic
+
+    def plantuml(self, source):
+        box = self.vbox("uml")
+        pic = Gtk.Picture(can_shrink=True, halign=Gtk.Align.CENTER)
+        pic.set_content_fit(Gtk.ContentFit.SCALE_DOWN)
+        box.append(pic)
+
+        def done(svg, err):
+            if svg:
+                try:
+                    pic.set_paintable(SvgPaintable(svg))
+                    return False
+                except GLib.Error as exc:
+                    err = str(exc)
+            box.remove(pic)
+            box.append(self.label('<span foreground="%s">PlantUML — %s</span>' % (
+                self.c["accent"], GLib.markup_escape_text(err or "?")), "uml-error"))
+            pre = Node("pre", {})
+            pre.children.append(source)
+            box.append(self.codeblock(pre))
+            return False
+
+        self.uml.render(source, done)
+        return box
+
+
+# ============================================================
+# CSS : markdown.css traduit pour GTK (tailles et espacements)
+# ============================================================
+CSS = """
+window.mdview, window.mdview viewport, .doc {{ background: {bg}; }}
+.doc {{ padding: 28px 36px 60px; color: {fg}; font-family: "MiSans Latin", "Noto Sans", sans-serif;
+        font-size: 10.5pt; }}
+.doc label {{ line-height: 1.55; }}
+label.p {{ margin-bottom: 12px; }}
+label.h1, label.h2, label.h3, label.h4, label.h5, label.h6 {{ color: {heading}; font-weight: 700;
+        margin: 18px 0 8px; line-height: 1.25; }}
+label.h1 {{ font-size: 20pt; border-bottom: 1px solid {rule}; padding-bottom: 6px; margin-top: 0; }}
+label.h2 {{ font-size: 15pt; border-bottom: 1px solid {rule_soft}; padding-bottom: 5px; }}
+label.h3 {{ font-size: 12.5pt; }}
+label.h4 {{ font-size: 11pt; color: {fg}; }}
+label.h5, label.h6 {{ font-size: 10.5pt; color: {muted}; }}
+label link {{ color: {link}; }}
+.pre {{ background: {code_bg}; border: 1px solid {rule_soft}; border-radius: 8px; padding: 10px 14px;
+        margin-bottom: 14px; }}
+label.code {{ font-family: "Iosevka Nerd Font", "Noto Sans Mono", monospace; font-size: 9pt; line-height: 1.45; }}
+.quote {{ border-left: 3px solid {accent}; padding: 2px 0 2px 14px; margin-bottom: 14px; }}
+.quote label {{ color: {muted}; }}
+.quote label.p:last-child {{ margin-bottom: 0; }}
+.list {{ margin-bottom: 12px; }}
+.li label.p {{ margin-bottom: 3px; }}
+.li .list {{ margin: 2px 0 0; }}
+label.bullet {{ color: {muted}; }}
+grid.table {{ margin-bottom: 14px; border-top: 1px solid {rule}; border-left: 1px solid {rule}; }}
+grid.table label {{ font-size: 9.7pt; padding: 6px 10px; border-right: 1px solid {rule};
+        border-bottom: 1px solid {rule}; margin: 0; }}
+label.th {{ background: {surface}; color: {heading}; font-weight: 600; }}
+label.td.even {{ background: {surface_2}; }}
+separator.hr {{ background: {rule}; min-height: 1px; margin: 20px 0; }}
+.uml {{ margin: 16px 0; }}
+label.uml-error {{ margin-bottom: 4px; }}
+.details {{ margin-bottom: 12px; color: {fg}; }}
+"""
+
+
+# ============================================================
+# Le document : blocs, diff, suivi du curseur
+# ============================================================
+class Document:
+    def __init__(self, app, dark):
+        self.colors = palette(dark)
+        self.conv = Converter()
+        self.uml = Plantuml(self.colors)
+        self.dir = os.getcwd()
+        self.render = Renderer(self.colors, CodeColors(dark), self.uml, lambda: self.dir)
+        self.items = []          # [(clé, widget, début, fin)]
+        self.last_target = None
+        self.cursor = 0
+
+        self.win = Gtk.ApplicationWindow(application=app, title="Aperçu markdown", css_classes=["mdview"])
+        self.win.set_default_size(820, 1000)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["doc"])
+        self.clamp = Clamp(self.box, MAX_WIDTH)
+        self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.scroll.set_child(self.clamp)
+        self.win.set_child(self.scroll)
+
+        css = Gtk.CssProvider()
+        css.load_from_string(CSS.format(**self.colors))
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        # En phase de capture : la fenêtre voit j/k/espace AVANT les textes
+        # sélectionnables, qui s'en serviraient pour déplacer leur curseur.
+        keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        keys.connect("key-pressed", self.key)
+        self.win.add_controller(keys)
+        self.win.present()
+
+    def key(self, _c, keyval, _code, _state):
+        name = Gdk.keyval_name(keyval) or ""
+        adj = self.scroll.get_vadjustment()
+        if name in ("q", "Escape"):
+            self.win.close()
+        elif name in ("j", "Down"):
+            adj.set_value(adj.get_value() + 60)
+        elif name in ("k", "Up"):
+            adj.set_value(adj.get_value() - 60)
+        elif name in ("space", "Page_Down"):
+            adj.set_value(adj.get_value() + adj.get_page_size() * 0.9)
+        elif name == "Page_Up":
+            adj.set_value(adj.get_value() - adj.get_page_size() * 0.9)
+        elif name == "Home":
+            adj.set_value(0)
+        elif name == "End":
+            adj.set_value(adj.get_upper())
+        else:
+            return False
+        return True
+
+    def update(self, text):
+        refs = "\n".join(l for l in text.split("\n") if REF_DEF.match(l))
+        new = []
+        for start, end, src in split_blocks(text):
+            key_src = src + ("\n\n" + refs if refs else "")
+            for idx, elem in enumerate(self.conv.convert(key_src)):
+                new.append(((hash(key_src), idx), elem, start, end))
+
+        old_keys = [it[0] for it in self.items]
+        new_keys = [n[0] for n in new]
+        sm = difflib.SequenceMatcher(None, old_keys, new_keys, autojunk=False)
+        widgets = [None] * len(new)
+        reused = set()
+        for op, i1, i2, j1, j2 in sm.get_opcodes():
+            if op == "equal":
+                for a, b in zip(range(i1, i2), range(j1, j2)):
+                    widgets[b] = self.items[a][1]
+                    reused.add(a)
+        for a, it in enumerate(self.items):
+            if a not in reused:
+                self.box.remove(it[1])
+        made = 0
+        for b, (key, elem, start, end) in enumerate(new):
+            if widgets[b] is None:
+                widgets[b] = self.render.block(elem)
+                made += 1
+        prev = None
+        for w in widgets:
+            if w.get_parent() is None:
+                self.box.insert_child_after(w, prev)
+            elif w.get_prev_sibling() is not prev:
+                self.box.reorder_child_after(w, prev)
+            prev = w
+        self.items = [(new[b][0], widgets[b], new[b][2], new[b][3]) for b in range(len(new))]
+        return made
+
+    def target(self, line):
+        best = None
+        for k, (_, w, start, end) in enumerate(self.items):
+            if start <= line < end:
+                return k
+            if start <= line:
+                best = k
+        return best
+
+    def follow(self, force=False):
+        k = self.target(self.cursor)
+        if k is None or (k == self.last_target and not force):
+            return
+        self.last_target = k
+        # Après une mise à jour, la mise en page n'est pas encore faite :
+        # on attend une image.
+        GLib.timeout_add(40, self._scroll_to, k)
+
+    def _scroll_to(self, k):
+        if k >= len(self.items):
+            return False
+        w = self.items[k][1]
+        ok, rect = w.compute_bounds(self.clamp)
+        if not ok:
+            return False
+        adj = self.scroll.get_vadjustment()
+        top, page = adj.get_value(), adj.get_page_size()
+        y, h = rect.get_y(), rect.get_height()
+        if y < top or y + min(h, page * 0.5) > top + page:
+            adj.set_value(max(0, y - page * SCROLL_AT))
+        return False
+
+    def handle(self, msg):
+        if "name" in msg:
+            self.win.set_title("Aperçu — " + msg["name"])
+        if msg.get("dir"):
+            self.dir = msg["dir"]
+        if "cursor" in msg:
+            self.cursor = max(0, int(msg["cursor"]) - 1)
+        if "text" in msg:
+            self.update(msg["text"])
+            self.follow(force=True)
+        else:
+            self.follow()
+
+
+# ============================================================
+# Hyprland : rendre le focus au terminal une fois la fenêtre ouverte
+# ============================================================
+def hypr(*args):
+    try:
+        return subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def refocus(back):
+    if not back:
+        return
+    for _ in range(40):
+        try:
+            if any(c.get("pid") == os.getpid() for c in json.loads(hypr("-j", "clients") or "[]")):
+                hypr("dispatch", "hl.dsp.focus({ window = 'address:%s' })" % back)
+                return
+        except ValueError:
+            pass
+        time.sleep(0.15)
+
+
+def main():
+    try:
+        back = json.loads(hypr("-j", "activewindow") or "{}").get("address")
+    except ValueError:
+        back = None
+    dark = md2pdf.desktop_is_dark()
+    app = Gtk.Application(application_id="fr.dotfiles.mdview", flags=Gio.ApplicationFlags.NON_UNIQUE)
+    state = {}
+
+    def activate(app):
+        try:
+            doc = state["doc"] = Document(app, dark)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            state["failed"] = True
+            app.quit()
+            return
+        threading.Thread(target=refocus, args=(back,), daemon=True).start()
+
+        # Les messages s'accumulent pendant un rendu : seul le dernier
+        # texte compte, et le dernier curseur.
+        pending, lock = {}, threading.Lock()
+
+        def drain():
+            with lock:
+                msg = dict(pending)
+                pending.clear()
+            if msg:
+                doc.handle(msg)
+            return False
+
+        def read():
+            for raw in sys.stdin:
+                try:
+                    msg = json.loads(raw)
+                except ValueError:
+                    continue
+                with lock:
+                    first = not pending
+                    pending.update(msg)
+                if first:
+                    GLib.idle_add(drain)
+            GLib.idle_add(app.quit)
+
+        threading.Thread(target=read, daemon=True).start()
+
+    app.connect("activate", activate)
+    code = app.run(None)
+    if "doc" in state:
+        state["doc"].uml.close()
+    return 1 if state.get("failed") else code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
