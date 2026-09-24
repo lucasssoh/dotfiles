@@ -23,7 +23,7 @@
 # still running old code is reported, never acted on.
 #
 # Everything the plan called for is here: build, status, update, install,
-# verify, needs-restart, clean. `log` is the one verb left, and it is four
+# verify, prune, needs-restart, clean. `log` is the one verb left, and it is four
 # lines of `less` whenever it is wanted.
 set -Eeuo pipefail
 
@@ -68,6 +68,10 @@ Commands:
   verify [--full]      Check the machine against what the modules recorded
                        doing: links, binaries, packages, units. --fix re-runs
                        the modules owning any hard problem.
+  prune [-n]           Undo the links whose source was deleted from the
+                       repo: remove the dangling symlink (disabling and
+                       stopping it first if it is a user unit) and forget
+                       it. -n prints what it would do.
   build [crate...]     Build the repo's Rust binaries, skipping any whose
                        sources have not changed since the last build.
                        With no argument, all of them.
@@ -103,6 +107,7 @@ Examples:
   cc-pkg-mng update -n         # what would be applied, without doing it
   cc-pkg-mng update            # apply it (user scope, no password)
   cc-pkg-mng update --system   # include the root-owned parts
+  cc-pkg-mng prune -n          # links left behind by deleted repo files
 EOF
 }
 
@@ -618,21 +623,24 @@ cmd_verify() {
     if [ ! -s "$STATE_DIR/links.ledger" ]; then
         printf "  ${DIM}○${RESET} ledger empty — no module has placed a link on this machine yet\n"
     else
-        local mod src dst bad=0 n=0
+        local mod src dst bad=0 n=0 gone=0
         while IFS=$'\t' read -r mod src dst; do
             [ -n "$dst" ] || continue
             n=$((n+1))
-            if [ ! -L "$dst" ]; then
+            # Checked first: re-running the module (--fix) cannot bring back
+            # a source that was deleted, only `prune` resolves this one.
+            if [ ! -e "$src" ]; then
+                printf "  ${RED}✗${RESET} %s: its target %s is gone from the repo\n" "$dst" "$src"
+                bad=$((bad+1)); gone=$((gone+1))
+            elif [ ! -L "$dst" ]; then
                 printf "  ${RED}✗${RESET} %s: not a symlink (module %s)\n" "$dst" "$mod"
                 bad=$((bad+1)); broken_modules+=("$mod")
             elif [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
                 printf "  ${RED}✗${RESET} %s: points somewhere other than %s\n" "$dst" "$src"
                 bad=$((bad+1)); broken_modules+=("$mod")
-            elif [ ! -e "$src" ]; then
-                printf "  ${RED}✗${RESET} %s: its target %s is gone from the repo\n" "$dst" "$src"
-                bad=$((bad+1)); broken_modules+=("$mod")
             fi
         done < "$STATE_DIR/links.ledger"
+        [ "$gone" = 0 ] || printf "  ${DIM}→ \`cc-pkg-mng prune\` removes the %s link(s) left by deleted files${RESET}\n" "$gone"
         [ "$bad" = 0 ] && printf "  ${GREEN}✓${RESET} %s link(s) correct\n" "$n" || hard=$((hard+1))
     fi
 
@@ -755,6 +763,82 @@ cmd_verify() {
     return 0
 }
 
+# ---------------------------------------------------------------- prune ----
+# The link ledger only ever grows: safe_link records what a module links, and
+# nothing runs for a file that was deleted from the repo, so its symlink and
+# its ledger line stay behind for good. `verify` reports them; this removes
+# them. It only ever touches a symlink that still points at the deleted
+# source -- anything else at that path was put there by someone else since,
+# so it is left alone and only forgotten.
+cmd_prune() {
+    [ $# -eq 0 ] || err "prune: unknown option $1"
+
+    local ledger="$STATE_DIR/links.ledger"
+    [ -s "$ledger" ] || { info "Link ledger empty, nothing to prune."; return 0; }
+
+    local mod src dst units=() keep=() tracked=() n=0
+    while IFS=$'\t' read -r mod src dst; do
+        [ -n "$dst" ] || continue
+        if [ -e "$src" ]; then
+            keep+=("$mod"$'\t'"$src"$'\t'"$dst")
+            continue
+        fi
+        n=$((n+1))
+
+        if [ -L "$dst" ] && [ "$(readlink -m "$dst")" = "$(readlink -m "$src")" ]; then
+            # A unit has to be disabled before its file goes, or systemd
+            # keeps a wants/ link to a unit it can no longer load.
+            case "$dst" in
+                "$HOME/.config/systemd/user/"*)
+                    if [ "$DRY_RUN" = 1 ]; then
+                        dry "systemctl --user disable --now $(basename "$dst")"
+                    else
+                        systemctl --user disable --now "$(basename "$dst")" >/dev/null 2>&1 || true
+                    fi
+                    units+=("$dst") ;;
+            esac
+            # ~/.config/hypr is itself a link into the repo, so some of these
+            # symlinks are tracked files: removing them is a change to commit.
+            local real; real="$(readlink -f "$(dirname "$dst")")/$(basename "$dst")"
+            case "$real" in
+                "$DOTFILES_ROOT"/*)
+                    git -C "$DOTFILES_ROOT" ls-files --error-unmatch "$real" >/dev/null 2>&1 \
+                        && tracked+=("${real#"$DOTFILES_ROOT"/}") ;;
+            esac
+            if [ "$DRY_RUN" = 1 ]; then
+                dry "rm $dst"
+            else
+                rm -f "$dst"
+                ok "Removed: $dst ($mod)"
+            fi
+        elif [ -e "$dst" ] || [ -L "$dst" ]; then
+            warn "$dst no longer points at $src — left in place, only forgotten"
+        else
+            info "Already gone: $dst ($mod)"
+        fi
+    done < "$ledger"
+
+    if [ "$n" = 0 ]; then
+        info "Every recorded link still has its source, nothing to prune."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" = 1 ]; then
+        dry "forget $n ledger entr$( [ "$n" = 1 ] && echo y || echo ies)"
+    else
+        local tmp="$ledger.tmp.$$"
+        if [ "${#keep[@]}" -gt 0 ]; then printf '%s\n' "${keep[@]}" > "$tmp"; else : > "$tmp"; fi
+        mv -f "$tmp" "$ledger"
+        [ "${#units[@]}" = 0 ] || systemctl --user daemon-reload 2>/dev/null || true
+        ok "Pruned $n link(s)."
+    fi
+
+    if [ "${#tracked[@]}" -gt 0 ]; then
+        echo -e "${DIM}Tracked in the repo, the deletion is yours to commit:${RESET}"
+        printf '  %s\n' "${tracked[@]}"
+    fi
+}
+
 # ------------------------------------------------------------- dispatch ----
 main() {
     local cmd=""
@@ -780,6 +864,7 @@ main() {
         help|"") usage ;;
         needs-restart) needs_restart_report || true ;;
         verify) cmd_verify ${args[@]+"${args[@]}"} ;;
+        prune)  cmd_prune  ${args[@]+"${args[@]}"} ;;
         install) cmd_install ${args[@]+"${args[@]}"} ;;
         log)
             err "'$cmd' is not implemented yet — see --help for what ships today." ;;
