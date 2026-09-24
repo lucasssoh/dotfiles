@@ -16,8 +16,7 @@ import "theme"
 // BAR — Quickshell port of waybar/config.jsonc + waybar/style.css.
 //
 // STATUS: ACTIVE (see install.sh, hypr/hyprland.lua). waybar/ is kept
-// installed and in the repo as a fallback, not started -- quickshell/
-// dashboard/ is the one still inactive, on purpose.
+// installed and in the repo as a fallback, not started.
 //
 // v3: visual grouping matches waybar/style.css's actual color/border/
 // radius rules (see modules/Block.qml) -- colors below are copied

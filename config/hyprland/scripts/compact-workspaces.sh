@@ -47,10 +47,10 @@ for mon in "${monitor_names[@]}"; do
     active_ws="$(jq -r --arg m "$mon" '.[] | select(.name==$m) | .activeWorkspace.id // empty' <<<"$monitors_json")"
     [[ -n "$active_ws" ]] && restore_focus["$mon"]="$active_ws"
 
-    # Occupied workspaces (real windows, excluding the empty dashboard)
+    # Occupied workspaces
     # among this monitor's slots, in ascending slot order
     mapfile -t occ < <(jq -r --argjson slots "$slots_json" '
-        ([.[] | select(.class | ascii_downcase | contains("dashboard") | not) | .workspace.id] | unique) as $busy
+        ([.[] | .workspace.id] | unique) as $busy
         | $slots[] | select(. as $s | $busy | index($s))
     ' <<<"$clients_json")
 
@@ -63,7 +63,7 @@ for mon in "${monitor_names[@]}"; do
             [[ -z "$addr" ]] && continue
             move_window "$addr" "$new"
         done < <(jq -r --argjson ws "$old" \
-            '.[] | select(.workspace.id==$ws and (.class | ascii_downcase | contains("dashboard") | not)) | .address' \
+            '.[] | select(.workspace.id==$ws) | .address' \
             <<<"$clients_json")
 
         moved["$mon"]=1

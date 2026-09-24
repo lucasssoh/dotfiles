@@ -81,7 +81,7 @@ The largest module by a wide margin, and the one that does the heavy lifting.
 | Installs | ~61 packages, distro-dependent, plus three coprs on Fedora (`lionheartp/Hyprland`, `errornointernet/quickshell`, `mineiro/satty`) |
 | Builds | `balise`, `prisme` + `wallpaper-filter`, `roue` — from the sources in this repo, skipping any crate that has not changed |
 | Links | `hypr`, `waybar`, `quickshell`, `rofi`, `balise`, `prisme`, `roue`, `hyprlock`, `scripts`, `khal`, `theme` into `~/.config/` |
-| Services | Four `systemd --user` units: `balise`, `wallpaper-slideshow`, `slideshow-fullscreen-guard`, `workspace-dashboard` |
+| Services | Three `systemd --user` units: `balise`, `wallpaper-slideshow`, `slideshow-fullscreen-guard` |
 
 It also downloads four icon/mono fonts when absent (JetBrains Mono Nerd Font, GoogleSansCode Nerd Font Mono, Phosphor Icons, Lucide Icons — the last two resolved from the npm registry), and builds the Comix Cursors theme from upstream SVGs when `~/.icons/ComixCursors-White` does not exist.
 

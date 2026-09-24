@@ -470,7 +470,7 @@ apply_targets
 # what isn't trusted here.
 #
 # Guarded to real work only: skips workspaces that don't exist yet,
-# already sit on their target, or hold no real (non-dashboard) windows --
+# already sit on their target, or hold no windows --
 # an ordinary reload/reassert with nothing to migrate shouldn't yank
 # focus or flicker a monitor for no reason.
 workspaces_json="$(hyprctl workspaces -j)"
@@ -481,7 +481,7 @@ migrate_workspace_if_needed() {
     cur="$(jq -r --argjson w "$ws" '.[] | select(.id==$w) | .monitor' <<<"$workspaces_json")"
     [[ -z "$cur" || "$cur" == "$target" ]] && return 0
     has_windows="$(jq -r --argjson w "$ws" \
-        '[.[] | select(.workspace.id==$w and (.class | ascii_downcase | contains("dashboard") | not))] | length' \
+        '[.[] | select(.workspace.id==$w)] | length' \
         <<<"$clients_json")"
     [[ "$has_windows" -eq 0 ]] && return 0
     hyprctl eval "hl.dispatch(hl.dsp.workspace.move({ workspace = $ws, monitor = \"$target\" }))" >/dev/null

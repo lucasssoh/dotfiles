@@ -8,10 +8,8 @@ import Quickshell.Hyprland
 // only exposes `.title`), it goes stale unless something calls
 // Hyprland.refreshToplevels() -- already done globally on every raw
 // event by shell.qml (see its own header comment), so this file doesn't
-// need its own Connections/refresh -- and a floating "dashboard-*"
-// window (see hypr/windowrules.lua's DASHBOARD block) isn't a real
-// focus target, same exclusion workspace-dashboard.sh and
-// ActiveWindow.qml both already apply.
+// need its own Connections/refresh -- and a floating window isn't a
+// real focus target, same exclusion ActiveWindow.qml already applies.
 //
 // Unlike ActiveWindow.qml, there's no per-monitor gating here: that
 // existed there to solve "this BAR shows the wrong monitor's window",
@@ -35,7 +33,6 @@ Scope {
     readonly property bool hasWindow:
         root.ipc !== null
         && !root.ipc.floating
-        && (root.ipc.class || "").toLowerCase().indexOf("dashboard") === -1
 
     readonly property string windowClass: root.hasWindow ? (root.ipc.class || "") : ""
     readonly property string windowTitle: root.hasWindow ? (root.toplevel.title || "") : ""
@@ -147,7 +144,7 @@ Scope {
 
     onFamilyChanged: {
         // An empty family is NOT a switch. `hasWindow` reports "" for a
-        // floating window, a dashboard surface, or an empty workspace --
+        // floating window or an empty workspace --
         // treating any of those as a change would reset a three-hour
         // session every time a dialog opened, which is exactly the kind
         // of quietly-wrong number that's worse than no number.

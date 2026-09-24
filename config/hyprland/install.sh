@@ -195,8 +195,8 @@ if [ "$DISTRO" = "fedora" ]; then
         #   hypr/scripts/wallpaper-cache-watcher.sh, also autostarted.
         #   Absent, the watcher exits at once and the wallpaper thumbnail
         #   cache silently stops updating.
-        # libnotify -> notify-send, used by power-profile.sh,
-        #   display-layout.sh and dashboard-toggle.sh. The mildest of the
+        # libnotify -> notify-send, used by power-profile.sh
+        #   and display-layout.sh. The mildest of the
         #   four: every call site already tolerates its absence, so it only
         #   costs the toasts.
         dbus-tools pulseaudio-utils inotify-tools libnotify

@@ -8,8 +8,7 @@
 # config/<name>/install.sh that NOTHING ever called, and the gap was
 # invisible on a machine where they had been installed by hand. On a
 # genuinely fresh install it meant no application launcher at all (fuzzel IS
-# Super+Space, see hypr/keybinds.lua) and an empty workspace dashboard
-# (fastfetch, see scripts/dashboard-fastfetch.sh).
+# Super+Space, see hypr/keybinds.lua).
 #
 # registry_validate() turns that class of drift from "invisible until a fresh
 # machine boots wrong" into "every command fails immediately, naming the

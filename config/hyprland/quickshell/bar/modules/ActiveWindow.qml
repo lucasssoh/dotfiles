@@ -40,13 +40,9 @@ Item {
     // new to activate. Gating on this monitor's own active workspace's
     // toplevels (same live, event-driven model used for the workspace
     // pills' own occupied check -- see Workspaces.qml) catches that case.
-    // Floating toplevels (dashboard-fastfetch/dashboard-clock, `no_focus`
-    // pinned widgets -- see hypr/windowrules.lua's DASHBOARD block) don't
-    // count as "real" content, same convention compact-workspaces.sh and
-    // workspace-dashboard.sh already use (excluding floating/dashboard
-    // windows from "is this workspace occupied") -- otherwise this bar
-    // kept showing that widget's own title/class as if it were the
-    // active window.
+    // Floating toplevels (pinned widgets, pickers, dialogs) don't count
+    // as "real" content -- otherwise this bar kept showing a pinned
+    // widget's own title/class as if it were the active window.
     readonly property var monitorWs: root.monitor ? root.monitor.activeWorkspace : null
     readonly property bool monitorWsHasRealWindow: {
         if (!root.monitorWs || !root.monitorWs.toplevels) return false;
