@@ -83,6 +83,7 @@ Singleton {
         // but whose drawer band overlaps this one's -- see
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
+        CalendarState.close();
         root.activeScreen = screen;
         root.centerOpen = true;
         root.hasUnseen = false;

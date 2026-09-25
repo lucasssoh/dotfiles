@@ -99,6 +99,7 @@ Singleton {
         // but whose drawer band overlaps this one's -- see
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
+        CalendarState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // The panel just became visible -- refresh right away rather

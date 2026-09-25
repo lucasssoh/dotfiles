@@ -64,6 +64,10 @@ bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscre
 -- ~/.local/bin in their PATH (see commit bbb8f61).
 bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
 
+-- Agenda: add an event (or delete one) through fuzzel, stored in khal;
+-- the bar's calendar drawer shows it and rings its reminders.
+bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"))
+
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
 -- equivalent to hyprlang's `bindr`) confirms immediately -- holding +

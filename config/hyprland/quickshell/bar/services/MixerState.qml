@@ -62,6 +62,7 @@ Singleton {
         // but whose drawer band overlaps this one's -- see
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
+        CalendarState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Availability can change while the drawer is shut (a cable goes

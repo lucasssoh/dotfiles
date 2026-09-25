@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "../theme"
+import "../services"
 
 // Native port of waybar's `clock` module (format {:%H:%M}), moved out of
 // dead-center (was sharing centerRow with Workspaces -- see shell.qml)
@@ -19,6 +20,10 @@ Item {
     // those call sites again. See theme/Ink.qml's MATERIAL note for why
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
+
+    // Which bar was clicked, so the calendar drawer opens on THIS
+    // monitor -- same hand-down Battery/BaliseButton/NotificationBell take.
+    property var screen: null
 
     // 20 -> 12, i.e. 10px of padding a side down to 6 -- asked for ("les
     // paddings right de powerprofile et horloge sont trop grand par
@@ -48,5 +53,13 @@ Item {
         color: root.ink.primary
         font.family: Fonts.ui
         font.pixelSize: 14
+    }
+
+    // A click opens the month calendar (CalendarState / calendar/
+    // CalendarHome.qml), TOOLS' fifth drawer.
+    MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: CalendarState.togglePanel(root.screen)
     }
 }

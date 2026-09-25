@@ -66,6 +66,7 @@ Singleton {
         // but whose drawer band overlaps this one's -- see
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
+        CalendarState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Same "just opened" refresh BaliseState.togglePanel does, and for

@@ -9,6 +9,7 @@ import "modules/balise"
 import "modules/power"
 import "modules/mixer"
 import "modules/launcher"
+import "modules/calendar"
 import "services"
 import "theme"
 
@@ -415,6 +416,13 @@ ShellRoot {
         function toggleMixer(): void {
             MixerState.togglePanel(Quickshell.screens[0]);
         }
+        function toggleCalendar(): void {
+            CalendarState.togglePanel(Quickshell.screens[0]);
+        }
+        // Poked by hypr/scripts/agenda.py after each add/delete.
+        function reloadEvents(): void {
+            CalendarState.reloadEvents();
+        }
         // Same reasoning once more for the Launchers actions panel, which
         // opens on a RIGHT click on an app chip -- and which, unlike the
         // four above, cannot be opened at all unless one of the five known
@@ -511,6 +519,13 @@ ShellRoot {
             if (LauncherActionsState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 LauncherActionsState.close();
+            }
+
+            // ...and the calendar. Nothing runs behind it, so this is
+            // only about the drawer not outliving a focus change.
+            if (CalendarState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                CalendarState.close();
             }
         }
     }
@@ -1488,6 +1503,11 @@ ShellRoot {
                     // either.
                     MixerHome {
                         drawerOpen: MixerState.panelOpen && MixerState.activeScreen === bar.screen
+                    },
+                    // Fifth entry, opened by the clock in the row -- no
+                    // button of its own either.
+                    CalendarHome {
+                        drawerOpen: CalendarState.panelOpen && CalendarState.activeScreen === bar.screen
                     }
                 ]
                 // Glass. These three float free of every screen edge, so
@@ -1748,7 +1768,7 @@ ShellRoot {
                     // Clock (+ date) -- moved out of dead-center (see
                     // barRow's own comment above) to right before the
                     // power dot, asked for.
-                    Modules.Clock { ink: toolsInk }
+                    Modules.Clock { ink: toolsInk; screen: bar.screen }
 
                     // Notification bell -- moved again (asked for:
                     // "entre clock et power", i.e. the literal power dot

@@ -182,6 +182,7 @@ Singleton {
         BaliseState.close();
         PowerState.close();
         MixerState.close();
+        CalendarState.close();
 
         root.label = app.label;
         root.icon = app.icon;
@@ -262,7 +263,8 @@ Singleton {
 
     function otherDrawerOpen() {
         return NotificationState.centerOpen || BaliseState.panelOpen
-            || PowerState.panelOpen || MixerState.panelOpen;
+            || PowerState.panelOpen || MixerState.panelOpen
+            || CalendarState.panelOpen;
     }
 
     function hoverEnter(screen, app) {
