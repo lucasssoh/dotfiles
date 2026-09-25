@@ -54,6 +54,24 @@ Item {
     // samplers. Everything this file draws below is unchanged.
     readonly property var matches: LauncherActionsState.matches
 
+    // Horizontal centre of the chip the actions drawer is currently about,
+    // in THIS item's coordinates, or -1 when no chip on this screen owns
+    // it. Written by the one chip whose `menuOpen` is true, through the
+    // Binding in the delegate below.
+    //
+    // shell.qml feeds it to the island's `drawerAnchorX` (plus the row's
+    // own inset, which is the island's to publish, not this file's) so the
+    // pane comes out centred under the icon it is about instead of glued
+    // to the island's right edge -- asked for.
+    //
+    // Keyed on the OPEN chip and not on the hovered one, deliberately:
+    // travelling from the chip down into the panel means leaving the chip,
+    // and a pointer-keyed anchor would snap the pane sideways at exactly
+    // that moment. It also means the anchor follows its chip when a
+    // neighbour appears or disappears and the row re-lays-out underneath
+    // an open panel.
+    property real anchorX: -1
+
     implicitWidth: row.implicitWidth
     // Animated width change, asked for -- even a single chip appearing/
     // disappearing (app opened/closed) now shifts this pill smoothly
@@ -85,6 +103,29 @@ Item {
                     && LauncherActionsState.address === chip.modelData.address
                     && LauncherActionsState.activeScreen === root.screen
 
+                // See root.anchorX. `row.x` is in there because the Row is
+                // not pinned to 0 -- it is the sum this file can state
+                // exactly, where a mapToItem would be a function call
+                // rather than a binding and would not re-run when the
+                // chips beside this one come and go.
+                Binding {
+                    target: root
+                    property: "anchorX"
+                    when: chip.menuOpen
+                    value: row.x + chip.x + chip.width / 2
+                    // No restore, and that is the point. Retargeting from
+                    // one chip to the next flips two of these in the same
+                    // frame -- one off, one on -- in an order QML does not
+                    // promise, and a restoring Binding that happens to go
+                    // last would put the -1 back over the value the other
+                    // one just wrote, dropping the pane back to
+                    // right-aligned. So the last chip to have owned the
+                    // panel keeps the anchor after it closes: nothing
+                    // reads it while the pane is invisible, and reopening
+                    // the same chip then starts already in place.
+                    restoreMode: Binding.RestoreNone
+                }
+
                 width: 22
                 height: 22   // was 18 -- more vertical padding around the icon inside the chip
                 anchors.verticalCenter: parent.verticalCenter
@@ -98,9 +139,19 @@ Item {
                 // panel below names the app it is about, but the chip it
                 // came out of is what the pointer is still sitting on, and
                 // an unmarked chip leaves five identical candidates above
-                // an open menu. Same accent fill a DrawerTile carries when
-                // it is on, at the chip's own scale.
-                color: chip.menuOpen ? Surfaces.accentStrong : "transparent"
+                // an open menu.
+                //
+                // A light translucent wash, NOT the `Surfaces.accentStrong`
+                // a DrawerTile carries when it is on -- asked for ("juste
+                // un highlight leger"). Two things made that one read far
+                // heavier here than on a tile: it is opaque, so on this
+                // translucent band it painted a solid plate where every
+                // neighbouring chip shows the wallpaper through, and it now
+                // fires on a plain hover rather than on a deliberate right
+                // click. 10% white is the same wash BatteryRing's track and
+                // the OSD's own surfaces use -- it marks the chip without
+                // becoming an object sitting on the bar.
+                color: chip.menuOpen ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
                 Behavior on color { ColorAnimation { duration: 120 } }
 
                 Text {
@@ -140,6 +191,19 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    // Plain hover opens the drawer now -- asked for. All
+                    // of the debouncing this needs (the open delay that
+                    // keeps a pointer merely crossing the row from
+                    // flashing five panels, the grace period that lets it
+                    // cross the 7px gap down into the pane, the refusal to
+                    // steal another island's open drawer) lives in
+                    // LauncherActionsState's hover section rather than
+                    // here: there is one state machine and five chips per
+                    // screen feeding it, and `containsMouse` on any one of
+                    // them knows nothing about the other four.
+                    hoverEnabled: true
+                    onEntered: LauncherActionsState.hoverEnter(root.screen, chip.modelData)
+                    onExited: LauncherActionsState.hoverExit()
                     // hl.dsp.focus, not the plain `focuswindow`. The
                     // comment that used to sit here reasoned that
                     // pip-daemon.sh "already proves" address-targeted

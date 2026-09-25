@@ -1178,6 +1178,46 @@ ShellRoot {
                 // header for the rest of the pass this belongs to.
                 drawerFillTop: "#ff121419"
                 drawerFillBottom: "#ff121419"
+                // ...and flat all the way: no GlassLens edge either
+                // (asked for -- "il faut juste un bg plat"). The lens is a
+                // light source, and a fill that is one constant colour
+                // gives it nothing to be the light for -- it was tracing a
+                // rim around a pane with no modelling behind it. It also
+                // takes an FBO the size of the pane out of a panel that
+                // now opens and closes on hover.
+                drawerLens: false
+
+                // No reveal: full height on the frame it opens, one quick
+                // fade, nothing staged (asked for -- "pas d'effet tiroir,
+                // juste un fade rapide"). See `instantDrawer` in
+                // DrawerIsland.qml for why this is not just a shorter
+                // `twoPhase: false`, and LauncherActions.qml for the
+                // entry's own half of it (no height Behavior, no RevealPop
+                // cascade).
+                //
+                // The three durations left are the fade's, and they are
+                // deliberately well under the defaults (260/200/140): this
+                // panel is three verbs opened on a hover, so the fade is
+                // there to stop it snapping into existence, not to be
+                // watched.
+                instantDrawer: true
+                panelFadeDuration: 120
+                contentFadeDuration: 120
+                contentFadeOutDuration: 90
+
+                // The one island that does not right-align its drawer
+                // band: the pane is centred under the CHIP it is about
+                // (asked for -- "centre le milieu du tiroir avec l'icone
+                // en question"). Two terms, because the chip's own x is
+                // relative to the Launchers item inside the island's row
+                // while `drawerAnchorX` is relative to the island: the
+                // row's inset (`rowContentX`, the island's to publish) and
+                // the chip centre within the row (`anchorX`, the module's).
+                // -1 passes straight through and keeps the old
+                // right-aligned band, which is what the `qs ipc` open --
+                // no pointer, no chip under it -- lands on.
+                drawerAnchorX: launcherChips.anchorX < 0 ? -1
+                    : launchers.rowContentX + launcherChips.x + launcherChips.anchorX
 
                 drawerItems: [
                     LauncherActions {
@@ -1187,6 +1227,7 @@ ShellRoot {
                 ]
 
                 Modules.Launchers {
+                    id: launcherChips
                     ink: launchersInk
                     opacity: 0.8
                     screen: bar.screen

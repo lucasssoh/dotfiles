@@ -276,6 +276,31 @@ Item {
     // a 70px swing in a panel whose own content had not changed at all.
     property int fixedDrawerWidth: 0
 
+    // Where the drawer band wants its CENTRE, in this island's own
+    // coordinate space (the same space `drawerBandX` is expressed in).
+    // -1, the default, keeps the right-aligned band every island had
+    // until now -- so centerIsland and toolsIsland go through exactly the
+    // code they went through before.
+    //
+    // Why it exists: launchersIsland's row is five chips and the drawer
+    // is about ONE of them, so a band glued to the island's right edge
+    // points at whichever chip happens to be last rather than at the one
+    // the panel names. Asked for ("centrer le milieu du tiroir avec
+    // l'icone en question"). Only that island sets it, and it sets it
+    // from the chip the panel is about -- not from the pointer -- so the
+    // band stays put while the pointer travels down into it.
+    property real drawerAnchorX: -1
+
+    // The row's own horizontal inset inside the island, published for the
+    // one thing that cannot compute it from outside: a `drawerAnchorX`
+    // derived from the position of one of this row's CHILDREN. A child's
+    // x is relative to topRow, drawerAnchorX is relative to the island,
+    // and this is the term between the two. Read-only, and there is no
+    // mapToItem in the chain on purpose -- that is a function call, not a
+    // binding, and the anchor has to re-derive itself whenever a chip
+    // appears or disappears beside the one the panel is about.
+    readonly property real rowContentX: topRow.x
+
     // The width arrow points ONE way, and it points from the row down into
     // the drawer: the Instantiator at the bottom of this file forces every
     // entry to `effectiveWidth`, and entries are expected to reflow into
@@ -371,6 +396,37 @@ Item {
     // gets its own plain, unblocking Behavior instead of being driven by
     // openSequence/closeSequence.
     property bool twoPhase: true
+
+    // No reveal at all -- the pane is simply there, at full height, and
+    // fades. Asked for, for launchersIsland: "pas d'effet tiroir, juste
+    // un fade rapide".
+    //
+    // It is not a shorter `twoPhase: false`. That mode still SEQUENCES
+    // (stretch, wait out `revealDuration`, then fade the content), and
+    // the stretch is the thing being refused here, not its duration. So
+    // this reduces `onAnyOpenChanged` to a single assignment: `expanded`
+    // is whatever `anyOpen` says on that frame, `openProgress` follows it
+    // through a Binding with no Behavior, and `contentProgress` is the
+    // only thing left with a duration.
+    // Combined with dropping the entry's own `Behavior on height` (see
+    // LauncherActions.qml), the pane reaches its full height on the frame
+    // it opens and the only thing moving is opacity.
+    //
+    // Why THAT island and not the other two: it opens on a hover now, and
+    // it holds three verbs. A staged reveal is for a panel you settle
+    // into -- it was ~780ms here (260 widen + 220 stretch + 320 pause +
+    // 200 fade) before anything was readable, which is longer than the
+    // pointer is going to be there.
+    property bool instantDrawer: false
+
+    // The thick-glass edge traced around the drawer block (GlassLens, see
+    // drawerFill below). Off gives a flat pane -- the fill and nothing
+    // else -- which is what a drawer whose fill is already one constant
+    // colour wants: the lens is a light source, and there is no gradient
+    // under it here for it to be the light FOR. Asked for ("il faut juste
+    // un bg plat"), and it also takes an FBO the size of the pane out of
+    // a panel that opens and closes on hover.
+    property bool drawerLens: true
     // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
     // this 6px auto-spacing entirely, no manual spacers between its
     // children. TOOLS' own content instead uses spacing:0 plus hand-tuned
@@ -509,6 +565,12 @@ Item {
     // the drawer first became two blocks ("aligner le bloc tools et la
     // largeur des elements tiroir") -- their right edges still line up,
     // which is the edge both are anchored to.
+    //
+    // ...unless `drawerAnchorX` names a point to centre on instead, which
+    // only launchersIsland does: its row is five interchangeable chips
+    // rather than one fixed set of modules, so "the island's right edge"
+    // stops being a meaningful thing for its drawer to point at. See that
+    // property.
     readonly property real drawerContentWidth: root.fixedDrawerWidth > 0
         ? root.fixedDrawerWidth : root.effectiveWidth
     // Offset of the drawer band within the island, negative when the
@@ -516,7 +578,49 @@ Item {
     // shell.qml's input mask has to reproduce this band exactly -- see
     // the note there about a Region that reads a `rect` never following
     // it.
-    readonly property int drawerBandX: Math.round(root.effectiveWidth - root.drawerContentWidth)
+    readonly property int drawerBandTargetX: {
+        // Right-aligned, the default and the only behaviour until
+        // `drawerAnchorX` existed -- see the paragraph above for why that
+        // is the right answer for an island anchored to the bar's right
+        // edge.
+        if (root.drawerAnchorX < 0)
+            return Math.round(root.effectiveWidth - root.drawerContentWidth);
+        // Centred on the anchor instead. `- margin` because the band's
+        // own x is its OUTER edge while the anchor names a point in the
+        // content: drawerBandWidth is drawerContentWidth plus a margin at
+        // each end (see just below), so the content's centre sits half a
+        // content-width past the outer edge plus that one margin.
+        const raw = root.drawerAnchorX - root.margin - root.drawerContentWidth / 2;
+        // Clamped against the WINDOW, not against the island: a 210px
+        // pane centred on a 22px chip legitimately overhangs both of the
+        // island's own edges (that is the whole point), but an overhang
+        // past the bar's left or right edge is a pane with a piece
+        // missing. `root.x` is the island's offset in that window, so
+        // these two limits are the window's edges expressed in island
+        // coordinates. Falls back to the left limit alone before there is
+        // a parent to measure.
+        const leftLimit = -root.x;
+        if (!root.parent) return Math.round(Math.max(leftLimit, raw));
+        const rightLimit = root.parent.width - root.drawerBandWidth - root.x;
+        return Math.round(Math.max(leftLimit, Math.min(rightLimit, raw)));
+    }
+    // Slides rather than jumps when the anchor moves from one chip to the
+    // next under a travelling pointer -- the pane is already open and
+    // fully visible at that point, so a hard cut would read as a second
+    // panel replacing the first. Gated on the pane actually being on
+    // screen: opening and closing must place the band instantly, or the
+    // first frame of a reveal would come out of wherever the LAST one
+    // ended. Matches the row hover tint's own 120ms rather than the
+    // reveal's much slower 320 -- this is a correction, not an entrance.
+    // Published separately from the target above, and NOT readonly, for
+    // one reason: a Behavior animates a property by writing to it, which
+    // a readonly property will not accept. Nothing outside writes it --
+    // the binding below is its only source.
+    property int drawerBandX: root.drawerBandTargetX
+    Behavior on drawerBandX {
+        enabled: root.opaqueProgress > 0.99
+        NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+    }
     readonly property int drawerBandWidth: Math.round(root.drawerContentWidth + root.margin * 2)
     // drawerColumn's own height is the live sum of its children's
     // (animating) heights -- the Column reflows as each entry grows or
@@ -613,11 +717,41 @@ Item {
         target: root
         property: "openProgress"
         value: root.anyOpen ? 1 : 0
-        when: !root.twoPhase
+        when: !root.twoPhase || root.instantDrawer
     }
     Behavior on openProgress {
-        enabled: !root.twoPhase
+        // ...and not even a Behavior in `instantDrawer`: that mode's whole
+        // point is that nothing about the island's SHAPE animates.
+        enabled: !root.twoPhase && !root.instantDrawer
         NumberAnimation { duration: root.widenDuration; easing.type: Easing.InOutCubic }
+    }
+
+    // `instantDrawer`'s last moving part. `expanded` is not here -- it is
+    // assigned straight from `onAnyOpenChanged` below, the same way the
+    // two fast sequences assign it in `twoPhase: false` mode. A
+    // declarative Binding on it was tried first and the drawer never
+    // opened at all: `expanded` is a property three ScriptActions also
+    // write imperatively, and mixing the two ways of owning one property
+    // is how it ends up owned by neither. `contentProgress` gets a
+    // Binding because nothing else writes it in this mode, and it needs
+    // the Behavior below.
+    //
+    // A Binding + Behavior rather than a sequence precisely because there
+    // is nothing to wait for any more: the delayed START that a
+    // SequentialAnimation exists to express IS the effect being removed.
+    Binding {
+        target: root
+        property: "contentProgress"
+        value: root.anyOpen ? 1 : 0
+        when: root.instantDrawer
+    }
+    Behavior on contentProgress {
+        enabled: root.instantDrawer
+        NumberAnimation {
+            duration: root.anyOpen ? root.contentFadeDuration
+                                   : root.contentFadeOutDuration
+            easing.type: Easing.OutCubic
+        }
     }
     // ...but the CONTENT reveal is still sequenced even here. There is
     // no width phase to wait on in this mode (TOOLS pins
@@ -654,6 +788,13 @@ Item {
     }
 
     onAnyOpenChanged: {
+        // Nothing to sequence: `expanded` is simply what `anyOpen` says,
+        // on this frame, and openProgress/contentProgress are owned by
+        // the two Bindings above.
+        if (root.instantDrawer) {
+            root.expanded = root.anyOpen;
+            return;
+        }
         if (!root.twoPhase) {
             // Was a bare `root.expanded = root.anyOpen` -- which is
             // exactly why an earlier pass at the staged reveal appeared
@@ -872,7 +1013,7 @@ Item {
         // Gated rather than left on: an FBO the size of this block is
         // not something to keep allocated for a drawer that is shut most
         // of the time.
-        layer.enabled: root.splitDrawer && root.opaqueProgress > 0.01
+        layer.enabled: root.drawerLens && root.splitDrawer && root.opaqueProgress > 0.01
         layer.effect: GlassLens {
             radius: root.drawerRadius
             // The greyer, fainter edge this block already had.

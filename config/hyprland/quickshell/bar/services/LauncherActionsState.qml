@@ -161,6 +161,18 @@ Singleton {
             root.close();
             return;
         }
+        root.openFor(screen, app);
+    }
+
+    // The body toggleFor used to have inline, split out because hover
+    // needs the same thing without the toggle: a pointer entering a chip
+    // OPENS, it does not flip a switch -- re-entering the chip the panel
+    // is already about must leave it exactly as it is, and going through
+    // toggleFor would have shut it.
+    function openFor(screen, app) {
+        hoverOpenTimer.stop();
+        hoverCloseTimer.stop();
+        root.pendingApp = null;
         // Mutually exclusive with TOOLS' four drawers, same rule they
         // already apply to each other -- see NotificationState.qml. Not
         // for lack of room (this island is its own), but because TOOLS'
@@ -187,10 +199,115 @@ Singleton {
     }
 
     function close() {
+        hoverOpenTimer.stop();
+        hoverCloseTimer.stop();
+        root.pendingApp = null;
         root.panelOpen = false;
         root.quitSent = false;
         root.forceOffered = false;
         forceTimer.stop();
+    }
+
+    // ---------------------------------------------------------------
+    // hover
+    // ---------------------------------------------------------------
+    //
+    // Asked for: the drawer opens on a plain hover rather than only on a
+    // right click ("un simple hover"). The click paths are untouched --
+    // left still focuses, right still toggles -- this is a third way in,
+    // and it is the one with all the edge cases, because a pointer is
+    // never anywhere on purpose the way a click is.
+    //
+    // Four of them, and each is a real timer or guard below rather than
+    // something hover alone would have got right:
+    //
+    //   * SWEEPING PAST. The chips sit between the central island and
+    //     TOOLS, so the pointer crosses all five of them on its way to
+    //     the notification bell. Opening on contact would flash five
+    //     panels in half a second, so an entry has to LAST
+    //     `hoverOpenDelay` before it counts. Switching chips while the
+    //     panel is already open skips that wait -- the decision to have
+    //     this open has already been made, and re-running the delay
+    //     there would just make the retarget feel broken.
+    //
+    //   * THE GAP. The drawer is a separate block sitting `drawerTop -
+    //     rowHeight` px below the chips (7 on this bar), so travelling
+    //     from the chip into the panel means leaving both for a few
+    //     frames. Hence `hoverCloseGrace`: leaving arms a close, it does
+    //     not perform one, and anything that re-enters (the same chip,
+    //     another chip, the panel itself) cancels it.
+    //
+    //   * THE PANEL ITSELF. LauncherActions has to keep the panel alive
+    //     while the pointer is inside it, which is `hoverKeep` -- and it
+    //     does that through a HoverHandler rather than a MouseArea
+    //     precisely because the action rows underneath still need their
+    //     own clicks.
+    //
+    //   * SOMEBODY ELSE'S DRAWER. openFor() closes the other four, which
+    //     is right for a click and hostile for a hover: with the
+    //     notification center open, reaching its bell means sweeping over
+    //     these chips, and a hover that honoured the exclusion rule would
+    //     shut the very panel the user is walking towards. So hover
+    //     declines to open at all while another drawer is up. The right
+    //     click still gets through -- that one is an actual request.
+    readonly property int hoverOpenDelay: 130
+    readonly property int hoverCloseGrace: 240
+
+    // The chip a pending open is about. A COPY of the matches entry, same
+    // reason the fields above are copies rather than a live reference into
+    // Hyprland.toplevels: `matches` is rebuilt on every IPC event, which
+    // is to say several times inside a 130ms wait.
+    property var pendingApp: null
+    property var pendingScreen: null
+
+    function otherDrawerOpen() {
+        return NotificationState.centerOpen || BaliseState.panelOpen
+            || PowerState.panelOpen || MixerState.panelOpen;
+    }
+
+    function hoverEnter(screen, app) {
+        hoverCloseTimer.stop();
+        if (root.otherDrawerOpen()) return;
+        // Already open: retarget now, no delay (see SWEEPING PAST above).
+        if (root.panelOpen) {
+            if (root.address === app.address && root.activeScreen === screen)
+                return;
+            root.openFor(screen, app);
+            return;
+        }
+        root.pendingScreen = screen;
+        root.pendingApp = app;
+        hoverOpenTimer.restart();
+    }
+
+    function hoverExit() {
+        hoverOpenTimer.stop();
+        root.pendingApp = null;
+        if (root.panelOpen) hoverCloseTimer.restart();
+    }
+
+    // The pointer is somewhere that counts as "still on this drawer" --
+    // inside the panel, or back on a chip. Cancels a pending close without
+    // touching the target.
+    function hoverKeep() { hoverCloseTimer.stop(); }
+
+    Timer {
+        id: hoverOpenTimer
+        interval: root.hoverOpenDelay
+        onTriggered: {
+            if (!root.pendingApp) return;
+            root.openFor(root.pendingScreen, root.pendingApp);
+        }
+    }
+
+    Timer {
+        id: hoverCloseTimer
+        interval: root.hoverCloseGrace
+        // Not close(): a SIGTERM waiting on its "Force quit" escalation is
+        // a conversation in progress, and the pointer drifting off the
+        // panel is not the user abandoning it. Every other state closes on
+        // its own.
+        onTriggered: { if (!root.quitSent) root.close(); }
     }
 
     Timer {

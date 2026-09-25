@@ -1,6 +1,5 @@
 import QtQuick
 import ".."          // DrawerHandle
-import "../balise"   // RevealPop
 import "../../theme"
 import "../../services"
 
@@ -11,10 +10,11 @@ import "../../services"
 // back and no way out).
 //
 // Same DrawerIsland contract the four TOOLS drawers satisfy: `drawerOpen`
-// bound from outside, `implicitHeight` computed here, `Behavior on height`
-// kept equal to the island's `revealDuration`. Width is not set here --
-// the island forces every entry to its own `fixedDrawerWidth`, so
-// everything below sizes off `parent.width`.
+// bound from outside, `implicitHeight` computed here. Width is not set
+// here -- the island forces every entry to its own `fixedDrawerWidth`, so
+// everything below sizes off `parent.width`. The contract's third clause,
+// a `Behavior on height` matching the island's `revealDuration`, is the
+// one this entry opts out of -- see the note on it below.
 //
 // Three actions, and the ORDER is the point: they run from the one that
 // changes nothing (focus) to the one that ends the process (quit), so the
@@ -34,22 +34,52 @@ import "../../services"
 // the pointer. Which is also why the pane stays fully opaque where TOOLS'
 // is allowed some translucency -- the cards that made that readable are
 // exactly what was removed.
+//
+// The per-row RevealPop cascade went the same way, and for the same
+// reason the island's staged reveal did (see `instantDrawer` in
+// DrawerIsland.qml): a staggered pop is an entrance, and this panel opens
+// on a hover now. One quick fade of the whole pane, nothing staged --
+// asked for ("pas d'effet tiroir, juste un fade rapide"). The rows keep
+// their own hover tint, which is the only motion left in here.
 Item {
     id: root
 
     property bool drawerOpen: false
 
     implicitHeight: handle.implicitHeight + 8 + content.implicitHeight + 10
-    // Kept equal to DrawerIsland's `revealDuration` -- the island waits
-    // out exactly this long before fading content in.
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    // NO `Behavior on height`, and that is the whole of this island's
+    // `instantDrawer` on the entry's side: the pane reaches full height on
+    // the frame it opens and only its opacity moves. Asked for ("pas
+    // d'effet tiroir, juste un fade rapide").
+    //
+    // The contract at the top of DrawerIsland.qml asks entries for a
+    // height Behavior matching `revealDuration`, and this one deliberately
+    // opts out -- that clause exists so the island's PauseAnimation can
+    // wait out the stretch, and in `instantDrawer` there is no pause and
+    // no stretch to wait for.
 
-    // Same kick PowerHome/MixerHome give the shared cascade: this content
-    // is built once, so without it the reveal would play at bar startup,
-    // invisibly, and never again.
-    onDrawerOpenChanged: {
-        if (root.drawerOpen) BaliseReveal.replay();
+    // Keeps the panel alive while the pointer is inside it, and arms its
+    // close when it leaves -- the other half of the hover open in
+    // Launchers.qml (see LauncherActionsState's hover section for the whole
+    // state machine, including why leaving arms rather than closes).
+    //
+    // A HoverHandler and NOT a MouseArea: a MouseArea over this whole item
+    // would sit on top of every ActionRow's own MouseArea and eat the
+    // clicks the panel exists for. Handlers are passive about buttons.
+    //
+    // Bounded by this item, which the island sizes to `drawerContentWidth`
+    // -- so the pane's own 6px margin on each side is outside it. Leaving
+    // through that strip starts the grace period a frame or two early,
+    // which is 240ms of slack against 6px of travel.
+    HoverHandler {
+        onHoveredChanged: {
+            if (hovered) LauncherActionsState.hoverKeep();
+            else LauncherActionsState.hoverExit();
+        }
     }
+
+    // The `BaliseReveal.replay()` kick that used to be here is gone with
+    // the cascade it drove -- see the RevealPop note below.
 
     // ---- one action row ---------------------------------------------
     //
@@ -62,9 +92,6 @@ Item {
     // label, and the hover tint is the only surface in the whole panel.
     component ActionRow: Rectangle {
         id: arow
-
-        property int revealIndex: 0
-        RevealPop { item: arow; index: arow.revealIndex }
 
         property string glyph: ""
         property string label: ""
@@ -173,8 +200,6 @@ Item {
             width: parent.width
             height: 24
 
-            RevealPop { item: header; index: 0; fromScale: 1.0 }
-
             // Both icon kinds the chips can carry (a Font Awesome Brands
             // glyph, or a real SVG for Lutris/Heroic, which no icon font
             // has a logo for), same split as Launchers.qml -- and at the
@@ -253,21 +278,18 @@ Item {
         }
 
         ActionRow {
-            revealIndex: 1
             glyph: "\uE426"   // lu-app-window
             label: "Focus window"
             onActivated: LauncherActionsState.focusWindow()
         }
 
         ActionRow {
-            revealIndex: 2
             glyph: "\uE175"   // lu-square-x
             label: "Close window"
             onActivated: LauncherActionsState.closeWindow()
         }
 
         ActionRow {
-            revealIndex: 3
             glyph: "\uE140"   // lu-power
             label: "Quit app"
             hint: "SIGTERM"
@@ -281,7 +303,6 @@ Item {
         // (LauncherActionsState.syncTarget). SIGKILL is state loss, so it
         // is a second deliberate click and never an automatic follow-up.
         ActionRow {
-            revealIndex: 4
             visible: LauncherActionsState.forceOffered
             glyph: "\uE221"   // lu-skull
             label: "Force quit"
