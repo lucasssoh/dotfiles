@@ -446,6 +446,12 @@ hl.config({
         -- Set before wiring that listener up, not after.
         mouse_move_enables_dpms  = true,
         key_press_enables_dpms   = true,
+
+        -- Lets a new locker take over a session whose locker died. The
+        -- session stays locked either way; without this, a hyprlock crash
+        -- strands it on Hyprland's "lockscreen crashed" screen, and even
+        -- relaunching hyprlock from a TTY is refused.
+        allow_session_lock_restore = true,
     },
 })
 

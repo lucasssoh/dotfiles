@@ -204,6 +204,24 @@ hl.define_submap("resize", function()
     bind("+ Return", hl.dsp.submap("reset"))
 end)
 
+-- Wake submap: the first key after the panel went dark (or the machine
+-- slept) only wakes, it is not typed anywhere. Hyprland's
+-- key_press_enables_dpms turns the panel back on AND still delivers
+-- that key to the focused surface -- on the lock screen, hyprlock, which
+-- puts it in the password field (verified in both sources: Hyprland
+-- 0.56.2 InputManager.cpp, hyprlock 0.9.6 CHyprlock::onKey).
+--
+-- scripts/idle-action.sh enters this submap on dpms-off and before a
+-- suspend; the catchall swallows the next key and leaves. Waking with
+-- the mouse instead leaves through hypridle's on-resume (dpms-on).
+--   locked      -- binds are skipped while the session is locked
+--                  otherwise, and locked is the whole point here.
+--   ignore_mods -- a catchall still has to match the modmask, so without
+--                  it a Shift+x or Ctrl+x wake would slip through.
+hl.define_submap("wake", function()
+    bind("catchall", hl.dsp.submap("reset"), { locked = true, ignore_mods = true })
+end)
+
 -- ============================================================
 -- WORKSPACES — number row in AZERTY layout
 -- ============================================================

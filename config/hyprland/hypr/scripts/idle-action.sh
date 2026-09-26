@@ -26,8 +26,11 @@
 #      laptop lock at 5 minutes unplugged and 15 minutes plugged in from a
 #      single conf, with no daemon restart when the cable moves.
 #
-# Usage: idle-action.sh <dim|undim|lock|dpms-off|dpms-on|suspend>
-#                       [--on ac|battery] [--dry-run]
+# Usage: idle-action.sh <dim|undim|lock|dpms-off|dpms-on|suspend|
+#                        sleep|resume> [--on ac|battery] [--dry-run]
+#
+# sleep/resume are hypridle's before_sleep_cmd/after_sleep_cmd -- see the
+# wake submap below for why they are not just lock-session/dpms-on.
 #
 # --dry-run prints the verdict instead of acting, which is the only way to
 # exercise the laptop's policy on a machine where it must never run:
@@ -60,7 +63,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$action" ] || {
-    echo "usage: $0 <dim|undim|lock|dpms-off|dpms-on|suspend> [--on ac|battery] [--dry-run]" >&2
+    echo "usage: $0 <dim|undim|lock|dpms-off|dpms-on|suspend|sleep|resume> [--on ac|battery] [--dry-run]" >&2
     exit 2
 }
 
@@ -74,6 +77,22 @@ esac
 # not a percentage of the panel's maximum: see the dim action below for
 # what that cost. Raise it for a gentler dim, lower it for a starker one.
 DIM_PERCENT=40
+
+# Seconds after an IDLE lock during which any key, or a mouse move of
+# more than 5px, unlocks without a password (hyprlock --grace). The "I
+# was right here, I just stopped moving" case. Only the idle lock gets
+# it: Super+Escape and the pre-suspend lock (hypridle's lock_cmd) run
+# hyprlock bare -- a grace there would mean opening the lid and nudging
+# the mouse unlocks a machine that has been asleep for hours.
+LOCK_GRACE=5
+
+# The wake submap (keybinds.lua): while it is active, the next key only
+# leaves it -- nothing gets typed. Entered whenever the panel goes dark,
+# so the key that wakes the screen does not land in hyprlock's password
+# field (Hyprland delivers the dpms-waking key to the focused surface).
+wake_submap() {
+    hyprctl eval "hl.dispatch(hl.dsp.submap(\"$1\"))" >/dev/null 2>&1
+}
 
 verdict() {
     [ "$dry_run" = 1 ] && echo "$action: $1"
@@ -96,8 +115,12 @@ verdict() {
 # Both are idempotent and safe to run when nothing dimmed anything:
 # `brightnessctl -r` with no saved level does nothing, `wlopm --on` on an
 # already-on output does nothing.
+#
+# sleep/resume are ungated for the same reason plus one: they are what
+# hypridle runs around EVERY suspend, idle or manual, on every machine --
+# the lock before sleep must never depend on the idle policy.
 case "$action" in
-    undim|dpms-on) ;;
+    undim|dpms-on|sleep|resume) ;;
     *)
         # ── GATE 2 — this machine, by name ──────────────────────────────
         # shellcheck source=host-profile.sh
@@ -216,7 +239,10 @@ case "$action" in
         brightnessctl -r >/dev/null 2>&1
         ;;
     lock)
-        loginctl lock-session
+        # hyprlock directly rather than `loginctl lock-session`: the
+        # latter goes through hypridle's lock_cmd, which is shared with
+        # the pre-suspend lock and so must stay grace-free.
+        pidof hyprlock >/dev/null || exec hyprlock --grace "$LOCK_GRACE"
         ;;
     # VERIFIED on the IdeaPad Slim 5 14IMH10 (eDP-1), via the wlopm branch.
     # `hyprctl monitors -j .dpmsStatus` went true -> false -> true across
@@ -252,13 +278,30 @@ case "$action" in
         else
             hyprctl eval 'hl.dispatch(hl.dsp.dpms({ state = "off" }))' >/dev/null 2>&1
         fi
+        wake_submap wake
         ;;
-    dpms-on)
+    # resume is after_sleep_cmd: panel on, but the submap stays armed.
+    # That hook runs as the machine wakes, and the key that woke it may
+    # arrive after it -- disarming here would let that key through. So the
+    # first key after a suspend always only wakes, even when opening the
+    # lid already lit the panel.
+    dpms-on|resume)
         if command -v wlopm >/dev/null 2>&1; then
             wlopm --on '*' >/dev/null 2>&1
         else
             hyprctl eval 'hl.dispatch(hl.dsp.dpms({ state = "on" }))' >/dev/null 2>&1
         fi
+        # Only when this is a wake from the dpms-off rung (hypridle's
+        # on-resume): if a KEY did the waking, the submap already swallowed
+        # it and left; if the mouse did, leaving here is what hands the
+        # keyboard back. Not reached from after_sleep_cmd -- see resume.
+        [ "$action" = dpms-on ] && wake_submap reset
+        ;;
+    # before_sleep_cmd. Arm the wake submap BEFORE locking, so the key that
+    # wakes the machine cannot race hyprlock's first frame into the field.
+    sleep)
+        wake_submap wake
+        loginctl lock-session
         ;;
     suspend)
         systemctl suspend
