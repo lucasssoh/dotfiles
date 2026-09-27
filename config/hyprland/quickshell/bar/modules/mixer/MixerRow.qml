@@ -218,6 +218,8 @@ Rectangle {
                 radius: 9
                 color: DrawerTheme.on
 
+                layer.enabled: true
+                layer.effect: GlassOn { radius: eqBtn.radius }
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering

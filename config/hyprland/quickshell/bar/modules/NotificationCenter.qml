@@ -258,6 +258,8 @@ Item {
                 color: NotificationState.dnd ? DrawerTheme.accent
                      : dndHover.containsMouse ? DrawerTheme.cardHover
                      : DrawerTheme.card
+                layer.enabled: NotificationState.dnd
+                layer.effect: GlassOn { radius: dndButton.radius }
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 // Same glass edge every other block in this bar now

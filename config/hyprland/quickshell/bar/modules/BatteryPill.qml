@@ -25,6 +25,9 @@ Item {
     // Where the charge will stop, 0-100, or negative for no tick. Set to
     // 60 by Battery.qml while conservation mode caps the cell.
     property real capAt: -1
+    // The number's one colour and its outline -- see the Text below.
+    property color numberColor: "#f2f2f7"
+    property color numberOutline: "#0c0c0e"
 
     readonly property real bodyWidth: 30
     readonly property real bodyHeight: 15
@@ -44,80 +47,90 @@ Item {
     readonly property real capWidth: root.capAt >= 0
         ? Math.round(root.bodyWidth * root.capAt / 100) : root.bodyWidth
 
-    Rectangle {
-        id: body
-        width: root.capWidth
-        height: root.bodyHeight
-        topLeftRadius: root.bodyRadius
-        bottomLeftRadius: root.bodyRadius
-        topRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.capWidth))
-        bottomRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.capWidth))
-        color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.30)
-    }
-    Rectangle {
-        visible: root.capAt >= 0
-        x: root.capWidth
-        width: root.bodyWidth - root.capWidth
-        height: root.bodyHeight
-        topRightRadius: root.bodyRadius
-        bottomRightRadius: root.bodyRadius
-        color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.10)
-    }
-
-    // Square on its right edge -- that edge is the charge level -- until
-    // it runs into the body's own rounded end, where its corners round
-    // with it. `bodyWidth - fillWidth` is how far the level still is from
-    // that end, so the right radii grow from 0 to the body's radius over
-    // the last few pixels instead of snapping. No clip needed, which a
-    // plain `clip: true` could not do anyway: it clips to the bounding
-    // box, not to the body's rounded shape.
-    Rectangle {
-        width: root.fillWidth
-        height: root.bodyHeight
-        topLeftRadius: root.bodyRadius
-        bottomLeftRadius: root.bodyRadius
-        topRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.fillWidth))
-        bottomRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.fillWidth))
-        color: root.color
-    }
-
-    // The percentage: ONE colour, white, with a thin dark outline.
-    //
-    // It used to be drawn twice and split on the fill's edge (dark over
-    // the fill, light over the empty part). Asked for instead: a single
-    // colour that holds against white, black AND grey -- the pill's fill
-    // is the primary ink (white on the dark band, black on the light one)
-    // and its empty part is that ink at 30%, a mid grey. Measured, no
-    // flat colour can: the best neutral reaches ~4:1 on white and black
-    // but ~1:1 on the grey, and the best saturated one (a violet) is
-    // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
-    // An outline sidesteps the maths: the white body carries the black
-    // background, the dark rim carries the white and grey ones, and it
-    // survives the state colours (charging green, low red...) too.
-    //
-    // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
-    // native rasterisation snaps the digits to the pixel grid and they
-    // read blocky; the curve renderer antialiases the outline in
-    // greyscale. QtRendering (distance field) fringed them in colour.
-    property color numberColor: "#f2f2f7"
-    property color numberOutline: "#0c0c0e"
-
-    Text {
-        id: number
+    // The cell -- body, fill and number -- as one item, so the convex
+    // glass can go over it as a single pane (asked for on the battery:
+    // "essaie ça avec l'icône de la batterie"). The nub stays outside:
+    // the lens traces a rounded rectangle, and the nub would break it.
+    Item {
+        id: cell
         width: root.bodyWidth
         height: root.bodyHeight
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        renderType: Text.CurveRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: Math.round(root.percent)
-        color: root.numberColor
-        style: Text.Outline
-        styleColor: root.numberOutline
-        font.family: Fonts.ui
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        font.features: { "tnum": 1 }
+        layer.enabled: true
+        layer.effect: GlassChip { radius: root.bodyRadius }
+
+        Rectangle {
+            id: body
+            width: root.capWidth
+            height: root.bodyHeight
+            topLeftRadius: root.bodyRadius
+            bottomLeftRadius: root.bodyRadius
+            topRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.capWidth))
+            bottomRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.capWidth))
+            color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.30)
+        }
+        Rectangle {
+            visible: root.capAt >= 0
+            x: root.capWidth
+            width: root.bodyWidth - root.capWidth
+            height: root.bodyHeight
+            topRightRadius: root.bodyRadius
+            bottomRightRadius: root.bodyRadius
+            color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.10)
+        }
+
+        // Square on its right edge -- that edge is the charge level -- until
+        // it runs into the body's own rounded end, where its corners round
+        // with it. `bodyWidth - fillWidth` is how far the level still is from
+        // that end, so the right radii grow from 0 to the body's radius over
+        // the last few pixels instead of snapping. No clip needed, which a
+        // plain `clip: true` could not do anyway: it clips to the bounding
+        // box, not to the body's rounded shape.
+        Rectangle {
+            width: root.fillWidth
+            height: root.bodyHeight
+            topLeftRadius: root.bodyRadius
+            bottomLeftRadius: root.bodyRadius
+            topRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.fillWidth))
+            bottomRightRadius: Math.max(0, root.bodyRadius - (root.bodyWidth - root.fillWidth))
+            color: root.color
+        }
+
+        // The percentage: ONE colour, white, with a thin dark outline.
+        //
+        // It used to be drawn twice and split on the fill's edge (dark over
+        // the fill, light over the empty part). Asked for instead: a single
+        // colour that holds against white, black AND grey -- the pill's fill
+        // is the primary ink (white on the dark band, black on the light one)
+        // and its empty part is that ink at 30%, a mid grey. Measured, no
+        // flat colour can: the best neutral reaches ~4:1 on white and black
+        // but ~1:1 on the grey, and the best saturated one (a violet) is
+        // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
+        // An outline sidesteps the maths: the white body carries the black
+        // background, the dark rim carries the white and grey ones, and it
+        // survives the state colours (charging green, low red...) too.
+        //
+        // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
+        // native rasterisation snaps the digits to the pixel grid and they
+        // read blocky; the curve renderer antialiases the outline in
+        // greyscale. QtRendering (distance field) fringed them in colour.
+
+        Text {
+            id: number
+            width: root.bodyWidth
+            height: root.bodyHeight
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            renderType: Text.CurveRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: Math.round(root.percent)
+            color: root.numberColor
+            style: Text.Outline
+            styleColor: root.numberOutline
+            font.family: Fonts.ui
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.features: { "tnum": 1 }
+        }
     }
 
     // Terminal nub, at 55% so it reads as part of the cell without

@@ -62,6 +62,8 @@ Item {
                     ? (pillArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
                     : (pillArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.cardHover)
                 Behavior on color { ColorAnimation { duration: 120 } }
+                layer.enabled: pill.selected
+                layer.effect: GlassOn { radius: pill.radius }
 
                 Text {
                     anchors.centerIn: parent

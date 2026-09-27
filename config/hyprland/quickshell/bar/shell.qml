@@ -1065,11 +1065,11 @@ ShellRoot {
                 fixedDrawerWidth: 360
                 widenOnOpen: false
                 splitDrawer: true
-                // DrawerTheme, the drawers' own palette, and flat -- no
-                // convex lens on the pane since the HyperOS pass.
+                // DrawerTheme, the drawers' own palette. The convex lens
+                // on the pane came back after a flat trial ("c'est trop
+                // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.panelTop
                 drawerFillBottom: DrawerTheme.panelBottom
-                drawerLens: false
                 drawerRadius: 20
                 drawerGap: 0
                 drawerTop: bar.bandHeight
@@ -1310,7 +1310,9 @@ ShellRoot {
                 // rim around a pane with no modelling behind it. It also
                 // takes an FBO the size of the pane out of a panel that
                 // now opens and closes on hover.
-                drawerLens: false
+                // Lens on too, like every other drawer pane (it was the
+                // one flat exception; asked for on "chaque tiroir").
+                drawerLens: true
 
                 // No reveal: full height on the frame it opens, one quick
                 // fade, nothing staged (asked for -- "pas d'effet tiroir,
@@ -1548,11 +1550,11 @@ ShellRoot {
                 // theme/Surfaces.qml for the whole rule. Only TOOLS gets
                 // it: centerIsland's drawers draw bare text with no card
                 // behind it.
-                // DrawerTheme, the drawers' own palette, and flat -- no
-                // convex lens on the pane since the HyperOS pass.
+                // DrawerTheme, the drawers' own palette. The convex lens
+                // on the pane came back after a flat trial ("c'est trop
+                // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.panelTop
                 drawerFillBottom: DrawerTheme.panelBottom
-                drawerLens: false
                 drawerRadius: 20
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.

@@ -249,6 +249,8 @@ Item {
                         ? DrawerTheme.on
                         : (chipHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
                     Behavior on color { ColorAnimation { duration: 120 } }
+                    layer.enabled: chip.current
+                    layer.effect: GlassOn { radius: chip.radius }
 
                     Text {
                         id: chipLabel

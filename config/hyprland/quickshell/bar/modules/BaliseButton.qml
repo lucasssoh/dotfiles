@@ -170,6 +170,13 @@ Item {
         height: 24
         radius: height / 2
         color: Qt.rgba(root.ink.primary.r, root.ink.primary.g, root.ink.primary.b, 0.16)
+
+        // The convex edge on the capsule (asked for: "essaie ça avec le
+        // bouton de balise"). GlassChip rather than GlassOn: this fill is
+        // a translucent veil, not the white of an active control, and the
+        // chip's light rim is what reads on it.
+        layer.enabled: true
+        layer.effect: GlassChip { radius: badge.radius }
     }
 
     // Up to 3 icons (gear always, net/bt conditional).
