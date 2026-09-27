@@ -51,14 +51,23 @@ InkBlend {
     // matches the pill's empty part exactly. Mid grey until the wallpaper
     // profile has been read.
     property color behind: "#5a5a5c"
-    readonly property color surface: BandTint.composite(BandTint.bandFor(island.t), island.behind)
+    readonly property color surface: BandTint.composite(BandTint.bandFor(island.veil), island.behind)
+
+    // How much of the band's veil sits under this island, 0..1 (see
+    // BandTint.decide): none over a calm wallpaper, as much as the text
+    // needs over a busy one. Eased on the same 900ms as the ink, so the
+    // veil and the text change together with the wallpaper transition.
+    property real veil: 1
+    Behavior on veil { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
 
     function reevaluate(): void {
         if (!island.monitor || island.rectW <= 0 || !BandTint.ready) return;
         const bg = BandTint.backgroundAt(island.monitor, island.rectX, island.rectW);
         if (bg) island.behind = bg;
-        island.inkChoice = BandTint.recommend(island.monitor, island.rectX, island.rectW,
-                                              island.inkChoice, Ink.primary, InkLight.primary);
+        const d = BandTint.decide(island.monitor, island.rectX, island.rectW,
+                                  island.inkChoice, Ink.primary, InkLight.primary);
+        island.inkChoice = d.ink;
+        island.veil = d.veil;
     }
 
     onMonitorChanged: island.reevaluate()

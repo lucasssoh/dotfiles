@@ -164,6 +164,31 @@ def bucketise(strip):
     return out
 
 
+def bucket_range(strip):
+    """(H, W, 3) uint8 strip -> (lo, hi): per bucket, the 10th and 90th
+    percentile of the pixels' LUMINANCE, as the sRGB grey of that
+    luminance (0-255).
+
+    The mean alone says nothing about how busy the wallpaper is behind a
+    bucket: a checkerboard and a flat grey have the same mean. The bar
+    uses these two to decide how much of its veil an island needs (see
+    services/BandTint.qml's `decide`) -- text has to hold against the
+    brightest and the darkest of what is really behind it, not against
+    the average. Percentiles rather than min/max so a few stray pixels
+    (a star, a dithering speck) do not summon a veil on their own.
+    """
+    lin = to_linear(strip.astype(np.float32))
+    Y = 0.2126 * lin[..., 0] + 0.7152 * lin[..., 1] + 0.0722 * lin[..., 2]
+    edges = np.linspace(0, Y.shape[1], BUCKETS + 1).astype(int)
+    lo, hi = [], []
+    for i in range(BUCKETS):
+        x0, x1 = edges[i], max(edges[i] + 1, edges[i + 1])
+        p10, p90 = np.percentile(Y[:, x0:x1], [10, 90])
+        lo.append(round(float(to_srgb(np.float32(p10))), 1))
+        hi.append(round(float(to_srgb(np.float32(p90))), 1))
+    return lo, hi
+
+
 # ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------
@@ -306,7 +331,9 @@ def sample(explicit_path=None, verbose=False):
             if verbose:
                 print(f"{mon['name']}: pas de source (fullscreen ?)", file=sys.stderr)
             continue
-        profiles[mon["name"]] = {"width": mon["w"], "cells": bucketise(strip)}
+        lo, hi = bucket_range(strip)
+        profiles[mon["name"]] = {"width": mon["w"], "cells": bucketise(strip),
+                                 "lo": lo, "hi": hi}
         if verbose:
             cells = np.array(profiles[mon["name"]]["cells"])
             print(f"{mon['name']}: {src}, {len(cells)} buckets, "

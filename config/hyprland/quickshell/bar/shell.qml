@@ -912,20 +912,21 @@ ShellRoot {
                 // replaces, verified as a pixel-identical capture.
                 // Fixe, et c'est le point: plate et translucide, une seule
                 // couleur, toujours. Seule l'encre posee dessus bascule.
-                // Denser or lighter under each island, following that
-                // island's own ink (see BandTint's `bandLight`). A
+                // As much veil under each island as its wallpaper needs
+                // (IslandInk.veil, see BandTint.decide) -- none over a
+                // calm stretch, the full band over a busy one. A
                 // horizontal gradient with a stop at each island's centre
                 // rather than one colour per island: where two islands
                 // disagree the veil eases from one density to the other
                 // instead of cutting the band into blocks.
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0; color: BandTint.bandFor(clockInk.t) }
-                    GradientStop { position: (clockIsland.x + clockIsland.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(clockInk.t) }
-                    GradientStop { position: (metrics.x + metrics.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(metricsInk.t) }
-                    GradientStop { position: (launchers.x + launchers.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(launchersInk.t) }
-                    GradientStop { position: (toolsIsland.x + toolsIsland.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(toolsInk.t) }
-                    GradientStop { position: 1; color: BandTint.bandFor(toolsInk.t) }
+                    GradientStop { position: 0; color: BandTint.bandFor(clockInk.veil) }
+                    GradientStop { position: (clockIsland.x + clockIsland.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(clockInk.veil) }
+                    GradientStop { position: (metrics.x + metrics.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(metricsInk.veil) }
+                    GradientStop { position: (launchers.x + launchers.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(launchersInk.veil) }
+                    GradientStop { position: (toolsIsland.x + toolsIsland.width / 2) / Math.max(1, bar.width); color: BandTint.bandFor(toolsInk.veil) }
+                    GradientStop { position: 1; color: BandTint.bandFor(toolsInk.veil) }
                 }
             }
 

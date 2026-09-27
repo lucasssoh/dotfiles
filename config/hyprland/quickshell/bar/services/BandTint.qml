@@ -38,34 +38,24 @@ Singleton {
     // island 5.57:1 against 4.22:1 here) and was wrong on the design: a
     // bar whose surface turns white is a different bar.
     //
-    // What does move, since the HyperOS pass, is its DENSITY: under an
-    // island whose ink went dark (a bright wallpaper behind it), the same
-    // black thins from 0x73 to 0x40 (~25%) -- asked for, "éclaircir un
-    // peu le fond translucide en mode light". Measured over pure white,
-    // the 0x73 band composited to grey 145, where the light ramp's
-    // secondary ink (units, date) scored 2.2:1 and simply vanished; at
-    // 0x40 the surface is 194 and the same text reads at 6.4:1. Still the
-    // same colour, still translucent, so it stays the same bar -- just a
-    // lighter veil of it. `bandFor` below is the interpolation shell.qml
-    // paints with, per island, following each island's own ink.
+    // What moves since the HyperOS pass is HOW MUCH of it there is, per
+    // island: `veil`, 0 to 1, scales this alpha. Asked for after a test
+    // with no band at all read "parfait" on calm wallpapers: "si le fond
+    // est très irrégulier, alors la bande est plus pertinente, quand le
+    // fond est relativement uniforme, c'est très lisible et très beau".
+    // So an island over a calm wallpaper gets no veil, one over a busy or
+    // high-contrast stretch gets exactly as much as its text needs --
+    // see `decide` below for how much that is.
+    //
+    // (A lighter 0x40 veil under dark-ink islands existed for a while; it
+    // is gone -- a dark veil only ever LOWERS dark text's contrast, so
+    // dark text now always sits on the bare wallpaper.)
     readonly property color band: "#730c0c0e"
-    readonly property color bandLight: "#400c0c0e"
 
-    // TEST (asked for: "enlever complètement le fond de la barre"): false
-    // drops the veil altogether -- the band paints nothing, and because
-    // every contrast decision below goes through bandFor(), the inks are
-    // then chosen against the bare wallpaper instead of against a veil
-    // that is no longer there. Flip back to true to restore the band.
-    readonly property bool veil: false
-
-    // The band under an island whose ink sits at `t` on the dark(0) ->
-    // light(1) axis (IslandInk.t, which animates), so the veil thins in
-    // step with the ink flipping rather than after it.
-    function bandFor(t) {
-        if (!root.veil) return Qt.rgba(root.band.r, root.band.g, root.band.b, 0);
-        const k = Math.max(0, Math.min(1, t));
-        return Qt.rgba(root.band.r, root.band.g, root.band.b,
-                       root.band.a + (root.bandLight.a - root.band.a) * k);
+    // The band at `veil` (0..1) of its full density.
+    function bandFor(veil) {
+        const k = Math.max(0, Math.min(1, veil));
+        return Qt.rgba(root.band.r, root.band.g, root.band.b, root.band.a * k);
     }
 
     // ---- the profile -------------------------------------------------
@@ -165,48 +155,95 @@ Singleton {
     // between two real wallpapers.
     readonly property real switchMargin: 1.0
 
-    // Returns "dark" or "light" -- which INK reads better behind
-    // [x, x+w). Both are scored against the same band, because the band
-    // is the same; this is the whole difference from the material flip
-    // that preceded it.
+    // The legibility target every island is held to: WCAG AA for body
+    // text, against the WORST pixel behind it (see `rangeAt`), not the
+    // average.
+    readonly property real target: 4.5
+
+    // Darkest and brightest of what is behind [x, x+w), as two sRGB greys:
+    // the lowest 10th and highest 90th luminance percentile across the
+    // buckets it covers (bar-tint.py's `lo`/`hi`). Texture inside a bucket
+    // and a gradient across the island both widen this range, and both
+    // are what actually breaks one ink for the whole island. Falls back to
+    // the bucket means on a profile written before `lo`/`hi` existed.
+    function rangeAt(monitor, x, w) {
+        if (!root.profile || !root.profile[monitor]) return null;
+        const m = root.profile[monitor];
+        const n = m.cells.length;
+        if (!n || w <= 0) return null;
+        let i0 = Math.max(0, Math.min(n - 1, Math.floor((x / m.width) * n)));
+        let i1 = Math.max(i0 + 1, Math.min(n, Math.ceil(((x + w) / m.width) * n)));
+        let lo = 255, hi = 0;
+        for (let i = i0; i < i1; i++) {
+            if (m.lo && m.hi) {
+                lo = Math.min(lo, m.lo[i]);
+                hi = Math.max(hi, m.hi[i]);
+            } else {
+                const c = m.cells[i];
+                const g = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+                lo = Math.min(lo, g);
+                hi = Math.max(hi, g);
+            }
+        }
+        return { lo: Qt.rgba(lo / 255, lo / 255, lo / 255, 1),
+                 hi: Qt.rgba(hi / 255, hi / 255, hi / 255, 1) };
+    }
+
+    // Which ink an island takes, and how much veil goes under it:
+    // { ink: "dark" | "light", veil: 0..1 }. ("dark" is the dark MATERIAL,
+    // i.e. white text; "light" is dark text -- the names Ink/InkLight use.)
     //
-    // Per island, not once for the whole bar. That is only possible
-    // BECAUSE the band no longer moves: three islands with three inks on
-    // one uniform surface have no seam between them, where three
-    // materials would have had to cut the band into three colours. It is
-    // also worth doing -- the islands disagree on 27% of the library, and
-    // a single global ink fixes only 2 of the 7 wallpapers that fail
-    // today, against 4 of 7 when each island chooses for itself.
+    //   1. Without any veil, score dark text against the brightest-but-
+    //      darkest pixel (`lo`) and white text against the brightest
+    //      (`hi`). Whichever clears `target` wins with veil 0; if both do,
+    //      the better one, with the old hysteresis so a crossfade cannot
+    //      flip-flop the ink.
+    //   2. If neither does, white text takes the SMALLEST veil (in 5%
+    //      steps) that lifts its worst case over `target` -- the veil
+    //      darkens the bright spots under it, which is the only thing a
+    //      dark veil can do for text.
+    //   3. If even the full band is not enough, whichever of "white on the
+    //      full band" and "dark on nothing" scores higher.
     //
-    // `current` is the caller's own previous answer, which is where the
-    // hysteresis state lives: a singleton cannot hold it when three
-    // islands each need their own.
+    // `current` is the caller's previous ink, where the hysteresis state
+    // lives (a singleton cannot hold it for several islands).
+    function decide(monitor, x, w, current, inkDark, inkLight) {
+        const r = root.rangeAt(monitor, x, w);
+        if (!r) return { ink: current || "dark", veil: 1 };
+        const whiteAt = v => root.contrast(root.composite(root.bandFor(v), r.hi), inkDark);
+        const darkBare = root.contrast(r.lo, inkLight);
+        const whiteBare = whiteAt(0);
+        const okDark = darkBare >= root.target, okWhite = whiteBare >= root.target;
+        if (okDark && okWhite) {
+            if (current === "light")
+                return { ink: whiteBare > darkBare + root.switchMargin ? "dark" : "light", veil: 0 };
+            return { ink: darkBare > whiteBare + root.switchMargin ? "light" : "dark", veil: 0 };
+        }
+        if (okDark) return { ink: "light", veil: 0 };
+        if (okWhite) return { ink: "dark", veil: 0 };
+        for (let v = 0.05; v <= 1.0001; v += 0.05) {
+            if (whiteAt(v) >= root.target) return { ink: "dark", veil: Math.min(1, v) };
+        }
+        return whiteAt(1) >= darkBare ? { ink: "dark", veil: 1 } : { ink: "light", veil: 0 };
+    }
+
+    // Kept for callers that only want the ink.
     function recommend(monitor, x, w, current, inkDark, inkLight) {
-        const behind = root.backgroundAt(monitor, x, w);
-        if (!behind) return current || "dark";
-        // Each ink scored against the band it would actually sit on: the
-        // dark ink goes with the dense band, the light-material ink with
-        // the thinned one (see `bandLight`).
-        const sDark = root.contrast(root.composite(root.bandFor(0), behind), inkDark);
-        const sLight = root.contrast(root.composite(root.bandFor(1), behind), inkLight);
-        if (current === "light")
-            return sDark > sLight + root.switchMargin ? "dark" : "light";
-        return sLight > sDark + root.switchMargin ? "light" : "dark";
+        return root.decide(monitor, x, w, current, inkDark, inkLight).ink;
     }
 
     // Debug: what each island would be told, as one line. Wired to an IPC
     // in shell.qml so the pipeline can be inspected end to end without
     // anything on screen having to change first.
     function describe(monitor, x, w, inkDark, inkLight) {
-        const behind = root.backgroundAt(monitor, x, w);
-        if (!behind) return "pas de profil";
-        const surface = root.composite(root.bandFor(0), behind);
-        const surfaceLight = root.composite(root.bandFor(1), behind);
+        const r = root.rangeAt(monitor, x, w);
+        if (!r) return "pas de profil";
+        const d = root.decide(monitor, x, w, "dark", inkDark, inkLight);
         const f = v => Math.round(v * 255);
-        return "fond rgb(" + f(surface.r) + "," + f(surface.g) + "," + f(surface.b) + ")"
-             + " / allégé rgb(" + f(surfaceLight.r) + "," + f(surfaceLight.g) + "," + f(surfaceLight.b) + ")"
-             + "  encre claire " + root.contrast(surface, inkDark).toFixed(2) + ":1"
-             + "  encre sombre " + root.contrast(surfaceLight, inkLight).toFixed(2) + ":1"
-             + "  -> " + root.recommend(monitor, x, w, "dark", inkDark, inkLight);
+        return "fond " + f(r.lo.r) + ".." + f(r.hi.r)
+             + "  texte sombre nu " + root.contrast(r.lo, inkLight).toFixed(2) + ":1"
+             + "  texte clair nu " + root.contrast(r.hi, inkDark).toFixed(2) + ":1"
+             + "  -> " + (d.ink === "dark" ? "texte clair" : "texte sombre")
+             + ", voile " + Math.round(d.veil * 100) + "%";
     }
 }
