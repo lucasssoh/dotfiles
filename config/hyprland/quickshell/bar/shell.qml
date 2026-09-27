@@ -255,6 +255,15 @@ ShellRoot {
         function setDnd(on: bool): void {
             NotificationState.dnd = on;
         }
+        // The drawers' material: "auto" follows the wallpaper through the
+        // band's inks, "light"/"dark" pin it -- for trying the light
+        // drawers without changing wallpaper.
+        //   qs -c bar ipc call bar setDrawerTheme light
+        function setDrawerTheme(mode: string): string {
+            if (mode === "auto" || mode === "light" || mode === "dark")
+                DrawerTheme.mode = mode;
+            return DrawerTheme.mode + " t=" + DrawerTheme.t.toFixed(2);
+        }
         // The other half of that bracket: what to restore TO. One line
         // rather than two getters so a caller takes a single snapshot and
         // can't read the two halves either side of a change.
@@ -576,6 +585,37 @@ ShellRoot {
             // set, and the island is inset from it on both sides.
             readonly property int bandHeight: 31
             readonly property int islandInset: 3
+
+            // Which material the drawers take (DrawerTheme.autoT): the ink
+            // of the island a drawer is hanging from, so a drawer opens in
+            // the same light/dark the band above it is showing. The TOOLS
+            // ink is the default -- it also covers the notification toasts,
+            // which appear with no drawer open -- and only the first
+            // screen's bar sets it, so two monitors cannot fight over one
+            // singleton. RestoreNone: when a drawer closes, the value must
+            // stay put while it fades out rather than snap back mid-fade.
+            Binding {
+                target: DrawerTheme
+                property: "autoT"
+                value: toolsInk.t
+                when: bar.screen === Quickshell.screens[0]
+                      && !clockIsland.anyOpen && !launchers.anyOpen
+                restoreMode: Binding.RestoreNone
+            }
+            Binding {
+                target: DrawerTheme
+                property: "autoT"
+                value: clockInk.t
+                when: clockIsland.anyOpen
+                restoreMode: Binding.RestoreNone
+            }
+            Binding {
+                target: DrawerTheme
+                property: "autoT"
+                value: launchersInk.t
+                when: launchers.anyOpen
+                restoreMode: Binding.RestoreNone
+            }
 
             IslandInk {
                 id: clockInk
@@ -1061,8 +1101,12 @@ ShellRoot {
                 fixedDrawerWidth: 360
                 widenOnOpen: false
                 splitDrawer: true
-                drawerFillTop: Surfaces.panelTop
-                drawerFillBottom: Surfaces.panelBottom
+                // DrawerTheme, not Surfaces: these panes follow the
+                // wallpaper into the light material (see DrawerTheme.qml),
+                // and they are flat now -- no convex lens on the pane.
+                drawerFillTop: DrawerTheme.panelTop
+                drawerFillBottom: DrawerTheme.panelBottom
+                drawerLens: false
                 drawerRadius: 20
                 drawerGap: 0
                 drawerTop: bar.bandHeight
@@ -1294,8 +1338,8 @@ ShellRoot {
                 // the panel reads as the same material as the others,
                 // just without the modelling. See LauncherActions.qml's
                 // header for the rest of the pass this belongs to.
-                drawerFillTop: "#ff121419"
-                drawerFillBottom: "#ff121419"
+                drawerFillTop: DrawerTheme.panelTop
+                drawerFillBottom: DrawerTheme.panelBottom
                 // ...and flat all the way: no GlassLens edge either
                 // (asked for -- "il faut juste un bg plat"). The lens is a
                 // light source, and a fill that is one constant colour
@@ -1541,8 +1585,12 @@ ShellRoot {
                 // theme/Surfaces.qml for the whole rule. Only TOOLS gets
                 // it: centerIsland's drawers draw bare text with no card
                 // behind it.
-                drawerFillTop: Surfaces.panelTop
-                drawerFillBottom: Surfaces.panelBottom
+                // DrawerTheme, not Surfaces: these panes follow the
+                // wallpaper into the light material (see DrawerTheme.qml),
+                // and they are flat now -- no convex lens on the pane.
+                drawerFillTop: DrawerTheme.panelTop
+                drawerFillBottom: DrawerTheme.panelBottom
+                drawerLens: false
                 drawerRadius: 20
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.

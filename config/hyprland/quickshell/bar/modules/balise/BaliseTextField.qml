@@ -51,14 +51,12 @@ Rectangle {
     // state cue, not decoration, so a zone nobody is touching and
     // nothing has switched on carries no edge at all. It also means
     // the layer is allocated only for the one element in play.
-    layer.enabled: input.activeFocus
-    layer.effect: GlassCard { radius: 11 }
-    color: input.activeFocus ? Surfaces.cardRaised : Surfaces.card
+    color: input.activeFocus ? DrawerTheme.cardRaised : DrawerTheme.card
     border.width: 1
     // The focus ring is the only cue that keystrokes are landing here --
     // there is no window title bar or system focus indicator on a layer
     // surface to fall back on.
-    border.color: input.activeFocus ? Surfaces.accent : Qt.rgba(1, 1, 1, 0.10)
+    border.color: input.activeFocus ? DrawerTheme.accent : DrawerTheme.ink(0.10)
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 
@@ -85,9 +83,9 @@ Rectangle {
         clip: true
         selectByMouse: true
 
-        color: Ink.primary
-        selectionColor: Surfaces.accentStrongest
-        selectedTextColor: Ink.primary
+        color: DrawerTheme.primary
+        selectionColor: DrawerTheme.accentStrongest
+        selectedTextColor: DrawerTheme.primary
         font.family: Fonts.ui
         font.pixelSize: 13
         renderType: Text.NativeRendering
@@ -121,7 +119,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: field.placeholder
-            color: Ink.secondary
+            color: DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 13
             elide: Text.ElideRight
@@ -141,7 +139,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: field.showSecret ? "Hide" : "Show"
-        color: revealArea.containsMouse ? Ink.primary : Surfaces.accent
+        color: revealArea.containsMouse ? DrawerTheme.primary : DrawerTheme.accent
         font.family: Fonts.ui
         font.pixelSize: 11
         font.bold: true

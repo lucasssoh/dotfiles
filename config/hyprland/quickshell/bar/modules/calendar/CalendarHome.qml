@@ -128,7 +128,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
-                color: prevHit.containsMouse ? Ink.primary : Ink.secondary
+                color: prevHit.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 20
                 MouseArea {
@@ -150,7 +150,7 @@ Item {
                 // Accent while away from the current month: it is also
                 // the button that brings you back.
                 color: CalendarState.monthOffset !== 0 && titleHit.containsMouse
-                    ? Ink.accent : Ink.primary
+                    ? DrawerTheme.accent : DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 15
                 MouseArea {
@@ -171,7 +171,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "›"
-                color: nextHit.containsMouse ? Ink.primary : Ink.secondary
+                color: nextHit.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 20
                 MouseArea {
@@ -204,7 +204,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: modelData
-                        color: index >= 5 ? Ink.muted : Ink.secondary
+                        color: index >= 5 ? DrawerTheme.muted : DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 11
                     }
@@ -240,8 +240,8 @@ Item {
                             width: 28
                             height: 28
                             radius: width / 2
-                            color: modelData.today ? Surfaces.accent
-                                : cellHit.containsMouse ? Surfaces.cardHover
+                            color: modelData.today ? DrawerTheme.accent
+                                : cellHit.containsMouse ? DrawerTheme.cardHover
                                 : "transparent"
                         }
 
@@ -250,10 +250,10 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: modelData.d
-                            color: modelData.today ? Ink.onLight
-                                : modelData.holiday !== "" ? Ink.danger
-                                : modelData.weekend ? Ink.secondary
-                                : Ink.primary
+                            color: modelData.today ? DrawerTheme.onLight
+                                : modelData.holiday !== "" ? DrawerTheme.danger
+                                : modelData.weekend ? DrawerTheme.secondary
+                                : DrawerTheme.primary
                             opacity: modelData.inMonth ? 1 : 0.3
                             font.family: Fonts.ui
                             font.pixelSize: 13
@@ -270,7 +270,7 @@ Item {
                             width: 4
                             height: 4
                             radius: 2
-                            color: modelData.today ? Ink.onLight : Ink.accent
+                            color: modelData.today ? DrawerTheme.onLight : DrawerTheme.accent
                             opacity: modelData.inMonth ? 1 : 0.3
                         }
 
@@ -303,8 +303,8 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.footerText
-            color: root.hoveredText === "" ? Ink.secondary
-                : root.hoveredHoliday ? Ink.danger : Ink.primary
+            color: root.hoveredText === "" ? DrawerTheme.secondary
+                : root.hoveredHoliday ? DrawerTheme.danger : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 12
 

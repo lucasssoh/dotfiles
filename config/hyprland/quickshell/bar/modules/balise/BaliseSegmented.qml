@@ -51,28 +51,24 @@ Item {
                 // state cue, not decoration, so a zone nobody is touching and
                 // nothing has switched on carries no edge at all. It also means
                 // the layer is allocated only for the one element in play.
-                layer.enabled: pill.selected || pillArea.containsMouse
-                layer.effect: GlassCard { radius: 10 }
                 // An unselected pill needs a fill AND an outline of its
-                // own: this control sits on a `Surfaces.card` panel, and
+                // own: this control sits on a `DrawerTheme.card` panel, and
                 // painting the idle state that same card colour made the
                 // unselected options read as bare floating labels with no
                 // hit target -- confirmed on a screenshot before this was
                 // a raised tint.
+                // Selected segment inverted, the rest flat (HyperOS pass).
                 color: pill.selected
-                    ? (pillArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium)
-                    : (pillArea.containsMouse ? Surfaces.cardRaised : Surfaces.cardHover)
-                border.width: 1
-                border.color: pill.selected ? Surfaces.accent : Qt.rgba(1, 1, 1, 0.08)
+                    ? (pillArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+                    : (pillArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.cardHover)
                 Behavior on color { ColorAnimation { duration: 120 } }
-                Behavior on border.color { ColorAnimation { duration: 120 } }
 
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
-                    color: pill.selected ? Surfaces.accent : Ink.secondary
+                    color: pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 11
                     font.bold: pill.selected

@@ -38,7 +38,7 @@ Rectangle {
 
     readonly property bool critical: card.notification
         && card.notification.urgency === NotificationUrgency.Critical
-    readonly property color accent: card.critical ? Ink.danger : Ink.accent
+    readonly property color accent: card.critical ? DrawerTheme.danger : DrawerTheme.accent
     readonly property bool hasImage: card.notification && card.notification.image !== ""
     readonly property bool hasActions: card.notification && card.notification.actions.length > 0
     readonly property bool hasBody: card.notification && card.notification.body !== ""
@@ -62,7 +62,7 @@ Rectangle {
     // forgotten, and every gram of decoration on it works against that.
     property bool toast: false
 
-    color: card.toast ? "#ff000000" : "#ff1e2128"
+    color: card.toast ? DrawerTheme.panelTop : DrawerTheme.card
 
     // The card itself carries NO glass edge in either mode. It shows
     // text; it is not a button. The rule the whole bar follows now is
@@ -91,7 +91,7 @@ Rectangle {
                 width: 28
                 height: 28
                 radius: 8
-                color: "#1a1d2a"
+                color: DrawerTheme.cardRaised
 
                 Image {
                     anchors.fill: parent
@@ -124,7 +124,7 @@ Rectangle {
                     width: 12
                     height: 1.5
                     radius: 1
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: DrawerTheme.ink(0.5)
                     rotation: 45
                 }
                 Rectangle {
@@ -132,7 +132,7 @@ Rectangle {
                     width: 12
                     height: 1.5
                     radius: 1
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: DrawerTheme.ink(0.5)
                     rotation: -45
                 }
                 MouseArea {
@@ -156,7 +156,7 @@ Rectangle {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: card.notification ? card.notification.summary : ""
-                    color: Ink.primary
+                    color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 14
                     font.bold: true
@@ -168,7 +168,7 @@ Rectangle {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: card.hasBody ? card.notification.body : ""
-                    color: Qt.rgba(1, 1, 1, 0.7)
+                    color: DrawerTheme.ink(0.7)
                     font.family: Fonts.ui
                     font.pixelSize: 13
                     wrapMode: Text.WordWrap
@@ -191,7 +191,7 @@ Rectangle {
                     height: 28
                     radius: 14
                     width: actionLabel.implicitWidth + 20
-                    color: actionArea.containsMouse ? "#14161d" : "transparent"
+                    color: actionArea.containsMouse ? DrawerTheme.cardHover : "transparent"
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     // Border and glass SWAP rather than stack: at rest
@@ -203,11 +203,8 @@ Rectangle {
                     // Never in a toast, whichever state it is in -- see
                     // `toast` at the top of this file.
                     readonly property bool lit: !card.toast && actionArea.containsMouse
-                    border.width: actionPill.lit ? 0 : 1
-                    border.color: Qt.rgba(1, 1, 1, 0.18)
+                    border.width: 0
 
-                    layer.enabled: actionPill.lit
-                    layer.effect: GlassChip { radius: 14 }
 
                     Text {
                         id: actionLabel
@@ -215,7 +212,7 @@ Rectangle {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: actionPill.modelData.text
-                        color: Ink.primary
+                        color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                     }

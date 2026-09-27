@@ -20,7 +20,7 @@ Rectangle {
     signal rowActivated()
 
     readonly property bool connected: !!modelData.is_active
-    readonly property color accent: Ink.accent
+    readonly property color accent: DrawerTheme.accent
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
@@ -34,13 +34,11 @@ Rectangle {
     // state cue, not decoration, so a zone nobody is touching and
     // nothing has switched on carries no edge at all. It also means
     // the layer is allocated only for the one element in play.
-    layer.enabled: row.connected || rowArea.containsMouse
-    layer.effect: GlassCard { radius: 14 }
+    // HyperOS pass: the connected row is INVERTED (primary-ink fill,
+    // inverse-ink text), flat, no rim -- same rule as the home tiles.
     color: row.connected
-        ? rowArea.containsMouse ? Surfaces.accentStrong : Surfaces.accentSoft
-        : (rowArea.containsMouse ? Surfaces.cardHover : Surfaces.card)
-    border.width: 1
-    border.color: row.connected ? Qt.rgba(0xa8 / 255, 0xb4 / 255, 0xc4 / 255, 0.55) : "transparent"
+        ? (rowArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+        : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
 
     MouseArea {
@@ -58,8 +56,8 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: 32
         height: 32
-        radius: 10
-        color: row.connected ? Surfaces.accentStrong : Surfaces.cardHover
+        radius: width / 2
+        color: row.connected ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10) : DrawerTheme.cardRaised
 
         Text {
             anchors.centerIn: parent
@@ -68,7 +66,7 @@ Rectangle {
             // ph-plugs-connected / ph-plugs, both already verified in
             // Ethernet.qml.
             text: "\uF2AA"   // mgc router_modem; connected = accent ink + badge
-            color: row.connected ? row.accent : Ink.primary
+            color: row.connected ? DrawerTheme.onInk : DrawerTheme.primary
             font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
@@ -87,7 +85,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || row.modelData.device_name || ""
-            color: Ink.primary
+            color: row.connected ? DrawerTheme.onInk : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
@@ -100,7 +98,7 @@ Rectangle {
             text: row.connected
                 ? ("Connected" + (row.modelData.ip4_address ? " · " + row.modelData.ip4_address : ""))
                 : (row.modelData.has_carrier ? "Cable plugged in" : "Unplugged")
-            color: row.connected ? row.accent : Ink.secondary
+            color: row.connected ? DrawerTheme.onInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 11
             elide: Text.ElideRight
@@ -115,7 +113,9 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "›"
-        color: Qt.rgba(1, 1, 1, rowArea.containsMouse ? 0.6 : 0.3)
+        color: row.connected
+            ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, rowArea.containsMouse ? 0.6 : 0.3)
+            : DrawerTheme.ink(rowArea.containsMouse ? 0.6 : 0.3)
         font.family: Fonts.ui
         font.pixelSize: 17
         Behavior on color { ColorAnimation { duration: 120 } }

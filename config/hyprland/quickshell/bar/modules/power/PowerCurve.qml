@@ -47,7 +47,7 @@ Item {
     // greyed glass, and two fully saturated primaries in it would read as
     // a different application.
     readonly property color dischargeColor: "#8ecae6"
-    readonly property color chargeColor: Ink.positive
+    readonly property color chargeColor: DrawerTheme.positive
 
     // Room on the right for "100%". Everything that draws inside the plot
     // measures against plotWidth, never width.
@@ -97,8 +97,8 @@ Item {
                 // them are only a reading aid -- drawn fainter so the
                 // curve stays the most contrasted thing in the block.
                 color: (parent.modelData === 0 || parent.modelData === 100)
-                    ? Qt.rgba(1, 1, 1, 0.13)
-                    : Qt.rgba(1, 1, 1, 0.06)
+                    ? DrawerTheme.ink(0.13)
+                    : DrawerTheme.ink(0.06)
             }
 
             Text {
@@ -108,7 +108,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: parent.modelData + "%"
-                color: Ink.muted
+                color: DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 9
             }
@@ -270,7 +270,7 @@ Item {
         y: 0
         height: root.plotHeight
         x: root.hoverPoint ? root.xOf(root.hoverPoint.t) : 0
-        color: Qt.rgba(1, 1, 1, 0.22)
+        color: DrawerTheme.ink(0.22)
     }
 
     Rectangle {
@@ -283,7 +283,7 @@ Item {
         y: (root.hoverPoint ? root.yOf(root.hoverPoint.pct) : 0) - 3.5
         color: root.hoverPoint && root.hoverPoint.up ? root.chargeColor : root.dischargeColor
         border.width: 1.5
-        border.color: Surfaces.cardDeep
+        border.color: DrawerTheme.cardDeep
     }
 
     Rectangle {
@@ -296,9 +296,7 @@ Item {
         width: bubbleText.implicitWidth + 16
         height: 20
         radius: 10
-        color: Surfaces.accentStrongest
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.14)
+        color: DrawerTheme.accentStrongest
 
         // Centred on the crosshair, then clamped so it never hangs off
         // either end of the plot.
@@ -320,7 +318,7 @@ Item {
                 const when = root.hoverShowsDate ? root.dayLabel(d) + " " + clock : clock;
                 return when + "  ·  " + Math.round(root.hoverPoint.pct) + "%";
             }
-            color: Ink.primary
+            color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 10
             font.bold: true
@@ -393,7 +391,7 @@ Item {
                     if (root.tickStep >= 3600 && d.getHours() === 0) return root.dayLabel(d);
                     return Qt.formatDateTime(d, "HH:mm");
                 }
-                color: Ink.muted
+                color: DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 9
             }
@@ -409,7 +407,7 @@ Item {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "no data yet"
-        color: Ink.muted
+        color: DrawerTheme.muted
         font.family: Fonts.ui
         font.pixelSize: 11
     }

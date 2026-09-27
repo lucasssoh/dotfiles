@@ -60,16 +60,12 @@ Rectangle {
 
     // Only lit rows and hovered rows pay for the blur -- same gate
     // DrawerTile and BaliseDeviceRow both use.
-    layer.enabled: row.muted || hover.containsMouse
-    layer.effect: GlassCard { radius: 14 }
 
-    color: row.muted
-        ? (hover.containsMouse ? Surfaces.accentStrong : Surfaces.accentSoft)
-        : (hover.containsMouse ? Surfaces.cardHover : Surfaces.card)
-    border.width: 1
-    border.color: row.muted ? Qt.rgba(0xa8 / 255, 0xb4 / 255, 0xc4 / 255, 0.55) : "transparent"
+    // Flat, no rim (HyperOS pass). Muted no longer tints the row: the
+    // badge's glyph goes to the danger ink and the slider goes grey,
+    // which is where the eye already is.
+    color: hover.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
     Behavior on color { ColorAnimation { duration: 120 } }
-    Behavior on border.color { ColorAnimation { duration: 120 } }
 
     // Hover only. The card itself is not clickable: every pixel that does
     // something in this row already belongs to one of the three hit areas
@@ -90,10 +86,8 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: row.badgeSize
         height: row.badgeSize
-        radius: row.compact ? 8 : 10
-        color: row.muted
-            ? Surfaces.accentStrong
-            : (badgeHit.containsMouse ? Surfaces.accentSoft : Surfaces.cardHover)
+        radius: width / 2
+        color: badgeHit.containsMouse ? DrawerTheme.accentStrongest : DrawerTheme.cardRaised
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Text {
@@ -101,7 +95,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.glyph
-            color: row.muted ? Ink.accent : Ink.primary
+            color: row.muted ? DrawerTheme.danger : DrawerTheme.primary
             font.family: Fonts.iconMingcute
             font.pixelSize: row.compact ? 14 : 16
         }
@@ -150,7 +144,7 @@ Rectangle {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: row.title
-                    color: Ink.primary
+                    color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: row.compact ? 12 : 13
                     font.bold: true
@@ -175,7 +169,7 @@ Rectangle {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: Math.round(row.value * 100) + "%"
-                color: row.muted ? Ink.faint : Ink.secondary
+                color: row.muted ? DrawerTheme.faint : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
             }
@@ -193,7 +187,7 @@ Rectangle {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: "\uF28E"   // mgc right
-                    color: chevronHit.containsMouse ? Ink.primary : Ink.secondary
+                    color: chevronHit.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                     font.family: Fonts.iconMingcute
                     font.pixelSize: 14
                 }
@@ -222,16 +216,14 @@ Rectangle {
                 width: 30
                 height: 18
                 radius: 9
-                color: Surfaces.accentStrong
-                border.width: 1
-                border.color: Ink.accent
+                color: DrawerTheme.on
 
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: "EQ"
-                    color: Ink.accent
+                    color: DrawerTheme.onInk
                     font.family: Fonts.ui
                     font.pixelSize: 9
                     font.bold: true

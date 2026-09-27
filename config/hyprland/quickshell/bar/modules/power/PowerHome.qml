@@ -235,7 +235,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.estParts ? root.estParts.h : ""
-                        color: Ink.primary
+                        color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
                         font.bold: true
@@ -245,7 +245,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "h"
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                         rightPadding: 4
@@ -258,7 +258,7 @@ Item {
                         text: root.estParts
                             ? (root.estParts.m < 10 ? "0" + root.estParts.m : root.estParts.m)
                             : ""
-                        color: Ink.primary
+                        color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
                         font.bold: true
@@ -268,7 +268,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "min"
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                     }
@@ -287,7 +287,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: PowerState.present ? Math.round(PowerState.pct) : "—"
-                        color: Ink.primary
+                        color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
                         font.bold: true
@@ -297,7 +297,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "%"
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                     }
@@ -317,7 +317,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: root.headlineCaption
-                    color: Ink.secondary
+                    color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 11
                 }
@@ -343,7 +343,7 @@ Item {
                     text: PowerState.medianWatts > 0
                         ? root.fmtWatts(PowerState.watts) + "  ·  med. " + root.fmtWatts(PowerState.medianWatts)
                         : root.fmtWatts(PowerState.watts)
-                    color: Ink.secondary
+                    color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 11
                 }
@@ -499,7 +499,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "Discharging"
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 10
                     }
@@ -516,7 +516,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "Charging"
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 10
                     }

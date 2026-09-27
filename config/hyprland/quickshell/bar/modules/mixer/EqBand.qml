@@ -25,7 +25,7 @@ Item {
     // that refuses input while showing a value is just a lie about being
     // interactive.
     property bool active: true
-    property color accent: Ink.accent
+    property color accent: DrawerTheme.accent
 
     signal moved(real db)
 
@@ -35,7 +35,7 @@ Item {
     // y of the knob centre: t = +1 at the top, -1 at the bottom.
     readonly property real knobY: track.y + band.knobRadius + (1 - band.t) / 2 * band.travel
 
-    readonly property color liveColor: band.active ? band.accent : Ink.faint
+    readonly property color liveColor: band.active ? band.accent : DrawerTheme.faint
 
     // dB readout on top. Fixed height so the five columns stay aligned
     // whatever their values, and no decimals: a tenth of a dB is below what
@@ -48,7 +48,7 @@ Item {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: (band.value > 0 ? "+" : "") + Math.round(band.value)
-        color: Math.round(band.value) === 0 ? Ink.muted : band.liveColor
+        color: Math.round(band.value) === 0 ? DrawerTheme.muted : band.liveColor
         font.family: Fonts.ui
         font.pixelSize: 10
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -63,7 +63,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         width: 4
         radius: 2
-        color: Surfaces.cardHover
+        color: DrawerTheme.cardHover
     }
 
     // The zero line, drawn across the whole column rather than just the
@@ -74,7 +74,7 @@ Item {
         anchors.right: parent.right
         y: track.y + track.height / 2
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.10)
+        color: DrawerTheme.ink(0.10)
     }
 
     // The fill, from the zero line to the knob, in whichever direction.
@@ -95,7 +95,7 @@ Item {
         radius: band.knobRadius
         x: track.x + track.width / 2 - band.knobRadius
         y: band.knobY - band.knobRadius
-        color: band.active ? Ink.primary : Ink.muted
+        color: band.active ? DrawerTheme.primary : DrawerTheme.muted
         scale: drag.pressed ? 1.25 : (drag.containsMouse ? 1.12 : 1.0)
         Behavior on scale { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
     }
@@ -107,7 +107,7 @@ Item {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: band.label
-        color: Ink.secondary
+        color: DrawerTheme.secondary
         font.family: Fonts.ui
         font.pixelSize: 10
     }

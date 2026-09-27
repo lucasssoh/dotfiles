@@ -41,7 +41,7 @@ Item {
     signal backRequested()
     signal scanRequested()
 
-    readonly property color accent: Ink.accent
+    readonly property color accent: DrawerTheme.accent
 
     // Fixed, like NotificationCenter.qml's own 600px -- a nice-to-have
     // follow-up to make this content-driven is deferred the same way
@@ -82,9 +82,7 @@ Item {
             // state cue, not decoration, so a zone nobody is touching and
             // nothing has switched on carries no edge at all. It also means
             // the layer is allocated only for the one element in play.
-            layer.enabled: backArea.containsMouse
-            layer.effect: GlassChip { radius: 9 }
-            color: backArea.containsMouse ? Surfaces.cardRaised : Surfaces.card
+            color: backArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.card
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Text {
@@ -95,7 +93,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
                 font.bold: true
@@ -118,7 +116,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.title
-            color: Ink.primary
+            color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
             font.bold: true
@@ -133,7 +131,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Scan"
-            color: scanArea.containsMouse ? Ink.primary : root.accent
+            color: scanArea.containsMouse ? DrawerTheme.primary : root.accent
             font.family: Fonts.ui
             font.pixelSize: 13
 
@@ -167,9 +165,7 @@ Item {
         // state cue, not decoration, so a zone nobody is touching and
         // nothing has switched on carries no edge at all. It also means
         // the layer is allocated only for the one element in play.
-        layer.enabled: root.masterChecked || masterArea.containsMouse
-        layer.effect: GlassCard { radius: 12 }
-        color: masterArea.containsMouse ? Surfaces.cardHover : Surfaces.card
+        color: masterArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Column {
@@ -185,7 +181,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterTitle
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
                 font.bold: true
@@ -197,7 +193,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterSubtitle
-                color: Ink.secondary
+                color: DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -214,14 +210,14 @@ Item {
             width: 40
             height: 22
             radius: 11
-            color: root.masterChecked ? root.accent : Qt.rgba(1, 1, 1, 0.18)
+            color: root.masterChecked ? root.accent : DrawerTheme.ink(0.18)
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Rectangle {
                 width: 18
                 height: 18
                 radius: 9
-                color: "#0c0c0e"
+                color: DrawerTheme.onInk
                 anchors.verticalCenter: parent.verticalCenter
                 x: root.masterChecked ? parent.width - width - 2 : 2
                 Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
@@ -281,7 +277,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: sectionHeader.section.toUpperCase()
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -305,7 +301,7 @@ Item {
                     for (let i = 0; i < items.length; i++) if (items[i]._group === sectionHeader.section) n++;
                     return n > 0 ? n : "";
                 }
-                color: Qt.rgba(1, 1, 1, 0.3)
+                color: DrawerTheme.ink(0.3)
                 font.family: Fonts.ui
                 font.pixelSize: 11
             }
@@ -317,7 +313,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.emptyText
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: DrawerTheme.ink(0.4)
             font.family: Fonts.ui
             font.pixelSize: 13
         }

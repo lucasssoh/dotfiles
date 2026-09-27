@@ -20,7 +20,7 @@ Text {
 
     renderType: Text.NativeRendering
     font.hintingPreference: Font.PreferNoHinting
-    color: Qt.rgba(1, 1, 1, 0.4)
+    color: DrawerTheme.ink(0.4)
     font.family: Fonts.ui
     font.pixelSize: 11
     font.bold: true

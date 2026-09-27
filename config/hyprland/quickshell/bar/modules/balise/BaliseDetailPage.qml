@@ -44,8 +44,8 @@ Item {
     property var profile: null         // WiredProfile (ethernet)
     signal backRequested()
 
-    readonly property color accent: Ink.accent
-    readonly property color destructive: Ink.danger
+    readonly property color accent: DrawerTheme.accent
+    readonly property color destructive: DrawerTheme.danger
 
     // ---- WiFi credential entry ------------------------------------------
     // The SSID every WiFi action on this page targets. `ap` and `details`
@@ -408,9 +408,7 @@ Item {
             // state cue, not decoration, so a zone nobody is touching and
             // nothing has switched on carries no edge at all. It also means
             // the layer is allocated only for the one element in play.
-            layer.enabled: backArea.containsMouse
-            layer.effect: GlassChip { radius: 9 }
-            color: backArea.containsMouse ? Surfaces.cardRaised : Surfaces.card
+            color: backArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.card
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Text {
@@ -419,7 +417,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
                 font.bold: true
@@ -441,7 +439,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.pageTitle
-            color: Ink.primary
+            color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
             font.bold: true
@@ -496,9 +494,7 @@ Item {
             height: 44
             radius: 12
 
-            color: root.statusConnected ? Surfaces.accentMedium : "#14161d"
-            border.width: 1
-            border.color: root.statusConnected ? root.accent : Qt.rgba(1, 1, 1, 0.12)
+            color: root.statusConnected ? DrawerTheme.on : DrawerTheme.card
 
             Text {
                 anchors.left: parent.left
@@ -509,7 +505,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.statusText
-                color: root.statusConnected ? root.accent : Ink.primary
+                color: root.statusConnected ? DrawerTheme.onInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
                 font.bold: true
@@ -538,7 +534,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.wifiEnterprise ? "SIGN IN" : "PASSWORD"
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -552,7 +548,7 @@ Item {
                 height: formColumn.implicitHeight + 28
                 radius: 12
 
-                color: Surfaces.card
+                color: DrawerTheme.card
 
                 Column {
                     id: formColumn
@@ -600,7 +596,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: (root.credAdvancedOpen ? "▾  " : "▸  ") + "EAP settings"
-                            color: advancedArea.containsMouse ? Ink.primary : Ink.secondary
+                            color: advancedArea.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                             font.bold: true
@@ -627,7 +623,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Method"
-                            color: Ink.secondary
+                            color: DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                         }
@@ -650,7 +646,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Phase 2"
-                            color: Ink.secondary
+                            color: DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 11
                         }
@@ -703,14 +699,10 @@ Item {
                         // state cue, not decoration, so a zone nobody is touching and
                         // nothing has switched on carries no edge at all. It also means
                         // the layer is allocated only for the one element in play.
-                        layer.enabled: root.canSubmit || submitArea.containsMouse
-                        layer.effect: GlassCard { radius: 20 }
                         color: {
-                            if (!root.canSubmit) return Surfaces.card;
-                            return submitArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium;
+                            if (!root.canSubmit) return DrawerTheme.card;
+                            return submitArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on;
                         }
-                        border.width: 1
-                        border.color: root.canSubmit ? root.accent : Qt.rgba(1, 1, 1, 0.10)
                         Behavior on color { ColorAnimation { duration: 120 } }
 
                         Text {
@@ -718,7 +710,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.connecting ? "Connecting…" : "Connect"
-                            color: root.canSubmit ? root.accent : Ink.secondary
+                            color: root.canSubmit ? DrawerTheme.onInk : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 14
                             font.bold: true
@@ -746,7 +738,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.metaSectionLabel
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -760,7 +752,7 @@ Item {
                 height: metaColumn.implicitHeight + 16
                 radius: 12
 
-                color: Surfaces.card
+                color: DrawerTheme.card
 
                 Column {
                     id: metaColumn
@@ -783,7 +775,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.label
-                                color: Ink.secondary
+                                color: DrawerTheme.secondary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
                             }
@@ -796,7 +788,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.value
-                                color: Ink.primary
+                                color: DrawerTheme.primary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
@@ -817,7 +809,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "OPTIONS"
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -838,9 +830,7 @@ Item {
                 // A toggle row, not a text block: it takes a click and
                 // carries an on/off state, so it keeps the glass -- lit
                 // only while it is actually on.
-                layer.enabled: root.optionsValue
-                layer.effect: GlassCard { radius: 12 }
-                color: Surfaces.card
+                color: DrawerTheme.card
 
                 Column {
                     anchors.left: parent.left
@@ -855,7 +845,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsLabel
-                        color: Ink.primary
+                        color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 14
                         font.bold: true
@@ -866,7 +856,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsSubtitle
-                        color: Ink.secondary
+                        color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 11
                         elide: Text.ElideRight
@@ -883,14 +873,14 @@ Item {
                     width: 40
                     height: 22
                     radius: 11
-                    color: root.optionsValue ? root.accent : Qt.rgba(1, 1, 1, 0.18)
+                    color: root.optionsValue ? root.accent : DrawerTheme.ink(0.18)
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     Rectangle {
                         width: 18
                         height: 18
                         radius: 9
-                        color: "#0c0c0e"
+                        color: DrawerTheme.onInk
                         anchors.verticalCenter: parent.verticalCenter
                         x: root.optionsValue ? parent.width - width - 2 : 2
                         Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
@@ -917,7 +907,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "SHARE"
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -930,7 +920,7 @@ Item {
                 width: parent.width
                 height: shareColumn.implicitHeight + 28
                 radius: 12
-                color: Surfaces.card
+                color: DrawerTheme.card
 
                 Column {
                     id: shareColumn
@@ -1004,7 +994,7 @@ Item {
                         // here is how to use it.
                         text: root.shareError !== "" ? root.shareError
                             : (root.shareMatrix ? "Point a phone's camera at this to join" : "Reading the saved key…")
-                        color: root.shareError !== "" ? root.destructive : Ink.secondary
+                        color: root.shareError !== "" ? root.destructive : DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
@@ -1023,7 +1013,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "ACTIONS"
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 font.bold: true
@@ -1044,7 +1034,7 @@ Item {
                     height: 44
                     radius: 22
                     readonly property color tint: actionBtn.modelData.style === "destructive" ? root.destructive
-                        : (actionBtn.modelData.style === "primary" ? root.accent : Ink.primary)
+                        : (actionBtn.modelData.style === "primary" ? DrawerTheme.onInk : DrawerTheme.primary)
                     // Destructive gets a faintly red-tinted fill of its
                     // own (the mockup's "Oublier ce réseau"), primary the
                     // accent tint, everything else the plain bordered
@@ -1052,17 +1042,10 @@ Item {
                     color: {
                         const hovered = actionArea.containsMouse;
                         if (actionBtn.modelData.style === "destructive")
-                            return hovered ? Surfaces.destructiveSoftHover : Surfaces.destructiveSoft;
+                            return hovered ? DrawerTheme.destructiveSoftHover : DrawerTheme.destructiveSoft;
                         if (actionBtn.modelData.style === "primary")
-                            return hovered ? Surfaces.accentStrongest : Surfaces.accentMedium;
-                        return hovered ? Surfaces.cardHover : Surfaces.card;
-                    }
-                    border.width: 1
-                    border.color: {
-                        if (actionBtn.modelData.style === "destructive")
-                            return Qt.rgba(0xff / 255, 0x6e / 255, 0x6e / 255, 0.35);
-                        if (actionBtn.modelData.style === "primary") return root.accent;
-                        return "transparent";
+                            return hovered ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on;
+                        return hovered ? DrawerTheme.cardHover : DrawerTheme.card;
                     }
                     Behavior on color { ColorAnimation { duration: 120 } }
 

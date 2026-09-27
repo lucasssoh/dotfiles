@@ -14,8 +14,8 @@ import "balise"   // RevealPop
 // SystemStats.qml's header makes for centralizing the samplers.
 //
 // The one change made in the move: `accent` is a property here, defaulted
-// to Ink.accent, where the inline version reached out to BaliseHome's own
-// `root.accent` (which was itself `Ink.accent`). Same color, no call site
+// to DrawerTheme.accent, where the inline version reached out to BaliseHome's own
+// `root.accent` (which was itself `DrawerTheme.accent`). Same color, no call site
 // affected, and a drawer that wants a different one can now say so.
 Rectangle {
     id: tile
@@ -28,7 +28,7 @@ Rectangle {
     property string glyph: ""
     property string glyphFont: Fonts.iconMingcute   // see DrawerIconBadge
     property bool active: false
-    property color accent: Ink.accent
+    property color accent: DrawerTheme.accent
     signal activated()
     // Right-click opens this tile's section list (WiFi/Bluetooth in
     // Balise); a tile with no second action routes both to the same
@@ -42,21 +42,21 @@ Rectangle {
     // state cue, not decoration, so a zone nobody is touching and nothing
     // has switched on carries no edge at all. It also means the layer is
     // allocated only for the one element in play.
-    layer.enabled: tile.active || mouseArea.containsMouse
-    layer.effect: GlassCard { radius: 20 }
     // "On" needs real contrast at rest, not just a tinted icon/status --
     // a faint accent-tinted fill plus an accent border, subtle enough to
     // still read as a card rather than a solid switch. Hover darkens or
     // brightens slightly from whichever base it is already in.
+    // HyperOS pass: flat, no rim, and "on" is an INVERSION -- the whole
+    // tile turns to the primary ink with its text and glyph cut out in
+    // the inverse one, the way HyperOS control-centre tiles light up and
+    // the way the bar's active workspace already reads. Hover is a small
+    // step in the same direction on either side.
     color: tile.active
-        ? (mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium)
-        : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep)
-    border.width: 1
-    border.color: tile.active ? tile.accent : Qt.rgba(1, 1, 1, 0.18)
+        ? (mouseArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+        : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
-    Behavior on border.color { ColorAnimation { duration: 120 } }
 
-    readonly property color fg: tile.active ? tile.accent : Ink.primary
+    readonly property color fg: tile.active ? DrawerTheme.onInk : DrawerTheme.primary
 
     // Vertically centered rather than top-anchored with a fixed margin:
     // tiles differ in whether they carry a status line, and centering
@@ -88,7 +88,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: tile.title
-            color: Ink.primary
+            color: tile.fg
             font.family: Fonts.ui
             font.pixelSize: 13
             font.bold: true
@@ -100,7 +100,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: tile.status
-            color: tile.active ? tile.fg : Ink.secondary
+            color: tile.active ? DrawerTheme.onInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 11
             elide: Text.ElideRight

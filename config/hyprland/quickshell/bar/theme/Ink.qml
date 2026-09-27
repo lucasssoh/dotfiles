@@ -81,9 +81,10 @@ QtObject {
     // moves the crossover to grey 115 where both sides score ~8.7:1, and
     // guarantees 8.65:1 across the whole 0-255 range.
     //
-    // Only the band flips. The drawers, the OSD and BatteryAlert sit over
-    // WINDOWS rather than over the wallpaper, so they have nothing to
-    // sample and keep the dark ramp above permanently -- which is why
-    // this is a plain second token and not a mode switch on `primary`.
+    // The OSD, BatteryAlert and the central island keep the dark ramp
+    // above permanently -- which is why this is a plain second token and
+    // not a mode switch on `primary`. The band's DRAWERS used to as well;
+    // since the HyperOS pass they follow the island they hang from into a
+    // light material of their own, through theme/DrawerTheme.qml.
     readonly property color onLight: "#0c0c0e"
 }

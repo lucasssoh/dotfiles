@@ -106,11 +106,11 @@ Item {
         height: 30
         radius: 8
         color: rowArea.containsMouse
-            ? (arow.destructive ? Surfaces.destructiveSoft : Surfaces.cardHover)
+            ? (arow.destructive ? DrawerTheme.destructiveSoft : DrawerTheme.cardHover)
             : "transparent"
         Behavior on color { ColorAnimation { duration: 100 } }
 
-        readonly property color fg: arow.destructive ? Ink.danger : Ink.primary
+        readonly property color fg: arow.destructive ? DrawerTheme.danger : DrawerTheme.primary
 
         MouseArea {
             id: rowArea
@@ -163,7 +163,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: arow.hint
-            color: Ink.muted
+            color: DrawerTheme.muted
             font.family: Fonts.ui
             font.pixelSize: 10
         }
@@ -217,7 +217,7 @@ Item {
                 font.hintingPreference: Font.PreferNoHinting
                 visible: LauncherActionsState.image === ""
                 text: LauncherActionsState.icon
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.iconBrand
                 font.pixelSize: 12
             }
@@ -247,7 +247,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: LauncherActionsState.label
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 12
                 font.bold: true
@@ -271,7 +271,7 @@ Item {
                     const n = LauncherActionsState.windowCount;
                     return n > 1 ? n + " windows" : "";
                 }
-                color: LauncherActionsState.forceOffered ? Ink.danger : Ink.muted
+                color: LauncherActionsState.forceOffered ? DrawerTheme.danger : DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 10
             }

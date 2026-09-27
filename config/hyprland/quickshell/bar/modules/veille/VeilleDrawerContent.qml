@@ -72,6 +72,7 @@ Item {
     // hole has to be the handle, not the full width of a clock nobody
     // ever clicks.
     DrawerHandle {
+        tint: Surfaces.accent
         id: handle
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top

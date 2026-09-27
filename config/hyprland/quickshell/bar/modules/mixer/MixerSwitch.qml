@@ -14,7 +14,7 @@ Item {
     id: sw
 
     property bool checked: false
-    property color accent: Ink.accent
+    property color accent: DrawerTheme.accent
     signal toggled(bool value)
 
     implicitWidth: 40
@@ -24,14 +24,14 @@ Item {
         id: track
         anchors.fill: parent
         radius: height / 2
-        color: sw.checked ? sw.accent : Qt.rgba(1, 1, 1, 0.18)
+        color: sw.checked ? sw.accent : DrawerTheme.ink(0.18)
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Rectangle {
             width: 18
             height: 18
             radius: 9
-            color: "#0c0c0e"
+            color: DrawerTheme.onInk
             anchors.verticalCenter: parent.verticalCenter
             x: sw.checked ? parent.width - width - 2 : 2
             Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

@@ -340,7 +340,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: "Nothing playing"
-                    color: Ink.muted
+                    color: DrawerTheme.muted
                     font.family: Fonts.ui
                     font.pixelSize: 12
 

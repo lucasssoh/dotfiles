@@ -31,7 +31,7 @@ Item {
     // "this row has no meter", which is every row except the two masters
     // -- see MixerState's own note on why peak monitoring is not free.
     property real peak: -1
-    property color accent: Ink.accent
+    property color accent: DrawerTheme.accent
 
     signal moved(real v)
 
@@ -39,7 +39,11 @@ Item {
     // room -- see its Rectangle below.
     implicitHeight: root.peak >= 0 ? 18 : 14
 
-    readonly property real knobRadius: 6
+    // HyperOS pass: a thick rounded bar whose FILL is the handle -- no
+    // thin wire, no separate knob. `knobRadius` survives as half the bar's
+    // thickness so the fill never gets shorter than a full round end.
+    readonly property real barHeight: 12
+    readonly property real knobRadius: root.barHeight / 2
     readonly property real travel: Math.max(1, root.width - root.knobRadius * 2)
     // Clamped both ends: a source left at 1.5 by something else while
     // `maximum` is 1.0 would otherwise push the knob past the right edge.
@@ -50,16 +54,16 @@ Item {
     // that is how every mixer behaves and it is the useful behaviour
     // (set the level you want, then unmute) -- so the greying is a
     // statement about the audio, not about the control.
-    readonly property color liveColor: root.muted ? Ink.faint : root.accent
+    readonly property color liveColor: root.muted ? DrawerTheme.faint : root.accent
 
     Rectangle {
         id: track
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        height: 6
-        radius: 3
-        color: Surfaces.cardHover
+        height: root.barHeight
+        radius: root.barHeight / 2
+        color: DrawerTheme.cardRaised
     }
 
     // Unity mark, only on the tracks that go past it. Without it a mic at
@@ -68,9 +72,9 @@ Item {
     Rectangle {
         visible: root.maximum > 1.0
         width: 1
-        height: 6
+        height: root.barHeight
         radius: 0
-        color: Qt.rgba(1, 1, 1, 0.22)
+        color: DrawerTheme.ink(0.22)
         x: root.knobRadius + (1.0 / root.maximum) * root.travel
         anchors.verticalCenter: track.verticalCenter
     }
@@ -79,7 +83,7 @@ Item {
         id: fill
         anchors.left: track.left
         anchors.verticalCenter: track.verticalCenter
-        width: root.knobX
+        width: root.knobX + root.knobRadius
         height: track.height
         radius: track.radius
         color: root.liveColor
@@ -104,20 +108,6 @@ Item {
         radius: 1
         color: root.accent
         opacity: root.muted ? 0.18 : 0.45
-    }
-
-    Rectangle {
-        id: knob
-        width: root.knobRadius * 2
-        height: root.knobRadius * 2
-        radius: root.knobRadius
-        x: root.knobX - root.knobRadius
-        anchors.verticalCenter: track.verticalCenter
-        color: Ink.primary
-        // Grows under the pointer and while dragging, which is the only
-        // feedback a 12px circle can give that it is the thing being held.
-        scale: drag.pressed ? 1.25 : (drag.containsMouse ? 1.12 : 1.0)
-        Behavior on scale { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
     }
 
     MouseArea {

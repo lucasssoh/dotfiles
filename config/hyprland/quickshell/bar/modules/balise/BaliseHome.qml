@@ -360,7 +360,7 @@ Item {
     // (`.balise-tile.active`) -- same "accent tints the glyph/badge, the
     // pill itself never fills solid" idea BatteryAlert's own checkBadge
     // ring uses, not a new recipe.
-    readonly property color accent: Ink.accent
+    readonly property color accent: DrawerTheme.accent
 
     // ---- entrance cascade -------------------------------------------
     // Lives in RevealPop.qml + services/BaliseReveal.qml now: the section
@@ -374,7 +374,7 @@ Item {
     // Kept as an alias so every `Tile { ... }` below reads exactly as it
     // did -- see that file's header for the one difference (`accent` is a
     // property there instead of reaching into this file's `root.accent`,
-    // and defaults to the same Ink.accent).
+    // and defaults to the same DrawerTheme.accent).
     component Tile: DrawerTile {}
 
     // Small-caps group label above a block of tiles/rows -- the mockup's
@@ -408,8 +408,6 @@ Item {
         // state cue, not decoration, so a zone nobody is touching and
         // nothing has switched on carries no edge at all. It also means
         // the layer is allocated only for the one element in play.
-        layer.enabled: trow.checked || mouseArea.containsMouse
-        layer.effect: GlassCard { radius: 12 }
         // The card itself carries the state -- there is no switch. It used
         // to have a real track+thumb on the right; dropping it and tinting
         // the card instead is exactly what the WiFi/Bluetooth/Ethernet
@@ -427,13 +425,11 @@ Item {
         // off/rest cell, which is `cardDeep` on both: everything in this
         // panel that is switched off now recedes into it, and only what
         // is on or under the pointer comes forward.
+        // Inverted when on, flat and rimless -- same rule as DrawerTile.
         color: trow.checked
-            ? (mouseArea.containsMouse ? Surfaces.accentStrongest : Surfaces.accentMedium)
-            : (mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep)
-        border.width: 1
-        border.color: trow.checked ? root.accent : Qt.rgba(1, 1, 1, 0.18)
+            ? (mouseArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+            : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
         Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
 
         // The same badge the connectivity tiles above carry -- asked
         // for, so that SYSTEM reads as the same kind of control as the
@@ -467,7 +463,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: trow.checked ? root.accent : Ink.primary
+                color: trow.checked ? DrawerTheme.onInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 // 13, matching DrawerTile's own title, not the 14 these
                 // rows used before they had icons. Two reasons and they
@@ -486,7 +482,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: Ink.secondary
+                color: trow.checked ? DrawerTheme.onInk2 : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -523,18 +519,10 @@ Item {
         // state cue, not decoration, so a zone nobody is touching and
         // nothing has switched on carries no edge at all. It also means
         // the layer is allocated only for the one element in play.
-        layer.enabled: mouseArea.containsMouse
-        layer.effect: GlassCard { radius: 12 }
-        // Near-black at rest, same as ToggleRow above -- asked for, and
-        // the two sit next to each other in the SYSTEM group so they
-        // have to match.
-        color: mouseArea.containsMouse ? Surfaces.cardHover : Surfaces.cardDeep
-        // A hairline this row did NOT have before, matching ToggleRow's
-        // own. Without it a near-black fill on a near-black panel leaves
-        // nothing at all to aim at: the glass edge only arrives on
-        // hover, so at rest the border IS the button.
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.18)
+        // Flat card, same as ToggleRow above (the two sit side by side in
+        // SYSTEM). The hairline it used to need is gone: the neutral card
+        // tier now stands off the black panel on its own.
+        color: mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
         Behavior on color { ColorAnimation { duration: 120 } }
 
         // Never `active`: a one-shot action has no on-state to tint,
@@ -555,7 +543,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: arow.title
-            color: Ink.primary
+            color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13   // matches ToggleRow and DrawerTile
             font.bold: true
@@ -644,11 +632,10 @@ Item {
                 // display (it names the network you are on), so it has
                 // no active state to brighten into; it simply recedes,
                 // and its border is what keeps the shape. See
-                // Surfaces.cardDeep.
-                color: Surfaces.cardDeep
-                border.width: 1
-                border.color: root.heroConnected ? Qt.rgba(0xa8 / 255, 0xb4 / 255, 0xc4 / 255, 0.35) : Qt.rgba(1, 1, 1, 0.08)
-                Behavior on border.color { ColorAnimation { duration: 160 } }
+                // DrawerTheme.cardDeep.
+                // Inverted while connected, like every "on" control here.
+                color: root.heroConnected ? DrawerTheme.on : DrawerTheme.card
+                Behavior on color { ColorAnimation { duration: 160 } }
 
                 Column {
                     anchors.left: parent.left
@@ -663,7 +650,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroName
-                        color: Ink.primary
+                        color: root.heroConnected ? DrawerTheme.onInk : DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
                         font.bold: true
@@ -674,7 +661,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroStatus
-                        color: root.heroConnected ? root.accent : Ink.secondary
+                        color: root.heroConnected ? DrawerTheme.onInk2 : DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
                         elide: Text.ElideRight
@@ -693,8 +680,8 @@ Item {
                     height: 36
                     radius: 18
                     color: root.heroConnected
-                        ? Surfaces.accentStrong
-                        : Surfaces.cardHover
+                        ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10)
+                        : DrawerTheme.cardRaised
                     Behavior on color { ColorAnimation { duration: 160 } }
 
                     Text {
@@ -702,7 +689,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroGlyph
-                        color: root.heroConnected ? root.accent : Ink.secondary
+                        color: root.heroConnected ? DrawerTheme.onInk : DrawerTheme.secondary
                         font.family: Fonts.iconMingcute
                         font.pixelSize: 18
                     }

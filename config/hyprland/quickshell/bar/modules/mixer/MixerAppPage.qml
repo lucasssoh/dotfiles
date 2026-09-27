@@ -70,7 +70,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "\uEFF6"   // mgc left
-                color: backHit.containsMouse ? Ink.primary : Ink.secondary
+                color: backHit.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                 font.family: Fonts.iconMingcute
                 font.pixelSize: 18
 
@@ -92,7 +92,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: page.glyph
-                color: Ink.secondary
+                color: DrawerTheme.secondary
                 font.family: Fonts.iconMingcute
                 font.pixelSize: 15
             }
@@ -106,7 +106,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: page.appLabel
-                color: Ink.primary
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 15
                 font.bold: true
@@ -141,7 +141,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: "All " + MixerState.slotCount + " equalizer chains are in use — "
                   + "turn one off on another application"
-            color: Ink.danger
+            color: DrawerTheme.danger
             font.family: Fonts.ui
             font.pixelSize: 11
             wrapMode: Text.WordWrap
@@ -155,7 +155,7 @@ Item {
             width: parent.width
             height: 132
             radius: 14
-            color: Surfaces.card
+            color: DrawerTheme.card
 
             RevealPop { item: eqCard; index: 2 }
 
@@ -218,7 +218,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "Custom"
-                color: Ink.muted
+                color: DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 11
             }
@@ -246,12 +246,9 @@ Item {
                     height: 24
                     radius: 12
                     color: chip.current
-                        ? Surfaces.accentStrong
-                        : (chipHit.containsMouse ? Surfaces.cardHover : Surfaces.card)
-                    border.width: 1
-                    border.color: chip.current ? Ink.accent : "transparent"
+                        ? DrawerTheme.on
+                        : (chipHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
                     Behavior on color { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
 
                     Text {
                         id: chipLabel
@@ -259,7 +256,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: chip.modelData.name
-                        color: chip.current ? Ink.accent : Ink.secondary
+                        color: chip.current ? DrawerTheme.onInk : DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 11
                     }

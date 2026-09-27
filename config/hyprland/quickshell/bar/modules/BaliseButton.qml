@@ -203,7 +203,10 @@ Item {
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "\uF32C"   // mgc settings_3_fill
+            // mgc switch_fill -- two toggles, "quick settings", the
+            // HyperOS control-centre idea (picked over the gear, which
+            // read heavier than the wifi glyph beside it).
+            text: "\uF41C"
             color: root.ink.primary
             font.family: Fonts.iconMingcute
             font.pixelSize: 15

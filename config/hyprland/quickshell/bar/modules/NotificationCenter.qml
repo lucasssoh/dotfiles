@@ -255,9 +255,9 @@ Item {
                 width: 40
                 height: 40
                 radius: 12
-                color: NotificationState.dnd ? Surfaces.accent
-                     : dndHover.containsMouse ? Surfaces.cardHover
-                     : Surfaces.card
+                color: NotificationState.dnd ? DrawerTheme.accent
+                     : dndHover.containsMouse ? DrawerTheme.cardHover
+                     : DrawerTheme.card
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 // Same glass edge every other block in this bar now
@@ -267,15 +267,13 @@ Item {
                 //
                 // Only while ON or hovered -- asked for: the glass is a
                 // state cue, not decoration.
-                layer.enabled: NotificationState.dnd || dndHover.containsMouse
-                layer.effect: GlassCard { radius: 12 }
 
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: NotificationState.dnd ? "\uF12A" : "\uF126"   // mgc notification_off / notification
-                    color: NotificationState.dnd ? "#0c0c0e" : Ink.primary
+                    color: NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.primary
                     font.family: Fonts.iconMingcute
                     font.pixelSize: 18
                 }
@@ -300,7 +298,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: Qt.formatDateTime(clock.date, "HH:mm")
-                    color: Ink.primary
+                    color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 34
                     font.weight: Font.DemiBold
@@ -312,7 +310,7 @@ Item {
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
-                    color: Ink.secondary
+                    color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 13
                 }
@@ -343,7 +341,7 @@ Item {
             width: parent.width
             height: mediaColumn.height + 24
             radius: 16
-            color: Surfaces.card
+            color: DrawerTheme.card
             visible: root.mprisPlayer !== null
 
 
@@ -377,7 +375,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.mprisPlayer ? (root.mprisPlayer.trackTitle || root.mprisPlayer.identity || "") : ""
-                            color: Ink.primary
+                            color: DrawerTheme.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
                             elide: Text.ElideRight
@@ -388,7 +386,7 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.mprisPlayer ? (root.mprisPlayer.trackArtist || "") : ""
-                            color: Qt.rgba(1, 1, 1, 0.6)
+                            color: DrawerTheme.ink(0.6)
                             font.family: Fonts.ui
                             font.pixelSize: 12
                             elide: Text.ElideRight
@@ -465,7 +463,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.formatDuration(root.mprisPosition)
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: DrawerTheme.ink(0.5)
                         font.family: Fonts.ui
                         font.pixelSize: 11
                         // Same reason as the clock's own: this one ticks
@@ -481,7 +479,7 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.formatDuration(root.mprisTrackLength)
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: DrawerTheme.ink(0.5)
                         font.family: Fonts.ui
                         font.pixelSize: 11
                         font.features: ({ "tnum": 1 })
@@ -501,13 +499,13 @@ Item {
                         visible: progressRow.hasLength
                         height: 3
                         radius: height / 2
-                        color: Qt.rgba(1, 1, 1, 0.14)
+                        color: DrawerTheme.ink(0.14)
 
                         Rectangle {
                             width: parent.width * progressRow.progress
                             height: parent.height
                             radius: parent.radius
-                            color: Surfaces.accent
+                            color: DrawerTheme.accent
                         }
                     }
                 }
@@ -542,7 +540,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: Surfaces.cardHover
+            color: DrawerTheme.cardHover
             opacity: (tb.enabled && hover.containsMouse) ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 110 } }
 
@@ -552,8 +550,6 @@ Item {
             // entirely at 0), so the transport buttons still show
             // nothing at rest -- the glass appears with the hover, it
             // does not put a permanent ring on every button.
-            layer.enabled: opacity > 0.01
-            layer.effect: GlassChip { radius: 15 }
         }
 
         Text {
@@ -561,8 +557,8 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: tb.glyph
-            color: !tb.enabled ? Qt.rgba(1, 1, 1, 0.22)
-                 : hover.containsMouse ? Surfaces.accent : Ink.primary
+            color: !tb.enabled ? DrawerTheme.ink(0.22)
+                 : hover.containsMouse ? DrawerTheme.accent : DrawerTheme.primary
             Behavior on color { ColorAnimation { duration: 110 } }
             font.family: Fonts.iconMingcute
             font.pixelSize: tb.glyphSize
@@ -602,7 +598,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Clear all"
-            color: NotificationState.trackedNotifications.values.length > 0 ? Ink.accent : Ink.faint
+            color: NotificationState.trackedNotifications.values.length > 0 ? DrawerTheme.accent : DrawerTheme.faint
             font.family: Fonts.ui
             font.pixelSize: 13
         }
@@ -675,7 +671,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "No notifications"
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: DrawerTheme.ink(0.4)
             font.family: Fonts.ui
             font.pixelSize: 13
         }

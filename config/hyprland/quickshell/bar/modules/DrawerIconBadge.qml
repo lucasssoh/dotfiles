@@ -18,7 +18,7 @@ Rectangle {
 
     property string glyph: ""
     property bool active: false
-    property color accent: Ink.accent
+    property color accent: DrawerTheme.accent
     // Which icon face `glyph` is a codepoint of. MingCute since the
     // HyperOS pass, for every drawer; kept as a property so one badge can
     // still borrow a glyph MingCute lacks.
@@ -27,8 +27,14 @@ Rectangle {
     visible: badge.glyph !== ""
     width: 30
     height: 30
-    radius: 9
-    color: badge.active ? Surfaces.accentStrong : Surfaces.cardHover
+    // Round since the HyperOS pass (control-centre toggles are discs).
+    // `active` means the badge sits on an INVERTED control (see
+    // DrawerTile), so it goes to a faint veil of the inverse ink rather
+    // than a fill of its own, and its glyph takes that inverse ink.
+    radius: width / 2
+    color: badge.active
+        ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10)
+        : DrawerTheme.cardRaised
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Text {
@@ -36,7 +42,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: badge.glyph
-        color: badge.active ? badge.accent : Ink.primary
+        color: badge.active ? DrawerTheme.onInk : DrawerTheme.primary
         font.family: badge.glyphFont
         // A TWO-glyph badge -- PowerHome's double bolt, the only one so
         // far -- does not fit at the single-glyph size. Every Lucide

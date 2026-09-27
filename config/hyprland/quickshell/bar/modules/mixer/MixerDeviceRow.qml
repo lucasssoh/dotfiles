@@ -28,15 +28,13 @@ Rectangle {
     height: 34
     radius: 10
 
-    layer.enabled: hit.containsMouse
-    layer.effect: GlassCard { radius: 10 }
 
     // The current entry gets no fill at all, only the tick on the right.
     // It was given the lit `accentSoft` treatment first and that was
     // wrong: in a list whose whole job is "click one of these", a
     // highlighted row reads as the recommended action rather than as the
     // one already in effect.
-    color: hit.containsMouse ? Surfaces.cardHover : "transparent"
+    color: hit.containsMouse ? DrawerTheme.cardHover : "transparent"
     Behavior on color { ColorAnimation { duration: 120 } }
 
     MouseArea {
@@ -58,7 +56,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: dev.glyph
-        color: dev.current ? Ink.accent : Ink.secondary
+        color: dev.current ? DrawerTheme.accent : DrawerTheme.secondary
         font.family: Fonts.iconMingcute
         font.pixelSize: 14
     }
@@ -72,7 +70,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: dev.title
-        color: dev.current ? Ink.primary : Ink.secondary
+        color: dev.current ? DrawerTheme.primary : DrawerTheme.secondary
         font.family: Fonts.ui
         font.pixelSize: 12
         elide: Text.ElideRight
@@ -87,7 +85,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "\uEB80"   // mgc check
-        color: Ink.accent
+        color: DrawerTheme.accent
         font.family: Fonts.iconMingcute
         font.pixelSize: 14
     }

@@ -32,6 +32,11 @@ Item {
     // component knows nothing about Balise or notifications.
     signal closeRequested()
 
+    // The grabber's colour. DrawerTheme's by default, so it follows the
+    // band's drawers into light mode; Veille, on the always-black central
+    // island, pins it back to the dark material.
+    property color tint: DrawerTheme.accent
+
     // Taller than the line it draws: the hit target is the whole 18px
     // band, so the handle is grabbable without having to land on 4px.
     implicitHeight: 18
@@ -46,7 +51,7 @@ Item {
         width: 48
         height: 4
         radius: height / 2
-        color: Surfaces.accent
+        color: root.tint
         // Quiet at rest, clearly live on hover -- it is an affordance,
         // not a piece of the panel's information.
         opacity: hit.containsMouse ? 0.9 : 0.4
