@@ -11,12 +11,17 @@ import "../theme"
 //   - the body, the state colour at 30%: the empty part of the cell,
 //     fainter past `capAt` (Lenovo conservation mode) when one is set;
 //   - the fill, the state colour, as wide as the charge;
-//   - the percentage, white with a dark outline -- see below.
+//   (the percentage is NOT in here any more -- see Battery.qml).
 //
 // No colour of its own: `color` is whatever Battery.qml's batteryColor
 // resolves to (primary ink, charging green, conservation blue, low red or
 // amber), so the pill follows the band's light/dark material flip like
-// every other module. The number is the one fixed colour -- see there.
+// every other module.
+//
+// The percentage lived inside this pill for a while (HyperOS-style, then
+// with an outlined single colour) and went back out to Battery.qml's slot
+// on the left, in the band's one text style (asked for). Without it the
+// pill is a plain gauge again, so it shrank back to 24x12.
 Item {
     id: root
 
@@ -25,13 +30,10 @@ Item {
     // Where the charge will stop, 0-100, or negative for no tick. Set to
     // 60 by Battery.qml while conservation mode caps the cell.
     property real capAt: -1
-    // The number's one colour and its outline -- see the Text below.
-    property color numberColor: "#f2f2f7"
-    property color numberOutline: "#0c0c0e"
 
-    readonly property real bodyWidth: 30
-    readonly property real bodyHeight: 15
-    readonly property real bodyRadius: 5
+    readonly property real bodyWidth: 24
+    readonly property real bodyHeight: 12
+    readonly property real bodyRadius: 4
     readonly property real fillWidth: root.bodyWidth * Math.max(0, Math.min(1, root.percent / 100))
 
     implicitWidth: root.bodyWidth + 1.5 + nub.width
@@ -95,47 +97,6 @@ Item {
             color: root.color
         }
 
-    }
-
-    // Drawn OVER the glass cell, not inside it: inside, the lens
-    // refracted the digits' own pixels toward the edge and smeared their
-    // rim into coloured blots above and below them.
-    //
-    // The percentage: ONE colour, white, with a thin dark outline.
-    //
-    // It used to be drawn twice and split on the fill's edge (dark over
-    // the fill, light over the empty part). Asked for instead: a single
-    // colour that holds against white, black AND grey -- the pill's fill
-    // is the primary ink (white on the dark band, black on the light one)
-    // and its empty part is that ink at 30%, a mid grey. Measured, no
-    // flat colour can: the best neutral reaches ~4:1 on white and black
-    // but ~1:1 on the grey, and the best saturated one (a violet) is
-    // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
-    // An outline sidesteps the maths: the white body carries the black
-    // background, the dark rim carries the white and grey ones, and it
-    // survives the state colours (charging green, low red...) too.
-    //
-    // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
-    // native rasterisation snaps the digits to the pixel grid and they
-    // read blocky; the curve renderer antialiases the outline in
-    // greyscale. QtRendering (distance field) fringed them in colour.
-
-    Text {
-        id: number
-        width: root.bodyWidth
-        height: root.bodyHeight
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        renderType: Text.CurveRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: Math.round(root.percent)
-        color: root.numberColor
-        style: Text.Outline
-        styleColor: root.numberOutline
-        font.family: Fonts.ui
-        font.pixelSize: 11
-        font.weight: Font.Medium
-        font.features: { "tnum": 1 }
     }
 
     // Terminal nub, at 55% so it reads as part of the cell without

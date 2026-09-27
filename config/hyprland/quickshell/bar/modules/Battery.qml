@@ -150,13 +150,12 @@ Item {
         NumberAnimation { target: label; property: "scale"; to: 1.0; duration: 380; easing.type: Easing.OutBack }
     }
 
-    // HyperOS pass: the percentage moved INSIDE the battery (see
-    // BatteryPill.qml) instead of sitting in a fixed slot to its left, so
-    // the number no longer needs its own width reservation -- the pill is
-    // a constant 31.5px whatever it reads.
+    // Percentage, then gauge, then (on AC only) the mains badge. The
+    // percentage sat inside the pill for part of the HyperOS pass and is
+    // back beside it -- see the slot below and BatteryPill.qml.
     //
     // The one thing that still changes this module's width is the mains
-    // badge after it: a MingCute bolt while charging, the Lucide plug
+    // badge after the gauge: a MingCute bolt while charging, the Lucide plug
     // while the cell is at rest on AC (MingCute has no plug glyph). It
     // appears and disappears only when the charger goes in or out, never
     // with the percentage, which is the rule the old fixed slot existed
@@ -164,33 +163,41 @@ Item {
     Row {
         id: label
         anchors.centerIn: parent
-        spacing: 3
+        spacing: 4
         visible: root.present
+
+        // The percentage, left of the gauge, in a fixed slot: pinned to
+        // pctRef's width (a hidden "100", the widest it can read) and
+        // right-aligned, so 1/10/100 never shift the row and the digits
+        // sit flush against the gauge. Same single text style as the rest
+        // of the band (13px Medium); state-coloured like the gauge.
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.present ? Math.round(root.pct) : ""
+            color: root.batteryColor
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            font.weight: Font.Medium
+            font.features: { "tnum": 1 }
+            width: pctRef.implicitWidth
+            horizontalAlignment: Text.AlignRight
+        }
+        Text {
+            id: pctRef
+            visible: false
+            text: "100"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            font.weight: Font.Medium
+            font.features: { "tnum": 1 }
+        }
 
         BatteryPill {
             anchors.verticalCenter: parent.verticalCenter
             percent: root.present ? root.pct : 100
             color: root.batteryColor
-            // The number is the island's primary ink (white on the dark
-            // band, black on the light one) and its rim is the colour of
-            // the pill's EMPTY part -- asked for, so the rim melts into the
-            // empty side instead of being a hard black/white line.
-            //
-            // Recomputed opaque rather than reused as is: the empty part
-            // is the state colour at 30% over the band, and a 30% rim
-            // would let the fill show through and lose the digits on the
-            // full side. So it is that same 30% mix, done here over the
-            // band's real surface (IslandInk.surface: sampled wallpaper +
-            // veil) -- first tried over the inverse ink instead, which is
-            // near-white on the light material and left a pale halo.
-            // Falls back to the inverse ink on a plain Ink ramp.
-            numberColor: root.ink.primary
-            numberOutline: {
-                const c = root.batteryColor;
-                const o = root.ink.surface !== undefined ? root.ink.surface : root.ink.onLight;
-                return Qt.rgba(c.r * 0.3 + o.r * 0.7, c.g * 0.3 + o.g * 0.7,
-                               c.b * 0.3 + o.b * 0.7, 1);
-            }
             // Where conservation mode will stop the charge -- shown only
             // while the machine is on AC, where it answers "how far will
             // this go". On battery the cap is irrelevant and the tick
