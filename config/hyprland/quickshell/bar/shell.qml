@@ -575,6 +575,10 @@ ShellRoot {
             // band instead. The band keeps the 31px the island used to
             // set, and the island is inset from it on both sides.
             readonly property int bandHeight: 31
+            // Top gap 3 -> 1 (asked for: less space between the screen's
+            // top edge and the capsule); the bottom keeps its 3, so the
+            // capsule grows by the 2px it gave up at the top.
+            readonly property int islandTopInset: 1
             readonly property int islandInset: 3
 
             IslandInk {
@@ -966,7 +970,7 @@ ShellRoot {
                 // centerIsland.rowHeight directly. `exclusiveZone` stays
                 // at 24 -- that is what tiled windows reserve, and this
                 // island was already free to overhang it.
-                rowHeight: bar.bandHeight - 2 * bar.islandInset
+                rowHeight: bar.bandHeight - bar.islandTopInset - bar.islandInset
                 // Floating capsule (HyperOS pass): rounded on all four
                 // corners, inset from the band's top and bottom. See
                 // DrawerIsland's `rowRadius` for how an 18px corner fits
@@ -979,7 +983,7 @@ ShellRoot {
                 // See DrawerIsland's `rowLens`.
                 rowLens: true
                 anchors.top: parent.top
-                anchors.topMargin: bar.islandInset
+                anchors.topMargin: bar.islandTopInset
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 // `shell.veille` is the single shared logic instance
