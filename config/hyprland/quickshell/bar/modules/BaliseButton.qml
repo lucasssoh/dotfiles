@@ -99,11 +99,10 @@ Item {
     // the old one came from the font's GSUB ligature table, which
     // misattributes names -- render and look before trusting it.
     function netIcon() {
-        // Ethernet stays the Lucide glyph (MingCute has none, see the
-        // slot's `glyphFont` below). MingCute has ONE wifi glyph, not
-        // Lucide's three strength tiers, so strength moved from the
-        // glyph's shape to its tone -- see `netWeak`.
-        if (root.netKind === "ethernet") return "\uE125";
+        // MingCute has ONE wifi glyph, not Lucide's three strength
+        // tiers, so strength moved from the glyph's shape to its tone --
+        // see `netWeak`.
+        if (root.netKind === "ethernet") return "\uF2AA";   // mgc router_modem
         if (root.netKind === "wifi") return "\uF5CA";   // mgc wifi_fill
         return "";
     }
@@ -188,7 +187,6 @@ Item {
         }
         IconSlot {
             glyph: root.netIcon()
-            glyphFont: root.netKind === "ethernet" ? Fonts.iconPhosphorBold : Fonts.iconMingcute
             glyphColor: root.netWeak ? root.ink.secondary : root.ink.primary
         }
 

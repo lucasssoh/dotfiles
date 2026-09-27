@@ -105,9 +105,9 @@ Rectangle {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: "\uE059"   // lu-bell -- generic fallback when no image/icon
+                    text: "\uF126"   // mgc notification -- generic fallback when no image/icon
                     color: card.accent
-                    font.family: Fonts.iconPhosphor
+                    font.family: Fonts.iconMingcute
                     font.pixelSize: 14
                 }
             }

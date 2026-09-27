@@ -1,14 +1,6 @@
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <rect width="18" height="18" x="3" y="3" rx="2" />
-  <path d="M12 3v18" />
+<!-- MingCute columns_2_fill (Apache-2.0, mingcute_icon 2.9.72), for Roue.
+     Filled, not stroked: currentColor is the fill, which icons.rs swaps
+     for the normal/accent colours exactly as it did the Lucide stroke. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <path fill="currentColor" d="M11 3v18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm8 0a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6V3z"/>
 </svg>

@@ -72,9 +72,11 @@ Rectangle {
             font.hintingPreference: Font.PreferNoHinting
             // ph-bluetooth-connected / ph-bluetooth, both already verified
             // in Bluetooth.qml.
-            text: row.connected ? String.fromCharCode(0xe0dc) : String.fromCharCode(0xe0da)
+            // mgc bluetooth either way: "connected" is the accent ink and
+            // the tinted badge behind it, MingCute has no separate glyph.
+            text: "\uEA40"
             color: row.connected ? row.accent : Ink.primary
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
     }

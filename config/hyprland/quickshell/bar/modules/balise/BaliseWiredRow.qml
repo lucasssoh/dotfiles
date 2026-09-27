@@ -67,9 +67,9 @@ Rectangle {
             font.hintingPreference: Font.PreferNoHinting
             // ph-plugs-connected / ph-plugs, both already verified in
             // Ethernet.qml.
-            text: row.connected ? String.fromCharCode(0xedde) : String.fromCharCode(0xedda)   // ph-network / ph-network-x
+            text: "\uF2AA"   // mgc router_modem; connected = accent ink + badge
             color: row.connected ? row.accent : Ink.primary
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
     }

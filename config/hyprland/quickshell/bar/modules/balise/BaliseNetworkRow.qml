@@ -77,14 +77,13 @@ Rectangle {
             font.hintingPreference: Font.PreferNoHinting
             // ph-wifi-low/medium/high, same 3 tiers + thresholds as
             // Network.qml's own icon() (Phosphor ships no more than 3).
-            text: {
-                const s = row.modelData.signal || 0;
-                if (s < 33) return String.fromCharCode(0xe4ec);
-                if (s < 66) return String.fromCharCode(0xe4ee);
-                return String.fromCharCode(0xe4ea);
-            }
+            // MingCute wifi (HyperOS pass). It has one glyph, not three
+            // strength tiers, so a weak network is drawn fainter instead.
+            text: "\uF5CA"
+            opacity: (row.modelData.signal || 0) < 33 ? 0.45
+                   : (row.modelData.signal || 0) < 66 ? 0.75 : 1.0
             color: row.connected ? row.accent : Ink.primary
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
     }

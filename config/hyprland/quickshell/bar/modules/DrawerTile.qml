@@ -26,6 +26,7 @@ Rectangle {
     property string title: ""
     property string status: ""
     property string glyph: ""
+    property string glyphFont: Fonts.iconPhosphor   // see DrawerIconBadge
     property bool active: false
     property color accent: Ink.accent
     signal activated()
@@ -78,6 +79,7 @@ Rectangle {
         // same badge -- see that file.
         DrawerIconBadge {
             glyph: tile.glyph
+            glyphFont: tile.glyphFont
             active: tile.active
             accent: tile.accent
         }

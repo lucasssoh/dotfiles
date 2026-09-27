@@ -1,16 +1,15 @@
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-  <path d="M12 19v3" />
-  <path d="M10.4 10.9 13.6 14.1 12 15.7 12 9.3 13.6 10.9 10.4 14.1" />
+<!-- MingCute mic + bluetooth_fill (Apache-2.0, mingcute_icon 2.9.72), for Roue.
+     Filled, not stroked: currentColor is the fill, which icons.rs swaps
+     for the normal/accent colours exactly as it did the Lucide stroke. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <defs>
+    <mask id="cut">
+      <rect width="24" height="24" fill="white"/>
+      <circle cx="18.5" cy="18.5" r="6.5" fill="black"/>
+    </mask>
+  </defs>
+  <!-- the device glyph, with a disc knocked out bottom-right for the badge -->
+  <g mask="url(#cut)"><path fill="currentColor" d="M19.07 12.01a1 1 0 0 1 .85 1.132A8 8 0 0 1 13 19.936V21a1 1 0 0 1-2 0v-1.064a8 8 0 0 1-6.919-6.794a1 1 0 0 1 1.98-.284a6.002 6.002 0 0 0 11.879 0a1 1 0 0 1 1.13-.848M12 2a5 5 0 0 1 5 5v5a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5"/></g>
+  <!-- bluetooth_fill as the badge, at half size in that disc -->
+  <g transform="translate(13 13) scale(0.46)"><path fill="currentColor" fill-rule="evenodd" d="M11.553 2.106A1 1 0 0 1 12.6 2.2l6 4.5a1 1 0 0 1 0 1.6L13.667 12l4.933 3.7a1 1 0 0 1 0 1.6l-6 4.5A1 1 0 0 1 11 21v-7l-4.4 3.3a1 1 0 1 1-1.2-1.6l4.933-3.7L5.4 8.3a1 1 0 1 1 1.2-1.6L11 10V3a1 1 0 0 1 .553-.894" clip-rule="evenodd"/></g>
 </svg>

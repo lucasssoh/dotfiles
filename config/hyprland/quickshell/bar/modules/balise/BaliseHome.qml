@@ -308,14 +308,11 @@ Item {
     // Ethernet.qml), just spelled in a form that survives every editor
     // and diff tool unambiguously.
     readonly property string heroGlyph: {
-        if (root.activeWiredProfile) return String.fromCharCode(0xedde);   // ph-network
-        if (root.connectedWifiAp) {
-            const s = root.connectedWifiAp.signal;
-            if (s < 33) return String.fromCharCode(0xe4ec);   // ph-wifi-low
-            if (s < 66) return String.fromCharCode(0xe4ee);   // ph-wifi-medium
-            return String.fromCharCode(0xe4ea);               // ph-wifi-high
-        }
-        return String.fromCharCode(0xe4f2);   // ph-wifi-slash
+        // MingCute (HyperOS pass). One wifi glyph rather than three
+        // strength tiers -- the strength is spelled out next to it.
+        if (root.activeWiredProfile) return "\uF2AA";   // mgc router_modem
+        if (root.connectedWifiAp) return "\uF5CA";      // mgc wifi
+        return "\uF5CC";                                // mgc wifi_off
     }
     readonly property bool heroConnected: root.activeWiredProfile !== null || root.connectedWifiAp !== null
 
@@ -378,7 +375,9 @@ Item {
     // did -- see that file's header for the one difference (`accent` is a
     // property there instead of reaching into this file's `root.accent`,
     // and defaults to the same Ink.accent).
-    component Tile: DrawerTile {}
+    // Every glyph in this drawer is MingCute since the HyperOS pass, the
+    // same filled face as the bar row -- see Fonts.qml's `iconMingcute`.
+    component Tile: DrawerTile { glyphFont: Fonts.iconMingcute }
 
     // Small-caps group label above a block of tiles/rows -- the mockup's
     // own "CONNECTIVITÉ"/"OPTIONS" rhythm, same typography
@@ -448,6 +447,7 @@ Item {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             glyph: trow.glyph
+            glyphFont: Fonts.iconMingcute
             active: trow.checked
             accent: root.accent
         }
@@ -548,6 +548,7 @@ Item {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             glyph: arow.glyph
+            glyphFont: Fonts.iconMingcute
             accent: root.accent
         }
 
@@ -706,7 +707,7 @@ Item {
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.heroGlyph
                         color: root.heroConnected ? root.accent : Ink.secondary
-                        font.family: Fonts.iconPhosphor
+                        font.family: Fonts.iconMingcute
                         font.pixelSize: 18
                     }
                 }
@@ -725,7 +726,7 @@ Item {
                     title: "WiFi"
                     revealIndex: 3
                     status: root.wifiTileStatus
-                    glyph: BaliseState.wifiEnabled ? "\uE1AE" : "\uE1AF"   // lu-wifi / lu-wifi-off
+                    glyph: BaliseState.wifiEnabled ? "\uF5CA" : "\uF5CC"   // mgc wifi / wifi_off
                     active: BaliseState.wifiEnabled
                     onActivated: BaliseState.toggleWifi()
                     onActivatedSecondary: root.goTo("wifi")
@@ -736,7 +737,7 @@ Item {
                     title: "Bluetooth"
                     revealIndex: 4
                     status: root.bluetoothTileStatus
-                    glyph: BaliseState.bluetoothEnabled ? "\uE05C" : "\uE1B9"   // lu-bluetooth / lu-bluetooth-slash
+                    glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
                     active: BaliseState.bluetoothEnabled
                     onActivated: BaliseState.toggleBluetooth()
                     onActivatedSecondary: root.goTo("bluetooth")
@@ -757,7 +758,7 @@ Item {
                     title: "Ethernet"
                     revealIndex: 5
                     status: root.ethernetTileStatus
-                    glyph: root.activeWiredProfile ? "\uE125" : "\uE45D"   // lu-network / lu-unplug
+                    glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
                     active: root.activeWiredProfile !== null
                     // No radio to toggle -- both buttons open the section.
                     onActivated: root.goTo("ethernet")
@@ -793,7 +794,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
-                    glyph: "\uE11E"   // lu-moon
+                    glyph: "\uF0DE"   // mgc moon
                     revealIndex: 8
                     checked: BaliseState.nightModeEnabled
                     onToggled: BaliseState.toggleNightMode()
@@ -806,7 +807,7 @@ Item {
                     // page binds `monitor: Hyprland.monitorFor(...)`), so a
                     // screen is the honest picture -- and it collides with
                     // none of the other three glyphs in this group.
-                    glyph: "\uE11D"
+                    glyph: "\uF408"   // mgc sun
                     revealIndex: 9
                     checked: root.hdrActive
                     onToggled: HdrState.toggle()
@@ -824,7 +825,7 @@ Item {
             ToggleRow {
                 width: parent.width
                 title: "Dark mode"
-                glyph: "\uE09D"   // lu-contrast
+                glyph: "\uEAAC"   // mgc brightness (half-lit sun, the contrast idiom)
                 revealIndex: 10
                 subtitle: "turn dark mode on"
                 checked: AppearanceState.dark
@@ -834,7 +835,7 @@ Item {
                 ActionRow {
                     width: parent.width
                     title: "Screenshot"
-                    glyph: "\uE064"   // lu-camera
+                    glyph: "\uEB08"   // mgc camera
                     revealIndex: 11
                     onActivated: BaliseState.triggerScreenshot()
                 }

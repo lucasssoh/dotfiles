@@ -274,10 +274,9 @@ Item {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: NotificationState.dnd ? "\uE05A" : "\uE059"   // bell-z / bell
+                    text: NotificationState.dnd ? "\uF12A" : "\uF126"   // mgc notification_off / notification
                     color: NotificationState.dnd ? "#0c0c0e" : Ink.primary
-                    font.family: NotificationState.dnd ? Fonts.iconPhosphorFill
-                                                       : Fonts.iconPhosphorBold
+                    font.family: Fonts.iconMingcute
                     font.pixelSize: 18
                 }
                 MouseArea {
@@ -406,20 +405,20 @@ Item {
                         spacing: 0
 
                         TransportButton {
-                            glyph: "\uE15F"                                  // lu-skip-back
+                            glyph: "\uF37C"                                  // mgc skip_previous
                             enabled: root.mprisPlayer ? root.mprisPlayer.canGoPrevious : false
                             onTriggered: root.mprisPlayer.previous()
                         }
                         TransportButton {
                             // The only one that changes shape, and the reason the
                             // row needs no play/pause label anywhere else.
-                            glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uE12E" : "\uE13C"   // lu-pause / lu-play
+                            glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uF17A" : "\uF1D8"   // mgc pause / play
                             glyphSize: 17
                             enabled: root.mprisPlayer ? root.mprisPlayer.canTogglePlaying : false
                             onTriggered: root.mprisPlayer.togglePlaying()
                         }
                         TransportButton {
-                            glyph: "\uE160"                                  // lu-skip-forward
+                            glyph: "\uF37A"                                  // mgc skip_forward
                             enabled: root.mprisPlayer ? root.mprisPlayer.canGoNext : false
                             onTriggered: root.mprisPlayer.next()
                         }
@@ -565,7 +564,7 @@ Item {
             color: !tb.enabled ? Qt.rgba(1, 1, 1, 0.22)
                  : hover.containsMouse ? Surfaces.accent : Ink.primary
             Behavior on color { ColorAnimation { duration: 110 } }
-            font.family: Fonts.iconPhosphorFill
+            font.family: Fonts.iconMingcute
             font.pixelSize: tb.glyphSize
         }
 

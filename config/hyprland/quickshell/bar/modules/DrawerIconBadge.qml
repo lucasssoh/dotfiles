@@ -19,6 +19,10 @@ Rectangle {
     property string glyph: ""
     property bool active: false
     property color accent: Ink.accent
+    // Which icon face `glyph` is a codepoint of. Lucide by default (the
+    // Power drawer still draws with it); Balise's tiles pass MingCute
+    // since the HyperOS pass.
+    property string glyphFont: Fonts.iconPhosphor
 
     visible: badge.glyph !== ""
     width: 30
@@ -33,7 +37,7 @@ Rectangle {
         font.hintingPreference: Font.PreferNoHinting
         text: badge.glyph
         color: badge.active ? badge.accent : Ink.primary
-        font.family: Fonts.iconPhosphor
+        font.family: badge.glyphFont
         // A TWO-glyph badge -- PowerHome's double bolt, the only one so
         // far -- does not fit at the single-glyph size. Every Lucide
         // glyph carries a full 1.0em advance (verified in the font's own
