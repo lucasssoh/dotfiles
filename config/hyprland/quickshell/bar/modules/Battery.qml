@@ -171,8 +171,6 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             percent: root.present ? root.pct : 100
             color: root.batteryColor
-            numberOnEmpty: root.ink.primary
-            numberOnFill: root.ink.onLight
             // Where conservation mode will stop the charge -- shown only
             // while the machine is on AC, where it answers "how far will
             // this go". On battery the cap is irrelevant and the tick

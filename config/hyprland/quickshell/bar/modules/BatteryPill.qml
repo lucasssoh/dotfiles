@@ -11,23 +11,17 @@ import "../theme"
 //   - the body, the state colour at 30%: the empty part of the cell,
 //     fainter past `capAt` (Lenovo conservation mode) when one is set;
 //   - the fill, the state colour, as wide as the charge;
-//   - the percentage, twice -- see below.
+//   - the percentage, white with a dark outline -- see below.
 //
 // No colour of its own: `color` is whatever Battery.qml's batteryColor
 // resolves to (primary ink, charging green, conservation blue, low red or
-// amber), and the number's two inks are the island's own `primary` and
-// `onLight`, so the pill follows the band's light/dark material flip like
-// every other module.
+// amber), so the pill follows the band's light/dark material flip like
+// every other module. The number is the one fixed colour -- see there.
 Item {
     id: root
 
     property real percent: 100   // 0-100
     property color color: Ink.primary
-    // Number over the empty part, and over the fill. `onFill` is the
-    // island's inverse ink: dark on the usual light fill, light again when
-    // the material flips and the fill goes dark.
-    property color numberOnEmpty: Ink.primary
-    property color numberOnFill: Ink.onLight
     // Where the charge will stop, 0-100, or negative for no tick. Set to
     // 60 by Battery.qml while conservation mode caps the cell.
     property real capAt: -1
@@ -87,47 +81,43 @@ Item {
         color: root.color
     }
 
-    // The percentage, drawn TWICE and split exactly on the fill's edge,
-    // the same overdraw BatteryIcon.qml uses for its '+': whole in the
-    // empty-part ink, then again in the fill ink clipped to the fill's
-    // box. Neither ink survives both backgrounds, and the split moves
-    // with the charge, so a fixed colour would vanish on one side.
+    // The percentage: ONE colour, white, with a thin dark outline.
+    //
+    // It used to be drawn twice and split on the fill's edge (dark over
+    // the fill, light over the empty part). Asked for instead: a single
+    // colour that holds against white, black AND grey -- the pill's fill
+    // is the primary ink (white on the dark band, black on the light one)
+    // and its empty part is that ink at 30%, a mid grey. Measured, no
+    // flat colour can: the best neutral reaches ~4:1 on white and black
+    // but ~1:1 on the grey, and the best saturated one (a violet) is
+    // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
+    // An outline sidesteps the maths: the white body carries the black
+    // background, the dark rim carries the white and grey ones, and it
+    // survives the state colours (charging green, low red...) too.
+    //
+    // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
+    // native rasterisation snaps the digits to the pixel grid and they
+    // read blocky; the curve renderer antialiases the outline in
+    // greyscale. QtRendering (distance field) fringed them in colour.
+    property color numberColor: "#f2f2f7"
+    property color numberOutline: "#0c0c0e"
+
     Text {
         id: number
         width: root.bodyWidth
         height: root.bodyHeight
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        // CurveRendering, not the NativeRendering every other bar Text
-        // uses (asked for: "un peu plus anti-aliasé"). At 10px native
-        // rasterisation snaps the digits to the pixel grid and they read
-        // blocky inside the pill; the curve renderer antialiases the
-        // outline itself, in greyscale. QtRendering (distance field) was
-        // tried too and fringed the digits in colour.
         renderType: Text.CurveRendering
         font.hintingPreference: Font.PreferNoHinting
         text: Math.round(root.percent)
-        color: root.numberOnEmpty
+        color: root.numberColor
+        style: Text.Outline
+        styleColor: root.numberOutline
         font.family: Fonts.ui
         font.pixelSize: 10
-        font.weight: Font.DemiBold
+        font.weight: Font.Bold
         font.features: { "tnum": 1 }
-    }
-    Item {
-        width: root.fillWidth
-        height: root.bodyHeight
-        clip: true
-
-        Text {
-            width: number.width
-            height: number.height
-            horizontalAlignment: number.horizontalAlignment
-            verticalAlignment: number.verticalAlignment
-            renderType: number.renderType
-            font: number.font
-            text: number.text
-            color: root.numberOnFill
-        }
     }
 
     // Terminal nub, at 55% so it reads as part of the cell without

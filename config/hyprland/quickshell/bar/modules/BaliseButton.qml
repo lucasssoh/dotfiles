@@ -203,10 +203,11 @@ Item {
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            // mgc switch_fill -- two toggles, "quick settings", the
-            // HyperOS control-centre idea (picked over the gear, which
-            // read heavier than the wifi glyph beside it).
-            text: "\uF41C"
+            // mgc down_small_fill -- a small chevron that only says "a
+            // drawer opens here". Picked over the gear (heavier than the
+            // wifi glyph beside it) and then over a two-toggles "quick
+            // settings" glyph, as the more discreet of the two.
+            text: "\uECEA"
             color: root.ink.primary
             font.family: Fonts.iconMingcute
             font.pixelSize: 15
