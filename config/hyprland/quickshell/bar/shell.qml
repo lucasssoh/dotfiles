@@ -1107,12 +1107,12 @@ ShellRoot {
                 // the central island's own content axis, which a fixed 3
                 // did not.
                 anchors.topMargin: Math.round((barBand.height - height) / 2)
-                // HyperOS pass: METRICS moved from the far left to the
-                // right-hand cluster, in front of Launchers and TOOLS --
-                // the far left belongs to the clock now (`clockIsland`),
-                // as on a HyperOS status bar where everything but the
-                // time sits on the right.
-                anchors.right: launchers.left
+                // Right after the clock since the HyperOS pass. They sat
+                // in the right-hand cluster for a while, HyperOS-style,
+                // which left the clock alone on a very empty left half
+                // (asked for: "place quand même les metrics à gauche
+                // après l'horloge").
+                anchors.left: clockIsland.right
                 flushTop: false
                 color: "transparent"
                 // Glass. These three float free of every screen edge, so
@@ -1154,6 +1154,11 @@ ShellRoot {
                 // would have kept painting (the trap NotificationCard.qml
                 // documents, found the hard way once already).
 
+                // Gap after the clock: the time and the readings are two
+                // different things, so wider than the 12px between two
+                // readings.
+                Item { width: 10; height: 1 }
+
                 Modules.Cpu { ink: metricsInk }
                 Modules.Temperature { ink: metricsInk }
                 Modules.Fan { ink: metricsInk }
@@ -1163,12 +1168,6 @@ ShellRoot {
                 // wifi/rate module, now grouped with METRICS' other
                 // continuously-updating stats instead.
                 Modules.Traffic { ink: metricsInk }
-
-                // Breathing room between the readings and the status
-                // icons after them: text and glyphs are two different
-                // kinds of thing, so they get a wider gap than the 12px
-                // between two readings.
-                Item { width: 10; height: 1 }
             }
 
             // Launchers -- its own separate floating island (asked for:

@@ -150,29 +150,56 @@ Item {
         NumberAnimation { target: label; property: "scale"; to: 1.0; duration: 380; easing.type: Easing.OutBack }
     }
 
-    // HyperOS pass: the percentage moved INSIDE the battery (see
-    // BatteryPill.qml) instead of sitting in a fixed slot to its left, so
-    // the number no longer needs its own width reservation -- the pill is
-    // a constant 31.5px whatever it reads.
+    // Percentage on the LEFT of the gauge, in a fixed slot. It spent the
+    // HyperOS pass inside the pill and came back out (see BatteryPill.qml
+    // for why). The slot's rules are the ones it always had:
+    //
+    // Fixed width (asked for: "l'espace pour battery soit fixe") -- the
+    // Text is pinned to pctRef's width (a hidden "100", the widest it can
+    // ever read) instead of following its own content, so 1/10/100 do not
+    // shift everything to the right of this module on every change.
+    //
+    // Right-aligned, so the digits sit flush against the gauge whatever
+    // their count, and any slack goes to the far left of the cluster
+    // ("à gauche de l'icon et aligné à droite").
     //
     // The one thing that still changes this module's width is the mains
-    // badge after it: a MingCute bolt while charging, the Lucide plug
-    // while the cell is at rest on AC (MingCute has no plug glyph). It
-    // appears and disappears only when the charger goes in or out, never
-    // with the percentage, which is the rule the old fixed slot existed
-    // to keep.
+    // badge after the gauge: a MingCute bolt while charging, the Lucide
+    // plug while the cell is at rest on AC (MingCute has no plug glyph).
+    // It comes and goes only when the charger does, never with the level.
     Row {
         id: label
         anchors.centerIn: parent
-        spacing: 3
+        spacing: 4
         visible: root.present
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: root.present ? Math.round(root.pct) : ""
+            color: root.batteryColor
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            font.weight: Font.Medium
+            font.features: { "tnum": 1 }
+            width: pctRef.implicitWidth
+            horizontalAlignment: Text.AlignRight
+        }
+        Text {
+            id: pctRef
+            visible: false
+            text: "100"
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            font.weight: Font.Medium
+            font.features: { "tnum": 1 }
+        }
 
         BatteryPill {
             anchors.verticalCenter: parent.verticalCenter
             percent: root.present ? root.pct : 100
             color: root.batteryColor
-            numberOnEmpty: root.ink.primary
-            numberOnFill: root.ink.onLight
             // Where conservation mode will stop the charge -- shown only
             // while the machine is on AC, where it answers "how far will
             // this go". On battery the cap is irrelevant and the tick

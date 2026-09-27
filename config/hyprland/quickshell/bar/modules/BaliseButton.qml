@@ -148,7 +148,7 @@ Item {
     // not the single continuous resize that was actually wanted. One
     // real animated source (the icon), everything downstream of it a
     // plain binding, not a second smoothing pass.
-    implicitWidth: badge.width + 5
+    implicitWidth: badge.width + 6
     implicitHeight: 24
 
     // Same 18px height/6px radius as Hdr's badge, fully transparent (see
@@ -158,13 +158,19 @@ Item {
     Rectangle {
         id: badge
         anchors.centerIn: parent
-        width: Math.max(content.implicitWidth + 6, 24)
-        // HyperOS pass: no frame any more. The GlassChip that used to
-        // outline this badge was one of the macOS-like details; the
-        // Rectangle is kept, transparent, purely as the sized hit area
-        // the rest of this file measures against.
+        width: Math.max(content.implicitWidth + 16, 26)
+        // HyperOS pass: a filled capsule instead of the GlassChip rim.
+        // The rim was one of the macOS-like details and went first, which
+        // left bluetooth + wifi as two loose glyphs that did not read as
+        // ONE button -- asked for back: "il faut un contraste de
+        // délimitation vraiment car c'est un bouton avec un ensemble de
+        // plusieurs icônes". A HyperOS control-centre tile does that with
+        // a soft fill, not an outline: the island's own primary ink at
+        // 16%, so it is a light veil on the dark band and a dark one on
+        // the thinned light band, and follows the material flip for free.
         height: 22
-        color: "transparent"
+        radius: height / 2
+        color: Qt.rgba(root.ink.primary.r, root.ink.primary.g, root.ink.primary.b, 0.16)
     }
 
     // Up to 3 icons (gear always, net/bt conditional).
