@@ -247,7 +247,7 @@ Item {
                         text: "h"
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 12
+                        font.pixelSize: 13
                         rightPadding: 4
                     }
                     Text {
@@ -270,7 +270,7 @@ Item {
                         text: "min"
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 12
+                        font.pixelSize: 13
                     }
                 }
 
@@ -299,7 +299,7 @@ Item {
                         text: "%"
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 12
+                        font.pixelSize: 13
                     }
                 }
             }
@@ -319,7 +319,7 @@ Item {
                     text: root.headlineCaption
                     color: DrawerTheme.secondary
                     font.family: Fonts.ui
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                 }
 
                 // The instantaneous draw, and BESIDE IT the median the
@@ -345,7 +345,7 @@ Item {
                         : root.fmtWatts(PowerState.watts)
                     color: DrawerTheme.secondary
                     font.family: Fonts.ui
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                 }
             }
         }
@@ -501,7 +501,7 @@ Item {
                         text: "Discharging"
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 10
+                        font.pixelSize: 11
                     }
                 }
                 Row {
@@ -518,7 +518,7 @@ Item {
                         text: "Charging"
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 10
+                        font.pixelSize: 11
                     }
                 }
             }

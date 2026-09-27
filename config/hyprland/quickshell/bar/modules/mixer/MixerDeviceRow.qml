@@ -72,7 +72,7 @@ Rectangle {
         text: dev.title
         color: dev.current ? DrawerTheme.primary : DrawerTheme.secondary
         font.family: Fonts.ui
-        font.pixelSize: 12
+        font.pixelSize: 13
         elide: Text.ElideRight
     }
 

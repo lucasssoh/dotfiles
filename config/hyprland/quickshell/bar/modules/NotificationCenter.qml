@@ -390,7 +390,7 @@ Item {
                             text: root.mprisPlayer ? (root.mprisPlayer.trackArtist || "") : ""
                             color: DrawerTheme.ink(0.6)
                             font.family: Fonts.ui
-                            font.pixelSize: 12
+                            font.pixelSize: 13
                             elide: Text.ElideRight
                         }
                     }
@@ -467,7 +467,7 @@ Item {
                         text: root.formatDuration(root.mprisPosition)
                         color: DrawerTheme.ink(0.5)
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         // Same reason as the clock's own: this one ticks
                         // every second, and a proportional "1" would walk
                         // the track's left end back and forth as it counts.
@@ -483,7 +483,7 @@ Item {
                         text: root.formatDuration(root.mprisTrackLength)
                         color: DrawerTheme.ink(0.5)
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         font.features: ({ "tnum": 1 })
                     }
 

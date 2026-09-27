@@ -342,7 +342,7 @@ Item {
                     text: "Nothing playing"
                     color: DrawerTheme.muted
                     font.family: Fonts.ui
-                    font.pixelSize: 12
+                    font.pixelSize: 13
 
                     RevealPop { item: emptyLabel; index: 9; fromScale: 1.0 }
                 }

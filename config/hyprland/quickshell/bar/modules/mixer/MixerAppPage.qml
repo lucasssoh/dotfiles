@@ -143,7 +143,7 @@ Item {
                   + "turn one off on another application"
             color: DrawerTheme.danger
             font.family: Fonts.ui
-            font.pixelSize: 11
+            font.pixelSize: 12
             wrapMode: Text.WordWrap
 
             RevealPop { item: fullWarning; index: 1; fromScale: 1.0 }
@@ -220,7 +220,7 @@ Item {
                 text: "Custom"
                 color: DrawerTheme.muted
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
         }
 
@@ -260,7 +260,7 @@ Item {
                         text: chip.modelData.name
                         color: chip.current ? DrawerTheme.onInk : DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                     }
 
                     MouseArea {

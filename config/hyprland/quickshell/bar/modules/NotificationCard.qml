@@ -214,7 +214,7 @@ Rectangle {
                         text: actionPill.modelData.text
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
-                        font.pixelSize: 12
+                        font.pixelSize: 13
                     }
                     MouseArea {
                         id: actionArea

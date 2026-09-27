@@ -206,7 +206,7 @@ Item {
                         text: modelData
                         color: index >= 5 ? DrawerTheme.muted : DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                     }
                 }
             }
@@ -258,7 +258,7 @@ Item {
                                 : DrawerTheme.primary
                             opacity: modelData.inMonth ? 1 : 0.3
                             font.family: Fonts.ui
-                            font.pixelSize: 13
+                            font.pixelSize: 14
                             font.weight: modelData.today ? Font.DemiBold : Font.Normal
                         }
 
@@ -308,7 +308,7 @@ Item {
             color: root.hoveredText === "" ? DrawerTheme.secondary
                 : root.hoveredHoliday ? DrawerTheme.danger : DrawerTheme.primary
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
 
             RevealPop { item: footer; index: 2 }
         }

@@ -141,7 +141,7 @@ Rectangle {
         text: field.showSecret ? "Hide" : "Show"
         color: revealArea.containsMouse ? DrawerTheme.primary : DrawerTheme.accent
         font.family: Fonts.ui
-        font.pixelSize: 11
+        font.pixelSize: 12
         font.bold: true
 
         MouseArea {

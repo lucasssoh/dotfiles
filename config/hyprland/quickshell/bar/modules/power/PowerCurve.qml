@@ -110,7 +110,7 @@ Item {
                 text: parent.modelData + "%"
                 color: DrawerTheme.muted
                 font.family: Fonts.ui
-                font.pixelSize: 9
+                font.pixelSize: 10
             }
         }
     }
@@ -320,7 +320,7 @@ Item {
             }
             color: DrawerTheme.primary
             font.family: Fonts.ui
-            font.pixelSize: 10
+            font.pixelSize: 11
             font.bold: true
         }
     }
@@ -393,7 +393,7 @@ Item {
                 }
                 color: DrawerTheme.muted
                 font.family: Fonts.ui
-                font.pixelSize: 9
+                font.pixelSize: 10
             }
         }
     }
@@ -409,6 +409,6 @@ Item {
         text: "no data yet"
         color: DrawerTheme.muted
         font.family: Fonts.ui
-        font.pixelSize: 11
+        font.pixelSize: 12
     }
 }

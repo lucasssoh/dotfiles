@@ -151,7 +151,7 @@ Item {
             text: arow.label
             color: arow.fg
             font.family: Fonts.ui
-            font.pixelSize: 12
+            font.pixelSize: 13
             elide: Text.ElideRight
         }
 
@@ -165,7 +165,7 @@ Item {
             text: arow.hint
             color: DrawerTheme.muted
             font.family: Fonts.ui
-            font.pixelSize: 10
+            font.pixelSize: 11
         }
     }
 
@@ -249,7 +249,7 @@ Item {
                 text: LauncherActionsState.label
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
-                font.pixelSize: 12
+                font.pixelSize: 13
                 font.bold: true
             }
 
@@ -273,7 +273,7 @@ Item {
                 }
                 color: LauncherActionsState.forceOffered ? DrawerTheme.danger : DrawerTheme.muted
                 font.family: Fonts.ui
-                font.pixelSize: 10
+                font.pixelSize: 11
             }
         }
 

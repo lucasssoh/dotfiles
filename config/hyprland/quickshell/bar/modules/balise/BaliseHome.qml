@@ -486,7 +486,7 @@ Item {
                 text: trow.subtitle
                 color: trow.checked ? DrawerTheme.onInk2 : DrawerTheme.secondary
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
         }
@@ -667,7 +667,7 @@ Item {
                         text: root.heroStatus
                         color: root.heroConnected ? DrawerTheme.onInk2 : DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 12
+                        font.pixelSize: 13
                         elide: Text.ElideRight
                     }
                 }

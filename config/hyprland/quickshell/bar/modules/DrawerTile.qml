@@ -108,7 +108,7 @@ Rectangle {
             text: tile.status
             color: tile.active ? DrawerTheme.onInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
-            font.pixelSize: 11
+            font.pixelSize: 12
             elide: Text.ElideRight
         }
     }

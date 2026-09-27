@@ -195,7 +195,7 @@ Item {
                 text: root.masterSubtitle
                 color: DrawerTheme.secondary
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
         }
@@ -279,7 +279,7 @@ Item {
                 text: sectionHeader.section.toUpperCase()
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }
@@ -303,7 +303,7 @@ Item {
                 }
                 color: DrawerTheme.ink(0.3)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
         }
 

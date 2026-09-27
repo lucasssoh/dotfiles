@@ -538,7 +538,7 @@ Item {
                 text: root.wifiEnterprise ? "SIGN IN" : "PASSWORD"
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }
@@ -600,7 +600,7 @@ Item {
                             text: (root.credAdvancedOpen ? "▾  " : "▸  ") + "EAP settings"
                             color: advancedArea.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                             font.family: Fonts.ui
-                            font.pixelSize: 11
+                            font.pixelSize: 12
                             font.bold: true
                             Behavior on color { ColorAnimation { duration: 120 } }
                         }
@@ -627,7 +627,7 @@ Item {
                             text: "Method"
                             color: DrawerTheme.secondary
                             font.family: Fonts.ui
-                            font.pixelSize: 11
+                            font.pixelSize: 12
                         }
                         BaliseSegmented {
                             options: [
@@ -650,7 +650,7 @@ Item {
                             text: "Phase 2"
                             color: DrawerTheme.secondary
                             font.family: Fonts.ui
-                            font.pixelSize: 11
+                            font.pixelSize: 12
                         }
                         BaliseSegmented {
                             visible: root.credEap !== "pwd"
@@ -684,7 +684,7 @@ Item {
                         text: root.connectError
                         color: root.destructive
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         wrapMode: Text.WordWrap
                     }
 
@@ -744,7 +744,7 @@ Item {
                 text: root.metaSectionLabel
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }
@@ -781,7 +781,7 @@ Item {
                                 text: modelData.label
                                 color: DrawerTheme.secondary
                                 font.family: Fonts.ui
-                                font.pixelSize: 12
+                                font.pixelSize: 13
                             }
                             Text {
                                 anchors.right: parent.right
@@ -794,7 +794,7 @@ Item {
                                 text: modelData.value
                                 color: DrawerTheme.primary
                                 font.family: Fonts.ui
-                                font.pixelSize: 12
+                                font.pixelSize: 13
                                 elide: Text.ElideRight
                             }
                         }
@@ -815,7 +815,7 @@ Item {
                 text: "OPTIONS"
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }
@@ -862,7 +862,7 @@ Item {
                         text: root.optionsSubtitle
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         elide: Text.ElideRight
                     }
                 }
@@ -913,7 +913,7 @@ Item {
                 text: "SHARE"
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }
@@ -1000,7 +1000,7 @@ Item {
                             : (root.shareMatrix ? "Point a phone's camera at this to join" : "Reading the saved key…")
                         color: root.shareError !== "" ? root.destructive : DrawerTheme.secondary
                         font.family: Fonts.ui
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         wrapMode: Text.WordWrap
                     }
                 }
@@ -1019,7 +1019,7 @@ Item {
                 text: "ACTIONS"
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
                 font.bold: true
                 font.letterSpacing: 1
             }

@@ -72,7 +72,7 @@ Item {
                     text: pill.modelData.label
                     color: pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary
                     font.family: Fonts.ui
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     font.bold: pill.selected
                     elide: Text.ElideRight
                 }

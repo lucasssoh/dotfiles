@@ -22,7 +22,7 @@ Text {
     font.hintingPreference: Font.PreferNoHinting
     color: DrawerTheme.ink(0.4)
     font.family: Fonts.ui
-    font.pixelSize: 11
+    font.pixelSize: 12
     font.bold: true
     font.letterSpacing: 1
 }

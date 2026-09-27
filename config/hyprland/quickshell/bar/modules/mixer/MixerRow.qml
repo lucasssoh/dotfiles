@@ -171,7 +171,7 @@ Rectangle {
                 text: Math.round(row.value * 100) + "%"
                 color: row.muted ? DrawerTheme.faint : DrawerTheme.secondary
                 font.family: Fonts.ui
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
 
             Item {
@@ -227,7 +227,7 @@ Rectangle {
                     text: "EQ"
                     color: DrawerTheme.onInk
                     font.family: Fonts.ui
-                    font.pixelSize: 9
+                    font.pixelSize: 10
                     font.bold: true
                     font.letterSpacing: 0.5
                 }

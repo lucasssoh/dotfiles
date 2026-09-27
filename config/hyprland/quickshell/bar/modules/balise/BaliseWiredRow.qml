@@ -102,7 +102,7 @@ Rectangle {
                 : (row.modelData.has_carrier ? "Cable plugged in" : "Unplugged")
             color: row.connected ? DrawerTheme.onInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
-            font.pixelSize: 11
+            font.pixelSize: 12
             elide: Text.ElideRight
         }
     }

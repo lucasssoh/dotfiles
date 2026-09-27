@@ -50,7 +50,7 @@ Item {
         text: (band.value > 0 ? "+" : "") + Math.round(band.value)
         color: Math.round(band.value) === 0 ? DrawerTheme.muted : band.liveColor
         font.family: Fonts.ui
-        font.pixelSize: 10
+        font.pixelSize: 11
         Behavior on color { ColorAnimation { duration: 120 } }
     }
 
@@ -109,7 +109,7 @@ Item {
         text: band.label
         color: DrawerTheme.secondary
         font.family: Fonts.ui
-        font.pixelSize: 10
+        font.pixelSize: 11
     }
 
     // The whole column is the grab target, not the 4px track -- the columns
