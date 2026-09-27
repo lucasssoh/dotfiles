@@ -83,8 +83,8 @@ QtObject {
     //
     // The OSD, BatteryAlert and the central island keep the dark ramp
     // above permanently -- which is why this is a plain second token and
-    // not a mode switch on `primary`. The band's DRAWERS used to as well;
-    // since the HyperOS pass they follow the island they hang from into a
-    // light material of their own, through theme/DrawerTheme.qml.
+    // not a mode switch on `primary`. So do the band's drawers, which
+    // read theme/DrawerTheme.qml (dark only; a wallpaper-driven light
+    // material was tried there and dropped).
     readonly property color onLight: "#0c0c0e"
 }
