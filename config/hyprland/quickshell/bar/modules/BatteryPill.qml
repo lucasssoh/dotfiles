@@ -21,7 +21,8 @@ import "../theme"
 // The percentage lived inside this pill for a while (HyperOS-style, then
 // with an outlined single colour) and went back out to Battery.qml's slot
 // on the left, in the band's one text style (asked for). Without it the
-// pill is a plain gauge again, so it shrank back to 24x12.
+// pill is a plain gauge again, at 26x14: the height of the 17px glyphs
+// around it (24x12 was tried and sat visibly short of them).
 Item {
     id: root
 
@@ -31,9 +32,9 @@ Item {
     // 60 by Battery.qml while conservation mode caps the cell.
     property real capAt: -1
 
-    readonly property real bodyWidth: 24
-    readonly property real bodyHeight: 12
-    readonly property real bodyRadius: 4
+    readonly property real bodyWidth: 26
+    readonly property real bodyHeight: 14
+    readonly property real bodyRadius: 4.5
     readonly property real fillWidth: root.bodyWidth * Math.max(0, Math.min(1, root.percent / 100))
 
     implicitWidth: root.bodyWidth + 1.5 + nub.width
