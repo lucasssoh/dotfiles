@@ -51,10 +51,18 @@ Singleton {
     readonly property color band: "#730c0c0e"
     readonly property color bandLight: "#400c0c0e"
 
+    // TEST (asked for: "enlever complètement le fond de la barre"): false
+    // drops the veil altogether -- the band paints nothing, and because
+    // every contrast decision below goes through bandFor(), the inks are
+    // then chosen against the bare wallpaper instead of against a veil
+    // that is no longer there. Flip back to true to restore the band.
+    readonly property bool veil: false
+
     // The band under an island whose ink sits at `t` on the dark(0) ->
     // light(1) axis (IslandInk.t, which animates), so the veil thins in
     // step with the ink flipping rather than after it.
     function bandFor(t) {
+        if (!root.veil) return Qt.rgba(root.band.r, root.band.g, root.band.b, 0);
         const k = Math.max(0, Math.min(1, t));
         return Qt.rgba(root.band.r, root.band.g, root.band.b,
                        root.band.a + (root.bandLight.a - root.band.a) * k);
@@ -179,8 +187,8 @@ Singleton {
         // Each ink scored against the band it would actually sit on: the
         // dark ink goes with the dense band, the light-material ink with
         // the thinned one (see `bandLight`).
-        const sDark = root.contrast(root.composite(root.band, behind), inkDark);
-        const sLight = root.contrast(root.composite(root.bandLight, behind), inkLight);
+        const sDark = root.contrast(root.composite(root.bandFor(0), behind), inkDark);
+        const sLight = root.contrast(root.composite(root.bandFor(1), behind), inkLight);
         if (current === "light")
             return sDark > sLight + root.switchMargin ? "dark" : "light";
         return sLight > sDark + root.switchMargin ? "light" : "dark";
@@ -192,8 +200,8 @@ Singleton {
     function describe(monitor, x, w, inkDark, inkLight) {
         const behind = root.backgroundAt(monitor, x, w);
         if (!behind) return "pas de profil";
-        const surface = root.composite(root.band, behind);
-        const surfaceLight = root.composite(root.bandLight, behind);
+        const surface = root.composite(root.bandFor(0), behind);
+        const surfaceLight = root.composite(root.bandFor(1), behind);
         const f = v => Math.round(v * 255);
         return "fond rgb(" + f(surface.r) + "," + f(surface.g) + "," + f(surface.b) + ")"
              + " / allégé rgb(" + f(surfaceLight.r) + "," + f(surfaceLight.g) + "," + f(surfaceLight.b) + ")"
