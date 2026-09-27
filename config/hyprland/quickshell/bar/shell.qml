@@ -569,17 +569,12 @@ ShellRoot {
             // these, which is what keeps them out of it entirely.
             readonly property string tintMonitor: bar.screen ? bar.screen.name : ""
 
-            // HyperOS pass: the central island stopped being welded to the
-            // screen's top edge -- that notch-like shape was the most
-            // MacBook detail left -- and floats as a capsule inside the
-            // band instead. The band keeps the 31px the island used to
-            // set, and the island is inset from it on both sides.
+            // The band's height, and the central island's: welded to the
+            // screen's top edge again, the island's rounded bottom finishing
+            // on the band's bottom line. It floated as an inset capsule for
+            // part of the HyperOS pass and came back (asked for: "collé au
+            // bord comme avant").
             readonly property int bandHeight: 31
-            // Top gap 3 -> 1 (asked for: less space between the screen's
-            // top edge and the capsule); the bottom keeps its 3, so the
-            // capsule grows by the 2px it gave up at the top.
-            readonly property int islandTopInset: 1
-            readonly property int islandInset: 3
 
             IslandInk {
                 id: clockInk
@@ -970,12 +965,7 @@ ShellRoot {
                 // centerIsland.rowHeight directly. `exclusiveZone` stays
                 // at 24 -- that is what tiled windows reserve, and this
                 // island was already free to overhang it.
-                rowHeight: bar.bandHeight - bar.islandTopInset - bar.islandInset
-                // Floating capsule (HyperOS pass): rounded on all four
-                // corners, inset from the band's top and bottom. See
-                // DrawerIsland's `rowRadius` for how an 18px corner fits
-                // on a 25px row.
-                flushTop: false
+                rowHeight: bar.bandHeight
                 // Convex glass rather than the traced GlassRim it had --
                 // asked for, and it carries onto whatever extends below
                 // (Veille, the keybinds sheet) because with splitDrawer
@@ -983,7 +973,6 @@ ShellRoot {
                 // See DrawerIsland's `rowLens`.
                 rowLens: true
                 anchors.top: parent.top
-                anchors.topMargin: bar.islandTopInset
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 // `shell.veille` is the single shared logic instance
