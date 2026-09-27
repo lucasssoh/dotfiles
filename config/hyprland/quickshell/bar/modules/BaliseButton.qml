@@ -157,7 +157,7 @@ Item {
     Rectangle {
         id: badge
         anchors.centerIn: parent
-        width: Math.max(content.implicitWidth + 16, 26)
+        width: Math.max(content.implicitWidth + 14, 22)
         // HyperOS pass: a filled capsule instead of the GlassChip rim.
         // The rim was one of the macOS-like details and went first, which
         // left bluetooth + wifi as two loose glyphs that did not read as
@@ -167,7 +167,11 @@ Item {
         // a soft fill, not an outline: the island's own primary ink at
         // 16%, so it is a light veil on the dark band and a dark one on
         // the thinned light band, and follows the material flip for free.
-        height: 24
+        // 20 tall with 14px glyphs (was 24 / 17): the capsule is the only
+        // framed thing in the row, and at 24 it stood taller than the
+        // 17px icons around it (asked for: "le container dépasse les
+        // autres"). Its glyphs step down so they keep their margin inside.
+        height: 20
         radius: height / 2
         color: Qt.rgba(root.ink.primary.r, root.ink.primary.g, root.ink.primary.b, 0.16)
         // No glass here: a convex edge was tried on this capsule (the
@@ -213,7 +217,7 @@ Item {
             text: "\uECEA"
             color: root.ink.primary
             font.family: Fonts.iconMingcute
-            font.pixelSize: 17
+            font.pixelSize: 14
         }
     }
 
@@ -347,7 +351,7 @@ Item {
             text: slot.displayGlyph
             color: slot.glyphColor
             font.family: slot.glyphFont
-            font.pixelSize: 17
+            font.pixelSize: 14
             opacity: 0
         }
     }
