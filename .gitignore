@@ -3,6 +3,7 @@ config/hyprland/hypr/display-layout.json
 config/hyprland/hypr/monitor-layout.json
 config/hyprland/hypr/scale.json
 config/hyprland/hypr/hdr-state.json
+config/hyprland/hypr/private.lua
 config/hyprland/.claude/
 config/hyprland/orbit-vendor/target/
 config/hyprland/prisme-src/target/

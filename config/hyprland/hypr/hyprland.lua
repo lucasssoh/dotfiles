@@ -484,3 +484,9 @@ hl.config({
 require("monitors")
 require("windowrules")
 require("keybinds")
+
+-- Machine-local overrides (per-game rules, anything not worth versioning).
+-- private.lua is gitignored and absent on a fresh clone. Existence check
+-- rather than pcall, which would also swallow errors raised inside it.
+-- Unknown window_rule properties are silently ignored, so check names.
+if package.searchpath("private", package.path) then require("private") end
