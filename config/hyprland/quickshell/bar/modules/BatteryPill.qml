@@ -95,42 +95,47 @@ Item {
             color: root.color
         }
 
-        // The percentage: ONE colour, white, with a thin dark outline.
-        //
-        // It used to be drawn twice and split on the fill's edge (dark over
-        // the fill, light over the empty part). Asked for instead: a single
-        // colour that holds against white, black AND grey -- the pill's fill
-        // is the primary ink (white on the dark band, black on the light one)
-        // and its empty part is that ink at 30%, a mid grey. Measured, no
-        // flat colour can: the best neutral reaches ~4:1 on white and black
-        // but ~1:1 on the grey, and the best saturated one (a violet) is
-        // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
-        // An outline sidesteps the maths: the white body carries the black
-        // background, the dark rim carries the white and grey ones, and it
-        // survives the state colours (charging green, low red...) too.
-        //
-        // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
-        // native rasterisation snaps the digits to the pixel grid and they
-        // read blocky; the curve renderer antialiases the outline in
-        // greyscale. QtRendering (distance field) fringed them in colour.
+    }
 
-        Text {
-            id: number
-            width: root.bodyWidth
-            height: root.bodyHeight
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            renderType: Text.CurveRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: Math.round(root.percent)
-            color: root.numberColor
-            style: Text.Outline
-            styleColor: root.numberOutline
-            font.family: Fonts.ui
-            font.pixelSize: 11
-            font.weight: Font.Bold
-            font.features: { "tnum": 1 }
-        }
+    // Drawn OVER the glass cell, not inside it: inside, the lens
+    // refracted the digits' own pixels toward the edge and smeared their
+    // rim into coloured blots above and below them.
+    //
+    // The percentage: ONE colour, white, with a thin dark outline.
+    //
+    // It used to be drawn twice and split on the fill's edge (dark over
+    // the fill, light over the empty part). Asked for instead: a single
+    // colour that holds against white, black AND grey -- the pill's fill
+    // is the primary ink (white on the dark band, black on the light one)
+    // and its empty part is that ink at 30%, a mid grey. Measured, no
+    // flat colour can: the best neutral reaches ~4:1 on white and black
+    // but ~1:1 on the grey, and the best saturated one (a violet) is
+    // 4.3/4.1:1 and still only 1.2:1 on the grey, readable by hue alone.
+    // An outline sidesteps the maths: the white body carries the black
+    // background, the dark rim carries the white and grey ones, and it
+    // survives the state colours (charging green, low red...) too.
+    //
+    // CurveRendering (asked for: "un peu plus anti-aliasé") -- at 10px
+    // native rasterisation snaps the digits to the pixel grid and they
+    // read blocky; the curve renderer antialiases the outline in
+    // greyscale. QtRendering (distance field) fringed them in colour.
+
+    Text {
+        id: number
+        width: root.bodyWidth
+        height: root.bodyHeight
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        renderType: Text.CurveRendering
+        font.hintingPreference: Font.PreferNoHinting
+        text: Math.round(root.percent)
+        color: root.numberColor
+        style: Text.Outline
+        styleColor: root.numberOutline
+        font.family: Fonts.ui
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.features: { "tnum": 1 }
     }
 
     // Terminal nub, at 55% so it reads as part of the cell without

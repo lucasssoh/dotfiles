@@ -171,6 +171,12 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             percent: root.present ? root.pct : 100
             color: root.batteryColor
+            // The number inverts with the band's material: white with a
+            // black rim on the dark band, black with a white rim on the
+            // light one (asked for). Both come from the island's own ink,
+            // so they flip in step with everything else on it.
+            numberColor: root.ink.primary
+            numberOutline: root.ink.onLight
             // Where conservation mode will stop the charge -- shown only
             // while the machine is on AC, where it answers "how far will
             // this go". On battery the cap is irrelevant and the tick
