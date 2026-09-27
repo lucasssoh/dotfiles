@@ -141,7 +141,7 @@ Item {
         MixerAppPage {
             node: root.appNode
             appLabel: root.appLabel
-            glyph: root.appNode ? MixerState.streamGlyph(root.appNode) : "\uE55A"
+            glyph: root.appNode ? MixerState.streamGlyph(root.appNode) : "\uF57C"
             onBackRequested: root.goHome()
         }
     }
@@ -218,7 +218,7 @@ Item {
 
             MixerRow {
                 revealIndex: 3
-                glyph: root.isMuted(MixerState.source) ? "\uE119" : "\uE118"   // lu-mic-off / lu-mic
+                glyph: root.isMuted(MixerState.source) ? "\uF0B0" : "\uF0AE"   // mgc mic_off / mic
                 title: MixerState.deviceLabel(MixerState.source)
                 // 1.5, matching AudioInput.qml's own scroll cap -- see
                 // MixerSlider.maximum for why the output does not get the
@@ -267,7 +267,7 @@ Item {
                         required property int index
                         revealIndex: 4 + index
                         compact: true
-                        glyph: "\uE118"   // lu-mic
+                        glyph: "\uF0AE"   // mgc mic
                         title: MixerState.streamLabel(modelData)
                         maximum: 1.5
                         value: root.vol(modelData)

@@ -124,9 +124,9 @@ Item {
     // Same three codepoints Performance.qml maps, so the bar glyph and
     // the tile glyph are never two different pictures of one setting.
     function profileGlyph(p) {
-        if (p === PowerProfile.Performance) return "";   // lu-zap
-        if (p === PowerProfile.PowerSaver) return "";    // lu-leaf
-        return "";                                       // lu-wind
+        if (p === PowerProfile.Performance) return "\uEE06";   // mgc flash
+        if (p === PowerProfile.PowerSaver) return "\uEFF4";    // mgc leaf
+        return "\uF5CE";                                       // mgc wind
     }
 
     // ---- headline ----------------------------------------------------
@@ -389,7 +389,7 @@ Item {
                 title: "Charge limit"
                 revealIndex: 1
                 status: root.conservationOn ? "60%" : "Off"
-                glyph: ""   // lu-battery-medium
+                glyph: "\uEA04"   // mgc battery_2
                 active: root.conservationOn
                 onActivated: root.setConservation(!root.conservationOn)
             }
@@ -419,7 +419,7 @@ Item {
                 // battery. A bare bolt is about the RATE, which is what
                 // the tile switches, and doubling it says "more of the
                 // same thing" without needing a second concept.
-                glyph: root.fastChargeOn ? "" : ""   // lu-zap x2 / lu-zap
+                glyph: root.fastChargeOn ? "\uEE06\uEE06" : "\uEE06"   // mgc flash x2 / flash
                 active: root.fastChargeOn
                 onActivated: root.setFastCharge(!root.fastChargeOn)
             }

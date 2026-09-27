@@ -136,7 +136,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             text: arow.glyph
             color: arow.fg
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconMingcute
             font.pixelSize: 14
         }
 
@@ -278,19 +278,19 @@ Item {
         }
 
         ActionRow {
-            glyph: "\uE426"   // lu-app-window
+            glyph: "\uE916"   // mgc aiming_2 (focus)
             label: "Focus window"
             onActivated: LauncherActionsState.focusWindow()
         }
 
         ActionRow {
-            glyph: "\uE175"   // lu-square-x
+            glyph: "\uEBC8"   // mgc close_square
             label: "Close window"
             onActivated: LauncherActionsState.closeWindow()
         }
 
         ActionRow {
-            glyph: "\uE140"   // lu-power
+            glyph: "\uF1EE"   // mgc power
             label: "Quit app"
             hint: "SIGTERM"
             destructive: true
@@ -304,7 +304,7 @@ Item {
         // is a second deliberate click and never an automatic follow-up.
         ActionRow {
             visible: LauncherActionsState.forceOffered
-            glyph: "\uE221"   // lu-skull
+            glyph: "\uF380"   // mgc skull
             label: "Force quit"
             hint: "SIGKILL"
             destructive: true

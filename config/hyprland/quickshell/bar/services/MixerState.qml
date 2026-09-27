@@ -920,12 +920,12 @@ Singleton {
     // column would be the only raster image in any drawer.
     function streamGlyph(n) {
         const s = root.streamLabel(n).toLowerCase();
-        if (/firefox|chrom|brave|librewolf|epiphany|webkit/.test(s)) return "\uE0E8";   // globe
-        if (/mpv|vlc|celluloid|totem|video/.test(s)) return "\uE0D0";                   // film
-        if (/spotify|rhythmbox|audacious|music|lollypop/.test(s)) return "\uE122";      // music
-        if (/discord|telegram|signal|element|slack/.test(s)) return "\uE116";           // message-circle
-        if (/steam|lutris|heroic|wine|proton|game/.test(s)) return "\uE0DF";            // gamepad-2
-        return "\uE55A";                                                                // audio-lines
+        if (/firefox|chrom|brave|librewolf|epiphany|webkit/.test(s)) return "\uEEB6";   // mgc globe
+        if (/mpv|vlc|celluloid|totem|video/.test(s)) return "\uEDD4";                   // mgc film
+        if (/spotify|rhythmbox|audacious|music|lollypop/.test(s)) return "\uF10A";      // mgc music
+        if (/discord|telegram|signal|element|slack/.test(s)) return "\uF098";           // mgc message_1
+        if (/steam|lutris|heroic|wine|proton|game/.test(s)) return "\uEE8C";            // mgc game_2
+        return "\uF57C";                                                                // mgc voice
     }
 
     // Off the device's own name, and on this machine that is enough --
@@ -944,21 +944,21 @@ Singleton {
     // So a picker row and the glyph beside it come from one constant
     // string, with no process and no subscription behind them.
     function deviceGlyph(n) {
-        if (!n) return "\uE166";                                       // speaker
+        if (!n) return "\uF3BA";                                       // mgc speaker
         const s = (n.nickname || n.name || "").toLowerCase();
-        if (/headphones?|headset|earbuds/.test(s)) return "\uE0F1";    // headphones
-        if (/hdmi|displayport/.test(s)) return "\uE11D";               // monitor
-        if (/bluez|bluetooth/.test(s)) return "\uE05C";                // bluetooth
-        if (/mic|capture|input/.test(s)) return "\uE118";              // mic
-        return "\uE166";                                               // speaker
+        if (/headphones?|headset|earbuds/.test(s)) return "\uEF0A";    // mgc headphone
+        if (/hdmi|displayport/.test(s)) return "\uEC04";               // mgc computer
+        if (/bluez|bluetooth/.test(s)) return "\uEA40";                // mgc bluetooth
+        if (/mic|capture|input/.test(s)) return "\uF0AE";              // mgc mic
+        return "\uF3BA";                                               // mgc speaker
     }
 
-    // Four steps, so the icon beside a slider is a readout and not just a
-    // decoration that happens to sit there.
+    // Three states: muted, silent, sounding. Lucide had two level tiers
+    // above zero; MingCute has one volume glyph, and the slider next to
+    // it already reads out the level.
     function volumeGlyph(muted, v) {
-        if (muted) return "\uE626";        // volume-off
-        if (v <= 0.001) return "\uE1AC";   // volume-x
-        if (v < 0.5) return "\uE1AA";      // volume-1
-        return "\uE1AB";                   // volume-2
+        if (muted) return "\uF584";        // mgc volume_off
+        if (v <= 0.001) return "\uF582";   // mgc volume_mute
+        return "\uF580";                   // mgc volume
     }
 }

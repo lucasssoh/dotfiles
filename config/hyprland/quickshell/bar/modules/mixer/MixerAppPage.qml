@@ -69,9 +69,9 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
-                text: "\uE06E"   // lu-chevron-left
+                text: "\uEFF6"   // mgc left
                 color: backHit.containsMouse ? Ink.primary : Ink.secondary
-                font.family: Fonts.iconPhosphor
+                font.family: Fonts.iconMingcute
                 font.pixelSize: 18
 
                 MouseArea {
@@ -93,7 +93,7 @@ Item {
                 font.hintingPreference: Font.PreferNoHinting
                 text: page.glyph
                 color: Ink.secondary
-                font.family: Fonts.iconPhosphor
+                font.family: Fonts.iconMingcute
                 font.pixelSize: 15
             }
 

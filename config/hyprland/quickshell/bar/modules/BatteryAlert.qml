@@ -324,9 +324,9 @@ Rectangle {
                 anchors.centerIn: parent
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
-                text: "\uE06C"
+                text: "\uEB80"   // mgc check
                 color: card.accentLight
-                font.family: Fonts.iconPhosphorBold
+                font.family: Fonts.iconMingcute
                 font.pixelSize: 16
             }
         }

@@ -59,7 +59,7 @@ Rectangle {
         font.hintingPreference: Font.PreferNoHinting
         text: dev.glyph
         color: dev.current ? Ink.accent : Ink.secondary
-        font.family: Fonts.iconPhosphor
+        font.family: Fonts.iconMingcute
         font.pixelSize: 14
     }
 
@@ -86,9 +86,9 @@ Rectangle {
         visible: dev.current
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
-        text: "\uE06C"   // lu-check
+        text: "\uEB80"   // mgc check
         color: Ink.accent
-        font.family: Fonts.iconPhosphor
+        font.family: Fonts.iconMingcute
         font.pixelSize: 14
     }
 }

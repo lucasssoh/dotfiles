@@ -375,9 +375,7 @@ Item {
     // did -- see that file's header for the one difference (`accent` is a
     // property there instead of reaching into this file's `root.accent`,
     // and defaults to the same Ink.accent).
-    // Every glyph in this drawer is MingCute since the HyperOS pass, the
-    // same filled face as the bar row -- see Fonts.qml's `iconMingcute`.
-    component Tile: DrawerTile { glyphFont: Fonts.iconMingcute }
+    component Tile: DrawerTile {}
 
     // Small-caps group label above a block of tiles/rows -- the mockup's
     // own "CONNECTIVITÉ"/"OPTIONS" rhythm, same typography
@@ -447,7 +445,6 @@ Item {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             glyph: trow.glyph
-            glyphFont: Fonts.iconMingcute
             active: trow.checked
             accent: root.accent
         }
@@ -548,7 +545,6 @@ Item {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             glyph: arow.glyph
-            glyphFont: Fonts.iconMingcute
             accent: root.accent
         }
 

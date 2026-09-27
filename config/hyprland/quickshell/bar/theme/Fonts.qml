@@ -159,12 +159,12 @@ QtObject {
     // config/hyprland/install.sh. One face, and every glyph used is a `_fill`
     // variant; codepoints come from the package's font/Mingcute.css.
     //
-    // Moved so far: the bar row, the Balise drawer and the notification
-    // centre/cards (Roue's SVGs too, in config/hyprland/roue/icons/). The
-    // Power, Mixer and launcher drawers still draw with the Lucide face
-    // above -- DrawerTile/DrawerIconBadge take a `glyphFont` for that
-    // reason. One row glyph stays Lucide because MingCute has none: the
-    // mains plug (Battery.qml).
+    // Everything live uses it: the bar row, every drawer (Balise, power,
+    // mixer, launcher actions, notifications), the OSD and the battery
+    // alert -- plus Roue's SVGs in config/hyprland/roue/icons/. The Lucide
+    // face above survives for one glyph MingCute has no equivalent for,
+    // the mains plug (Battery.qml, BatteryRing.qml), and in the unused
+    // legacy modules (Bluetooth/Ethernet/Network/StreamModule.qml).
     readonly property string iconMingcute: "MingCute"
 
     // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's

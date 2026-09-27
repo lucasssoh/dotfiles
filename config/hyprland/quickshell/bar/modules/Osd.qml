@@ -118,10 +118,12 @@ Rectangle {
     // glyph choice, rendered at two sizes (small left / big right) --
     // matches the reference's own small-sun/big-sun pair, which is the
     // same icon at two scales too, not two different icons.
+    // MingCute since the HyperOS pass: sun / mic_off / mic /
+    // volume_off / volume, the same glyphs the bar row and the mixer use.
     readonly property string iconGlyph: {
-        if (kind === "brightness") return "";
-        if (kind === "mic") return muted ? "" : "";
-        return muted ? "" : "";
+        if (kind === "brightness") return "\uF408";
+        if (kind === "mic") return muted ? "\uF0B0" : "\uF0AE";
+        return muted ? "\uF584" : "\uF580";
     }
 
     Text {
@@ -149,7 +151,7 @@ Rectangle {
         font.hintingPreference: Font.PreferNoHinting
         text: card.iconGlyph
         color: card.muted ? Ink.danger : Qt.rgba(1, 1, 1, 0.55)
-        font.family: Fonts.iconPhosphorBold
+        font.family: Fonts.iconMingcute
         font.pixelSize: 14
     }
 
@@ -162,7 +164,7 @@ Rectangle {
         font.hintingPreference: Font.PreferNoHinting
         text: card.iconGlyph
         color: card.muted ? Ink.danger : Ink.primary
-        font.family: Fonts.iconPhosphorBold
+        font.family: Fonts.iconMingcute
         font.pixelSize: 22
     }
 

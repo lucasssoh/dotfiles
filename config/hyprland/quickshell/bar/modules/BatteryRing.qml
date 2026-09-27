@@ -199,8 +199,8 @@ Item {
                 y: root.charging ? -root.lineHeight : 0
                 Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutCubic } }
 
-                Glyph { id: lowGlyph; glyph: "\uE37F"; tone: root.lowColor }      // plug-bold
-                Glyph { id: chargeGlyph; glyph: "\uE1B4"; tone: root.chargeColor } // lightning-bold
+                Glyph { id: lowGlyph; glyph: "\uE37F"; tone: root.lowColor; face: Fonts.iconPhosphorBold }   // Lucide plug: MingCute has none
+                Glyph { id: chargeGlyph; glyph: "\uEE06"; tone: root.chargeColor } // mgc flash
             }
         }
 
@@ -238,6 +238,7 @@ Item {
     component Glyph: Text {
         required property string glyph
         required property color tone
+        property string face: Fonts.iconMingcute
 
         width: iconWindow.width
         height: root.lineHeight
@@ -247,7 +248,7 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         text: glyph
         color: tone
-        font.family: Fonts.iconPhosphorBold
+        font.family: face
         font.pixelSize: 16
     }
 }

@@ -102,7 +102,7 @@ Rectangle {
             font.hintingPreference: Font.PreferNoHinting
             text: row.glyph
             color: row.muted ? Ink.accent : Ink.primary
-            font.family: Fonts.iconPhosphor
+            font.family: Fonts.iconMingcute
             font.pixelSize: row.compact ? 14 : 16
         }
 
@@ -192,9 +192,9 @@ Rectangle {
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: "\uE06F"   // lu-chevron-right
+                    text: "\uF28E"   // mgc right
                     color: chevronHit.containsMouse ? Ink.primary : Ink.secondary
-                    font.family: Fonts.iconPhosphor
+                    font.family: Fonts.iconMingcute
                     font.pixelSize: 14
                 }
 

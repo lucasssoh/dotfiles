@@ -26,7 +26,7 @@ Rectangle {
     property string title: ""
     property string status: ""
     property string glyph: ""
-    property string glyphFont: Fonts.iconPhosphor   // see DrawerIconBadge
+    property string glyphFont: Fonts.iconMingcute   // see DrawerIconBadge
     property bool active: false
     property color accent: Ink.accent
     signal activated()

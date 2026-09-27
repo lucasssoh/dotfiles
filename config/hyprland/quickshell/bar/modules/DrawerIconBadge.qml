@@ -19,10 +19,10 @@ Rectangle {
     property string glyph: ""
     property bool active: false
     property color accent: Ink.accent
-    // Which icon face `glyph` is a codepoint of. Lucide by default (the
-    // Power drawer still draws with it); Balise's tiles pass MingCute
-    // since the HyperOS pass.
-    property string glyphFont: Fonts.iconPhosphor
+    // Which icon face `glyph` is a codepoint of. MingCute since the
+    // HyperOS pass, for every drawer; kept as a property so one badge can
+    // still borrow a glyph MingCute lacks.
+    property string glyphFont: Fonts.iconMingcute
 
     visible: badge.glyph !== ""
     width: 30
