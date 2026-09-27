@@ -195,11 +195,12 @@ Item {
         // all off, with nothing left to click on visually. Never
         // animated in/out itself, only ever present.
         //
-        // HyperOS pass: now ONLY that fallback. Next to a wifi or
-        // bluetooth glyph the gear was a third icon saying "this opens
-        // settings", which the other two already do by being clickable.
+        // The HyperOS pass briefly showed it only as a fallback, when
+        // neither wifi nor bluetooth was on. Reverted (asked for): the
+        // gear popping in and out snapped the capsule's width, since
+        // unlike the IconSlots it has no animation of its own. Always
+        // present, it also gives the capsule a fixed right end.
         Text {
-            visible: root.netIcon() === "" && root.btIcon() === ""
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "\uF32C"   // mgc settings_3_fill
