@@ -176,16 +176,18 @@ Item {
             // the pill's EMPTY part -- asked for, so the rim melts into the
             // empty side instead of being a hard black/white line.
             //
-            // Made opaque rather than reused as is: the empty part is the
-            // state colour at 30% over whatever is behind, and a 30% rim
-            // would let the fill show through it and lose the digits on
-            // the full side. So: state colour at 30% over the inverse ink,
-            // which is what the band behind the pill roughly is on either
-            // material -- #525255-ish on the dark band, #aeaeb2-ish on
-            // the light one, each ~7-9:1 against its own fill.
+            // Recomputed opaque rather than reused as is: the empty part
+            // is the state colour at 30% over the band, and a 30% rim
+            // would let the fill show through and lose the digits on the
+            // full side. So it is that same 30% mix, done here over the
+            // band's real surface (IslandInk.surface: sampled wallpaper +
+            // veil) -- first tried over the inverse ink instead, which is
+            // near-white on the light material and left a pale halo.
+            // Falls back to the inverse ink on a plain Ink ramp.
             numberColor: root.ink.primary
             numberOutline: {
-                const c = root.batteryColor, o = root.ink.onLight;
+                const c = root.batteryColor;
+                const o = root.ink.surface !== undefined ? root.ink.surface : root.ink.onLight;
                 return Qt.rgba(c.r * 0.3 + o.r * 0.7, c.g * 0.3 + o.g * 0.7,
                                c.b * 0.3 + o.b * 0.7, 1);
             }

@@ -43,8 +43,20 @@ InkBlend {
     // bar finishes changing with the picture rather than after it.
     Behavior on t { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
 
+    // What the band actually looks like under this island: the sampled
+    // wallpaper behind it with the band's own veil composited on top, at
+    // the density the veil has for the current ink (BandTint.bandFor).
+    // For modules that need to blend INTO the band rather than just sit
+    // on it -- Battery.qml mixes its number's rim from this so the rim
+    // matches the pill's empty part exactly. Mid grey until the wallpaper
+    // profile has been read.
+    property color behind: "#5a5a5c"
+    readonly property color surface: BandTint.composite(BandTint.bandFor(island.t), island.behind)
+
     function reevaluate(): void {
         if (!island.monitor || island.rectW <= 0 || !BandTint.ready) return;
+        const bg = BandTint.backgroundAt(island.monitor, island.rectX, island.rectW);
+        if (bg) island.behind = bg;
         island.inkChoice = BandTint.recommend(island.monitor, island.rectX, island.rectW,
                                               island.inkChoice, Ink.primary, InkLight.primary);
     }
