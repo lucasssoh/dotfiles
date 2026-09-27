@@ -93,7 +93,7 @@ Each copr is enabled only when the package it provides is actually missing.
 
 ### The bar's drawers
 
-The bar is quickshell, linked by `hyprland` and living in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). It follows HyperOS's status-bar layout rather than macOS's menu bar: the time on the far left followed by the metrics as plain text, a floating capsule in the middle (window, workspaces, media), and the status icons (MingCute), the battery gauge with its percentage, the bell and the power button on the right. Four panels drop out of the **TOOLS** island on the right, and they are the part worth describing because they are where the desktop's settings actually live. A fifth, the month calendar, drops from the clock on the left.
+The bar is quickshell, linked by `hyprland` and living in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). It follows HyperOS's status-bar layout rather than macOS's menu bar: the time on the far left followed by the metrics as plain text, a floating capsule in the middle (window, workspaces, media), and the status icons (MingCute), the battery with its percentage inside, the bell and the power button on the right. Four panels drop out of the **TOOLS** island on the right, and they are the part worth describing because they are where the desktop's settings actually live. A fifth, the month calendar, drops from the clock on the left.
 
 | Drawer | Opened by | What it holds |
 |---|---|---|
