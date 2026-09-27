@@ -1159,11 +1159,8 @@ ShellRoot {
                 Modules.Temperature { ink: metricsInk }
                 Modules.Fan { ink: metricsInk }
                 Modules.Memory { ink: metricsInk }
-                // Moved here from Network.qml in TOOLS (asked for) --
-                // the download-rate half of what used to be one combined
-                // wifi/rate module, now grouped with METRICS' other
-                // continuously-updating stats instead.
-                Modules.Traffic { ink: metricsInk }
+                // Traffic (the network rate) used to close this group; it
+                // moved back to TOOLS, next to the wifi it measures.
             }
 
             // Launchers -- its own separate floating island (asked for:
@@ -1850,6 +1847,11 @@ ShellRoot {
                     // ---- son | reseau ----
                     Item { width: toolsIsland.groupGap; height: 1 }
 
+                    // The network rate, right before the wifi/bluetooth
+                    // capsule it belongs with (asked for: moved from the
+                    // left-hand metrics to the right). No padding change:
+                    // Traffic carries its own 6px a side like the metrics.
+                    Modules.Traffic { ink: toolsInk }
                     Modules.BaliseButton { screen: bar.screen; ink: toolsInk }
 
                     // ---- reseau | energie ----
