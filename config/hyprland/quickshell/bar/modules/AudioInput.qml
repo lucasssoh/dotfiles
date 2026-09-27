@@ -46,7 +46,7 @@ Item {
     implicitHeight: 24
     visible: root.node !== null
 
-    readonly property string iconGlyph: root.muted ? "\uE119" : "\uE118"   // lu-mic-off / lu-mic
+    readonly property string iconGlyph: root.muted ? "\uF0B0" : "\uF0AE"   // mgc mic_off_fill / mic_fill
     // Icon ONLY -- see AudioOutput.qml's own note for why the numeric
     // level went away. The "---" this used to show while muted goes with
     // it and loses nothing: the glyph itself already switches to
@@ -70,7 +70,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.iconGlyph
             color: root.ink.primary
-            font.family: Fonts.iconPhosphorBold
+            font.family: Fonts.iconMingcute
             font.pixelSize: 15
         }
     }

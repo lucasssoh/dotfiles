@@ -37,58 +37,36 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
-    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
-    // reactive form made the pill visibly grow/shrink as the rate
-    // string's length changed (B/s -> K/s -> M/s, digit count within
-    // each). valueMetrics measures the worst-case string ONCE with the
-    // real font instead.
-    TextMetrics {
-        id: valueMetrics
-        font.family: Fonts.ui
-        font.pixelSize: 13
-        text: "999.9M/s"
+    // Value and unit split, so StatReadout can size and tint them apart.
+    function rateValue(bps) {
+        if (bps < 1024) return bps.toFixed(0);
+        if (bps < 1024 * 1024) return (bps / 1024).toFixed(1);
+        return (bps / 1024 / 1024).toFixed(1);
+    }
+    function rateUnit(bps) {
+        if (bps < 1024) return "B/s";
+        if (bps < 1024 * 1024) return "K/s";
+        return "M/s";
     }
 
-    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
+    // HyperOS pass: text only, no leading glyph -- see StatReadout.qml.
+    // 6px a side, down from 10: without a glyph there is no icon/value
+    // pair to give room to, just readings separated by that 12px.
+    implicitWidth: row.implicitWidth + 12
     implicitHeight: 24
 
-    // One combined string here (unlike Network.qml's old two-row stack)
-    // -- this sits among METRICS' other plain single-row stats (Cpu's
-    // "  usage max_freq", Memory's "usedGB", etc.), so it follows their
-    // shape instead of TOOLS' space-constrained stacked treatment.
-    function formatRate(bps) {
-        if (bps < 1024) return bps.toFixed(0) + "B/s";
-        if (bps < 1024 * 1024) return (bps / 1024).toFixed(1) + "K/s";
-        return (bps / 1024 / 1024).toFixed(1) + "M/s";
-    }
-
     Row {
-        id: label
+        id: row
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 6
 
-        // ph-arrows-down-up -- asked for specifically: a bidirectional
-        // arrow reading as "traffic" rather than a connection-type
-        // glyph (that's Network.qml's job now). Still really just the
-        // download side underneath (SystemStats.netRateBps, rx_bytes
-        // only) -- the glyph is about what this NUMBER represents (data
-        // moving), not a claim that upload is being measured too.
-        Text {
-            id: iconGlyph
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: "\uE046"   // lu-arrow-down-up
-            color: SystemStats.netKind === "none" ? root.ink.muted : root.ink.primary
-            font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 15
-        }
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: SystemStats.netKind === "none" ? "----o/s" : root.formatRate(SystemStats.netRateBps)
-            color: SystemStats.netKind === "none" ? root.ink.muted : root.ink.primary
-            font.family: Fonts.ui
-            font.pixelSize: 13
+        StatReadout {
+            readonly property bool offline: SystemStats.netKind === "none"
+            value: offline ? "–" : root.rateValue(SystemStats.netRateBps)
+            widest: "999.9"
+            unit: offline ? "" : root.rateUnit(SystemStats.netRateBps)
+            valueColor: offline ? root.ink.muted : root.ink.primary
+            unitColor: root.ink.secondary
         }
     }
 }

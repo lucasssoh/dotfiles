@@ -66,8 +66,8 @@ Item {
     implicitHeight: 24
 
     readonly property string iconGlyph: {
-        if (root.dnd) return "\uE05A";                        // lu-bell-off (sleeping)
-        return root.hasUnseen ? "\uE42B" : "\uE059";   // lu-bell-dot (unseen) / lu-bell (idle)
+        if (root.dnd) return "\uF12A";                        // mgc notification_off_fill
+        return root.hasUnseen ? "\uF128" : "\uF126";   // mgc notification_newdot_fill / notification_fill
     }
     // Unread used to ride the WEIGHT: solid while unread, outline once
     // read (asked for), which carried the state far harder than the glyph
@@ -80,9 +80,10 @@ Item {
     // Lucide's bell family that reads at 15px. The branch below is kept
     // rather than collapsed so that reverting the Lucide test restores
     // the filled/hollow version with nothing else to put back.
-    readonly property string iconFamily: root.hasUnseen
-        ? Fonts.iconPhosphorFill
-        : Fonts.iconPhosphor
+    // One face for every state since the HyperOS pass: MingCute is filled
+    // throughout, so "unseen" rides the glyph (the bell with its dot cut
+    // out) and the accent ink, as it already did under Lucide.
+    readonly property string iconFamily: Fonts.iconMingcute
 
     readonly property color iconColor: {
         if (root.hasUnseen) return root.ink.accent;

@@ -152,6 +152,19 @@ QtObject {
     // outline weights do not differ enough to.
     readonly property string iconPhosphorFill: iconLucide
 
+    // MingCute (Apache 2.0, mingcute_icon on npm) -- the bar ROW's icon
+    // face since the HyperOS pass: filled, soft-cornered glyphs, which is
+    // the Xiaomi side of the HyperOS/iOS family resemblance where Lucide's
+    // thin outline is the SF Symbols side. Installed by
+    // config/hyprland/install.sh. One face, and every glyph used is a `_fill`
+    // variant; codepoints come from the package's font/Mingcute.css.
+    //
+    // Only the bar row has moved. The drawers (Balise, power, mixer,
+    // notification center) still draw with the Lucide face above, and two
+    // row glyphs stay Lucide because MingCute has no equivalent: the mains
+    // plug (Battery.qml) and ethernet (BaliseButton.qml).
+    readonly property string iconMingcute: "MingCute"
+
     // Clash Grotesk (Fontshare/Indian Type Foundry, free) -- Veille's
     // clock/message font, downloaded via api.fontshare.com's CSS
     // endpoint (the fonts.com share page itself is a JS app with no

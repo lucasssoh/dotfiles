@@ -150,110 +150,47 @@ Item {
         NumberAnimation { target: label; property: "scale"; to: 1.0; duration: 380; easing.type: Easing.OutBack }
     }
 
+    // HyperOS pass: the percentage moved INSIDE the battery (see
+    // BatteryPill.qml) instead of sitting in a fixed slot to its left, so
+    // the number no longer needs its own width reservation -- the pill is
+    // a constant 31.5px whatever it reads.
+    //
+    // The one thing that still changes this module's width is the mains
+    // badge after it: a MingCute bolt while charging, the Lucide plug
+    // while the cell is at rest on AC (MingCute has no plug glyph). It
+    // appears and disappears only when the charger goes in or out, never
+    // with the percentage, which is the rule the old fixed slot existed
+    // to keep.
     Row {
         id: label
         anchors.centerIn: parent
-        // 6 -> 4, matching Cpu.qml/Memory.qml/Temperature.qml/Fan.qml's
-        // own icon-text spacing in this same pill (asked for: "réduit le
-        // gap").
-        spacing: 4
+        spacing: 3
         visible: root.present
 
-        // No "%" unit (asked for: "beaucoup plus sobre et économe") --
-        // the battery icon right next to it already says "this is a
-        // percentage", same reasoning Cpu.qml/Memory.qml's own bare
-        // numbers already use elsewhere in this pill.
-        //
-        // Fixed width (asked for: "l'espace pour battery soit fixe") --
-        // this Text's own `width` is pinned to pctRef's implicitWidth
-        // (a hidden "100" reference, always the widest this ever
-        // renders) instead of following its own live content. Without
-        // this, 1/10/100 each measure a different implicitWidth, so the
-        // module's own width (and everything to its right in this pill
-        // -- Clock, the power dot) shifted by a few px on every
-        // percentage change.
-        //
-        // BEFORE the icon, right-aligned within that fixed slot --
-        // corrected after a first, wrong guess at this (icon-then-
-        // number, left-aligned): asked for explicitly, "à gauche de
-        // l'icon et aligné à droite". Right-aligned here puts the digit
-        // flush against the icon regardless of its own width, with any
-        // leftover slack pushed out to the far left of the whole
-        // cluster instead -- the least noticeable place for it, further
-        // from everything else in this pill than a gap right next to
-        // the icon would be.
+        BatteryPill {
+            anchors.verticalCenter: parent.verticalCenter
+            percent: root.present ? root.pct : 100
+            color: root.batteryColor
+            numberOnEmpty: root.ink.primary
+            numberOnFill: root.ink.onLight
+            // Where conservation mode will stop the charge -- shown only
+            // while the machine is on AC, where it answers "how far will
+            // this go". On battery the cap is irrelevant and the tick
+            // would just be noise.
+            capAt: root.conservationActive && (root.isCharging || root.atRestOnAC) ? 60 : -1
+        }
+
         Text {
+            visible: root.isCharging || root.atRestOnAC
+            anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: root.present ? Math.round(root.pct) : ""
+            // mgc flash_fill while charging; lu-plug (the glyph this
+            // module already used for "at rest on AC") otherwise.
+            text: root.isCharging ? "\uEE06" : "\uE45C"
             color: root.batteryColor
-            font.family: Fonts.ui
-            font.pixelSize: 13
-            width: pctRef.implicitWidth
-            horizontalAlignment: Text.AlignRight
-        }
-        Text {
-            id: pctRef
-            visible: false
-            text: "100"
-            font.family: Fonts.ui
-            font.pixelSize: 13
-        }
-
-        // Custom-drawn proportional gauge (BatteryIcon.qml), not a
-        // Phosphor font glyph -- asked for after a reference screenshot
-        // of iOS's own battery widget. Replaced the previous 5-tier
-        // Nerd Font icon() lookup entirely; UPower's own percentage
-        // drives the fill directly now, no tier bucketing needed.
-        BatteryIcon {
-            // Hidden, not merely covered, when the plug replaces it: a
-            // QtQuick positioner (this Row) drops invisible children from
-            // its layout entirely, so the two icons never both reserve
-            // space.
-            visible: !root.atRestOnAC
-            anchors.verticalCenter: parent.verticalCenter
-            width: 20
-            height: 10
-            percent: root.present ? root.pct : 100
-            charging: root.isCharging
-            outlineColor: root.batteryColor
-            fillColor: root.batteryColor
-        }
-
-        // ph-plugs-connected (U+EB56) -- two mated plugs, i.e. "running
-        // off the mains", rather than ph-plug's (U+E946) lone wall pin.
-        //
-        // Written as a \u escape, not a literal PUA character: the
-        // codepoint was first taken from the font's GSUB ligature table
-        // (mapping the icon NAME "plugs-connected" to its glyph) and that
-        // reconstruction put it at U+EB5A, which is a different icon
-        // entirely -- caught only by rendering the candidates and looking
-        // at them. An escape keeps the intended codepoint readable in the
-        // source instead of hiding it inside an invisible glyph, so the
-        // next such mistake is visible in a diff.
-        //
-        // A gauge is
-        // the wrong picture for this state: the cell is idle and its
-        // level says nothing about what's powering the machine. The
-        // PERCENTAGE stays, and carries the part that still matters --
-        // how much you'd actually have if you unplugged, which under a
-        // ~60% cap is not the "100" a plug icon would otherwise imply.
-        //
-        // Pinned to BatteryIcon's own 20px rather than left to the
-        // glyph's advance width, so swapping between the two doesn't
-        // shift this module's width (and with it everything to its right
-        // in the pill) every time the charger goes in or out -- the same
-        // reasoning as the fixed percentage slot above, applied to a
-        // state change instead of a value change.
-        Text {
-            visible: root.atRestOnAC
-            anchors.verticalCenter: parent.verticalCenter
-            text: "\uE45C"
-            color: root.batteryColor
-            font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 15
-            width: 20
-            horizontalAlignment: Text.AlignHCenter
+            font.family: root.isCharging ? Fonts.iconMingcute : Fonts.iconPhosphorBold
+            font.pixelSize: 12
         }
     }
 

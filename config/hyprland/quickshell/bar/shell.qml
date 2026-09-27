@@ -569,6 +569,21 @@ ShellRoot {
             // these, which is what keeps them out of it entirely.
             readonly property string tintMonitor: bar.screen ? bar.screen.name : ""
 
+            // HyperOS pass: the central island stopped being welded to the
+            // screen's top edge -- that notch-like shape was the most
+            // MacBook detail left -- and floats as a capsule inside the
+            // band instead. The band keeps the 31px the island used to
+            // set, and the island is inset from it on both sides.
+            readonly property int bandHeight: 31
+            readonly property int islandInset: 3
+
+            IslandInk {
+                id: clockInk
+                monitor: bar.tintMonitor
+                rectX: clockIsland.x
+                rectW: clockIsland.width
+            }
+
             IslandInk {
                 id: metricsInk
                 monitor: bar.tintMonitor
@@ -680,7 +695,7 @@ ShellRoot {
             // as empty/transparent -- and stays outside the input mask
             // just below -- whenever a drawer isn't open.
             implicitHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight,
-                                     launchers.openHeight)
+                                     launchers.openHeight, clockIsland.openHeight)
 
             // Input stays restricted to the NORMAL bar's own height
             // (centerIsland.rowHeight, 31) regardless of how tall the
@@ -714,7 +729,7 @@ ShellRoot {
                     x: 0
                     y: 0
                     width: bar.width
-                    height: centerIsland.rowHeight
+                    height: bar.bandHeight
                 }
                 Region {
                     x: toolsIsland.x
@@ -793,7 +808,7 @@ ShellRoot {
                     // instead of quietly becoming a coincidence.
                     x: centerIsland.x + centerIsland.drawerBandX
                        + centerIsland.margin + veilleDrawer.closeHitX
-                    y: centerIsland.rowHeight
+                    y: centerIsland.y + centerIsland.rowHeight
                        + centerIsland.drawerGap * centerIsland.opaqueProgress
                        + veilleDrawer.closeHitY
                     width: veilleDrawer.closeHitWidth
@@ -819,6 +834,15 @@ ShellRoot {
                     y: 0
                     width: launchers.drawerBandWidth
                     height: launchers.height
+                }
+                // SEVENTH, the clock island's calendar drawer -- the same
+                // band-shaped hole as TOOLS' and Launchers' own, for the
+                // drawer that moved over with the clock.
+                Region {
+                    x: clockIsland.x + clockIsland.drawerBandX
+                    y: 0
+                    width: clockIsland.drawerBandWidth
+                    height: clockIsland.height
                 }
             }
 
@@ -868,7 +892,7 @@ ShellRoot {
                 // translucent band -- and its rounded corners let the
                 // band show through at each end, which is what draws the
                 // shape.
-                height: centerIsland.rowHeight
+                height: bar.bandHeight
                 // Flat, not the two-stop gradient the pills carried --
                 // asked for ("juste une bande uni"). The gradient was a
                 // BODY: it gave a floating pane a lit top and a thinner
@@ -928,7 +952,12 @@ ShellRoot {
                 // centerIsland.rowHeight directly. `exclusiveZone` stays
                 // at 24 -- that is what tiled windows reserve, and this
                 // island was already free to overhang it.
-                rowHeight: 31
+                rowHeight: bar.bandHeight - 2 * bar.islandInset
+                // Floating capsule (HyperOS pass): rounded on all four
+                // corners, inset from the band's top and bottom. See
+                // DrawerIsland's `rowRadius` for how an 18px corner fits
+                // on a 25px row.
+                flushTop: false
                 // Convex glass rather than the traced GlassRim it had --
                 // asked for, and it carries onto whatever extends below
                 // (Veille, the keybinds sheet) because with splitDrawer
@@ -936,6 +965,7 @@ ShellRoot {
                 // See DrawerIsland's `rowLens`.
                 rowLens: true
                 anchors.top: parent.top
+                anchors.topMargin: bar.islandInset
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 // `shell.veille` is the single shared logic instance
@@ -985,7 +1015,59 @@ ShellRoot {
                 Modules.Media {}
             }
 
-            // ── METRICS (separate from the main bar, top-left) ─
+            // ── CLOCK (far left) ──────────────────────────────
+            // HyperOS pass: the time moved to the far left, alone -- the
+            // Android/HyperOS status-bar convention, and the one move that
+            // most separates this bar from macOS's menu bar, whose clock
+            // sits at the far right. See Clock.qml.
+            //
+            // A DrawerIsland, not a Block, because the clock opens the
+            // month calendar and that drawer should hang under the thing
+            // that was clicked: CalendarHome moved here from TOOLS, and
+            // every drawer setting below is TOOLS' own, copied so the
+            // calendar opens exactly as it did -- only on the other side.
+            Modules.DrawerIsland {
+                id: clockIsland
+
+                rowPane: false
+                rowHeight: 24
+                anchors.top: parent.top
+                // `rowHeight`, not `height` -- see toolsIsland's topMargin.
+                anchors.topMargin: Math.round((barBand.height - clockIsland.rowHeight) / 2)
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                flushTop: false
+
+                twoPhase: false
+                revealDuration: 220
+                contentFadeDuration: 150
+                contentFadeOutDuration: 110
+                panelFadeDuration: 200
+                widenDuration: 180
+                fixedDrawerWidth: 360
+                widenOnOpen: false
+                splitDrawer: true
+                drawerFillTop: Surfaces.panelTop
+                drawerFillBottom: Surfaces.panelBottom
+                drawerRadius: 20
+                drawerGap: 0
+                drawerTop: bar.bandHeight
+                // Left-aligned band, the mirror of TOOLS' right-aligned
+                // one: an anchor half a pane in from the island's own
+                // margin lands the band's outer edge exactly on the
+                // island's left edge (see drawerBandTargetX).
+                drawerAnchorX: clockIsland.margin + clockIsland.drawerContentWidth / 2
+
+                drawerItems: [
+                    CalendarHome {
+                        drawerOpen: CalendarState.panelOpen && CalendarState.activeScreen === bar.screen
+                    }
+                ]
+
+                Modules.Clock { ink: clockInk; screen: bar.screen }
+            }
+
+            // ── METRICS (right-hand cluster, before Launchers) ─
             // Pulled out entirely, asked for -- "le moins élégant, mais
             // j'en ai besoin": cpu/temp/fan/mem/battery, the actual numeric
             // hardware readouts. Split from "tools" below (display/hdr/
@@ -1011,8 +1093,12 @@ ShellRoot {
                 // the central island's own content axis, which a fixed 3
                 // did not.
                 anchors.topMargin: Math.round((barBand.height - height) / 2)
-                anchors.left: parent.left
-                anchors.leftMargin: 6
+                // HyperOS pass: METRICS moved from the far left to the
+                // right-hand cluster, in front of Launchers and TOOLS --
+                // the far left belongs to the clock now (`clockIsland`),
+                // as on a HyperOS status bar where everything but the
+                // time sits on the right.
+                anchors.right: launchers.left
                 flushTop: false
                 color: "transparent"
                 // Glass. These three float free of every screen edge, so
@@ -1054,8 +1140,6 @@ ShellRoot {
                 // would have kept painting (the trap NotificationCard.qml
                 // documents, found the hard way once already).
 
-                Item { width: 6; height: 1 }
-
                 Modules.Cpu { ink: metricsInk }
                 Modules.Temperature { ink: metricsInk }
                 Modules.Fan { ink: metricsInk }
@@ -1065,6 +1149,12 @@ ShellRoot {
                 // wifi/rate module, now grouped with METRICS' other
                 // continuously-updating stats instead.
                 Modules.Traffic { ink: metricsInk }
+
+                // Breathing room between the readings and the status
+                // icons after them: text and glyphs are two different
+                // kinds of thing, so they get a wider gap than the 12px
+                // between two readings.
+                Item { width: 10; height: 1 }
             }
 
             // Launchers -- its own separate floating island (asked for:
@@ -1171,7 +1261,7 @@ ShellRoot {
                 // under the pointer that just clicked one).
                 splitDrawer: true
                 drawerGap: 0
-                drawerTop: centerIsland.rowHeight
+                drawerTop: bar.bandHeight
                 drawerRadius: 20
                 widenOnOpen: false
                 // Pinned, not "whatever the row happens to be": the row
@@ -1476,7 +1566,7 @@ ShellRoot {
                 // wants a rounded top ("arrondi les coins du dessus ...
                 // vu qu'il y a un espace").
                 drawerGap: 0
-                drawerTop: centerIsland.rowHeight
+                drawerTop: bar.bandHeight
 
                 drawerItems: [
                     Modules.NotificationCenter {
@@ -1503,12 +1593,9 @@ ShellRoot {
                     // either.
                     MixerHome {
                         drawerOpen: MixerState.panelOpen && MixerState.activeScreen === bar.screen
-                    },
-                    // Fifth entry, opened by the clock in the row -- no
-                    // button of its own either.
-                    CalendarHome {
-                        drawerOpen: CalendarState.panelOpen && CalendarState.activeScreen === bar.screen
                     }
+                    // The calendar used to be the fifth entry here; it
+                    // moved to `clockIsland` along with the clock.
                 ]
                 // Glass. These three float free of every screen edge, so
                 // all four of their edges are visible -- the one place in
@@ -1611,7 +1698,14 @@ ShellRoot {
                         // (ph-copy/ph-cards) trace the old icon's shape
                         // more closely but say "duplicate", not "two
                         // displays".
-                        iconFont: Fonts.iconPhosphorBold
+                        // MingCute since the HyperOS pass: laptop_fill,
+                        // computer_fill and device_fill (a big screen plus
+                        // a small one -- still "two displays" rather than
+                        // "duplicate"). All three are filled silhouettes of
+                        // similar mass, so the per-class sizes collapse
+                        // back to the row's 15.
+                        iconFont: Fonts.iconMingcute
+                        framed: false
                         // 10 -> 14 -> 15. The 10 below Fonts.icon was
                         // shrunk to (see ScriptModule.qml's own note on
                         // that number) was compensating for the Nerd Font
@@ -1627,9 +1721,9 @@ ShellRoot {
                         // badge, 18 -> 22).
                         iconPixelSize: 15
                         classIcons: ({
-                            "display-internal": "\uE1CD",
-                            "display-external": "\uE11D",
-                            "display-both": "\uE3A2"
+                            "display-internal": "\uEFAE",
+                            "display-external": "\uEC04",
+                            "display-both": "\uECA4"
                         })
                         // Optically matched to the row, not to each
                         // other's nominal size -- see ScriptModule.qml's
@@ -1648,8 +1742,8 @@ ShellRoot {
                         // outright lands lu-monitor at 11.5px, which
                         // overshoots into visibly small.
                         classIconSizes: ({
-                            "display-internal": 14,
-                            "display-external": 13,
+                            "display-internal": 15,
+                            "display-external": 15,
                             "display-both": 15
                         })
                         clickCommand: ["bash", "-c",
@@ -1762,13 +1856,11 @@ ShellRoot {
                     // for the same contract.
                     Modules.Battery { ink: toolsInk; screen: bar.screen }
 
-                    // ---- energie | heure ----
+                    // ---- energie | notifications ----
                     Item { width: toolsIsland.groupGap; height: 1 }
 
-                    // Clock (+ date) -- moved out of dead-center (see
-                    // barRow's own comment above) to right before the
-                    // power dot, asked for.
-                    Modules.Clock { ink: toolsInk; screen: bar.screen }
+                    // The clock sat here until the HyperOS pass moved it
+                    // to the far left (`clockIsland`).
 
                     // Notification bell -- moved again (asked for:
                     // "entre clock et power", i.e. the literal power dot

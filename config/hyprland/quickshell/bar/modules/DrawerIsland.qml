@@ -75,6 +75,18 @@ Item {
 
     readonly property int margin: 6
     readonly property int cornerRadius: 18
+    // cornerRadius, capped at half the height it is drawn on. A no-op on
+    // every island up to now (rows of 24-31px never asked for more than
+    // their half), and what makes a floating CAPSULE possible: the
+    // central island's row is 25px tall since the HyperOS pass, where an
+    // 18px corner is taller than half the shape and would come out as a
+    // blob (Rectangle does not clamp per-corner radii the way it clamps
+    // `radius`, and GlassLens's shader clamps nothing). `fillRadius`
+    // follows the fill's LIVE height, so as a drawer grows the island
+    // downward its bottom corners open out from the capsule's 12.5 to the
+    // full 18 instead of staying pinched.
+    readonly property real rowRadius: Math.min(root.cornerRadius, root.rowHeight / 2)
+    readonly property real fillRadius: Math.min(root.cornerRadius, fill.height / 2)
     // The drawer block's own, deliberately rounder than the row pill's
     // (asked for: "arrondir beaucoup plus les coins du conteneur
     // principal"). Separate from `cornerRadius` above rather than a bump
@@ -845,10 +857,10 @@ Item {
         y: 0
         width: parent.width
         height: root.splitDrawer ? root.rowHeight : root.height
-        topLeftRadius: root.flushTop ? 0 : root.cornerRadius
-        topRightRadius: root.flushTop ? 0 : root.cornerRadius
-        bottomLeftRadius: root.cornerRadius
-        bottomRightRadius: root.cornerRadius
+        topLeftRadius: root.flushTop ? 0 : root.rowRadius
+        topRightRadius: root.flushTop ? 0 : root.rowRadius
+        bottomLeftRadius: root.fillRadius
+        bottomRightRadius: root.fillRadius
         color: root.fillColor
         gradient: root.fillGradient
 
@@ -858,8 +870,8 @@ Item {
         // actually draws.
         layer.enabled: root.rowLens
         layer.effect: GlassLens {
-            topRadius: root.flushTop ? 0 : root.cornerRadius
-            bottomRadius: root.cornerRadius
+            topRadius: root.flushTop ? 0 : root.rowRadius
+            bottomRadius: root.fillRadius
             // Flush against the screen's top edge: that edge gets no
             // treatment at all, the island simply melts into the border.
             // Comfortably past the 7px band plus the rim's reach.
@@ -931,10 +943,10 @@ Item {
                 x: 0; y: 0
                 width: gloss.width
                 height: gloss.height
-                topLeftRadius: root.flushTop ? 0 : root.cornerRadius
-                topRightRadius: root.flushTop ? 0 : root.cornerRadius
-                bottomLeftRadius: root.cornerRadius
-                bottomRightRadius: root.cornerRadius
+                topLeftRadius: root.flushTop ? 0 : root.rowRadius
+                topRightRadius: root.flushTop ? 0 : root.rowRadius
+                bottomLeftRadius: root.fillRadius
+                bottomRightRadius: root.fillRadius
             }
         }
     }

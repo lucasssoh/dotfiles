@@ -60,9 +60,9 @@ Item {
     // monospaced, so this module's width no longer jumps 15px when the
     // profile changes -- it is constant in every state.
     function iconFor(p) {
-        if (p === PowerProfile.Performance) return "\uE1B4";   // lu-zap
-        if (p === PowerProfile.PowerSaver) return "\uE2DE";    // lu-leaf
-        return "\uE1B0";                                       // lu-wind (balanced)
+        if (p === PowerProfile.Performance) return "\uEE06";   // mgc flash_fill
+        if (p === PowerProfile.PowerSaver) return "\uEFF4";    // mgc leaf_fill
+        return "\uF5CE";                                       // mgc wind_fill (balanced)
     }
 
     function colorFor(p) {
@@ -80,7 +80,7 @@ Item {
         anchors.centerIn: parent
         text: root.iconFor(PowerProfiles.profile)
         color: root.colorFor(PowerProfiles.profile)
-        font.family: Fonts.iconPhosphorBold
+        font.family: Fonts.iconMingcute
         font.pixelSize: 15
     }
 

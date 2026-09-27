@@ -21,49 +21,24 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
-    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
-    // reactive form made the pill visibly grow/shrink as rpm's digit
-    // count changed (or during the brief "N/A" at startup, before hwmon
-    // discovery resolves). valueMetrics measures the worst-case string
-    // ONCE with the real font instead. rpm is already padStart(4)'d.
-    TextMetrics {
-        id: valueMetrics
-        font.family: Fonts.ui
-        font.pixelSize: 13
-        text: "9999"
-    }
-
-    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
+    // HyperOS pass: text only, no leading glyph -- see StatReadout.qml.
+    // 6px a side, down from 10: without a glyph there is no icon/value
+    // pair to give room to, just readings separated by that 12px.
+    implicitWidth: row.implicitWidth + 12
     implicitHeight: 24
     visible: SystemStats.fanPath !== ""
 
     Row {
-        id: label
+        id: row
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 6
 
-        // Box-centering (anchors.verticalCenter) -- see Temperature.qml's
-        // comment for the full history of why the right anchor mode
-        // depends on the specific icon font, not a fixed rule.
-        Text {
-            id: iconGlyph
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: "\uE379"   // lu-fan
-            color: root.ink.primary
-            font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 15
-        }
-        Text {
-            id: valueLabel
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: SystemStats.fanRpm
-            color: root.ink.primary
-            font.family: Fonts.ui
-            font.pixelSize: 13
+        StatReadout {
+            value: String(SystemStats.fanRpm)
+            widest: "9999"
+            unit: "rpm"
+            valueColor: root.ink.primary
+            unitColor: root.ink.secondary
         }
     }
 }

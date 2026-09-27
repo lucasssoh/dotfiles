@@ -83,6 +83,7 @@ Item {
                         (modelData.toplevels && modelData.toplevels.values.length > 0)
                         || (modelData.lastIpcObject && modelData.lastIpcObject.windows > 0)
                     )
+                readonly property bool empty: !modelData.active && !pill.occupied
 
                 // `active` = current workspace on ITS OWN monitor;
                 // `focused` = that AND the monitor is also the globally
@@ -101,45 +102,41 @@ Item {
                 }
                 height: 18
                 anchors.verticalCenter: parent.verticalCenter
-                radius: 6   // 2 -> 6, more pronounced corners (still short of a full pill at 9)
-                color: modelData.active ? "#34383f" : "transparent"
-
-                // One GlassChip in place of the topLeft + bottomRight
-                // GlassRim pair -- see GlassChip.qml, and ActiveWindow's
-                // own note on why the top bias is kept on the central
-                // island rather than flipped to the badges' bottom one.
-                //
-                // The only chip in this set with a real fill, so also
-                // the only one where the trough has a surface to shade
-                // and the convexity reads as a body rather than as an
-                // edge alone.
-                //
-                // Gated on `active` exactly as the two GlassRims were:
-                // the inactive pills, which is most of them most of the
-                // time, allocate nothing at all.
-                layer.enabled: modelData.active
-                layer.effect: GlassChip { radius: 6 }
-
-                // Same GlassRim "verre métal" edge as the bar's other
-                // pills (asked for), on the active pill only -- occupied/
-                // empty stay plain (no fill to rim in the first place).
-                // Plain-child mode (target left unset, traces `parent`):
-                // `pill` is a bare Repeater delegate, not wrapped in any
-                // Block/reparenting container, so there's no separate
-                // sibling to hang a `target:` off of.
+                // HyperOS pass: the active workspace is INVERTED -- a solid
+                // capsule of the primary ink with the digit cut out in the
+                // dark ink, the way HyperOS control-centre tiles show "on".
+                // It replaces the graphite fill + GlassChip rim, the most
+                // macOS-like detail this module had, and adds no colour:
+                // both inks are the ones the island already draws with.
+                radius: height / 2
+                color: modelData.active ? Ink.primary : "transparent"
 
                 Text {
+                    visible: !pill.empty
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     anchors.centerIn: parent
                     text: modelData.id
-                    // active -> accent text inside the ring, bold; occupied
-                    // (not active) -> plain bright text, no weight; empty
-                    // -> muted, no weight.
-                    color: pill.modelData.active ? Ink.accent : (pill.occupied ? Ink.primary : Ink.faint)
+                    // active -> dark ink cut out of the capsule; occupied ->
+                    // plain bright text. Empty workspaces draw no digit at
+                    // all (the dot below): only the ones holding something
+                    // are worth reading.
+                    color: pill.modelData.active ? Ink.onLight : Ink.primary
                     font.family: Fonts.ui
                     font.pixelSize: 13
-                    font.bold: pill.modelData.active
+                    font.weight: pill.modelData.active ? Font.DemiBold : Font.Normal
+                }
+
+                // Empty workspace: a 4px dot instead of a faint digit, the
+                // HyperOS page-indicator idiom. The pill keeps its full
+                // width, so the click target does not shrink with it.
+                Rectangle {
+                    visible: pill.empty
+                    anchors.centerIn: parent
+                    width: 4
+                    height: 4
+                    radius: 2
+                    color: Ink.faint
                 }
 
                 MouseArea {

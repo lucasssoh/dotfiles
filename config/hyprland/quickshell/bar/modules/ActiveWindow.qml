@@ -196,43 +196,20 @@ Item {
         font.pixelSize: 13
     }
 
-    Rectangle {
+    // HyperOS pass: the app name is no longer a framed chip. The bold
+    // accent label in a glass rim read as macOS's bold app menu sitting
+    // next to the Apple logo; a plain Medium label in the secondary ink,
+    // followed by the title in the primary one, carries the same "app,
+    // then what it is showing" hierarchy through weight and tone alone.
+    // Still an Item named `chip` so the width maths above is unchanged.
+    Item {
         id: chip
         visible: root.hasWindow
         anchors.left: parent.left
-        // Deliberate gap/offset from the block's left edge, purely for
-        // breathing room (Block has no border to clear any more). 4 -> 8,
-        // asked for -- also keeps the chip clear of the pill's now-bigger
-        // bottom-left corner radius (see shell.qml's island Block).
         anchors.leftMargin: 8
         anchors.verticalCenter: parent.verticalCenter
-        width: appLabel.implicitWidth + 22
+        width: appLabel.implicitWidth
         height: 18
-        radius: 6   // same corner rounding as the active workspace pill (2 -> 6, more pronounced, still not a full pill/stadium shape)
-        // No FLAT border (see the no-border pass in shell.qml's header
-        // comment) -- the graphite-platinum fill against the block's
-        // darker background, plus the accent-colored label below, is
-        // enough to read as a chip on its own. It does get the same
-        // GlassRim "verre métal" edge as the bar's other pills though
-        // (asked for): a child, not a sibling, here -- `chip` isn't a
-        // Block/reparenting container, so GlassRim's plain-child mode
-        // (target left unset, traces `parent`) applies directly.
-        color: "#34383f00"
-
-        // One GlassChip in place of the topLeft + fainter-bottomRight
-        // GlassRim pair -- see GlassChip.qml. The diagonal is gone
-        // because the lens is vertical-only by design (an angle means
-        // something different on every shape in this bar; GlassRim's own
-        // header makes that case), but the TOP bias is kept here rather
-        // than flipped to the badges' bottom one: this chip belongs to
-        // the central island's pane family, not to TOOLS' small badges.
-        //
-        // `chip` has no fill of its own (#34383f00) -- the rim is the
-        // only thing that draws it, and it survives being fed to a
-        // shader because the emissive term carries its own alpha. See
-        // glass.frag.
-        layer.enabled: true
-        layer.effect: GlassChip { radius: 6 }
 
         Text {
             renderType: Text.NativeRendering
@@ -240,12 +217,11 @@ Item {
             id: appLabel
             anchors.centerIn: parent
             text: root.appName
-            color: Ink.accent
+            color: Ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 14
-            font.bold: true
+            font.weight: Font.Medium
         }
-
     }
 
     Text {

@@ -99,17 +99,20 @@ Item {
     // the old one came from the font's GSUB ligature table, which
     // misattributes names -- render and look before trusting it.
     function netIcon() {
+        // Ethernet stays the Lucide glyph (MingCute has none, see the
+        // slot's `glyphFont` below). MingCute has ONE wifi glyph, not
+        // Lucide's three strength tiers, so strength moved from the
+        // glyph's shape to its tone -- see `netWeak`.
         if (root.netKind === "ethernet") return "\uE125";
-        if (root.netKind === "wifi") {
-            const s = root.wifiSignal;
-            if (s < 33) return "\uE5F8";
-            if (s < 66) return "\uE5F7";
-            return "\uE1AE";
-        }
+        if (root.netKind === "wifi") return "\uF5CA";   // mgc wifi_fill
         return "";
     }
 
     // ---- bluetooth slot (shown whenever the radio is on) ---------------
+    // Below a third of full signal. Drawn in the secondary ink rather
+    // than as a smaller glyph -- see netIcon().
+    readonly property bool netWeak: root.netKind === "wifi" && root.wifiSignal < 33
+
     readonly property bool btEnabled: Bluetooth.defaultAdapter !== null && Bluetooth.defaultAdapter.enabled
     readonly property bool btConnected: {
         if (!Bluetooth.defaultAdapter) return false;
@@ -123,7 +126,10 @@ Item {
     // Bluetooth.qml's own icon(). "" for fully off.
     function btIcon() {
         if (!root.btEnabled) return "";
-        return root.btConnected ? "\uE1B8" : "\uE05C";
+        // mgc bluetooth_fill either way: MingCute has no "connected"
+        // variant, so a connection is carried by the ink instead (primary
+        // when something is connected, secondary when merely on).
+        return "\uEA40";
     }
 
     // Width tracks `content`'s own live width (badge padding: 7px each
@@ -152,34 +158,13 @@ Item {
     Rectangle {
         id: badge
         anchors.centerIn: parent
-        width: Math.max(content.implicitWidth + 14, 24)
-        // 18 -> 22: the chip stopped being the thing that fits and went
-        // back to being the thing that frames. Every bar icon is one size
-        // now (15px, see Fonts.qml), and a Lucide glyph at 15 inks up to
-        // 16px tall -- inside an 18px chip that left ONE pixel of padding,
-        // so the only way to keep 18 was to shrink the glyph, which is the
-        // wrong end to give (asked for: "plutot agrandir le bouton que de
-        // retrecir l'icon qui s'y trouve"). 22 restores ~3px a side, the
-        // same breathing room the 12px glyphs used to have at 18.
-        // Still fits: modules are 24 tall inside the island's 31px row, so
-        // this grows into slack that was already there -- no module
-        // implicitHeight moved, no row got taller.
-        // Radius stays 6, NOT half the height: a 22px chip capsules at 11,
-        // and "coin arrondi mais pas totalement arrondi comme un pill" is
-        // still the rule these three share.
+        width: Math.max(content.implicitWidth + 6, 24)
+        // HyperOS pass: no frame any more. The GlassChip that used to
+        // outline this badge was one of the macOS-like details; the
+        // Rectangle is kept, transparent, purely as the sized hit area
+        // the rest of this file measures against.
         height: 22
-        radius: 6
         color: "transparent"
-
-        // One GlassChip in place of the bottom+top GlassRim pair, same
-        // swap and same 0.40/0.18 balance as Hdr.qml's own -- and a
-        // layer.effect for the same reason, see there.
-        layer.enabled: true
-        layer.effect: GlassChip {
-            radius: 6
-            lightBottom: 1.0
-            lightTop: 0.45
-        }
     }
 
     // Up to 3 icons (gear always, net/bt conditional).
@@ -191,48 +176,34 @@ Item {
         // Order asked for explicitly: Bluetooth all the way to the left,
         // internet in the middle, the permanent gear all the way to the
         // right. Row lays children out in declaration order.
-        IconSlot { glyph: root.btIcon() }
-        IconSlot { glyph: root.netIcon() }
+        IconSlot {
+            glyph: root.btIcon()
+            glyphColor: root.btConnected ? root.ink.primary : root.ink.secondary
+        }
+        IconSlot {
+            glyph: root.netIcon()
+            glyphFont: root.netKind === "ethernet" ? Fonts.iconPhosphorBold : Fonts.iconMingcute
+            glyphColor: root.netWeak ? root.ink.secondary : root.ink.primary
+        }
 
         // Permanent anchor icon -- see header comment: without this the
         // badge went fully blank whenever WiFi/Bluetooth/Ethernet were
         // all off, with nothing left to click on visually. Never
         // animated in/out itself, only ever present.
+        //
+        // HyperOS pass: now ONLY that fallback. Next to a wifi or
+        // bluetooth glyph the gear was a third icon saying "this opens
+        // settings", which the other two already do by being clickable.
         Text {
+            visible: root.netIcon() === "" && root.btIcon() === ""
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "\uE154"
+            text: "\uF32C"   // mgc settings_3_fill
             color: root.ink.primary
-            font.family: Fonts.iconPhosphorBold
+            font.family: Fonts.iconMingcute
             font.pixelSize: 15
         }
     }
-
-    // Same "verre métal" edge as Hdr's badge, Balise's own panel, Roue's
-    // hub -- see GlassRim.qml's header for the shared five-stop ramp.
-    // Traces `badge`'s live x/y/width/height (GlassRim.qml binds to
-    // `target`'s geometry every frame), so it grows/shrinks in step with
-    // the animated resize above instead of needing its own Behavior.
-    // Symmetric light from BELOW, not the topLeft/bottomRight diagonal the
-    // bar's bigger panes use -- asked for, for the island badges
-    // specifically ("un light source bas symétrique, pas haut gauche bas
-    // droite"). Two sources still, same idiom as before: the lit one from
-    // the bottom plus a fainter one from the top, so the upper arête
-    // still reads instead of dissolving into the pill behind it.
-    //
-    // vSpan 1.0 (not the 0.65/0.5 diagonal default) spends the whole
-    // five-stop ramp across the badge's 18px height, which is what makes
-    // the bottom edge read as the lit one on a chip this small.
-    //
-    // 0.40/0.18 and not the full-strength 1.0/0.45 the panes use: a
-    // corner hot spot only ever lights a short arc, while a symmetric
-    // source lights the ENTIRE bottom run at the ramp's brightest stop,
-    // so the same numbers that read as a highlight on a pane read as a
-    // white underline here -- measured, 157 luminance against the old
-    // diagonal's 92 peak, and "la puissance du blanc est trop forte".
-    // 0.40 puts it at 66, below the look it replaces, with the direction
-    // still legible; 0.28 was tried too and loses the bottom edge into
-    // the other three.
 
     // Opens Balise's own drawer on toolsIsland now (BaliseHome.qml, see
     // the project plan) instead of launching the separate GTK app --
@@ -281,6 +252,8 @@ Item {
     component IconSlot: Item {
         id: slot
         required property string glyph
+        property string glyphFont: Fonts.iconMingcute
+        property color glyphColor: root.ink.primary
         readonly property bool shown: slot.glyph !== ""
         property string displayGlyph: ""
 
@@ -360,8 +333,8 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: slot.displayGlyph
-            color: root.ink.primary
-            font.family: Fonts.iconPhosphorBold
+            color: slot.glyphColor
+            font.family: slot.glyphFont
             font.pixelSize: 15
             opacity: 0
         }

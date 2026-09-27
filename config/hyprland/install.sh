@@ -649,6 +649,39 @@ else
 fi
 
 # ============================================================
+# MINGCUTE ICONS (quickshell bar row -- Fonts.qml's iconMingcute)
+# ============================================================
+# Apache-2.0, not packaged by any distro -- pulled from the `mingcute_icon`
+# npm package, whose font/MingCute.ttf is one family ("MingCute") holding
+# every glyph in both its _line and _fill forms. PINNED rather than
+# `latest` like the two above: the bar addresses these glyphs by raw
+# codepoint (taken from that version's font/Mingcute.css), and a release
+# that renumbered them would silently swap icons in the bar.
+section "Checking MingCute Icons font"
+
+MINGCUTE_VERSION="2.9.72"
+if fc-list | grep -qi "MingCute"; then
+    ok "MingCute Icons already installed."
+elif ! command -v curl &>/dev/null; then
+    warn "curl not available. Install MingCute Icons manually:"
+    warn "https://github.com/Richard9394/MingCute"
+else
+    info "Downloading MingCute Icons (mingcute_icon ${MINGCUTE_VERSION})..."
+    MINGCUTE_TMP="$(mktemp -d)"
+    if curl -fLo "$MINGCUTE_TMP/mingcute.tgz" \
+            "https://registry.npmjs.org/mingcute_icon/-/mingcute_icon-${MINGCUTE_VERSION}.tgz" \
+        && tar -xzf "$MINGCUTE_TMP/mingcute.tgz" -C "$MINGCUTE_TMP" package/font/MingCute.ttf; then
+        mkdir -p ~/.local/share/fonts
+        cp "$MINGCUTE_TMP/package/font/MingCute.ttf" ~/.local/share/fonts/
+        fc-cache -f ~/.local/share/fonts
+        ok "MingCute Icons ($MINGCUTE_VERSION) installed."
+    else
+        warn "MingCute Icons download failed. Install manually: https://github.com/Richard9394/MingCute"
+    fi
+    rm -rf "$MINGCUTE_TMP"
+fi
+
+# ============================================================
 # SYMLINK CONFIG
 # ============================================================
 

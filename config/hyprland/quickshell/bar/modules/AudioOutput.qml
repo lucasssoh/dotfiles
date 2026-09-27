@@ -180,8 +180,10 @@ Item {
     // ph-speaker-x / ph-headphones / ph-monitor (no dedicated "hdmi"
     // glyph in Phosphor -- monitor/display is the closest stand-in for
     // "audio routed to the screen's own output") / ph-speaker-high
-    readonly property string iconGlyph: root.muted ? "\uE626"
-        : (root.isHeadphone ? "\uE0F1" : root.isHdmi ? "\uE11D" : "\uE1AB")
+    // MingCute fill glyphs (HyperOS pass): volume_off / headphone /
+    // computer / volume.
+    readonly property string iconGlyph: root.muted ? "\uF584"
+        : (root.isHeadphone ? "\uEF0A" : root.isHdmi ? "\uEC04" : "\uF580")
     // Icon ONLY -- the numeric level that used to sit before it is gone,
     // asked for: "puisqu'on a deja ce retour, enleve les valeurs devant
     // les icones audio output et input". That retour is the OSD (Osd.qml,
@@ -217,7 +219,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.iconGlyph
             color: root.ink.primary
-            font.family: Fonts.iconPhosphorBold
+            font.family: Fonts.iconMingcute
             font.pixelSize: 15
         }
     }

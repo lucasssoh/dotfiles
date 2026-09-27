@@ -9,6 +9,14 @@ import "../services"
 // a macOS-menu-bar-style "Fri Aug 28 20:32" string, then a plain time
 // while the day/date lived elsewhere, and now a date again -- but AFTER
 // the time ("ajouter Fri Sep 18 à droite de 22:11"), not before it.
+//
+// HyperOS pass: moved again, to the far LEFT of the bar, on its own
+// island (see shell.qml's `clockIsland`) -- the Android/HyperOS status
+// bar convention, and the single move that most separates this bar from
+// macOS's menu bar, whose clock lives at the far right. The time and the
+// date are now two Texts so they can carry different weights: the time
+// in DemiBold, the date in the secondary ink. The date keeps its
+// "Sun Sep 27" shape (asked for).
 
 Item {
     id: root
@@ -40,23 +48,41 @@ Item {
         precision: SystemClock.Minutes
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    Row {
         id: label
         anchors.centerIn: parent
-        // en_US locale rather than Qt.formatDateTime, which would follow
-        // this session's fr_FR one and render "ven. 18 sept." -- same
-        // reasoning, and the same "Fri Sep 18" shape, as
-        // NotificationCenter.qml's own header clock.
-        text: Qt.formatDateTime(clock.date, "HH:mm") + "  " + clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
-        color: root.ink.primary
-        font.family: Fonts.ui
-        font.pixelSize: 14
+        spacing: 8
+
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            anchors.baseline: dateText.baseline
+            text: Qt.formatDateTime(clock.date, "HH:mm")
+            color: root.ink.primary
+            font.family: Fonts.ui
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
+        }
+
+        Text {
+            id: dateText
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            anchors.verticalCenter: parent.verticalCenter
+            // en_US locale rather than Qt.formatDateTime, which would
+            // follow this session's fr_FR one and render "ven. 18 sept."
+            // -- same reasoning, and the same "Fri Sep 18" shape, as
+            // NotificationCenter.qml's own header clock.
+            text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
+            color: root.ink.secondary
+            font.family: Fonts.ui
+            font.pixelSize: 13
+            font.weight: Font.Medium
+        }
     }
 
     // A click opens the month calendar (CalendarState / calendar/
-    // CalendarHome.qml), TOOLS' fifth drawer.
+    // CalendarHome.qml), hosted by the clock's own island.
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor

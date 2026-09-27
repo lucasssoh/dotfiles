@@ -84,6 +84,10 @@ Item {
 
     property real textOpacity: 1.0      // waybar/style.css per-module opacity (e.g. #custom-apps: 0.8)
     property real letterSpacing: 0      // waybar/style.css per-module letter-spacing (e.g. #custom-apps: 4px)
+    // Draw the GlassChip frame around the badge. On by default (the
+    // generic module's historical look); the bar turns it off since the
+    // HyperOS pass, where no status icon is framed any more.
+    property bool framed: true
     property real minWidth: 0           // floor in px -- mirrors waybar's "min-length"/CSS
                                          // min-width, reserves space so a module's own text
                                          // changing length (or briefly being empty before the
@@ -171,7 +175,7 @@ Item {
         // One GlassChip in place of the bottom+top GlassRim pair, same
         // swap and same 0.40/0.18 balance as Hdr.qml's own -- and a
         // layer.effect for the same reason, see there.
-        layer.enabled: true
+        layer.enabled: root.framed
         layer.effect: GlassChip {
             radius: 6
             lightBottom: 1.0

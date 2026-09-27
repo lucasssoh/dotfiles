@@ -21,59 +21,24 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
-    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
-    // reactive form made the pill visibly grow/shrink every time
-    // celsius crossed a digit boundary. valueMetrics measures the
-    // worst-case string ONCE with the real font instead.
-    TextMetrics {
-        id: valueMetrics
-        font.family: Fonts.ui
-        font.pixelSize: 13
-        text: "100"   // padStart(3) never exceeds 3 digits
-    }
-
-    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
+    // HyperOS pass: text only, no leading glyph -- see StatReadout.qml.
+    // 6px a side, down from 10: without a glyph there is no icon/value
+    // pair to give room to, just readings separated by that 12px.
+    implicitWidth: row.implicitWidth + 12
     implicitHeight: 24
     visible: SystemStats.tempPath !== ""
 
     Row {
-        id: label
+        id: row
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 6
 
-        // History on this Row's alignment: per-glyph size bumps, plain
-        // top-alignment (Row's default), and anchors.baseline were each
-        // right for a DIFFERENT icon font, not universally -- Nerd Font +
-        // Inter happened to sit close enough at y:0; Font Awesome (drawn
-        // like a letter, sitting ON the baseline) needed
-        // anchors.baseline; Phosphor's glyphs are drawn floating,
-        // vertically centered in their own line box rather than sitting
-        // on the baseline -- box-centering (anchors.verticalCenter, both
-        // items) is what actually measures aligned for THIS font, tested
-        // pixel-precise against baseline-anchoring before picking it.
-        // Moral: there's no one correct anchor mode across icon fonts,
-        // has to be re-checked (screenshot, not assumed) per swap.
-        Text {
-            id: iconGlyph
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: "\uE186"   // lu-thermometer
-            color: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
-            font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 15
-        }
-        // waybar format: "{temperatureC:>3}" -- right-padded to 3 chars,
-        // no unit (asked to keep it that way).
-        Text {
-            id: valueLabel
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: String(SystemStats.tempCelsius).padStart(3, " ")
-            color: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
-            font.family: Fonts.ui
-            font.pixelSize: 13
+        StatReadout {
+            value: String(SystemStats.tempCelsius)
+            widest: "100"
+            unit: "°C"
+            valueColor: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
+            unitColor: root.ink.secondary
         }
     }
 }

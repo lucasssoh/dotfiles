@@ -83,7 +83,7 @@ The largest module by a wide margin, and the one that does the heavy lifting.
 | Links | `hypr`, `waybar`, `quickshell`, `rofi`, `balise`, `prisme`, `roue`, `hyprlock`, `scripts`, `khal`, `theme` into `~/.config/` |
 | Services | Three `systemd --user` units: `balise`, `wallpaper-slideshow`, `slideshow-fullscreen-guard` |
 
-It also downloads four icon/mono fonts when absent (JetBrains Mono Nerd Font, GoogleSansCode Nerd Font Mono, Phosphor Icons, Lucide Icons — the last two resolved from the npm registry), and builds the Comix Cursors theme from upstream SVGs when `~/.icons/ComixCursors-White` does not exist.
+It also downloads five icon/mono fonts when absent (JetBrains Mono Nerd Font, GoogleSansCode Nerd Font Mono, Phosphor Icons, Lucide Icons, MingCute — the last three from the npm registry, MingCute pinned because the bar addresses its glyphs by codepoint), and builds the Comix Cursors theme from upstream SVGs when `~/.icons/ComixCursors-White` does not exist.
 
 Config directories are linked, not copied: editing a file in the repo changes the live config immediately. `hyprctl reload` picks up the Lua; quickshell watches its own QML and reloads itself.
 
@@ -93,7 +93,7 @@ Each copr is enabled only when the package it provides is actually missing.
 
 ### The bar's drawers
 
-The bar is quickshell, linked by `hyprland` and living in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). Most of it is a row of pills, but four panels drop out of the **TOOLS** island on the right, and they are the part worth describing because they are where the desktop's settings actually live.
+The bar is quickshell, linked by `hyprland` and living in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). It follows HyperOS's status-bar layout rather than macOS's menu bar: the time alone on the far left, a floating capsule in the middle (window, workspaces, media), and everything else on the right — metrics as plain text, then status icons (MingCute), the battery with its percentage inside, the bell and the power button. Four panels drop out of the **TOOLS** island on the right, and they are the part worth describing because they are where the desktop's settings actually live. A fifth, the month calendar, drops from the clock on the left.
 
 | Drawer | Opened by | What it holds |
 |---|---|---|

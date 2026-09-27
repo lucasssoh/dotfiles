@@ -18,49 +18,23 @@ Item {
     // the material flips rather than the ink alone.
     property QtObject ink: Ink
 
-    // Fixed width, not Math.max(label.implicitWidth, ...) -- that
-    // reactive form made the pill visibly grow/shrink as usedGB's digit
-    // count changed. valueMetrics measures the worst-case string ONCE
-    // with the real font instead.
-    TextMetrics {
-        id: valueMetrics
-        font.family: Fonts.ui
-        font.pixelSize: 13
-        text: "199.9GB"
-    }
-
-    implicitWidth: iconGlyph.implicitWidth + label.spacing + valueMetrics.width + 20
+    // HyperOS pass: text only, no leading glyph -- see StatReadout.qml.
+    // 6px a side, down from 10: without a glyph there is no icon/value
+    // pair to give room to, just readings separated by that 12px.
+    implicitWidth: row.implicitWidth + 12
     implicitHeight: 24
 
     Row {
-        id: label
+        id: row
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 6
 
-        // Phosphor vs Inter: box-centering (anchors.verticalCenter) is
-        // what measured aligned for Phosphor -- see Temperature.qml's
-        // comment for the full reasoning/history.
-        Text {
-            id: iconGlyph
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            text: "\uE445"   // lu-memory-stick
-            color: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
-            font.family: Fonts.iconPhosphorBold
-            font.pixelSize: 15
-        }
-        Text {
-            id: valueLabel
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            anchors.verticalCenter: parent.verticalCenter
-            // "G" -> "GB" (asked for, across all of METRICS: an
-            // unambiguous unit rather than a bare letter).
-            text: SystemStats.memUsedGB.toFixed(1) + "GB"
-            color: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
-            font.family: Fonts.ui
-            font.pixelSize: 13
+        StatReadout {
+            value: SystemStats.memUsedGB.toFixed(1)
+            widest: "99.9"
+            unit: "GB"
+            valueColor: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
+            unitColor: root.ink.secondary
         }
     }
 }
