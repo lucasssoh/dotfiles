@@ -170,13 +170,14 @@ Item {
         // pctRef's width (a hidden "100", the widest it can read) and
         // right-aligned, so 1/10/100 never shift the row and the digits
         // sit flush against the gauge. Same single text style as the rest
-        // of the band (13px Medium); state-coloured like the gauge.
+        // of the band (13px Medium) and its plain primary ink -- the state colour
+        // (charging green, low red...) stays on the gauge alone (asked for).
         Text {
             anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.present ? Math.round(root.pct) : ""
-            color: root.batteryColor
+            color: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
