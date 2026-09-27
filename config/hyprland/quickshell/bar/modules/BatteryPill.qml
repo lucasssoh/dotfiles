@@ -50,16 +50,13 @@ Item {
     readonly property real capWidth: root.capAt >= 0
         ? Math.round(root.bodyWidth * root.capAt / 100) : root.bodyWidth
 
-    // The cell -- body, fill and number -- as one item, so the convex
-    // glass can go over it as a single pane (asked for on the battery:
-    // "essaie ça avec l'icône de la batterie"). The nub stays outside:
-    // the lens traces a rounded rectangle, and the nub would break it.
+    // The cell -- body and fill -- as one item. It carried GlassChip's
+    // convex lens for a while (tried on the battery and the Balise
+    // capsule); removed from both, the gauge is flat again (asked for).
     Item {
         id: cell
         width: root.bodyWidth
         height: root.bodyHeight
-        layer.enabled: true
-        layer.effect: GlassChip { radius: root.bodyRadius }
 
         Rectangle {
             id: body
