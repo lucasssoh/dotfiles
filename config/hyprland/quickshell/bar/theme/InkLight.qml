@@ -55,7 +55,11 @@ QtObject {
     // and Ink already names this colour, so naming it twice with a
     // one-bit difference would be a difference with no meaning.
     readonly property color primary: "#0c0c0e"
-    readonly property color secondary: "#5b5b5f"
+    // #5b5b5f -> #3a3a3e (HyperOS pass): the units and the date moved
+    // into this tier, and at #5b5b5f they scored 2.2:1 on the band over
+    // white -- "le gris ne se voit pas du tout". Still clearly lighter
+    // than `primary`, so the value/unit hierarchy survives.
+    readonly property color secondary: "#3a3a3e"
     readonly property color muted: Ink.muted
     readonly property color faint: Ink.faint
 

@@ -192,7 +192,21 @@ void main() {
              - sdRoundRect(c - vec2(1.0, 0.0), halfSize, rt, rb);
     float dy = sdRoundRect(c + vec2(0.0, 1.0), halfSize, rt, rb)
              - sdRoundRect(c - vec2(0.0, 1.0), halfSize, rt, rb);
-    vec2 n = normalize(vec2(dx, dy) + vec2(1e-6));
+    //
+    // Guarded rather than nudged. This used to be normalize(g + 1e-6),
+    // which is fine in full precision but not in the GLSL ES build this
+    // file also ships (mediump): 1e-6 squared underflows to 0, and a
+    // pixel where the field is perfectly flat -- the exact middle row of
+    // a pane with an odd pixel height, between its top and bottom edges
+    // -- normalises a zero vector into NaN. That one row then sampled
+    // garbage and showed as a thin grey line across the middle of the
+    // central island whenever the keybinds sheet grew it to an odd
+    // height. The normal only matters where `lens` is non-zero, i.e.
+    // near an edge, where the gradient is never flat, so any fixed
+    // direction is correct for the flat case.
+    vec2 g = vec2(dx, dy);
+    float gl = length(g);
+    vec2 n = gl > 1e-3 ? g / gl : vec2(0.0, 1.0);
 
     // Distance from each lit edge, 0 at that edge and 1 at the far one.
     // Purely vertical, so every x reads the same value -- see the

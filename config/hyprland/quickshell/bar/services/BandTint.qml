@@ -33,12 +33,32 @@ Singleton {
     // 0x73 is ~45% -- the band blocks less than half of what is behind
     // it, which is the whole reason this machinery exists.
     //
-    // ONE band, and it never changes: flat and translucent, always this
-    // colour. A second, light band was tried and removed -- it worked on
-    // the numbers (worst island 5.57:1 against 4.22:1 here) and was wrong
-    // on the design: a bar whose surface turns white is a different bar.
-    // Only the ink moves now.
+    // ONE band material: flat, translucent, this near-black. A second,
+    // WHITE band was tried and removed -- it worked on the numbers (worst
+    // island 5.57:1 against 4.22:1 here) and was wrong on the design: a
+    // bar whose surface turns white is a different bar.
+    //
+    // What does move, since the HyperOS pass, is its DENSITY: under an
+    // island whose ink went dark (a bright wallpaper behind it), the same
+    // black thins from 0x73 to 0x40 (~25%) -- asked for, "éclaircir un
+    // peu le fond translucide en mode light". Measured over pure white,
+    // the 0x73 band composited to grey 145, where the light ramp's
+    // secondary ink (units, date) scored 2.2:1 and simply vanished; at
+    // 0x40 the surface is 194 and the same text reads at 6.4:1. Still the
+    // same colour, still translucent, so it stays the same bar -- just a
+    // lighter veil of it. `bandFor` below is the interpolation shell.qml
+    // paints with, per island, following each island's own ink.
     readonly property color band: "#730c0c0e"
+    readonly property color bandLight: "#400c0c0e"
+
+    // The band under an island whose ink sits at `t` on the dark(0) ->
+    // light(1) axis (IslandInk.t, which animates), so the veil thins in
+    // step with the ink flipping rather than after it.
+    function bandFor(t) {
+        const k = Math.max(0, Math.min(1, t));
+        return Qt.rgba(root.band.r, root.band.g, root.band.b,
+                       root.band.a + (root.bandLight.a - root.band.a) * k);
+    }
 
     // ---- the profile -------------------------------------------------
     property var profile: null
@@ -156,9 +176,11 @@ Singleton {
     function recommend(monitor, x, w, current, inkDark, inkLight) {
         const behind = root.backgroundAt(monitor, x, w);
         if (!behind) return current || "dark";
-        const surface = root.composite(root.band, behind);
-        const sDark = root.contrast(surface, inkDark);
-        const sLight = root.contrast(surface, inkLight);
+        // Each ink scored against the band it would actually sit on: the
+        // dark ink goes with the dense band, the light-material ink with
+        // the thinned one (see `bandLight`).
+        const sDark = root.contrast(root.composite(root.band, behind), inkDark);
+        const sLight = root.contrast(root.composite(root.bandLight, behind), inkLight);
         if (current === "light")
             return sDark > sLight + root.switchMargin ? "dark" : "light";
         return sLight > sDark + root.switchMargin ? "light" : "dark";
@@ -171,10 +193,12 @@ Singleton {
         const behind = root.backgroundAt(monitor, x, w);
         if (!behind) return "pas de profil";
         const surface = root.composite(root.band, behind);
+        const surfaceLight = root.composite(root.bandLight, behind);
         const f = v => Math.round(v * 255);
         return "fond rgb(" + f(surface.r) + "," + f(surface.g) + "," + f(surface.b) + ")"
+             + " / allégé rgb(" + f(surfaceLight.r) + "," + f(surfaceLight.g) + "," + f(surfaceLight.b) + ")"
              + "  encre claire " + root.contrast(surface, inkDark).toFixed(2) + ":1"
-             + "  encre sombre " + root.contrast(surface, inkLight).toFixed(2) + ":1"
+             + "  encre sombre " + root.contrast(surfaceLight, inkLight).toFixed(2) + ":1"
              + "  -> " + root.recommend(monitor, x, w, "dark", inkDark, inkLight);
     }
 }
