@@ -171,12 +171,24 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             percent: root.present ? root.pct : 100
             color: root.batteryColor
-            // The number inverts with the band's material: white with a
-            // black rim on the dark band, black with a white rim on the
-            // light one (asked for). Both come from the island's own ink,
-            // so they flip in step with everything else on it.
+            // The number is the island's primary ink (white on the dark
+            // band, black on the light one) and its rim is the colour of
+            // the pill's EMPTY part -- asked for, so the rim melts into the
+            // empty side instead of being a hard black/white line.
+            //
+            // Made opaque rather than reused as is: the empty part is the
+            // state colour at 30% over whatever is behind, and a 30% rim
+            // would let the fill show through it and lose the digits on
+            // the full side. So: state colour at 30% over the inverse ink,
+            // which is what the band behind the pill roughly is on either
+            // material -- #525255-ish on the dark band, #aeaeb2-ish on
+            // the light one, each ~7-9:1 against its own fill.
             numberColor: root.ink.primary
-            numberOutline: root.ink.onLight
+            numberOutline: {
+                const c = root.batteryColor, o = root.ink.onLight;
+                return Qt.rgba(c.r * 0.3 + o.r * 0.7, c.g * 0.3 + o.g * 0.7,
+                               c.b * 0.3 + o.b * 0.7, 1);
+            }
             // Where conservation mode will stop the charge -- shown only
             // while the machine is on AC, where it answers "how far will
             // this go". On battery the cap is irrelevant and the tick
