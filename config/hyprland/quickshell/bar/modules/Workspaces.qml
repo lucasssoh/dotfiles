@@ -102,14 +102,14 @@ Item {
                 }
                 height: 18
                 anchors.verticalCenter: parent.verticalCenter
-                // HyperOS pass: the active workspace is INVERTED -- a solid
-                // capsule of the primary ink with the digit cut out in the
-                // dark ink, the way HyperOS control-centre tiles show "on".
-                // It replaces the graphite fill + GlassChip rim, the most
-                // macOS-like detail this module had, and adds no colour:
-                // both inks are the ones the island already draws with.
+                // The active workspace: a soft veil of the primary ink (18%)
+                // behind a semi-bold white digit. It was a solid white
+                // capsule with the digit cut out in black for a while (the
+                // HyperOS inversion), and read too loud on the black island
+                // -- asked for: "quelque chose de moins contrasté". Same veil
+                // language as the Balise capsule in the right-hand row.
                 radius: height / 2
-                color: modelData.active ? Ink.primary : "transparent"
+                color: modelData.active ? Qt.rgba(Ink.primary.r, Ink.primary.g, Ink.primary.b, 0.18) : "transparent"
 
                 Text {
                     visible: !pill.empty
@@ -121,7 +121,7 @@ Item {
                     // plain bright text. Empty workspaces draw no digit at
                     // all (the dot below): only the ones holding something
                     // are worth reading.
-                    color: pill.modelData.active ? Ink.onLight : Ink.primary
+                    color: Ink.primary
                     font.family: Fonts.ui
                     font.pixelSize: 13
                     font.weight: pill.modelData.active ? Font.DemiBold : Font.Normal
