@@ -66,7 +66,6 @@ Item {
             widest: "999.9"
             unit: offline ? "" : root.rateUnit(SystemStats.netRateBps)
             valueColor: offline ? root.ink.muted : root.ink.primary
-            unitColor: root.ink.secondary
         }
     }
 }

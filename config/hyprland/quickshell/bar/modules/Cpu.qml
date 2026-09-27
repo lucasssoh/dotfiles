@@ -51,14 +51,12 @@ Item {
             widest: "100"
             unit: "%"
             valueColor: SystemStats.cpuUsage >= 90 ? root.ink.danger : root.ink.primary
-            unitColor: root.ink.secondary
         }
         StatReadout {
             value: SystemStats.cpuMaxGhz.toFixed(1)
             widest: "9.9"
             unit: "GHz"
             valueColor: SystemStats.cpuUsage >= 90 ? root.ink.danger : root.ink.primary
-            unitColor: root.ink.secondary
         }
     }
 }

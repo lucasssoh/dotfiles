@@ -79,6 +79,8 @@ Item {
         // it -- the same call the `hdr` label already got when the badge
         // grew to 22px and its text deliberately stayed at 13.
         font.pixelSize: 13
-        font.bold: true
+        // Medium, not bold: same single text style as every other
+        // reading in the band (clock, metrics, network rate).
+        font.weight: Font.Medium
     }
 }

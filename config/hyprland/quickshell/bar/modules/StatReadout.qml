@@ -1,8 +1,9 @@
 import QtQuick
 import "../theme"
 
-// One metric reading as TEXT ONLY: a value in the primary ink and its
-// unit, smaller, in the secondary one -- "38°C", "3.5GB", "1.9GHz".
+// One metric reading as TEXT ONLY: a value and its unit, one style --
+// "38°C", "3.5GB", "1.9GHz". The unit follows the value's ink (so a
+// reading past its danger threshold turns red as a whole).
 //
 // HyperOS pass: the METRICS block used to open every reading with a
 // glyph (chip, thermometer, memory stick...). The unit already says what
@@ -22,7 +23,8 @@ Item {
     property string unit: ""
     property string widest: root.value
     property color valueColor: Ink.primary
-    property color unitColor: Ink.secondary
+    // Same ink as the value by default -- see the unit Text below.
+    property color unitColor: root.valueColor
 
     implicitWidth: valueMetrics.width + unitText.implicitWidth + 1
     implicitHeight: 24
@@ -56,10 +58,13 @@ Item {
         font.hintingPreference: Font.PreferNoHinting
         anchors.right: parent.right
         anchors.baseline: valueText.baseline
+        // Same size, weight and ink as the value (asked for: no accent
+        // difference between value and unit). It started smaller and in
+        // the secondary ink.
         text: root.unit
         color: root.unitColor
         font.family: Fonts.ui
-        font.pixelSize: 11
+        font.pixelSize: 13
         font.weight: Font.Medium
     }
 }

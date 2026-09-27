@@ -13,10 +13,10 @@ import "../services"
 // HyperOS pass: moved again, to the far LEFT of the bar, on its own
 // island (see shell.qml's `clockIsland`) -- the Android/HyperOS status
 // bar convention, and the single move that most separates this bar from
-// macOS's menu bar, whose clock lives at the far right. The time and the
-// date are now two Texts so they can carry different weights: the time
-// in DemiBold, the date in the secondary ink. The date keeps its
-// "Sun Sep 27" shape (asked for).
+// macOS's menu bar, whose clock lives at the far right. Time and date are
+// two Texts but ONE style -- primary ink, 13px Medium: a DemiBold time
+// over a grey date was tried and read as two different accents (asked
+// for: "uniformise"). The date keeps its "Sun Sep 27" shape.
 
 Item {
     id: root
@@ -60,8 +60,8 @@ Item {
             text: Qt.formatDateTime(clock.date, "HH:mm")
             color: root.ink.primary
             font.family: Fonts.ui
-            font.pixelSize: 15
-            font.weight: Font.DemiBold
+            font.pixelSize: 13
+            font.weight: Font.Medium
         }
 
         Text {
@@ -74,7 +74,7 @@ Item {
             // -- same reasoning, and the same "Fri Sep 18" shape, as
             // NotificationCenter.qml's own header clock.
             text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
-            color: root.ink.secondary
+            color: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium

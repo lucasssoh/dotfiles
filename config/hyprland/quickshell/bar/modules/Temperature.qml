@@ -38,7 +38,6 @@ Item {
             widest: "100"
             unit: "°C"
             valueColor: SystemStats.tempCelsius >= 85 ? root.ink.danger : root.ink.primary
-            unitColor: root.ink.secondary
         }
     }
 }

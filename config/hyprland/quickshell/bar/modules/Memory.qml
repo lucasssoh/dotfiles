@@ -34,7 +34,6 @@ Item {
             widest: "99.9"
             unit: "GB"
             valueColor: SystemStats.memUsedPct >= 90 ? root.ink.danger : root.ink.primary
-            unitColor: root.ink.secondary
         }
     }
 }

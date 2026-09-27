@@ -38,7 +38,6 @@ Item {
             widest: "9999"
             unit: "rpm"
             valueColor: root.ink.primary
-            unitColor: root.ink.secondary
         }
     }
 }
