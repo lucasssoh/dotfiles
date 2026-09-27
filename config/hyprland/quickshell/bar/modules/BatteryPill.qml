@@ -134,7 +134,7 @@ Item {
         styleColor: root.numberOutline
         font.family: Fonts.ui
         font.pixelSize: 11
-        font.weight: Font.Bold
+        font.weight: Font.Medium
         font.features: { "tnum": 1 }
     }
 
