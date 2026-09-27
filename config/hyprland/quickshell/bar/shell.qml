@@ -1742,7 +1742,7 @@ ShellRoot {
                         // The row no longer sits "at 12-15": it sits at 15,
                         // and the chips grew instead (ScriptModule.qml's
                         // badge, 18 -> 22).
-                        iconPixelSize: 15
+                        iconPixelSize: 17
                         classIcons: ({
                             "display-internal": "\uEFAE",
                             "display-external": "\uEC04",
@@ -1765,9 +1765,9 @@ ShellRoot {
                         // outright lands lu-monitor at 11.5px, which
                         // overshoots into visibly small.
                         classIconSizes: ({
-                            "display-internal": 15,
-                            "display-external": 15,
-                            "display-both": 15
+                            "display-internal": 17,
+                            "display-external": 17,
+                            "display-both": 17
                         })
                         clickCommand: ["bash", "-c",
                             "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"]
@@ -1911,8 +1911,8 @@ ShellRoot {
                         // with hinting. Same red as before.
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 8
-                            height: 8
+                            width: 9
+                            height: 9
                             radius: width / 2
                             // bandInk, pas Ink: ce disque est pose
                             // directement sur la bande par shell.qml au

@@ -188,7 +188,7 @@ Item {
             text: root.isCharging ? "\uEE06" : "\uE45C"
             color: root.batteryColor
             font.family: root.isCharging ? Fonts.iconMingcute : Fonts.iconPhosphorBold
-            font.pixelSize: 12
+            font.pixelSize: 14
         }
     }
 

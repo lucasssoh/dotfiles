@@ -220,7 +220,7 @@ Item {
             text: root.iconGlyph
             color: root.ink.primary
             font.family: Fonts.iconMingcute
-            font.pixelSize: 15
+            font.pixelSize: 17
         }
     }
 

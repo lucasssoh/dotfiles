@@ -98,7 +98,7 @@ Item {
         text: root.iconGlyph
         color: root.iconColor
         font.family: root.iconFamily
-        font.pixelSize: 15
+        font.pixelSize: 17
     }
 
     MouseArea {

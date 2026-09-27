@@ -167,7 +167,7 @@ Item {
         // a soft fill, not an outline: the island's own primary ink at
         // 16%, so it is a light veil on the dark band and a dark one on
         // the thinned light band, and follows the material flip for free.
-        height: 22
+        height: 24
         radius: height / 2
         color: Qt.rgba(root.ink.primary.r, root.ink.primary.g, root.ink.primary.b, 0.16)
     }
@@ -210,7 +210,7 @@ Item {
             text: "\uECEA"
             color: root.ink.primary
             font.family: Fonts.iconMingcute
-            font.pixelSize: 15
+            font.pixelSize: 17
         }
     }
 
@@ -344,7 +344,7 @@ Item {
             text: slot.displayGlyph
             color: slot.glyphColor
             font.family: slot.glyphFont
-            font.pixelSize: 15
+            font.pixelSize: 17
             opacity: 0
         }
     }
