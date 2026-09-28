@@ -143,8 +143,7 @@ Item {
         // (modules/mixer/), which does the same job as a property write
         // on Pipewire.preferredDefaultAudioSink and carries the per-app
         // sliders that had no in-bar path at all. The roue audio wheels
-        // and audio.sh's roue-gen have since been removed from the repo;
-        // the roue "Actions" hub opens this same mixer instead.
+        // and audio.sh's roue-gen have since been removed from the repo.
         //
         // Right click still opens pavucontrol. Kept deliberately: this
         // drawer does levels and routing, not per-stream device moves or

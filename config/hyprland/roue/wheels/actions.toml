@@ -6,10 +6,10 @@
 # gives them one key to remember instead of three awkward ones: power
 # (SUPER+Delete), powerprofile (SUPER+SHIFT+Delete) and display (SUPER+O).
 #
-# "Sound" is the one sector that is not a wheel: it opens quickshell's
-# Mixer drawer (outputs, inputs, levels, per-app volume). It replaced two
-# sectors, Sound and Microphone, that opened roue's audio-output /
-# audio-input device wheels -- retired once the Mixer covered both.
+# Wheels only. Sound and Microphone sectors used to open roue's
+# audio-output / audio-input device wheels; both were retired once
+# quickshell's Mixer drawer covered them, and the hub no longer points at
+# anything that is not a wheel.
 #
 # The three existing shortcuts stay as they are. Nothing here replaces them:
 # a hub is one keystroke slower than a direct bind, which is the right trade
@@ -49,8 +49,3 @@ action = "$HOME/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/b
 icon = "monitor.svg"
 label = "Displays"
 action = "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"
-
-[[segment]]
-icon = "volume-2.svg"
-label = "Sound"
-action = "qs -c bar ipc call bar toggleMixer"

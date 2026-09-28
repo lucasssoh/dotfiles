@@ -14,9 +14,8 @@ export LC_ALL=C
 #
 # It also used to generate the roue "audio-output"/"audio-input" wheels
 # (roue-gen / roue-gen-input). Gone: device choice, levels and per-app
-# volume all live in quickshell's Mixer drawer now, which the roue
-# "Actions" hub opens directly. The rofi menus stay for waybar, the
-# fallback bar.
+# volume all live in quickshell's Mixer drawer now. The rofi menus stay
+# for waybar, the fallback bar.
 #
 # pactl backend (pipewire-pulse). Volume/mute stay handled elsewhere
 # (wpctl via keyboard shortcuts and clicking the module); this script
