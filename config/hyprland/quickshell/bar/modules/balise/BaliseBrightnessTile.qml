@@ -38,11 +38,13 @@ Rectangle {
         id: fill
         anchors.bottom: parent.bottom
         width: parent.width
-        // Starts at the sun's square, the level spreads over the rest.
-        height: tile.hdrActive ? width
-              : width + (parent.height - width) * Math.max(0, Math.min(1, tile.level))
-        bottomLeftRadius: tile.radius
-        bottomRightRadius: tile.radius
+        // Strictly proportional: 1% is 1% of the height (asked for -- a
+        // floor at the sun's square put 1% at more than a third). The
+        // bottom corners follow the tile's until the fill is shorter
+        // than them.
+        height: tile.hdrActive ? 0 : parent.height * Math.max(0, Math.min(1, tile.level))
+        bottomLeftRadius: Math.min(tile.radius, fill.height / 2)
+        bottomRightRadius: Math.min(tile.radius, fill.height / 2)
         topLeftRadius: Math.max(0, tile.radius - (parent.height - fill.height))
         topRightRadius: Math.max(0, tile.radius - (parent.height - fill.height))
         color: tile.hdrActive ? "#3a3a3e" : DrawerTheme.on
@@ -51,12 +53,15 @@ Rectangle {
     }
 
     Text {
+        id: sun
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height - (parent.width + height) / 2
+        y: parent.height - 14 - height
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: ""   // mgc sun
-        color: tile.hdrActive ? DrawerTheme.secondary : DrawerTheme.onInk
+        // Dark while the fill covers it, light on the bare track below it.
+        color: tile.hdrActive ? DrawerTheme.secondary
+             : (fill.height >= tile.height - sun.y ? DrawerTheme.onInk : DrawerTheme.primary)
         font.family: Fonts.iconMingcute
         font.pixelSize: 20
     }
@@ -82,11 +87,7 @@ Rectangle {
         anchors.fill: parent
         enabled: !tile.hdrActive
         cursorShape: tile.hdrActive ? Qt.ArrowCursor : Qt.PointingHandCursor
-        // Inverse of the fill's height: the bottom `width` px are the
-        // sun's square, the level spreads over the rest.
-        function apply(my) {
-            OsdState.setBrightness((height - my - width) / Math.max(1, height - width));
-        }
+        function apply(my) { OsdState.setBrightness((height - my) / height); }
         onPressed: (m) => apply(m.y)
         onPositionChanged: (m) => { if (pressed) apply(m.y); }
         onWheel: (w) => OsdState.setBrightness(tile.level + (w.angleDelta.y > 0 ? 0.05 : -0.05))
