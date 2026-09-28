@@ -10,37 +10,17 @@
 
 window,
 .background {
-    background-color: rgba(16, 20, 24, 0.95);
+    /* Neutral, not the blue-tinted rgba(16,20,24) it was: the shell's
+       greys carry no hue since the HyperOS pass. */
+    background-color: rgba(10, 10, 12, 0.95);
 }
 
-/* rgba(20, 20, 22, 0.88) matches the center hub color exactly (see the HUB
-   fill in roue-src/src/wheel.rs) -- a panel instead of a full-screen blur
-   (permanent GPU cost at idle, see earlier discussion).
-
-   Border: the SAME 5-stop gradient as Hyprland's active-window border
-   (hypr/hyprland.lua general.col.active_border -- text/subtle/muted/
-   overlay/background tokens, ~75% down to ~6% alpha, top-left -> bottom-
-   right) and RoueWheel's own hub rim (HUB_GLASS_STOPS in wheel.rs) --
-   same 3 places now read as one "curved glass" material instead of 3
-   different border treatments. The classic double-background trick
-   (opaque fill clipped to padding-box, gradient clipped to border-box,
-   through a transparent border) since GTK CSS has no `border-image`.
-   Rounding 22px: pronounced enough for the gradient to read as a curved
-   edge rather than a thin outline on square corners (same reasoning as
-   hyprland.lua's rounding bump for the same border). */
 .roue-sidebar {
-    border: 1.5px solid transparent;
+    /* Flat since the HyperOS pass, like the wheel it sits next to: the
+       drawers' black panel with a faint rim, no glass gradient. */
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 22px;
-    background:
-        linear-gradient(rgba(20, 20, 22, 0.88), rgba(20, 20, 22, 0.88)) padding-box,
-        linear-gradient(
-            135deg,
-            rgba(229, 229, 234, 0.75) 0%,
-            rgba(142, 142, 147, 0.45) 25%,
-            rgba(99, 99, 102, 0.28) 50%,
-            rgba(58, 58, 60, 0.15) 75%,
-            rgba(28, 28, 30, 0.06) 100%
-        ) border-box;
+    background: #000000;
     padding: 16px 22px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }

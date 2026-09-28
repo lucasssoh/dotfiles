@@ -25,16 +25,15 @@ pub struct Segment {
     pub confirm: bool,
     /// Tint shown when hovering this sector (fill, icon, text) -- a named
     /// color (see color.rs) or a `#rrggbb` hex code. Absent from the TOML =
-    /// cyan by default. This is the field that makes the color scheme
-    /// configurable wheel by wheel without touching the Rust code (e.g.
-    /// wheels/powerprofile.toml: green/yellow/cyan per sector).
+    /// the white ink. (Per-sector tints -- powerprofile.toml still names
+    /// green/yellow -- resolve to white since the HyperOS pass.)
     #[serde(default)]
     pub accent: Option<String>,
     /// Tint of the "Confirm" sector in the sub-menu shown when `confirm` is
     /// true (see `RoueWheel::enter_confirm`) -- independent from `accent`
     /// above (which only concerns THIS sector in the root wheel): a sector
     /// can have a neutral `accent` but a red confirmation sub-menu (e.g.
-    /// wheels/power.toml), or the reverse. Absent from the TOML = cyan by
+    /// wheels/power.toml), or the reverse. Absent from the TOML = white by
     /// default, like `accent` -- only genuinely destructive sectors need to
     /// force it to "red".
     #[serde(default)]

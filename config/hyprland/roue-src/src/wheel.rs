@@ -4,11 +4,13 @@
 //! "powerprofile" here, this is what allows this widget to be reused as-is
 //! for any future wheel (see config.rs).
 //!
-//! Drawn entirely in GSK (like card.rs/carousel.rs in Prisme): each sector
-//! is a polygon sampled along its two arcs (gsk::PathBuilder has no
-//! dedicated arc primitive in this version), filled via
-//! push_fill/append_color, exactly the same technique as card.rs's
-//! parallelogram -- just with more points.
+//! Drawn entirely in GSK (like card.rs/carousel.rs in Prisme): a black
+//! disc, a grey track along its edge, separators, and arcs laid on the
+//! track for the hovered and the applied sector -- paths sampled point by
+//! point (gsk::PathBuilder has no dedicated arc primitive in this
+//! version), stroked or filled via push_stroke/push_fill + append_color.
+//! (It was a ring of glass-filled wedges with a cyan tint until the
+//! HyperOS pass.)
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -34,24 +36,12 @@ const OUTER_MARGIN_PX: f64 = 24.0;
 /// by sectors between it and the outer edge (less radial "empty space" in
 /// each sector, which now only holds a logo).
 const INNER_RADIUS_RATIO: f64 = 0.56;
-/// Total width (px, measured perpendicular to the separating radius) of
-/// the gap between two sectors -- NOT a constant angle: see `wedge_path`
-/// for why (a constant angle makes both edges converge to a point at the
-/// center, which is exactly what we want to avoid).
-const WEDGE_GAP_PX: f64 = 10.0;
-const HOVER_RADIUS_BOOST_PX: f64 = 12.0;
 /// Radius (px) around the center where mouse hover is ignored -- avoids an
 /// angle that jumps erratically when the cursor passes very close to the
 /// center (atan2(0,0) isn't stably defined), same role as an analog
 /// joystick's dead zone.
 const HOVER_DEADZONE_PX: f64 = 28.0;
 const ARC_STEPS: usize = 20;
-/// Corner radius for the 4 sharp vertices of each wedge (where a straight
-/// radial-ish edge meets the outer/inner arc) -- "tout arrondir", no
-/// pointed corners anywhere, asked for. See `round_corner`.
-const WEDGE_CORNER_RADIUS: f64 = 10.0;
-/// Points sampled per rounded corner -- see `round_corner`.
-const CORNER_STEPS: usize = 8;
 /// Display size (px) of the SVG logo in a sector -- grows a bit with `t`
 /// on hover, like the old glyph rendering. `ICON_FONT_PX` remains used for
 /// the plain-text fallback (see `draw_icon` in snapshot()) -- confirmation
@@ -76,33 +66,18 @@ const HUB_LABEL_MAX_WIDTH_PX: f64 = 190.0;
 const CANCEL_INDEX: usize = 0;
 const CONFIRM_INDEX: usize = 1;
 const HUB_BORDER_WIDTH_PX: f32 = 3.0;
-/// Same "glass" rim as Hyprland's active-window border (hypr/hyprland.lua
-/// -- a single light source top-left, fading through the bar's own
-/// text/subtle/muted/overlay/background tokens down to near-invisible
-/// bottom-right). Copied verbatim (same 5 hex colors/alphas, same
-/// top-left -> bottom-right direction) rather than re-derived, so the
-/// hub reads as the same "curved glass surface" material as every window
-/// in this setup -- deliberately monochrome for the same reason: color
-/// here would read as decoration, not as a lit edge.
-fn hub_glass_stops(alpha_mult: f32) -> [gsk::ColorStop; 5] {
-    let stop = |offset: f32, r: f32, g: f32, b: f32, a: f32| {
-        gsk::ColorStop::new(offset, gdk::RGBA::new(r, g, b, a * alpha_mult))
-    };
-    [
-        stop(0.00, 0.898, 0.898, 0.918, 0.749), // text,      ~75% -- highlight tip
-        stop(0.25, 0.557, 0.557, 0.576, 0.451), // subtle,    ~45% -- shoulder
-        stop(0.50, 0.388, 0.388, 0.400, 0.278), // muted,     ~28% -- terminator
-        stop(0.75, 0.227, 0.227, 0.235, 0.149), // overlay,   ~15% -- entering shadow
-        stop(1.00, 0.110, 0.110, 0.118, 0.059), // background,~6%  -- deep shadow
-    ]
-}
 /// White band marking the "current system state" sector (see the TOML
 /// `active` field, e.g. the current power profile) -- drawn slightly
 /// INSIDE the outer edge (ACTIVE_BAND_INSET_PX), not right on it, to stay
 /// visually WITHIN the colored sector rather than straddling its
 /// anti-aliasing.
-const ACTIVE_BAND_WIDTH_PX: f32 = 4.0;
-const ACTIVE_BAND_INSET_PX: f64 = 7.0;
+/// The grey track along the disc's edge, and the arcs laid on it (the
+/// selection, the applied state): its width, how far in from the disc's
+/// edge its centre runs, and the gap left at each end of a sector's arc
+/// so two neighbouring arcs never touch.
+const TRACK_WIDTH_PX: f32 = 7.0;
+const TRACK_INSET_PX: f64 = 16.0;
+const ARC_GAP_PX: f64 = 18.0;
 
 mod imp {
     use super::*;
@@ -201,99 +176,89 @@ mod imp {
             // Ignored during a confirmation -- see the field's doc.
             let active_index = if confirming { None } else { self.active_index.get() };
 
+            // HyperOS pass -- the "C" of the mockups ("arc de sélection"):
+            // one black disc instead of a ring of glass wedges, a grey track
+            // along its edge, thin separators between sectors, and the
+            // hovered sector marked by a white arc laid on the track while
+            // its icon turns from grey to white. The same language as the
+            // bar's volume popup (a thick arc on a track), and no tint of
+            // its own -- only a destructive confirmation turns red.
+            let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
+            let track_radius = (outer_radius - TRACK_INSET_PX * open).max(inner_radius + 1.0);
+
+            // The disc.
+            let disc = circle_path(cx, cy, outer_radius);
+            snapshot.push_fill(&disc, gsk::FillRule::Winding);
+            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, (0.94 * open) as f32), &full);
+            snapshot.pop();
+            snapshot.push_stroke(&disc, &gsk::Stroke::new(1.0));
+            snapshot.append_color(&gdk::RGBA::new(1.0, 1.0, 1.0, (0.08 * open) as f32), &full);
+            snapshot.pop();
+
+            // The track.
+            let track = circle_path(cx, cy, track_radius);
+            snapshot.push_stroke(&track, &gsk::Stroke::new(TRACK_WIDTH_PX));
+            snapshot.append_color(&gdk::RGBA::new(0.165, 0.165, 0.184, open as f32), &full);
+            snapshot.pop();
+
             for (i, seg) in segments.iter().enumerate() {
                 let t = if i == hovered { hover_t } else { 0.0 };
-                // This sector's tint -- its TOML `accent` field (cyan by
-                // default if absent, see color.rs), except the "Confirm"
-                // sector of the confirmation sub-menu which forces red at
-                // construction time (see `enter_confirm`) rather than
-                // through a special case here: a single mechanism for both.
                 let accent = color::resolve(seg.accent.as_deref()).rgb;
-                // "Pure" cut angles, with NO trimming -- the gap between
-                // sectors is now handled at constant pixel width inside
-                // wedge_path (see its doc), not by trimming these angles.
                 let angle_left = base + i as f64 * angle_per;
                 let angle_right = base + (i + 1) as f64 * angle_per;
-                let boost = HOVER_RADIUS_BOOST_PX * t as f64 * open;
-                let path = wedge_path(
-                    cx,
-                    cy,
-                    inner_radius,
-                    outer_radius + boost,
-                    angle_left,
-                    angle_right,
-                    WEDGE_GAP_PX * open,
-                );
 
-                snapshot.push_fill(&path, gsk::FillRule::Winding);
-                let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
-                // Glass sheen instead of a flat fill -- see
-                // wedge_glass_stops. Same top-left -> bottom-right light
-                // direction as the hub's rim, anchored to the WHOLE wheel
-                // (not each wedge's own bounds) so every sector reads as
-                // lit by the same single source rather than each having
-                // its own independent glow.
-                snapshot.append_linear_gradient(
-                    &full,
-                    &graphene::Point::new((cx - outer_radius) as f32, (cy - outer_radius) as f32),
-                    &graphene::Point::new((cx + outer_radius) as f32, (cy + outer_radius) as f32),
-                    &wedge_glass_stops(t, open as f32, accent),
-                );
-                snapshot.pop();
+                // Separator on this sector's left edge, from just outside
+                // the hub to just inside the track.
+                if n > 1 {
+                    let sep = gsk::PathBuilder::new();
+                    let (r0, r1) = (inner_radius + 6.0, track_radius - TRACK_WIDTH_PX as f64 - 6.0);
+                    sep.move_to((cx + r0 * angle_left.cos()) as f32, (cy + r0 * angle_left.sin()) as f32);
+                    sep.line_to((cx + r1 * angle_left.cos()) as f32, (cy + r1 * angle_left.sin()) as f32);
+                    snapshot.push_stroke(&sep.to_path(), &gsk::Stroke::new(1.5));
+                    snapshot.append_color(&gdk::RGBA::new(0.122, 0.122, 0.137, open as f32), &full);
+                    snapshot.pop();
+                }
 
                 if open <= 0.05 {
                     continue;
                 }
 
-                // Current-state band -- visible even without hover (unlike
-                // the `t` highlight), to spot the applied state at a
-                // glance even before aiming. Follows the same OUTER radius
-                // as the sector (so its `boost` too if it's also hovered),
-                // just slightly inset (ACTIVE_BAND_INSET_PX).
+                // The applied state (current profile, current layout...):
+                // this sector's stretch of the track in a lighter grey,
+                // readable before aiming. Ignored during a confirmation.
+                let arc = outer_arc_path(cx, cy, track_radius, angle_left, angle_right, ARC_GAP_PX);
+                let cap = gsk::Stroke::new(TRACK_WIDTH_PX);
+                cap.set_line_cap(gsk::LineCap::Round);
                 if active_index == Some(i) {
-                    let band_radius = (outer_radius + boost - ACTIVE_BAND_INSET_PX).max(inner_radius + 1.0);
-                    let band_path = outer_arc_path(cx, cy, band_radius, angle_left, angle_right, WEDGE_GAP_PX * open);
-                    let stroke = gsk::Stroke::new(ACTIVE_BAND_WIDTH_PX);
-                    snapshot.push_stroke(&band_path, &stroke);
-                    snapshot.append_color(&gdk::RGBA::new(1.0, 1.0, 1.0, open as f32), &full);
+                    snapshot.push_stroke(&arc, &cap);
+                    snapshot.append_color(&gdk::RGBA::new(0.353, 0.353, 0.373, open as f32), &full);
+                    snapshot.pop();
+                }
+                // The selection: the same stretch in the sector's accent
+                // (white, or red on a destructive confirmation), fading in
+                // with the hover.
+                if t > 0.001 {
+                    snapshot.push_stroke(&arc, &cap);
+                    snapshot.append_color(&gdk::RGBA::new(accent.0, accent.1, accent.2, open as f32 * t), &full);
                     snapshot.pop();
                 }
 
                 let mid_angle = (angle_left + angle_right) / 2.0;
-                let mid_radius = (inner_radius + outer_radius + boost) / 2.0;
+                let mid_radius = (inner_radius + track_radius) / 2.0;
                 let px = cx + mid_radius * mid_angle.cos();
                 let py = cy + mid_radius * mid_angle.sin();
-
-                // Just the logo in the sector -- the text label is only
-                // shown in the central hub (see below), not here.
                 let size = ICON_SIZE_PX + t as f64 * ICON_HOVER_GROW_PX;
                 draw_icon(&widget, snapshot, &self.icons.borrow(), seg, px, py, size, t, open);
             }
 
             // Central hub -- shows the icon + label of the currently
             // hovered sector, an immediate readout of the current choice
-            // (like the weapon name centered in a game's wheel).
+            // (like the weapon name centered in a game's wheel). Black on
+            // the black disc, set apart by a faint rim.
             if open > 0.02 {
                 let hub_path = circle_path(cx, cy, inner_radius);
-                snapshot.push_fill(&hub_path, gsk::FillRule::Winding);
-                let full = graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
-                snapshot.append_color(
-                    &gdk::RGBA::new(0.078, 0.078, 0.086, (0.88 * open) as f32),
-                    &full,
-                );
-                snapshot.pop();
-
-                // "Glass" rim -- see HUB_GLASS_STOPS. Drawn on every open
-                // wheel (not just while confirming, unlike the colored
-                // danger stroke below, which paints over it when active).
-                let glass_stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
-                snapshot.push_stroke(&hub_path, &glass_stroke);
-                snapshot.append_linear_gradient(
-                    &full,
-                    &graphene::Point::new((cx - inner_radius) as f32, (cy - inner_radius) as f32),
-                    &graphene::Point::new((cx + inner_radius) as f32, (cy + inner_radius) as f32),
-                    &hub_glass_stops(open as f32),
-                );
+                snapshot.push_stroke(&hub_path, &gsk::Stroke::new(1.0));
+                snapshot.append_color(&gdk::RGBA::new(1.0, 1.0, 1.0, (0.08 * open) as f32), &full);
                 snapshot.pop();
 
                 if let Some(seg) = segments.get(hovered) {
@@ -308,18 +273,11 @@ mod imp {
                     // even without looking at the sectors themselves.
                     let hub_danger = confirming && hovered == CONFIRM_INDEX;
                     if hub_danger {
-                        // Same glass treatment as the grey rim underneath
-                        // (which this paints over) and the wedge fills,
-                        // just tinted from the accent instead of grey --
-                        // "glass lit red", not a flat red ring.
                         let stroke = gsk::Stroke::new(HUB_BORDER_WIDTH_PX);
                         snapshot.push_stroke(&hub_path, &stroke);
-                        let base = gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32);
-                        snapshot.append_linear_gradient(
+                        snapshot.append_color(
+                            &gdk::RGBA::new(hub_accent.0, hub_accent.1, hub_accent.2, open as f32),
                             &full,
-                            &graphene::Point::new((cx - inner_radius) as f32, (cy - inner_radius) as f32),
-                            &graphene::Point::new((cx + inner_radius) as f32, (cy + inner_radius) as f32),
-                            &glass_stops(base, ACCENT_GLASS_CONTRAST),
                         );
                         snapshot.pop();
                     }
@@ -363,9 +321,8 @@ mod imp {
 
                     // Always at full accent (t=1) -- this is the currently
                     // selected sector, not one more animated hover.
-                    // Automatically picks up the sector's own tint
-                    // (green/yellow/cyan/red/...), same mechanism as the
-                    // ring: no special case here.
+                    // Picks up the sector's resolved accent (white, or red
+                    // on a confirmation), same as the arc: no special case.
                     draw_icon(&widget, snapshot, &self.icons.borrow(), seg, cx, icon_cy, HUB_ICON_SIZE_PX, 1.0, open);
 
                     // Hub label in the same tint as the icon -- consistent
@@ -488,167 +445,6 @@ fn draw_texture(snapshot: &gtk4::Snapshot, texture: &gdk::Texture, rect: &graphe
     }
 }
 
-/// Sampled polygon approximating a ring sector (outer arc, then inner arc
-/// in reverse, or a plain vertex at the center if `inner_r` is ~0) -- same
-/// technique as `parallelogram_path` in card.rs (PathBuilder +
-/// move_to/line_to/close), with a fixed number of points (`ARC_STEPS`)
-/// rather than a dedicated arc primitive.
-///
-/// `angle_left`/`angle_right` are the cut's PURE angles (the imaginary
-/// line starting from the center, with no trimming) -- the gap with the
-/// neighboring sector is NOT created by trimming these angles (which would
-/// make both edges converge to a point exactly at the center, forming an
-/// angle between the two neighboring cuts -- the reported flaw). It's
-/// created by offsetting each edge PERPENDICULAR to its own imaginary
-/// line, by `gap_px / 2` on each side: the two edges bounding a given gap
-/// then remain straight lines parallel to each other (parallel to the
-/// shared edge's imaginary line), whatever the radius -- exactly the "two
-/// parallel lines next to the imaginary line" layout that was asked for,
-/// rather than two radii that meet at the center.
-fn wedge_path(
-    cx: f64,
-    cy: f64,
-    inner_r: f64,
-    outer_r: f64,
-    angle_left: f64,
-    angle_right: f64,
-    gap_px: f64,
-) -> gsk::Path {
-    let half_gap = (gap_px / 2.0).max(0.0);
-
-    let (a_out_l, r_out_l) = offset_ray(angle_left, outer_r, half_gap);
-    let (a_out_r, r_out_r) = offset_ray(angle_right, outer_r, -half_gap);
-    let pt = |a: f64, r: f64| (cx + r * a.cos(), cy + r * a.sin());
-
-    let outer: Vec<(f64, f64)> = (0..=ARC_STEPS)
-        .map(|step| {
-            let t = step as f64 / ARC_STEPS as f64;
-            pt(a_out_l + (a_out_r - a_out_l) * t, r_out_l + (r_out_r - r_out_l) * t)
-        })
-        .collect();
-
-    let has_hub_gap = inner_r > half_gap + 1.0;
-    let builder = gsk::PathBuilder::new();
-
-    if !has_hub_gap {
-        // No real hub gap -- falls back to the original sharp tip at dead
-        // center, same as before. Rounding a single "corner" that's
-        // really just a point wouldn't read as anything but a smaller,
-        // still-pointed tip, so this case is left alone.
-        for (i, &(x, y)) in outer.iter().enumerate() {
-            if i == 0 {
-                builder.move_to(x as f32, y as f32);
-            } else {
-                builder.line_to(x as f32, y as f32);
-            }
-        }
-        builder.line_to(cx as f32, cy as f32);
-        builder.close();
-        return builder.to_path();
-    }
-
-    let (a_in_l, r_in_l) = offset_ray(angle_left, inner_r, half_gap);
-    let (a_in_r, r_in_r) = offset_ray(angle_right, inner_r, -half_gap);
-    let inner: Vec<(f64, f64)> = (0..=ARC_STEPS)
-        .map(|step| {
-            let t = step as f64 / ARC_STEPS as f64;
-            pt(a_in_r + (a_in_l - a_in_r) * t, r_in_r + (r_in_l - r_in_r) * t)
-        })
-        .collect();
-
-    // The 4 sharp vertices, each rounded off using the already-sampled
-    // point one step into its adjacent arc (a close enough tangent
-    // approximation at ARC_STEPS resolution) or the opposite vertex
-    // across a straight edge -- see round_corner's own doc.
-    let outer_left = outer[0];
-    let outer_right = outer[ARC_STEPS];
-    let inner_right = inner[0];
-    let inner_left = inner[ARC_STEPS];
-
-    let emit = |points: Vec<(f64, f64)>, started: &mut bool| {
-        for (x, y) in points {
-            if *started {
-                builder.line_to(x as f32, y as f32);
-            } else {
-                builder.move_to(x as f32, y as f32);
-                *started = true;
-            }
-        }
-    };
-
-    let mut started = false;
-    emit(
-        round_corner(inner_left, outer_left, outer[1], WEDGE_CORNER_RADIUS, CORNER_STEPS),
-        &mut started,
-    );
-    // Middle of the outer arc, corners already sampled at both ends above.
-    for &(x, y) in &outer[1..ARC_STEPS] {
-        builder.line_to(x as f32, y as f32);
-    }
-    emit(
-        round_corner(outer[ARC_STEPS - 1], outer_right, inner_right, WEDGE_CORNER_RADIUS, CORNER_STEPS),
-        &mut started,
-    );
-    emit(
-        round_corner(outer_right, inner_right, inner[1], WEDGE_CORNER_RADIUS, CORNER_STEPS),
-        &mut started,
-    );
-    for &(x, y) in &inner[1..ARC_STEPS] {
-        builder.line_to(x as f32, y as f32);
-    }
-    emit(
-        round_corner(inner[ARC_STEPS - 1], inner_left, outer_left, WEDGE_CORNER_RADIUS, CORNER_STEPS),
-        &mut started,
-    );
-    // close() draws the untouched middle portion of the left edge, from
-    // the last point above (near inner_left, on the left edge) back to
-    // the very first point (near outer_left, on the same left edge) --
-    // same principle as every other straight run between two rounded
-    // corners here, just implicit via close() instead of an explicit loop.
-    builder.close();
-    builder.to_path()
-}
-
-/// Replaces a sharp polygon corner with a small rounded fillet, using a
-/// quadratic Bézier (the original vertex as control point) between two
-/// points backed off along the adjacent edges -- not a true circular arc:
-/// much simpler to get right than computing a tangent-fillet center, and
-/// at this radius the visual difference is imperceptible. `radius` is
-/// clamped to at most half of either adjacent edge's length, so short
-/// edges never produce overlapping/self-intersecting fillets.
-fn round_corner(
-    prev: (f64, f64),
-    corner: (f64, f64),
-    next: (f64, f64),
-    radius: f64,
-    steps: usize,
-) -> Vec<(f64, f64)> {
-    let d_prev = ((corner.0 - prev.0).powi(2) + (corner.1 - prev.1).powi(2)).sqrt();
-    let d_next = ((next.0 - corner.0).powi(2) + (next.1 - corner.1).powi(2)).sqrt();
-    let r = radius.min(d_prev * 0.5).min(d_next * 0.5).max(0.0);
-    if r < 0.5 || d_prev < 0.001 || d_next < 0.001 {
-        return vec![corner];
-    }
-    let a = (
-        corner.0 + (prev.0 - corner.0) / d_prev * r,
-        corner.1 + (prev.1 - corner.1) / d_prev * r,
-    );
-    let b = (
-        corner.0 + (next.0 - corner.0) / d_next * r,
-        corner.1 + (next.1 - corner.1) / d_next * r,
-    );
-    (0..=steps)
-        .map(|i| {
-            let t = i as f64 / steps as f64;
-            let mt = 1.0 - t;
-            (
-                mt * mt * a.0 + 2.0 * mt * t * corner.0 + t * t * b.0,
-                mt * mt * a.1 + 2.0 * mt * t * corner.1 + t * t * b.1,
-            )
-        })
-        .collect()
-}
-
 /// EXACT angle and radius of the point on ray `theta` (length `r`) offset
 /// perpendicularly by `offset` (positive = toward increasing angles) --
 /// direct geometric identity (right triangle radius/perpendicular), never
@@ -704,81 +500,11 @@ fn circle_path(cx: f64, cy: f64, r: f64) -> gsk::Path {
     builder.to_path()
 }
 
-/// A sector's fill color -- interpolates from neutral gray to a dark shade
-/// tinted with `accent` (this sector's RESOLVED color, see
-/// `color::resolve` -- cyan by default, green/yellow/red/... if the TOML
-/// specifies it) with `t` (hover highlight), never the full accent: stays
-/// a sector background, not a solid-color button. `open` multiplies the
-/// alpha (fade-in on opening). `MIX` sets the dose of accent blended into
-/// the background gray -- a generic formula rather than a per-tint
-/// constant, to stay valid whatever the color (see its doc in color.rs):
-/// an unbounded number of colors, not just cyan/red.
-fn wedge_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
-    const MIX: f32 = 0.20;
-    let base = (0.145_f32, 0.145, 0.153);
-    let k = MIX * t;
-    gdk::RGBA::new(
-        base.0 + (accent.0 - base.0) * k,
-        base.1 + (accent.1 - base.1) * k,
-        base.2 + (accent.2 - base.2) * k,
-        (0.80 + 0.10 * t) * open,
-    )
-}
-
-/// Contrast (0..1, how far `glass_stops` pushes toward white/black at
-/// each end) for a wedge's own fill -- subtle, so the sheen reads as a
-/// curved surface rather than competing with the hover/accent tint
-/// itself for attention.
-const WEDGE_GLASS_CONTRAST: f32 = 0.30;
-/// Contrast for the confirmation hub's danger border (see its call
-/// site): higher than WEDGE_GLASS_CONTRAST -- a thin 3px ring has far
-/// less area than a wedge to sell "glass" with, and needs to visibly
-/// read as such over the grey rim it paints over, not just a slightly
-/// duller flat accent.
-const ACCENT_GLASS_CONTRAST: f32 = 0.55;
-
-/// Turns any flat `base` color into the same "glass" sheen used
-/// throughout this file: brighter toward the shared top-left light
-/// source, darker away from it, `base` itself as the midpoint. Generic
-/// over both the color and the contrast amount on purpose -- unlike
-/// HUB_GLASS_STOPS (a fixed grey ramp, for the rim that's always visible
-/// regardless of what's selected), this derives the gradient from
-/// whatever color is actually in play: a wedge's own accent
-/// (wedge_glass_stops below) or the confirmation hub's danger-red border
-/// (see its call site) -- "glass tinted red" rather than red painted
-/// flat, or grey painted over red.
-fn glass_stops(base: gdk::RGBA, contrast: f32) -> [gsk::ColorStop; 3] {
-    let lighten = |c: f32, amt: f32| c + (1.0 - c) * amt;
-    let darken = |c: f32, amt: f32| c * (1.0 - amt);
-    let hi = gdk::RGBA::new(
-        lighten(base.red(), contrast),
-        lighten(base.green(), contrast),
-        lighten(base.blue(), contrast),
-        base.alpha(),
-    );
-    let lo = gdk::RGBA::new(
-        darken(base.red(), contrast),
-        darken(base.green(), contrast),
-        darken(base.blue(), contrast),
-        base.alpha(),
-    );
-    [gsk::ColorStop::new(0.0, hi), gsk::ColorStop::new(0.5, base), gsk::ColorStop::new(1.0, lo)]
-}
-
-/// Same material as glass_stops, but as a sector's FILL rather than a
-/// rim: a sheen across the wedge's face instead of `wedge_color`'s flat
-/// matte tone -- asked for explicitly: the wedges' background, not their
-/// (already-glass) hub/window/sidebar borders. `wedge_color` itself
-/// untouched -- still used here as the gradient's midpoint, so
-/// hover/accent/fade-in math isn't duplicated.
-fn wedge_glass_stops(t: f32, open: f32, accent: (f32, f32, f32)) -> [gsk::ColorStop; 3] {
-    glass_stops(wedge_color(t, open, accent), WEDGE_GLASS_CONTRAST)
-}
-
-/// A sector's text/icon color -- off-white at rest, full `accent` (this
-/// sector's resolved color) once hovered (`t` -> 1).
+/// A sector's text/icon color -- grey at rest, full `accent` (this
+/// sector's resolved color: white, or red on a confirmation) once
+/// hovered (`t` -> 1).
 fn text_color(t: f32, open: f32, accent: (f32, f32, f32)) -> gdk::RGBA {
-    let base = (0.949_f32, 0.949, 0.969);
+    let base = (0.557_f32, 0.557, 0.576);
     gdk::RGBA::new(
         base.0 + (accent.0 - base.0) * t,
         base.1 + (accent.1 - base.1) * t,
@@ -971,11 +697,11 @@ impl RoueWheel {
         // vec's order IS the index, so Cancel must stay the first element:
         // it's the sub-menu's default selection (sector 0), the least
         // destructive option if the user has no mouse. Confirm picks up
-        // `confirm_accent` from the root sector (cyan by default if
+        // `confirm_accent` from the root sector (white by default if
         // absent, like `accent` -- see color.rs): this is NO LONGER a
         // hardcoded red, only genuinely destructive sectors
         // (wheels/power.toml) force it explicitly. Cancel keeps `None`
-        // (cyan by default), never the confirmed sector's tint.
+        // (white), never the confirmed sector's tint.
         *imp.segments.borrow_mut() = vec![
             Segment {
                 icon: "✗".into(),

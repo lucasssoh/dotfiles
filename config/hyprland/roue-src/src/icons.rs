@@ -20,14 +20,16 @@ use crate::config::Segment;
 /// (append_scaled_texture, Trilinear filter).
 const RASTER_PX: u32 = 128;
 
-const COLOR_NORMAL: &str = "#f2f2f7";
+// Grey at rest, since the HyperOS pass: the hovered sector's icon turns
+// white (the accent texture), so the one in play is the only bright one.
+const COLOR_NORMAL: &str = "#8e8e93";
 
 /// An icon rasterized in the two colors that matter -- hover animates a
 /// crossfade between the two (see wheel.rs) rather than a GPU color-matrix
 /// recolor, simpler for such a small number of icons. The "accent" variant
 /// is baked with THE sector's color (see `color::resolve`), not a global
-/// constant -- that's what lets powerprofile.toml have a different
-/// green/yellow/cyan hover per sector.
+/// constant -- white for every sector today, red for a destructive
+/// confirmation (see color.rs).
 pub struct IconPair {
     pub normal: gdk::Texture,
     pub accent: gdk::Texture,

@@ -1,11 +1,12 @@
 //! Resolves a sector's accent color (optional TOML field `accent`, see
-//! config.rs) -- known named colors or a direct `#rrggbb` hex code, falling
-//! back to the historical cyan if absent/unknown. Central place so any
-//! future wheel can define its own per-sector tints just through its TOML
-//! file, without touching the Rust code (see wheels/powerprofile.toml for
-//! an example: green/yellow/cyan).
+//! config.rs) -- a known name or a direct `#rrggbb` hex code, falling back
+//! to the shell's white ink if absent/unknown. Since the HyperOS pass the
+//! only named colour left is red, for destructive confirmations; the other
+//! names still parse and resolve to white.
 
-const DEFAULT_HEX: &str = "#4fefff";
+// White ink since the HyperOS pass, not the historical cyan #4fefff: the
+// shell carries "selected" by white, and keeps colour for danger only.
+const DEFAULT_HEX: &str = "#f2f2f7";
 
 /// Canonical color resolved for a sector -- a hex code (used to rasterize
 /// the "accent" variant of its SVG icon, see icons.rs) AND the same color
@@ -32,17 +33,18 @@ fn resolve_hex(accent: Option<&str>) -> String {
     named(&raw).unwrap_or(DEFAULT_HEX).to_string()
 }
 
-/// Palette of short names usable in the TOML -- deliberately small (the
-/// tints actually used today: cyan by default, green/yellow for
-/// powerprofile, red for power's confirmation sub-menu). A direct hex code
+/// Palette of short names usable in the TOML -- deliberately small (red for
+/// power's confirmation sub-menu; the rest map to white). A direct hex code
 /// (`accent = "#34d399"`) always remains possible for everything else, no
 /// future wheel is limited to these names.
 fn named(name: &str) -> Option<&'static str> {
     match name {
-        "cyan" | "blue" | "default" => Some(DEFAULT_HEX),
-        "green" => Some("#4ade80"),
-        "yellow" => Some("#fbbf24"),
-        "red" => Some("#ff5252"),
+        // Red is the one colour left -- a destructive confirmation --
+        // and matches the drawers' danger ink. The other names still parse
+        // (powerprofile.toml sets green/yellow) but resolve to the white
+        // default: tints per sector went with the cyan.
+        "red" => Some("#ff6e6e"),
+        "cyan" | "blue" | "green" | "yellow" | "default" => Some(DEFAULT_HEX),
         _ => None,
     }
 }
