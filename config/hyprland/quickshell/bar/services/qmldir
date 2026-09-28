@@ -12,3 +12,4 @@ singleton PowerState 1.0 PowerState.qml
 singleton MixerState 1.0 MixerState.qml
 singleton LauncherActionsState 1.0 LauncherActionsState.qml
 singleton CalendarState 1.0 CalendarState.qml
+singleton HyprGaps 1.0 HyprGaps.qml

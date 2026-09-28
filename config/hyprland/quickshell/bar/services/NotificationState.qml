@@ -159,9 +159,19 @@ Singleton {
         return n.urgency === NotificationUrgency.Low ? 4000 : 6000;
     }
 
+    // When each notification arrived, by id (ms since epoch) -- the
+    // Notification object carries no timestamp of its own, and the centre
+    // splits its history into Today / Earlier. Reassigned rather than
+    // mutated so bindings on it re-evaluate. Lost on a reload: anything
+    // tracked from before (keepOnReload) simply reads as Earlier.
+    property var receivedAt: ({})
+
     function _handleNotification(n) {
         n.tracked = true;   // mandatory + synchronous, else n is destroyed
         root.hasUnseen = true;
+        const stamps = Object.assign({}, root.receivedAt);
+        stamps[n.id] = Date.now();
+        root.receivedAt = stamps;
         n.closed.connect(() => root._removeToast(n.id));
 
         if (root.dnd) return;   // still tracked/in history, just no popup
