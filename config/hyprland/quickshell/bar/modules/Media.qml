@@ -77,7 +77,10 @@ Item {
 
     // +24 over the old figure: room for the static play/pause icon and
     // its gap to the viewport, on top of the viewport's own padding.
-    readonly property real openWidth: Math.max(viewportWidth + 34 + 24, 84)
+    // Just the wave since the HyperOS pass (asked for: the scrolling title
+    // "finalement annoying" -- what is playing is in the notification
+    // centre's player anyway). The pill hugs the five bars.
+    readonly property real openWidth: 34
 
     // The widest this module can ever get -- same formula as openWidth
     // above but with viewportWidth's own cap (maxViewport) substituted
@@ -88,7 +91,7 @@ Item {
     // two being deliberately paired "élargisseurs"). Read by
     // DrawerIsland.qml to size Veille's drawer at a fixed width instead
     // of whatever this module's CURRENT width happens to be.
-    readonly property real maxWidth: Math.max(maxViewport + 34 + 24, 84)
+    readonly property real maxWidth: root.openWidth
 
     // Placeholder text/width when no player is active -- asked for: this
     // side of the bar collapsing to 0 while ActiveWindow (the module
@@ -116,10 +119,13 @@ Item {
     // (below) when inactive, so hiding the whole Item on top of that
     // would just make the placeholder invisible too.
     opacity: 1
+    // Gone when nothing plays: the "No media" placeholder only balanced the
+    // island against a scrolling title that no longer exists.
+    visible: root.active
 
     Rectangle {
         id: pill
-        width: root.active ? root.openWidth : root.placeholderWidth
+        width: root.openWidth
         height: 24
         anchors.centerIn: parent
         // Top-square/bottom-rounded, same treatment as Block.qml -- the
@@ -172,9 +178,7 @@ Item {
             // an equal gap on both sides (openWidth is wider than the
             // Row's natural content), leaving the disc floating away
             // from the pill's left edge instead of sitting snug in it.
-            anchors.left: parent.left
-            anchors.leftMargin: 6   // bumped up now the disc is smaller -- more breathing room around it
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.centerIn: parent
             // 4 -> 8: more breathing room specifically between the wave
             // and the scrolling title now that the wave itself is
             // narrower (asked for) -- previously 4 read fine against a
@@ -270,6 +274,10 @@ Item {
 
             Item {
                 id: viewport
+                // The scrolling title, retired -- kept in the tree but out
+                // of the layout (a positioner skips invisible children), so
+                // bringing it back is flipping this.
+                visible: false
                 anchors.verticalCenter: parent.verticalCenter
                 width: root.viewportWidth
                 height: 18
@@ -342,7 +350,7 @@ Item {
                             // resumes. Both guarded on titleText !== "" --
                             // calling setPaused() while the animation isn't
                             // running is a Qt warning, not just a no-op.
-                            running: root.titleText !== ""
+                            running: viewport.visible && root.titleText !== ""
                             paused: root.titleText !== "" ? !root.playing : false
                             loops: Animation.Infinite
                             from: 0
