@@ -2,14 +2,14 @@
 # firmware sends as the fixed chord SUPER+SHIFT+F23 (see keybinds.lua for the
 # libinput capture and why that bind has no `release` half).
 #
-# This wheel opens the OTHER wheels rather than doing anything itself. The
-# reason is that there are five of them and only three were reachable from
-# the keyboard: power (SUPER+Delete), powerprofile (SUPER+SHIFT+Delete) and
-# display (SUPER+O). audio-output and audio-input existed just as fully --
-# audio.sh generates their toml exactly like display-layout.sh does -- but
-# the only way to open either was a left click on the bar's AudioOutput /
-# AudioInput module. This wheel is what puts them on the keyboard, and it
-# gives the whole set one key to remember instead of three awkward ones.
+# This wheel opens the OTHER wheels rather than doing anything itself, and
+# gives them one key to remember instead of three awkward ones: power
+# (SUPER+Delete), powerprofile (SUPER+SHIFT+Delete) and display (SUPER+O).
+#
+# "Sound" is the one sector that is not a wheel: it opens quickshell's
+# Mixer drawer (outputs, inputs, levels, per-app volume). It replaced two
+# sectors, Sound and Microphone, that opened roue's audio-output /
+# audio-input device wheels -- retired once the Mixer covered both.
 #
 # The three existing shortcuts stay as they are. Nothing here replaces them:
 # a hub is one keystroke slower than a direct bind, which is the right trade
@@ -24,11 +24,10 @@
 # `roue power --commit` deliberately is.
 #
 # Two sectors run a `roue-gen` first, exactly as the bar and keybinds.lua
-# already do for these same wheels: powerprofile and the audio ones describe
-# hardware state (which profile is applied, which sinks/sources exist right
-# now), so their toml is rewritten on every press rather than kept in the
-# repo. display is the same case. Only power.toml is static, hence the bare
-# call in its sector.
+# already do for these same wheels: powerprofile and display describe
+# hardware state (which profile is applied, which outputs are connected),
+# so their toml is rewritten on every press rather than kept in the repo.
+# Only power.toml is static, hence the bare call in its sector.
 #
 # No sector is destructive -- the confirmations live one level down, inside
 # power.toml -- so nothing here carries `confirm` or `accent`, and the
@@ -52,11 +51,6 @@ label = "Displays"
 action = "$HOME/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"
 
 [[segment]]
-icon = "headphones.svg"
+icon = "volume-2.svg"
 label = "Sound"
-action = "$HOME/.config/waybar/scripts/audio.sh roue-gen && $HOME/.local/bin/roue audio-output"
-
-[[segment]]
-icon = "mic.svg"
-label = "Microphone"
-action = "$HOME/.config/waybar/scripts/audio.sh roue-gen-input && $HOME/.local/bin/roue audio-input"
+action = "qs -c bar ipc call bar toggleMixer"

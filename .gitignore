@@ -11,8 +11,6 @@ config/hyprland/roue-src/target/
 config/hyprland/balise-src/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml
-config/hyprland/roue/wheels/audio-output.toml
-config/hyprland/roue/wheels/audio-input.toml
 
 # Bytecode Python des daemons de hypr/scripts (float-smart-place,
 # border-tint, bar-tint). Regenere a chaque import, et importe depuis

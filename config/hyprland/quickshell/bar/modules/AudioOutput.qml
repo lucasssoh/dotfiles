@@ -8,12 +8,8 @@ import "../services"
 // volume/mute: Pipewire.defaultAudioSink is a live DBus/pipewire-backed
 // reference, PwObjectTracker keeps its `audio` sub-properties bound and
 // reactive. wpctl/pactl are gone entirely for *that* display; left click
-// still shells out to regenerate and open the "audio-output" roue wheel
-// (audio.sh roue-gen, one sector per sink -- see waybar/scripts/audio.sh),
-// same pattern as Performance.qml's power-profile wheel: a one-shot user
-// action, not worth reimplementing, and no separate re-query needed
-// afterwards since Pipewire.defaultAudioSink above already picks up the
-// change live.
+// opens the mixer drawer (see the click handler below), and whatever it
+// changes, Pipewire.defaultAudioSink above picks up live.
 //
 // The headphone-vs-speaker icon is the one thing PwNode genuinely can't
 // answer: Quickshell.Services.Pipewire exposes no port/route data at all
@@ -146,9 +142,9 @@ Item {
         // to pick an output. It opens the mixer drawer instead now
         // (modules/mixer/), which does the same job as a property write
         // on Pipewire.preferredDefaultAudioSink and carries the per-app
-        // sliders that had no in-bar path at all. audio.sh's roue-gen and
-        // the wheel itself are untouched in the repo, just unreferenced
-        // from here -- same as Bluetooth/Network/Ethernet.qml.
+        // sliders that had no in-bar path at all. The roue audio wheels
+        // and audio.sh's roue-gen have since been removed from the repo;
+        // the roue "Actions" hub opens this same mixer instead.
         //
         // Right click still opens pavucontrol. Kept deliberately: this
         // drawer does levels and routing, not per-stream device moves or
