@@ -420,7 +420,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
-                font.bold: true
+                font.weight: Font.DemiBold
             }
             MouseArea {
                 id: backArea
@@ -442,7 +442,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
-            font.bold: true
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
     }
@@ -508,7 +508,7 @@ Item {
                 color: root.statusConnected ? DrawerTheme.onInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
-                font.bold: true
+                font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
         }
@@ -537,7 +537,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 
@@ -599,7 +599,7 @@ Item {
                             color: advancedArea.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 12
-                            font.bold: true
+                            font.weight: Font.DemiBold
                             Behavior on color { ColorAnimation { duration: 120 } }
                         }
                         MouseArea {
@@ -713,7 +713,7 @@ Item {
                             color: root.canSubmit ? DrawerTheme.onInk : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 14
-                            font.bold: true
+                            font.weight: Font.DemiBold
                         }
                         MouseArea {
                             id: submitArea
@@ -741,7 +741,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 
@@ -812,7 +812,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 
@@ -848,7 +848,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 14
-                        font.bold: true
+                        font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     Text {
@@ -910,7 +910,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 
@@ -1016,7 +1016,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 
@@ -1057,7 +1057,7 @@ Item {
                         color: actionBtn.tint
                         font.family: Fonts.ui
                         font.pixelSize: 14
-                        font.bold: true
+                        font.weight: Font.DemiBold
                     }
                     MouseArea {
                         id: actionArea

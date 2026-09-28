@@ -159,7 +159,7 @@ Rectangle {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 14
-                    font.bold: true
+                    font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
                 Text {

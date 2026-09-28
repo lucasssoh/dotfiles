@@ -95,7 +95,7 @@ Rectangle {
             color: row.connected ? DrawerTheme.onInk : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13
-            font.bold: true
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
         Text {

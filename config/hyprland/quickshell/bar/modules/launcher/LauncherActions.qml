@@ -250,7 +250,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
-                font.bold: true
+                font.weight: Font.DemiBold
             }
 
             // Right-aligned and quiet, so the name keeps the line. The

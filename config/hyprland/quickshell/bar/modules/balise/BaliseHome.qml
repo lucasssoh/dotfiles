@@ -480,7 +480,7 @@ Item {
                 // "same style as the connectivity tiles" is about the
                 // type as much as the badge.
                 font.pixelSize: 13
-                font.bold: true
+                font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
             Text {
@@ -553,7 +553,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13   // matches ToggleRow and DrawerTile
-            font.bold: true
+            font.weight: Font.DemiBold
         }
 
         MouseArea {
@@ -660,7 +660,7 @@ Item {
                         color: root.heroConnected ? DrawerTheme.onInk : DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
-                        font.bold: true
+                        font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     Text {

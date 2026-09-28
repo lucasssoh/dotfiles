@@ -96,7 +96,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
-                font.bold: true
+                font.weight: Font.DemiBold
             }
             MouseArea {
                 id: backArea
@@ -119,7 +119,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
-            font.bold: true
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
 
@@ -184,7 +184,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
-                font.bold: true
+                font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
             Text {
@@ -280,7 +280,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.letterSpacing: 1
             }
 

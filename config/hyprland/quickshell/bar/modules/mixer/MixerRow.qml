@@ -147,7 +147,7 @@ Rectangle {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: row.compact ? 12 : 13
-                    font.bold: true
+                    font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
             }
@@ -226,7 +226,7 @@ Rectangle {
                     color: DrawerTheme.onInk
                     font.family: Fonts.ui
                     font.pixelSize: 10
-                    font.bold: true
+                    font.weight: Font.DemiBold
                     font.letterSpacing: 0.5
                 }
             }

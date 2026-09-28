@@ -142,7 +142,7 @@ Rectangle {
         color: revealArea.containsMouse ? DrawerTheme.primary : DrawerTheme.accent
         font.family: Fonts.ui
         font.pixelSize: 12
-        font.bold: true
+        font.weight: Font.DemiBold
 
         MouseArea {
             id: revealArea

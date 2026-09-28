@@ -321,7 +321,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 11
-            font.bold: true
+            font.weight: Font.DemiBold
         }
     }
 

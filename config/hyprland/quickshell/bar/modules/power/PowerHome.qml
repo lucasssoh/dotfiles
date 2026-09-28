@@ -238,7 +238,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.bold: true
+                        font.weight: Font.DemiBold
                     }
                     Text {
                         anchors.baseline: hoursDigits.baseline
@@ -261,7 +261,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.bold: true
+                        font.weight: Font.DemiBold
                     }
                     Text {
                         anchors.baseline: hoursDigits.baseline
@@ -290,7 +290,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.bold: true
+                        font.weight: Font.DemiBold
                     }
                     Text {
                         anchors.baseline: levelDigits.baseline

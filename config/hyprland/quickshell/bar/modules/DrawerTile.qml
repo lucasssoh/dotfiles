@@ -92,7 +92,7 @@ Rectangle {
             color: tile.fg
             font.family: Fonts.ui
             font.pixelSize: 13
-            font.bold: true
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
         Text {
