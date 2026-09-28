@@ -487,6 +487,7 @@ hl.config({
 require("monitors")
 require("windowrules")
 require("dialoghold")  -- after windowrules: acts on the "dialog" tag it sets
+require("readinghold")
 require("keybinds")
 
 -- Machine-local overrides (per-game rules, anything not worth versioning).
