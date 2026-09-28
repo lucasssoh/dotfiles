@@ -34,6 +34,13 @@ config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
 config.cursor_blink_rate = 0
 config.use_fancy_tab_bar = false
 
+-- Cursor smear (wezterm PR #7737, not in upstream yet). config_builder
+-- raises on unknown keys, so the pcall keeps builds without it working.
+-- Frames are only redrawn during a jump (~150 ms), nothing when idle.
+pcall(function()
+  config.cursor_smear = true
+end)
+
 -- =========================
 -- PANE FOCUS VISUAL
 -- =========================

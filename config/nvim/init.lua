@@ -71,7 +71,7 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
     spec = {
-        require("cursor"),
+        -- require("cursor"), -- replaced by wezterm's native cursor_smear (PR #7737)
         require("start"),
         require("lsp.mason"),
         { import = "plugins" },
