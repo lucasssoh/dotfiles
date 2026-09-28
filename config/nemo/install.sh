@@ -47,11 +47,15 @@ DBUS_SERVICES_DIR="$HOME/.local/share/dbus-1/services"
 info "Setting up D-Bus FileManager1 interface redirect to Nemo..."
 mkdir -p "$DBUS_SERVICES_DIR"
 
-# Mask Dolphin D-Bus activator if present and link it to Nemo's service definition
+# Mask Dolphin D-Bus activator if present and link it to Nemo's service definition.
+# --no-default-window is what Nemo's own /usr/share/dbus-1/services files
+# use; --gapplication-service, used here before, is not a Nemo 6.6 option
+# -- activation exited on "Option inconnue" and "open folder" from another
+# app failed whenever no Nemo window was already open.
 cat << EOF > "$DBUS_SERVICES_DIR/org.freedesktop.FileManager1.service"
 [D-BUS Service]
 Name=org.freedesktop.FileManager1
-Exec=/usr/bin/nemo --no-desktop --gapplication-service
+Exec=/usr/bin/nemo --no-default-window
 EOF
 
 # 5. Reload and restart user services
@@ -86,6 +90,11 @@ systemctl --user restart xdg-desktop-portal.service || true
 #   c. dconf, below.
 info "Theming GTK3 (Nemo + the GTK file chooser portal)..."
 python3 "$SCRIPT_DIR/theme/build-adwaita-dark.py" >/dev/null
+# A running GTK3 process resolves its theme once, at startup, and never
+# re-reads the files: the file-chooser portal, alive since login, would
+# keep drawing whatever the theme was before this run (seen: a light
+# path bar in Firefox's "Enregistrer sous"). try-restart: only if running.
+systemctl --user try-restart xdg-desktop-portal-gtk.service 2>/dev/null || true
 mkdir -p "$HOME/.config/gtk-3.0"
 safe_link "$SCRIPT_DIR/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/settings.ini"
 safe_link "$SCRIPT_DIR/gtk-3.0/gtk.css"      "$HOME/.config/gtk-3.0/gtk.css"
