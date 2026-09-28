@@ -49,12 +49,24 @@ Item {
         radius: height / 2
         color: DrawerTheme.cardRaised
 
+        // Rounded on the left, where it meets the track's own end, but a
+        // STRAIGHT right edge -- that edge is the level, and a round end
+        // melted into the track at low levels (asked for). It only rounds
+        // as it reaches the track's far end, over the last few pixels,
+        // the same trick as the battery gauge. Its width starts at the
+        // disc that carries the sun and spreads the level over the rest,
+        // so every level from 1% up moves it (a plain max(disc, level)
+        // froze everything under ~12% at the disc's width).
         Rectangle {
             id: fill
             height: parent.height
-            radius: height / 2
+            readonly property real r: height / 2
+            topLeftRadius: fill.r
+            bottomLeftRadius: fill.r
+            topRightRadius: Math.max(0, fill.r - (parent.width - fill.width))
+            bottomRightRadius: Math.max(0, fill.r - (parent.width - fill.width))
             width: row.hdrActive ? height
-                 : Math.max(height, parent.width * Math.max(0, Math.min(1, row.level)))
+                 : height + (parent.width - height) * Math.max(0, Math.min(1, row.level))
             color: row.hdrActive ? "#3a3a3e" : DrawerTheme.on
             Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: 140 } }
@@ -92,7 +104,9 @@ Item {
             anchors.fill: parent
             enabled: !row.hdrActive
             cursorShape: row.hdrActive ? Qt.ArrowCursor : Qt.PointingHandCursor
-            function apply(mx) { OsdState.setBrightness(mx / width); }
+            // Inverse of the fill's width: the first `height` px are the
+            // sun's disc, the level spreads over the rest.
+            function apply(mx) { OsdState.setBrightness((mx - height) / Math.max(1, width - height)); }
             onPressed: (m) => apply(m.x)
             onPositionChanged: (m) => { if (pressed) apply(m.x); }
             onWheel: (w) => OsdState.setBrightness(row.level + (w.angleDelta.y > 0 ? 0.05 : -0.05))
