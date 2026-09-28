@@ -115,8 +115,14 @@ Singleton {
     FileView { id: maxFile; blockLoading: true }
     FileView { id: curFile; blockLoading: true }
 
-    function pokeBrightness() {
-        if (root.backlightPath === "") return;
+    // The backlight level, 0-1, kept here for anything that shows it
+    // outside the popup -- Balise's screen row reads and sets it. Updated
+    // by readBrightness() (the one-shot sysfs read the popup always used)
+    // and optimistically by setBrightness().
+    property real brightness: 0
+
+    function readBrightness() {
+        if (root.backlightPath === "") return false;
         // reload() alone queues an async re-read -- text() right after
         // still returns the PREVIOUS content (found by testing: showed
         // the pre-brightnessctl value every time). waitForJob() blocks
@@ -126,7 +132,41 @@ Singleton {
         curFile.reload();
         curFile.waitForJob();
         const v = parseInt(curFile.text().trim());
-        if (isNaN(v)) return;
-        root.show("brightness", Math.max(0, Math.min(1, v / root.maxBrightness)), false);
+        if (isNaN(v)) return false;
+        root.brightness = Math.max(0, Math.min(1, v / root.maxBrightness));
+        return true;
+    }
+
+    function pokeBrightness() {
+        if (!root.readBrightness()) return;
+        root.show("brightness", root.brightness, false);
+    }
+
+    // Set the backlight from a drag or a wheel in Balise. No popup: the
+    // gauge being dragged already shows the level. brightnessctl, the same
+    // tool keybinds.lua drives; one call in flight at a time -- a drag
+    // fires far faster than a process can spawn, so while one runs only
+    // the latest wanted value is kept and sent when it exits. Floored at
+    // 1%: 0 turns this panel's backlight fully off.
+    property real pendingBrightness: -1
+    function setBrightness(frac) {
+        const f = Math.max(0.01, Math.min(1, frac));
+        root.brightness = f;
+        if (brightnessProc.running) {
+            root.pendingBrightness = f;
+            return;
+        }
+        brightnessProc.command = ["brightnessctl", "-q", "set", Math.round(f * 100) + "%"];
+        brightnessProc.running = true;
+    }
+    Process {
+        id: brightnessProc
+        onExited: {
+            if (root.pendingBrightness >= 0) {
+                const f = root.pendingBrightness;
+                root.pendingBrightness = -1;
+                root.setBrightness(f);
+            }
+        }
     }
 }

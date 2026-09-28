@@ -265,6 +265,13 @@ Item {
     property var monitor: Hyprland.focusedMonitor
     readonly property bool hdrActive: HdrState.activeOn(root.monitor)
 
+    // Whether this drawer's screen has a backlight the OS can set: an
+    // internal panel (eDP/LVDS/DSI) on a machine with a /sys/class/
+    // backlight device. External screens fall outside it on purpose --
+    // brightnessctl does not reach them. See the SYSTEM group.
+    readonly property bool screenAdjustable: OsdState.backlightPath !== ""
+        && !!root.monitor && /^(eDP|LVDS|DSI)/.test(root.monitor.name)
+
     // ---- hero card + tile subtitles (mockup-derived layout, see this
     // file's header) ------------------------------------------------------
     // The WiFi network currently connected, straight off the same list
@@ -756,25 +763,24 @@ Item {
 
             GroupLabel { text: "SYSTEM"; revealIndex: 7 }
 
-            // Night mode and HDR sit SIDE BY SIDE -- asked for ("à coté
-            // de night mode, ajoute les bouton hdr"). HDR replaces the
-            // charge cap in this slot; the cap moved up into the tile
-            // grid, where the Airplane tile used to be.
-            //
-            // The pair is unconditional now, which is what let both
-            // widths go back to a plain half: the cap was gated on
-            // hardware that most machines do not have, so this Row needed
-            // the "survivor takes the full width" dance. HDR has no such
-            // gate (see the hdrActive block up top for why the capability
-            // check is deliberately not reinstated), so there is always
-            // exactly one row of two here.
-            //
-            // Both still drop their subtitle: at half width "Warmer
-            // screen temperature" does not fit, and a subtitle on one but
-            // not the other reads as a mistake. ToggleRow collapses
-            // 54 -> 46px when subtitle is empty, so the pair stays a tidy
-            // band.
+            // The screen's controls. On a panel the OS can dim (the
+            // laptop's own, through /sys/class/backlight), one line:
+            // brightness gauge, then round Night mode and HDR buttons --
+            // BaliseScreenRow.qml. Anywhere else there is no gauge that
+            // would mean anything (an external screen dims through its own
+            // firmware: DDC/CI at best, its buttons at worst), so the two
+            // toggles stay as the side-by-side pair below instead.
+            BaliseScreenRow {
+                visible: root.screenAdjustable
+                width: parent.width
+                revealIndex: 8
+                hdrActive: root.hdrActive
+            }
+
+            // Night mode and HDR SIDE BY SIDE -- the fallback above. This
+            // pair was the only layout until the screen row existed.
             Row {
+                visible: !root.screenAdjustable
                 width: parent.width
                 spacing: 16
 

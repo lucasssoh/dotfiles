@@ -2039,7 +2039,7 @@ ShellRoot {
             // fade+scale is untouched.
             mask: Region { width: 0; height: 0 }
 
-            Modules.Osd { id: osd }
+            Modules.Osd { id: osd; monitor: Hyprland.monitorFor(osdWindow.screen) }
         }
     }
 

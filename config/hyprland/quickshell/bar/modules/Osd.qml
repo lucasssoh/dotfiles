@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import "../theme"
 import "../services"
 
@@ -18,212 +19,180 @@ import "../services"
 // Battery" alert), a deliberately different shape for a warning that
 // wants an acknowledgement rather than a glance-and-forget corner popup.
 //
-// Redesigned around macOS's own brightness/volume HUD (reference
-// screenshot: title label, small-icon/thin-track/big-icon row, tick
-// marks): deliberately sidesteps the previous design's whole class of
-// bugs. That one used a THICK fill (the full pill height) as the level
-// indicator, which needed pixel-correct rounded-corner clipping at every
-// width -- two different per-corner-radius attempts got it wrong at the
-// extremes (near-0%, exactly-100%), and a MultiEffect rounded-mask
-// attempt after that hit real QtQuick footguns live (a source item that
-// went fully blank once actually hidden from the normal scene, an
-// invisible mask rectangle painting solid white over everything once it
-// wasn't). A THIN track (a few px tall) just doesn't have that problem
-// -- its own rounded ends are small enough that no one will ever notice
-// or care about sub-pixel correctness there, so the fill is back to a
-// plain Rectangle with a plain `radius`, no clamping, no masking, no
-// thresholds.
+// HyperOS pass: redesigned as a round knob, after a Dribbble reference the
+// user picked ("Volume Control Buttons") -- replacing a HUD that copied
+// macOS's closely (title, small icon / thin track / big icon, tick dots).
 //
-// Opaque card, not translucent glass -- asked for, after this used the
-// shared glass recipe below at first. (Translucency was never a real
-// compositor blur anyway: Hyprland's layerrule blur needs a distinct
-// Wayland layer-shell namespace to target just this popup, and
-// Quickshell hardcodes the same "quickshell" namespace for every
-// PanelWindow in the process -- confirmed live via `hyprctl layers -j`
-// -- so a layerrule on that shared namespace would've blurred the
-// always-on bar too, continuously, for the whole session. Moot now:
-// solid fill needs no blur to read cleanly, so that whole tradeoff
-// stopped mattering.)
+//   - a black disc, the drawers' panel colour, so it reads over anything;
+//   - a knob in soft relief: an outer ring and a slightly sunken inner
+//     face, two vertical gradients in the drawers' neutral greys;
+//   - an arc around it, open at the bottom like a potentiometer (270deg
+//     from 7:30 to 4:30), on a VISIBLE grey track (asked for: the
+//     reference's arc floats alone, which reads poorly near 0%), with a
+//     soft wider copy under it for the glow;
+//   - a notch on the knob's rim turned to the same angle, so the knob
+//     reads as having been turned, not just filled;
+//   - the glyph, and the level under it (the reference's "K2" variant:
+//     number instead of a caption).
 //
-// Glass treatment: the SAME one shell.qml already uses on METRICS/
-// Launchers/TOOLS, not a bespoke one -- for consistency with the rest
-// of the bar (still true for the GlassRim edge highlight below, just
-// not for the fill's alpha anymore). That system is a vertical Gradient
-// body (lighter/denser at the top, darker/thinner at the bottom -- here
-// at full 0xff alpha instead of those other blocks' shared 0x73, the
-// one deliberate difference) plus GlassRim.qml traced around the edge
-// as the actual highlight -- a five-stop diagonal-reading ramp raking
-// across the top-left corner, the same one Hyprland's own active-window
-// border, Roue's hub and Balise's panel all use (see GlassRim.qml's
-// header). Two GlassRim instances, like those three blocks: topLeft at
-// full strength, a fainter bottomRight one as a secondary source. (An
-// earlier pass here built its own top-right glow out of overlapping
-// circles instead, before being asked to just reuse this -- simpler,
-// and actually consistent instead of a fourth slightly-different glass
-// recipe in the same bar.)
-
-Rectangle {
+// Brightness under HDR: the panel ignores backlight changes then, so the
+// knob greys out and reads "HDR" instead of a level that means nothing.
+// Drawn with Shapes (ShapePath + PathAngleArc): no image asset, no
+// shader, and the arcs are exact at every level.
+Item {
     id: card
+
+    // Which monitor this popup is on, for the HDR check (shell.qml).
+    property var monitor: null
 
     readonly property real level: OsdState.level
     readonly property bool muted: OsdState.muted
     readonly property string kind: OsdState.kind   // "volume" | "mic" | "brightness"
+    readonly property bool hdrLock: card.kind === "brightness" && HdrState.activeOn(card.monitor)
+    // What the arc shows: nothing while muted or locked.
+    readonly property real shown: (card.muted || card.hdrLock) ? 0 : Math.max(0, Math.min(1, card.level))
 
-    width: 280
-    height: 92
-    radius: 20
+    // Eased copy of `shown` for the arc and the notch.
+    property real anim: card.shown
+    Behavior on anim { SpringAnimation { spring: 3; damping: 0.35 } }
 
-    // Thick-glass edge -- see GlassLens.qml / shaders/glass.frag. The
-    // layer only exists while the OSD is actually up (this window is
-    // torn down between showings), so the pass is as transient as the
-    // popup is.
-    layer.enabled: true
-    layer.effect: GlassLens {
-        radius: card.radius
-        // Shallower band than the taller surfaces: this card is 92px
-        // tall, so a 14px bevel would be nearly a third of its height.
-        band: 10
-        depth: 5
-    }
+    readonly property real startAngle: 135
+    readonly property real sweep: 270
+    readonly property real endAngle: card.startAngle + card.sweep * card.anim
 
-    // The central island's own black, flat -- asked for. Deleted rather
-    // than nulled, same reason as BatteryAlert's; see there.
-    color: "#ff000000"
-
-    // target left unset (null) -- these are plain CHILDREN of card, not
-    // siblings, so GlassRim's own child-mode default (trace `parent`)
-    // is correct as-is. `card` is a plain Rectangle here, not a
-    // Block.qml instance with content-reparenting, so there's no
-    // separate "sibling" wiring to do the way metrics/tools need it.
-    // The two GlassRim instances that used to sit here are gone: the
-    // edge is now drawn by GlassLens' own shader, which reproduces the
-    // same five-stop ramp but curves and disperses it. Keeping a real
-    // GlassRim as well drew the line twice and flattened the fringe
-    // back out -- checked on screen, not assumed.
+    width: 150
+    height: 150
 
     opacity: OsdState.osdVisible ? 1 : 0
     scale: OsdState.osdVisible ? 1 : 0.9
     Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
-    readonly property string titleText: {
-        if (kind === "brightness") return "Brightness";
-        if (kind === "mic") return "Micro";
-        return "Volume";
-    }
-
-    // ph-sun / ph-microphone-slash / ph-microphone / ph-speaker-x /
-    // ph-speaker-high -- the last two reused verbatim from
-    // AudioOutput.qml's own muted/unmuted glyphs, same meaning here. ONE
-    // glyph choice, rendered at two sizes (small left / big right) --
-    // matches the reference's own small-sun/big-sun pair, which is the
-    // same icon at two scales too, not two different icons.
-    // MingCute since the HyperOS pass: sun / mic_off / mic /
-    // volume_off / volume, the same glyphs the bar row and the mixer use.
+    // MingCute: sun / mic_off / mic / volume_off / volume.
     readonly property string iconGlyph: {
-        if (kind === "brightness") return "\uF408";
-        if (kind === "mic") return muted ? "\uF0B0" : "\uF0AE";
-        return muted ? "\uF584" : "\uF580";
+        if (kind === "brightness") return "";
+        if (kind === "mic") return muted ? "" : "";
+        return muted ? "" : "";
     }
 
-    Text {
-        id: titleLabel
-        anchors.top: parent.top
-        anchors.topMargin: 16
-        anchors.left: parent.left
-        anchors.leftMargin: 20
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: card.titleText
-        color: Ink.primary
-        font.family: Fonts.ui
-        font.pixelSize: 15
-        font.bold: true
+    // ---- disc ----------------------------------------------------------
+    Rectangle {
+        anchors.centerIn: parent
+        width: 144
+        height: 144
+        radius: width / 2
+        color: DrawerTheme.panelTop
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
     }
 
-    Text {
-        id: smallIcon
-        anchors.left: parent.left
-        anchors.leftMargin: 20
-        anchors.top: titleLabel.bottom
-        anchors.topMargin: 16
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: card.iconGlyph
-        color: card.muted ? Ink.danger : Qt.rgba(1, 1, 1, 0.55)
-        font.family: Fonts.iconMingcute
-        font.pixelSize: 14
-    }
+    // ---- arc: track, glow, level ---------------------------------------
+    Shape {
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
 
-    Text {
-        id: bigIcon
-        anchors.right: parent.right
-        anchors.rightMargin: 20
-        anchors.verticalCenter: smallIcon.verticalCenter
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: card.iconGlyph
-        color: card.muted ? Ink.danger : Ink.primary
-        font.family: Fonts.iconMingcute
-        font.pixelSize: 22
-    }
-
-    Item {
-        id: track
-        height: 6
-        anchors.left: smallIcon.right
-        anchors.leftMargin: 10
-        anchors.right: bigIcon.left
-        anchors.rightMargin: 10
-        anchors.verticalCenter: smallIcon.verticalCenter
-
-        Rectangle {
-            anchors.fill: parent
-            radius: height / 2
-            color: Qt.rgba(1, 1, 1, 0.16)
-        }
-
-        Rectangle {
-            id: fill
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: parent.width * (card.muted ? 0 : card.level)
-            radius: height / 2
-            color: card.muted ? Ink.danger : Ink.primary
-            // SpringAnimation instead of a plain eased tween (asked for)
-            // -- a physical settle instead of an instant/linear jump to
-            // the new level.
-            Behavior on width { SpringAnimation { spring: 3; damping: 0.3 } }
-        }
-    }
-
-    // Reference points as small round dots BELOW the track (not tick
-    // marks cutting across the gauge itself, corrected after the first
-    // attempt) -- purely decorative, entirely independent of the fill,
-    // never covered or interacted with by it. Evenly spaced by index
-    // instead of Row+spacing -- this codebase doesn't use
-    // QtQuick.Layouts anywhere, plain anchors/x math matches its
-    // existing style better.
-    Item {
-        id: dotsRow
-        height: 4
-        anchors.top: track.bottom
-        anchors.topMargin: 8
-        anchors.left: track.left
-        anchors.right: track.right
-
-        Repeater {
-            model: 14
-            Rectangle {
-                required property int index
-                width: 4
-                height: 4
-                radius: 2
-                color: Qt.rgba(1, 1, 1, 0.3)
-                x: (dotsRow.width - width) * (index / 13)
-                anchors.verticalCenter: dotsRow.verticalCenter
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: DrawerTheme.cardRaised
+            strokeWidth: 2.6
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+                centerX: card.width / 2; centerY: card.height / 2
+                radiusX: 57; radiusY: 57
+                startAngle: card.startAngle; sweepAngle: card.sweep
             }
         }
+        // Glow: a wide, faint copy of the level arc under it.
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: card.anim > 0.001 ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+            strokeWidth: 8
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+                centerX: card.width / 2; centerY: card.height / 2
+                radiusX: 57; radiusY: 57
+                startAngle: card.startAngle; sweepAngle: card.sweep * card.anim
+            }
+        }
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: card.anim > 0.001 ? DrawerTheme.on : "transparent"
+            strokeWidth: 2.6
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+                centerX: card.width / 2; centerY: card.height / 2
+                radiusX: 57; radiusY: 57
+                startAngle: card.startAngle; sweepAngle: card.sweep * card.anim
+            }
+        }
+    }
+
+    // ---- knob ----------------------------------------------------------
+    Rectangle {
+        anchors.centerIn: parent
+        width: 92
+        height: 92
+        radius: width / 2
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#1c1c20" }
+            GradientStop { position: 1.0; color: "#0b0b0d" }
+        }
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.05)
+    }
+    Rectangle {
+        anchors.centerIn: parent
+        width: 72
+        height: 72
+        radius: width / 2
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#1f1f23" }
+            GradientStop { position: 1.0; color: "#121215" }
+        }
+        border.width: 1.5
+        border.color: Qt.rgba(0, 0, 0, 0.6)
+    }
+
+    // The notch: a short white mark on the knob's rim, turned with the
+    // level. A zero-size item at the centre, rotated; the mark sits
+    // straight "up" from it, so rotation = angle + 90.
+    Item {
+        x: card.width / 2
+        y: card.height / 2
+        rotation: card.endAngle + 90
+        Rectangle {
+            x: -1.1
+            y: -33
+            width: 2.2
+            height: 4.5
+            radius: 1.1
+            color: card.hdrLock ? "#4a4a4f" : DrawerTheme.on
+        }
+    }
+
+    // ---- glyph and level -----------------------------------------------
+    Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -7
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        text: card.iconGlyph
+        color: card.hdrLock ? DrawerTheme.muted : (card.muted ? DrawerTheme.danger : DrawerTheme.primary)
+        font.family: Fonts.iconMingcute
+        font.pixelSize: 20
+    }
+    Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 14
+        renderType: Text.NativeRendering
+        font.hintingPreference: Font.PreferNoHinting
+        text: card.hdrLock ? "HDR" : card.muted ? "—" : Math.round(card.level * 100)
+        color: card.hdrLock ? DrawerTheme.secondary : DrawerTheme.primary
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        font.weight: Font.DemiBold
+        font.features: { "tnum": 1 }
     }
 }
