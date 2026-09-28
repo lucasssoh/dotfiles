@@ -197,6 +197,12 @@ Item {
 
         BatteryPill {
             anchors.verticalCenter: parent.verticalCenter
+            // Optical correction, 1px up (asked for: it read low although
+            // it was geometrically centred). A solid rectangle carries its
+            // mass evenly down to its bottom edge, where the glyphs beside
+            // it (the digits, the bell) thin out toward theirs, so at the
+            // same centre the gauge looks like it sits lower.
+            anchors.verticalCenterOffset: -1
             percent: root.present ? root.pct : 100
             color: root.batteryColor
             // Where conservation mode will stop the charge -- shown only
