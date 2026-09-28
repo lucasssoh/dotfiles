@@ -269,6 +269,14 @@ Item {
     // internal panel (eDP/LVDS/DSI) on a machine with a /sys/class/
     // backlight device. External screens fall outside it on purpose --
     // brightnessctl does not reach them. See the SYSTEM group.
+    // Where the brightness gauge goes (on a screen the OS can dim):
+    //   "row"  -- one line in SYSTEM with Night mode and HDR as round
+    //             buttons (BaliseScreenRow.qml);
+    //   "tile" -- a tall column beside the connectivity tiles, Night mode
+    //             and HDR back to their two toggle rows
+    //             (BaliseBrightnessTile.qml). Being tried now.
+    readonly property string brightnessLayout: "tile"
+
     readonly property bool screenAdjustable: OsdState.backlightPath !== ""
         && !!root.monitor && /^(eDP|LVDS|DSI)/.test(root.monitor.name)
 
@@ -707,52 +715,80 @@ Item {
 
             GroupLabel { text: "CONNECTIVITY"; revealIndex: 2 }
 
-            Row {
+            // The connectivity tiles, with the brightness column beside
+            // them when the layout asks for it (`brightnessLayout`
+            // "tile"): the column spans both rows, the tiles narrow to
+            // make room. Without it (the "row" layout, or a screen the OS
+            // cannot dim) the tiles take the full width as before.
+            Item {
+                id: connGrid
                 width: parent.width
-                spacing: 16
-                Tile {
-                    width: (parent.width - 16) / 2
-                    height: 92
-                    title: "WiFi"
-                    revealIndex: 3
-                    status: root.wifiTileStatus
-                    glyph: BaliseState.wifiEnabled ? "\uF5CA" : "\uF5CC"   // mgc wifi / wifi_off
-                    active: BaliseState.wifiEnabled
-                    onActivated: BaliseState.toggleWifi()
-                    onActivatedSecondary: root.goTo("wifi")
+                height: connLeft.implicitHeight
+                readonly property bool withTile: root.brightnessLayout === "tile" && root.screenAdjustable
+
+                Column {
+                    id: connLeft
+                    width: connGrid.withTile ? parent.width - brightTile.width - 16 : parent.width
+                    spacing: 12
+
+                    Row {
+                        width: connLeft.width
+                        spacing: 16
+                        Tile {
+                            width: (parent.width - 16) / 2
+                            height: 92
+                            title: "WiFi"
+                            revealIndex: 3
+                            status: root.wifiTileStatus
+                            glyph: BaliseState.wifiEnabled ? "\uF5CA" : "\uF5CC"   // mgc wifi / wifi_off
+                            active: BaliseState.wifiEnabled
+                            onActivated: BaliseState.toggleWifi()
+                            onActivatedSecondary: root.goTo("wifi")
+                        }
+                        Tile {
+                            width: (parent.width - 16) / 2
+                            height: 92
+                            title: "Bluetooth"
+                            revealIndex: 4
+                            status: root.bluetoothTileStatus
+                            glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
+                            active: BaliseState.bluetoothEnabled
+                            onActivated: BaliseState.toggleBluetooth()
+                            onActivatedSecondary: root.goTo("bluetooth")
+                        }
+                    }
+                    Row {
+                        width: connLeft.width
+                        spacing: 16
+                        Tile {
+                            // Full width, unconditionally: the charge cap that
+                            // used to take the other half of this row moved to
+                            // the power drawer, and Ethernet is alone here now.
+                            // Still an explicit width rather than a stretch -- a
+                            // positioner reclaims a hidden child's space, it does
+                            // not stretch the survivor into it.
+                            width: parent.width
+                            height: 92
+                            title: "Ethernet"
+                            revealIndex: 5
+                            status: root.ethernetTileStatus
+                            glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
+                            active: root.activeWiredProfile !== null
+                            // No radio to toggle -- both buttons open the section.
+                            onActivated: root.goTo("ethernet")
+                            onActivatedSecondary: root.goTo("ethernet")
+                        }
+                    }
                 }
-                Tile {
-                    width: (parent.width - 16) / 2
-                    height: 92
-                    title: "Bluetooth"
-                    revealIndex: 4
-                    status: root.bluetoothTileStatus
-                    glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
-                    active: BaliseState.bluetoothEnabled
-                    onActivated: BaliseState.toggleBluetooth()
-                    onActivatedSecondary: root.goTo("bluetooth")
-                }
-            }
-            Row {
-                width: parent.width
-                spacing: 16
-                Tile {
-                    // Full width, unconditionally: the charge cap that
-                    // used to take the other half of this row moved to
-                    // the power drawer, and Ethernet is alone here now.
-                    // Still an explicit width rather than a stretch -- a
-                    // positioner reclaims a hidden child's space, it does
-                    // not stretch the survivor into it.
-                    width: parent.width
-                    height: 92
-                    title: "Ethernet"
-                    revealIndex: 5
-                    status: root.ethernetTileStatus
-                    glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
-                    active: root.activeWiredProfile !== null
-                    // No radio to toggle -- both buttons open the section.
-                    onActivated: root.goTo("ethernet")
-                    onActivatedSecondary: root.goTo("ethernet")
+
+                BaliseBrightnessTile {
+                    id: brightTile
+                    visible: connGrid.withTile
+                    anchors.right: parent.right
+                    width: 76
+                    height: connLeft.height
+                    revealIndex: 6
+                    hdrActive: root.hdrActive
                 }
             }
             Item { width: 1; height: 4 }
@@ -767,7 +803,7 @@ Item {
             // firmware: DDC/CI at best, its buttons at worst), so the two
             // toggles stay as the side-by-side pair below instead.
             BaliseScreenRow {
-                visible: root.screenAdjustable
+                visible: root.screenAdjustable && root.brightnessLayout === "row"
                 width: parent.width
                 revealIndex: 8
                 hdrActive: root.hdrActive
@@ -776,7 +812,7 @@ Item {
             // Night mode and HDR SIDE BY SIDE -- the fallback above. This
             // pair was the only layout until the screen row existed.
             Row {
-                visible: !root.screenAdjustable
+                visible: !(root.screenAdjustable && root.brightnessLayout === "row")
                 width: parent.width
                 spacing: 16
 
