@@ -196,13 +196,15 @@ Item {
         }
 
         BatteryPill {
-            anchors.verticalCenter: parent.verticalCenter
-            // Optical correction, 1px up (asked for: it read low although
-            // it was geometrically centred). A solid rectangle carries its
-            // mass evenly down to its bottom edge, where the glyphs beside
-            // it (the digits, the bell) thin out toward theirs, so at the
-            // same centre the gauge looks like it sits lower.
-            anchors.verticalCenterOffset: -1
+            // Optical centring (asked for: it read low although it was
+            // geometrically centred -- a solid rectangle carries its mass
+            // down to its bottom edge, where the glyphs beside it thin
+            // out). A full pixel up overshot ("un poil trop haute"); half
+            // a pixel is the middle, but a half-pixel y would blur both
+            // edges. So the gauge is 15px tall -- odd -- and its y is
+            // floored: its centre lands exactly half a pixel above the
+            // row's, on whole-pixel edges.
+            y: Math.floor((parent.height - height) / 2)
             percent: root.present ? root.pct : 100
             color: root.batteryColor
             // Where conservation mode will stop the charge -- shown only
