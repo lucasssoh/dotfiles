@@ -1,5 +1,4 @@
 import QtQuick
-import ".."          // GlassOn
 import "../../theme"
 import "../../services"
 
@@ -115,8 +114,6 @@ Item {
             ? (hit.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
             : (hit.containsMouse ? DrawerTheme.accentStrongest : DrawerTheme.cardRaised)
         Behavior on color { ColorAnimation { duration: 120 } }
-        layer.enabled: btn.on
-        layer.effect: GlassOn { radius: btn.radius }
 
         Text {
             anchors.centerIn: parent

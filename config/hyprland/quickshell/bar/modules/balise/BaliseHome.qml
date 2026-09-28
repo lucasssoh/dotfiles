@@ -437,8 +437,6 @@ Item {
             ? (mouseArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
             : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
         Behavior on color { ColorAnimation { duration: 120 } }
-        layer.enabled: trow.checked
-        layer.effect: GlassOn { radius: trow.radius }
 
         // The same badge the connectivity tiles above carry -- asked
         // for, so that SYSTEM reads as the same kind of control as the
@@ -645,8 +643,6 @@ Item {
                 // Inverted while connected, like every "on" control here.
                 color: root.heroConnected ? DrawerTheme.on : DrawerTheme.card
                 Behavior on color { ColorAnimation { duration: 160 } }
-                layer.enabled: root.heroConnected
-                layer.effect: GlassOn { radius: heroCard.radius }
 
                 Column {
                     anchors.left: parent.left

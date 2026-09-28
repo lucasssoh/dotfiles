@@ -495,8 +495,6 @@ Item {
             radius: 12
 
             color: root.statusConnected ? DrawerTheme.on : DrawerTheme.card
-            layer.enabled: root.statusConnected
-            layer.effect: GlassOn { radius: 12 }
 
             Text {
                 anchors.left: parent.left
@@ -706,8 +704,6 @@ Item {
                             return submitArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on;
                         }
                         Behavior on color { ColorAnimation { duration: 120 } }
-                        layer.enabled: root.canSubmit
-                        layer.effect: GlassOn { radius: 20 }
 
                         Text {
                             anchors.centerIn: parent
@@ -1052,8 +1048,6 @@ Item {
                         return hovered ? DrawerTheme.cardHover : DrawerTheme.card;
                     }
                     Behavior on color { ColorAnimation { duration: 120 } }
-                    layer.enabled: actionBtn.modelData.style === "primary"
-                    layer.effect: GlassOn { radius: actionBtn.radius }
 
                     Text {
                         anchors.centerIn: parent

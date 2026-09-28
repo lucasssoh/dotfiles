@@ -243,8 +243,6 @@ Item {
                             color: modelData.today ? DrawerTheme.accent
                                 : cellHit.containsMouse ? DrawerTheme.cardHover
                                 : "transparent"
-                            layer.enabled: modelData.today
-                            layer.effect: GlassOn { radius: 14 }
                         }
 
                         Text {

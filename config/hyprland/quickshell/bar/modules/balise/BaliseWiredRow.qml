@@ -40,8 +40,6 @@ Rectangle {
         ? (rowArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
         : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
-    layer.enabled: row.connected
-    layer.effect: GlassOn { radius: row.radius }
 
     MouseArea {
         id: rowArea

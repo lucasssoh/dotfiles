@@ -56,11 +56,6 @@ Rectangle {
         : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
 
-    // Convex glass on the tile while it is ON (asked for back after the
-    // flat pass: "c'est trop plat"), and only then -- an inactive tile
-    // allocates no layer. See GlassOn.qml.
-    layer.enabled: tile.active
-    layer.effect: GlassOn { radius: tile.radius }
 
     readonly property color fg: tile.active ? DrawerTheme.onInk : DrawerTheme.primary
 
