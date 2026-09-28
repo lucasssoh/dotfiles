@@ -292,9 +292,10 @@ mod imp {
                     let danger = confirming && hovered == CONFIRM_INDEX;
 
                     // What the hub says. On a confirmation ("C2") it asks
-                    // the question about the pending action; otherwise the
-                    // hovered sector's name, plus -- on a wheel with an
-                    // applied state -- which one is current.
+                    // the question about the pending action; otherwise just
+                    // the hovered sector's name. (A "now: <profile>" line
+                    // was tried under it and dropped: the applied state's
+                    // colour on the rim and its arc already says it.)
                     let pending_label = self.pending.borrow().as_ref().map(|p| p.label.clone());
                     let (title, sub): (String, Option<String>) = if confirming {
                         if danger {
@@ -303,9 +304,6 @@ mod imp {
                         } else {
                             ("Cancel".into(), Some("back to the wheel".into()))
                         }
-                    } else if let Some((ai, a)) = active_seg {
-                        (seg.label.clone(),
-                         Some(if ai == hovered { "current".into() } else { format!("now: {}", a.label) }))
                     } else {
                         (seg.label.clone(), None)
                     };
