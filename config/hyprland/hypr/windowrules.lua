@@ -218,6 +218,7 @@ for _, t in ipairs(nemo_dialogs) do
         center          = true,
         size            = "850 550",
         no_follow_mouse = true,
+        tag             = "+dialog",
     })
 end
 
@@ -250,6 +251,7 @@ hl.window_rule({
     float           = true,
     center          = true,
     no_follow_mouse = true,
+    tag             = "+dialog",
 })
 
 -- Library (history/bookmarks/downloads) — popup confirmed via hyprctl
@@ -265,6 +267,7 @@ hl.window_rule({
     center          = true,
     size            = "900 650",
     no_follow_mouse = true,
+    tag             = "+dialog",
 })
 
 -- ============================================================
@@ -333,20 +336,19 @@ hl.window_rule({
 -- that was what made these dialogs lose focus while navigating and on
 -- confirm/cancel. It is the whole fix; nothing else is needed.
 --
--- No stay_focused, on purpose. It used to be here too, and it does not
--- "protect" a dialog, it PINS every input to it: with a save dialog open,
--- the screenshot bind's satty could not take focus and the Quickshell bar
--- stopped taking clicks. A new window is focused on open anyway, and
--- satty -- the one app that fought for it -- no longer has stay_focused
--- itself (see its rule above).
+-- No static stay_focused, on purpose: it PINS every input to the dialog
+-- for as long as it is open (with a save dialog up, satty could not take
+-- focus and the Quickshell bar stopped taking clicks). Instead every
+-- dialog rule tags its window "dialog", and dialoghold.lua holds focus on
+-- it only until you act on it -- first key, or the pointer moving inside.
 -- ".*" at the end is load-bearing: Hyprland full-matches the regex, and
 -- without it this rule matched only a title that was exactly "Ouvrir",
 -- "Save"... -- never "Enregistrer sous - Projet.pdf". Portal dialogs
 -- still floated through the class rule below; toolkit-native ones
 -- (a GTK app's own chooser) tiled.
-hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select).*" }, float = true, center = true, no_follow_mouse = true })
-hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, no_follow_mouse = true })
-hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, no_follow_mouse = true })
+hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select).*" }, float = true, center = true, no_follow_mouse = true, tag = "+dialog" })
+hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, no_follow_mouse = true, tag = "+dialog" })
+hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, no_follow_mouse = true, tag = "+dialog" })
 
 -- ============================================================
 -- GAMESCOPE — games launched via gamescope (e.g. CS2 in 4:3)

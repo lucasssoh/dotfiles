@@ -486,6 +486,7 @@ hl.config({
 -- Submodules: monitors/HDR, per-app rules, keyboard shortcuts
 require("monitors")
 require("windowrules")
+require("dialoghold")  -- after windowrules: acts on the "dialog" tag it sets
 require("keybinds")
 
 -- Machine-local overrides (per-game rules, anything not worth versioning).
