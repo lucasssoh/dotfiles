@@ -7,36 +7,12 @@
 -- ============================================================
 
 -- ============================================================
--- FIREFOX
--- ============================================================
-hl.window_rule({
-    match   = { class = "firefox" },
-    opacity = "1.0 override",
-    workspace = "2",
-})
-
--- ============================================================
 -- WEZTERM
 -- ============================================================
 -- hl.window_rule({
 --     match   = { class = "org.wezfurlong.wezterm" },
 --     opacity = "0.95 override",
 -- })
-
--- ============================================================
--- THUNAR — floating dialogs, main window tiled
--- ============================================================
--- Dialogs (everything that is NOT the main "— Thunar" window)
-hl.window_rule({
-    match  = { class = "thunar", title = "^(?!.*— Thunar)" },
-    size   = "900 600",
-    center = true,
-})
--- Opacity on all Thunar windows
-hl.window_rule({
-    match   = { class = "thunar" },
-    opacity = "0.95 override",
-})
 
 -- ============================================================
 -- SYSTEM DIALOGS — always floating and centered
@@ -260,42 +236,39 @@ hl.window_rule({
 -- ============================================================
 -- FIREFOX — downloads, preferences, and popups
 -- ============================================================
--- Main window tiled on workspace 2
+-- Class is "org.mozilla.firefox" here (hyprctl clients), not "firefox".
+-- Three rules keyed on "firefox" never matched anything: a forced
+-- workspace 2 for every Firefox window, the main window tiled, and the
+-- popups below. The first two were dropped rather than revived -- Firefox
+-- goes wherever it is opened, as it always has in practice.
+--
+-- Popups: floating, centred. The pattern ends in ".*" because Hyprland
+-- full-matches the title ("Informations sur la page – https://..."). No
+-- stay_focused: see UNIVERSAL DIALOG BOXES at the end of this file.
 hl.window_rule({
-    match     = { class = "firefox", title = " — Mozilla Firefox$" },
-    workspace = "2",
-    tile      = true,
-})
-
--- Floating for preferences and login windows.
--- Note: the class actually reported by hyprctl clients on this system is
--- "org.mozilla.firefox", not "firefox" — so this rule is inactive as-is.
--- The targeted titles haven't been verified under real conditions; fix if
--- the need is confirmed. The Library window is already covered separately
--- below.
-hl.window_rule({
-    match = { class = "firefox", title = "^(Password Required|Page Info|S'identifier|Préférences|Preferences|Paramètres|Settings)" },
-    float = true,
-    center = true,
-    stay_focused = true,
+    match           = { class = "org.mozilla.firefox", title = "^(Password Required|Mot de passe requis|Page Info|Informations sur la page|S'identifier|Préférences|Preferences|Paramètres|Settings).*" },
+    float           = true,
+    center          = true,
+    no_follow_mouse = true,
 })
 
 -- Library (history/bookmarks/downloads) — popup confirmed via hyprctl
 -- clients: class="org.mozilla.firefox", title="Bibliothèque" (FR locale).
 -- "Library" covers the official Mozilla English name for the same
--- window. Floating, centered, fixed size, keeps focus on open. No pin: it
--- should follow the current workspace rather than stay pinned to the
--- screen.
+-- window. Floating, centered, fixed size. No pin: it should follow the
+-- current workspace rather than stay pinned to the screen. No
+-- stay_focused: the downloads list stays open for a while, and pinning
+-- focus to it locked out every other window (see UNIVERSAL DIALOG BOXES).
 hl.window_rule({
-    match        = { class = "org.mozilla.firefox", title = "^(Bibliothèque|Library)$" },
-    float        = true,
-    center       = true,
-    size         = "900 650",
-    stay_focused = true,
+    match           = { class = "org.mozilla.firefox", title = "^(Bibliothèque|Library)$" },
+    float           = true,
+    center          = true,
+    size            = "900 650",
+    no_follow_mouse = true,
 })
 
 -- ============================================================
--- STEAM & GAME LAUNCHERS (Lutris, Heroic, Rockstar)
+-- STEAM & GAME LAUNCHERS (Lutris, Heroic)
 -- ============================================================
 -- Forces floating on all game launcher popups: these windows don't have a
 -- usable fixed title (e.g. Steam's game config dialog takes the game's
@@ -348,21 +321,6 @@ hl.window_rule({
     no_follow_mouse = false,
 })
 
--- Steam friends, chat, or properties windows
-hl.window_rule({ match = { class = "steam", title = "^(Amis|Friends|Lancement|Configuring|Properties|Steam - Self Updater)" }, float = true })
-
--- Rockstar Games Launcher
-hl.window_rule({
-    match        = { class = "steam_proton", title = "^Rockstar Games Launcher" },
-    float        = true,
-    size         = "1200 800",
-    center       = true,
-    stay_focused = true,
-    no_blur      = true,
-    no_anim      = true,
-    opacity      = "1.0 override",
-})
-
 -- ============================================================
 -- UNIVERSAL DIALOG BOXES (XDG Portals, GTK, QT)
 -- ============================================================
@@ -387,7 +345,6 @@ hl.window_rule({
 -- still floated through the class rule below; toolkit-native ones
 -- (a GTK app's own chooser) tiled.
 hl.window_rule({ match = { title = "^(Ouvrir|Open|Enregistrer|Save|Choix|Select).*" }, float = true, center = true, no_follow_mouse = true })
-hl.window_rule({ match = { title = "(Fichier|File|Dossier|Folder)$" }, float = true, center = true, no_follow_mouse = true })
 hl.window_rule({ match = { class = "xdg-desktop-portal-gtk" }, float = true, center = true, no_follow_mouse = true })
 hl.window_rule({ match = { class = "xdg-desktop-portal-kde" }, float = true, center = true, no_follow_mouse = true })
 
