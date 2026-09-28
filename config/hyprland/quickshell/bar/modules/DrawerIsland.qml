@@ -628,9 +628,17 @@ Item {
     // one reason: a Behavior animates a property by writing to it, which
     // a readonly property will not accept. Nothing outside writes it --
     // the binding below is its only source.
+    //
+    // Anchor mode only. Right-aligned, a change in drawerBandX is never a
+    // move of the pane: it is the island's own x moving the other way
+    // (the island grows leftward from its right anchor), and the band
+    // offset has to cancel it on the very same frame. Animated, it lagged
+    // the island by 120ms, so the whole open drawer lurched sideways and
+    // back each time a row icon appeared -- Balise, whenever turning wifi
+    // or bluetooth on added its glyph to BaliseButton.
     property int drawerBandX: root.drawerBandTargetX
     Behavior on drawerBandX {
-        enabled: root.opaqueProgress > 0.99
+        enabled: root.drawerAnchorX >= 0 && root.opaqueProgress > 0.99
         NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
     }
     readonly property int drawerBandWidth: Math.round(root.drawerContentWidth + root.margin * 2)
