@@ -631,89 +631,12 @@ Item {
             // ---- hero: whatever is actually carrying traffic right now
             // (the mockup's own "RÉSEAU ACTUEL" card). Ethernet wins over
             // WiFi, see heroName's own comment.
-            GroupLabel { text: "CURRENT NETWORK"; revealIndex: 0 }
-
-            Rectangle {
-                // The one animated block that is not one of the reusable
-                // components above, so it carries the cascade inline.
-                id: heroCard
-                RevealPop { item: heroCard; index: 1 }
-
-                width: parent.width
-                height: 66
-                radius: 14
-
-                // Near-black at rest -- asked for. This block is pure
-                // display (it names the network you are on), so it has
-                // no active state to brighten into; it simply recedes,
-                // and its border is what keeps the shape. See
-                // DrawerTheme.cardDeep.
-                // Inverted while connected, like every "on" control here.
-                color: root.heroConnected ? DrawerTheme.on : DrawerTheme.card
-                Behavior on color { ColorAnimation { duration: 160 } }
-
-                Column {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.right: heroBadge.left
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 3
-
-                    Text {
-                        width: parent.width
-                        renderType: Text.NativeRendering
-                        font.hintingPreference: Font.PreferNoHinting
-                        text: root.heroName
-                        color: root.heroConnected ? DrawerTheme.onInk : DrawerTheme.primary
-                        font.family: Fonts.ui
-                        font.pixelSize: 15
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                    }
-                    Text {
-                        width: parent.width
-                        renderType: Text.NativeRendering
-                        font.hintingPreference: Font.PreferNoHinting
-                        text: root.heroStatus
-                        color: root.heroConnected ? DrawerTheme.onInk2 : DrawerTheme.secondary
-                        font.family: Fonts.ui
-                        font.pixelSize: 13
-                        elide: Text.ElideRight
-                    }
-                }
-
-                // Circular badge, unlike the tiles' rounded squares --
-                // the mockup uses the same distinction to mark this as
-                // the status summary rather than another toggle.
-                Rectangle {
-                    id: heroBadge
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: root.heroConnected
-                        ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10)
-                        : DrawerTheme.cardRaised
-                    Behavior on color { ColorAnimation { duration: 160 } }
-
-                    Text {
-                        anchors.centerIn: parent
-                        renderType: Text.NativeRendering
-                        font.hintingPreference: Font.PreferNoHinting
-                        text: root.heroGlyph
-                        color: root.heroConnected ? DrawerTheme.onInk : DrawerTheme.secondary
-                        font.family: Fonts.iconMingcute
-                        font.pixelSize: 18
-                    }
-                }
-            }
-
-            Item { width: 1; height: 4 }
-
-            GroupLabel { text: "CONNECTIVITY"; revealIndex: 2 }
+            // No "CURRENT NETWORK" card and no "CONNECTIVITY" label any
+            // more (the S4 layout of the mockups): the card only repeated
+            // what the Wi-Fi tile says, and with the brightness column in
+            // the grid "connectivity" no longer described it. The Wi-Fi
+            // tile went wide instead and carries the network, its quality
+            // and its signal bars.
 
             // The connectivity tiles, with the brightness column beside
             // them when the layout asks for it (`brightnessLayout`
@@ -731,46 +654,41 @@ Item {
                     width: connGrid.withTile ? parent.width - brightTile.width - 16 : parent.width
                     spacing: 12
 
+                    // Wi-Fi alone on the first row, full width: the tile the
+                    // "CURRENT NETWORK" card used to duplicate.
+                    Tile {
+                        width: connLeft.width
+                        height: 92
+                        title: root.connectedWifiAp ? root.connectedWifiAp.ssid : "WiFi"
+                        revealIndex: 1
+                        status: root.connectedWifiAp
+                            ? "Wi-Fi · " + root.signalWord(root.connectedWifiAp.signal) + " · " + root.connectedWifiAp.signal + "%"
+                            : root.wifiTileStatus
+                        signalBars: root.connectedWifiAp ? Math.max(1, Math.ceil(root.connectedWifiAp.signal / 25)) : -1
+                        glyph: BaliseState.wifiEnabled ? "\uF5CA" : "\uF5CC"   // mgc wifi / wifi_off
+                        active: BaliseState.wifiEnabled
+                        onActivated: BaliseState.toggleWifi()
+                        onActivatedSecondary: root.goTo("wifi")
+                    }
                     Row {
                         width: connLeft.width
                         spacing: 16
                         Tile {
                             width: (parent.width - 16) / 2
                             height: 92
-                            title: "WiFi"
-                            revealIndex: 3
-                            status: root.wifiTileStatus
-                            glyph: BaliseState.wifiEnabled ? "\uF5CA" : "\uF5CC"   // mgc wifi / wifi_off
-                            active: BaliseState.wifiEnabled
-                            onActivated: BaliseState.toggleWifi()
-                            onActivatedSecondary: root.goTo("wifi")
-                        }
-                        Tile {
-                            width: (parent.width - 16) / 2
-                            height: 92
                             title: "Bluetooth"
-                            revealIndex: 4
+                            revealIndex: 2
                             status: root.bluetoothTileStatus
                             glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
                             active: BaliseState.bluetoothEnabled
                             onActivated: BaliseState.toggleBluetooth()
                             onActivatedSecondary: root.goTo("bluetooth")
                         }
-                    }
-                    Row {
-                        width: connLeft.width
-                        spacing: 16
                         Tile {
-                            // Full width, unconditionally: the charge cap that
-                            // used to take the other half of this row moved to
-                            // the power drawer, and Ethernet is alone here now.
-                            // Still an explicit width rather than a stretch -- a
-                            // positioner reclaims a hidden child's space, it does
-                            // not stretch the survivor into it.
-                            width: parent.width
+                            width: (parent.width - 16) / 2
                             height: 92
                             title: "Ethernet"
-                            revealIndex: 5
+                            revealIndex: 3
                             status: root.ethernetTileStatus
                             glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
                             active: root.activeWiredProfile !== null
@@ -787,7 +705,7 @@ Item {
                     anchors.right: parent.right
                     width: 76
                     height: connLeft.height
-                    revealIndex: 6
+                    revealIndex: 4
                     hdrActive: root.hdrActive
                 }
             }

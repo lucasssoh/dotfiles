@@ -28,6 +28,9 @@ Rectangle {
     property string glyph: ""
     property string glyphFont: Fonts.iconMingcute   // see DrawerIconBadge
     property bool active: false
+    // Optional signal strength beside the title, 0-4 bars; -1 = none.
+    // Balise's wide Wi-Fi tile uses it.
+    property int signalBars: -1
     property color accent: DrawerTheme.accent
     signal activated()
     // Right-click opens this tile's section list (WiFi/Bluetooth in
@@ -84,16 +87,40 @@ Rectangle {
             active: tile.active
             accent: tile.accent
         }
-        Text {
+        Row {
             width: tileText.width
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: tile.title
-            color: tile.fg
-            font.family: Fonts.ui
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
+            spacing: 6
+            Text {
+                id: titleText
+                width: Math.min(implicitWidth, tileText.width - (bars.visible ? bars.width + 6 : 0))
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: tile.title
+                color: tile.fg
+                font.family: Fonts.ui
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+            Row {
+                id: bars
+                visible: tile.signalBars >= 0
+                anchors.bottom: titleText.baseline
+                anchors.bottomMargin: -1
+                spacing: 2
+                Repeater {
+                    model: 4
+                    Rectangle {
+                        required property int index
+                        anchors.bottom: parent.bottom
+                        width: 3
+                        height: 4 + index * 2.5
+                        radius: 1
+                        color: tile.fg
+                        opacity: index < tile.signalBars ? 1 : 0.3
+                    }
+                }
+            }
         }
         Text {
             width: tileText.width
