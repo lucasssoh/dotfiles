@@ -34,22 +34,30 @@ Rectangle {
     }
     Component.onCompleted: OsdState.readBrightness()
 
-    Rectangle {
+    // The fill is a FULL tile-shaped rectangle in the fill colour, of
+    // which only the bottom slice shows -- the clip is the level. That
+    // makes it exactly the tile's shape cut by a straight line: the
+    // bottom corners follow the tile's own curve at every level (at 1% a
+    // thin sliver hugging it, not a square-cornered bar), and the top
+    // corners appear by themselves as the slice reaches the top. The
+    // previous per-corner radii shrank the bottom ones toward 0 at low
+    // levels while the top ones behaved, which is the asymmetry asked
+    // about. Strictly proportional: 1% is 1% of the height.
+    Item {
         id: fill
         anchors.bottom: parent.bottom
         width: parent.width
-        // Strictly proportional: 1% is 1% of the height (asked for -- a
-        // floor at the sun's square put 1% at more than a third). The
-        // bottom corners follow the tile's until the fill is shorter
-        // than them.
         height: tile.hdrActive ? 0 : parent.height * Math.max(0, Math.min(1, tile.level))
-        bottomLeftRadius: Math.min(tile.radius, fill.height / 2)
-        bottomRightRadius: Math.min(tile.radius, fill.height / 2)
-        topLeftRadius: Math.max(0, tile.radius - (parent.height - fill.height))
-        topRightRadius: Math.max(0, tile.radius - (parent.height - fill.height))
-        color: tile.hdrActive ? "#3a3a3e" : DrawerTheme.on
+        clip: true
         Behavior on height { enabled: !drag.pressed; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        Behavior on color { ColorAnimation { duration: 140 } }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            width: tile.width
+            height: tile.height
+            radius: tile.radius
+            color: DrawerTheme.on
+        }
     }
 
     Text {

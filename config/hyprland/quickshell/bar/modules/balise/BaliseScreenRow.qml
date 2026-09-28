@@ -49,25 +49,25 @@ Item {
         radius: height / 2
         color: DrawerTheme.cardRaised
 
-        // Rounded on the left, where it meets the track's own end, but a
-        // STRAIGHT right edge -- that edge is the level, and a round end
-        // melted into the track at low levels (asked for). It only rounds
-        // as it reaches the track's far end, over the last few pixels,
-        // the same trick as the battery gauge.
-        Rectangle {
+        // A full track-shaped capsule in the fill colour, of which only
+        // the left slice shows -- the clip is the level. So the left end
+        // always follows the track's own curve (at 1% a sliver hugging
+        // it), the level edge is straight, and the right end rounds in by
+        // itself as the slice reaches it. Strictly proportional: 1% is 1%
+        // of the width.
+        Item {
             id: fill
             height: parent.height
-            readonly property real r: Math.min(height / 2, width / 2)
-            topLeftRadius: fill.r
-            bottomLeftRadius: fill.r
-            topRightRadius: Math.max(0, fill.r - (parent.width - fill.width))
-            bottomRightRadius: Math.max(0, fill.r - (parent.width - fill.width))
-            // Strictly proportional: 1% is 1% of the width (a floor at the
-            // sun's disc overstated every low level).
             width: row.hdrActive ? 0 : parent.width * Math.max(0, Math.min(1, row.level))
-            color: row.hdrActive ? "#3a3a3e" : DrawerTheme.on
+            clip: true
             Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: 140 } }
+
+            Rectangle {
+                width: track.width
+                height: track.height
+                radius: track.radius
+                color: DrawerTheme.on
+            }
         }
 
         Text {
