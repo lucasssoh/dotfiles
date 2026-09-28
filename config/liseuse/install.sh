@@ -115,8 +115,10 @@ mkdir -p ~/Livres
 # honest about books opened outside SUPER+F.
 #
 # Points at zathura's own .desktop, not at a Liseuse one: a file opened
-# from a file manager is not a reading SESSION (no bar hiding, no idle
-# inhibitor), it's a quick look at a document.
+# from a file manager is not a reading SESSION (no do-not-disturb, no
+# focus handling), it's a quick look at a document. It still keeps the
+# screen on while it is visible -- that is hypr/readinghold.lua, and it
+# applies to every zathura window.
 if command -v xdg-mime &> /dev/null; then
     for mime in application/pdf application/epub+zip \
                 application/x-mobipocket-ebook application/vnd.comicbook+zip \

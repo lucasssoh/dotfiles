@@ -516,11 +516,13 @@ decorate() {
 #                     still land in the centre, they just don't pop)
 #   hypridle       -> 5 min to lock on battery, 15 on mains, and reading
 #                     is the one activity that produces NO input for
-#                     minutes at a time. Handled by launching zathura
-#                     under systemd-inhibit rather than from here:
-#                     hypridle.conf keeps ignore_dbus_inhibit = false
-#                     precisely so a D-Bus inhibitor is honoured, the
-#                     same mechanism mpv and Firefox already use.
+#                     minutes at a time. Handled by the compositor, in
+#                     hypr/readinghold.lua: idle is held off while a book
+#                     is on a workspace that is on screen, and only then.
+#                     This used to be `systemd-inhibit` around zathura,
+#                     which held it for as long as the book was OPEN --
+#                     a book forgotten on another workspace kept an
+#                     unattended laptop lit all afternoon.
 #
 # The bar is NOT in that list, and used to be: this hid it with setZen
 # on the way in and showed it again on the way out. That was redundant
@@ -665,10 +667,7 @@ open_book() {
     trap focus_leave EXIT INT TERM HUP
     local cfg
     cfg="$(zathura_config_dir "$target")" || cfg=""
-    systemd-inhibit --what=idle \
-                    --who=Liseuse \
-                    --why="Reading a book" \
-                    zathura ${cfg:+--config-dir "$cfg"} -- "$target" || true
+    zathura ${cfg:+--config-dir "$cfg"} -- "$target" || true
     focus_leave
     trap - EXIT INT TERM HUP
 }
