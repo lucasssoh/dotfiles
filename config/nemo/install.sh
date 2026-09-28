@@ -65,41 +65,69 @@ systemctl --user restart xdg-desktop-portal.service || true
 # reason this section is here rather than in the Qt side of the desktop:
 # qt6ct, which QT_QPA_PLATFORMTHEME points at, never sees this window.
 #
-# Both files land in ~/.config/gtk-3.0, so they reach every GTK3 app on the
-# machine, not only Nemo. That is intentional and worth naming: the other
-# GTK3 surface on this desktop is xdg-desktop-portal-gtk's file chooser,
-# installed by this very module a few lines up, and a file chooser that did
-# not match the file manager that opens next to it would be the odd one out.
-# Nothing else here is GTK3 -- the bar is Quickshell, fuzzel is native,
-# the browsers draw their own chrome.
+# Everything here reaches every GTK3 app on the machine, not only Nemo.
+# That is intentional: the other GTK3 surface on this desktop is
+# xdg-desktop-portal-gtk's file chooser, installed by this very module a
+# few lines up, and a file chooser that did not match the file manager
+# that opens next to it would be the odd one out.
+#
+# Three pieces, because the bar's appearance toggle (AppearanceState.qml)
+# switches GTK3 by theme NAME -- "Adwaita-dark" / "Adwaita" in
+# org.gnome.desktop.interface gtk-theme:
+#   a. ~/.local/share/themes/Adwaita-dark, GENERATED from the Adwaita dark
+#      sheet compiled into libgtk-3, recoloured to the bar's palette, plus
+#      theme/overlay.css. GTK3 has no built-in theme by that name, so until
+#      this exists "Adwaita-dark" silently means LIGHT Adwaita -- which is
+#      what Nemo had been running on under a dark-only user stylesheet
+#      (white properties page, blue tab underline, invisible disk gauges).
+#      Rebuilt on every run: it is cheap and it tracks GTK updates.
+#   b. ~/.config/gtk-3.0/{settings.ini,gtk.css}: the no-portal fallback and
+#      colour-free geometry that reads right on both themes.
+#   c. dconf, below.
 info "Theming GTK3 (Nemo + the GTK file chooser portal)..."
+python3 "$SCRIPT_DIR/theme/build-adwaita-dark.py" >/dev/null
 mkdir -p "$HOME/.config/gtk-3.0"
 safe_link "$SCRIPT_DIR/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/settings.ini"
 safe_link "$SCRIPT_DIR/gtk-3.0/gtk.css"      "$HOME/.config/gtk-3.0/gtk.css"
 
-# The dconf half, and the actual reason Nemo came up white while the rest of
-# the desktop was dark: the session carried gtk-theme='Adwaita-dark', and no
-# such GTK3 theme exists. /usr/share/themes has no Adwaita at all on Fedora
-# (GTK3 ships it compiled into libgtk-3 as a gresource), and that resource
-# holds ONE theme named "Adwaita" whose dark variant is selected by the
-# boolean gtk-application-prefer-dark-theme, not a second theme named
-# "Adwaita-dark". The name resolved to nothing and GTK3 fell back to light.
-#
-# This has to be fixed HERE and not only in settings.ini: with
-# xdg-desktop-portal-gtk running, GTK3 reads org.gnome.desktop.interface
-# through the portal, and that value outranks settings.ini. Left alone, the
-# stale name would keep winning and the theme below it would never show.
-#
-# 'Adwaita-dark' is only ever wrong, so it is rewritten rather than
-# preserved; any other value is somebody's deliberate choice and is left be.
+# The dconf half. With xdg-desktop-portal-gtk running, GTK3 reads gtk-theme
+# through the portal and that outranks settings.ini, so the two keys have
+# to agree HERE:
+#   color-scheme  read by GTK4/libadwaita and the browsers; GTK3 ignores it.
+#   gtk-theme     the only one GTK3 follows.
+# color-scheme is only chosen when nobody has ('default'): after that it is
+# the bar toggle's to own. gtk-theme is then aligned to it -- which also
+# migrates a machine set up by the previous version of this script, which
+# rewrote 'Adwaita-dark' to 'Adwaita' + prefer-dark (dark only through
+# settings.ini's prefer-dark flag, now 0 so the light toggle works).
+# A value that is neither Adwaita name is somebody's choice and is left be.
 if command -v gsettings &> /dev/null; then
-    CUR_GTK_THEME="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || echo "")"
-    if [ "$CUR_GTK_THEME" = "'Adwaita-dark'" ]; then
-        info "Rewriting gtk-theme 'Adwaita-dark' (not a GTK3 theme) -> 'Adwaita' + prefer-dark..."
-        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'
+    CUR_SCHEME="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || echo "")"
+    if [ "$CUR_SCHEME" = "'default'" ]; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
+        CUR_SCHEME="'prefer-dark'"
     fi
-    # GTK4/libadwaita reads this one; GTK3 does not, hence the pair.
-    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
+    CUR_GTK_THEME="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || echo "")"
+    case "$CUR_GTK_THEME" in
+        "'Adwaita'"|"'Adwaita-dark'")
+            WANT="Adwaita"
+            [ "$CUR_SCHEME" = "'prefer-dark'" ] && WANT="Adwaita-dark"
+            if [ "$CUR_GTK_THEME" != "'$WANT'" ]; then
+                info "Aligning gtk-theme with color-scheme -> '$WANT'..."
+                gsettings set org.gnome.desktop.interface gtk-theme "$WANT"
+            fi
+            ;;
+    esac
+fi
+
+# Sidebar width. Nemo's default, 170 px, cuts "Dossier personnel" and
+# "Système de fichiers" to "Dossier pe..." / "Système d..." in MiSans 11 --
+# and the disk gauge is drawn under that clipped label. 210 fits both.
+# Only raised from Nemo's default, never from a width somebody dragged.
+if command -v gsettings &> /dev/null; then
+    if [ "$(gsettings get org.nemo.window-state sidebar-width 2>/dev/null)" = "170" ]; then
+        gsettings set org.nemo.window-state sidebar-width 210
+    fi
 fi
 
 # 7. Thumbnails
