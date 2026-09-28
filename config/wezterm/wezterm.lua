@@ -34,12 +34,16 @@ config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
 config.cursor_blink_rate = 0
 config.use_fancy_tab_bar = false
 
--- Cursor smear (wezterm PR #7737, not in upstream yet). config_builder
--- raises on unknown keys, so the pcall keeps builds without it working.
--- Frames are only redrawn during a jump (~150 ms), nothing when idle.
-pcall(function()
-  config.cursor_smear = true
-end)
+-- Cursor smear (wezterm PR #7737, not in upstream yet; `cc-pkg-mng wezterm
+-- smear` builds it). config_builder raises on unknown keys, so the pcall
+-- keeps the packaged build working. Frames are only redrawn during a jump
+-- (~150 ms), nothing when idle.
+--
+-- The variable is set only when the key exists: nvim's smear-cursor.nvim
+-- (nvim/lua/cursor.lua) stands down on it, and stays on everywhere else.
+if pcall(function() config.cursor_smear = true end) then
+  config.set_environment_variables = { WEZTERM_CURSOR_SMEAR = '1' }
+end
 
 -- =========================
 -- PANE FOCUS VISUAL

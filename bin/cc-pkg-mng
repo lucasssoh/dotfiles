@@ -77,9 +77,16 @@ Commands:
                        With no argument, all of them.
   clean [--cargo]      Remove build caches. --cargo also removes the three
                        legacy ~/.cache/*-build trees this replaced.
-  install [--user]     Fresh-machine path: ignores state, runs every module.
+  install [--user] [--wezterm <variant>]
+                       Fresh-machine path: ignores state, runs every module.
                        System scope unless --user. This is what ./install
                        delegates to.
+  wezterm [stable|smear]
+                       Which wezterm this machine runs, and switch it:
+                       stable = the packaged build, smear = compiled from
+                       PR #7737 with a native cursor smear (nvim's
+                       smear-cursor then stands down). Switching asks for
+                       sudo. Without an argument, prints the current one.
   help                 This text.
 
 Options:
@@ -108,6 +115,7 @@ Examples:
   cc-pkg-mng update            # apply it (user scope, no password)
   cc-pkg-mng update --system   # include the root-owned parts
   cc-pkg-mng prune -n          # links left behind by deleted repo files
+  cc-pkg-mng wezterm smear     # build and switch to the cursor-smear wezterm
 EOF
 }
 
@@ -529,10 +537,11 @@ cmd_update() {
 #   * system scope by default, because installing a desktop means installing
 #     packages. `--user` is the opt-out, and matches today's `./install user`.
 cmd_install() {
-    local system=1 only=() greeter=0 phases=()
+    local system=1 only=() greeter=0 phases=() wez=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --user)            system=0 ;;
+            --wezterm)         shift; wez="${1:-}" ;;
             --system-only)     phases+=(system) ;;
             --hardware-only)   phases+=(hardware) ;;
             --greeter|--login-manager) greeter=1 ;;   # old name kept working
@@ -543,6 +552,17 @@ cmd_install() {
     done
 
     registry_validate || err "Module registry is inconsistent (see above)."
+
+    # Recorded before any module runs, so the wezterm module of this very run
+    # reads it.
+    if [ -n "$wez" ]; then
+        _wezterm_variant_valid "$wez"
+        if [ "$DRY_RUN" = 1 ]; then
+            dry "record wezterm.variant = $wez"
+        else
+            state_load; state_set wezterm.variant "$wez"; state_save
+        fi
+    fi
 
     # `./install system` / `./install hardware` asked for one phase and nothing
     # else; honour that rather than quietly doing the full run.
@@ -578,6 +598,43 @@ cmd_install() {
     [ "$system" = 1 ] && args+=(--system)
     local o; for o in ${only[@]+"${only[@]}"}; do args+=(--only "$o"); done
     cmd_update "${args[@]}"
+}
+
+# -------------------------------------------------------------- wezterm ----
+# The variant is a machine choice, not repo content, so it lives in the state
+# file and not in config/wezterm: a tracked file would have to be edited per
+# machine, and `update` refuses to pull over local edits. Nothing in the
+# module's fingerprint moves when it changes, so switching runs the module
+# right away instead of waiting for the next `update`.
+_wezterm_variant_valid() {
+    case "$1" in
+        stable|smear) ;;
+        *) err "wezterm: unknown variant '$1' (stable or smear)" ;;
+    esac
+}
+
+cmd_wezterm() {
+    [ $# -le 1 ] || err "wezterm: one variant at most (stable or smear)"
+    state_load
+    local cur; cur="$(state_get wezterm.variant stable)"
+
+    if [ $# -eq 0 ]; then
+        echo -e "${BOLD}wezterm${RESET}  $cur  ${DIM}→ $(command -v wezterm 2>/dev/null || echo 'not installed')${RESET}"
+        return 0
+    fi
+
+    _wezterm_variant_valid "$1"
+    if [ "$DRY_RUN" = 1 ]; then
+        dry "record wezterm.variant = $1, then run the wezterm module (system scope)"
+        return 0
+    fi
+    state_set wezterm.variant "$1"
+    state_save
+    [ "$1" = "$cur" ] || info "wezterm: $cur → $1"
+
+    # Same path as `update`, so the run is logged and recorded like any other.
+    # --system because both directions write /usr/local/bin.
+    cmd_update --no-pull --force --system --only wezterm
 }
 
 # --------------------------------------------------------------- verify ----
@@ -866,6 +923,7 @@ main() {
         verify) cmd_verify ${args[@]+"${args[@]}"} ;;
         prune)  cmd_prune  ${args[@]+"${args[@]}"} ;;
         install) cmd_install ${args[@]+"${args[@]}"} ;;
+        wezterm) cmd_wezterm ${args[@]+"${args[@]}"} ;;
         log)
             err "'$cmd' is not implemented yet — see --help for what ships today." ;;
         *) usage; err "unknown command '$cmd'" ;;

@@ -1,0 +1,281 @@
+From 7a99c45fc60ac1947790dd3c0a25a7082500dd22 Mon Sep 17 00:00:00 2001
+From: lucasssoh <ramilisonlucasmahatoky@gmail.com>
+Date: Mon, 28 Sep 2026 09:50:44 +0200
+Subject: [PATCH] cursor smear: travel across pane and tab switches
+
+The trail state is per pane, in pane-relative coordinates, so switching
+the active pane made the cursor appear in place. Keep the last cursor
+corners drawn in screen space and start the new pane's smear from them.
+Paint the active pane last so its smear isn't covered by the backgrounds
+of the panes it crosses.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ wezterm-gui/src/termwindow/cursortrail.rs  | 128 ++++++++++++++-------
+ wezterm-gui/src/termwindow/mod.rs          |   5 +
+ wezterm-gui/src/termwindow/render/paint.rs |   7 ++
+ wezterm-gui/src/termwindow/render/pane.rs  |  47 ++++++++
+ 4 files changed, 146 insertions(+), 41 deletions(-)
+
+diff --git a/wezterm-gui/src/termwindow/cursortrail.rs b/wezterm-gui/src/termwindow/cursortrail.rs
+index 3e718a3b..53e37135 100644
+--- a/wezterm-gui/src/termwindow/cursortrail.rs
++++ b/wezterm-gui/src/termwindow/cursortrail.rs
+@@ -568,47 +568,12 @@ impl CursorTrailState {
+             // during the hold), so the smear naturally animates from there to
+             // the current cell as the corners tick toward it below.
+             if let Phase::Arm(from) = phase {
+-                let from_cx = from.x as f32 * cell_width + cell_width * 0.5;
+-                let from_cy = from.y as f32 * cell_height + cell_height * 0.5;
+-                let cur_cx = target_x + cell_width * 0.5;
+-                let cur_cy = target_y + cell_height * 0.5;
+-                let move_dx = cur_cx - from_cx;
+-                let move_dy = cur_cy - from_cy;
+-                let move_dist = move_dx.hypot(move_dy);
+-
+-                if move_dist > 0.0 {
+-                    let travel_x = move_dx / move_dist;
+-                    let travel_y = move_dy / move_dist;
+-
+-                    // alignment[i] = dot(corner_dir[i], travel_dir): +1 = fully leading.
+-                    let alignments: [f32; 4] = std::array::from_fn(|i| {
+-                        CORNER_DIR[i].0 * travel_x + CORNER_DIR[i].1 * travel_y
+-                    });
+-
+-                    // Sort by descending alignment to assign ranks 0 (trailing) – 3 (leading).
+-                    let mut order = [0usize, 1, 2, 3];
+-                    order.sort_by(|&a, &b| {
+-                        alignments[b]
+-                            .partial_cmp(&alignments[a])
+-                            .unwrap_or(std::cmp::Ordering::Equal)
+-                    });
+-                    let mut ranks = [0usize; 4];
+-                    for (rank_from_back, &idx) in order.iter().rev().enumerate() {
+-                        ranks[idx] = rank_from_back;
+-                    }
+-
+-                    // Duration per rank (matching Neovide's jump() logic).
+-                    let leading_dur = (anim_length * (1.0 - trail_size).max(0.05)).max(0.005);
+-                    let trailing_dur = anim_length.max(0.005);
+-                    for (i, corner) in self.smear_corners.iter_mut().enumerate() {
+-                        let dur = match ranks[i] {
+-                            3 | 2 => leading_dur,
+-                            1 => (leading_dur + trailing_dur) * 0.5,
+-                            _ => trailing_dur,
+-                        };
+-                        corner.speed = 0.3 / dur;
+-                    }
+-                }
++                self.assign_corner_speeds(
++                    target_x - from.x as f32 * cell_width,
++                    target_y - from.y as f32 * cell_height,
++                    anim_length,
++                    trail_size,
++                );
+             }
+ 
+             match phase {
+@@ -642,6 +607,87 @@ impl CursorTrailState {
+         self.prev_pos = *current;
+     }
+ 
++    /// Ranks the corners by how aligned they are with the travel direction
++    /// (`move_dx`, `move_dy` in pixels) and gives the leading ones a shorter
++    /// duration, so they race ahead while the trailing ones lag behind.
++    fn assign_corner_speeds(&mut self, move_dx: f32, move_dy: f32, anim_length: f32, trail_size: f32) {
++        let move_dist = move_dx.hypot(move_dy);
++        if move_dist <= 0.0 {
++            return;
++        }
++        let travel_x = move_dx / move_dist;
++        let travel_y = move_dy / move_dist;
++
++        // alignment[i] = dot(corner_dir[i], travel_dir): +1 = fully leading.
++        let alignments: [f32; 4] =
++            std::array::from_fn(|i| CORNER_DIR[i].0 * travel_x + CORNER_DIR[i].1 * travel_y);
++
++        // Sort by descending alignment to assign ranks 0 (trailing) – 3 (leading).
++        let mut order = [0usize, 1, 2, 3];
++        order.sort_by(|&a, &b| {
++            alignments[b]
++                .partial_cmp(&alignments[a])
++                .unwrap_or(std::cmp::Ordering::Equal)
++        });
++        let mut ranks = [0usize; 4];
++        for (rank_from_back, &idx) in order.iter().rev().enumerate() {
++            ranks[idx] = rank_from_back;
++        }
++
++        // Duration per rank (matching Neovide's jump() logic).
++        let leading_dur = (anim_length * (1.0 - trail_size).max(0.05)).max(0.005);
++        let trailing_dur = anim_length.max(0.005);
++        for (i, corner) in self.smear_corners.iter_mut().enumerate() {
++            let dur = match ranks[i] {
++                3 | 2 => leading_dur,
++                1 => (leading_dur + trailing_dur) * 0.5,
++                _ => trailing_dur,
++            };
++            corner.speed = 0.3 / dur;
++        }
++    }
++
++    /// Starts a smear from corners drawn by *another* pane (a pane or tab
++    /// switch), given in this pane's stable pixel space.
++    ///
++    /// Leaves the state as if the cursor had always been at `current`, so the
++    /// following `update()` just ticks the corners towards it: no deferral,
++    /// no bogus jump from this pane's stale position.
++    pub fn hand_off(
++        &mut self,
++        from_corners: [(f32, f32); 4],
++        current: &StableCursorPosition,
++        cell_width: f32,
++        cell_height: f32,
++        anim_length: f32,
++        trail_size: f32,
++        cursor_shape: CursorShape,
++        now: Instant,
++    ) {
++        self.cached_corner_offsets = shape_corner_offsets(cursor_shape, cell_width, cell_height);
++        self.cached_corner_key = (cursor_shape, cell_width.to_bits(), cell_height.to_bits());
++        for (corner, (x, y)) in self.smear_corners.iter_mut().zip(from_corners) {
++            corner.snap_to(x, y);
++        }
++
++        // Travel between the centroids, which also covers a shape change
++        // (bar in one pane, block in the other).
++        let offsets = self.cached_corner_offsets;
++        let target_x = current.x as f32 * cell_width;
++        let target_y = current.y as f32 * cell_height;
++        let (mut move_dx, mut move_dy) = (0.0, 0.0);
++        for (i, (x, y)) in from_corners.iter().enumerate() {
++            move_dx += (target_x + offsets[i].0 * cell_width - x) * 0.25;
++            move_dy += (target_y + offsets[i].1 * cell_height - y) * 0.25;
++        }
++        self.assign_corner_speeds(move_dx, move_dy, anim_length, trail_size);
++
++        self.pending_jump = None;
++        self.prev_pos = *current;
++        self.prev_initialized = true;
++        self.last_tick = now;
++    }
++
+     // ── Particle spawning ─────────────────────────────────────────────────────
+ 
+     fn spawn_trail_particles(
+diff --git a/wezterm-gui/src/termwindow/mod.rs b/wezterm-gui/src/termwindow/mod.rs
+index 1d2bee7e..e4cdf9af 100644
+--- a/wezterm-gui/src/termwindow/mod.rs
++++ b/wezterm-gui/src/termwindow/mod.rs
+@@ -404,6 +404,9 @@ pub struct TermWindow {
+     current_mouse_event: Option<MouseEvent>,
+     prev_cursor: PrevCursorPos,
+     cursor_trail_states: RefCell<HashMap<PaneId, CursorTrailState>>,
++    /// Screen-space corners of the last cursor drawn by the active pane, so
++    /// the smear can travel across a pane or tab switch.
++    cursor_handoff: RefCell<Option<(PaneId, [(f32, f32); 4])>>,
+     last_scroll_info: RenderableDimensions,
+ 
+     tab_state: RefCell<HashMap<TabId, TabState>>,
+@@ -723,6 +726,7 @@ impl TermWindow {
+             current_modifier_and_leds: Default::default(),
+             prev_cursor: PrevCursorPos::new(),
+             cursor_trail_states: RefCell::new(HashMap::new()),
++            cursor_handoff: RefCell::new(None),
+             last_scroll_info: RenderableDimensions::default(),
+             tab_state: RefCell::new(HashMap::new()),
+             pane_state: RefCell::new(HashMap::new()),
+@@ -1784,6 +1788,7 @@ impl TermWindow {
+ 
+         self.show_scroll_bar = config.enable_scroll_bar;
+         self.cursor_trail_states.borrow_mut().clear();
++        self.cursor_handoff.borrow_mut().take();
+         self.shape_generation += 1;
+         {
+             let mut shape_cache = self.shape_cache.borrow_mut();
+diff --git a/wezterm-gui/src/termwindow/render/paint.rs b/wezterm-gui/src/termwindow/render/paint.rs
+index 5218d2d7..a431341e 100644
+--- a/wezterm-gui/src/termwindow/render/paint.rs
++++ b/wezterm-gui/src/termwindow/render/paint.rs
+@@ -246,6 +246,13 @@ impl crate::TermWindow {
+             .context("filled_rectangle for window background")?;
+         }
+ 
++        let mut panes = panes;
++        if self.config.cursor_smear {
++            // A smear crossing into another pane is drawn with the active
++            // pane, on layer 0: paint that pane last so the backgrounds of
++            // the others don't cover it.
++            panes.sort_by_key(|pos| pos.is_active);
++        }
+         for pos in panes {
+             if pos.is_active {
+                 self.update_text_cursor(&pos);
+diff --git a/wezterm-gui/src/termwindow/render/pane.rs b/wezterm-gui/src/termwindow/render/pane.rs
+index b93fee94..a3a87b3a 100644
+--- a/wezterm-gui/src/termwindow/render/pane.rs
++++ b/wezterm-gui/src/termwindow/render/pane.rs
+@@ -329,6 +329,37 @@ impl crate::TermWindow {
+         if cursor_anim_enabled {
+             let mut trails = self.cursor_trail_states.borrow_mut();
+             let trail = trails.entry(pane_id).or_insert_with(CursorTrailState::new);
++
++            // The active pane changed (split or tab switch): start the smear
++            // from wherever the previous pane last drew its cursor. Consumed
++            // even when the cursor is hidden, so it can't fire late.
++            let handoff = {
++                let mut handoff = self.cursor_handoff.borrow_mut();
++                match *handoff {
++                    Some((from_pane, _)) if from_pane != pane_id => handoff.take(),
++                    _ => None,
++                }
++            };
++            if let (Some((_, screen_corners)), true, true) =
++                (handoff, cursor_visible, config.cursor_smear)
++            {
++                let viewport_top_px =
++                    current_viewport.unwrap_or(dims.physical_top) as f32 * cell_height;
++                let screen_off_x =
++                    padding_left + border.left.get() as f32 + pos.left as f32 * cell_width;
++                let screen_off_y = top_pixel_y + pos.top as f32 * cell_height - viewport_top_px;
++                trail.hand_off(
++                    screen_corners.map(|(x, y)| (x - screen_off_x, y - screen_off_y)),
++                    &cursor,
++                    cell_width,
++                    cell_height,
++                    config.cursor_animation_duration,
++                    config.cursor_trail_size,
++                    config.default_cursor_style.effective_shape(cursor.shape),
++                    now,
++                );
++            }
++
+             if cursor_visible {
+                 trail.update(
+                     &cursor,
+@@ -1214,6 +1245,22 @@ impl crate::TermWindow {
+             self.update_next_frame_time(Some(now));
+         }
+ 
++        if config.cursor_smear {
++            let screen_corners = if smear_active {
++                let c = &trail_state.smear_corners;
++                std::array::from_fn(|i| (screen_off_x + c[i].visual_x, screen_off_y + c[i].visual_y))
++            } else {
++                let offsets = trail_state.corner_offsets();
++                std::array::from_fn(|i| {
++                    (
++                        screen_off_x + target_x + offsets[i].0 * cell_width,
++                        screen_off_y + target_y + offsets[i].1 * cell_height,
++                    )
++                })
++            };
++            *self.cursor_handoff.borrow_mut() = Some((pos.pane.pane_id(), screen_corners));
++        }
++
+         // No cap rect: the static cursor drawn by the line render path is
+         // the canonical cursor draw at the target cell and already applies
+         // cursor_fg / cursor_bg / inversion to the underlying glyph. The
+-- 
+2.55.0
+

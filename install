@@ -38,6 +38,10 @@ Phases (default: everything -- system packages, then every module):
   greeter        greetd + tuigreet on VT1. Opt-in and interactive.
 
 Options:
+  --wezterm=stable|smear
+               Which wezterm to install: the packaged build (default), or
+               one compiled with a native cursor smear (~5 min of build).
+               Remembered; `cc-pkg-mng wezterm` switches it later.
   --detect     Print the hardware detection and exit. Changes nothing.
   --dry-run    Print what would be done, in order, and exit.
   -h, --help   This text.
@@ -56,6 +60,7 @@ for a in "$@"; do
         hardware)      args+=(--hardware-only) ;;
         user)          args+=(--user) ;;
         greeter|login-manager) args+=(--greeter) ;;   # old name kept working
+        --wezterm=*)   args+=(--wezterm "${a#*=}") ;;
         --detect)      exec "$DOTFILES_DIR/scripts/hardware-detect.sh" --report ;;
         --dry-run|-n)  args=(-n "${args[@]+${args[@]}}") ;;
         -h|--help)     usage; exit 0 ;;

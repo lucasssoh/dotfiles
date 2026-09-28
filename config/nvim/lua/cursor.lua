@@ -1,5 +1,8 @@
 return {
   "sphamba/smear-cursor.nvim",
+  -- A wezterm built with cursor_smear exports WEZTERM_CURSOR_SMEAR
+  -- (config/wezterm/wezterm.lua); two trails at once would fight.
+  cond = vim.env.WEZTERM_CURSOR_SMEAR ~= "1",
   opts = {
     -- Trail color (going with pure white to match your cursor)
     cursor_color = "#ffffff",
