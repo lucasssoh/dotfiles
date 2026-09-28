@@ -36,12 +36,19 @@ config.use_fancy_tab_bar = false
 
 -- Cursor smear (wezterm PR #7737, not in upstream yet; `cc-pkg-mng wezterm
 -- smear` builds it). config_builder raises on unknown keys, so the pcall
--- keeps the packaged build working. Frames are only redrawn during a jump
--- (~150 ms), nothing when idle.
+-- keeps the packaged build working. Frames are only redrawn during a jump,
+-- nothing when idle.
+--
+-- 0.08 s, not the 0.15 default: the corners ease out exponentially, so the
+-- tail of a long jump takes about 2.3x the duration to land -- ~350 ms at
+-- 0.15, which dragged. ~180 ms now.
 --
 -- The variable is set only when the key exists: nvim's smear-cursor.nvim
 -- (nvim/lua/cursor.lua) stands down on it, and stays on everywhere else.
-if pcall(function() config.cursor_smear = true end) then
+if pcall(function()
+  config.cursor_smear = true
+  config.cursor_animation_duration = 0.08
+end) then
   config.set_environment_variables = { WEZTERM_CURSOR_SMEAR = '1' }
 end
 
