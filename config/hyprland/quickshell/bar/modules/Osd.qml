@@ -19,24 +19,21 @@ import "../services"
 // Battery" alert), a deliberately different shape for a warning that
 // wants an acknowledgement rather than a glance-and-forget corner popup.
 //
-// HyperOS pass: redesigned as a round knob, after a Dribbble reference the
-// user picked ("Volume Control Buttons") -- replacing a HUD that copied
-// macOS's closely (title, small icon / thin track / big icon, tick dots).
+// HyperOS pass: a round dial, the "R2" of the mockups ("arc et
+// curseur"), replacing a HUD that copied macOS's closely (title, small
+// icon / thin track / big icon, tick dots). A knob in relief with a notch
+// (after a Dribbble reference, "K2") came first and was swapped for this
+// flatter one:
 //
 //   - a black disc, the drawers' panel colour, so it reads over anything;
-//   - a knob in soft relief: an outer ring and a slightly sunken inner
-//     face, two vertical gradients in the drawers' neutral greys;
-//   - an arc around it, open at the bottom like a potentiometer (270deg
-//     from 7:30 to 4:30), on a VISIBLE grey track (asked for: the
-//     reference's arc floats alone, which reads poorly near 0%), with a
-//     soft wider copy under it for the glow;
-//   - a notch on the knob's rim turned to the same angle, so the knob
-//     reads as having been turned, not just filled;
-//   - the glyph, and the level under it (the reference's "K2" variant:
-//     number instead of a caption).
+//   - a THICK arc, open at the bottom like a potentiometer (270deg from
+//     7:30 to 4:30), on a visible grey track;
+//   - a white dot riding the arc's end -- the "cursor" -- ringed in the
+//     disc's black so it stands off the arc it sits on;
+//   - the glyph and the level in the middle.
 //
 // Brightness under HDR: the panel ignores backlight changes then, so the
-// knob greys out and reads "HDR" instead of a level that means nothing.
+// dial greys out and reads "HDR" instead of a level that means nothing.
 // Drawn with Shapes (ShapePath + PathAngleArc): no image asset, no
 // shader, and the arcs are exact at every level.
 Item {
@@ -52,7 +49,7 @@ Item {
     // What the arc shows: nothing while muted or locked.
     readonly property real shown: (card.muted || card.hdrLock) ? 0 : Math.max(0, Math.min(1, card.level))
 
-    // Eased copy of `shown` for the arc and the notch.
+    // Eased copy of `shown` for the arc and its cursor.
     property real anim: card.shown
     Behavior on anim { SpringAnimation { spring: 3; damping: 0.35 } }
 
@@ -87,7 +84,10 @@ Item {
         border.color: Qt.rgba(1, 1, 1, 0.08)
     }
 
-    // ---- arc: track, glow, level ---------------------------------------
+    // ---- arc: track, level, cursor ------------------------------------
+    readonly property real arcRadius: 59
+    readonly property real arcWidth: 9
+
     Shape {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
@@ -95,79 +95,44 @@ Item {
         ShapePath {
             fillColor: "transparent"
             strokeColor: DrawerTheme.cardRaised
-            strokeWidth: 2.6
+            strokeWidth: card.arcWidth
             capStyle: ShapePath.RoundCap
             PathAngleArc {
                 centerX: card.width / 2; centerY: card.height / 2
-                radiusX: 57; radiusY: 57
+                radiusX: card.arcRadius; radiusY: card.arcRadius
                 startAngle: card.startAngle; sweepAngle: card.sweep
-            }
-        }
-        // Glow: a wide, faint copy of the level arc under it.
-        ShapePath {
-            fillColor: "transparent"
-            strokeColor: card.anim > 0.001 ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
-            strokeWidth: 8
-            capStyle: ShapePath.RoundCap
-            PathAngleArc {
-                centerX: card.width / 2; centerY: card.height / 2
-                radiusX: 57; radiusY: 57
-                startAngle: card.startAngle; sweepAngle: card.sweep * card.anim
             }
         }
         ShapePath {
             fillColor: "transparent"
             strokeColor: card.anim > 0.001 ? DrawerTheme.on : "transparent"
-            strokeWidth: 2.6
+            strokeWidth: card.arcWidth
             capStyle: ShapePath.RoundCap
             PathAngleArc {
                 centerX: card.width / 2; centerY: card.height / 2
-                radiusX: 57; radiusY: 57
+                radiusX: card.arcRadius; radiusY: card.arcRadius
                 startAngle: card.startAngle; sweepAngle: card.sweep * card.anim
             }
         }
     }
 
-    // ---- knob ----------------------------------------------------------
-    Rectangle {
-        anchors.centerIn: parent
-        width: 92
-        height: 92
-        radius: width / 2
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#1c1c20" }
-            GradientStop { position: 1.0; color: "#0b0b0d" }
-        }
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.05)
-    }
-    Rectangle {
-        anchors.centerIn: parent
-        width: 72
-        height: 72
-        radius: width / 2
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#1f1f23" }
-            GradientStop { position: 1.0; color: "#121215" }
-        }
-        border.width: 1.5
-        border.color: Qt.rgba(0, 0, 0, 0.6)
-    }
-
-    // The notch: a short white mark on the knob's rim, turned with the
-    // level. A zero-size item at the centre, rotated; the mark sits
-    // straight "up" from it, so rotation = angle + 90.
+    // The cursor: a white dot at the arc's end, ringed in the disc's black.
+    // A zero-size item at the centre, rotated; the dot sits straight "up"
+    // from it at the arc's radius, so rotation = angle + 90.
     Item {
         x: card.width / 2
         y: card.height / 2
         rotation: card.endAngle + 90
+        visible: card.anim > 0.001
         Rectangle {
-            x: -1.1
-            y: -33
-            width: 2.2
-            height: 4.5
-            radius: 1.1
-            color: card.hdrLock ? "#4a4a4f" : DrawerTheme.on
+            width: 15
+            height: 15
+            radius: width / 2
+            x: -width / 2
+            y: -card.arcRadius - height / 2
+            color: DrawerTheme.on
+            border.width: 2.5
+            border.color: DrawerTheme.panelTop
         }
     }
 
@@ -175,24 +140,24 @@ Item {
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -7
+        anchors.verticalCenterOffset: -9
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: card.iconGlyph
         color: card.hdrLock ? DrawerTheme.muted : (card.muted ? DrawerTheme.danger : DrawerTheme.primary)
         font.family: Fonts.iconMingcute
-        font.pixelSize: 20
+        font.pixelSize: 24
     }
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 14
+        anchors.verticalCenterOffset: 16
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: card.hdrLock ? "HDR" : card.muted ? "—" : Math.round(card.level * 100)
         color: card.hdrLock ? DrawerTheme.secondary : DrawerTheme.primary
         font.family: Fonts.ui
-        font.pixelSize: 13
+        font.pixelSize: 15
         font.weight: Font.DemiBold
         font.features: { "tnum": 1 }
     }
