@@ -989,11 +989,22 @@ pick() {
     # Two columns per line: what to show, and what to search.
     #
     # fuzzel has done fzf-style matching all along (that is its default
-    # match-mode), so nothing here is adding fuzzy search -- it is giving
-    # that search something worth matching against. --with-nth=1 displays
-    # the title, --match-nth=2 matches the hidden path haystack, so typing
-    # "dotfiles keybind", "courses reseaux" or just "md" finds documents
-    # whose displayed title contains none of those words.
+    # match-mode), and for a while it matched a hidden second column, the
+    # whole path (--match-nth=2). That found documents by folder, but
+    # fuzzel can only highlight what it matched, and a hidden column has
+    # nothing on screen to light up: rows came and went while you typed
+    # and nothing said why. So it matches the title you see, and in
+    # --match-mode=exact: what you type is one run of characters, found
+    # as-is in the title, lit up in place -- no scattered fzf letters.
+    #
+    # The colours are what makes the lit run readable. fuzzel.ini paints
+    # a match in platinum (#a8b4c4) on near-white text, a step DOWN in
+    # brightness, which is invisible. Here the rows drop to DrawerTheme's
+    # `secondary` grey and the match rises to its `primary` white, so the
+    # typed string is the brightest thing in each row.
+    #
+    # The hay column is still emitted by `ranked` (and still read by
+    # `list`); it is simply no longer searched.
     #
     # --index rather than matching the chosen line back against the list:
     # titles are derived (extension stripped, underscores replaced, a
@@ -1015,7 +1026,11 @@ pick() {
     idx="$(for i in "${!paths[@]}"; do
                printf '%s\t%s\n' "${labels[$i]}" "${hays[$i]}"
            done \
-            | fuzzel --dmenu --index --with-nth=1 --match-nth=2 \
+            | fuzzel --dmenu --index --with-nth=1 \
+                     --match-mode=exact \
+                     --text-color=8e8e93ff --match-color=f2f2f7ff \
+                     --selection-text-color=aeaeb2ff \
+                     --selection-match-color=ffffffff \
                      --lines 14 --width 60 \
                      --prompt='' --placeholder='Read…' --counter \
             || true)"
