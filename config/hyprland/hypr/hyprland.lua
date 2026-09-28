@@ -100,8 +100,11 @@ hl.on("hyprland.start", function()
     -- Clipboard history
     hl.exec_cmd("wl-paste --watch cliphist store")
     -- Nemo D-Bus daemon, for other applications' "Open location"
-    -- integration (file manager always available).
-    hl.exec_cmd("nemo --no-desktop --gapplication-service")
+    -- integration (file manager always available). --no-default-window,
+    -- the flag Nemo's own D-Bus service files use: Nemo 6.6 does not know
+    -- --gapplication-service and exits on it ("Option inconnue"), so the
+    -- previous line never started anything.
+    hl.exec_cmd("nemo --no-default-window")
 
     -- Arranges new floating windows into per-context rows (a window and
     -- whatever it spawns afterwards, detected by focus) instead of
