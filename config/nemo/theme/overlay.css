@@ -13,36 +13,40 @@
    It is imported by the generated gtk.css straight from the repo, so an
    edit here needs `nemo -q` (Nemo runs as a service) and nothing else.
 
-   Selection is the one decision worth stating: an INVERTED accent pill
-   -- #a8b4c4 fill, near-black ink -- like HyperOS's active states. The
-   previous pass used a dark #2f323b fill with a 1px accent rim, which on
-   a #14161d well measured barely brighter than the background, and in a
-   backdrop window drew the selected label DARKER than the unselected
-   ones: the indicator pointed the wrong way.
+   The palette is the DRAWERS' one (quickshell/bar/theme/DrawerTheme.qml),
+   not Surfaces/Ink: since the HyperOS pass the drawers are neutral greys
+   on a black pane, and "on" is an INVERSION -- the primary ink as the
+   fill, near-black ink on it, like the bar's active workspace -- not a
+   tint. A first version of this file used the older blue-grey graphite
+   and the platinum #a8b4c4 accent, and Nemo read as a different app from
+   the drawers next to it.
 
-   PALETTE SYNC: copies of quickshell/bar/theme/Surfaces.qml, Ink.qml and
-   DrawerIsland -- change a token there, carry it here by hand. The
-   greys/blues ramp is in build-adwaita-dark.py (GREY_ANCHORS).
+   So: chrome (menubar, toolbar, sidebar, status bar) is the drawer pane,
+   black; the file list is the one card on it; a selected file, a checked
+   toggle, a ticked box are the inverted ink.
+
+   PALETTE SYNC: copies of DrawerTheme.qml -- change a token there, carry
+   it here by hand. The grey ramp is in build-adwaita-dark.py
+   (GREY_ANCHORS).
    ============================================================ */
 
-@define-color bar_pane         #1e2128;  /* DrawerIsland.drawerFillTop */
-@define-color bar_pane_deep    #060608;  /* DrawerIsland.drawerFillBottom */
-@define-color bar_card         #14161d;  /* Surfaces.card        */
-@define-color bar_card_hover   #1a1d2a;  /* Surfaces.cardHover   */
-@define-color bar_card_raised  #1f2330;  /* Surfaces.cardRaised  */
-@define-color bar_card_deep    #070709;  /* Surfaces.cardDeep    */
-@define-color bar_accent       #a8b4c4;  /* Ink.accent           */
-@define-color bar_accent_str   #2f323b;  /* Surfaces.accentStrong    */
-@define-color bar_accent_max   #353941;  /* Surfaces.accentStrongest */
-@define-color bar_ink          #f2f2f7;  /* Ink.primary   */
-@define-color bar_ink_second   #8e8e93;  /* Ink.secondary */
-@define-color bar_ink_muted    #636366;  /* Ink.muted     */
-@define-color bar_ink_faint    #48484a;  /* Ink.faint     */
-@define-color bar_on_light     #0c0c0e;  /* Ink.onLight   */
-@define-color bar_danger       #ff6e6e;  /* Ink.danger    */
-@define-color bar_positive     #a3d9a5;  /* Ink.positive  */
-@define-color bar_rim          alpha(#ffffff, 0.10);
-@define-color bar_hover        alpha(#f2f2f7, 0.07);
+@define-color bar_pane         #000000;  /* DrawerTheme.panelTop        */
+@define-color bar_card         #17171a;  /* DrawerTheme.card            */
+@define-color bar_card_hover   #1f1f23;  /* DrawerTheme.cardHover       */
+@define-color bar_card_raised  #2a2a2f;  /* DrawerTheme.cardRaised      */
+@define-color bar_card_deep    #0b0b0d;  /* DrawerTheme.cardDeep        */
+@define-color bar_accent       #f2f2f7;  /* DrawerTheme.on (= primary)  */
+@define-color bar_accent_str   #2a2a2f;  /* DrawerTheme.accentStrong    */
+@define-color bar_accent_max   #323237;  /* DrawerTheme.accentStrongest */
+@define-color bar_ink          #f2f2f7;  /* DrawerTheme.primary   */
+@define-color bar_ink_second   #8e8e93;  /* DrawerTheme.secondary */
+@define-color bar_ink_muted    #636366;  /* DrawerTheme.muted     */
+@define-color bar_ink_faint    #48484a;  /* DrawerTheme.faint     */
+@define-color bar_on_light     #0c0c0e;  /* DrawerTheme.onInk     */
+@define-color bar_danger       #ff6e6e;  /* DrawerTheme.danger    */
+@define-color bar_positive     #a3d9a5;  /* DrawerTheme.positive  */
+@define-color bar_rim          alpha(#f2f2f7, 0.10);  /* ink(0.10) */
+@define-color bar_hover        alpha(#f2f2f7, 0.07);  /* ink(0.07) */
 
 /* Public names, for app stylesheets (Nemo's own reads these). base.css
    already defines them from the remap; restated so the selection pair
@@ -113,6 +117,45 @@
 }
 .nemo-window toolbar button:disabled { color: @bar_ink_faint; }
 
+/* Every other GTK3 window here -- the file-chooser portal, Nemo's
+   properties and preferences -- gets the same chrome, so a dialog reads
+   as a drawer too: black pane, header bar and action bar flat on it, the
+   file list and sidebar as in Nemo. */
+window.background:not(.popup),
+headerbar,
+.titlebar:not(headerbar),
+actionbar > revealer > box {
+    background-color: @bar_pane;
+    background-image: none;
+    box-shadow: none;
+    border-color: @bar_rim;
+}
+/* Adwaita paints `.sidebar` and `.sidebar:backdrop` (0,1,0 / 0,2,0) with
+   its own grey; the element + class form below outranks both. */
+placessidebar.sidebar,
+placessidebar.sidebar:backdrop,
+stacksidebar.sidebar,
+stacksidebar.sidebar:backdrop {
+    background-color: @bar_pane;
+    border-color: @bar_rim;
+}
+filechooser #pathbarbox { border-bottom-color: @bar_rim; }
+headerbar:backdrop { background-color: @bar_pane; background-image: none; }
+placessidebar row:selected,
+placessidebar row:selected:focus {
+    background-color: @bar_accent_max;
+    color: @bar_ink;
+}
+placessidebar row:hover { background-color: @bar_hover; }
+filechooser .path-bar button:checked,
+.path-bar button:checked {
+    background-color: @bar_accent;
+    background-image: none;
+    border-color: @bar_accent;
+    color: @bar_on_light;
+    box-shadow: none;
+}
+
 /* ---- location entry / search ---------------------------------------- */
 /* BaliseTextField: card fill, radius 11, a faint rim that becomes the
    accent on focus. */
@@ -127,7 +170,7 @@
     min-height: 30px;
 }
 .nemo-window entry:focus {
-    border-color: @bar_accent;
+    border-color: alpha(@bar_ink, 0.5);
     box-shadow: none;
 }
 entry selection,
@@ -174,10 +217,10 @@ label selection {
 }
 /* Keyboard focus (gtk_render_focus on the label rect). Adwaita's is a
    1px DASHED ring, which drew a dotted box inside every selected pill.
-   Solid and in the accent when it marks an unselected item -- moving with
+   Solid, in half ink, when it marks an unselected item -- moving with
    Ctrl+arrows -- and gone once the pill already says where you are. */
 .nemo-window .nemo-canvas-item {
-    outline: 1px solid alpha(@bar_accent, 0.6);
+    outline: 1px solid alpha(@bar_ink, 0.5);
     outline-offset: 0;
     -gtk-outline-radius: 7px;
 }
@@ -200,8 +243,8 @@ label selection {
 .nemo-window rubberband,
 .nemo-window .view.rubberband,
 .nemo-window treeview.view rubberband {
-    background-color: alpha(@bar_accent, 0.14);
-    border: 1px solid alpha(@bar_accent, 0.7);
+    background-color: alpha(@bar_ink, 0.10);
+    border: 1px solid alpha(@bar_ink, 0.5);
     border-radius: 4px;
 }
 
@@ -266,20 +309,20 @@ label selection {
 /* Disk usage gauges under each mounted volume. Nemo's fallback draws them
    from shade(@theme_selected_bg_color) on shade(@theme_bg_color, .65),
    which in this palette was dark-grey-on-black -- invisible, the most
-   "wrong indicator" of the lot. Now: the accent on a dim track, 3px,
+   "wrong indicator" of the lot. Now: the ink on a dim track, 3px,
    like the bar's own battery gauge. Opaque on purpose: Nemo paints these
    with the colour's RGB only, so an alpha() track came out near-white
    (measured 230,230,235) and swallowed the fill. */
 .places-treeview {
-    -NemoPlacesTreeView-disk-full-bg-color: #33363f;
-    -NemoPlacesTreeView-disk-full-fg-color: #a8b4c4;
+    -NemoPlacesTreeView-disk-full-bg-color: #2a2a2f;
+    -NemoPlacesTreeView-disk-full-fg-color: #f2f2f7;
     -NemoPlacesTreeView-disk-full-bar-width: 3px;
     -NemoPlacesTreeView-disk-full-bar-radius: 2px;
     -NemoPlacesTreeView-disk-full-bottom-padding: 2px;
     -NemoPlacesTreeView-disk-full-max-length: 90px;
 }
 .places-treeview:selected {
-    -NemoPlacesTreeView-disk-full-bg-color: #4a4e58;
+    -NemoPlacesTreeView-disk-full-bg-color: #48484a;
     -NemoPlacesTreeView-disk-full-fg-color: #f2f2f7;
 }
 
@@ -297,7 +340,7 @@ label selection {
    and before it, invisible. Same shape as the location entry, focused. */
 .nemo-window .nemo-window-pane widget.entry {
     background-color: @bar_card_raised;
-    border: 1px solid @bar_accent;
+    border: 1px solid alpha(@bar_ink, 0.5);
     border-radius: 7px;
     color: @bar_ink;
     caret-color: @bar_ink;
@@ -311,9 +354,9 @@ label selection {
 /* ---- tabs ------------------------------------------------------------ */
 /* Adwaita marks the current tab with a 3px underline in its accent. Here
    the current tab is a raised grey pill with full ink, the others are
-   bare secondary ink -- the segmented look of HyperOS tabs. Not
-   cardRaised: #1f2330 on the #1e2128 pane measured as no difference at
-   all, the current tab only showed through its brighter label. */
+   bare secondary ink -- the segmented look of HyperOS tabs. The pill is
+   accentStrongest, not cardRaised: it has to stand off the black pane,
+   and the raised card is spent on hover elsewhere. */
 notebook > header {
     background-color: @bar_pane;
     border: none;
@@ -370,7 +413,7 @@ notebook > stack:not(:only-child) { background-color: @bar_card; }
    -- it read as the focused one. The inactive side goes darker instead. */
 .nemo-window .nemo-inactive-pane .view:not(:selected),
 .nemo-window .nemo-inactive-pane iconview {
-    background-color: #0e1015;
+    background-color: @bar_card_deep;
 }
 
 /* ---- floating status (when the status bar is hidden) ---------------- */
@@ -390,7 +433,7 @@ notebook > stack:not(:only-child) { background-color: @bar_card; }
 menu,
 .menu,
 .context-menu {
-    background-color: @bar_card_raised;
+    background-color: @bar_card;
     padding: 5px;
 }
 .csd menu,
@@ -416,7 +459,7 @@ menu menuitem,
 }
 menu menuitem:hover,
 .menu menuitem:hover {
-    background-color: @bar_accent_max;
+    background-color: @bar_card_raised;
     color: @bar_ink;
 }
 menu menuitem:disabled { color: @bar_ink_faint; }
@@ -425,17 +468,17 @@ menu menuitem arrow { color: @bar_ink_second; }
 menu menuitem accelerator { color: @bar_ink_muted; }
 
 popover.background {
-    background-color: @bar_card_raised;
+    background-color: @bar_card;
     border: 1px solid @bar_rim;
     border-radius: 12px;
     box-shadow: 0 6px 18px alpha(black, 0.45);
 }
 popover modelbutton { border-radius: 7px; }
-popover modelbutton:hover { background-color: @bar_accent_max; }
+popover modelbutton:hover { background-color: @bar_card_raised; }
 
 tooltip.background,
 tooltip {
-    background-color: @bar_card_raised;
+    background-color: @bar_card;
     border: 1px solid @bar_rim;
     border-radius: 9px;
     color: @bar_ink;
@@ -443,7 +486,7 @@ tooltip {
 }
 
 /* ---- controls that carry state --------------------------------------- */
-/* The one place the accent is spent as a flood: something that is ON. */
+/* Something that is ON: the inverted ink, like every "on" in the drawers. */
 check:checked, check:indeterminate,
 radio:checked, radio:indeterminate {
     background-color: @bar_accent;
@@ -469,7 +512,7 @@ scale highlight {
 }
 progressbar trough,
 scale trough {
-    background-color: @bar_card_deep;
+    background-color: @bar_card_raised;
     background-image: none;
     border-color: @bar_rim;
 }
@@ -490,7 +533,7 @@ button.suggested-action {
     text-shadow: none;
     box-shadow: none;
 }
-button.suggested-action:hover { background-color: shade(@bar_accent, 1.08); }
+button.suggested-action:hover { background-color: #ffffff; }
 button.destructive-action {
     background-color: @bar_danger;
     background-image: none;
@@ -501,7 +544,7 @@ button.destructive-action {
 }
 
 /* Keyboard focus ring, everywhere. */
-*:focus { outline-color: alpha(@bar_accent, 0.55); }
+*:focus { outline-color: alpha(@bar_ink, 0.5); }
 
 /* Text selection outside entries (labels, text views). */
 *:selected { -gtk-icon-effect: none; }
@@ -511,5 +554,6 @@ textview text selection:focus {
     color: @bar_on_light;
 }
 
-link, *:link, button.link { color: @bar_accent; }
-*:link:visited { color: shade(@bar_accent, 0.85); }
+/* No accent hue to spend on links: the ink, underlined. */
+link, *:link, button.link { color: @bar_ink; text-decoration-line: underline; }
+*:link:visited { color: @bar_ink_second; }

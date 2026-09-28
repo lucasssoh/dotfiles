@@ -23,10 +23,11 @@ What it does, once, at install time (zero runtime cost -- GTK reads a
 static file):
   1. extracts Adwaita's own dark stylesheet from libgtk-3, so the result
      tracks whatever GTK version is installed instead of a vendored copy;
-  2. remaps its literal colours: neutral greys onto the bar's pane/card
-     ramp (piecewise-linear, so Adwaita's ordering of surfaces is kept),
-     and the blue accent family onto the bar's neutral accent hue --
-     same lightness, so every contrast Adwaita tuned survives;
+  2. remaps its literal colours onto DrawerTheme.qml: neutral greys onto
+     the drawers' grey ramp (piecewise-linear, so Adwaita's ordering of
+     surfaces is kept), and the blue accent family onto neutral greys of
+     the same lightness -- the drawers have no accent hue, "on" is an
+     inversion, drawn by overlay.css;
   3. rewrites asset urls to absolute resource:// paths (they are relative
      to the gresource and would break from a file on disk);
   4. writes gtk.css = that base + an @import of overlay.css, which holds
@@ -47,27 +48,31 @@ HERE = Path(__file__).resolve().parent
 LIBGTK = "/usr/lib64/libgtk-3.so.0"
 RES = "/org/gtk/libgtk/theme/Adwaita"
 
-# ---- palette: copies of quickshell/bar/theme/{Surfaces,Ink}.qml ----------
-# Adwaita-dark grey -> bar colour. Anchors are Adwaita's own surface roles
-# (read off @define-color at the end of gtk-contained-dark.css), so each
-# lands on the bar token playing the same role.
+# ---- palette: copies of quickshell/bar/theme/DrawerTheme.qml ------------
+# The drawers' palette since the HyperOS pass: neutral greys, no blue
+# tint, and "on" carried by inversion rather than by an accent colour.
+# Adwaita-dark grey -> drawer grey. Anchors are Adwaita's own surface
+# roles (read off @define-color at the end of gtk-contained-dark.css).
+# The ramp stays MONOTONIC on purpose: Adwaita draws hover/pressed states
+# as small steps up or down from these greys, and an inverted ramp would
+# turn those steps around. The drawers' black pane is applied to Nemo's
+# chrome by overlay.css instead, where it breaks nothing.
 GREY_ANCHORS = [
     (0x00, (0x00, 0x00, 0x00)),
-    (0x1b, (0x08, 0x09, 0x0c)),  # borders           -> below cardDeep
-    (0x20, (0x0e, 0x10, 0x15)),  # unfocused borders -> between
-    (0x2d, (0x14, 0x16, 0x1d)),  # base / view       -> Surfaces.card
-    (0x35, (0x1e, 0x21, 0x28)),  # window bg         -> drawerFillTop
-    (0x5b, (0x48, 0x48, 0x4a)),  # unfocused insens. -> Ink.faint
-    (0x91, (0x8e, 0x8e, 0x93)),  # insensitive fg    -> Ink.secondary
-    (0xee, (0xf2, 0xf2, 0xf7)),  # fg                -> Ink.primary
+    (0x1b, (0x05, 0x05, 0x06)),  # borders           -> near black
+    (0x20, (0x0b, 0x0b, 0x0d)),  # unfocused borders -> cardDeep
+    (0x2d, (0x17, 0x17, 0x1a)),  # base / view       -> card
+    (0x35, (0x1c, 0x1c, 0x20)),  # window bg         -> accentSoft
+    (0x5b, (0x48, 0x48, 0x4a)),  # unfocused insens. -> Ink faint
+    (0x91, (0x8e, 0x8e, 0x93)),  # insensitive fg    -> secondary
+    (0xee, (0xf2, 0xf2, 0xf7)),  # fg                -> primary
     (0xff, (0xff, 0xff, 0xff)),
 ]
 
-# Ink.accent #a8b4c4, as HLS. Saturation is capped rather than copied: the
-# accent is a desaturated slate, and Adwaita's blues at their own
-# lightness with that saturation read as the same family.
-ACCENT_H, _, ACCENT_S = colorsys.rgb_to_hls(0xa8 / 255, 0xb4 / 255, 0xc4 / 255)
-ACCENT_S = max(ACCENT_S, 0.22)
+# DrawerTheme's accent IS the primary ink -- there is no hue left to map
+# Adwaita's blues onto. They become neutral greys at their own lightness,
+# so every contrast Adwaita tuned survives; the controls that mean "on"
+# get the inverted ink fill from overlay.css.
 
 
 def map_grey(v):
@@ -83,8 +88,7 @@ def map_rgb(r, g, b):
         return map_grey(round((r + g + b) / 3))
     h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
     if 195 / 360 <= h <= 235 / 360 and s > 0.2:
-        rr, gg, bb = colorsys.hls_to_rgb(ACCENT_H, l, ACCENT_S)
-        return (round(rr * 255), round(gg * 255), round(bb * 255))
+        return map_grey(round(l * 255))
     return (r, g, b)  # reds, greens, oranges: state colours, left alone
 
 
