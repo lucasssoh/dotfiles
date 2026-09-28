@@ -173,21 +173,59 @@ Singleton {
         if (!n || w <= 0) return null;
         let i0 = Math.max(0, Math.min(n - 1, Math.floor((x / m.width) * n)));
         let i1 = Math.max(i0 + 1, Math.min(n, Math.ceil(((x + w) / m.width) * n)));
-        let lo = 255, hi = 0;
+        const los = [], his = [], local = [];
         for (let i = i0; i < i1; i++) {
             if (m.lo && m.hi) {
-                lo = Math.min(lo, m.lo[i]);
-                hi = Math.max(hi, m.hi[i]);
+                los.push(m.lo[i]);
+                his.push(m.hi[i]);
+                local.push(root.lstar(m.hi[i]) - root.lstar(m.lo[i]));
             } else {
                 const c = m.cells[i];
                 const g = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-                lo = Math.min(lo, g);
-                hi = Math.max(hi, g);
+                los.push(g);
+                his.push(g);
             }
         }
+        // Robust across the island too, not just within a bucket: the
+        // 10th percentile of the buckets' darks and the 90th of their
+        // lights, not the single darkest and lightest. With plain min/max
+        // one small patch decided for the whole island -- country-road's
+        // right-hand tree, under the last three of ~20 buckets, forced
+        // white text on a full band over bright sky, where it could never
+        // be legible.
+        los.sort((a, b) => a - b);
+        his.sort((a, b) => a - b);
+        const lo = los[Math.floor((los.length - 1) * 0.10)];
+        const hi = his[Math.ceil((his.length - 1) * 0.90)];
+        // Texture: how far apart dark and light are INSIDE a bucket (a
+        // ~30px square of wallpaper), in L* -- the 75th percentile across
+        // the island's buckets. Local on purpose: a smooth gradient spans
+        // a wide range across the island but almost none within a bucket,
+        // and one hard edge (a block of colour ending) moves only its own
+        // bucket, not the percentile. Foliage, noise, busy photos move
+        // most of them.
+        local.sort((a, b) => a - b);
+        const texture = local.length ? local[Math.floor((local.length - 1) * 0.75)] : 0;
         return { lo: Qt.rgba(lo / 255, lo / 255, lo / 255, 1),
-                 hi: Qt.rgba(hi / 255, hi / 255, hi / 255, 1) };
+                 hi: Qt.rgba(hi / 255, hi / 255, hi / 255, 1),
+                 texture: texture };
     }
+
+    // CIE L* (0-100) of an sRGB grey 0-255: perceived lightness, the scale
+    // `texture` is measured on.
+    function lstar(g) {
+        const y = root.toLinear(g / 255);
+        return y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y;
+    }
+
+    // Texture thresholds, in L*, calibrated on the 87 cached wallpapers:
+    // calm ones (flat, gradients, smooth photos) sit at 0-6; busy ones at
+    // 15-75 (country-road's foliage at 46). Below `textureStart` texture
+    // is ignored and the contrast rule alone decides; from there the band
+    // comes in with WHITE text, at a minimum density that reaches full at
+    // `textureFull`.
+    readonly property real textureStart: 15
+    readonly property real textureFull: 35
 
     // Which ink an island takes, and how much veil goes under it:
     // { ink: "dark" | "light", veil: 0..1 }. ("dark" is the dark MATERIAL,
@@ -211,6 +249,19 @@ Singleton {
         const r = root.rangeAt(monitor, x, w);
         if (!r) return { ink: current || "dark", veil: 1 };
         const whiteAt = v => root.contrast(root.composite(root.bandFor(v), r.hi), inkDark);
+        // 0. A busy wallpaper gets the band whatever the contrast says --
+        //    added after country-road's foliage passed the contrast rule
+        //    with dark text at 4.54:1 and was still hard to read: contrast
+        //    against the worst pixel says nothing about visual noise, and
+        //    only the band calms it. White text on it, the veil at least
+        //    as dense as the texture asks and at least as dense as white
+        //    text's contrast needs.
+        if (r.texture >= root.textureStart) {
+            const k = Math.min(1, (r.texture - root.textureStart) / (root.textureFull - root.textureStart));
+            let v = 0.35 + 0.65 * k;
+            while (v < 1 && whiteAt(v) < root.target) v = Math.min(1, v + 0.05);
+            return { ink: "dark", veil: v };
+        }
         const darkBare = root.contrast(r.lo, inkLight);
         const whiteBare = whiteAt(0);
         const okDark = darkBare >= root.target, okWhite = whiteBare >= root.target;
@@ -241,6 +292,7 @@ Singleton {
         const d = root.decide(monitor, x, w, "dark", inkDark, inkLight);
         const f = v => Math.round(v * 255);
         return "fond " + f(r.lo.r) + ".." + f(r.hi.r)
+             + "  texture " + r.texture.toFixed(1)
              + "  texte sombre nu " + root.contrast(r.lo, inkLight).toFixed(2) + ":1"
              + "  texte clair nu " + root.contrast(r.hi, inkDark).toFixed(2) + ":1"
              + "  -> " + (d.ink === "dark" ? "texte clair" : "texte sombre")
