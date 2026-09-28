@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "../theme"
 import "../services"
@@ -29,8 +28,9 @@ import "../services"
 // when it actually prints a sink/card/server change line, never on a
 // clock. Both halves of that split must be forced to LC_ALL=C -- pactl
 // translates both its event stream and its `list sinks` keys, and the
-// watcher missing that export is what kept this icon stale (see
-// portWatcher below).
+// watcher missing that export is what kept this icon stale. That
+// watcher and its query now live in services/OsdState.qml, shared with
+// the volume popup; this module only reads OsdState.outputGlyph.
 Item {
     id: root
 
@@ -47,92 +47,9 @@ Item {
     readonly property real volume: node && node.audio ? node.audio.volume : 0
     readonly property bool muted: node && node.audio ? node.audio.muted : false
 
-    // Port *key* (e.g. "analog-output-headphones"), not the human label --
-    // the label is locale-dependent (French here: "Casque audio") and
-    // wouldn't match an English regex anyway. The key is stable.
-    property string activePort: ""
-    readonly property bool isHeadphone: /headphones?|headset|earbuds/i.test(root.activePort)
-    readonly property bool isHdmi: /hdmi|displayport/i.test(root.activePort)
+    // The active port (headphones, HDMI...) and the glyph it maps to
+    // live in OsdState now, shared with the volume popup -- see there.
 
-    function refreshActivePort() {
-        // Already querying from earlier in the same burst -- come back
-        // in a moment instead of dropping this refresh on the floor.
-        // The LAST event of a burst is the one carrying the settled
-        // state, so silently skipping it (which is what the old
-        // call-site `!portQuery.running` guard did) is exactly the wrong
-        // one to lose.
-        if (portQuery.running) { portDebounce.restart(); return; }
-        portQuery.running = true;
-    }
-
-    // LC_ALL=C is NOT optional here, and leaving it off was a real bug:
-    // this process inherits the session's LANG (fr_FR.UTF-8 on this
-    // machine) and `pactl subscribe` TRANSLATES its event lines --
-    //     C  : Event 'change' on sink #67
-    //     fr : Événement « changement » sur destination #67
-    // -- so the English "sink" the filter below looks for never appeared
-    // in the stream at all. No event ever matched, nothing ever
-    // re-queried, and `activePort` kept whatever the single
-    // Component.onCompleted query had set at startup: plug headphones in
-    // after the bar is up and the speaker glyph stayed forever.
-    // `portQuery` below had the export from the start (its awk matches
-    // the literal "Name:"/"Active Port:" keys, just as locale-sensitive);
-    // this half simply never got it. `exec` so the bash wrapper replaces
-    // itself with pactl rather than lingering as a second process for
-    // the whole lifetime of the bar.
-    Process {
-        id: portWatcher
-        command: ["bash", "-c", "export LC_ALL=C; exec pactl subscribe"]
-        running: true
-        stdout: SplitParser {
-            splitMarker: "\n"
-            // Anchored on " on <type> #" instead of a bare substring
-            // test: "sink" on its own also matches `sink-input`, which
-            // fires on every stream start/stop and every per-app volume
-            // tick -- orders of magnitude more traffic than anything
-            // that can actually move the sink's own port, all of it
-            // re-querying for nothing.
-            //
-            // `card` sits in the list next to `sink` because on this
-            // machine's combo jack, physically plugging headphones in is
-            // a CARD event (that is where port availability lives) as
-            // much as a sink one -- verified live, `pactl subscribe`
-            // prints both. Matching only `sink` would be relying on luck
-            // rather than on the event that describes the change.
-            onRead: (line) => {
-                if (/ on (sink|card|server) #/.test(line)) portDebounce.restart();
-            }
-        }
-    }
-
-    // Coalesces bursts. The old `!portQuery.running` guard only stopped
-    // two queries from OVERLAPPING -- it did nothing about rate, and a
-    // single volume scroll on this very module emits a run of sink+card
-    // events, each of which would otherwise spawn its own `bash` +
-    // `pactl list sinks`. That cost was never actually paid before (see
-    // the locale bug above: nothing matched, so nothing ran), which is
-    // exactly why it would have landed as a fresh regression the moment
-    // the filter started working. 180ms is far under "instant" for a
-    // jack you just plugged in, and long enough to swallow a scroll
-    // step's worth of events.
-    Timer {
-        id: portDebounce
-        interval: 180
-        repeat: false
-        onTriggered: root.refreshActivePort()
-    }
-
-    Process {
-        id: portQuery
-        command: ["bash", "-c",
-            "export LC_ALL=C; sink=$(pactl get-default-sink); pactl list sinks | " +
-            "awk -v s=\"$sink\" '$1==\"Name:\" && $2==s {f=1} f && /Active Port:/ {print $3; f=0}'"]
-        stdout: StdioCollector {
-            onStreamFinished: root.activePort = this.text.trim()
-        }
-    }
-
-    Component.onCompleted: root.refreshActivePort()
 
     PwObjectTracker {
         objects: root.node ? [root.node] : []
@@ -177,13 +94,9 @@ Item {
     implicitHeight: 24
     visible: root.node !== null
 
-    // ph-speaker-x / ph-headphones / ph-monitor (no dedicated "hdmi"
-    // glyph in Phosphor -- monitor/display is the closest stand-in for
-    // "audio routed to the screen's own output") / ph-speaker-high
-    // MingCute fill glyphs (HyperOS pass): volume_off / headphone /
-    // computer / volume.
-    readonly property string iconGlyph: root.muted ? "\uF584"
-        : (root.isHeadphone ? "\uEF0A" : root.isHdmi ? "\uEC04" : "\uF580")
+    // One glyph for the output, shared with the volume popup so the two
+    // can never disagree about what is playing where (OsdState.outputGlyph).
+    readonly property string iconGlyph: OsdState.outputGlyph
     // Icon ONLY -- the numeric level that used to sit before it is gone,
     // asked for: "puisqu'on a deja ce retour, enleve les valeurs devant
     // les icones audio output et input". That retour is the OSD (Osd.qml,

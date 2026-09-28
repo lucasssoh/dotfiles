@@ -819,7 +819,7 @@ Item {
                 // The scope, not a restatement of the title: GTK apps (via
                 // gtk-theme and the portal's color-scheme, which browsers
                 // and Electron apps follow too), and knowingly not Qt.
-                subtitle: "GTK apps and browsers · not Qt apps"
+                subtitle: "GTK apps and browsers"
                 checked: AppearanceState.dark
                 onToggled: (value) => AppearanceState.setDark(value)
             }

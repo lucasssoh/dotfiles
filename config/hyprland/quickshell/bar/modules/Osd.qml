@@ -68,11 +68,12 @@ Item {
     Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
-    // MingCute: sun / mic_off / mic / volume_off / volume.
+    // Volume uses the output's own glyph (headphones, screen, Bluetooth,
+    // speaker -- OsdState.outputGlyph), the same one the bar shows.
     readonly property string iconGlyph: {
-        if (kind === "brightness") return "";
-        if (kind === "mic") return muted ? "" : "";
-        return muted ? "" : "";
+        if (kind === "brightness") return "\uF408";
+        if (kind === "mic") return muted ? "\uF0B0" : "\uF0AE";
+        return OsdState.outputGlyph;
     }
 
     // ---- disc ----------------------------------------------------------
