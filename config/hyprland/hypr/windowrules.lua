@@ -192,35 +192,59 @@ hl.window_rule({
 })
 
 -- ============================================================
--- NEMO — main window tiled, everything else floats
+-- NEMO — main windows tile, secondary windows float
 -- ============================================================
--- 1. Main window: title ending in " — Gestionnaire de fichiers" (FR)
---    or " — File Manager" (EN)
-hl.window_rule({
-    match  = { class = "nemo", title = " — Gestionnaire de fichiers$" },
-    tile   = true,
-})
-hl.window_rule({
-    match  = { class = "nemo", title = " — File Manager$" },
-    tile   = true,
-})
+-- Why these are listed by name. The previous version split the two with
+-- a negative lookahead, `^(?!.* — (Gestionnaire de fichiers|File
+-- Manager))`, and Hyprland matches with RE2, which has no lookahead: the
+-- rule never matched anything, so Properties, bookmarks and preferences
+-- opened tiled, taking half the screen from the file view. Its
+-- counterpart, "tile anything titled '… — Gestionnaire de fichiers'", was
+-- dead too: Nemo titles a main window with the bare folder name.
+--
+-- Nothing else tells them apart from here: HL.Window exposes no parent
+-- and no role, and a main window's title can be any folder name. What
+-- Hyprland DOES do on its own is float every window that has a parent
+-- (xdg_toplevel.set_parent) -- delete confirmations, copy conflicts,
+-- "open with" -- and every fixed-size window, which covers the
+-- file-operations progress window (Nemo makes it non-resizable; checked
+-- on a real 100 000-file copy: floating with no rule at all, and just as
+-- well, since its title at map time is already "36,5 Mo de 201,2 Mo", not
+-- "Opérations de fichiers" -- no title rule could have caught it). So the
+-- only ones left to name are Nemo's independent, resizable toplevels,
+-- below. Titles are Nemo 6.6's own strings (src/*.c, gresources/*.glade)
+-- in English and in its fr translation.
+--
+-- initial_title, not title: a rule is evaluated when the window opens,
+-- and Properties can retitle itself afterwards (a rename from inside it).
+--
+-- Main windows need no rule: tiling is the default.
 
--- 2. Everything else (dialogs, properties, transfers, File-Roller
---    extraction): inverse match of the rule above
+-- Properties ("Propriétés de X" / "X Properties", or bare for several
+-- files), bookmarks, preferences, connect-to-server, actions editor.
 -- stay_focused/no_follow_mouse: same reason as Steam/Lutris/gamescope
 -- below -- without no_follow_mouse, focus-follows-mouse (input.follow_mouse
 -- = 1) hands focus back to whatever window sits under the cursor the
--- moment it isn't strictly over this dialog (e.g. a dropdown/breadcrumb
--- popup rendered outside the tracked window geometry), which is what was
--- causing this dialog to lose focus mid-navigation and on confirm/cancel.
-hl.window_rule({
-    match           = { class = "nemo", title = "^(?!.* — (Gestionnaire de fichiers|File Manager))" },
-    float           = true,
-    center          = true,
-    size            = "850 550",
-    stay_focused    = true,
-    no_follow_mouse = true,
-})
+-- moment it isn't strictly over this dialog (e.g. a dropdown popup
+-- rendered outside the tracked window geometry).
+local nemo_dialogs = {
+    "^Propriétés( de .*)?$", "^Properties$", " Properties$",
+    "^Modifier les signets$", "^Edit Bookmarks$",
+    "^Préférences du gestionnaire de fichiers$", "^File Management Preferences$",
+    "^Se connecter au serveur$", "^Connect to Server$",
+    "^Éditeur de disposition des actions de Nemo$", "^Nemo Actions Layout Editor$",
+}
+for _, t in ipairs(nemo_dialogs) do
+    hl.window_rule({
+        match           = { class = "nemo", initial_title = t },
+        float           = true,
+        center          = true,
+        size            = "850 550",
+        stay_focused    = true,
+        no_follow_mouse = true,
+    })
+end
+
 hl.window_rule({
     match  = { class = "file-roller" },
     float  = true,
