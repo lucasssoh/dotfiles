@@ -709,9 +709,11 @@ Item {
                     hdrActive: root.hdrActive
                 }
             }
+            // No "SYSTEM" label either: with every control on one page it
+            // named nothing in particular. The extra 4px on top of the
+            // column's 12 is what still sets the toggles apart from the
+            // tiles above.
             Item { width: 1; height: 4 }
-
-            GroupLabel { text: "SYSTEM"; revealIndex: 7 }
 
             // The screen's controls. On a panel the OS can dim (the
             // laptop's own, through /sys/class/backlight), one line:
