@@ -1,8 +1,9 @@
 //! Resolves a sector's accent color (optional TOML field `accent`, see
 //! config.rs) -- a known name or a direct `#rrggbb` hex code, falling back
-//! to the shell's white ink if absent/unknown. Since the HyperOS pass the
-//! only named colour left is red, for destructive confirmations; the other
-//! names still parse and resolve to white.
+//! to the shell's white ink if absent/unknown. Colour means exactly two
+//! things since the HyperOS pass, and never "hovered": DANGER (red, a
+//! destructive confirmation) and STATE (the applied power profile keeps
+//! its yellow or green, see wheel.rs).
 
 // White ink since the HyperOS pass, not the historical cyan #4fefff: the
 // shell carries "selected" by white, and keeps colour for danger only.
@@ -34,17 +35,20 @@ fn resolve_hex(accent: Option<&str>) -> String {
 }
 
 /// Palette of short names usable in the TOML -- deliberately small (red for
-/// power's confirmation sub-menu; the rest map to white). A direct hex code
+/// power's confirmation sub-menu, yellow/green for powerprofile's states;
+/// cyan/blue map to white). A direct hex code
 /// (`accent = "#34d399"`) always remains possible for everything else, no
 /// future wheel is limited to these names.
 fn named(name: &str) -> Option<&'static str> {
     match name {
-        // Red is the one colour left -- a destructive confirmation --
-        // and matches the drawers' danger ink. The other names still parse
-        // (powerprofile.toml sets green/yellow) but resolve to the white
-        // default: tints per sector went with the cyan.
+        // Danger: the drawers' danger ink.
         "red" => Some("#ff6e6e"),
-        "cyan" | "blue" | "green" | "yellow" | "default" => Some(DEFAULT_HEX),
+        // State: the bar's performance yellow, and a green light enough
+        // to read on the black disc (the bar's own leaf green is too dark
+        // for an arc).
+        "yellow" => Some("#ffcc00"),
+        "green" => Some("#4ade80"),
+        "cyan" | "blue" | "default" => Some(DEFAULT_HEX),
         _ => None,
     }
 }

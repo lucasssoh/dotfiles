@@ -23,6 +23,7 @@ const RASTER_PX: u32 = 128;
 // Grey at rest, since the HyperOS pass: the hovered sector's icon turns
 // white (the accent texture), so the one in play is the only bright one.
 const COLOR_NORMAL: &str = "#8e8e93";
+const COLOR_HOVER: &str = "#f2f2f7";
 
 /// An icon rasterized in the two colors that matter -- hover animates a
 /// crossfade between the two (see wheel.rs) rather than a GPU color-matrix
@@ -31,7 +32,12 @@ const COLOR_NORMAL: &str = "#8e8e93";
 /// constant -- white for every sector today, red for a destructive
 /// confirmation (see color.rs).
 pub struct IconPair {
+    /// Grey: a sector at rest.
     pub normal: gdk::Texture,
+    /// White: the hovered sector (and the hub).
+    pub hover: gdk::Texture,
+    /// The sector's own colour: its STATE when it is the applied one, or
+    /// DANGER on a confirmation (see color.rs).
     pub accent: gdk::Texture,
 }
 
@@ -67,9 +73,9 @@ pub fn load(segments: &[Segment]) -> HashMap<String, IconPair> {
             continue;
         };
         let accent_hex = color::resolve(seg.accent.as_deref()).hex;
-        match (rasterize(&svg, COLOR_NORMAL), rasterize(&svg, &accent_hex)) {
-            (Some(normal), Some(accent)) => {
-                cache.insert(key, IconPair { normal, accent });
+        match (rasterize(&svg, COLOR_NORMAL), rasterize(&svg, COLOR_HOVER), rasterize(&svg, &accent_hex)) {
+            (Some(normal), Some(hover), Some(accent)) => {
+                cache.insert(key, IconPair { normal, hover, accent });
             }
             _ => eprintln!("[roue] invalid SVG: {path:?}"),
         }
