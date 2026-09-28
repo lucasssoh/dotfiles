@@ -816,7 +816,10 @@ Item {
                 title: "Dark mode"
                 glyph: "\uEAAC"   // mgc brightness (half-lit sun, the contrast idiom)
                 revealIndex: 10
-                subtitle: "turn dark mode on"
+                // The scope, not a restatement of the title: GTK apps (via
+                // gtk-theme and the portal's color-scheme, which browsers
+                // and Electron apps follow too), and knowingly not Qt.
+                subtitle: "GTK apps and browsers · not Qt apps"
                 checked: AppearanceState.dark
                 onToggled: (value) => AppearanceState.setDark(value)
             }
