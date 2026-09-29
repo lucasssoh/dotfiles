@@ -38,7 +38,7 @@
 # would show a stale look with no way to tell.
 # ============================================================
 import hashlib
-from html import escape as html_escape
+from html import escape as html_escape, unescape as html_unescape
 import json
 import os
 import re
@@ -147,8 +147,15 @@ EXTENSIONS = [
     "pymdownx.magiclink",   # bare URLs become links, as on GitHub
     "pymdownx.highlight",
     "pymdownx.superfences",
+    "pymdownx.arithmatex",  # $...$ and $$...$$, see _Math below
 ]
 EXTENSION_CONFIGS = {
+    # "generic" leaves each formula as bare TeX in a
+    # <span|div class="arithmatex"> instead of MathJax's <script> tags,
+    # and the empty wraps drop the \( \) / \[ \] around it: the caller
+    # gets the TeX alone and decides inline or display from the tag.
+    "pymdownx.arithmatex": {"generic": True, "tex_inline_wrap": ["", ""],
+                            "tex_block_wrap": ["", ""]},
     "pymdownx.highlight": {
         # Classes rather than inline styles, so the Pygments stylesheet
         # below is what colors the code and a change there needs no
@@ -159,6 +166,71 @@ EXTENSION_CONFIGS = {
     },
     "pymdownx.tasklist": {"custom_checkbox": False},
 }
+
+
+# ---- Maths -----------------------------------------------------------
+# arithmatex only sees a $$ block that starts a block of its own, so
+#
+#     Soit la somme
+#     $$
+#     \sum_k k^2
+#     $$
+#
+# -- which GitHub, Obsidian and every course note render as display
+# maths -- stayed a paragraph with literal dollars in it. This puts the
+# blank lines arithmatex wants around a $$ line glued to its neighbours,
+# outside fenced code. Pure line insertion: nothing is rewritten.
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+
+
+def _unglue_display_math(lines):
+    out, fence, inside = [], None, False
+    for line in lines:
+        m = _FENCE.match(line)
+        if fence:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                fence = None
+            out.append(line)
+            continue
+        if m and not inside:
+            fence = m.group(1)
+            out.append(line)
+            continue
+        s = line.strip()
+        opens = not inside and s.startswith("$$")
+        closes = s.endswith("$$") and (inside or (opens and len(s) >= 4))
+        if opens and out and out[-1].strip():
+            out.append("")
+        out.append(line)
+        if opens and not closes:
+            inside = True
+        elif closes:
+            inside = False
+            out.append("")          # an extra blank line is harmless
+    return out
+
+
+def unglue_math_extension(**_config):
+    """The preprocessor above, as a markdown extension. Named by string
+    in EXTENSIONS ("md2pdf:unglue_math_extension"), which markdown
+    resolves itself: importing this module keeps not importing markdown,
+    so a cache hit in main() stays as cheap as it was."""
+    import markdown
+
+    class Pre(markdown.preprocessors.Preprocessor):
+        def run(self, lines):
+            return _unglue_display_math(lines)
+
+    class Ext(markdown.Extension):
+        def extendMarkdown(self, md):
+            # Above fenced_code (25): it sees the raw text, fences
+            # included, and tracks them itself.
+            md.preprocessors.register(Pre(md), "liseuse_math", 30)
+
+    return Ext()
+
+
+EXTENSIONS.append("md2pdf:unglue_math_extension")
 
 # ---- PlantUML --------------------------------------------------------
 # A ```plantuml (or ```uml) block becomes an inline SVG. The fence
@@ -279,6 +351,76 @@ class _Plantuml:
                 sys.stderr.write("md2pdf: plantuml unavailable (%s)\n" % exc)
                 return [], []
         return proc.stdout.split(_UML_DELIM), _UML_ERROR.findall(proc.stderr)
+
+
+# MathJax's glyphs are sized for Computer Modern, whose x-height is
+# 0.442em; MiSans, the body font, has 0.545 (its OS/2 table). At the same
+# em a formula's letters were visibly smaller than the words around it.
+# Scaling by the ratio is what MathJax's own matchFontHeight does in a
+# browser. mdview reads it from here too.
+MATH_SCALE = 0.545 / 0.442
+TEX2SVG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tex2svg.js")
+# arithmatex's output, generic mode with empty wraps. `$$x$$` in running
+# text comes out as a span nested in a span: inline, but display-style.
+_MATH = re.compile(r'<(div|span) class="arithmatex">(<span class="arithmatex">)?(.*?)(?:</span>)?</\1>', re.S)
+
+
+class _Math:
+    """Every formula of the document through ONE tex2svg.js: node and
+    MathJax take ~210 ms to load and ~3 ms a formula after that, so one
+    process per formula would make a page of maths take seconds.
+
+    MathJax draws in currentColor, which WeasyPrint resolves to black
+    whatever the surrounding text -- invisible on the dark page -- so
+    the theme's text colour is written into each SVG instead."""
+
+    def __init__(self, theme: str):
+        self.fg = _UML_PALETTE.get(theme, _UML_PALETTE["dark"])["fg"]
+
+    def fill(self, html: str) -> str:
+        found = list(_MATH.finditer(html))
+        if not found:
+            return html
+        reqs = []
+        for m in found:
+            tex = html_unescape(m.group(3)).strip()
+            reqs.append({"tex": ("\\displaystyle " + tex) if m.group(2) else tex,
+                         "display": m.group(1) == "div", "scale": MATH_SCALE})
+        results = self._run(reqs)
+        out, last = [], 0
+        for m, req, res in zip(found, reqs, results):
+            out.append(html[last:m.start()])
+            last = m.end()
+            src = html_unescape(m.group(3)).strip()
+            svg, err = res.get("svg"), res.get("error", "TeX was not rendered")
+            svg = svg and svg.replace("currentColor", self.fg)
+            if req["display"]:
+                out.append('<div class="math-display">%s</div>' % svg if svg else
+                           '<p class="math-error">TeX: %s</p><pre><code>%s</code></pre>'
+                           % (html_escape(err), html_escape(src)))
+            else:
+                out.append(svg if svg else '<code class="math-error" title="%s">$%s$</code>'
+                           % (html_escape(err), html_escape(src)))
+        out.append(html[last:])
+        return "".join(out)
+
+    @staticmethod
+    def _run(reqs):
+        why = "tex2svg failed"
+        try:
+            proc = subprocess.run(["node", TEX2SVG], capture_output=True, text=True, timeout=60,
+                                  input="".join(json.dumps(r) + "\n" for r in reqs))
+            res = [json.loads(l) for l in proc.stdout.splitlines()]
+            why = (proc.stderr.strip().splitlines() or [why])[-1]
+        except Exception as exc:
+            why = "tex2svg unavailable (%s)" % exc
+            res = []
+        if len(res) != len(reqs):
+            # node missing, or mathjax-full not installed (install.sh):
+            # every formula falls back to its source, with the reason.
+            sys.stderr.write("md2pdf: %s\n" % why)
+            res = [{"error": why}] * len(reqs)
+        return res
 
 
 # Relative links between documents -- `[Installation](docs/installation.md)`
@@ -433,7 +575,7 @@ def render(source: str, pdf: str, theme: str, aspect: float) -> None:
             for b in blocks))
     else:
         md = markdown.Markdown(extensions=EXTENSIONS, extension_configs=configs)
-        body = uml.fill(md.convert(text))
+        body = _Math(theme).fill(uml.fill(md.convert(text)))
         body = _drop_empty_theads(_absolutise_links(body, source))
 
     with open(CSS_PATH, encoding="utf-8") as fh:

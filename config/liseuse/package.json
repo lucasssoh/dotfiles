@@ -1,0 +1,8 @@
+{
+  "name": "liseuse-math",
+  "private": true,
+  "description": "TeX -> SVG for md2pdf.py and nvim's mdview (tex2svg.js)",
+  "dependencies": {
+    "mathjax-full": "3.2.1"
+  }
+}

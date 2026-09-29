@@ -242,6 +242,15 @@ img { max-width: 100%; }
 .uml-page:last-child { break-after: auto; }
 .uml-page .uml { margin: 0; }
 .uml-error { color: var(--accent); font-size: .85em; margin: 1.2em 0 .3em; }
+
+/* Maths (md2pdf.py, _Math): MathJax SVGs sized in em, so they scale with
+   the text around them; the depth below the baseline is the inline
+   vertical-align tex2svg.js writes. A display formula is centred like
+   LaTeX's, and too wide a one shrinks rather than overflowing the page. */
+.math-display { margin: .9em 0; text-align: center; break-inside: avoid; }
+.math-display svg { max-width: 100%; }
+.math-error { color: var(--accent); }
+p.math-error { font-size: .85em; margin: 1.2em 0 .3em; }
 del { color: var(--faint); }
 mark { background: var(--surface); color: var(--fg); }
 

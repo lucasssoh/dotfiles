@@ -80,6 +80,14 @@ pkg_ensure \
 # name on the three distros; it pulls in java and graphviz for layout.
 pkg_ensure plantuml
 
+# Maths ($...$ and $$...$$, see tex2svg.js): MathJax, turned to SVG by
+# node, which WeasyPrint inlines like a diagram. A JavaScript runtime, but
+# still no browser: ~210ms to load for a whole document, then ~3ms a
+# formula. Only if node is missing: this machine's node may come from a
+# versioned package (nodejs22-bin) that the plain name would duplicate.
+command -v node >/dev/null 2>&1 || pkg_ensure "$(pkg_pick nodejs nodejs nodejs)"
+command -v npm >/dev/null 2>&1 || pkg_ensure "$(pkg_pick nodejs-npm npm npm)"
+
 # ------------------------------------------------------------
 # 2. Symlinks
 # ------------------------------------------------------------
@@ -97,6 +105,15 @@ chmod +x "$MODULE_DIR/liseuse" "$MODULE_DIR/md2pdf.py"
 # by Hyprland don't inherit ~/.local/bin in their PATH (see commit
 # bbb8f61 and the Prisme/Roue binds in hypr/keybinds.lua).
 safe_link "$MODULE_DIR/liseuse" ~/.local/bin/liseuse
+
+# mathjax-full, pinned by package-lock.json, into this folder's
+# node_modules/ (git-ignored): tex2svg.js resolves it from beside itself.
+# nvim's bin/mdview uses the same copy.
+if [ ! -d "$MODULE_DIR/node_modules/mathjax-full" ] && command -v npm >/dev/null 2>&1; then
+    npm ci --prefix "$MODULE_DIR" --omit=dev --no-audit --no-fund --silent \
+        && ok "mathjax-full installed (maths in markdown)." \
+        || warn "npm ci failed -- formulas will show as TeX source."
+fi
 
 # ------------------------------------------------------------
 # 3. Library root
