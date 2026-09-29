@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/display-layout.sh
+../../scripts/display-layout.sh

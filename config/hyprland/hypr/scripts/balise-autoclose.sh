@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/balise-autoclose.sh
+../../scripts/balise-autoclose.sh

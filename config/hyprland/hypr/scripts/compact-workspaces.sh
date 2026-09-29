@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/compact-workspaces.sh
+../../scripts/compact-workspaces.sh

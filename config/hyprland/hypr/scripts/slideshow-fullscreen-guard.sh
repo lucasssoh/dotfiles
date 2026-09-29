@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/slideshow-fullscreen-guard.sh
+../../scripts/slideshow-fullscreen-guard.sh

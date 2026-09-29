@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/toggle-night-mode.sh
+../../scripts/toggle-night-mode.sh

@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/workspace-manager.sh
+../../scripts/workspace-manager.sh

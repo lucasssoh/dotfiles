@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/scroll-workspace.sh
+../../scripts/scroll-workspace.sh

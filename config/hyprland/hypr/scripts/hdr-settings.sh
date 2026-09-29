@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/hdr-settings.sh
+../../scripts/hdr-settings.sh

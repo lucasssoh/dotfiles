@@ -1,1 +1,1 @@
-/home/lucas/code/dotfiles/config/hyprland/scripts/no-direct-scanout-wrap.sh
+../../scripts/no-direct-scanout-wrap.sh
