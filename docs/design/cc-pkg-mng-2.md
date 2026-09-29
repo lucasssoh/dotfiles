@@ -86,38 +86,53 @@ Window rules stay per application: rules for an app that is not installed never 
 
 ## Manifest
 
-One `unit.toml` per unit, under `units/<layer>/<name>/`. Payload (config files) stays where it is under `config/` and is referenced by path.
+One `unit.toml` per unit, under `units/<layer>/<name>/`. Payload (config files) stays where it is under `config/` and is referenced by path. `scripts/check-units.py` validates every manifest against the repo (`--packages` also checks every package name against dnf); `units/legacy-map.toml` records which units take over each current module.
 
 ```toml
 name     = "config-wezterm"
-layer    = "configs"
+layer    = "configs"               # core | apps | configs
 summary  = "Lucas's WezTerm setup"
 requires = ["wezterm"]
+optional = false                   # core only: asked at init (with `ask`)
+default  = true                    # apps only: preselected at init
 
 [packages]
-dnf  = []
-copr = []
+dnf   = []                         # installed in the single dnf transaction
+copr  = []                         # enabled before it
+build = []                         # edge only: build dependencies of [binaries]
 
-[links]                     # repo path → destination
+[binaries]                         # Rust apps: RPM on stable, local build on edge
+rpm    = "roue"
+source = "config/hyprland/roue-src"
+bins   = ["roue"]
+
+[links]                            # repo path → destination (user scope)
 "config/wezterm/wezterm.lua" = "~/.config/wezterm/wezterm.lua"
+
+[links_if]                         # links made only when that unit is installed
+wezterm = ["config/wezterm/wezterm.lua"]
+
+[files]                            # repo path → system path, copied as root
+"config/greetd/config.toml" = "/etc/greetd/config.toml"
 
 [services]
 user   = []
 system = []
 
-[[questions]]
+[[questions]]                      # asked at init, before anything runs
 id      = "variant"
 ask     = "WezTerm build"
 choices = ["stable", "smear"]
 default = "stable"
 
-[hooks]
-user = "hooks/post.sh"      # runs as the user, stdin closed
-root = ""                   # runs under the single sudo session, stdin closed
-
-[verify]
-commands = ["wezterm --version"]
+[[hooks]]                          # what cannot be declared; stdin closed
+name   = "smear-build"
+run_as = "root"                    # user | root
+does   = "build the smear variant when variant = smear"
+from   = "config/wezterm/install.sh"   # M1: the script that does it today
 ```
+
+A `# review:` comment in a manifest marks something the current modules do that is questionable or broken, recorded rather than silently changed.
 
 Hooks cover what cannot be declared (Plymouth's initramfs, the GTK theme build, the wezterm smear build). They run with **stdin closed**: a hook that waits for input fails at once with a clear message instead of hanging.
 
@@ -200,6 +215,35 @@ Only changed units are applied, as today (content fingerprints). A failed unit d
 
 The first run of 2.x migrates `~/.local/state/dotfiles/` (fingerprints, ledgers) so an existing machine is not re-applied from scratch.
 
+## Binaries and channels
+
+Git carries text only (configs, QML, Lua, scripts, manifests). The Rust apps reach machines as RPMs from the COPR. A release ties the two together:
+
+```
+                    tag v1.2.0
+                        │
+        ┌───────────────┴────────────────┐
+        ▼                                ▼
+   git (the repo)                    COPR (dnf)
+   configs, QML, Lua, scripts,       roue, prisme, balise,
+   manifests                         built from that same tag
+        │                                │
+        └──────── cc-pkg-mng upgrade ────┘
+```
+
+- Pushing a tag triggers the COPR builds of `roue`, `prisme` and `balise` from that tag; their RPM version is the release version.
+- A release's manifests state the binary versions they need (`roue = "1.2.0"`). `upgrade` checks out the tag and moves the RPMs in the same dnf transaction as every other package, so configs and binaries never drift apart.
+
+| Channel | Configs | Rust apps |
+|---|---|---|
+| **stable** | the tag | COPR RPMs matching the tag — no Rust toolchain on the machine |
+| **edge** | `master` | built locally (`cc-pkg-mng build`), since `master` is ahead of the last published RPM |
+| **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs — the COPR keeps previous builds |
+
+RPMs rather than raw binaries attached to GitHub releases: dnf installs their system dependencies (gtk4-layer-shell, libnm, bluez), the COPR signs them, `dnf remove` cleans up, and they land in `/usr/bin`, which the Hyprland session's `PATH` already has.
+
+Later, if edge ever needs to work without a Rust toolchain: COPR builds on every `master` commit ("nightly"). Not needed for 1.0.
+
 ## Distribution
 
 A COPR, `lucasssoh/coucou-shell`, built from tagged sources:
@@ -230,7 +274,7 @@ cc-pkg-mng init
 | | Deliverable | Usable when done |
 |---|---|---|
 | M0 | Clean-up on the current manager: remove Waybar and Rofi, fix `update`'s missing pull, relative script links, fingerprints survive a dangling link | **done** |
-| M1 | Manifests for every unit, next to the current modules | reviewable, nothing changes yet |
+| M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done** — reviewable, nothing changes yet |
 | M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display | `cc-pkg-mng install/remove/status` on Lucas's machine (`--dir ~/code/dotfiles`) |
 | M3 | `init`, channels, `upgrade`, `rollback`, migration from 1.x | full lifecycle on an existing machine |
 | M4 | `roles` unit, key bindings moved to roles | apps replaceable |
