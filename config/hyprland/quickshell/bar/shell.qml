@@ -1583,6 +1583,11 @@ ShellRoot {
                 drawerItems: [
                     Modules.NotificationCenter {
                         drawerOpen: NotificationState.centerOpen && NotificationState.activeScreen === bar.screen
+                        // Down to the bottom edge of the tiled windows (their
+                        // border's outer edge, `gaps_out` above the screen's
+                        // bottom) -- see HyprGaps.qml.
+                        availableHeight: bar.screen.height - HyprGaps.gapBottom
+                                         - toolsIsland.y - bar.bandHeight
                     },
                     BaliseHome {
                         drawerOpen: BaliseState.panelOpen && BaliseState.activeScreen === bar.screen

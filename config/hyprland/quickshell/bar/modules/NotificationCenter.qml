@@ -65,23 +65,19 @@ Item {
     id: root
 
     property bool drawerOpen: false
-    // The history pane's own height, and the one number in this drawer
-    // that is deliberately a constant: every rework of the top of this
-    // file so far ("keeps the history list the same size it always was")
-    // has been about NOT letting the list pay for whatever was added or
-    // removed above it. 404 is what it measured back when the drawer was
-    // a flat 544 of content -- 544 minus the 20 top margin, the old
-    // header+DND stack (24 + 16 + 44), the list's own 16 top margin and
-    // its 20 bottom one.
-    readonly property int historyHeight: 404
-    // Summed from the real measured pieces rather than a magic total, so
-    // adding or dropping a row above the list moves the DRAWER's height
-    // and leaves `historyHeight` alone. The mpris card is the one piece
-    // that comes and goes at runtime; when it does, the drawer grows or
-    // shrinks by exactly its band (through the `Behavior on height`
-    // below) instead of squeezing the history to absorb it.
-    implicitHeight: handle.implicitHeight + 20 + topSection.height
-                  + 16 + listHeader.height + 8 + root.historyHeight + 20
+    // How far the pane may run: from under the band down to the bottom of
+    // Hyprland's tiled windows, handed in by shell.qml (asked for: "au même
+    // alignement en haut que le reste des tiroirs, mais en bas ne dépasse
+    // pas les fenêtres tiles"). The history takes whatever the clock, the
+    // player and "Clear all" leave of it. The fallback is the old fixed
+    // 404px history, for a screen this is not told about.
+    //
+    // Cost, measured before doing it: the bar's surface is sized to its
+    // tallest drawer and fully damaged on every commit, so this makes it
+    // ~1160px tall for good (696px read ~8.6% render busy, 2250px ~16.1%).
+    property int availableHeight: 0
+    implicitHeight: root.availableHeight > 0 ? root.availableHeight
+        : handle.implicitHeight + 20 + topSection.height + 16 + listHeader.height + 8 + 404 + 20
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment
     // there; the island waits out exactly this long before fading content in.
     Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
@@ -611,8 +607,68 @@ Item {
         }
     }
 
-    // ---- notification history -- fills the rest of the card below listHeader ----
-    ListView {
+    // ---- notification history, grouped by app (N2) ----------------------
+    //
+    // One stack per app, newest app first, under TODAY / EARLIER labels
+    // (a stack goes where its newest notification does). A collapsed stack
+    // shows its newest card with the stack's size beside the app name and
+    // up to two ghost edges under it; clicking the card unfolds the stack,
+    // "Show less" folds it back. Single-notification apps are just a card.
+    //
+    // Rebuilt from NotificationServer's own list on every change, so a
+    // dismissed notification simply drops out of the next build.
+    // Arrival times come from NotificationState.receivedAt; anything
+    // without one (none should be) counts as Earlier, oldest.
+    property var expanded: ({})
+
+    function toggleApp(app) {
+        const e = Object.assign({}, root.expanded);
+        if (e[app]) delete e[app]; else e[app] = true;
+        root.expanded = e;
+    }
+
+    // Re-read when midnight passes while the drawer is open.
+    readonly property real midnight: {
+        const now = clock.date;
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    }
+
+    // "22:31" today, "Sep 27" before.
+    function timeText(stamp) {
+        if (!stamp) return "";
+        const d = new Date(stamp);
+        return stamp >= root.midnight ? Qt.formatDateTime(d, "HH:mm")
+                     : d.toLocaleDateString(Qt.locale("en_US"), "MMM d");
+    }
+
+    readonly property var sections: {
+        const all = NotificationState.trackedNotifications.values;
+        const stamps = NotificationState.receivedAt;
+        const midnight = root.midnight;
+
+        const items = all.map((n, i) => ({ n: n, at: stamps[n.id] || 0, i: i }));
+        items.sort((x, y) => (y.at - x.at) || (y.i - x.i));
+
+        const byApp = {};
+        const order = [];
+        for (const it of items) {
+            const app = it.n.appName || "Notifications";
+            if (!byApp[app]) { byApp[app] = { app: app, at: it.at, notes: [] }; order.push(app); }
+            byApp[app].notes.push(it.n);
+        }
+        const today = { title: "Today", count: 0, groups: [] };
+        const earlier = { title: "Earlier", count: 0, groups: [] };
+        for (const app of order) {
+            const g = byApp[app];
+            g.stamps = g.notes.map((n) => stamps[n.id] || 0);
+            const sec = g.at >= midnight ? today : earlier;
+            sec.groups.push(g);
+            sec.count += g.notes.length;
+        }
+        return [today, earlier].filter((sec) => sec.groups.length > 0);
+    }
+
+    Flickable {
         id: list
         anchors.left: parent.left
         anchors.right: parent.right
@@ -620,54 +676,81 @@ Item {
         anchors.bottom: parent.bottom
         anchors.leftMargin: 20
         anchors.rightMargin: 20
-        anchors.topMargin: 8
+        anchors.topMargin: 12
         anchors.bottomMargin: 20
         clip: true
-        spacing: 8
-        model: NotificationState.trackedNotifications
-        delegate: NotificationCard {
-            required property var modelData
-            width: list.width
-            notification: modelData
-            onDismissRequested: NotificationState.dismissForever(notification)
-            onActionRequested: (action) => NotificationState.invokeAction(notification, action)
-        }
-
-        // Leaves to the RIGHT -- asked for, and the opposite of the
-        // toasts' own exit ("pour popup il repart vers la gauche, pour les
-        // notifcenter, il repart vers la droite"), which is the direction
-        // each one arrived from in the first place: toasts slide in from
-        // the screen's left edge, history cards belong to a pane on the
-        // right of the bar.
-        //
-        // A ListView, unlike the Column the toasts used to be, keeps a
-        // removed delegate alive for the duration of this transition
-        // instead of destroying it with its model row -- that is the whole
-        // reason an exit animation is possible here at all. `InCubic`
-        // (accelerating away) rather than the OutCubic used on arrivals:
-        // the card should look like it is being flicked off, not easing to
-        // a stop somewhere off-pane.
-        remove: Transition {
-            ParallelAnimation {
-                NumberAnimation { property: "x"; to: list.width; duration: 180; easing.type: Easing.InCubic }
-                NumberAnimation { property: "opacity"; to: 0; duration: 180 }
-            }
-        }
-        // The cards below a dismissed one closing the gap. Kept slightly
-        // shorter than the exit itself so the list has already settled by
-        // the time the next one in a Clear-all cascade starts leaving.
-        removeDisplaced: Transition {
-            NumberAnimation { properties: "y"; duration: 160; easing.type: Easing.OutCubic }
-        }
+        contentWidth: width
+        contentHeight: sectionsColumn.height
+        boundsBehavior: Flickable.StopAtBounds
 
         // Soft edges instead of a hard cut wherever the history is taller
         // than the pane -- see ScrollFadeMask.qml.
         layer.enabled: true
         layer.effect: OpacityMask { maskSource: listMask }
 
+        Column {
+            id: sectionsColumn
+            width: list.width
+            spacing: 18
+
+            Repeater {
+                model: root.sections
+                delegate: Column {
+                    id: section
+                    required property var modelData
+                    width: sectionsColumn.width
+                    spacing: 10
+
+                    Item {
+                        width: parent.width
+                        height: sectionTitle.implicitHeight
+                        Text {
+                            id: sectionTitle
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: section.modelData.title.toUpperCase()
+                            color: DrawerTheme.secondary
+                            font.family: Fonts.ui
+                            font.pixelSize: 11
+                            font.weight: Font.Medium
+                            font.letterSpacing: 0.9
+                        }
+                        // Beside the title, not at the far right: that end
+                        // is "Clear all"'s, just above.
+                        Text {
+                            anchors.left: sectionTitle.right
+                            anchors.leftMargin: 6
+                            anchors.baseline: sectionTitle.baseline
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: section.modelData.count
+                            color: DrawerTheme.primary
+                            font.family: Fonts.ui
+                            font.pixelSize: 12
+                            font.weight: Font.Medium
+                            font.features: { "tnum": 1 }
+                        }
+                    }
+
+                    Column {
+                        width: parent.width
+                        spacing: 14
+                        Repeater {
+                            model: section.modelData.groups
+                            delegate: AppStack {
+                                required property var modelData
+                                width: section.width
+                                group: modelData
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Text {
             anchors.centerIn: parent
-            visible: list.count === 0
+            visible: NotificationState.trackedNotifications.values.length === 0
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "No notifications"
@@ -685,5 +768,115 @@ Item {
         view: list
         width: list.width
         height: list.height
+    }
+
+    // One app's notifications. Collapsed: the newest card, the stack's size
+    // on its meta line, and ghost edges for what is under it. Unfolded: a
+    // small header (app, "Show less") over every card.
+    component AppStack: Item {
+        id: stack
+        property var group
+
+        readonly property int size: stack.group ? stack.group.notes.length : 0
+        readonly property bool open: stack.size > 1 && root.expanded[stack.group.app] === true
+        readonly property int ghosts: stack.open ? 0 : Math.min(2, stack.size - 1)
+
+        height: stack.open ? openColumn.height : (frontCard.height + stack.ghosts * 5)
+
+        // ---- collapsed ----
+        Rectangle {
+            visible: stack.ghosts >= 2
+            x: 20
+            width: parent.width - 40
+            y: frontCard.height - 14
+            height: 24
+            radius: 14
+            color: "#0d0d10"
+        }
+        Rectangle {
+            visible: stack.ghosts >= 1
+            x: 10
+            width: parent.width - 20
+            y: frontCard.height - 14
+            height: 19
+            radius: 14
+            color: "#121215"
+        }
+        NotificationCard {
+            id: frontCard
+            visible: !stack.open
+            width: parent.width
+            notification: stack.group.notes[0]
+            showMeta: true
+            count: stack.size
+            timeText: root.timeText(stack.group.stamps[0])
+            clickable: stack.size > 1
+            onClicked: root.toggleApp(stack.group.app)
+            // The x on a folded stack clears the whole stack -- it is the
+            // only card of it you can see.
+            onDismissRequested: {
+                for (const n of stack.group.notes.slice()) NotificationState.dismissForever(n);
+            }
+            onActionRequested: (action) => NotificationState.invokeAction(notification, action)
+        }
+
+        // ---- unfolded ----
+        Column {
+            id: openColumn
+            visible: stack.open
+            width: parent.width
+            spacing: 8
+
+            Item {
+                width: parent.width
+                height: 20
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    text: stack.group.app
+                    color: DrawerTheme.primary
+                    font.family: Fonts.ui
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                }
+                Text {
+                    id: lessLabel
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    text: "Show less"
+                    color: DrawerTheme.secondary
+                    font.family: Fonts.ui
+                    font.pixelSize: 12
+                }
+                MouseArea {
+                    anchors.fill: lessLabel
+                    anchors.margins: -6
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.toggleApp(stack.group.app)
+                }
+            }
+
+            Repeater {
+                model: stack.open ? stack.group.notes : []
+                delegate: NotificationCard {
+                    required property var modelData
+                    required property int index
+                    width: openColumn.width
+                    notification: modelData
+                    showMeta: true
+                    // The header above already names the app.
+                    showApp: false
+                    timeText: root.timeText(stack.group.stamps[index])
+                    onDismissRequested: NotificationState.dismissForever(notification)
+                    onActionRequested: (action) => NotificationState.invokeAction(notification, action)
+                }
+            }
+        }
     }
 }

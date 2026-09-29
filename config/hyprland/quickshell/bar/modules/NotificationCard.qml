@@ -62,6 +62,17 @@ Rectangle {
     // forgotten, and every gram of decoration on it works against that.
     property bool toast: false
 
+    // The notification centre's grouped list (N2) adds a meta line above
+    // the summary -- the app's name, the size of its stack when collapsed,
+    // and the arrival time -- and makes a collapsed stack clickable to
+    // unfold it. Toasts leave all four at their defaults and look as before.
+    property bool showMeta: false
+    property bool showApp: true
+    property int count: 1
+    property string timeText: ""
+    property bool clickable: false
+    signal clicked()
+
     color: card.toast ? DrawerTheme.panelTop : DrawerTheme.card
 
     // The card itself carries NO glass edge in either mode. It shows
@@ -70,6 +81,15 @@ Rectangle {
     // is the action pills and the close button that light up, never the
     // surface they sit on. `toast` therefore only changes the fill.
 
+
+    // Behind everything else on the card, so the close button and the
+    // action pills (declared later, hence on top) keep their own clicks.
+    MouseArea {
+        anchors.fill: parent
+        enabled: card.clickable
+        cursorShape: Qt.PointingHandCursor
+        onClicked: card.clicked()
+    }
 
     Column {
         id: layout
@@ -150,6 +170,67 @@ Rectangle {
                 anchors.rightMargin: 8
                 anchors.top: parent.top
                 spacing: 2
+
+                Item {
+                    visible: card.showMeta
+                    width: parent.width
+                    height: Math.max(appLabel.implicitHeight, countPill.height) + 3
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.right: timeLabel.left
+                        anchors.rightMargin: 8
+                        spacing: 6
+
+                        Text {
+                            id: appLabel
+                            visible: card.showApp
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, parent.width - (countPill.visible ? countPill.width + 6 : 0))
+                            renderType: Text.NativeRendering
+                            font.hintingPreference: Font.PreferNoHinting
+                            text: card.notification ? (card.notification.appName || "Notifications") : ""
+                            color: DrawerTheme.secondary
+                            font.family: Fonts.ui
+                            font.pixelSize: 12
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                        }
+                        Rectangle {
+                            id: countPill
+                            visible: card.count > 1
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: countLabel.implicitWidth + 12
+                            height: 16
+                            radius: 8
+                            color: DrawerTheme.cardRaised
+                            Text {
+                                id: countLabel
+                                anchors.centerIn: parent
+                                renderType: Text.NativeRendering
+                                font.hintingPreference: Font.PreferNoHinting
+                                text: card.count
+                                color: DrawerTheme.primary
+                                font.family: Fonts.ui
+                                font.pixelSize: 11
+                                font.weight: Font.DemiBold
+                                font.features: { "tnum": 1 }
+                            }
+                        }
+                    }
+                    Text {
+                        id: timeLabel
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        renderType: Text.NativeRendering
+                        font.hintingPreference: Font.PreferNoHinting
+                        text: card.timeText
+                        color: DrawerTheme.secondary
+                        font.family: Fonts.ui
+                        font.pixelSize: 12
+                        font.features: { "tnum": 1 }
+                    }
+                }
 
                 Text {
                     width: parent.width
