@@ -67,7 +67,7 @@ ok "bluetuith installed."
 info "Audio..."
 sudo dnf install -y \
     pipewire \
-    pipewire-pulse \
+    pipewire-pulseaudio \
     pipewire-alsa \
     wireplumber \
     alsa-utils

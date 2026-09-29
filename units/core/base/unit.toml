@@ -7,8 +7,7 @@ dnf = [
   "bash", "coreutils", "util-linux", "findutils", "grep", "sed", "gawk", "less", "which", "file",
   "iproute", "iputils", "dhcp-client",
   "bluez",
-  "pipewire", "pipewire-pulseaudio", "pipewire-alsa",  # setup_fedora.sh asks for "pipewire-pulse", which does not exist
-  "wireplumber", "alsa-utils",
+  "pipewire", "pipewire-pulseaudio", "pipewire-alsa", "wireplumber", "alsa-utils",
   "mesa-dri-drivers", "mesa-vulkan-drivers", "vulkan-loader",
   "libinput", "xkeyboard-config",
   "udisks2", "ntfs-3g", "exfatprogs", "dosfstools",
