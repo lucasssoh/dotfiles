@@ -76,6 +76,11 @@ Scope {
     readonly property string dateString: Qt.formatDateTime(root.now, "dddd d MMMM")
     readonly property string messageString: messages.text
 
+    // The pulse card's own pieces: the hour, and the seconds set
+    // smaller beside it.
+    readonly property string hourString: Qt.formatDateTime(root.now, "HH:mm")
+    readonly property string secondsString: Qt.formatDateTime(root.now, "ss")
+
     // Mode gaming: profile Performance OR the focused window is
     // fullscreen (see the plan's own rationale -- both signals already
     // exist elsewhere in this bar/repo, nothing new to read). By explicit

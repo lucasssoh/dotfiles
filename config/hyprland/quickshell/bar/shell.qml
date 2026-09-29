@@ -1018,7 +1018,6 @@ ShellRoot {
                         id: veilleDrawer
                         veille: shell.veille
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
-                        maxContentWidth: centerIsland.maxRowWidth
                     },
                     Modules.KeybindsDrawerContent {
                         drawerOpen: shell.keybindsVisible

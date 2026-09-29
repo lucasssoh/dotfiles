@@ -2,6 +2,16 @@ import QtQuick
 import ".."
 import "../../theme"
 
+// Veille's pulse -- the "Classique" layout (2026-09-29): the hour, large
+// and thin, and the message under it across the full width, both in
+// DrawerTheme's cream. Nothing else. Both matter alike ("les deux sont
+// tout aussi important"), which is what several heavier layouts tried in
+// between got wrong: a white pill around the hour took every look, an
+// outlined card around both and a bar splitting the night along
+// veille.json's thresholds only added things to read past ("simple, et
+// straightforward"). This is the original Veille layout, moved to MiSans
+// and a fixed size instead of a clock scaled to the island's width.
+//
 // Clock + message content for Veille's drawer -- now living inside the
 // bar's own central island instead of a separate floating panel (asked
 // for explicitly: "combiner veille dans l'island central"). Pure
@@ -40,25 +50,22 @@ Item {
         NumberAnimation { duration: 320; easing.type: Easing.InOutCubic }
     }
 
-    readonly property int hPad: 20
+    readonly property int hPad: 24
     readonly property int topGap: 10
-    readonly property int bottomGap: 16
+    readonly property int bottomGap: 20
 
     readonly property bool showSeconds: root.veille ? root.veille.config.showSeconds : true
-    readonly property bool showDate: root.veille ? root.veille.config.showDate : false
-    // The widest the clock/quote block may get, 0 = the drawer's own
-    // width (the only behaviour until the keybinds sheet). The sheet
-    // widens the island to fit its keyboard, and with both open the
-    // clock -- sized off this width -- would have grown to match; capped
-    // to what the island gives Veille alone, and centred in the rest.
-    property real maxContentWidth: 0
-    readonly property real textWidth: Math.max(0,
-        (root.maxContentWidth > 0 ? Math.min(root.width, root.maxContentWidth) : root.width) - root.hPad * 2)
+    // The width this card asks the island for (DrawerIsland's
+    // `entryWidthFloor`): the row alone is ~520 px with nothing playing,
+    // which squeezed the message into five lines. Also
+    // the most it takes when the keybinds sheet widens the island
+    // further -- the card then stays this wide, centred.
+    readonly property int drawerWidth: 840
+    readonly property real textWidth: Math.max(0, Math.min(root.width, root.drawerWidth) - root.hPad * 2)
     readonly property real contentInset: root.hPad + Math.max(0, (root.width - root.textWidth - root.hPad * 2) / 2)
 
     // + the handle's own band: it sits ABOVE topGap, so the drawer grows
-    // by exactly what the handle takes and the clock/quote block keeps
-    // the size it had.
+    // by exactly what the handle takes.
     implicitHeight: handle.implicitHeight + root.topGap + content.implicitHeight + root.bottomGap
 
     // ---- force-close -------------------------------------------------
@@ -80,7 +87,6 @@ Item {
     // hole has to be the handle, not the full width of a clock nobody
     // ever clicks.
     DrawerHandle {
-        tint: Surfaces.accent
         id: handle
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -102,97 +108,57 @@ Item {
     readonly property int closeHitWidth: handle.width
     readonly property int closeHitHeight: handle.height
 
-    // The dévoilé (reveal) that used to be declared here is now owned by
-    // DrawerIsland instead (it drives `opacity` off this Item's own
-    // height progress, see its Binding) -- one implementation, applied
-    // to whatever currently holds the drawer, so the keybinds cheatsheet
-    // reveals identically instead of each content file carrying its own
-    // near-copy of the same formula.
-
-    // Same width -> font.pixelSize solve the old standalone overlay used
-    // to do against a fraction of the SCREEN's width instead of this
-    // island's own (see git history on this file's predecessor,
-    // Veille.qml, for the full rationale). TextMetrics measures a fixed
-    // reference string ("00:00:00"/"00:00", not the live-changing text)
-    // at 100px so the ratio itself never jitters as digits change.
-    TextMetrics {
-        id: clockMetrics
-        font.family: Fonts.clock
-        font.pixelSize: 100
-        text: root.showSeconds ? "00:00:00" : "00:00"
-    }
-    readonly property real clockWidthPerPixelSize: clockMetrics.width / 100
-    readonly property int clockPixelSize:
-        Math.round(root.textWidth / Math.max(0.001, root.clockWidthPerPixelSize))
-
-    readonly property int dateTextSize: Math.round(root.clockPixelSize * 0.32)
-    readonly property int messageTextSize: Math.round(root.clockPixelSize * 0.3)
-    readonly property int columnSpacing: Math.round(root.clockPixelSize * 0.08)
-
+    // ---- the pulse -----------------------------------------------------
     Column {
         id: content
-        anchors.left: parent.left
-        anchors.leftMargin: root.contentInset
+        x: root.contentInset
         anchors.top: handle.bottom
         anchors.topMargin: root.topGap
-        spacing: root.columnSpacing
+        width: root.textWidth
+        spacing: 12
 
-        Text {
-            id: clockText
-            anchors.left: parent.left
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            font.family: Fonts.clock
-            font.pixelSize: root.clockPixelSize
-            width: root.textWidth
-            horizontalAlignment: Text.AlignLeft
-            // Slightly warm off-white, not pure white -- carried over
-            // from the standalone overlay ("pas de blanc parfait mais
-            // legerement creme").
-            color: "#f2ecd9"
-            text: root.veille ? root.veille.clockString : ""
-            // No Behavior on font.pixelSize any more -- DrawerIsland
-            // reads `implicitHeight` (which this feeds into) to set its
-            // OWN height animation's target the instant its width
-            // animation finishes; if this were still easing afterward,
-            // implicitHeight would keep growing for another 600ms past
-            // that point, taller than the height DrawerIsland had
-            // already locked in and started animating toward -- the
-            // text visibly ran past the drawer's own (too-short)
-            // bottom edge, clipped there since this whole Item stays
-            // `clip: true` while showing.
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            visible: root.showDate
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            font.family: Fonts.ui
-            font.pixelSize: root.dateTextSize
-            color: Ink.secondary
-            text: root.veille ? root.veille.dateString : ""
-        }
-
-        Text {
-            anchors.left: parent.left
-            width: root.textWidth
-            horizontalAlignment: Text.AlignLeft
-            wrapMode: Text.WordWrap
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            // Lighter weight than the clock's own Fonts.clock (Medium),
-            // asked for ("un font plus light pour le quote"), left-
-            // aligned to match the clock above it exactly.
-            font.family: Fonts.clockLight
-            font.pixelSize: root.messageTextSize
-            color: "#c9c4b3"
-            text: root.veille ? root.veille.messageString : ""
-            opacity: text !== "" ? 0.9 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+        Row {
+            spacing: 7
+            Text {
+                id: hourText
+                text: root.veille ? root.veille.hourString : ""
+                color: DrawerTheme.cream
+                font.family: Fonts.ui
+                font.pixelSize: 104
+                font.weight: Font.ExtraLight
+                font.letterSpacing: -2
+                font.features: { "tnum": 1 }
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
             }
+            Text {
+                visible: root.showSeconds
+                anchors.baseline: hourText.baseline
+                text: root.veille ? root.veille.secondsString : ""
+                color: DrawerTheme.creamInk(0.45)
+                font.family: Fonts.ui
+                font.pixelSize: 36
+                font.weight: Font.Light
+                font.features: { "tnum": 1 }
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+            }
+        }
+
+        // The message; before the first one of the night (none until
+        // "late"), the date holds its place.
+        Text {
+            width: parent.width
+            readonly property bool hasMessage: root.veille !== null && root.veille.messageString !== ""
+            text: hasMessage ? root.veille.messageString : (root.veille ? root.veille.dateString : "")
+            color: hasMessage ? DrawerTheme.cream : DrawerTheme.cream2
+            wrapMode: Text.WordWrap
+            lineHeight: 1.1
+            font.family: Fonts.ui
+            font.pixelSize: 28
+            font.weight: Font.Medium
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
         }
     }
 }

@@ -393,35 +393,50 @@ Scope {
     // message due" only needs asking once, right as a pulse begins --
     // there's no point re-checking every second while nothing is even
     // visible to show it on.
+    // The draw a pulse opening asks for -- see onInPulseChanged below for
+    // why it runs a beat later rather than inside the signal.
+    function drawForPulse() {
+        if (!root.phase.inPulse || !root.phase.messagesEnabled) return;
+        if (!root.pastGrace) return;
+        // The 00:00 pulse is the rollover's, not the cooldown's.
+        // Its lead-in starts a few seconds BEFORE midnight (see
+        // VeillePhase's leadSeconds), so drawing here put an
+        // ordinary message on screen and let onMidnightCrossed
+        // below replace it three seconds later -- two sentences
+        // for one appearance, reported as exactly that ("deux
+        // messages qui chevauchent... il faut un seul message").
+        // Measured before the fix: present() at 23:59:56 with a
+        // regular line, then again at 23:59:59 with the midnight
+        // one.
+        //
+        // Skipping the draw rather than suppressing the rollover:
+        // the midnight line is the one that's actually about the
+        // moment, and it lands inside this same pulse by
+        // construction, so the pulse is never left silent. (The
+        // one exception is debug's `setNow "00:00"`, which lands
+        // in the pulse without the day ever changing and so
+        // shows the clock alone -- a fake rollover having no
+        // rollover message is the honest answer there.)
+        if (root.phase.midnightPulse) return;
+        if (!root.dueForMessage) return;
+        root.present(root.selectMessage());
+    }
+
     Connections {
         target: root.phase
 
         function onInPulseChanged() {
             if (root.phase.inPulse) {
-                if (!root.phase.messagesEnabled) return;
-                if (!root.pastGrace) return;
-                // The 00:00 pulse is the rollover's, not the cooldown's.
-                // Its lead-in starts a few seconds BEFORE midnight (see
-                // VeillePhase's leadSeconds), so drawing here put an
-                // ordinary message on screen and let onMidnightCrossed
-                // below replace it three seconds later -- two sentences
-                // for one appearance, reported as exactly that ("deux
-                // messages qui chevauchent... il faut un seul message").
-                // Measured before the fix: present() at 23:59:56 with a
-                // regular line, then again at 23:59:59 with the midnight
-                // one.
-                //
-                // Skipping the draw rather than suppressing the rollover:
-                // the midnight line is the one that's actually about the
-                // moment, and it lands inside this same pulse by
-                // construction, so the pulse is never left silent. (The
-                // one exception is debug's `setNow "00:00"`, which lands
-                // in the pulse without the day ever changing and so
-                // shows the clock alone -- a fake rollover having no
-                // rollover message is the honest answer there.)
-                if (root.phase.midnightPulse) return;
-                if (!root.dueForMessage) return;
-                root.present(root.selectMessage());
+                // Deferred to the end of this tick. `inPulse` and the
+                // phase flip on the SAME clock tick at 22:59:55 (the
+                // lead-in snaps `nowMinutes` to 23:00, which is what moves
+                // "evening" to "late"), and nothing orders their two
+                // bindings: read here synchronously, `messagesEnabled`
+                // could still be the evening's false, and the first
+                // message of the night was silently skipped. Found by
+                // jumping the debug clock straight into a pulse, where it
+                // happened every time.
+                Qt.callLater(root.drawForPulse);
             } else {
                 // Pulse just ended -- clear so a stale message never
                 // lingers (invisibly, since the window itself is
