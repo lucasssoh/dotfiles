@@ -57,6 +57,18 @@ pkg_ensure "$(pkg_pick python3-gobject python-gobject python3-gi)" \
 pkg_ensure "$(pkg_pick python3-markdown python-markdown python3-markdown)" \
     "$(pkg_pick python3-pymdown-extensions python-pymdown-extensions python3-pymdownx)" \
     "$(pkg_pick python3-pygments python-pygments python3-pygments)"
+# Ses formules $$...$$ : config/liseuse/tex2svg.js, MathJax sous node. Le
+# node_modules est celui de la liseuse (même raison que plus haut : qu'il
+# marche sans ce module) ; les $...$ en ligne, eux, n'ont besoin que
+# d'utftex, installé ci-dessus.
+command -v node >/dev/null 2>&1 || pkg_ensure "$(pkg_pick nodejs nodejs nodejs)"
+command -v npm >/dev/null 2>&1 || pkg_ensure "$(pkg_pick nodejs-npm npm npm)"
+LISEUSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../liseuse" && pwd)"
+if [ ! -d "$LISEUSE_DIR/node_modules/mathjax-full" ] && command -v npm >/dev/null 2>&1; then
+    npm ci --prefix "$LISEUSE_DIR" --omit=dev --no-audit --no-fund --silent \
+        && ok "mathjax-full installed (mdview maths)." \
+        || info 'npm ci failed: mdview shows $$...$$ as TeX source.'
+fi
 if ! command -v plantuml-lsp >/dev/null 2>&1 && [ ! -x ~/.local/bin/plantuml-lsp ]; then
     GOBIN="$HOME/.local/bin" go install github.com/ptdewey/plantuml-lsp@latest \
         && ok "plantuml-lsp installed." \

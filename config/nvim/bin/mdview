@@ -33,6 +33,11 @@
 # retoucher une couleur de la liseuse la retouche ici. Les tailles et
 # espacements, eux, sont traduits à la main dans CSS plus bas : GTK ne
 # comprend qu'un sous-ensemble du CSS web. La liseuse n'est pas modifiée.
+#
+# ---- Maths -------------------------------------------------------------
+# $$...$$ : SVG de MathJax, par le tex2svg.js de la liseuse gardé chaud
+# (classe MathJax). $...$ : markup Pango dans le paragraphe même, un
+# label ne pouvant pas contenir d'image (classe InlineTex).
 # ============================================================
 import collections
 import difflib
@@ -352,10 +357,6 @@ class Plantuml:
         env["JAVA_TOOL_OPTIONS"] = (env.get("JAVA_TOOL_OPTIONS", "") +
                                     " -Xmx192m -XX:+UseSerialGC -XX:TieredStopAtLevel=1").strip()
 
-        def die_with_parent():
-            import ctypes
-            ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)      # PR_SET_PDEATHSIG
-
         self.jvm = subprocess.Popen(["plantuml", "-picoweb:%d:127.0.0.1" % self.port], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                     preexec_fn=die_with_parent)
@@ -402,6 +403,301 @@ class Plantuml:
 
 
 # ============================================================
+# $$...$$ : MathJax dans un node chaud, lancé à la première formule
+# ============================================================
+# Le même tex2svg.js que la liseuse (voir son en-tête pour les mesures :
+# ~210 ms de chargement, puis ~3 ms par formule). Un seul fil de travail
+# nourrit le processus : un document qui en contient cent à l'ouverture
+# fait cent lignes dans un tube, pas cent threads qui attendent un verrou.
+# Il meurt avec mdview (PR_SET_PDEATHSIG) ou à la fermeture de stdin.
+class MathJax:
+    def __init__(self, colors):
+        self.fg = colors["fg"]
+        self.proc = None
+        self.cache = {}
+        self.queue = None
+
+    def render(self, tex: str, done):
+        """done(svg, erreur) est appelé dans le fil GTK. svg : couleur du
+        texte déjà posée, tailles en em (voir svg_px)."""
+        hit = self.cache.get(tex)
+        if hit:
+            done(*hit)
+            return
+        if self.queue is None:
+            import queue
+            self.queue = queue.Queue()
+            threading.Thread(target=self._work, daemon=True).start()
+        self.queue.put((tex, done))
+
+    def _work(self):
+        why = "tex2svg est mort"
+        try:
+            self.proc = subprocess.Popen(["node", md2pdf.TEX2SVG], stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         text=True, preexec_fn=die_with_parent)
+        except OSError as exc:
+            self.proc = None
+            why = "node introuvable (%s)" % exc
+        while True:
+            tex, done = self.queue.get()
+            res = self.cache.get(tex)
+            if res is None and self.proc:
+                try:
+                    self.proc.stdin.write(json.dumps({"tex": tex, "display": True,
+                                                      "scale": md2pdf.MATH_SCALE}) + "\n")
+                    self.proc.stdin.flush()
+                    out = json.loads(self.proc.stdout.readline() or "null")
+                except (OSError, ValueError):
+                    out = None
+                if out is None:
+                    # mathjax-full absent (config/liseuse/install.sh) : node
+                    # meurt au premier require et le dit sur stderr.
+                    self.proc.kill()
+                    err = self.proc.stderr.read().strip().splitlines()
+                    why = next((l for l in err if "Error" in l), err[-1] if err else "tex2svg est mort")
+                    self.proc = None
+                else:
+                    svg = out.get("svg")
+                    res = (svg.replace("currentColor", self.fg), None) if svg else (None, out.get("error"))
+                    self.cache[tex] = res
+            GLib.idle_add(done, *(res or (None, why)))
+
+    def close(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+
+
+def die_with_parent():
+    import ctypes
+    ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)      # PR_SET_PDEATHSIG
+
+
+EM = re.compile(r'( (?:width|height))="([\d.]+)em"')
+
+
+def svg_px(svg: str, em_px: float) -> str:
+    """Les tailles en em de tex2svg.js en pixels : librsvg résoudrait
+    l'em contre ses 12 px par défaut, pas contre la police du texte."""
+    return EM.sub(lambda m: '%s="%.2fpx"' % (m.group(1), float(m.group(2)) * em_px), svg, count=2)
+
+
+# ============================================================
+# $...$ : TeX -> markup Pango, dans le texte même
+# ============================================================
+# Un paragraphe est UN Gtk.Label : Pango n'y place pas d'image, donc pas
+# de SVG en ligne. Mais ce qu'on écrit entre deux $ au fil d'une phrase
+# est presque toujours plat -- des lettres, des indices, des exposants,
+# des symboles -- et Pango sait tout ça : <sup>, <sub>, <i>. Les symboles
+# viennent de la table d'utftex (`utftex -T`, ~2000 commandes, lue une
+# fois), déjà installé pour render-markdown dans nvim. Une fraction
+# devient a/b, une racine √(…). Ce qui n'a pas d'équivalent sur une ligne
+# (\begin, \matrix, une commande inconnue) garde son source, en mono :
+# lisible, et visiblement « pas rendu » plutôt que faux.
+class InlineTex:
+    # Absents de `utftex -T` : les grands opérateurs, qu'utftex dessine
+    # sur plusieurs lignes au lieu de les tenir dans sa table. \setminus
+    # y est ⧵, un glyphe que presque aucune police n'a.
+    EXTRA = {"sum": "∑", "prod": "∏", "coprod": "∐", "int": "∫", "iint": "∬", "iiint": "∭",
+             "oint": "∮", "bigcup": "⋃", "bigcap": "⋂", "setminus": "∖", "lbrace": "{",
+             "rbrace": "}", "dots": "…", "colon": ":"}
+    FUNCS = {"sin", "cos", "tan", "cot", "sec", "csc", "arcsin", "arccos", "arctan", "sinh",
+             "cosh", "tanh", "log", "ln", "lg", "exp", "lim", "liminf", "limsup", "max", "min",
+             "sup", "inf", "det", "dim", "ker", "deg", "gcd", "lcm", "arg", "hom", "Pr", "mod",
+             "bmod", "Im", "Re"}
+    TEXT = {"text", "textrm", "mathrm", "operatorname", "mbox", "textnormal", "textup", "mathup"}
+    IGNORE = {"left", "right", "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr",
+              "displaystyle", "textstyle", "scriptstyle", "limits", "nolimits", "middle"}
+    SPACES = {",": "\u2009", ":": "\u2005", ";": "\u2005", ">": "\u2005", "!": "", " ": " ",
+              "quad": "\u2003", "qquad": "\u2003\u2003", "enspace": "\u2002"}
+    ACCENTS = {"vec": "\u20d7", "hat": "\u0302", "widehat": "\u0302", "bar": "\u0304",
+               "overline": "\u0305", "tilde": "\u0303", "widetilde": "\u0303", "dot": "\u0307",
+               "ddot": "\u0308", "underline": "\u0332"}
+    # Pango n'espace pas les opérateurs comme TeX : on le fait à la main,
+    # une espace fine autour des opérations, une moyenne autour des relations.
+    REL = set("=<>≤≥≠≈≡∼≃≅∝→←↔⇒⇐⇔↦∈∉∋⊂⊃⊆⊇|∣∥⊥≪≫")
+    BIN = set("+−×÷·⋅±∓∪∩∘⊕⊗∧∨∖")
+    DOUBLE = {"R": "ℝ", "N": "ℕ", "Z": "ℤ", "Q": "ℚ", "C": "ℂ", "P": "ℙ", "H": "ℍ"}
+    TOKEN = re.compile(r"\\([A-Za-z]+)\*?|\\(.)|(\s+)|(.)", re.S)
+
+    class Unsupported(Exception):
+        pass
+
+    def __init__(self):
+        self.table = None
+        self.cache = {}
+
+    def _load(self):
+        try:
+            raw = subprocess.run(["utftex", "-T"], capture_output=True, text=True, timeout=3).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            raw = ""
+        self.table = {}
+        for name, sym in re.findall(r"\\([A-Za-z]+):(.*?);(?=\\|$)", raw):
+            self.table.setdefault(name, sym)
+        self.table.update(self.EXTRA)
+
+    def markup(self, tex: str) -> str:
+        hit = self.cache.get(tex)
+        if hit is None:
+            if self.table is None:
+                self._load()
+            try:
+                self.toks = [m for m in self.TOKEN.finditer(tex)]
+                self.i = 0
+                hit = self._seq(end=None).strip()
+            except (self.Unsupported, IndexError):
+                hit = '<span font_family="%s" size="88%%">$%s$</span>' % (
+                    MONO, GLib.markup_escape_text(tex))
+            self.cache[tex] = hit
+        return hit
+
+    # ---- l'analyse : une suite d'atomes, avec ^ et _ -------------------
+    def _next(self):
+        m = self.toks[self.i]
+        self.i += 1
+        return m
+
+    def _seq(self, end):
+        out = []
+        while self.i < len(self.toks):
+            m = self.toks[self.i]
+            if end and m.group(4) == end:
+                self.i += 1
+                return "".join(out)
+            self.i += 1
+            if m.group(4) in ("^", "_"):
+                tag = "sup" if m.group(4) == "^" else "sub"
+                # Dans un indice, TeX n'espace plus les relations : k=1.
+                a = "<%s>%s</%s>" % (tag, re.sub("[ \u2009\u2005]", "", self._arg()), tag)
+            else:
+                a = self._atom(m)
+            if not a:
+                continue
+            last = out[-1] if out else ""
+            # Un opérateur en tête, ou après une relation ou une parenthèse,
+            # est unaire : pas d'espace (-x, a = -b). Pas d'espace non plus
+            # entre une fonction et sa parenthèse : sin(x).
+            if a.startswith("\u2009") and (not last or last.endswith((" ", "(", "[", "{", "\u2009"))):
+                a = a.strip("\u2009") if a.strip("\u2009") in self.BIN else a.lstrip("\u2009")
+            if a.startswith(("(", "[")) and last.endswith("\u2009"):
+                out[-1] = last.rstrip("\u2009")
+            out.append(a)
+        if end:
+            raise self.Unsupported()                  # accolade non fermée
+        return "".join(out)
+
+    def _raw_arg(self):
+        """Le source d'un argument, sans le convertir."""
+        while self.toks[self.i].group(3):
+            self.i += 1
+        m = self._next()
+        if m.group(4) != "{":
+            return m.group(0)
+        depth, parts = 1, []
+        while True:
+            m = self._next()
+            depth += {"{": 1, "}": -1}.get(m.group(4), 0)
+            if not depth:
+                return "".join(parts)
+            parts.append(m.group(0))
+
+    def _arg(self):
+        while self.toks[self.i].group(3):
+            self.i += 1
+        m = self._next()
+        return self._seq("}") if m.group(4) == "{" else self._atom(m)
+
+    def _sub(self, tex):
+        saved = self.toks, self.i
+        self.toks, self.i = list(self.TOKEN.finditer(tex)), 0
+        try:
+            return self._seq(end=None).strip()
+        finally:
+            self.toks, self.i = saved
+
+    def _paren(self, tex):
+        inner = self._sub(tex)
+        simple = re.fullmatch(r"\s*(\w+|\\[A-Za-z]+)\s*", tex)
+        return inner if simple else "(%s)" % inner
+
+    def _sym(self, s):
+        esc = GLib.markup_escape_text(s)
+        if s in self.REL:
+            return " %s " % esc
+        if s in self.BIN:
+            return "\u2009%s\u2009" % esc
+        return esc
+
+    def _atom(self, m):
+        cmd, esc, space, ch = m.groups()
+        if space:
+            return ""                                  # TeX ignore les espaces du source
+        if ch is not None:
+            if ch == "{":
+                return self._seq("}")
+            if ch.isalpha():
+                return "<i>%s</i>" % GLib.markup_escape_text(ch)
+            if ch in "&}":
+                raise self.Unsupported()
+            if ch == "~":
+                return "\u00a0"
+            if ch in ",;":
+                return ch + "\u2009"                  # ponctuation : espace fine après
+            return self._sym("−" if ch == "-" else "′" if ch == "'" else ch)
+        if esc is not None:
+            if esc in self.SPACES:
+                return self.SPACES[esc]
+            if esc == "\\":
+                raise self.Unsupported()
+            return GLib.markup_escape_text(esc)        # \{ \} \% \$ \_ \# \&
+        if cmd in self.IGNORE:
+            if cmd in ("left", "right", "middle", "bigl", "bigr", "Bigl", "Bigr") and self.i < len(self.toks) \
+                    and self.toks[self.i].group(4) == ".":
+                self.i += 1
+            return ""
+        if cmd in self.SPACES:
+            return self.SPACES[cmd]
+        if cmd in ("frac", "dfrac", "tfrac", "cfrac"):
+            a, b = self._raw_arg(), self._raw_arg()
+            return "%s/%s" % (self._paren(a), self._paren(b))
+        if cmd == "sqrt":
+            if self.toks[self.i].group(4) == "[":
+                self.i += 1
+                n = self._seq("]")
+                return "<sup>%s</sup>√%s" % (n, self._paren(self._raw_arg()))
+            return "√" + self._paren(self._raw_arg())
+        if cmd in ("binom", "dbinom", "tbinom"):
+            return "C(%s, %s)" % (self._sub(self._raw_arg()), self._sub(self._raw_arg()))
+        if cmd in self.TEXT:
+            raw = self._raw_arg()
+            return GLib.markup_escape_text(raw) if cmd.startswith("text") or cmd == "mbox" \
+                else re.sub(r"</?i>", "", self._sub(raw))
+        if cmd in ("mathbf", "boldsymbol", "bm", "textbf"):
+            return "<b>%s</b>" % self._arg()
+        if cmd in ("mathit", "textit", "emph"):
+            return "<i>%s</i>" % re.sub(r"</?i>", "", self._arg())
+        if cmd in ("mathbb", "Bbb"):
+            raw = self._raw_arg().strip()
+            return "".join(self.DOUBLE.get(c, c) for c in raw)
+        if cmd in ("mathcal", "mathscr", "mathfrak", "mathsf", "mathtt"):
+            return re.sub(r"</?i>", "", self._arg())
+        if cmd in self.ACCENTS:
+            inner = re.sub(r"</?i>", "", self._sub(self._raw_arg()))
+            mark = self.ACCENTS[cmd]
+            text = "".join(c + mark for c in inner) if cmd in ("overline", "underline", "bar") else inner + mark
+            return "<i>%s</i>" % text
+        if cmd in self.FUNCS:
+            return "\u2009%s\u2009" % ("\u2005mod\u2005" if cmd in ("mod", "bmod") else cmd)
+        if cmd == "pmod":
+            return "\u2005(mod\u2009%s)" % self._arg()
+        sym = self.table.get(cmd)
+        if sym is None:
+            raise self.Unsupported()
+        return self._sym(sym)
+
+
+# ============================================================
 # Largeur de colonne bornée, centrée (l'équivalent d'un max-width)
 # ============================================================
 class Clamp(Gtk.Widget):
@@ -441,8 +737,13 @@ MONO = "Iosevka Nerd Font, Noto Sans Mono, monospace"
 
 
 class Renderer:
-    def __init__(self, colors, code, uml, base_dir_fn):
-        self.c, self.code, self.uml, self.base_dir = colors, code, uml, base_dir_fn
+    def __init__(self, colors, code, uml, math, base_dir_fn):
+        self.c, self.code, self.uml, self.math, self.base_dir = colors, code, uml, math, base_dir_fn
+        self.tex = InlineTex()
+        # L'em du texte, en pixels logiques : 10.5pt (voir .doc dans CSS)
+        # au DPI que GTK applique lui-même aux polices.
+        dpi = (Gtk.Settings.get_default().props.gtk_xft_dpi or 96 * 1024) / 1024
+        self.em_px = 10.5 * (dpi if dpi > 0 else 96) / 72
 
     # ---- en ligne -----------------------------------------------------
     def inline(self, node, pre=False) -> str:
@@ -471,7 +772,12 @@ class Renderer:
             return "<%s>%s</%s>" % (t, inner(), t)
         if t == "input" and node.attrs.get("type") == "checkbox":
             return "☑ " if "checked" in node.attrs else "☐ "
+        if t == "span" and "arithmatex" in node.cls().split():
+            return self.tex.markup(self.text_of(node).strip())
         return inner()
+
+    def text_of(self, node) -> str:
+        return node if isinstance(node, str) else "".join(self.text_of(c) for c in node.children)
 
     @staticmethod
     def set_markup(lbl, markup):
@@ -541,6 +847,8 @@ class Renderer:
             return self.codeblock(n)
         if t == "div" and "uml" in n.cls().split():
             return self.plantuml(n.attrs.get("data-src", ""))
+        if t == "div" and "arithmatex" in n.cls().split():
+            return self.display_math(self.text_of(n).strip())
         if t == "blockquote":
             box = self.vbox("quote")
             self.flow(n.children, box)
@@ -655,6 +963,30 @@ class Renderer:
         self.uml.render(source, done)
         return box
 
+    def display_math(self, tex):
+        box = self.vbox("math")
+        pic = Gtk.Picture(can_shrink=True, halign=Gtk.Align.CENTER)
+        pic.set_content_fit(Gtk.ContentFit.SCALE_DOWN)
+        box.append(pic)
+
+        def done(svg, err):
+            if svg:
+                try:
+                    pic.set_paintable(SvgPaintable(svg_px(svg, self.em_px)))
+                    return False
+                except GLib.Error as exc:
+                    err = str(exc)
+            box.remove(pic)
+            box.append(self.label('<span foreground="%s">TeX — %s</span>' % (
+                self.c["accent"], GLib.markup_escape_text(err or "?")), "uml-error"))
+            pre = Node("pre", {})
+            pre.children.append(tex)
+            box.append(self.codeblock(pre))
+            return False
+
+        self.math.render(tex, done)
+        return box
+
 
 # ============================================================
 # CSS : markdown.css traduit pour GTK (tailles et espacements)
@@ -690,6 +1022,7 @@ label.th {{ background: {surface}; color: {heading}; font-weight: 600; }}
 label.td.even {{ background: {surface_2}; }}
 separator.hr {{ background: {rule}; min-height: 1px; margin: 20px 0; }}
 .uml {{ margin: 16px 0; }}
+.math {{ margin: 4px 0 14px; }}
 label.uml-error {{ margin-bottom: 4px; }}
 .details {{ margin-bottom: 12px; color: {fg}; }}
 """
@@ -703,8 +1036,9 @@ class Document:
         self.colors = palette(dark)
         self.conv = Converter()
         self.uml = Plantuml(self.colors)
+        self.math = MathJax(self.colors)
         self.dir = os.getcwd()
-        self.render = Renderer(self.colors, CodeColors(dark), self.uml, lambda: self.dir)
+        self.render = Renderer(self.colors, CodeColors(dark), self.uml, self.math, lambda: self.dir)
         self.items = []          # [(clé, widget, début, fin)]
         self.last_target = None
         self.cursor = 0
@@ -905,6 +1239,7 @@ def main():
     code = app.run(None)
     if "doc" in state:
         state["doc"].uml.close()
+        state["doc"].math.close()
     return 1 if state.get("failed") else code
 
 
