@@ -87,6 +87,11 @@ Rectangle {
             active: tile.active
             accent: tile.accent
         }
+        // Title and status as their own tight pair: the outer 8 is the
+        // badge's breathing room, too loose between two lines of text.
+        Column {
+            width: tileText.width
+            spacing: 2
         Row {
             width: tileText.width
             spacing: 6
@@ -132,6 +137,7 @@ Rectangle {
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight
+        }
         }
     }
 

@@ -1060,7 +1060,7 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.panelTop
                 drawerFillBottom: DrawerTheme.panelBottom
-                drawerRadius: 20
+                drawerRadius: 28
                 drawerGap: 0
                 drawerTop: bar.bandHeight
                 // Left-aligned band, the mirror of TOOLS' right-aligned
@@ -1269,7 +1269,7 @@ ShellRoot {
                 splitDrawer: true
                 drawerGap: 0
                 drawerTop: bar.bandHeight
-                drawerRadius: 20
+                drawerRadius: 28
                 widenOnOpen: false
                 // Pinned, not "whatever the row happens to be": the row
                 // here is 22 to 122px wide depending on how many of the
@@ -1542,7 +1542,7 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.panelTop
                 drawerFillBottom: DrawerTheme.panelBottom
-                drawerRadius: 20
+                drawerRadius: 28
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.
                 //

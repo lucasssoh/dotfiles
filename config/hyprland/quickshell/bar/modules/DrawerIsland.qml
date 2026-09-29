@@ -94,7 +94,7 @@ Item {
     // ~24-31px tall, so any radius past half its height is clamped away
     // anyway -- raising it there would change nothing while quietly
     // reshaping centerIsland's own flush-top rim/gloss geometry too.
-    property int drawerRadius: 30
+    property int drawerRadius: 36
     // 31 was tuned for centerIsland's own row (ActiveWindow/Workspaces/
     // Media) -- overridable now that TOOLS' row (METRICS-style icons,
     // originally a plain 24px-tall Block) needs to match METRICS' own
