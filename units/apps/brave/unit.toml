@@ -1,0 +1,13 @@
+name     = "brave"
+layer    = "apps"
+summary  = "Brave browser"
+default  = false
+
+[packages]
+dnf = ["brave-browser"]
+
+[[hooks]]
+name   = "brave-repo"
+run_as = "root"
+does   = "add Brave's rpm repo (dnf config-manager addrepo)"
+from   = "config/brave/install.sh"

@@ -1,0 +1,12 @@
+name     = "hardware"
+layer    = "core"
+summary  = "Drivers and tools for the detected CPU/GPU, RPM Fusion codec swaps"
+requires = ["base"]
+
+# The package list is computed at run time from the CPU/GPU profile
+# (scripts/lib/hardware.sh), so it cannot be declared here.
+[[hooks]]
+name   = "install-hardware"
+run_as = "root"
+does   = "detect the profile, install its packages, enable RPM Fusion and apply codec swaps, print manual follow-ups"
+from   = "scripts/install-hardware.sh"

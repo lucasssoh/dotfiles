@@ -1,0 +1,35 @@
+# Which units take over each current module (config/*/install.sh) and phase.
+# Checked by scripts/check-units.py: every module on disk must appear here.
+
+[modules]
+fonts           = ["fonts"]
+bash            = ["config-shell"]
+ccpkg           = []
+ccnote          = ["ccnote"]
+ccslide         = ["ccslide"]
+tmux            = ["config-shell"]
+wezterm         = ["wezterm", "config-wezterm"]
+nvim            = ["neovim", "config-nvim"]
+pipewire        = ["audio"]
+wireplumber     = ["audio"]
+mangohud        = ["mangohud", "config-extras"]
+nemo            = ["nemo", "theme", "hyprland"]
+fuzzel          = ["fuzzel"]
+fastfetch       = ["fastfetch", "config-extras"]
+firefox         = ["firefox"]
+brave           = ["brave", "config-extras"]
+mpv             = ["mpv", "config-extras"]
+liseuse         = ["liseuse"]
+"boot/plymouth" = ["plymouth"]
+hyprland        = ["hyprland", "bar", "theme", "fonts", "roue", "prisme", "balise"]
+"boot/login"    = ["greeter"]
+kde             = []
+
+[phases]
+system   = ["base"]
+hardware = ["hardware"]
+
+# Modules with no unit, and why.
+[dropped]
+ccpkg = "cc-pkg-mng itself becomes an RPM"
+kde   = "not part of coucou-shell"

@@ -1,0 +1,25 @@
+name     = "config-nvim"
+layer    = "configs"
+summary  = "Lucas's Neovim: LSP, plugins, Markdown and PlantUML live previews"
+requires = ["neovim", "liseuse"]
+
+[packages]
+dnf = [
+  "libtexprintf-tools", "plantuml", "golang",
+  "python3-gobject", "python3-cairo", "gtk4", "librsvg2", "imv",
+  "python3-markdown", "python3-pymdown-extensions", "python3-pygments",
+  "nodejs", "nodejs-npm", "pipx",
+]
+
+[links]
+"config/nvim/init.lua" = "~/.config/nvim/init.lua"
+"config/nvim/lua"      = "~/.config/nvim/lua"
+"config/nvim/ftplugin" = "~/.config/nvim/ftplugin"
+"config/nvim/colors"   = "~/.config/nvim/colors"
+"config/nvim/bin"      = "~/.config/nvim/bin"
+
+[[hooks]]
+name   = "tools"
+run_as = "user"
+does   = "pipx install pylatexenc; go install plantuml-lsp into ~/.local/bin; mathjax-full comes from the liseuse unit"
+from   = "config/nvim/install.sh"

@@ -1,0 +1,20 @@
+name     = "wezterm"
+layer    = "apps"
+summary  = "WezTerm terminal"
+default  = true
+
+[packages]
+dnf = ["wezterm"]
+copr = ["wezfurlong/wezterm-nightly"]
+
+[[questions]]
+id      = "variant"
+ask     = "WezTerm build"
+choices = ["stable", "smear"]
+default = "stable"
+
+[[hooks]]
+name   = "smear-build"
+run_as = "root"
+does   = "when variant = smear: build wezterm PR #7737 + smear/pane-handoff.patch, install to /usr/local/bin; remove it again for stable"
+from   = "config/wezterm/install.sh"

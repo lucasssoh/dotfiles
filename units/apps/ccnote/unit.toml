@@ -1,0 +1,11 @@
+name     = "ccnote"
+layer    = "apps"
+summary  = "ccnote: quick notes from the shell"
+default  = false
+
+[packages]
+dnf = []
+
+[links]
+"config/ccnote/ccnote.py"  = "~/.config/ccnote/ccnote.py"
+"config/ccnote/ccnote.zsh" = "~/.config/ccnote/ccnote.zsh"

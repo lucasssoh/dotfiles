@@ -1,0 +1,24 @@
+name     = "balise"
+layer    = "core"
+summary  = "Network and Bluetooth daemon behind the bar's Balise drawer"
+requires = ["hyprland"]
+
+# stable: the RPM from the COPR, same version as the release.
+# edge:   built locally from config/hyprland/balise-src with the build deps.
+[binaries]
+rpm    = "balise"
+source = "config/hyprland/balise-src"
+bins   = ["balise"]
+
+[packages]
+dnf   = [
+  "NetworkManager", "bluez", "bluez-tools", "network-manager-applet", "nm-connection-editor", "blueman",
+]
+build = ["rust", "cargo", "gtk4-devel", "gtk4-layer-shell-devel", "NetworkManager-libnm-devel", "bluez-libs-devel"]
+
+[links]
+"config/hyprland/balise" = "~/.config/balise"
+"config/hyprland/systemd/balise.service" = "~/.config/systemd/user/balise.service"
+
+[services]
+user = ["balise"]

@@ -1,0 +1,11 @@
+name     = "firefox"
+layer    = "apps"
+summary  = "Firefox browser"
+default  = true
+
+[packages]
+dnf = ["firefox"]
+
+# The one setting the shell shares with Firefox: HDR follows the bar's HDR switch.
+[files]
+"config/firefox/policies.json" = "/etc/firefox/policies/policies.json"  # review: M0 decision: keep only gfx.wayland.hdr, as a default

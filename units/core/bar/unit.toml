@@ -1,0 +1,18 @@
+name     = "bar"
+layer    = "core"
+summary  = "The Quickshell bar: drawers, notifications, Veille, calendar; screenshot and clipboard tools"
+requires = ["hyprland", "fonts", "audio", "balise", "fuzzel"]
+
+[packages]
+dnf = [
+  "quickshell", "qt6-qt5compat",
+  "khal", "upower", "playerctl", "pavucontrol", "pulseaudio-utils",
+  "wl-clipboard", "cliphist",
+  "grim", "slurp", "grimblast", "satty",
+  "v4l-utils",  # review: which part of the bar uses it?
+]
+copr = ["errornointernet/quickshell", "mineiro/satty"]
+
+[links]
+"config/hyprland/quickshell" = "~/.config/quickshell"
+"config/hyprland/khal"       = "~/.config/khal"

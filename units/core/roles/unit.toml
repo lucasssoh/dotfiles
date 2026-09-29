@@ -1,0 +1,8 @@
+name     = "roles"
+layer    = "core"
+summary  = "coucou-open: terminal, browser and file-manager roles behind Super+Enter, Super+B, Super+E"
+requires = ["hyprland"]
+
+# New in cc-pkg-mng 2 (milestone M4); nothing in the current modules does this yet.
+[packages]
+dnf = ["xdg-terminal-exec"]

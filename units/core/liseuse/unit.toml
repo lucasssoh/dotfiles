@@ -1,0 +1,28 @@
+name     = "liseuse"
+layer    = "core"
+summary  = "Reading library on Super+F: zathura, Markdown with maths and PlantUML, office conversion"
+requires = ["fuzzel"]
+
+[packages]
+dnf = [
+  "zathura", "zathura-pdf-mupdf", "zathura-cb", "zathura-djvu", "mupdf", "libnotify",
+  "python3-markdown", "python3-pymdown-extensions", "python3-pygments", "python3-weasyprint",
+  "plantuml", "nodejs", "nodejs-npm",
+]
+
+[links]
+"config/liseuse/zathurarc"    = "~/.config/zathura/zathurarc"
+"config/liseuse/sources.conf" = "~/.config/liseuse/sources.conf"
+"config/liseuse/liseuse"      = "~/.local/bin/liseuse"
+
+[[hooks]]
+name   = "mathjax"
+run_as = "user"
+does   = "npm ci in config/liseuse when node_modules/mathjax-full is missing"
+from   = "config/liseuse/install.sh"
+
+[[hooks]]
+name   = "library-and-mime"
+run_as = "user"
+does   = "create ~/Livres, set zathura as the handler of document MIME types, write liseuse-markdown.desktop"
+from   = "config/liseuse/install.sh"

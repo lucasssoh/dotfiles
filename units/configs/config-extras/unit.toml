@@ -1,0 +1,20 @@
+name     = "config-extras"
+layer    = "configs"
+summary  = "Lucas's configs for mpv, MangoHud, fastfetch and Brave; each file only when its app is installed"
+
+[links]
+"config/mpv/mpv.conf"             = "~/.config/mpv/mpv.conf"
+"config/mangohud/MangoHud.conf"   = "~/.config/MangoHud/MangoHud.conf"
+"config/fastfetch/config.jsonc"   = "~/.config/fastfetch/config.jsonc"
+"config/fastfetch/rayponce.jpg"   = "~/.config/fastfetch/rayponce.jpg"
+
+[links_if]
+mpv       = ["config/mpv/mpv.conf"]
+mangohud  = ["config/mangohud/MangoHud.conf"]
+fastfetch = ["config/fastfetch/config.jsonc", "config/fastfetch/rayponce.jpg"]
+
+[[hooks]]
+name   = "brave-flags"
+run_as = "user"
+does   = "when brave is installed: user .desktop override adding config/brave/brave-flags.conf to every Exec= line"
+from   = "config/brave/install.sh"

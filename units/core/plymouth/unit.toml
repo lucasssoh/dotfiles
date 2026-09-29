@@ -1,0 +1,27 @@
+name     = "plymouth"
+layer    = "core"
+summary  = "Boot splash (coucou / byebye)"
+optional = true
+ask      = "Install the boot splash?"
+
+[packages]
+dnf = [
+  "plymouth", "plymouth-scripts", "plymouth-graphics-libs",
+  "plymouth-plugin-script", "plymouth-plugin-label", "jetbrains-mono-fonts",
+]
+
+[files]
+"config/boot/plymouth/theme"                        = "/usr/share/plymouth/themes/coucou"
+"config/boot/plymouth/mono-fontconfig.conf"         = "/etc/fonts/conf.d/55-mono-font.conf"
+"config/boot/plymouth/kernel-install-check.sh"      = "/etc/kernel/install.d/99-coucou-splash.install"
+"config/boot/plymouth/status-feed.sh"               = "/usr/local/libexec/coucou-splash-status"
+"config/boot/plymouth/coucou-splash-status.service" = "/etc/systemd/system/coucou-splash-status.service"
+
+[services]
+system = ["coucou-splash-status"]
+
+[[hooks]]
+name   = "select-and-rebuild"
+run_as = "root"
+does   = "clean plymouthd.conf, select the theme, set UseSimpledrm=0, write the dracut conf, rebuild every initramfs when its stamp is stale, verify with lsinitrd"
+from   = "config/boot/plymouth/install.sh"

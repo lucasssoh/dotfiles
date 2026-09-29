@@ -1,0 +1,7 @@
+name     = "mpv"
+layer    = "apps"
+summary  = "mpv media player"
+default  = true
+
+[packages]
+dnf = ["mpv"]

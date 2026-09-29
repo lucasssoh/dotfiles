@@ -1,0 +1,24 @@
+name     = "audio"
+layer    = "core"
+summary  = "PipeWire equalizer chains used by the mixer, WirePlumber Bluetooth policy"
+requires = ["base"]
+
+[packages]
+dnf = ["pipewire", "wireplumber", "pipewire-utils"]
+
+[links]
+"config/pipewire/50-equalizer.conf"            = "~/.config/pipewire/pipewire.conf.d/50-equalizer.conf"
+"config/wireplumber/10-bluetooth-policy.conf"  = "~/.config/wireplumber/wireplumber.conf.d/10-bluetooth-policy.conf"  # review: dead key on wireplumber 0.5
+"config/wireplumber/51-bluetooth-auto.conf"    = "~/.config/wireplumber/wireplumber.conf.d/51-bluetooth-auto.conf"
+"config/wireplumber/52-bluetooth-profile.conf" = "~/.config/wireplumber/wireplumber.conf.d/52-bluetooth-profile.conf"
+"config/wireplumber/systemd/bt-audio-switch.sh"      = "~/.config/wireplumber/scripts/bt-audio-switch.sh"
+"config/wireplumber/systemd/bt-audio-switch.service" = "~/.config/systemd/user/bt-audio-switch.service"
+
+[services]
+user = ["bt-audio-switch"]
+
+[[hooks]]
+name   = "restart-audio"
+run_as = "user"
+does   = "restart pipewire, pipewire-pulse and wireplumber when their config changed"
+from   = "config/pipewire/install.sh, config/wireplumber/install.sh"

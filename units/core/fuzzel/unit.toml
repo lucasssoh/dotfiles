@@ -1,0 +1,9 @@
+name     = "fuzzel"
+layer    = "core"
+summary  = "Launcher (Super+Space), clipboard picker (Super+V), picker behind Liseuse and the agenda"
+
+[packages]
+dnf = ["fuzzel"]
+
+[links]
+"config/fuzzel/fuzzel.ini" = "~/.config/fuzzel/fuzzel.ini"

@@ -1,0 +1,8 @@
+name     = "config-wezterm"
+layer    = "configs"
+summary  = "Lucas's WezTerm setup"
+requires = ["wezterm"]
+
+[links]
+"config/wezterm/wezterm.lua" = "~/.config/wezterm/wezterm.lua"
+# review: also linked to ~/.wezterm.lua today, which WezTerm reads first

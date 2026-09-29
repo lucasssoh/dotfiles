@@ -1,0 +1,19 @@
+name     = "roue"
+layer    = "core"
+summary  = "Radial selection wheel: power menu, power profile, display layout, actions"
+requires = ["hyprland"]
+
+# stable: the RPM from the COPR, same version as the release.
+# edge:   built locally from config/hyprland/roue-src with the build deps.
+[binaries]
+rpm    = "roue"
+source = "config/hyprland/roue-src"
+bins   = ["roue"]
+
+[packages]
+dnf   = [
+]
+build = ["rust", "cargo", "gtk4-devel", "gtk4-layer-shell-devel"]
+
+[links]
+"config/hyprland/roue" = "~/.config/roue"

@@ -1,0 +1,19 @@
+name     = "config-shell"
+layer    = "configs"
+summary  = "Lucas's shell: zsh and bash, prompt, aliases, zoxide, fzf, ripgrep, fd, tmux"
+
+[packages]
+dnf = ["zsh", "zoxide", "fzf", "ripgrep", "fd-find", "make", "gcc", "tmux", "wl-clipboard"]
+
+[links]
+"config/bash/.bashrc"       = "~/.bashrc"
+"config/bash/.bash_aliases" = "~/.bash_aliases"
+"config/bash/.zshrc"        = "~/.zshrc"
+"config/bash/prompt.zsh"    = "~/.config/bash/prompt.zsh"
+"config/tmux/.tmux.conf"    = "~/.tmux.conf"
+
+[[hooks]]
+name   = "zsh"
+run_as = "user"
+does   = "clone zsh-autosuggestions and zsh-syntax-highlighting into ~/.zsh, make zsh the login shell"
+from   = "config/bash/install.sh"

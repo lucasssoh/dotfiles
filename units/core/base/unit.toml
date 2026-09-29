@@ -1,0 +1,37 @@
+name     = "base"
+layer    = "core"
+summary  = "Base Fedora system: shell utilities, network, Bluetooth, audio stack, Mesa, input, storage, dbus, xdg, GTK/Qt"
+
+[packages]
+dnf = [
+  "bash", "coreutils", "util-linux", "findutils", "grep", "sed", "gawk", "less", "which", "file",
+  "iproute", "iputils", "dhcp-client",
+  "bluez",
+  "pipewire", "pipewire-pulseaudio", "pipewire-alsa",  # setup_fedora.sh asks for "pipewire-pulse", which does not exist
+  "wireplumber", "alsa-utils",
+  "mesa-dri-drivers", "mesa-vulkan-drivers", "vulkan-loader",
+  "libinput", "xkeyboard-config",
+  "udisks2", "ntfs-3g", "exfatprogs", "dosfstools",
+  "dbus", "dbus-broker", "polkit",
+  "xdg-utils", "xdg-user-dirs",
+  "gtk3", "gtk4", "qt5-qtbase", "qt6-qtbase",
+  "tar", "gzip", "unzip", "zip", "curl", "wget", "git", "rsync", "nano", "sudo",
+  "bluetuith",
+  "snapd",  # review: is snap part of coucou-shell, or a personal choice?
+]
+copr = ["lxdes/bluetuith"]  # review: Balise covers Bluetooth; still needed?
+
+[services]
+system = ["NetworkManager", "bluetooth", "dbus-broker", "snapd.socket"]
+
+[[hooks]]
+name   = "system-upgrade"
+run_as = "root"
+does   = "dnf upgrade before anything else (fresh machines only)"
+from   = "setup_fedora.sh"
+
+[[hooks]]
+name   = "snap-classic"
+run_as = "root"
+does   = "ln -s /var/lib/snapd/snap /snap"
+from   = "setup_fedora.sh"

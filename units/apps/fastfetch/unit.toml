@@ -1,0 +1,7 @@
+name     = "fastfetch"
+layer    = "apps"
+summary  = "fastfetch system summary"
+default  = false
+
+[packages]
+dnf = ["fastfetch", "chafa"]

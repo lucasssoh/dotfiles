@@ -1,0 +1,13 @@
+name     = "nemo"
+layer    = "apps"
+summary  = "Nemo file manager"
+default  = true
+
+[packages]
+dnf = ["nemo", "nemo-fileroller"]
+
+[[hooks]]
+name   = "file-manager"
+run_as = "user"
+does   = "Nemo as the inode/directory handler, org.freedesktop.FileManager1 D-Bus redirect, thumbnail limit 32 MiB, sidebar width"
+from   = "config/nemo/install.sh"

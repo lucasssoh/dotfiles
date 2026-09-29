@@ -1,0 +1,27 @@
+name     = "theme"
+layer    = "core"
+summary  = "GTK3 theme generated in the bar's palette, icons, cursors, Qt settings, light/dark setting"
+
+[packages]
+dnf = [
+  "papirus-icon-theme", "gtk-murrine-engine",  # gnome-themes-extra: not in Fedora 44, dropped
+  "adwaita-cursor-theme",
+  "librsvg2-tools", "xcursorgen", "qt5ct", "qt6ct",
+]
+
+[links]
+"config/hyprland/theme"        = "~/.config/theme"
+"config/nemo/gtk-3.0/settings.ini" = "~/.config/gtk-3.0/settings.ini"
+"config/nemo/gtk-3.0/gtk.css"      = "~/.config/gtk-3.0/gtk.css"
+
+[[hooks]]
+name   = "gtk-theme"
+run_as = "user"
+does   = "build ~/.local/share/themes/Adwaita-dark with config/nemo/theme/build-adwaita-dark.py; align gtk-theme with color-scheme in dconf; restart the GTK portal"
+from   = "config/nemo/install.sh"
+
+[[hooks]]
+name   = "comix-cursors"
+run_as = "user"
+does   = "build Comix Cursors from upstream SVGs when ~/.icons/ComixCursors-White is missing"
+from   = "config/hyprland/install.sh"

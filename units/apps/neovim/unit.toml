@@ -1,0 +1,7 @@
+name     = "neovim"
+layer    = "apps"
+summary  = "Neovim editor"
+default  = true
+
+[packages]
+dnf = ["neovim"]

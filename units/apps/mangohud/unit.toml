@@ -1,0 +1,7 @@
+name     = "mangohud"
+layer    = "apps"
+summary  = "MangoHud overlay and GOverlay"
+default  = false
+
+[packages]
+dnf = ["mangohud", "goverlay"]

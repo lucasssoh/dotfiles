@@ -1,0 +1,30 @@
+name     = "fonts"
+layer    = "core"
+summary  = "UI and icon fonts: MiSans, JetBrains Mono, Iosevka, Cascadia Code, GoogleSansCode, Phosphor, Lucide, MingCute"
+
+[packages]
+dnf = [
+  "google-noto-sans-fonts", "google-noto-emoji-fonts", "jetbrains-mono-fonts-all",
+  "fontawesome-6-free-fonts", "fontawesome-6-brands-fonts",
+]
+
+[links]
+"config/fonts/70-ui-font.conf" = "~/.config/fontconfig/conf.d/70-ui-font.conf"
+
+[[hooks]]
+name   = "download-fonts"
+run_as = "user"
+does   = "download into ~/.local/share/fonts when absent: JetBrainsMono, Iosevka, CascadiaCode Nerd Fonts, MiSans Latin; then fc-cache"
+from   = "config/fonts/install.sh"
+
+[[hooks]]
+name   = "download-icon-fonts"
+run_as = "user"
+does   = "download when absent: JetBrains Mono NF, GoogleSansCode NFM, Phosphor, Lucide, MingCute (pinned: the bar addresses glyphs by codepoint)"
+from   = "config/hyprland/install.sh"
+
+[[hooks]]
+name   = "ui-font"
+run_as = "user"
+does   = "set the UI font through gsettings (and kwriteconfig6 when present)"
+from   = "config/fonts/install.sh"

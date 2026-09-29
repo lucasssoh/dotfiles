@@ -1,0 +1,38 @@
+name     = "hyprland"
+layer    = "core"
+summary  = "Hyprland and its ecosystem, the Lua config, session scripts, host profiles, wallpapers"
+requires = ["base", "fonts", "theme"]
+
+[packages]
+dnf = [
+  "hyprland", "hyprlock", "hypridle", "hyprsunset", "hyprland-guiutils",
+  "xdg-desktop-portal-hyprland", "xdg-desktop-portal-gtk",
+  "dbus-x11", "dbus-daemon", "dbus-tools", "polkit", "xdg-user-dirs",
+  "awww", "wlopm", "brightnessctl", "power-profiles-daemon", "lm_sensors",
+  "jq", "bc", "socat", "curl", "git", "unzip", "inotify-tools", "libnotify",
+  "python3-numpy", "python3-pillow",
+]
+copr = ["lionheartp/Hyprland"]
+
+[links]
+"config/hyprland/hypr"    = "~/.config/hypr"
+"config/hyprland/scripts" = "~/.config/scripts"
+"config/hyprland/systemd/wallpaper-slideshow.service"         = "~/.config/systemd/user/wallpaper-slideshow.service"
+"config/hyprland/systemd/slideshow-fullscreen-guard.service"  = "~/.config/systemd/user/slideshow-fullscreen-guard.service"
+# review: config/nemo/install.sh links config/nemo/hyprland-portals.conf, which was never
+# committed -- the link it leaves in ~/.config/xdg-desktop-portal/ is dangling.
+
+[services]
+user = ["wallpaper-slideshow", "slideshow-fullscreen-guard"]
+
+[[hooks]]
+name   = "sensors-detect"
+run_as = "root"
+does   = "sensors-detect --auto"
+from   = "config/hyprland/install.sh"
+
+[[hooks]]
+name   = "wallpapers"
+run_as = "user"
+does   = "merge wallpapers/ (and wallpapers-private when present) into ~/Images/Wallpapers, register and apply the first one"
+from   = "config/hyprland/set_wallpapers.sh, config/hyprland/install.sh"

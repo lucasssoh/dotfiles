@@ -140,6 +140,7 @@ path_target() {
         scripts/*)                     printf 'meta:manager' ;;
         *.md|*.jpg|*.png|.gitignore|.gitattributes|LICENSE)
                                        printf 'none' ;;
+        units/*)                       printf 'none' ;;           # cc-pkg-mng 2 manifests, not applied yet
         *)                             printf 'unmapped' ;;
     esac
 }

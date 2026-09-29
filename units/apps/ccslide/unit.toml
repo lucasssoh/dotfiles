@@ -1,0 +1,17 @@
+name     = "ccslide"
+layer    = "apps"
+summary  = "ccslide: Markdown slides in the terminal (mdp)"
+default  = false
+
+[packages]
+dnf = []  # mdp is not packaged in Fedora: built from source by the hook below
+
+[links]
+"config/ccslide/ccslide.py"  = "~/.config/ccslide/ccslide.py"
+"config/ccslide/ccslide.zsh" = "~/.config/ccslide/ccslide.zsh"
+
+[[hooks]]
+name   = "mdp-from-source"
+run_as = "root"
+does   = "build mdp from source into /usr/local/bin when no package provides it"
+from   = "config/ccslide/install.sh"
