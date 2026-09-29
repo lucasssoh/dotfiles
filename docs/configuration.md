@@ -9,14 +9,12 @@ Everything the manager remembers lives in `${XDG_STATE_HOME:-~/.local/state}/dot
 | File | Contents |
 |---|---|
 | `state.v1` | `key<TAB>value`: per-module fingerprint, exit code, duration and timestamp; per-crate build key |
-| `links.ledger` | `module<TAB>source<TAB>destination`, written by `safe_link` as it runs. Read by `verify` |
-| `packages.ledger` | `module<TAB>package`, written by `pkg_ensure`. **Rewritten per module on each run**, not appended: it answers *what does this module depend on now*, so a package dropped from a module stops being demanded. Read by `verify`, which also skips any module no longer in the registry |
-| `deferred.ledger` | Root-owned steps skipped during the last run. Truncated at the start of each one |
+| `links.ledger` | `module<TAB>source<TAB>destination` for every link created. Read by `verify` and `prune` |
+| `packages.ledger` | `module<TAB>package`: what each module currently depends on. Read by `verify` |
+| `deferred.ledger` | Root-owned steps skipped during the last run |
 | `install-*.log`, `latest.log` | Full output of each run, one file per run |
 
-`state.v1` is plain text, sorted, and never sourced — it is data, not code.
-
-It also has more than one writer: a module runs as its own process and records its crate build keys from there, while the manager that launched it is holding an older copy. So a save **merges** — it re-reads the file and rewrites only the keys that process itself touched, removals included. Whoever saves last no longer wins the whole file, which is what used to silently drop the `crate.*` keys a module had just written.
+`state.v1` is plain, sorted text:
 
 ```
 schema	1
@@ -32,16 +30,17 @@ crate.roue.key	54c00228…|cargo 1.98.1 (797e8a9bc 2026-08-05)
 | Mark an already-configured machine as current | `cc-pkg-mng update --adopt` — records fingerprints without running anything |
 | Re-apply one module | `cc-pkg-mng update --force --only <name>` |
 
-The `schema` key is the reset lever: bumping `STATE_SCHEMA` in [`scripts/lib/state.sh`](../scripts/lib/state.sh) makes every machine do one full re-apply, which is the correct behaviour when the meaning of the stored values changes.
+Bumping `STATE_SCHEMA` in [`scripts/lib/state.sh`](../scripts/lib/state.sh) makes every machine do one full re-apply.
 
 ## Environment variables
 
 | Variable | Default | Effect |
 |---|---|---|
 | `STATE_DIR` | `~/.local/state/dotfiles` | Where state, ledgers and logs are written |
-| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Shared cargo target directory for the three crates |
+| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Shared cargo target directory for the Rust crates |
+| `HOST_PROFILE` | from the DMI product name | Force a machine profile — see [modules.md](modules.md#per-machine-profiles) |
 | `CCPKG_ALLOW_ROOT` | `1` | `0` defers every root-owned step instead of running it. `update` sets this itself |
-| `CCPKG_MODULE` | the module's path under `config/` | Which module the ledgers attribute an entry to. The path, not the basename, so a nested module (`boot/login`) records the same name whether it was run by `cc-pkg-mng` or by hand |
+| `CCPKG_MODULE` | the module's path under `config/` | Which module the ledgers attribute an entry to |
 
 ## The module registry
 
@@ -54,14 +53,14 @@ The `schema` key is the reset lever: bumping `STATE_SCHEMA` in [`scripts/lib/sta
 | `MODULE_AFTER` | Ordering constraints — `[liseuse]="fuzzel"`, or `"@last"` for the trailing block |
 | `MODULE_LAST_BLOCK` | How many entries form that trailing block |
 
-`registry_validate` runs on **every** invocation and checks four things:
+Every `cc-pkg-mng` command first checks that:
 
 1. every registered module has an `install.sh`;
 2. every `config/*/install.sh` on disk is registered somewhere;
 3. no duplicates in `MODULE_ORDER`;
 4. every `MODULE_AFTER` constraint holds.
 
-Any failure stops the command and names the module and the file to edit. Check 2 is the one that matters: a module added to the repo but to no list would otherwise be silently never run.
+Any failure stops the command and names the module and the file to edit.
 
 ### Adding a module
 
@@ -110,10 +109,10 @@ declare -A RUST_CRATES=(
 
 A crate is rebuilt when its content fingerprint changes, when the `cargo --version` string changes, or when one of its binaries is missing from `~/.local/bin`. `--force` bypasses the check.
 
-All three share one target directory (`CARGO_TARGET_ROOT`), outside the repo. Builds happen in place, so cargo's own incremental engine keeps its fingerprint database between runs.
+Binaries go to `~/.local/bin`; build output goes to `CARGO_TARGET_ROOT`, outside the repo.
 
 ```bash
-cc-pkg-mng build            # all three, skipping what is current
+cc-pkg-mng build            # all crates, skipping what is current
 cc-pkg-mng build roue       # one
 cc-pkg-mng build --force    # ignore the staleness check
 cc-pkg-mng clean --cargo    # drop the target directory
@@ -124,9 +123,9 @@ cc-pkg-mng clean --cargo    # drop the target directory
 One content fingerprint per `config/<module>/`, stored in `state.v1` and compared on the next run.
 
 - The file list comes from `git ls-files`, so **`.gitignore` decides what is excluded** — build output under `*-src/target/`, `__pycache__/` and the runtime JSON under `hypr/` never count.
-- **Contents are hashed, not modification times.** `touch` alone triggers nothing; `cp`, `git checkout` and `git stash` all rewrite mtimes and would produce false positives.
-- The file *list* is hashed alongside the contents, so a deletion or a rename moves the fingerprint even though no surviving file changed.
-- Untracked files that are not ignored do count, so a new file you have not committed still triggers a re-apply.
+- Contents are compared, not modification times: `touch` alone triggers nothing.
+- Deleting or renaming a file counts as a change.
+- Untracked files that are not ignored count too.
 
 ### Paths outside `config/`
 
@@ -135,7 +134,6 @@ One content fingerprint per `config/<module>/`, stored in `state.v1` and compare
 | `setup_fedora.sh` | the system phase |
 | `scripts/lib/hardware.sh`, `scripts/install-hardware.sh`, `scripts/hardware-detect.sh` | the hardware phase |
 | `wallpapers/` | the `hyprland` module |
-| `bin/`, `scripts/`, `install`, `install_all.sh` | nothing — these change how the *next* run behaves, and are read fresh each time |
+| `bin/`, `scripts/`, `install`, `install_all.sh` | nothing |
 | anything else | listed by `status` under **Unmapped paths** |
 
-The unmapped category is deliberate rather than a silent default: a new top-level directory cannot quietly fall outside the manager's world without showing up in `status`.

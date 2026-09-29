@@ -8,7 +8,7 @@ cd dotfiles
 ./install
 ```
 
-`./install` is for a bare clone, where nothing is on `PATH` yet. It translates its arguments and delegates to [`bin/cc-pkg-mng`](../bin/cc-pkg-mng). Once the `ccpkg` module has run, `cc-pkg-mng` is available directly and is what you use from then on — see [cc-pkg-mng.md](cc-pkg-mng.md).
+`./install` is for a bare clone. Once it has run, use `cc-pkg-mng` — see [cc-pkg-mng.md](cc-pkg-mng.md).
 
 | Command | What it installs | sudo |
 |---|---|---|
@@ -21,6 +21,7 @@ cd dotfiles
 | Option | |
 |---|---|
 | `--dry-run` | Print the ordered list of what would run, change nothing |
+| `--wezterm=stable\|smear` | Which wezterm to install — see [modules.md](modules.md#wezterm) |
 | `--detect` | Print the hardware detection and exit |
 | `--help` | Usage |
 
@@ -30,7 +31,7 @@ cd dotfiles
 
 **`system`** installs the base package set — network, bluetooth, the pipewire stack, Mesa, input, storage, dbus/polkit, xdg, the GTK/Qt libraries — enables the matching services, then runs the hardware phase.
 
-**`hardware`** detects the CPU and GPU and installs only what *this* machine needs. It is not hardcoded; see [hardware.md](hardware.md).
+**`hardware`** detects the CPU and GPU and installs only what this machine needs — see [hardware.md](hardware.md).
 
 **`user`** runs every module in registry order, symlinks the repo into `~/.config`, and builds the Rust binaries. Nothing here needs root on a machine whose packages are already present.
 
@@ -64,8 +65,4 @@ bash config/nvim/install.sh
 
 A module run this way may install packages and will ask for sudo if something is missing. The same module run through `cc-pkg-mng update` will not.
 
-## Bootstrapping notes
-
-- `./install` must keep working from a clone with nothing else present. That is the only reason the file still exists: all of its logic now lives in `bin/cc-pkg-mng`, which is not yet on `PATH` at that point.
-- `cc-pkg-mng` is **symlinked** into `~/.local/bin`, never copied, so a later `git pull` updates the command itself with nothing to rebuild.
-- `~/.local/bin` reaches `PATH` through [`config/bash/.bashrc`](../config/bash/.bashrc), installed by the `bash` module — which is why `ccpkg` is ordered right after it.
+`cc-pkg-mng` lives in `~/.local/bin`, which reaches `PATH` through [`config/bash/.bashrc`](../config/bash/.bashrc): open a new shell after the first install.

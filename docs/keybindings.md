@@ -2,7 +2,7 @@
 
 AZERTY layout. The source of truth is [`config/hyprland/hypr/keybinds.lua`](../config/hyprland/hypr/keybinds.lua) — the key symbols there (`ampersand`, `eacute`, …) are the characters the AZERTY number row produces, not physical keys 1–10.
 
-Holding `Super` brings up a cheatsheet in the bar; it disappears on release.
+Holding `Super` shows every binding as a keyboard in the bar; hold `Shift` as well for the `Shift` layer. It disappears on release.
 
 ## Launching
 
@@ -15,6 +15,7 @@ Holding `Super` brings up a cheatsheet in the bar; it disappears on release.
 | `Super + W` | Prisme — wallpaper picker |
 | `Super + F` | Liseuse — resume the book you were reading, or pick one (`F1` inside a book for its manual) |
 | `Super + V` | Clipboard history (cliphist through rofi) |
+| `Super + A` | Agenda — add or delete an event (khal, through fuzzel) |
 
 ## Screenshots
 
@@ -74,7 +75,7 @@ Press, aim while holding, release to confirm.
 
 ## Media and hardware keys
 
-All of these keep working on the lock screen.
+Mute, mic mute and the playback keys also work on the lock screen.
 
 | Key | Action |
 |---|---|
