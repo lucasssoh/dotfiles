@@ -64,12 +64,7 @@ hl.on("hyprland.start", function()
 
     -- Session services and daemons
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-    -- quickshell replaces waybar as the bar (see quickshell/bar/) --
-    -- config.jsonc/style.css stay in the repo as a fallback, kept but
-    -- not started:
-    --   hl.exec_cmd("waybar")
-    --   hl.exec_cmd("bash ~/.config/waybar/scripts/watch-reload.sh")
-    -- Notifications (history, DND, mpris controls) are native to
+    -- The bar (see quickshell/bar/). Notifications (history, DND, mpris controls) are native to
     -- quickshell now (see quickshell/bar/services/NotificationState.qml)
     -- -- no separate daemon to start here any more. Used to be swaync,
     -- which replaced dunst for the same reason quickshell replaced
@@ -350,7 +345,7 @@ hl.curve("zoom",   { type = "bezier", points = { {0.16, 1.0}, {0.3, 1.0} } })
 --   - `border` is the focus transition, and since inactive_border is
 --     fully transparent (see general:col above) that fade IS the entire
 --     focus cue. At 800 ms, focus visibly lagged the keystroke.
---   - `layers` covers every layer-shell surface: rofi, the quickshell
+--   - `layers` covers every layer-shell surface: fuzzel, the quickshell
 --     bar, the notification center. All of them were fading in over
 --     most of a second.
 -- Setting each leaf by hand also means this block no longer depends on
@@ -381,7 +376,7 @@ hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "smooth" })
 
 hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "snap", style = "slide" })
 
--- Layer surfaces: rofi, the bar, the notification center. These are
+-- Layer surfaces: fuzzel, the bar, the notification center. These are
 -- summoned on demand and dismissed immediately -- a long fade here reads
 -- as the launcher being slow to open, never as elegance.
 hl.animation({ leaf = "layers", enabled = true, speed = 2, bezier = "smooth" })

@@ -12,7 +12,7 @@
 # On a Core Ultra 135H (Meteor Lake) `power-saver` pins the platform
 # profile low, which is where the SoC's own power management does the
 # real work -- far more than any compositor setting can. The Roue power
-# wheel (waybar/scripts/performance.sh) still overrides this by hand
+# wheel (hypr/scripts/performance.sh) still overrides this by hand
 # whenever the user wants; this only moves the DEFAULT, and it does it on
 # transitions, so a manual choice survives until the cable is next
 # plugged or unplugged.

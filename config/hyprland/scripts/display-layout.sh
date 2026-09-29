@@ -2,10 +2,9 @@
 set -euo pipefail
 
 # =========================================================
-# display-layout.sh — UI (wheel + waybar module; rofi menu kept as a
-# fallback/reference) for display layout. Same pattern as
-# set_wallpaper.sh / hdr.sh: this UI only writes the JSON state, it's
-# scripts/workspace-manager.sh (the engine) that applies it.
+# display-layout.sh — UI (wheel + bar status) for display layout. This UI
+# only writes the JSON state; scripts/workspace-manager.sh (the engine)
+# applies it.
 #
 #   display-layout.sh roue-gen -> regenerates ~/.config/roue/wheels/display.toml
 #                                  (SUPER+O, see hypr/keybinds.lua) then
@@ -13,12 +12,11 @@ set -euo pipefail
 #   display-layout.sh apply M  -> applies mode M ("both"/"internal"/
 #                                  "external"), triggered by a sector of
 #                                  the wheel generated above
-#   display-layout.sh menu     -> old rofi menu (just the mode choice now)
 #   display-layout.sh swap     -> swaps internal/external in
 #                                  monitor-layout.json's grid -- the quick
 #                                  fix for "I physically swapped which
 #                                  side the external screen is on"
-#   display-layout.sh status   -> JSON for the waybar module
+#   display-layout.sh status   -> JSON for the bar's display button
 #
 # Role resolution (internal/external) duplicated here in a minimal,
 # read-only version, just to know which options to offer/display — the
@@ -40,8 +38,6 @@ set -euo pipefail
 
 STATE_FILE="$HOME/.config/hypr/display-layout.json"
 LAYOUT_FILE="$HOME/.config/hypr/monitor-layout.json"
-RASI="$HOME/.config/rofi/wallpaper-mode.rasi"
-WAYBAR_SIGNAL=4
 
 # Internal panel connector read from DRM rather than via `hyprctl
 # monitors`, which loses the panel as soon as it's offline. Reading from
@@ -142,8 +138,6 @@ resolve_main() {
     fi
 }
 
-refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
-
 # Applies a mode directly (triggered from a wheel sector, see
 # cmd_roue_gen) -- geometry lives entirely in monitor-layout.json now
 # (see this file's header), untouched here.
@@ -155,7 +149,6 @@ cmd_apply() {
     new_main="$(resolve_main "$new_mode" "$main")"
     write_state "$new_mode" "$new_main"
     bash ~/.config/hypr/scripts/workspace-manager.sh
-    refresh_bar
 }
 
 # Swaps internal <-> external in monitor-layout.json's grid -- the
@@ -190,7 +183,6 @@ with open(path, 'w') as f:
     f.write('\n')
 "
     bash ~/.config/hypr/scripts/workspace-manager.sh
-    refresh_bar
     notify-send "Displays" "Layout swapped" 2>/dev/null || true
 }
 
@@ -198,7 +190,7 @@ with open(path, 'w') as f:
 # wheel (see keybinds.lua) -- THIS wheel has no config fixed in the repo:
 # its sectors (which external screen, whether one is even plugged in)
 # depend on the hardware actually detected at that moment, so it's this
-# script -- the same detection logic as cmd_menu (resolve_roles) -- that
+# script -- the same detection logic as resolve_roles -- that
 # writes the TOML on every press, not a static file. Gitignored file (see
 # .gitignore): it's a runtime artifact, not versioned config, same status
 # as display-layout.json.
@@ -263,34 +255,6 @@ $active_external
 EOF
 }
 
-cmd_menu() {
-    resolve_roles
-    current_state
-
-    if [[ -z "$first_external" ]]; then
-        notify-send "Displays" "No external screen detected — only one screen active."
-        exit 0
-    fi
-
-    local choice new_mode
-    choice=$(printf "All\n%s\n%s" "$internal_label" "$external_label" | rofi -dmenu \
-        -theme "$RASI" -theme-str 'listview { columns: 3; }' \
-        -mesg "Displays" -name "display-picker" -no-show-icons -no-custom -lines 1)
-    [[ -z "$choice" ]] && exit 0
-    case "$choice" in
-        "All")             new_mode="both" ;;
-        "$internal_label") new_mode="internal" ;;
-        "$external_label") new_mode="external" ;;
-        *)                 exit 0 ;;
-    esac
-
-    local new_main
-    new_main="$(resolve_main "$new_mode" "$main")"
-    write_state "$new_mode" "$new_main"
-    bash ~/.config/hypr/scripts/workspace-manager.sh
-    refresh_bar
-}
-
 # Short human-readable rendering of monitor-layout.json's grid, e.g.
 # "external | internal" (horizontal) or "external / internal" (vertical)
 # -- just enough for the tooltip to hint at the current arrangement
@@ -331,10 +295,9 @@ cmd_status() {
 }
 
 case "${1:-status}" in
-    menu)     cmd_menu ;;
     status)   cmd_status ;;
     apply)    cmd_apply "$2" ;;
     swap)     cmd_swap ;;
     roue-gen) cmd_roue_gen ;;
-    *)        echo "usage: $0 {menu|status|apply MODE|swap|roue-gen}" >&2; exit 1 ;;
+    *)        echo "usage: $0 {status|apply MODE|swap|roue-gen}" >&2; exit 1 ;;
 esac

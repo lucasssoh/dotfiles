@@ -1,7 +1,0 @@
-
-@import "common"
-
-listview {
-    columns: 1;
-    lines: 2;
-}

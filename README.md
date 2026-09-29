@@ -41,8 +41,7 @@ cc-pkg-mng verify     # check that everything is still in place
 | **Liseuse** (`config/liseuse/`) | Reading library on `Super + F`: a picker over `~/Livres` and the folders in `sources.conf`, opening PDF, EPUB, comics, Markdown (with maths and PlantUML) in zathura. `liseuse convert` turns office documents into PDFs |
 | **cc-pkg-mng** (`bin/cc-pkg-mng`) | The repo's install/update manager: applies only the modules that changed, rebuilds only the Rust crates that need it, and verifies the result |
 | **Boot** (`config/boot/`) | Plymouth splash (`boot/plymouth`), and an opt-in greetd + tuigreet login with the console in JetBrains Mono (`boot/login`) |
-| **Waybar** (`config/hyprland/waybar/`) | Installed as a fallback, not started. Some of its scripts are still used by the bar |
-| Everything else in `config/` | bash/zsh, tmux, wezterm, nvim, pipewire, wireplumber, nemo, fuzzel, rofi (clipboard), fonts, mpv, mangohud, fastfetch, firefox, brave — plus KDE as an opt-in session. See [docs/modules.md](docs/modules.md) |
+| Everything else in `config/` | bash/zsh, tmux, wezterm, nvim, pipewire, wireplumber, nemo, fuzzel, fonts, mpv, mangohud, fastfetch, firefox, brave — plus KDE as an opt-in session. See [docs/modules.md](docs/modules.md) |
 
 ## Monitors & HDR
 

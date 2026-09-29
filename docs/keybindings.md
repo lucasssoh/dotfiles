@@ -14,7 +14,7 @@ Holding `Super` shows every binding as a keyboard in the bar; hold `Shift` as we
 | `Super + B` | Firefox |
 | `Super + W` | Prisme — wallpaper picker |
 | `Super + F` | Liseuse — resume the book you were reading, or pick one (`F1` inside a book for its manual) |
-| `Super + V` | Clipboard history (cliphist through rofi) |
+| `Super + V` | Clipboard history (cliphist through fuzzel) |
 | `Super + A` | Agenda — add or delete an event (khal, through fuzzel) |
 
 ## Screenshots

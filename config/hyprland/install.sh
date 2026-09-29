@@ -86,15 +86,13 @@ if [ "$DISTRO" = "fedora" ]; then
     # root and still wakes dnf -- on every single run, for nothing.
     pkg_installed hyprland || sudo_maybe dnf copr enable -y lionheartp/Hyprland ||
         warn "COPR lionheartp/Hyprland could not be enabled — hyprland may fail to install."
-    # Quickshell -- the actual bar (see quickshell/bar/), waybar/config.jsonc
-    # is no longer started but stays installed/in the repo as a fallback.
+    # Quickshell -- the bar (see quickshell/bar/).
     pkg_installed quickshell || sudo_maybe dnf copr enable -y errornointernet/quickshell ||
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
     # satty is NOT in any Fedora repo and never has been, so listing it in
     # PKGS below only ever got it skipped by --skip-unavailable -- silently,
     # module still exit=0. It backs Super+S / Super+SHIFT+S (hypr/keybinds.lua
-    # pipes grim into it) and waybar/scripts/screenshot-region.sh; without it
-    # the pipe breaks and a screenshot produces nothing.
+    # pipes grim into it); without it the pipe breaks and a screenshot produces nothing.
     pkg_installed satty || sudo_maybe dnf copr enable -y mineiro/satty ||
         warn "COPR mineiro/satty could not be enabled — Super+S screenshots will be broken."
 
@@ -110,20 +108,16 @@ if [ "$DISTRO" = "fedora" ]; then
         # Upstream renamed this from hyprland-qtutils.
         hyprland-guiutils
         # Bar / notifications / launcher
-        # quickshell is the active bar AND the active notification daemon
-        # (see quickshell/bar/services/NotificationState.qml) -- waybar
-        # stays installed/available as a fallback, not started. No
-        # separate notification daemon package needed any more (used to
-        # be SwayNotificationCenter, before that dunst).
-        # fuzzel is the actual app launcher (Super+Space, see
-        # hypr/keybinds.lua); rofi is kept for the cliphist picker (Super+V)
-        # and its .rasi themes. config/fuzzel/ has its own module for the
-        # config file -- listed here too so a standalone run of this script
-        # still yields a usable desktop.
-        quickshell waybar fuzzel rofi-wayland khal hyprsunset
+        # quickshell is the bar AND the notification daemon (see
+        # quickshell/bar/services/NotificationState.qml).
+        # fuzzel is the app launcher (Super+Space) and the clipboard picker
+        # (Super+V), see hypr/keybinds.lua. config/fuzzel/ has its own module
+        # for the config file -- listed here too so a standalone run of this
+        # script still yields a usable desktop.
+        quickshell fuzzel khal hyprsunset
         # Wallpaper daemon
         awww
-        # Backs `powerprofilesctl`, which waybar/scripts/performance.sh calls
+        # Backs `powerprofilesctl`, which hypr/scripts/performance.sh calls
         # for the Super+Shift+Delete power-profile wheel. Used to arrive only
         # as a side effect of the KDE module, so skipping KDE silently broke
         # that wheel.
@@ -152,7 +146,7 @@ if [ "$DISTRO" = "fedora" ]; then
         papirus-icon-theme gnome-themes-extra gtk-murrine-engine adwaita-cursor-theme
         # Comix Cursors build deps (see "Building Comix Cursors" section below)
         librsvg2-tools xcursorgen
-        # Fonts (Nerd Fonts for the bar/waybar icons)
+        # Fonts (Nerd Fonts for the bar icons)
         google-noto-sans-fonts google-noto-emoji-fonts jetbrains-mono-fonts-all
         # Font Awesome 6 (Free + Brands) -- quickshell/bar's Launchers.qml
         # (Steam/Discord logos) and Fonts.qml's iconSolid/iconBrand.
@@ -200,7 +194,7 @@ if [ "$DISTRO" = "fedora" ]; then
         #   four: every call site already tolerates its absence, so it only
         #   costs the toasts.
         dbus-tools pulseaudio-utils inotify-tools libnotify
-        # edid-decode, pour la detection de capacite HDR de waybar/scripts/
+        # edid-decode, pour la detection de capacite HDR de hypr/scripts/
         # hdr.sh. Le seul des cinq qui degrade proprement : chaque appel est
         # garde par `command -v` et son absence fait traiter l'ecran comme
         # capable plutot que de bloquer (voir le commentaire du script). Il
@@ -222,7 +216,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # Never listed before because the two machines this repo grew on both
         # had them pulled in by something else; a Fedora "Minimal Install" has
         # neither, and the failure left no trace at all until the bar-tint.log
-        # redirect in scripts/set_wallpaper.sh (see its comment).
+        # redirect in scripts/restore_wallpaper.sh (see its comment).
         python3-numpy python3-pillow
         # Qt theming
         qt5ct qt6ct
@@ -244,12 +238,9 @@ elif [ "$DISTRO" = "arch" ]; then
         # Hyprland ecosystem
         dbus hyprland hyprlock hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
         # Bar / notifications / launcher
-        # quickshell is the active bar AND the active notification daemon
-        # (see quickshell/bar/services/NotificationState.qml); waybar
-        # stays installed as a fallback, not started. No separate
-        # notification daemon package needed any more (used to be
-        # swaync, before that dunst).
-        quickshell waybar rofi-wayland khal hyprsunset
+        # quickshell is the bar AND the notification daemon (see
+        # quickshell/bar/services/NotificationState.qml).
+        quickshell khal hyprsunset
         # Wallpaper daemon
         awww
         # Network
@@ -294,12 +285,12 @@ elif [ "$DISTRO" = "arch" ]; then
 
 elif [ "$DISTRO" = "debian" ]; then
     warn "Debian/Ubuntu: hyprland, awww and hyprlock may need manual install."
-    warn "quickshell (the active bar AND notification daemon, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually. waybar is still installed below as a fallback, just not started."
+    warn "quickshell (the active bar AND notification daemon, see quickshell/bar/) is not packaged in apt — build from source (https://quickshell.org/docs/v0.3.0/guide/install-setup/) or install manually."
     warn "Balise build deps (rust/cargo, libgtk4-layer-shell-dev, libnm-dev, libbluetooth-dev) vary a lot across Debian/Ubuntu versions — install manually if the cargo build step below fails."
     warn "xcursorgen ships in the x11-apps meta-package on Debian/Ubuntu (pulls in xeyes/xclock etc. as a side effect) — install it standalone if you'd rather avoid that."
     PKGS=(
         dbus dbus-x11 hyprland
-        waybar rofi khal hyprsunset
+        khal hyprsunset
         pipewire pipewire-pulse wireplumber pavucontrol
         network-manager network-manager-gnome
         blueman
@@ -405,7 +396,7 @@ rust_build "$REPO_DIR/balise-src" balise \
 # (prisme-src/), built at install time, binary in ~/.local/bin. Config (CSS
 # theme) in config/hyprland/prisme/, symlinked further down like the other
 # directories. awww stays the application backend (unchanged); Prisme only
-# replaces the selection UI (previously rofi).
+# replaces the selection UI.
 #
 # `cargo build --release` also builds wallpaper-filter (src/bin/), the
 # native worker for the "Filtered" cache (smart crop/extend, replaces the
@@ -422,8 +413,7 @@ rust_build "$REPO_DIR/prisme-src" prisme wallpaper-filter \
 # ============================================================
 # Same logic as the Balise/Prisme blocks above: source vendored in this repo
 # (roue-src/), built at install time, single binary in ~/.local/bin/roue.
-# Replaces waybar/scripts/rofi-power.sh and rofi-performance.sh -- one
-# binary for all wheels, each defined by a TOML file in
+# One binary for all wheels, each defined by a TOML file in
 # config/hyprland/roue/wheels/ (symlinked further down like the other
 # directories), so more can be added later without recompiling.
 section "Building Roue (radial selection wheel)"
@@ -521,7 +511,7 @@ section "Checking Nerd Fonts"
 if fc-list | grep -qi "nerd"; then
     ok "Nerd Fonts already installed."
 else
-    warn "No Nerd Font detected — Waybar icons may not render correctly."
+    warn "No Nerd Font detected — bar icons may not render correctly."
     info "Downloading JetBrains Mono Nerd Font..."
     mkdir -p ~/.local/share/fonts
     FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
@@ -687,14 +677,14 @@ fi
 
 if [ "$RESET_MODE" = true ]; then
     warn "Reset mode enabled — removing old configs from $CONFIG"
-    rm -rf "$CONFIG"/{hypr,waybar,quickshell,rofi,balise,prisme,roue,hyprlock,scripts,khal}
+    rm -rf "$CONFIG"/{hypr,quickshell,balise,prisme,roue,scripts,khal}
     ok "Old configs removed"
 fi
 
 section "Linking configuration directories"
 
 # Config directories to fully symlink into ~/.config
-modules=("hypr" "waybar" "quickshell" "rofi" "balise" "prisme" "roue" "hyprlock" "scripts" "khal" "theme")
+modules=("hypr" "quickshell" "balise" "prisme" "roue" "scripts" "khal" "theme")
 
 for mod in "${modules[@]}"; do
     if [ -d "$REPO_DIR/$mod" ]; then
@@ -748,22 +738,16 @@ section "CPU temperature sensor"
 
 if command -v sensors &>/dev/null; then
     sudo_maybe sensors-detect --auto 2>/dev/null || true
-    info "Run this to identify your sensor:"
-    echo ""
-    echo "    bash ~/.config/waybar/scripts/detect-temp.sh"
-    echo ""
-    info "Then set 'hwmon-path' in ~/.config/waybar/config if needed."
 else
     warn "lm_sensors not found, skipping temperature detection."
 fi
 
 # ============================================================
-# WALLPAPER SETUP & ROFI INTEGRATION
+# WALLPAPER SETUP
 # ============================================================
 
 section "Wallpaper automation"
 
-WP_SCRIPT="$REPO_DIR/scripts/set_wallpaper.sh"
 RESTORE_SCRIPT="$REPO_DIR/scripts/restore_wallpaper.sh"
 STATE_FILE="$HOME/.cache/current_wallpaper"
 WALLPAPER_DIR="$HOME/Images/Wallpapers"
@@ -771,27 +755,21 @@ WALLPAPER_DIR="$HOME/Images/Wallpapers"
 # 1. Create wallpaper directory
 mkdir -p "$WALLPAPER_DIR"
 
-# 2. Make scripts executable in the repo
-chmod +x "$WP_SCRIPT" "$RESTORE_SCRIPT"
-
-# 3. Symlink to ~/.local/bin (must be in $PATH for the desktop entry below)
+# 2. Make the restore script executable and reachable from PATH
+chmod +x "$RESTORE_SCRIPT"
 mkdir -p "$HOME/.local/bin"
-ln -sfn "$WP_SCRIPT" "$HOME/.local/bin/set_wallpaper"
 ln -sfn "$RESTORE_SCRIPT" "$HOME/.local/bin/restore_wallpaper"
 
-# 4. Desktop entry using the absolute path, so it works from any launcher
-mkdir -p "$HOME/.local/share/applications"
-cat <<EOF > "$HOME/.local/share/applications/set_wallpaper.desktop"
-[Desktop Entry]
-Name=Set Wallpaper
-Exec=$HOME/.local/bin/set_wallpaper
-Icon=background
-Type=Application
-Categories=Settings;
-Terminal=false
-EOF
+# 3. The old Rofi picker (set_wallpaper.sh) is gone -- Prisme (Super+W)
+#    replaced it. Remove what its install left behind, only if it is ours.
+if [ -L "$HOME/.local/bin/set_wallpaper" ] && [[ "$(readlink "$HOME/.local/bin/set_wallpaper")" == "$REPO_DIR/"* ]]; then
+    rm -f "$HOME/.local/bin/set_wallpaper"
+fi
+if grep -qs '^Exec=.*/.local/bin/set_wallpaper$' "$HOME/.local/share/applications/set_wallpaper.desktop"; then
+    rm -f "$HOME/.local/share/applications/set_wallpaper.desktop"
+fi
 
-ok "Wallpaper scripts ready and added to App Launcher."
+ok "Wallpaper restore script ready."
 
 # Start awww daemon ONLY if in a Wayland session and not already running.
 # WAYLAND_DISPLAY is legitimately absent (not just empty) when this script
@@ -861,7 +839,7 @@ echo ""
 echo "  Key bindings:"
 echo "    Super + Enter     → WezTerm"
 echo "    Super + W         → Wallpapers"
-echo "    Super + Space     → App launcher (Rofi)"
+echo "    Super + Space     → App launcher (fuzzel)"
 echo "    Super + E         → Nemo"
 echo "    Super + B         → Firefox"
 echo "    Super + Esc       → Lock screen"

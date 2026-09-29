@@ -27,7 +27,7 @@ flock 200
 # and max refresh rate, resolved BY ROLE (never by connector name —
 # names can change between plugs, e.g. DP-2 becoming DP-9 mid-session).
 # Every external screen's HDR/SDR state is reapplied here from whatever the
-# user last picked via waybar/scripts/hdr.sh (persisted in hdr-state.json,
+# user last picked via hypr/scripts/hdr.sh (persisted in hdr-state.json,
 # see hdr-settings.sh) — never forced to SDR. HDR itself is still never
 # auto-*enabled* the first time a screen is seen (unknown screen -> SDR
 # default, same as before); this only stops an already-made choice from
@@ -341,7 +341,7 @@ monitor_pos() {
 # ";", one Lua chunk) -- not one hyprctl call per monitor like earlier
 # versions of this script. Each external's bitdepth/cm (SDR vs HDR) is
 # reapplied from hdr_last_choice() (hdr-settings.sh) here -- i.e. whatever
-# the user last picked via waybar/scripts/hdr.sh for THAT PHYSICAL SCREEN
+# the user last picked via hypr/scripts/hdr.sh for THAT PHYSICAL SCREEN
 # (keyed by description, survives connector renames), defaulting to SDR
 # only the first time a screen is ever seen. This used to hardcode SDR
 # unconditionally on every desktop/startup/reload/hotplug, silently

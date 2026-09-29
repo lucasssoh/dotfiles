@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # hdr-settings.sh — shared HDR/SDR tuning + per-screen persistence.
 #
-# Sourced by BOTH waybar/scripts/hdr.sh (the manual per-screen toggle) and
+# Sourced by BOTH hypr/scripts/hdr.sh (the manual per-screen toggle) and
 # scripts/workspace-manager.sh (which re-asserts every active monitor's
 # mode/position/scale on hyprland.start, config.reloaded, monitor.added and
 # monitor.removed). Without this file, workspace-manager used to hardcode

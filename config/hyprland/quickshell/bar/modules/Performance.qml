@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Services.UPower
 import "../theme"
 
-// Native port of waybar/scripts/performance.sh's *status* display.
+// Native port of hypr/scripts/performance.sh's *status* display.
 // Zero exec, zero poll: PowerProfiles.profile is DBus-signal-backed
 // (net.hadess.PowerProfiles / power-profiles-daemon), same service
 // powerprofilesctl talks to. The click action still shells out to
@@ -53,7 +53,7 @@ Item {
     // performance, one for balanced -- so that "more/less of the same
     // thing" read as a quantity rather than as a mode. Wind says moderate
     // airflow on its own terms and matches the roue wheel, which now uses
-    // wind.svg for the same profile (see waybar/scripts/performance.sh).
+    // wind.svg for the same profile (see hypr/scripts/performance.sh).
     //
     // Consequence worth knowing, given the width comment above: all three
     // states are now a SINGLE Phosphor character, and Phosphor is
@@ -88,6 +88,6 @@ Item {
         cursorShape: Qt.PointingHandCursor
         anchors.fill: parent
         onClicked: Quickshell.execDetached(["bash", "-c",
-            "$HOME/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"])
+            "$HOME/.config/hypr/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"])
     }
 }

@@ -301,7 +301,7 @@ _HW_PKGS_COMMON=(
     # single most common "fresh minimal Fedora" failure.
     alsa-sof-firmware
     # Backs `powerprofilesctl`, which the Roue power-profile wheel calls
-    # (waybar/scripts/performance.sh). Used to arrive only as a side
+    # (hypr/scripts/performance.sh). Used to arrive only as a side
     # effect of the KDE module.
     power-profiles-daemon
     # Diagnostics: `vainfo` is how you check the VAAPI driver above

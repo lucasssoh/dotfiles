@@ -114,7 +114,7 @@ The compositor, the bar and every desktop tool.
 |---|---|
 | Installs | ~61 packages, distro-dependent, plus three coprs on Fedora (`lionheartp/Hyprland`, `errornointernet/quickshell`, `mineiro/satty`) — each enabled only when its package is missing |
 | Builds | `balise`, `prisme` + `wallpaper-filter`, `roue` — see [Rust crates](configuration.md#rust-crates) |
-| Links | `hypr`, `waybar`, `quickshell`, `rofi`, `balise`, `prisme`, `roue`, `scripts`, `khal`, `theme` into `~/.config/` |
+| Links | `hypr`, `quickshell`, `balise`, `prisme`, `roue`, `scripts`, `khal`, `theme` into `~/.config/` |
 | Services | `systemd --user`: `balise`, `wallpaper-slideshow`, `slideshow-fullscreen-guard` |
 | Fonts | JetBrains Mono Nerd Font, GoogleSansCode Nerd Font Mono, Phosphor, Lucide and MingCute icons, when absent |
 | Cursor | Comix Cursors, built when `~/.icons/ComixCursors-White` is missing |
@@ -241,7 +241,7 @@ Thumbnails are generated for files up to 32 MiB.
 
 ### `fuzzel`
 
-Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`, and the picker behind Liseuse and the agenda.
+Installs `fuzzel`, links `~/.config/fuzzel/fuzzel.ini`. This is `Super + Space`, and the picker behind the clipboard history, Liseuse and the agenda.
 
 ### `fonts`
 

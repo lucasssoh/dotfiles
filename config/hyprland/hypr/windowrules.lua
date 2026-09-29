@@ -60,23 +60,6 @@ hl.window_rule({
 })
 
 -- ============================================================
--- ROFI (launcher & powermenu)
--- ============================================================
-hl.window_rule({
-    match = { class = "Rofi" },
-    -- Disables the animation for this class (instant render)
-    no_anim = true,
-    -- Forces floating (already handled globally, intentional redundancy)
-    float = true,
-    -- Avoids a blur recalculation on open
-    no_blur = true,
-    -- Centers the window immediately with no sliding effect
-    center = true,
-    -- Keeps focus so typing works without re-clicking
-    stay_focused = true,
-})
-
--- ============================================================
 -- NMTUI — WiFi (TUI in a floating terminal) centered
 -- ============================================================
 hl.window_rule({
@@ -440,7 +423,7 @@ hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xra
 -- LAYER FADE — awww wallpaper
 -- ============================================================
 -- The `layers` animation (hyprland.lua) has no explicit style, so every
--- layer slides in from its nearest edge -- right for rofi or the bar,
+-- layer slides in from its nearest edge -- right for fuzzel or the bar,
 -- wrong for a full-screen wallpaper, which should never look like it's
 -- moving. Only this layer is switched to a plain fade: at session start
 -- the wallpaper rises out of the black misc:background_color instead of

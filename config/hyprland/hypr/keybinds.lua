@@ -28,7 +28,7 @@ local mod = "SUPER"
 -- bindings firing at the end of every SUPER+... combo. So after
 -- SUPER+Space or SUPER+H the release never arrives and the sheet just
 -- sits there. Watching Hyprland's event stream instead only covers part
--- of it: fuzzel and rofi are layer surfaces and emit no window event at
+-- of it: fuzzel is a layer surface and emits no window event at
 -- all, and moving a window within its workspace emits nothing either.
 -- The binds themselves are the only signal that sees every case.
 --
@@ -81,7 +81,9 @@ bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"), { description = "Terminal" 
 bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"), { description = "Files" })
 bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"), { description = "Browser" })
 bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"), { description = "Launcher" })
-bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"), { description = "Clipboard" })
+-- Clipboard history: fuzzel shows the text column, returns the whole
+-- "id<TAB>text" line that cliphist decode expects.
+bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu --with-nth=2 --only-match --prompt='Clipboard  ' | cliphist decode | wl-copy"), { description = "Clipboard" })
 bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Region" })
 bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Capture" })
 -- Absolute path required: processes launched by Hyprland don't inherit
@@ -111,7 +113,7 @@ bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"), { descri
 -- profile is currently applied comes from power-profiles-daemon, so
 -- `performance.sh roue-gen` regenerates wheels/powerprofile.toml on every
 -- press, same principle as the display wheel below.
-bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"), { description = "Power profile" })
+bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/hypr/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"), { description = "Power profile" })
 bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 
 -- Display layout wheel -- same press/release gesture, config regenerated
@@ -120,8 +122,7 @@ bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofi
 -- in (external screen present or not, its brand via EDID...), so
 -- `display-layout.sh roue-gen` rewrites it on EVERY press right before
 -- `roue display` opens (see its doc and cmd_roue_gen in
--- scripts/display-layout.sh). Replaces the old rofi menu
--- (`display-layout.sh menu`, still available if needed).
+-- scripts/display-layout.sh).
 bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"), { description = "Display" })
 
 -- Actions wheel -- the Copilot key. This machine's firmware sends it as a

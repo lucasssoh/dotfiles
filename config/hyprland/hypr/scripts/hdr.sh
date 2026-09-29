@@ -2,15 +2,14 @@
 set -euo pipefail
 
 # =========================================================
-# hdr.sh — per-screen SDR/HDR toggle for Hyprland + Waybar
+# hdr.sh — per-screen SDR/HDR toggle for Hyprland
 #
-#   hdr.sh status   -> JSON for the waybar module (THIS bar's screen)
-#   hdr.sh toggle    -> toggles the screen under the cursor (bar that was clicked)
-#   hdr.sh menu      -> rofi menu (HDR-capable screens only)
+#   hdr.sh toggle          -> toggles the screen under the cursor (the bar
+#                             that was clicked), falling back to the focused one
+#   hdr.sh debug [monitor] -> what is configured and negotiated for HDR
 #
-# In "per-screen" mode, each Waybar instance displays and controls ITS
-# OWN screen (via WAYBAR_OUTPUT_NAME for display, and cursor position
-# for clicks — WAYBAR_OUTPUT_NAME isn't reliable in click handlers).
+# The bar reads the HDR state itself (services/HdrState.qml); this script
+# only switches it.
 # =========================================================
 
 # ---- Settings ------------------------------------------------
@@ -20,10 +19,6 @@ set -euo pipefail
 # exact same values to reapply whichever of HDR/SDR the user last picked
 # for a screen, instead of always resetting it to SDR on reload/hotplug.
 source "$HOME/.config/hypr/scripts/hdr-settings.sh"
-
-WAYBAR_SIGNAL=3         # must match "signal" in config.jsonc
-RASI="$HOME/.config/rofi/theme.rasi"   # menu theme (adjust if needed)
-ICON=""               # screen glyph (nf-md-monitor)
 
 CACHE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hdr-toggle"
 
@@ -105,8 +100,6 @@ apply() {
     hdr_save_choice "$desc" "$want"
 }
 
-refresh_bar() { pkill -RTMIN+"$WAYBAR_SIGNAL" waybar 2>/dev/null || true; }
-
 # Prints what's actually configured/negotiated for HDR, to compare against
 # what Windows does before tuning anything. The "ColorManagement min/max/cll/
 # fall" line (what actually gets sent to the panel per-frame) only appears in
@@ -145,22 +138,6 @@ cmd_debug() {
 
 # ---- Subcommands ------------------------------------------
 
-cmd_status() {
-    # THIS bar's screen; falls back to the focused one if run by hand
-    local m="${WAYBAR_OUTPUT_NAME:-$(focused)}"
-    if [[ -z "$m" ]]; then
-        printf '{"text":"%s","class":"hdr-na","tooltip":"No display"}\n' "$ICON"
-        return
-    fi
-    if ! hdr_capable "$m"; then
-        printf '{"text":"%s n/a","class":"hdr-na","tooltip":"%s does not support HDR"}\n' "$ICON" "$m"
-    elif is_hdr "$m"; then
-        printf '{"text":"%s hdr","class":"hdr-on","tooltip":"HDR active · %s\\nClick: switch to SDR · Right-click: pick a display"}\n' "$ICON" "$m"
-    else
-        printf '{"text":"%s sdr","class":"hdr-off","tooltip":"SDR · %s\\nClick: enable HDR · Right-click: pick a display"}\n' "$ICON" "$m"
-    fi
-}
-
 cmd_toggle() {
     # The screen under the cursor = the bar that was clicked; falls back to focused
     local m; m=$(monitor_at_cursor) || true
@@ -171,38 +148,11 @@ cmd_toggle() {
         exit 0
     fi
     if is_hdr "$m"; then apply "$m" sdr; else apply "$m" hdr; fi
-    refresh_bar
-}
-
-cmd_menu() {
-    local m rows=() state
-    while read -r m; do
-        [[ -z "$m" ]] && continue
-        hdr_capable "$m" || continue
-        if is_hdr "$m"; then state="●  HDR on"; else state="○  HDR off"; fi
-        rows+=("$m  $state")
-    done < <(hyprctl monitors -j | jq -r '.[].name')
-
-    if [[ ${#rows[@]} -eq 0 ]]; then
-        notify-send "HDR" "No HDR-capable display detected"
-        exit 0
-    fi
-
-    local choice target
-    choice=$(printf '%s\n' "${rows[@]}" \
-        | rofi -dmenu -theme "$RASI" -p "HDR" -no-custom -format s -i)
-    [[ -z "$choice" ]] && exit 0
-
-    target=${choice%%[[:space:]]*}
-    if is_hdr "$target"; then apply "$target" sdr; else apply "$target" hdr; fi
-    refresh_bar
 }
 
 # ---- Dispatch ------------------------------------------------
-case "${1:-status}" in
-    status) cmd_status ;;
+case "${1:-}" in
     toggle) cmd_toggle ;;
-    menu)   cmd_menu ;;
     debug)  cmd_debug "${2:-}" ;;
-    *)      echo "usage: $0 {status|toggle|menu|debug [monitor]}" >&2; exit 1 ;;
+    *)      echo "usage: $0 {toggle|debug [monitor]}" >&2; exit 1 ;;
 esac

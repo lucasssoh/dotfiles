@@ -61,7 +61,7 @@ Singleton {
 
     Process {
         id: toggleProc
-        command: ["bash", "-c", "$HOME/.config/waybar/scripts/hdr.sh toggle"]
+        command: ["bash", "-c", "$HOME/.config/hypr/scripts/hdr.sh toggle"]
         onExited: root.refresh()
     }
 }

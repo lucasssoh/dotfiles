@@ -43,7 +43,7 @@ action = "$HOME/.local/bin/roue power"
 [[segment]]
 icon = "zap.svg"
 label = "Profile"
-action = "$HOME/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"
+action = "$HOME/.config/hypr/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"
 
 [[segment]]
 icon = "monitor.svg"

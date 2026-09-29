@@ -75,15 +75,14 @@ none of it is needed once the change itself is the thing that runs us.
 Gone with it: the signal race (a poke arriving during a sample), the
 stale pidfile, and an always-resident process.
 
-The four callers, which is why this is one script and not logic inside
+The three callers, which is why this is one script and not logic inside
 any one of them:
   - scripts/wallpaper-slideshow.sh  (the frequent one, a bash loop)
   - scripts/restore_wallpaper.sh    (login -- also the startup case)
-  - scripts/set_wallpaper.sh        (the legacy rofi picker)
   - prisme-src/src/apply.rs         (Prisme)
 Prisme is not a privileged point here despite being the newest: its own
 header says it is "a replacement UI, not a new backend", and it shells
-out to `awww img` exactly like the three scripts do. Putting the maths in
+out to `awww img` exactly like the two scripts do. Putting the maths in
 Rust there would leave the other three needing a second implementation of
 it, which is the one outcome worth avoiding.
 
