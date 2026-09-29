@@ -46,7 +46,15 @@ Item {
 
     readonly property bool showSeconds: root.veille ? root.veille.config.showSeconds : true
     readonly property bool showDate: root.veille ? root.veille.config.showDate : false
-    readonly property real textWidth: Math.max(0, root.width - root.hPad * 2)
+    // The widest the clock/quote block may get, 0 = the drawer's own
+    // width (the only behaviour until the keybinds sheet). The sheet
+    // widens the island to fit its keyboard, and with both open the
+    // clock -- sized off this width -- would have grown to match; capped
+    // to what the island gives Veille alone, and centred in the rest.
+    property real maxContentWidth: 0
+    readonly property real textWidth: Math.max(0,
+        (root.maxContentWidth > 0 ? Math.min(root.width, root.maxContentWidth) : root.width) - root.hPad * 2)
+    readonly property real contentInset: root.hPad + Math.max(0, (root.width - root.textWidth - root.hPad * 2) / 2)
 
     // + the handle's own band: it sits ABOVE topGap, so the drawer grows
     // by exactly what the handle takes and the clock/quote block keeps
@@ -124,7 +132,7 @@ Item {
     Column {
         id: content
         anchors.left: parent.left
-        anchors.leftMargin: root.hPad
+        anchors.leftMargin: root.contentInset
         anchors.top: handle.bottom
         anchors.topMargin: root.topGap
         spacing: root.columnSpacing

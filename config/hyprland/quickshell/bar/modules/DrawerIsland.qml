@@ -507,6 +507,32 @@ Item {
         return total;
     }
 
+    // The widest `drawerWidth` any entry on screen asks for, 0 if none
+    // does. Opt-in per entry and only honoured on the widen-on-open path
+    // (centerIsland): the keybinds sheet draws a 15-unit keyboard that
+    // cannot fit the row's ~700 px, while Veille declares nothing and
+    // keeps opening exactly as before.
+    //
+    // "On screen" is `drawerOpen || height > 0`, not just drawerOpen: an
+    // entry closing still has height while it collapses, and the island
+    // narrowing under it then would reflow it mid-fade.
+    readonly property real entryWidthWanted: {
+        let w = 0;
+        for (let i = 0; i < root.drawerItems.length; i++) {
+            const e = root.drawerItems[i];
+            if (e.drawerWidth !== undefined && (e.drawerOpen || e.height > 0))
+                w = Math.max(w, e.drawerWidth);
+        }
+        return w;
+    }
+    // Eased rather than applied as a step: when the sheet opens under an
+    // island Veille already holds open, there is no widen phase left to
+    // carry it, so this is what makes the island grow instead of jump.
+    property real entryWidthFloor: root.entryWidthWanted
+    Behavior on entryWidthFloor {
+        NumberAnimation { duration: root.revealDuration; easing.type: Easing.InOutCubic }
+    }
+
     // 0 = fully closed (island tracks the row's own live width, ordinary
     // bar behavior), 1 = fully open (island pinned at the fixed
     // maxRowWidth floor) -- animated by openSequence/closeSequence
@@ -555,7 +581,7 @@ Item {
             return Math.max(root.fixedContentWidth, topRow.implicitWidth);
         // `widenOnOpen: false` collapses the open-time term to zero, so
         // the island is simply its row, open or closed.
-        const target = root.widenOnOpen ? root.maxRowWidth : topRow.implicitWidth;
+        const target = root.widenOnOpen ? Math.max(root.maxRowWidth, root.entryWidthFloor) : topRow.implicitWidth;
         const raw = topRow.implicitWidth
             + root.openProgress * Math.max(0, target - topRow.implicitWidth);
         return Math.round(raw / 2) * 2;

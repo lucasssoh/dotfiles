@@ -139,6 +139,13 @@ ShellRoot {
     property real keybindsLastReleaseMs: 0
     readonly property int keybindsReorderGuard: 250
 
+    // SUPER+SHIFT layer of the sheet: true while Shift is down under the
+    // held SUPER. Pushed by keybinds.lua's raw key watcher (see its
+    // "Shift layer" block) through `keybindsShift` below; cleared on
+    // every hide so a Shift released after SUPER cannot leave the next
+    // opening on the wrong layer.
+    property bool keybindsShift: false
+
     // The one place the sheet gets hidden, so the release bind and the
     // event fallback below can't drift apart. Stamping the release time
     // here too means a press still in flight behind either of them is
@@ -147,6 +154,7 @@ ShellRoot {
         keybindsHoldTimer.stop();
         shell.keybindsLastReleaseMs = Date.now();
         shell.keybindsVisible = false;
+        shell.keybindsShift = false;
     }
 
     // Hyprland events that mean "a shortcut just DID something", used to
@@ -368,6 +376,12 @@ ShellRoot {
         }
         function keybindsRelease(): void {
             shell.hideKeybinds();
+        }
+        // `qs -c bar ipc call bar keybindsShift true|false` -- keybinds.lua
+        // calls it when Shift goes down or up while SUPER is held for the
+        // sheet.
+        function keybindsShift(down: bool): void {
+            shell.keybindsShift = down;
         }
         // Called by the companion bind keybinds.lua attaches to every
         // SUPER+... combo (see its `bind` wrapper): the combo means the
@@ -1004,9 +1018,11 @@ ShellRoot {
                         id: veilleDrawer
                         veille: shell.veille
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
+                        maxContentWidth: centerIsland.maxRowWidth
                     },
                     Modules.KeybindsDrawerContent {
                         drawerOpen: shell.keybindsVisible
+                        shiftHeld: shell.keybindsShift
                     }
                 ]
 

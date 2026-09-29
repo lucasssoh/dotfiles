@@ -1,9 +1,14 @@
 -- ============================================================
--- keybinds.lua — Keyboard shortcuts (AZERTY layout)
+-- keybinds.lua — Keyboard shortcuts
 -- ============================================================
--- Loaded last by hyprland.lua. Key symbols (ampersand, eacute, ...)
--- correspond to the characters produced by the number row on AZERTY, not
--- to physical keys 1-10.
+-- Loaded last by hyprland.lua. Letters are bound by keysym (they follow
+-- the layout: SUPER+H is wherever H is), the workspace row by keycode
+-- (it stays the top row whatever that row prints -- see WORKSPACES).
+--
+-- Every bind that belongs on the keybinds sheet carries a `description`:
+-- that string is what the sheet prints on the key, and the list of them
+-- is exported at the bottom of this file. This file is the only place a
+-- shortcut or its label is written down.
 -- ============================================================
 
 local mod = "SUPER"
@@ -37,8 +42,27 @@ local mod = "SUPER"
 -- (they already manage this state), and mouse binds (drag/resize rely on
 -- their own press/release handling; not worth perturbing for this).
 local hl_bind = hl.bind
+
+-- The keybinds sheet's source: every bind given a `description` in its
+-- opts, as {mods = {...}, key = "H", description = "Focus left"}. Written
+-- out as JSON at the bottom of this file, where quickshell's
+-- KeybindsState.qml picks it up. Not read back from `hyprctl binds -j`:
+-- that reports a `code:NN` bind with an empty key and keycode 0 (0.56.2
+-- keeps a Lua bind's keycode in its multi-key list, which the JSON does
+-- not print), so the whole workspace row would vanish from the sheet.
+local cheatsheet = {}
+
 local function bind(key, action, opts)
     hl_bind(key, action, opts)
+
+    if opts ~= nil and opts.description ~= nil then
+        local parts = {}
+        for part in key:gmatch("[^+]+") do
+            parts[#parts + 1] = part:match("^%s*(.-)%s*$")
+        end
+        local sym = table.remove(parts)
+        cheatsheet[#cheatsheet + 1] = { mods = parts, key = sym, description = opts.description }
+    end
 
     local eligible = type(key) == "string"
         and key:sub(1, #mod) == mod
@@ -53,20 +77,20 @@ end
 -- ============================================================
 -- APPLICATIONS
 -- ============================================================
-bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"))
-bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"))
-bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"))
-bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"))
-bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"))
-bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"))
-bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"))
+bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"), { description = "Terminal" })
+bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"), { description = "Files" })
+bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"), { description = "Browser" })
+bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"), { description = "Launcher" })
+bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"), { description = "Clipboard" })
+bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Region" })
+bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Screenshot" })
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
-bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"))
+bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { description = "Wallpaper" })
 
 -- Agenda: add an event (or delete one) through fuzzel, stored in khal;
 -- the bar's calendar drawer shows it and rings its reminders.
-bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"))
+bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"), { description = "Agenda" })
 
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
@@ -78,7 +102,7 @@ bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"))
 -- guard, any brief press would trigger Lock (first sector) instead of
 -- just showing the wheel. Absolute path required, same reason as Prisme
 -- above (commit bbb8f61).
-bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
+bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"), { description = "Power" })
 
 -- Power profile wheel -- same press/release gesture as above. Before:
 -- no keyboard shortcut, only the click on the waybar module
@@ -87,7 +111,7 @@ bind(mod .. "+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue power"))
 -- profile is currently applied comes from power-profiles-daemon, so
 -- `performance.sh roue-gen` regenerates wheels/powerprofile.toml on every
 -- press, same principle as the display wheel below.
-bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"))
+bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("~/.config/waybar/scripts/performance.sh roue-gen && $HOME/.local/bin/roue powerprofile"), { description = "Power profile" })
 bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofile --commit"), { release = true })
 
 -- Display layout wheel -- same press/release gesture, config regenerated
@@ -98,7 +122,7 @@ bind(mod .. "+ SHIFT+ Delete", hl.dsp.exec_cmd("$HOME/.local/bin/roue powerprofi
 -- `roue display` opens (see its doc and cmd_roue_gen in
 -- scripts/display-layout.sh). Replaces the old rofi menu
 -- (`display-layout.sh menu`, still available if needed).
-bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"))
+bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh roue-gen && $HOME/.local/bin/roue display"), { description = "Display" })
 
 -- Actions wheel -- the Copilot key. This machine's firmware sends it as a
 -- fixed chord, not as a key of its own (libinput debug-events, Lenovo 83V6):
@@ -135,17 +159,17 @@ bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh rou
 -- short to have opened the cheatsheet via the long_press bind, and
 -- keybindsRelease is idempotent (disarm the timer, hide), so this costs one
 -- short-lived process and changes nothing on screen.
-bind(mod .. "+ SHIFT+ F23", hl.dsp.exec_cmd("$HOME/.local/bin/roue actions --toggle"))
+bind(mod .. "+ SHIFT+ F23", hl.dsp.exec_cmd("$HOME/.local/bin/roue actions --toggle"), { description = "Actions" })
 -- Zen/focus mode: was `pkill -SIGUSR1 waybar` (waybar's built-in
 -- "toggle all bars" signal). quickshell has no such signal, so this
 -- calls its own IPC handler instead (see quickshell/bar/shell.qml's
 -- `zenMode` property / toggleZen()).
-bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"))
-bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"))
+bind(mod .. "+ Z",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleZen"), { description = "Zen" })
+bind(mod .. "+ N",       hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-night-mode.sh"), { description = "Night" })
 -- Notification center: was `swaync-client -t -sw`. quickshell owns
 -- notifications natively now (see quickshell/bar/services/
 -- NotificationState.qml) -- same IPC pattern as toggleZen above.
-bind(mod .. "+ I",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleNotificationCenter"))
+bind(mod .. "+ I",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleNotificationCenter"), { description = "Alerts" })
 
 -- ============================================================
 -- WINDOWS
@@ -158,7 +182,7 @@ bind(mod .. "+ Q", function()
     if w ~= nil then
         hl.dispatch(hl.dsp.window.close({ window = "address:" .. w.address }))
     end
-end)
+end, { description = "Close" })
 
 -- SUPER+F was fullscreen and is now Liseuse (config/liseuse/), the
 -- reading library: one key to get back into the book you were in, or to
@@ -168,33 +192,33 @@ end)
 --
 -- Absolute path, same reason as Prisme and Roue above (commit bbb8f61):
 -- Hyprland-launched processes don't inherit ~/.local/bin in their PATH.
-bind(mod .. "+ F",           hl.dsp.exec_cmd("$HOME/.local/bin/liseuse"))
-bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 0 }))
-bind(mod .. "+ CTRL+ F",     hl.dsp.window.fullscreen({ mode = 1 }))
-bind(mod .. "+ P",           hl.dsp.window.pseudo())
+bind(mod .. "+ F",           hl.dsp.exec_cmd("$HOME/.local/bin/liseuse"), { description = "Liseuse" })
+bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 0 }), { description = "Fullscreen" })
+bind(mod .. "+ CTRL+ F",     hl.dsp.window.fullscreen({ mode = 1 }), { description = "Maximize" })
+bind(mod .. "+ P",           hl.dsp.window.pseudo(), { description = "Pseudo-tile" })
 -- Flips the active split's axis by hand (raw dwindle layoutmsg "togglesplit"
 -- -- there's no hl.dsp.window.toggle_split(), this is the passthrough for
 -- layout-specific messages). Needed now that smart_split is off and the axis
 -- is picked from aspect ratio + preserve_split (see hyprland.lua): this is
 -- the manual escape hatch for the rare case the ratio picks the wrong one.
-bind(mod .. "+ T",           hl.dsp.layout("togglesplit"))
-bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }))
+bind(mod .. "+ T",           hl.dsp.layout("togglesplit"), { description = "Toggle split" })
+bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }), { description = "Float" })
 
 -- Move focus between windows (hjkl)
-bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }))
-bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }))
-bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }))
-bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }))
+bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }), { description = "Focus left" })
+bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }), { description = "Focus right" })
+bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }), { description = "Focus up" })
+bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }), { description = "Focus down" })
 
 -- Move the active window in the given direction
-bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }))
-bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }))
-bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }))
-bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }))
+bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }), { description = "Move left" })
+bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }), { description = "Move right" })
+bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }), { description = "Move up" })
+bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }), { description = "Move down" })
 
 -- Resize submap: SUPER+R enters "resize", hjkl resizes in 5px steps,
 -- Escape/Enter exits it.
-bind(mod .. "+ R", hl.dsp.submap("resize"))
+bind(mod .. "+ R", hl.dsp.submap("resize"), { description = "Resize" })
 hl.define_submap("resize", function()
     bind("+ H",      hl.dsp.window.resize({ x = -5, y = 0,  relative = true }), { repeating = true })
     bind("+ L",      hl.dsp.window.resize({ x =  5, y = 0,  relative = true }), { repeating = true })
@@ -223,29 +247,25 @@ hl.define_submap("wake", function()
 end)
 
 -- ============================================================
--- WORKSPACES — number row in AZERTY layout
+-- WORKSPACES — the number row, by keycode
 -- ============================================================
--- AZERTY key -> workspace number (1-10) mapping table, since physical
--- keys 1-10 produce non-numeric symbols on AZERTY (&, é, ", ', etc.).
-local ws_keys = {
-    { key = "ampersand",  n = 1  },
-    { key = "eacute",     n = 2  },
-    { key = "quotedbl",   n = 3  },
-    { key = "apostrophe", n = 4  },
-    { key = "parenleft",  n = 5  },
-    { key = "minus",      n = 6  },
-    { key = "egrave",     n = 7  },
-    { key = "underscore", n = 8  },
-    { key = "ccedilla",   n = 9  },
-    { key = "agrave",     n = 10 },
-}
+-- Bound as `code:10`..`code:19` (xkb keycodes of the row's ten keys,
+-- AE01..AE10) rather than by what they print. They used to be keysyms --
+-- ampersand, eacute, quotedbl... -- which only exist unshifted on
+-- AZERTY: under QWERTY, SUPER+ampersand would have needed Shift+7, and
+-- SUPER+SHIFT+ampersand would have collided with it. By keycode, the
+-- row is the workspace row in every layout, and the sheet just prints
+-- whatever glyph the active layout puts on each key.
+for n = 1, 10 do
+    local key = "code:" .. (9 + n)
 
-for _, ws in ipairs(ws_keys) do
     -- SUPER+key: switches focus to workspace n
-    bind(mod .. "+ " .. ws.key, hl.dsp.focus({ workspace = tostring(ws.n) }))
+    bind(mod .. "+ " .. key, hl.dsp.focus({ workspace = tostring(n) }),
+         { description = "Workspace " .. n })
 
     -- SUPER+SHIFT+key: moves the active window to workspace n
-    bind(mod .. "+ SHIFT + " .. ws.key, hl.dsp.window.move({ workspace = tostring(ws.n) }))
+    bind(mod .. "+ SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(n) }),
+         { description = "Send to " .. n })
 end
 
 -- Mouse wheel: navigates between workspaces on the monitor under the
@@ -259,11 +279,11 @@ bind(mod .. "+ mouse_down", hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-works
 bind(mod .. "+ mouse_up",   hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-workspace.sh next"))
 
 -- Compacts occupied workspaces toward the start of their range, per monitor
-bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"))
+bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"), { description = "Compact" })
 
 -- Scratchpad (special "magic" workspace)
-bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"))
-bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }))
+bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"), { description = "Scratchpad" })
+bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }), { description = "To scratchpad" })
 
 -- Move/resize window with the mouse (buttons 8/9)
 bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
@@ -272,9 +292,9 @@ bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
 -- ============================================================
 -- SYSTEM & MEDIA
 -- ============================================================
-bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"))
-bind(mod .. "+ SHIFT+ M",   hl.dsp.exit())
-bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"))
+bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"), { description = "Lock" })
+bind(mod .. "+ SHIFT+ M",   hl.dsp.exit(), { description = "Exit Hyprland" })
+bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload" })
 
 -- Volume, mic and backlight: media keys, no modifier
 -- -l 1.0: hard-capped at 100%, never boosts past it -- the previous 1.5
@@ -328,23 +348,84 @@ bind("+ XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),        { locked = tr
 -- `non_consuming` on both so binding the bare Super key changes nothing
 -- about Super's normal job as the modifier prefix for everything else
 -- here -- the key events still reach the focused client as usual.
-bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"),
-        { long_press = true, non_consuming = true })
+--
+-- A function rather than a bare exec_cmd because it also ARMS the Shift
+-- watcher below: the sheet only needs to hear about Shift while it may
+-- be on screen.
+local sheet = { armed = false, shift = false }
 
--- The release is registered under BOTH modmasks, and that is not
--- redundant. A bind matches on the modifier state at the moment the
--- event fires, and for the modifier key itself that state differs
--- between its own two edges: SUPER is not yet applied when it goes
--- DOWN (modmask 0, what the long-press bind above matches), but is
--- still applied while it comes back UP -- so a release bind registered
--- at modmask 0 alone never matches, which is exactly the "it opens but
--- letting go doesn't close it" symptom. Which of the two Hyprland
--- actually delivers is a compositor-internal ordering detail, so both
--- are registered rather than betting on one; firing both is harmless,
--- keybindsRelease is idempotent (disarm the timer, hide).
-bind("+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
-        { release = true, non_consuming = true })
-bind(mod .. "+ Super_L", hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"),
-        { release = true, non_consuming = true })
+bind("+ Super_L", function()
+    sheet.armed = true
+    sheet.shift = false
+    hl.dispatch(hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsPress"))
+end, { long_press = true, non_consuming = true })
 
+-- No release BIND: letting SUPER go is caught by the raw key watcher
+-- below. There used to be two (under modmask 0 and SUPER, since the
+-- modifier's own state differs between its two edges), and they missed
+-- exactly the case the Shift layer created: a modifier's release bind is
+-- suppressed once another key went down during the hold, and Shift is a
+-- key -- so after flipping to the Shift layer, letting go left the sheet
+-- up. The raw event sees SUPER's release whatever was pressed meanwhile.
 
+-- Shift layer of the sheet: while SUPER is held for it, adding Shift
+-- flips every key to its SUPER+SHIFT action (H "Focus left" -> "Move
+-- left"), and letting Shift go flips it back. SUPER's own release closes
+-- the sheet from here too (see above for why not a release bind).
+--
+-- Not a pair of binds: SUPER+Shift_L press/release binds would each go
+-- through `bind` above and pick up a keybindsHide companion, closing
+-- the sheet the moment Shift went down -- and a modifier's release bind
+-- is exactly the kind Hyprland suppresses once another key was pressed.
+-- The raw key event sees every edge instead. Its callback gets the xkb
+-- keycode (libinput's + 8), a timestamp and the wl_keyboard state
+-- (1 down, 0 up) -- LuaEventHandler.cpp in 0.56.2.
+--
+-- Cost: one Lua call per key event, returning on the first comparison
+-- unless the sheet is armed, and a `qs ipc` spawn only when Shift
+-- actually changes state under a held SUPER, or SUPER comes up after a
+-- hold long enough to arm the sheet.
+local SUPER_L, SHIFT_L, SHIFT_R = 133, 50, 62
+
+hl.on("input.keyboard.key", function(code, _, state)
+    if not sheet.armed then return end
+    if code == SUPER_L and state == 0 then
+        sheet.armed = false
+        hl.dispatch(hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsRelease"))
+    elseif (code == SHIFT_L or code == SHIFT_R) and (state == 0 or state == 1) then
+        local down = state == 1
+        if down ~= sheet.shift then
+            sheet.shift = down
+            hl.dispatch(hl.dsp.exec_cmd("qs -c bar ipc call bar keybindsShift " .. tostring(down)))
+        end
+    end
+end)
+
+-- ============================================================
+-- SHEET EXPORT
+-- ============================================================
+-- Every described bind above, as JSON, rewritten on each config load --
+-- so a reload is all it takes for the sheet to follow an edit here.
+-- $XDG_RUNTIME_DIR because it is per-session state, not config; written
+-- to a temp file and renamed so the watcher never reads half a file.
+local function json_string(str)
+    return '"' .. (str:gsub('[%c"\\]', function(c) return string.format("\\u%04x", c:byte()) end)) .. '"'
+end
+
+do
+    local entries = {}
+    for _, e in ipairs(cheatsheet) do
+        local mods = {}
+        for _, m in ipairs(e.mods) do mods[#mods + 1] = json_string(m) end
+        entries[#entries + 1] = string.format('{"mods":[%s],"key":%s,"description":%s}',
+            table.concat(mods, ","), json_string(e.key), json_string(e.description))
+    end
+
+    local path = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/hypr-keybinds.json"
+    local file = io.open(path .. ".tmp", "w")
+    if file ~= nil then
+        file:write("[" .. table.concat(entries, ",") .. "]\n")
+        file:close()
+        os.rename(path .. ".tmp", path)
+    end
+end
