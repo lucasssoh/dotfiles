@@ -42,6 +42,20 @@ QtObject {
         return Qt.rgba(root.primary.r, root.primary.g, root.primary.b, alpha);
     }
 
+    // ---- cream --------------------------------------------------------
+    // A slightly warm off-white for the two drawers that hang under the
+    // central island at night, Veille and the keybinds sheet ("un léger
+    // crème du blanc"). Softer than the #f2ecd9 / #c9c4b3 Veille wore
+    // before the HyperOS pass, which read as yellow once set large
+    // ("beaucoup trop intense"): a hint of warmth, not a colour. Kept off
+    // every other drawer on purpose: it is the evening's ink, not a new
+    // accent.
+    readonly property color cream: "#efece5"
+    readonly property color cream2: "#bdb9b0"
+    function creamInk(alpha) {
+        return Qt.rgba(root.cream.r, root.cream.g, root.cream.b, alpha);
+    }
+
     // ---- the inversion ("on") -----------------------------------------
     readonly property color on: root.primary
     readonly property color onInk: root.onLight

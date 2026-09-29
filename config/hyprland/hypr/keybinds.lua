@@ -44,7 +44,7 @@ local mod = "SUPER"
 local hl_bind = hl.bind
 
 -- The keybinds sheet's source: every bind given a `description` in its
--- opts, as {mods = {...}, key = "H", description = "Focus left"}. Written
+-- opts, as {mods = {...}, key = "H", description = "Focus ←"}. Written
 -- out as JSON at the bottom of this file, where quickshell's
 -- KeybindsState.qml picks it up. Not read back from `hyprctl binds -j`:
 -- that reports a `code:NN` bind with an empty key and keycode 0 (0.56.2
@@ -83,7 +83,7 @@ bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"), { description = "Browser" }
 bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"), { description = "Launcher" })
 bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | rofi -dmenu -theme ~/.config/rofi/launcher.rasi | cliphist decode | wl-copy"), { description = "Clipboard" })
 bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Region" })
-bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Screenshot" })
+bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Capture" })
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
 bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { description = "Wallpaper" })
@@ -195,26 +195,26 @@ end, { description = "Close" })
 bind(mod .. "+ F",           hl.dsp.exec_cmd("$HOME/.local/bin/liseuse"), { description = "Liseuse" })
 bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 0 }), { description = "Fullscreen" })
 bind(mod .. "+ CTRL+ F",     hl.dsp.window.fullscreen({ mode = 1 }), { description = "Maximize" })
-bind(mod .. "+ P",           hl.dsp.window.pseudo(), { description = "Pseudo-tile" })
+bind(mod .. "+ P",           hl.dsp.window.pseudo(), { description = "Pseudo" })
 -- Flips the active split's axis by hand (raw dwindle layoutmsg "togglesplit"
 -- -- there's no hl.dsp.window.toggle_split(), this is the passthrough for
 -- layout-specific messages). Needed now that smart_split is off and the axis
 -- is picked from aspect ratio + preserve_split (see hyprland.lua): this is
 -- the manual escape hatch for the rare case the ratio picks the wrong one.
-bind(mod .. "+ T",           hl.dsp.layout("togglesplit"), { description = "Toggle split" })
+bind(mod .. "+ T",           hl.dsp.layout("togglesplit"), { description = "Split" })
 bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }), { description = "Float" })
 
 -- Move focus between windows (hjkl)
-bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }), { description = "Focus left" })
-bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }), { description = "Focus right" })
-bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }), { description = "Focus up" })
-bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }), { description = "Focus down" })
+bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }), { description = "Focus ←" })
+bind(mod .. "+ L",  hl.dsp.focus({ direction = "right" }), { description = "Focus →" })
+bind(mod .. "+ K",  hl.dsp.focus({ direction = "up" }), { description = "Focus ↑" })
+bind(mod .. "+ J",  hl.dsp.focus({ direction = "down" }), { description = "Focus ↓" })
 
 -- Move the active window in the given direction
-bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }), { description = "Move left" })
-bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }), { description = "Move right" })
-bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }), { description = "Move up" })
-bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }), { description = "Move down" })
+bind(mod .. "+ SHIFT+ H",  hl.dsp.window.move({ direction = "left" }), { description = "Move ←" })
+bind(mod .. "+ SHIFT+ L",  hl.dsp.window.move({ direction = "right" }), { description = "Move →" })
+bind(mod .. "+ SHIFT+ K",  hl.dsp.window.move({ direction = "up" }), { description = "Move ↑" })
+bind(mod .. "+ SHIFT+ J",  hl.dsp.window.move({ direction = "down" }), { description = "Move ↓" })
 
 -- Resize submap: SUPER+R enters "resize", hjkl resizes in 5px steps,
 -- Escape/Enter exits it.
@@ -261,11 +261,11 @@ for n = 1, 10 do
 
     -- SUPER+key: switches focus to workspace n
     bind(mod .. "+ " .. key, hl.dsp.focus({ workspace = tostring(n) }),
-         { description = "Workspace " .. n })
+         { description = "WS " .. n })
 
     -- SUPER+SHIFT+key: moves the active window to workspace n
     bind(mod .. "+ SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(n) }),
-         { description = "Send to " .. n })
+         { description = "→ WS " .. n })
 end
 
 -- Mouse wheel: navigates between workspaces on the monitor under the
@@ -282,8 +282,8 @@ bind(mod .. "+ mouse_up",   hl.dsp.exec_cmd("~/.config/hypr/scripts/scroll-works
 bind(mod .. "+ C", hl.dsp.exec_cmd("~/.config/hypr/scripts/compact-workspaces.sh"), { description = "Compact" })
 
 -- Scratchpad (special "magic" workspace)
-bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"), { description = "Scratchpad" })
-bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }), { description = "To scratchpad" })
+bind(mod .. "+ U",         hl.dsp.workspace.toggle_special("magic"), { description = "Scratch" })
+bind(mod .. "+ SHIFT+ U", hl.dsp.window.move({ workspace = "special:magic" }), { description = "→ Scratch" })
 
 -- Move/resize window with the mouse (buttons 8/9)
 bind(mod .. "+ mouse:272",  hl.dsp.window.drag(),   { mouse = true })
@@ -293,7 +293,7 @@ bind(mod .. "+ mouse:273",  hl.dsp.window.resize(), { mouse = true })
 -- SYSTEM & MEDIA
 -- ============================================================
 bind(mod .. "+ Escape",         hl.dsp.exec_cmd("hyprlock"), { description = "Lock" })
-bind(mod .. "+ SHIFT+ M",   hl.dsp.exit(), { description = "Exit Hyprland" })
+bind(mod .. "+ SHIFT+ M",   hl.dsp.exit(), { description = "Exit" })
 bind(mod .. "+ SHIFT+ R",   hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload" })
 
 -- Volume, mic and backlight: media keys, no modifier
@@ -369,7 +369,7 @@ end, { long_press = true, non_consuming = true })
 -- up. The raw event sees SUPER's release whatever was pressed meanwhile.
 
 -- Shift layer of the sheet: while SUPER is held for it, adding Shift
--- flips every key to its SUPER+SHIFT action (H "Focus left" -> "Move
+-- flips every key to its SUPER+SHIFT action (H "Focus ←" -> "Move
 -- left"), and letting Shift go flips it back. SUPER's own release closes
 -- the sheet from here too (see above for why not a release bind).
 --

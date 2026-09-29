@@ -38,7 +38,7 @@ Item {
     // ---- geometry ------------------------------------------------------
     // One key unit is `pitch` px, `gap` of it being the space between
     // caps; every row is 15 units wide (ISO). 70 is what fits
-    // "Focus right" on a single 1-unit cap at 10 px.
+    // the longest label on a single 1-unit cap at 10 px.
     readonly property int pitch: 70
     readonly property int gap: 5
     readonly property int fnHeight: 30
@@ -51,14 +51,15 @@ Item {
 
     // The width this entry asks the island for while it shows (see
     // DrawerIsland's `entryWidthFloor`). The island normally opens to its
-    // row's widest, ~700 px; the board needs its full 15 units.
+    // row's widest, 520 to 760 px; the board needs its full 15 units.
     readonly property int drawerWidth: root.boardWidth + root.hPad * 2
 
     implicitHeight: root.topGap + header.height + root.headGap + root.boardHeight + root.bottomGap
 
-    // [name, width in units] per row. RTRN is the ISO Enter's wide top
-    // half, RTRN2 its tall lower part (drawn from the row above down, and
-    // the one that carries the label).
+    // [name, width in units] per row. RTRN reserves the ISO Enter's wide
+    // top half in its row but is not drawn; RTRN2 is the Enter itself, one
+    // cap spanning both rows. A true L was drawn as two overlapping caps
+    // until the caps became outlines -- the overlap then showed as a seam.
     readonly property var rows: [
         [["ESC", 1], ["F1", 1], ["F2", 1], ["F3", 1], ["F4", 1], ["F5", 1], ["F6", 1], ["F7", 1],
          ["F8", 1], ["F9", 1], ["F10", 1], ["F11", 1], ["F12", 1], ["DELE", 2]],
@@ -91,9 +92,9 @@ Item {
             const h = r === 0 ? root.fnHeight - root.gap : root.pitch - root.gap;
             let x = 0;
             for (const [id, w] of root.rows[r]) {
+                if (id === "RTRN") { x += w; continue; }
                 const cap = { id: id, x: x * root.pitch, y: y, w: w * root.pitch - root.gap, h: h };
-                // The tall half of Enter starts in the row above so the
-                // two halves read as one L-shaped key.
+                // Enter starts in the row above and spans both.
                 if (id === "RTRN2") { cap.y = y - root.pitch; cap.h = h + root.pitch; }
                 out.push(cap);
                 x += w;
@@ -116,7 +117,7 @@ Item {
             id: layoutLabel
             anchors.left: parent.left
             text: KeybindsState.layoutName
-            color: DrawerTheme.secondary
+            color: DrawerTheme.cream2
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.DemiBold
@@ -169,15 +170,21 @@ Item {
                 width: modelData.w
                 height: modelData.h
                 radius: 10
-                color: cap.lit ? DrawerTheme.on : (cap.held ? DrawerTheme.cardRaised : DrawerTheme.card)
-                border.width: cap.held ? 1.5 : 0
-                border.color: DrawerTheme.primary
+                // A bound key is OUTLINED, not filled: 50-odd white caps
+                // made the sheet a white slab over the screen ("le blanc
+                // est un peu trop visible"). The contour still sorts bound
+                // from unbound at a glance; the held modifiers take the
+                // raised grey instead, so they read as pressed rather than
+                // as one more bound key.
+                color: cap.held ? DrawerTheme.cardRaised : DrawerTheme.card
+                border.width: cap.lit ? 1.5 : 0
+                border.color: DrawerTheme.creamInk(0.55)
                 opacity: cap.elsewhere ? 0.55 : 1
                 Behavior on color { ColorAnimation { duration: 150 } }
                 Behavior on opacity { NumberAnimation { duration: 150 } }
 
-                readonly property color ink: cap.lit ? DrawerTheme.onInk
-                    : (cap.held ? DrawerTheme.primary : DrawerTheme.faint)
+                // Cream like Veille's, the other drawer under the island.
+                readonly property color ink: (cap.lit || cap.held) ? DrawerTheme.cream : DrawerTheme.faint
 
                 // What the key prints: its name for the fixed keys, the
                 // layout's glyph otherwise -- letters upper-cased like a
@@ -195,10 +202,7 @@ Item {
                     return s === b.toUpperCase() ? "" : s;
                 }
 
-                // The Enter's top half is only a shape; its tall half
-                // carries glyph and label.
                 Row {
-                    visible: cap.keyId !== "RTRN"
                     anchors.left: parent.left
                     anchors.leftMargin: 7
                     anchors.top: cap.isFn ? undefined : parent.top
@@ -245,7 +249,7 @@ Item {
                 }
 
                 Text {
-                    visible: !cap.isFn && cap.lit && cap.keyId !== "RTRN"
+                    visible: !cap.isFn && cap.lit
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
