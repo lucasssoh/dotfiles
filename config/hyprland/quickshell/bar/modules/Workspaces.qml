@@ -52,8 +52,8 @@ Item {
 
             // The page-indicator layout (2026-09-29): no digits, like a
             // phone's home-screen dots. The active workspace is a long
-            // cream bar, an occupied one a short one, an empty one a dot --
-            // you read your place in the row, not a number. The digits and
+            // cream bar, every other one a dot, cream if occupied, grey if
+            // empty -- you read your place in the row, not a number. The digits and
             // the filled active pill before it were one more thing to read
             // on the island; a solid capsule had already been judged too
             // loud there ("quelque chose de moins contrasté").
@@ -85,7 +85,11 @@ Item {
                 Rectangle {
                     id: mark
                     anchors.verticalCenter: parent.verticalCenter
-                    width: pill.modelData.active ? 22 : (pill.occupied ? 9 : 5)
+                    // Two sizes only -- the active one's bar, everyone
+                    // else's dot. Occupied vs empty is already the colour
+                    // (cream / grey); a third, mid-length bar for occupied
+                    // said it twice.
+                    width: pill.modelData.active ? 22 : 5
                     height: 5
                     radius: 2.5
                     // The active workspace with nothing in it is the same
