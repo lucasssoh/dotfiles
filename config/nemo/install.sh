@@ -30,7 +30,7 @@ mkdir -p "$XDG_CONF_DIR"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Symlink portal priorities configuration
-ln -sf "$SCRIPT_DIR/hyprland-portals.conf" "$XDG_CONF_DIR/hyprland-portals.conf"
+safe_link "$SCRIPT_DIR/hyprland-portals.conf" "$XDG_CONF_DIR/hyprland-portals.conf"
 
 # 3. Clean up and force MIME types
 MIME_FILE="$HOME/.config/mimeapps.list"

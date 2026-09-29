@@ -19,8 +19,7 @@ copr = ["lionheartp/Hyprland"]
 "config/hyprland/scripts" = "~/.config/scripts"
 "config/hyprland/systemd/wallpaper-slideshow.service"         = "~/.config/systemd/user/wallpaper-slideshow.service"
 "config/hyprland/systemd/slideshow-fullscreen-guard.service"  = "~/.config/systemd/user/slideshow-fullscreen-guard.service"
-# review: config/nemo/install.sh links config/nemo/hyprland-portals.conf, which was never
-# committed -- the link it leaves in ~/.config/xdg-desktop-portal/ is dangling.
+"config/nemo/hyprland-portals.conf" = "~/.config/xdg-desktop-portal/hyprland-portals.conf"
 
 [services]
 user = ["wallpaper-slideshow", "slideshow-fullscreen-guard"]
