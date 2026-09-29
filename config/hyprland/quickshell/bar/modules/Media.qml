@@ -216,11 +216,11 @@ Item {
 
                 readonly property real minBar: 3
                 readonly property real maxBar: 14
-                // Exact match to the scrolling title's own color below
-                // (#237823/#ffffff), not just a similar accent pair --
-                // asked for, so the icon reads as part of the same text
-                // rather than its own separate color choice.
-                readonly property color barColor: root.playing ? Ink.play : "#ffffff"
+                // The island's cream, like the window title and the
+                // workspace marks beside it ("Net" layout, 2026-09-29) --
+                // it was the green #237823 while playing. Paused still
+                // reads through the whole pill's opacity dip above.
+                readonly property color barColor: DrawerTheme.cream2
 
                 Row {
                     id: waveRow

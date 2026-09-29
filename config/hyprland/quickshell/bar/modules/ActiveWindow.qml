@@ -11,12 +11,12 @@ import "../theme"
 // long-standing hyprctl clients -j field, but not independently
 // re-verified here.
 //
-// Style: app name sits in a rounded accent "chip" floating on the left
-// (like the workspace pill / HDR badge -- 18px tall inset in the 24px
-// block). Corner radius matches the active workspace pill exactly (6px)
-// -- rounded corners on an otherwise-rectangular chip, not a fully
-// rounded pill/stadium shape. The title continues immediately after it
-// on the block's own plain background, no gap, no border between them.
+// The "Net" layout (2026-09-29): where the window lives, in grey, then
+// what it is about, in cream -- "nvim  keybinds.lua",
+// "Discord  Amis", "12 / 293  Platon-sophiste". The raw title led with
+// noise more often than not ("— Mozilla Firefox", "~/code/dotfiles/..."),
+// and the app name in front of it said again what the title's tail
+// already said. See `parts` for the rules.
 
 Item {
     id: root
@@ -76,9 +76,21 @@ Item {
     readonly property var classDisplayNames: ({
         "brave-browser": "Brave",
         "firefox": "Firefox",
+        // Firefox's own Flatpak-style class since it went Wayland-native;
+        // unmatched, it fell back to its initialTitle, "Mozilla Firefox".
+        "org.mozilla.firefox": "Firefox",
+        "org.wezfurlong.wezterm": "wezterm",
+        // Nemo's initialTitle is the folder it opened on ("Home").
+        "nemo": "Files",
         "chromium": "Chromium",
         "google-chrome": "Chrome",
         "org.pwmt.zathura": "Liseuse",
+    })
+    // Title tails that name the app in the SYSTEM's language, which the
+    // bar does not speak (its text is English): Nemo ends its titles in
+    // " - Fichiers" under fr_FR. Matched like the app name, so they go.
+    readonly property var classTitleTails: ({
+        "nemo": ["fichiers", "files"],
     })
     readonly property string readerClass: "org.pwmt.zathura"
     readonly property string appName: {
@@ -90,58 +102,65 @@ Item {
     }
     readonly property string windowTitle: root.toplevel ? root.toplevel.title : ""
 
-    // What the title line actually shows.
+    // The two halves the row shows: `obj`, what the window is about, and
+    // `ctx`, the app it lives in (or, for a document, the page).
     //
-    // For everything but the reader it is the window title unchanged.
-    // For a document it is reordered, because the two halves are not
-    // equally useful: zathura titles its window "<file>.pdf [12/340]"
-    // (zathurarc sets window-title-basename and window-title-page), and
-    // the position is the half that changes while you read and the half
-    // you glance at. So it leads: "[12/340] Platon-sophiste".
-    //
-    // The extension goes too. The picker already says what format a
-    // document is with an icon, and ".pdf" on every single row of a
-    // reading session is noise -- especially since a Markdown document
-    // is ALSO a .pdf by the time zathura sees it (Liseuse renders it
-    // first), so the extension would be actively misleading there.
-    //
-    // This is parsed out of the title rather than asked of zathura over
-    // D-Bus, which it does expose: the title is already live in the
-    // toplevel object this module binds to, it updates on every page
-    // turn for free, and it needs no polling and no second source of
-    // truth. If zathura ever stops putting the page there, the regex
-    // simply stops matching and the full title shows -- which is the
-    // right failure.
-    readonly property string displayTitle: {
-        const t = root.windowTitle;
-        if (!t) return "";
-        const ipc = root.toplevel ? root.toplevel.lastIpcObject : null;
-        if (!ipc || ipc.class !== root.readerClass) return t;
-        const m = t.match(/^(.*?)\s*\[(\d+\/\d+)\]\s*$/);
-        if (!m) return t;
-        const name = m[1].replace(/\.[^.]*$/, "");
-        return "[" + m[2] + "]  " + name;
+    // Rules, first match wins, all plain string work on the live title
+    // (no polling, no second source -- it updates with the title):
+    //   - the reader (zathura behind Liseuse) titles itself
+    //     "<file>.pdf [12/340]": the name without its extension, then the
+    //     page, which is the half that changes while you read. The
+    //     extension goes because a Markdown document is ALSO a .pdf by the
+    //     time zathura sees it (Liseuse renders it first).
+    //   - nvim titles itself "<file> (<dir>) - NVIM": the file's basename,
+    //     then "nvim" -- the terminal hosting it says nothing useful.
+    //   - a title ending in " — <app>" / " - <app>" (Firefox, Discord,
+    //     most GTK apps) loses that tail: it is the app name again.
+    //   - a title that IS the app name shows once, with no context.
+    // Anything else shows as-is, with the app after it.
+    function basename(path) {
+        return path.replace(/\/+$/, "").split("/").pop();
+    }
+    readonly property var parts: {
+        if (!root.toplevel) return { obj: "", ctx: "" };
+        const ipc = root.toplevel.lastIpcObject || {};
+        const t = (root.windowTitle || "").trim();
+        const app = root.appName;
+
+        if (ipc.class === root.readerClass) {
+            const m = t.match(/^(.*?)\s*\[(\d+)\/(\d+)\]\s*$/);
+            if (m) return { obj: m[1].replace(/\.[^.]*$/, ""), ctx: m[2] + " / " + m[3] };
+        }
+
+        let m = t.match(/^(.+?)(?:\s+\(.*\))?\s+[-–—]\s+NVIM$/i);
+        if (m) return { obj: root.basename(m[1].replace(/^[+*]\s*/, "")), ctx: "nvim" };
+
+        const names = [app, ipc.initialTitle || ""].concat(root.classTitleTails[ipc.class] || [])
+            .filter(n => n !== "").map(n => n.toLowerCase());
+        for (const sep of [" — ", " – ", " - "]) {
+            const i = t.lastIndexOf(sep);
+            if (i <= 0) continue;
+            const tail = t.slice(i + sep.length).toLowerCase();
+            if (names.some(n => n === tail || n.endsWith(tail) || tail.endsWith(n)))
+                return { obj: t.slice(0, i), ctx: app };
+        }
+
+        if (t === "" || names.indexOf(t.toLowerCase()) !== -1) return { obj: app, ctx: "" };
+        return { obj: t, ctx: app };
     }
 
-    // 380 -> 258: matches Media.qml's own hard cap -- its `openWidth` is
-    // max(viewportWidth + 34 + 24, 84) with viewportWidth clamped to
-    // maxViewport (200), so 200 + 58 = 258 is the widest mpris' pill ever
-    // gets. Asked for: window and mpris (the two "outward growers" in
-    // shell.qml's ONE BAR layout) now cap out at the same width.
-    readonly property int maxWidth: 258
+    // 258 -> 420. 258 matched Media's widest back when it scrolled its
+    // title; it is only the 34px wave now, and the workspace marks went
+    // from ~200px of digits to ~130px of dots, so the room they freed
+    // goes to the title, which elided far too early ("pas ... trop tôt").
+    // At its widest the row is still well under the 840px Veille opens
+    // the island to.
+    readonly property int maxWidth: 420
 
-    // titleMeasure, not titleLabel.implicitWidth, drives this: titleLabel
-    // is anchored right to `parent.right` (root itself), and root's own
-    // `width` defaults to `implicitWidth` since nothing sets it
-    // explicitly -- reading the constrained/elided titleLabel back into
-    // implicitWidth closed a real loop (implicitWidth -> width ->
-    // titleLabel.width via the anchor -> elided layout recompute ->
-    // titleLabel.implicitWidth -> implicitWidth), harmless in practice
-    // but logged a "Binding loop detected" warning once at startup.
-    // titleMeasure is a free-standing, invisible, unconstrained Text (same
-    // technique Media.qml's own titleMeasure uses) -- its implicitWidth
-    // reflects the title's natural width only, never root's own width, so
-    // there's nothing left to feed back into.
+    // objMeasure/ctxMeasure, not the visible labels, drive the width: the
+    // labels are width-limited (and elided) by root's own width, so
+    // reading them back into implicitWidth would close a binding loop.
+    // These are free-standing, invisible, unconstrained Texts.
     // Placeholder text/width when there's no active window -- asked for:
     // leaving this at 0 while Media (mpris, the module symmetric to this
     // one across the fixed centerRow -- see shell.qml's ONE BAR) had
@@ -150,14 +169,14 @@ Item {
     // balanced when only one of the two is actually active.
     readonly property string placeholderText: "Super + Space"
 
-    // +30, not +26 any more -- tracks chip's own leftMargin bump below
-    // (4 -> 8): 8 (chip left) + 10 (chip->title gap) + 12 (title right
-    // pad) = 30.
+    // 8 (left) + 12 (right) around the text, + the 8 gap when there is a
+    // context half.
+    readonly property real ctxSpan: root.parts.ctx !== "" ? ctxMeasure.implicitWidth + 8 : 0
     implicitWidth: root.hasWindow
-        ? Math.min(Math.max(chip.width + titleMeasure.implicitWidth + 30, 120), maxWidth)
+        ? Math.min(Math.max(objMeasure.implicitWidth + root.ctxSpan + 20, 92), maxWidth)
         : Math.max(placeholderMeasure.implicitWidth + 24, 92)   // 90 -> 92, point 6: 4pt grid
     // Animated width change, asked for -- title length changes (focus
-    // switch, page/tab title update) now widen/narrow this chip smoothly
+    // switch, page/tab title update) now widen/narrow this module smoothly
     // instead of snapping, same duration/curve as Media.qml's own pill.
     // Merged into the left Block now (see shell.qml), so the block and
     // everything after it in that Row follows along for free through the
@@ -170,8 +189,16 @@ Item {
     clip: true
 
     Text {
-        id: titleMeasure
-        text: root.displayTitle
+        id: objMeasure
+        text: root.parts.obj
+        font.family: Fonts.ui
+        font.pixelSize: 14
+        font.weight: Font.Medium
+        visible: false
+    }
+    Text {
+        id: ctxMeasure
+        text: root.parts.ctx
         font.family: Fonts.ui
         font.pixelSize: 14
         visible: false
@@ -196,48 +223,37 @@ Item {
         font.pixelSize: 13
     }
 
-    // HyperOS pass: the app name is no longer a framed chip. The bold
-    // accent label in a glass rim read as macOS's bold app menu sitting
-    // next to the Apple logo; a plain Medium label in the secondary ink,
-    // followed by the title in the primary one, carries the same "app,
-    // then what it is showing" hierarchy through weight and tone alone.
-    // Still an Item named `chip` so the width maths above is unchanged.
-    Item {
-        id: chip
+    Row {
         visible: root.hasWindow
         anchors.left: parent.left
         anchors.leftMargin: 8
         anchors.verticalCenter: parent.verticalCenter
-        width: appLabel.implicitWidth
-        height: 18
+        spacing: 8
 
+        // Where first, in grey, then what, in cream -- the order the bar
+        // always had (app, then title); swapped for a day and swapped
+        // back ("je me suis un peu habitué à l'avant").
         Text {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            id: appLabel
-            anchors.centerIn: parent
-            text: root.appName
-            color: Ink.secondary
+            visible: root.parts.ctx !== ""
+            text: root.parts.ctx
+            color: DrawerTheme.muted
+            font.family: Fonts.ui
+            font.pixelSize: 14
+        }
+        Text {
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            // Takes whatever the context half leaves; elides, so the app
+            // or page before it stays readable however long the title runs.
+            width: Math.max(0, Math.min(objMeasure.implicitWidth, root.width - 20 - root.ctxSpan))
+            text: root.parts.obj
+            color: DrawerTheme.cream
             font.family: Fonts.ui
             font.pixelSize: 14
             font.weight: Font.Medium
+            elide: Text.ElideRight
         }
-    }
-
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        id: titleLabel
-        text: root.displayTitle
-        visible: root.hasWindow
-        color: Ink.primary
-        font.family: Fonts.ui
-        font.pixelSize: 14
-        anchors.left: chip.right
-        anchors.leftMargin: 10
-        anchors.right: parent.right
-        anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        elide: Text.ElideRight
     }
 }

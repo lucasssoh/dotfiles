@@ -27,15 +27,15 @@ Item {
     // space below instead of centered on the same baseline as everyone
     // else.
     // +8 right padding only (Row itself stays left-aligned at x:0) --
-    // without it the last workspace number sits flush against the
-    // block's own right edge.
+    // without it the last mark sits flush against the block's own right
+    // edge.
     implicitWidth: row.implicitWidth + 8
     implicitHeight: 24
 
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 2
+        spacing: 6
 
         Repeater {
             // "sorted by id" per Hyprland.workspaces' own docs, but that
@@ -50,109 +50,75 @@ Item {
                 .filter(w => w.monitor === root.monitor)
                 .sort((a, b) => a.id - b.id)
 
-            delegate: Rectangle {
+            // The page-indicator layout (2026-09-29): no digits, like a
+            // phone's home-screen dots. The active workspace is a long
+            // cream bar, an occupied one a short one, an empty one a dot --
+            // you read your place in the row, not a number. The digits and
+            // the filled active pill before it were one more thing to read
+            // on the island; a solid capsule had already been judged too
+            // loud there ("quelque chose de moins contrasté").
+            delegate: Item {
                 id: pill
                 required property var modelData
 
-                // Three distinct states, not two: active (current on this
-                // monitor), occupied (has windows but not focused right
-                // now), empty. The active fill (no border, see the
-                // no-border pass in shell.qml's header comment) + bold
-                // accent text marks the ONE that matters most -- active --
-                // and occupied stays a plain bold number, no decoration:
-                // two tiers of emphasis, not two things that both look
-                // "highlighted".
+                // Three states: active (current on THIS monitor -- `active`,
+                // not `focused`, which would leave a non-focused monitor's
+                // bar with nothing lit), occupied, empty -- and the active
+                // one drawn hollow when it holds no window.
                 //
-                // `toplevels` (this workspace's own live window list, kept
-                // in sync via wlr-foreign-toplevel-management -- a Wayland
-                // protocol event stream, entirely separate from Hyprland's
-                // own IPC socket) is the primary signal, not
-                // `lastIpcObject.windows`: that field is just whatever
-                // `hyprctl workspaces -j` last reported wholesale, and in
-                // practice it was observed to stay stuck at its
-                // Quickshell-startup value -- a window opened on workspace
-                // 2 well after the bar started kept showing 2 as empty,
-                // even right after an explicit Hyprland.refreshWorkspaces()
-                // call. `lastIpcObject.windows` is kept as a second,
-                // OR'd check rather than dropped outright -- cheap safety
-                // net in case toplevels ever comes up empty for some
-                // window type (e.g. one that doesn't map to a
-                // foreign-toplevel handle).
-                readonly property bool occupied: !modelData.active
-                    && (
-                        (modelData.toplevels && modelData.toplevels.values.length > 0)
-                        || (modelData.lastIpcObject && modelData.lastIpcObject.windows > 0)
-                    )
-                readonly property bool empty: !modelData.active && !pill.occupied
+                // `toplevels` (this workspace's live window list, from
+                // wlr-foreign-toplevel-management -- separate from
+                // Hyprland's IPC socket) is the primary signal, not
+                // `lastIpcObject.windows`, which was seen stuck at its
+                // Quickshell-startup value. The latter stays as an OR'd
+                // safety net for any window without a foreign-toplevel
+                // handle.
+                readonly property bool hasWindows:
+                    (modelData.toplevels && modelData.toplevels.values.length > 0)
+                    || (modelData.lastIpcObject && modelData.lastIpcObject.windows > 0)
+                readonly property bool occupied: !modelData.active && pill.hasWindows
 
-                // `active` = current workspace on ITS OWN monitor;
-                // `focused` = that AND the monitor is also the globally
-                // focused one. Using `focused` here would mean a bar on
-                // a non-focused monitor never highlights anything, even
-                // though one of its workspaces genuinely is the active
-                // one on that screen -- `active` is the per-monitor-
-                // correct one.
-                width: modelData.active ? 24 : 18
-                // Animated width change, asked for -- the pill visibly
-                // growing/shrinking on focus switch instead of snapping.
-                // Rare event (only on workspace change), so this is a
-                // one-off ~150ms burst, not a recurring cost.
-                Behavior on width {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                }
-                height: 18
+                width: mark.width
+                height: 24
                 anchors.verticalCenter: parent.verticalCenter
-                // The active workspace: a soft veil of the primary ink (18%)
-                // behind a semi-bold white digit. It was a solid white
-                // capsule with the digit cut out in black for a while (the
-                // HyperOS inversion), and read too loud on the black island
-                // -- asked for: "quelque chose de moins contrasté". Same veil
-                // language as the Balise capsule in the right-hand row.
-                radius: height / 2
-                color: modelData.active ? Qt.rgba(Ink.primary.r, Ink.primary.g, Ink.primary.b, 0.18) : "transparent"
 
-                Text {
-                    visible: !pill.empty
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    anchors.centerIn: parent
-                    text: modelData.id
-                    // active -> dark ink cut out of the capsule; occupied ->
-                    // plain bright text. Empty workspaces draw no digit at
-                    // all (the dot below): only the ones holding something
-                    // are worth reading.
-                    color: Ink.primary
-                    font.family: Fonts.ui
-                    font.pixelSize: 13
-                    font.weight: pill.modelData.active ? Font.DemiBold : Font.Normal
-                }
-
-                // Empty workspace: a 4px dot instead of a faint digit, the
-                // HyperOS page-indicator idiom. The pill keeps its full
-                // width, so the click target does not shrink with it.
                 Rectangle {
-                    visible: pill.empty
-                    anchors.centerIn: parent
-                    width: 4
-                    height: 4
-                    radius: 2
-                    color: Ink.faint
+                    id: mark
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: pill.modelData.active ? 22 : (pill.occupied ? 9 : 5)
+                    height: 5
+                    radius: 2.5
+                    // The active workspace with nothing in it is the same
+                    // long bar, hollow: you are here, and here is empty.
+                    readonly property bool hollow: pill.modelData.active && !pill.hasWindows
+                    color: mark.hollow ? "transparent"
+                        : (pill.modelData.active ? DrawerTheme.cream
+                        : (pill.occupied ? DrawerTheme.cream2 : Ink.faint))
+                    border.width: mark.hollow ? 1.2 : 0
+                    border.color: DrawerTheme.cream
+                    // The bar stretching into place on a workspace switch.
+                    // Rare (workspace changes only): a one-off burst, not a
+                    // recurring cost.
+                    Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: 180 } }
                 }
 
                 MouseArea {
                     cursorShape: Qt.PointingHandCursor
+                    // A 5px dot is too small to aim at: the hit area takes
+                    // half the gap on each side, so the row is clickable
+                    // edge to edge.
                     anchors.fill: parent
+                    anchors.leftMargin: -row.spacing / 2
+                    anchors.rightMargin: -row.spacing / 2
                     // Hyprland.dispatch() sends the raw request string
                     // over Quickshell's own internal Hyprland IPC path,
                     // which this Hyprland build's custom Lua config
                     // doesn't understand (see hdr.sh's "non-legacy
                     // parser" comments) -- so this bypasses it entirely
                     // via `hyprctl eval`, same as everything else in this
-                    // repo. First guess (hl.dispatch("workspace N")) was
-                    // wrong too -- the actual working call, straight from
-                    // scripts/compact-workspaces.sh:32 and
-                    // hypr/keybinds.lua:128, is hl.dsp.focus({workspace=
-                    // ...}) wrapped in hl.dispatch(...), not a bare string.
+                    // repo: hl.dsp.focus({workspace=...}) wrapped in
+                    // hl.dispatch(...), as in hypr/keybinds.lua.
                     onClicked: Quickshell.execDetached(["hyprctl", "eval",
                         "hl.dispatch(hl.dsp.focus({ workspace = \"" + pill.modelData.id + "\" }))"])
                 }
