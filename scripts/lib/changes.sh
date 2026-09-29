@@ -61,10 +61,14 @@ fp_path() {
         return 0
     fi
 
+    # `|| true`: a dangling symlink makes sha256sum fail on that one path,
+    # and xargs then exits 123 -- which, under the callers' errexit, used to
+    # kill `status` silently. The dangling link still counts through the
+    # file list above; the other files hash exactly as before.
     {
         printf '%s\n' "$list"
         printf '%s\n' "$list" | tr '\n' '\0' \
-            | ( cd "$root" && xargs -0 -r sha256sum 2>/dev/null )
+            | ( cd "$root" && xargs -0 -r sha256sum 2>/dev/null || true )
     } | sha256sum | cut -d' ' -f1
 }
 

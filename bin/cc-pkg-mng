@@ -363,6 +363,7 @@ _crate_state() {
 
 # --------------------------------------------------------------- update ----
 cmd_update() {
+    local args=("$@")
     local force=0 adopt=0 no_pull=0 system=0 strict=0 only=()
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -412,8 +413,36 @@ cmd_update() {
             git -C "$DOTFILES_ROOT" status --short | sed 's/^/  /'
             err "refusing to pull over them. Commit, stash, or re-run with --no-pull to apply local work only."
         fi
-        info "git pull (fast-forward only)…"
-        [ "$DRY_RUN" = 1 ] && dry "git merge --ff-only origin/$(git -C "$DOTFILES_ROOT" branch --show-current)"
+        local upstream before after
+        upstream="$(git -C "$DOTFILES_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+        if [ -z "$(git -C "$DOTFILES_ROOT" branch --show-current)" ]; then
+            # A release checkout (detached HEAD on a tag) follows nothing.
+            info "On $(git -C "$DOTFILES_ROOT" describe --tags --always), not on a branch — nothing to pull."
+        elif [ -z "$upstream" ]; then
+            info "No upstream branch configured — nothing to pull."
+        elif [ "$DRY_RUN" = 1 ]; then
+            dry "git fetch && git merge --ff-only $upstream"
+        else
+            info "git pull (fast-forward only)…"
+            before="$(git -C "$DOTFILES_ROOT" rev-parse HEAD)"
+            if ! git -C "$DOTFILES_ROOT" fetch --quiet; then
+                warn "fetch failed (offline?) — applying the local tree as it is."
+            elif ! git -C "$DOTFILES_ROOT" merge --ff-only --quiet "$upstream"; then
+                err "the local branch has diverged from $upstream — rebase or merge by hand, then re-run."
+            fi
+            after="$(git -C "$DOTFILES_ROOT" rev-parse HEAD)"
+            if [ "$before" != "$after" ]; then
+                ok "Pulled $(git -C "$DOTFILES_ROOT" rev-list --count "$before..$after") commit(s)."
+                # The pull may have changed this very script and its
+                # libraries, already loaded in this process: hand over to
+                # the new version for the rest of the run.
+                local global=()
+                [ "$QUIET" = 1 ] && global+=(-q)
+                [ -z "$RESET" ] && global+=(--no-color)
+                exec "$DOTFILES_ROOT/bin/cc-pkg-mng" ${global[@]+"${global[@]}"} update --no-pull ${args[@]+"${args[@]}"}
+            fi
+            ok "Already up to date with $upstream."
+        fi
     fi
 
     walk_modules "$force"
