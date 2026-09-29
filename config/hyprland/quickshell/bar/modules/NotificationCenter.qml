@@ -603,7 +603,7 @@ Item {
             anchors.margins: -6
             enabled: NotificationState.trackedNotifications.values.length > 0
             cursorShape: Qt.PointingHandCursor
-            onClicked: NotificationState.clearAll()
+            onClicked: NotificationState.clearAll(root.clearUnits())
         }
     }
 
@@ -656,16 +656,34 @@ Item {
             if (!byApp[app]) { byApp[app] = { app: app, at: it.at, notes: [] }; order.push(app); }
             byApp[app].notes.push(it.n);
         }
-        const today = { title: "Today", count: 0, groups: [] };
-        const earlier = { title: "Earlier", count: 0, groups: [] };
+        const today = { title: "Today", count: 0, groups: [], notes: [] };
+        const earlier = { title: "Earlier", count: 0, groups: [], notes: [] };
         for (const app of order) {
             const g = byApp[app];
             g.stamps = g.notes.map((n) => stamps[n.id] || 0);
             const sec = g.at >= midnight ? today : earlier;
             sec.groups.push(g);
             sec.count += g.notes.length;
+            sec.notes = sec.notes.concat(g.notes);
         }
         return [today, earlier].filter((sec) => sec.groups.length > 0);
+    }
+
+    // What "Clear all" takes away together, in screen order: a folded
+    // stack is one card on screen, so it goes as one; an unfolded one goes
+    // card by card. See NotificationState.clearAll().
+    function clearUnits() {
+        const units = [];
+        for (const sec of root.sections)
+            for (const g of sec.groups) {
+                if (g.notes.length > 1 && root.expanded[g.app]) g.notes.forEach((n) => units.push([n]));
+                else units.push(g.notes.slice());
+            }
+        return units;
+    }
+
+    function isLeaving(n) {
+        return NotificationState.leaving[n.id] === true;
     }
 
     Flickable {
@@ -688,59 +706,68 @@ Item {
         layer.enabled: true
         layer.effect: OpacityMask { maskSource: listMask }
 
+        // No `spacing` in these columns: each entry carries its own gap
+        // below it (Exit's `gap`), so a leaving entry closes its gap along
+        // with its height instead of leaving a spacing to snap shut.
         Column {
             id: sectionsColumn
             width: list.width
-            spacing: 18
 
             Repeater {
                 model: root.sections
-                delegate: Column {
+                delegate: Exit {
                     id: section
                     required property var modelData
                     width: sectionsColumn.width
-                    spacing: 10
-
-                    Item {
-                        width: parent.width
-                        height: sectionTitle.implicitHeight
-                        Text {
-                            id: sectionTitle
-                            renderType: Text.NativeRendering
-                            font.hintingPreference: Font.PreferNoHinting
-                            text: section.modelData.title.toUpperCase()
-                            color: DrawerTheme.secondary
-                            font.family: Fonts.ui
-                            font.pixelSize: 11
-                            font.weight: Font.Medium
-                            font.letterSpacing: 0.9
-                        }
-                        // Beside the title, not at the far right: that end
-                        // is "Clear all"'s, just above.
-                        Text {
-                            anchors.left: sectionTitle.right
-                            anchors.leftMargin: 6
-                            anchors.baseline: sectionTitle.baseline
-                            renderType: Text.NativeRendering
-                            font.hintingPreference: Font.PreferNoHinting
-                            text: section.modelData.count
-                            color: DrawerTheme.primary
-                            font.family: Fonts.ui
-                            font.pixelSize: 12
-                            font.weight: Font.Medium
-                            font.features: { "tnum": 1 }
-                        }
-                    }
+                    gap: 18
+                    slides: false
+                    // The title folds away with the section's last card.
+                    leaving: section.modelData.notes.every((n) => root.isLeaving(n))
+                    bodyHeight: sectionBody.height
 
                     Column {
+                        id: sectionBody
                         width: parent.width
-                        spacing: 14
+
+                        Item {
+                            width: parent.width
+                            height: sectionTitle.implicitHeight + 10
+                            Text {
+                                id: sectionTitle
+                                renderType: Text.NativeRendering
+                                font.hintingPreference: Font.PreferNoHinting
+                                text: section.modelData.title.toUpperCase()
+                                color: DrawerTheme.secondary
+                                font.family: Fonts.ui
+                                font.pixelSize: 11
+                                font.weight: Font.Medium
+                                font.letterSpacing: 0.9
+                            }
+                            // Beside the title, not at the far right: that end
+                            // is "Clear all"'s, just above.
+                            Text {
+                                anchors.left: sectionTitle.right
+                                anchors.leftMargin: 6
+                                anchors.baseline: sectionTitle.baseline
+                                renderType: Text.NativeRendering
+                                font.hintingPreference: Font.PreferNoHinting
+                                text: section.modelData.count
+                                color: DrawerTheme.primary
+                                font.family: Fonts.ui
+                                font.pixelSize: 12
+                                font.weight: Font.Medium
+                                font.features: { "tnum": 1 }
+                            }
+                        }
+
                         Repeater {
                             model: section.modelData.groups
                             delegate: AppStack {
                                 required property var modelData
-                                width: section.width
+                                required property int index
+                                width: sectionBody.width
                                 group: modelData
+                                gap: index < section.modelData.groups.length - 1 ? 14 : 0
                             }
                         }
                     }
@@ -748,8 +775,12 @@ Item {
             }
         }
 
+        // Positioned, not `anchors.centerIn: parent`: a Flickable's child
+        // lands in its contentItem, which is as tall as the (empty) list --
+        // centring on it put the text up against "Clear all".
         Text {
-            anchors.centerIn: parent
+            x: (list.width - width) / 2
+            y: (list.height - height) / 2
             visible: NotificationState.trackedNotifications.values.length === 0
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
@@ -770,10 +801,57 @@ Item {
         height: list.height
     }
 
+    // Something in the history that can leave it: while `leaving`, the
+    // body slides off to the right and fades (180ms, accelerating away --
+    // flicked off, not easing to a stop), then the entry's height, gap
+    // included, closes (160ms) so what is below moves up. The same exit
+    // the ListView's remove/removeDisplaced transitions gave the flat list.
+    // NotificationState holds the real dismissal until both are done.
+    //
+    // `slides: false` skips the slide and only fades and closes -- for a
+    // section title or an unfolded stack's header, whose cards already
+    // slide out on their own.
+    component Exit: Item {
+        id: exit
+        property bool leaving: false
+        property bool slides: true
+        property real bodyHeight: 0
+        property real gap: 0
+        default property alias content: body.data
+
+        property bool closed: false
+        // Rebuilt while already leaving (another notification arrived
+        // mid-exit): start out closed rather than play the exit again.
+        Component.onCompleted: if (exit.leaving) exit.closed = true
+        onLeavingChanged: {
+            if (exit.leaving) closeTimer.restart();
+            else { closeTimer.stop(); exit.closed = false; }
+        }
+        Timer { id: closeTimer; interval: 180; onTriggered: exit.closed = true }
+
+        height: exit.closed ? 0 : exit.bodyHeight + exit.gap
+        Behavior on height {
+            enabled: exit.leaving
+            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+        }
+
+        Item {
+            id: body
+            width: parent.width
+            height: exit.bodyHeight
+            opacity: exit.leaving ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: 180 } }
+            transform: Translate {
+                x: exit.leaving && exit.slides ? exit.width : 0
+                Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.InCubic } }
+            }
+        }
+    }
+
     // One app's notifications. Collapsed: the newest card, the stack's size
     // on its meta line, and ghost edges for what is under it. Unfolded: a
     // small header (app, "Show less") over every card.
-    component AppStack: Item {
+    component AppStack: Exit {
         id: stack
         property var group
 
@@ -781,7 +859,13 @@ Item {
         readonly property bool open: stack.size > 1 && root.expanded[stack.group.app] === true
         readonly property int ghosts: stack.open ? 0 : Math.min(2, stack.size - 1)
 
-        height: stack.open ? openColumn.height : (frontCard.height + stack.ghosts * 5)
+        // Folded, it is one card on screen and leaves as one (Clear all
+        // marks all of it at once, so does its x). Unfolded, the cards
+        // leave one by one and the header goes with the last of them.
+        leaving: stack.open ? stack.group.notes.every((n) => root.isLeaving(n))
+                            : stack.group.notes.some((n) => root.isLeaving(n))
+        slides: !stack.open
+        bodyHeight: stack.open ? openColumn.height : (frontCard.height + stack.ghosts * 5)
 
         // ---- collapsed ----
         Rectangle {
@@ -814,9 +898,7 @@ Item {
             onClicked: root.toggleApp(stack.group.app)
             // The x on a folded stack clears the whole stack -- it is the
             // only card of it you can see.
-            onDismissRequested: {
-                for (const n of stack.group.notes.slice()) NotificationState.dismissForever(n);
-            }
+            onDismissRequested: NotificationState.leave(stack.group.notes)
             onActionRequested: (action) => NotificationState.invokeAction(notification, action)
         }
 
@@ -825,15 +907,14 @@ Item {
             id: openColumn
             visible: stack.open
             width: parent.width
-            spacing: 8
 
             Item {
                 width: parent.width
-                height: 20
+                height: 28
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
+                    y: (20 - height) / 2
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: stack.group.app
@@ -846,7 +927,7 @@ Item {
                     id: lessLabel
                     anchors.right: parent.right
                     anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
+                    y: (20 - height) / 2
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: "Show less"
@@ -864,17 +945,26 @@ Item {
 
             Repeater {
                 model: stack.open ? stack.group.notes : []
-                delegate: NotificationCard {
+                delegate: Exit {
+                    id: entry
                     required property var modelData
                     required property int index
                     width: openColumn.width
-                    notification: modelData
-                    showMeta: true
-                    // The header above already names the app.
-                    showApp: false
-                    timeText: root.timeText(stack.group.stamps[index])
-                    onDismissRequested: NotificationState.dismissForever(notification)
-                    onActionRequested: (action) => NotificationState.invokeAction(notification, action)
+                    gap: entry.index < stack.size - 1 ? 8 : 0
+                    leaving: root.isLeaving(entry.modelData)
+                    bodyHeight: card.height
+
+                    NotificationCard {
+                        id: card
+                        width: parent.width
+                        notification: entry.modelData
+                        showMeta: true
+                        // The header above already names the app.
+                        showApp: false
+                        timeText: root.timeText(stack.group.stamps[entry.index])
+                        onDismissRequested: NotificationState.leave([notification])
+                        onActionRequested: (action) => NotificationState.invokeAction(notification, action)
+                    }
                 }
             }
         }

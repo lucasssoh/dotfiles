@@ -242,45 +242,91 @@ Singleton {
         notification.dismiss();
     }
 
+    // ---- leaving the centre, animated ---------------------------------
+    //
+    // The centre's grouped list is rebuilt from trackedNotifications on
+    // every change, so a card dismissed outright is simply gone on the
+    // next frame -- there is no ListView keeping it alive for a `remove`
+    // transition any more. So a dismissal from the centre goes through
+    // here instead: the notification is marked in `leaving`, its card
+    // slides off to the right and closes its gap (NotificationCenter.qml),
+    // and only then is it really dismissed.
+    //
+    // The real dismissals are held until `leaveDuration` after the LAST
+    // one queued, and done together: each dismissal rebuilds the list, and
+    // a rebuild mid-cascade would reset the cards still in flight.
+    readonly property int leaveDuration: 340   // slide 180 + gap closing 160
+    property var leaving: ({})
+    property var _leaveBatch: []
+
+    function isTracked(n) {
+        return server.trackedNotifications.values.indexOf(n) >= 0;
+    }
+
+    function leave(list) {
+        const marks = Object.assign({}, root.leaving);
+        let added = false;
+        for (const n of list) {
+            if (!n || marks[n.id] || !root.isTracked(n)) continue;
+            marks[n.id] = true;
+            root._leaveBatch.push(n);
+            added = true;
+        }
+        if (!added) return;
+        root.leaving = marks;
+        leaveTimer.restart();
+    }
+
+    Timer {
+        id: leaveTimer
+        interval: root.leaveDuration
+        onTriggered: {
+            const batch = root._leaveBatch;
+            root._leaveBatch = [];
+            const marks = Object.assign({}, root.leaving);
+            for (const n of batch) {
+                delete marks[n.id];
+                if (root.isTracked(n)) root.dismissForever(n);
+            }
+            root.leaving = marks;
+        }
+    }
+
     // Clear-all as a CASCADE rather than one bulk wipe -- asked for: "en
     // clear all il faut un petit effet escalier pour qu'il se degage une à
     // une même ultra rapidement, je veux garder le système reactif".
     //
-    // The staircase is not animated here at all: dismissing one
-    // notification per tick is enough, because each removal independently
-    // fires NotificationCenter.qml's own `remove` transition, so the cards
-    // peel off to the right one after another on their own. Doing it this
-    // way rather than staggering delays inside the view is also what keeps
-    // it interruptible -- see below.
+    // One `leave()` per tick, each starting that card's own exit, so the
+    // cards peel off to the right one after another. `units` is what
+    // leaves together, in screen order -- the centre passes one unit per
+    // folded stack (it goes as one card) and one per unfolded card;
+    // without it, one notification per tick, oldest first.
     //
-    // 45ms is deliberately shorter than the 180ms exit itself, so the
-    // cards overlap in flight (a cascade, not a queue of separate
-    // departures): ten notifications are fully gone in under half a
-    // second. Nothing blocks meanwhile -- this is a Timer, not a loop, so
-    // the drawer stays live and a notification arriving mid-cascade is
-    // simply not part of the batch.
+    // 45ms is deliberately shorter than the 180ms slide, so the cards
+    // overlap in flight (a cascade, not a queue of separate departures).
+    // A Timer, not a loop: the drawer stays live, and a notification
+    // arriving mid-cascade is simply not part of the batch.
     property int clearStagger: 45
     property var _clearBatch: []
 
-    function clearAll() {
+    function clearAll(units) {
         if (server.trackedNotifications.values.length === 0) return;
-        // Snapshotted, and in `values` order -- oldest first, which is
-        // also top-to-bottom on screen, so the cascade runs down the list
-        // the way it is read.
-        root._clearBatch = server.trackedNotifications.values.slice();
+        root._clearBatch = units ? units.slice()
+            : server.trackedNotifications.values.map((n) => [n]);
         root._clearStep();       // first card leaves immediately, no lead-in delay
         clearTimer.restart();
     }
 
     function _clearStep() {
         while (root._clearBatch.length > 0) {
-            const n = root._clearBatch.shift();
             // Skip anything that went away on its own since the snapshot
             // (the sending app closed it, or the user beat the cascade to
             // it) -- dismiss() on an already-destroyed Notification would
             // throw and strand the rest of the batch.
-            if (server.trackedNotifications.values.indexOf(n) >= 0) {
-                root.dismissForever(n);
+            const unit = root._clearBatch.shift()
+                .filter((n) => root.isTracked(n) && !root.leaving[n.id]);
+            if (unit.length > 0) {
+                root.leave(unit);
                 return;
             }
         }
