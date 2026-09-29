@@ -134,6 +134,8 @@ from   = "config/wezterm/install.sh"   # M1: the script that does it today
 
 A `# review:` comment in a manifest marks something the current modules do that is questionable or broken, recorded rather than silently changed.
 
+A hook runs when it has a `run` script (repo path) and its unit is new or its fingerprint changed; it gets `CCPKG_UNIT`, `COUCOU_DIR` and one `CCPKG_ANSWER_<ID>` per answered question. A hook without `run` is only described: the plan shows it as not extracted yet.
+
 Hooks cover what cannot be declared (Plymouth's initramfs, the GTK theme build, the wezterm smear build). They run with **stdin closed**: a hook that waits for input fails at once with a clear message instead of hanging.
 
 ## Commands
@@ -205,7 +207,7 @@ Only changed units are applied, as today (content fingerprints). A failed unit d
 ### Display
 
 - One line per unit: state, current step, elapsed time.
-- Each hook runs in a **pseudo-terminal**. Its output goes to the log; the detail line shows the latest line with escape codes stripped and progress bars (`\r`) handled. Width follows terminal resizes.
+- Every command (dnf, cargo, hooks) runs with stdin closed and its output piped, not on a pseudo-terminal: off a terminal, dnf and cargo drop their own progress bars, which is the cleaner result. Output goes to the log; the detail line shows the latest line with escape codes stripped and `\r` redraws collapsed, cut to the width read at each line.
 - On failure: the last 20 lines of that unit's log, then the log path.
 - Not a terminal (pipe, CI): plain lines, no redraw.
 
@@ -266,7 +268,8 @@ cc-pkg-mng init
 ## Implementation
 
 - **Rust**, a cargo workspace at the repo root: `crates/cc-pkg-mng`, and `roue`, `prisme`, `balise` moved from `config/hyprland/*-src/`.
-- Crates: `clap` (CLI), `serde` + `toml` (manifests, state), `portable-pty` (hooks), `crossterm` (display), `inquire` or `dialoguer` (questions). `git` and `dnf` are called as commands.
+- Crates: `clap` (CLI), `serde` + `toml` (manifests, state), `dialoguer` (questions), `sha2` (fingerprints), `terminal_size` + `unicode-width` (display). `git`, `rpm`, `dnf`, `systemctl` and `sudo` are called as commands.
+- `CCPKG_STATE_DIR` overrides the state directory (tests).
 - The current bash `install.sh` files are split into manifests plus hooks; most of their content becomes declarations.
 
 ## Milestones
@@ -275,7 +278,7 @@ cc-pkg-mng init
 |---|---|---|
 | M0 | Clean-up on the current manager: remove Waybar and Rofi, fix `update`'s missing pull, relative script links, fingerprints survive a dangling link | **done** |
 | M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done** — reviewable, nothing changes yet |
-| M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display | `cc-pkg-mng install/remove/status` on Lucas's machine (`--dir ~/code/dotfiles`) |
+| M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done** — `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
 | M3 | `init`, channels, `upgrade`, `rollback`, migration from 1.x | full lifecycle on an existing machine |
 | M4 | `roles` unit, key bindings moved to roles | apps replaceable |
 | M5 | COPR packages | installable from `dnf` |

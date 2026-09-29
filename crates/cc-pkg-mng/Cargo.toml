@@ -1,0 +1,16 @@
+[package]
+name = "cc-pkg-mng"
+version = "2.0.0-dev"
+edition = "2024"
+description = "coucou-shell package manager"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+dialoguer = "0.12.0"
+humantime = "2.4.0"
+serde = { version = "1.0.229", features = ["derive"] }
+sha2 = "0.11.0"
+terminal_size = "0.4.4"
+toml = "1.1.6"
+unicode-width = "0.2.2"
