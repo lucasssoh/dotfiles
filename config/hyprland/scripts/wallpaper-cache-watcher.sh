@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # =========================================================
-# wallpaper-cache-watcher.sh — keeps the "filtered" image cache up to date
-# (cropped/extended to the active screen's format, never cropping the axis
-# that would carry the main subject), applied automatically by Prisme
-# (prisme-src/src/apply.rs) when available, and by the old
-# set_wallpaper.sh's "Filtered" mode. Launched by Hyprland's autostart
-# (hyprland.lua), runs continuously.
+# wallpaper-cache-watcher.sh — keeps the "filtered" image cache up to date:
+# every wallpaper fitted to every connected screen's resolution, one folder
+# per resolution (~/.cache/filtered_wallpapers/<W>x<H>/), read by
+# hypr/scripts/wallpaper-set. Launched by Hyprland's autostart
+# (hyprland.lua), runs continuously; a pass also runs when a screen is
+# plugged in.
+#
+#   wallpaper-cache-watcher.sh --once   one pass, then exit (the install hook:
+#                                       no session yet, so wallpaper-filter
+#                                       reads the screens from the kernel)
 #
 # Also owns keeping WALL_DIR itself in sync: it's a generated symlink farm
 # merging the dotfiles repo's wallpapers/ (the GNOME default designs) with
@@ -42,6 +46,8 @@ FILTER_BIN="$HOME/.local/bin/wallpaper-filter"
 # (it's symlinked into ~/.config/hypr/scripts by install.sh and invoked
 # from there, so `readlink -f` is needed before walking up to the repo
 # root; see set_wallpapers.sh for the sibling logic this mirrors).
+ONCE=0
+[[ "${1:-}" == "--once" ]] && ONCE=1
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
 DOTFILES_SRC="$REPO_ROOT/wallpapers"
@@ -89,28 +95,64 @@ sync_merged_dir
 # thumbnail cache -- same binary, same version, purged together) --
 # targeted purge (not an `rm -rf` of the whole folder) to never touch the
 # marker itself or step outside these two cache dirs.
-FILTER_VERSION=8
+# 9: one folder per screen resolution instead of one flat folder.
+FILTER_VERSION=9
 VERSION_FILE="$CACHE_DIR/.filter-version"
 if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
-    find "$CACHE_DIR" -maxdepth 1 -type f \
+    find "$CACHE_DIR" -maxdepth 2 -type f \
         \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
         -delete
+    find "$CACHE_DIR" -mindepth 1 -maxdepth 1 -type d -empty -delete
     find "$THUMB_CACHE_DIR" -maxdepth 1 -type f -iname "*.thumb.jpg" -delete
     printf '%s\n' "$FILTER_VERSION" > "$VERSION_FILE"
 fi
 
-# Initial pass: generates the cache for all images already present, one
-# at a time -- NOT in parallel. Each call briefly holds a full-resolution
-# source decode plus several derived buffers (cover/blur/composite) in
-# RAM; with ~80+ wallpapers including 8K photos, launching all of them at
-# once (the previous `&` + a single trailing `wait`) was enough to
-# saturate RAM and freeze the machine. Sequential is slower end to end but
-# every instance's peak memory is released before the next one starts.
-while IFS= read -r -d '' img; do
-    "$FILTER_BIN" "$img"
-done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
-    \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
-    -print0)
+# One pass: every image, one at a time -- NOT in parallel. Each call holds a
+# full-resolution source decode plus the derived buffers in RAM; with ~80+
+# wallpapers including 8K photos, launching them all at once (the previous
+# `&` + a single trailing `wait`) saturated RAM and froze the machine.
+# wallpaper-filter decodes each image once and derives every screen size
+# from that decode, so several screens cost one decode per image, not one
+# per image and screen. Its freshness check makes an unchanged image a
+# no-op, so a pass is cheap when nothing changed. A lock keeps two passes
+# (a screen plugged in during an inotify pass) from running at once. One
+# notification sums up the pass instead of one per image.
+run_pass() {
+    (
+        flock 9
+        local fitted=0 line sizes=()
+        while IFS= read -r -d '' img; do
+            while IFS= read -r line; do
+                if [[ "$line" == fitted\ * ]]; then
+                    fitted=$((fitted + 1))
+                    sizes+=("${line##* }")
+                fi
+            done < <("$FILTER_BIN" "$img")
+        done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
+            \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
+            -print0)
+        if (( fitted > 0 )); then
+            local res
+            res="$(printf '%s\n' "${sizes[@]}" | sort -u | paste -sd ' ')"
+            echo "[wallpapers] $fitted fitted ($res)"
+            [[ -n "${WAYLAND_DISPLAY:-}" ]] && notify-send "Wallpapers ready" "$fitted fitted for $res" --expire-time 3000 2>/dev/null
+        fi
+    ) 9>"$CACHE_DIR/.lock"
+}
+
+run_pass
+[[ "$ONCE" == 1 ]] && exit 0
+
+# A screen plugged in (or a new mode) needs its own size: listen to
+# Hyprland's event socket and run a pass on every monitor added.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v socat >/dev/null; then
+    (
+        socat -U - "UNIX-CONNECT:${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock" |
+            while IFS= read -r event; do
+                [[ "$event" == monitoradded* ]] && run_pass
+            done
+    ) &
+fi
 
 # Continuous watching: watches the two SOURCE folders (not WALL_DIR --
 # nothing should be dropped there directly, it's fully generated) for
@@ -129,11 +171,6 @@ if [[ ${#watch_dirs[@]} -gt 0 ]]; then
     inotifywait -m -e close_write,moved_to,delete,moved_from --format '%e' "${watch_dirs[@]}" | \
         while read -r _event; do
             sync_merged_dir
-            # Same one-at-a-time rule as the initial pass above.
-            while IFS= read -r -d '' img; do
-                "$FILTER_BIN" "$img"
-            done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
-                \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
-                -print0)
+            run_pass
         done
 fi

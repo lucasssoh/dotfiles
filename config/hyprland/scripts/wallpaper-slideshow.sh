@@ -18,7 +18,6 @@ if [[ -f "$WALLPAPERS_CONF" ]]; then
     configured="$(grep -vE '^[[:space:]]*(#|$)' "$WALLPAPERS_CONF" | head -n1)"
     [[ -n "$configured" ]] && WALL_DIR="${configured/#\~\//$HOME/}"
 fi
-CACHE_DIR="$HOME/.cache/filtered_wallpapers"
 PLAYLIST_FILE="$HOME/.config/hypr/wallpaper-playlist.json"
 
 if ! pidof awww-daemon >/dev/null; then
@@ -26,19 +25,10 @@ if ! pidof awww-daemon >/dev/null; then
     sleep 0.5
 fi
 
+# One place applies a wallpaper: wallpaper-set gives each screen the
+# version fitted to its resolution, and refreshes the bar's tint.
 apply_wall() {
-    awww img "$1" \
-        --transition-type fade \
-        --transition-bezier .4,0,.2,1 \
-        --transition-fps 60 \
-        --transition-duration 1.5
-
-    # Profil de luminance pour la barre quickshell (hypr/scripts/bar-tint.py).
-    # En arriere-plan: il ne depend que du FICHIER, pas de l'ecran, donc il
-    # n'a aucune raison d'attendre la fin de la transition awww.
-    # stderr vers un log plutot que /dev/null -- voir le commentaire
-    # detaille dans scripts/set_wallpaper.sh.
-    "$HOME/.config/hypr/scripts/bar-tint.py" "$1" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
+    "$HOME/.config/hypr/scripts/wallpaper-set" "$1"
 }
 
 # Fisher-Yates shuffle: avoids replaying the playlist in the same order

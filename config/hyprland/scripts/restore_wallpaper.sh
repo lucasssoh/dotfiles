@@ -38,19 +38,14 @@ if [ "$MODE" = "static" ]; then
     systemctl --user stop wallpaper-slideshow.service 2>/dev/null
 
     SELECTED_WALL=$(python3 -c "import json; print(json.load(open('$PLAYLIST_FILE'))['walls'][0])")
-    # `source` is written by Prisme (Original vs Filtered) -- absent from
-    # playlists written by the old rofi picker, hence the fallback to
-    # WALL_DIR.
+    # `source` is written by Prisme -- absent from playlists written by the
+    # old rofi picker, hence the fallback to WALL_DIR.
     SRC_DIR=$(python3 -c "import json; d = json.load(open('$PLAYLIST_FILE')); print(d.get('source') or '$WALL_DIR')")
-    awww img "$SRC_DIR/$SELECTED_WALL" --transition-type none
-    # Cas de DEMARRAGE en plus du cas "restauration": c'est ce qui donne
-    # son premier profil a la barre, donc pas d'entree d'autostart separee
-    # dans hyprland.lua.
-    # stderr vers un log plutot que /dev/null -- voir le commentaire detaille
-    # dans scripts/set_wallpaper.sh. C'est LE site qui comptait le plus: etant
-    # aussi le chemin de demarrage, son echec silencieux signifiait que la
-    # barre n'avait jamais son premier profil, a chaque session.
-    "$HOME/.config/hypr/scripts/bar-tint.py" "$SRC_DIR/$SELECTED_WALL" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
+    # wallpaper-set fits it to each screen (a playlist pointing into the old
+    # flat cache is mapped back to the name) and gives the bar its first
+    # tint of the session -- this is also the login path, hence no separate
+    # autostart entry for the tint in hyprland.lua.
+    "$HOME/.config/hypr/scripts/wallpaper-set" --instant "$SRC_DIR/$SELECTED_WALL"
 
 elif [ "$MODE" = "dynamic" ]; then
     # Dynamic mode: delegates to the dedicated systemd service (slideshow)

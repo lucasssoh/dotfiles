@@ -1,6 +1,7 @@
 //! Applies the chosen wallpaper: writes state to `wallpaper-playlist.json`
-//! and drives awww/systemd, staying compatible with the format read by the
-//! historical bash scripts (restore_wallpaper.sh, wallpaper-slideshow.sh).
+//! and hands the wallpaper to hypr/scripts/wallpaper-set (static) or
+//! wallpaper-slideshow.service (dynamic), in the format restore_wallpaper.sh
+//! and wallpaper-slideshow.sh read.
 //! Prisme is a replacement UI, not a new backend.
 
 use serde_json::json;
@@ -17,16 +18,15 @@ fn playlist_path() -> PathBuf {
     PathBuf::from(home).join(".config/hypr/wallpaper-playlist.json")
 }
 
-/// Cache of "filtered" variants (cropped/extended to the active screen's
-/// aspect ratio) produced by scripts/wallpaper-filter-one.sh, continuously
-/// fed by wallpaper-cache-watcher.sh. Same filenames as the originals
-/// (resolved by plain basename). Never used for browsing/display
-/// (main.rs/thumbs.rs keep reading the originals -- the user needs to
-/// recognize their own photos in the carousel), only when actually
-/// applying a wallpaper to the desktop (see apply_static/apply_dynamic).
-fn filtered_dir() -> PathBuf {
+/// hypr/scripts/wallpaper-set: puts a wallpaper on every screen, each one
+/// getting the version fitted to its own resolution from the cache
+/// (~/.cache/filtered_wallpapers/<W>x<H>/), or the original while that is
+/// not ready. The one place that talks to awww for a wallpaper -- this
+/// module, the slideshow and the login restore all call it -- and it also
+/// refreshes the bar's tint.
+fn wallpaper_set() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME not set");
-    PathBuf::from(home).join(".cache/filtered_wallpapers")
+    PathBuf::from(home).join(".config/hypr/scripts/wallpaper-set")
 }
 
 /// Reproduces `if ! pidof awww-daemon; then awww-daemon & sleep 0.5; fi`
@@ -92,14 +92,10 @@ pub fn last_static() -> Option<String> {
     None
 }
 
-/// "Static" mode -- equivalent of step 21 in set_wallpaper.sh: stops the
-/// slideshow, writes the playlist, applies via awww with the same
-/// transition. `source` is written into the playlist (absent from the
-/// historical bash script's format -- see the corresponding patch in
-/// restore_wallpaper.sh) so boot-time restoration knows where to replay
-/// the wallpaper from -- the directory actually applied (filtered cache
-/// if available, originals otherwise, see filtered_dir()), not always
-/// `source_dir` as received.
+/// "Static" mode: stops the slideshow, writes the playlist, puts the
+/// wallpaper on every screen. `source` in the playlist is the folder of the
+/// originals: which fitted version each screen gets is wallpaper-set's
+/// business, so the playlist stays valid whatever screens come and go.
 pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &str) {
     ensure_awww_daemon();
 
@@ -107,72 +103,14 @@ pub fn apply_static(source_dir: &Path, wallpaper_path: &Path, wallpaper_name: &s
         .args(["--user", "stop", "wallpaper-slideshow.service"])
         .status();
 
-    // Filtered variant if the cache has already produced it (normal case:
-    // the watcher runs continuously), otherwise the original as-is -- an
-    // image added two seconds ago, or whose extension slips past the
-    // filter (case-sensitive regex), must not end up with no wallpaper at
-    // all.
-    let filtered = filtered_dir();
-    let cached = filtered.join(wallpaper_name);
-    let (applied_dir, applied_path) = if cached.is_file() {
-        (filtered, cached)
-    } else {
-        (source_dir.to_path_buf(), wallpaper_path.to_path_buf())
-    };
-
     write_playlist(&json!({
         "mode": "static",
-        "source": applied_dir.to_string_lossy(),
+        "source": source_dir.to_string_lossy(),
         "walls": [wallpaper_name],
         "last_static": wallpaper_name,
     }));
 
-    let _ = Command::new("awww")
-        .arg("img")
-        .arg(&applied_path)
-        .args([
-            "--transition-type",
-            "fade",
-            "--transition-bezier",
-            ".4,0,.2,1",
-            "--transition-fps",
-            "60",
-            "--transition-duration",
-            "1.5",
-        ])
-        .status();
-
-    tint_bar(&applied_path);
-}
-
-/// Hands the freshly-applied image to `hypr/scripts/bar-tint.py`, which
-/// writes the luminance profile the quickshell bar reads to keep its ink
-/// legible over a bright wallpaper.
-///
-/// A spawn of the shared script rather than the same maths reimplemented
-/// here, even though Prisme is Rust and already talks to the image
-/// files: the other three setters (restore_wallpaper.sh,
-/// set_wallpaper.sh, wallpaper-slideshow.sh) all need it too, and a
-/// second implementation of a contrast computation is exactly the
-/// duplication this pipeline exists to avoid. Same reasoning as this
-/// module's header -- Prisme is a replacement UI, not a new backend.
-///
-/// `spawn`, not `status`: the profile depends only on the FILE, never on
-/// what the compositor has finished painting, so there is nothing to wait
-/// for. Errors are ignored for the same reason the `awww` call above
-/// ignores them -- a wallpaper must still get applied on a machine where
-/// the bar is not running.
-fn tint_bar(applied_path: &Path) {
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => return,
-    };
-    let script = Path::new(&home).join(".config/hypr/scripts/bar-tint.py");
-    let _ = Command::new(script)
-        .arg(applied_path)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
+    let _ = Command::new(wallpaper_set()).arg(wallpaper_path).status();
 }
 
 /// "Dynamic" (slideshow) mode -- equivalent of step 5: writes the
@@ -183,23 +121,13 @@ fn tint_bar(applied_path: &Path) {
 pub fn apply_dynamic(source_dir: &Path, duration: u32, walls: &[String]) {
     ensure_awww_daemon();
 
-    // Only one `source` for the whole playlist: wallpaper-slideshow.sh
-    // applies "$SOURCE/$img" for each name, it can't mix two directories.
-    // Only switches to the cache if ALL images in the selection are
-    // already there; a single one missing and the whole batch stays on
-    // the originals, rather than a slideshow that skips an image.
-    let filtered = filtered_dir();
-    let all_filtered = !walls.is_empty() && walls.iter().all(|name| filtered.join(name).is_file());
-    let playlist_source = if all_filtered {
-        filtered
-    } else {
-        source_dir.to_path_buf()
-    };
-
+    // The originals' folder, as for Static: wallpaper-slideshow.sh hands
+    // each "$SOURCE/$img" to wallpaper-set, which picks each screen's
+    // fitted version.
     let mut value = json!({
         "mode": "dynamic",
         "duration": duration,
-        "source": playlist_source.to_string_lossy(),
+        "source": source_dir.to_string_lossy(),
         "walls": walls,
     });
     if let Some(last_static) = last_static() {

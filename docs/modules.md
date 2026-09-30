@@ -225,7 +225,7 @@ A large clock overlay for late sessions, with occasional messages. Configured in
 | App | Source | Use |
 |---|---|---|
 | **Roue** | [`roue-src`](../config/hyprland/roue-src/) | Radial wheel: press, aim, release. Power menu, power profile, display layout, actions |
-| **Prisme** | [`prisme-src`](../config/hyprland/prisme-src/) | Wallpaper picker (`Super + W`). `wallpaper-filter` fits a wallpaper to each screen (fill mode by default) |
+| **Prisme** | [`prisme-src`](../config/hyprland/prisme-src/) | Wallpaper picker (`Super + W`). Every wallpaper is fitted to each connected screen's resolution, in `~/.cache/filtered_wallpapers/<W>x<H>/`, computed at install and again when a new screen is plugged in; until then that screen shows the original |
 | **Balise** | [`balise-src`](../config/hyprland/balise-src/) | Network/Bluetooth daemon behind the bar's Balise drawer. `balise wifi-share <ssid>` prints a QR code |
 
 Rebuilt by `cc-pkg-mng build` when their sources change.

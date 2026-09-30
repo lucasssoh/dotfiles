@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# wallpaper-set — put a wallpaper on every connected screen.
+#
+#   wallpaper-set [--instant] NAME|PATH
+#
+# Each screen gets the version fitted to its own resolution from the cache
+# (~/.cache/filtered_wallpapers/<W>x<H>/NAME, written by wallpaper-filter),
+# or the original when that version does not exist yet — awww then scales
+# it, which is never worse than an image fitted for another screen.
+#
+# NAME is looked up in the wallpaper folder (prisme/wallpapers.conf, default
+# ~/Images/Wallpapers). A PATH is used as the original; a path into the old
+# flat cache (~/.cache/filtered_wallpapers/NAME, written by playlists before
+# the cache was split per resolution) is mapped back to NAME.
+#
+# The one place that talks to awww for a wallpaper: Prisme, the slideshow and
+# the login restore all go through here. Also refreshes the bar's tint.
+set -uo pipefail
+
+instant=0
+[ "${1:-}" = "--instant" ] && { instant=1; shift; }
+arg="${1:-}"
+[ -n "$arg" ] || { echo "usage: wallpaper-set [--instant] NAME|PATH" >&2; exit 2; }
+
+WALL_DIR="$HOME/Images/Wallpapers"
+conf="$HOME/.config/prisme/wallpapers.conf"
+if [ -f "$conf" ]; then
+    configured="$(grep -vE '^[[:space:]]*(#|$)' "$conf" | head -n1)"
+    [ -n "$configured" ] && WALL_DIR="${configured/#\~\//$HOME/}"
+fi
+CACHE_DIR="$HOME/.cache/filtered_wallpapers"
+
+name="$(basename "$arg")"
+case "$arg" in
+    "$CACHE_DIR"/*) source="$WALL_DIR/$name" ;;   # a playlist from before the split
+    */*)            source="$arg" ;;
+    *)              source="$WALL_DIR/$name" ;;
+esac
+[ -e "$source" ] || { echo "wallpaper-set: $source not found" >&2; exit 1; }
+
+if ! pidof awww-daemon >/dev/null; then
+    awww-daemon >/dev/null 2>&1 &
+    sleep 0.5
+fi
+
+if [ "$instant" = 1 ]; then
+    transition=(--transition-type none)
+else
+    transition=(--transition-type fade --transition-bezier .4,0,.2,1
+                --transition-fps 60 --transition-duration 1.5)
+fi
+
+# name<TAB>WxH per screen, rotated screens swapped to their real shape.
+screens="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] |
+    (if (.transform % 2) == 1 then "\(.height)x\(.width)" else "\(.width)x\(.height)" end) as $res |
+    "\(.name)\t\($res)"' 2>/dev/null)"
+
+tint_source="$source"
+if [ -z "$screens" ]; then
+    # Outside a Hyprland session: one image for whatever awww drives.
+    awww img "$source" "${transition[@]}"
+else
+    first=1
+    while IFS=$'\t' read -r output res; do
+        file="$CACHE_DIR/$res/$name"
+        [ -f "$file" ] || file="$source"
+        awww img -o "$output" "$file" "${transition[@]}"
+        # The bar sits on every screen but reads one tint: the internal
+        # panel's image when there is one, else the first screen's.
+        if [ "$first" = 1 ] || [[ "$output" == eDP* || "$output" == LVDS* || "$output" == DSI* ]]; then
+            tint_source="$file"; first=0
+        fi
+    done <<< "$screens"
+fi
+
+"$HOME/.config/hypr/scripts/bar-tint.py" "$tint_source" >/dev/null 2>"$HOME/.cache/bar-tint.log" &

@@ -1,6 +1,9 @@
-//! wallpaper-filter <image> — recomposes an image to exactly fill the
-//! active screen's resolution. Two modes, picked per-file (see
-//! `is_safe_mode`):
+//! wallpaper-filter [--size WxH]... <image> — recomposes an image to exactly
+//! fill each screen's resolution: every connected screen by default (see
+//! `screens`), or the sizes given. One decode per image, every size derived
+//! from it (see `resize`). Each result lands in `~/.cache/filtered_wallpapers/<W>x<H>/`,
+//! read by `hypr/scripts/wallpaper-set`. Prints `fitted <name> <W>x<H>` for
+//! every file it writes. Two modes, picked per-file (see `is_safe_mode`):
 //!
 //! - "fill" (default): plain cover + center-crop, no safe axis, no blur,
 //!   no background compositing -- both axes are cropped as needed to fill
@@ -32,8 +35,9 @@
 //! all wallpapers, and the FILTER_VERSION marker -- see it for the
 //! version to bump if the algorithm below changes).
 
+use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
 use image::codecs::jpeg::JpegEncoder;
-use image::{imageops::FilterType, DynamicImage, ExtendedColorType, GenericImageView, ImageEncoder, Rgb, RgbImage, RgbaImage};
+use image::{DynamicImage, ExtendedColorType, ImageEncoder, Rgb, RgbImage, RgbaImage};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -55,6 +59,23 @@ fn save_jpeg(rgb: &RgbImage, path: &Path) -> bool {
         .write_image(rgb.as_raw(), rgb.width(), rgb.height(), ExtendedColorType::Rgb8)
         .is_ok()
 }
+/// Resizes with fast_image_resize (SIMD convolution): several times faster
+/// than the `image` crate's scalar filters, whose cost grows with the source
+/// size even for a tiny output -- an 8K photo took ~1.5 s to thumbnail.
+/// `crop_to_fit`: center-crop the source to the destination's aspect ratio
+/// first, in the same pass (cover + crop without an intermediate image).
+fn resize(src: &RgbImage, w: u32, h: u32, filter: FilterType, crop_to_fit: bool) -> RgbImage {
+    let mut dst = RgbImage::new(w.max(1), h.max(1));
+    let mut options = ResizeOptions::new().resize_alg(ResizeAlg::Convolution(filter));
+    if crop_to_fit {
+        options = options.fit_into_destination(Some((0.5, 0.5)));
+    }
+    Resizer::new()
+        .resize(src, &mut dst, &options)
+        .expect("same pixel type on both sides");
+    dst
+}
+
 /// Sigma of the background's Gaussian blur -- bumped from the old
 /// ImageMagick `-blur 0x40` look (18.0) to better disguise the "cover +
 /// crop" background as a duplicate of the sharp subject on portrait
@@ -219,40 +240,80 @@ fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
     cached_time >= src_time
 }
 
-/// Target resolution: internal screen if active, otherwise the 1st active
-/// screen (via `hyprctl monitors -j`, never `monitors all -j` -- we want
-/// the screen that's actually displaying pixels right now, see the
-/// historical wallpaper-filter-one.sh). Falls back to 1920x1080 outside a
-/// Hyprland session or if hyprctl/its JSON output are unusable.
-fn target_resolution() -> (u32, u32) {
-    const DEFAULT: (u32, u32) = (1920, 1080);
+/// Every connected screen's resolution: what Hyprland drives
+/// (`hyprctl monitors -j`, rotated screens swapped to their real shape),
+/// else what the kernel reports (`/sys/class/drm`, native mode of each
+/// connected connector -- this is what an install sees, before any session),
+/// else 1920x1080. No duplicates.
+fn screens() -> Vec<(u32, u32)> {
+    let mut found = hyprland_screens();
+    if found.is_empty() {
+        found = drm_screens();
+    }
+    if found.is_empty() {
+        found.push((1920, 1080));
+    }
+    let mut unique = Vec::new();
+    for s in found {
+        if !unique.contains(&s) {
+            unique.push(s);
+        }
+    }
+    unique
+}
+
+fn hyprland_screens() -> Vec<(u32, u32)> {
     let Ok(output) = Command::new("hyprctl").args(["monitors", "-j"]).output() else {
-        return DEFAULT;
+        return Vec::new();
     };
     if !output.status.success() {
-        return DEFAULT;
+        return Vec::new();
     }
-    let Ok(monitors) = serde_json::from_slice::<serde_json::Value>(&output.stdout) else {
-        return DEFAULT;
+    let Ok(serde_json::Value::Array(monitors)) = serde_json::from_slice(&output.stdout) else {
+        return Vec::new();
     };
-    let Some(monitors) = monitors.as_array() else {
-        return DEFAULT;
+    monitors
+        .iter()
+        .filter_map(|m| {
+            let w = m.get("width")?.as_u64()? as u32;
+            let h = m.get("height")?.as_u64()? as u32;
+            let rotated = m.get("transform").and_then(|t| t.as_u64()).unwrap_or(0) % 2 == 1;
+            (w > 0 && h > 0).then_some(if rotated { (h, w) } else { (w, h) })
+        })
+        .collect()
+}
+
+/// `card*-<connector>/status` == connected, first line of `modes` (the
+/// preferred, native mode). Internal panels first.
+fn drm_screens() -> Vec<(u32, u32)> {
+    let Ok(entries) = std::fs::read_dir("/sys/class/drm") else {
+        return Vec::new();
     };
-    let is_internal = |m: &serde_json::Value| {
-        m.get("name")
-            .and_then(|n| n.as_str())
-            .is_some_and(|n| n.starts_with("eDP") || n.starts_with("LVDS") || n.starts_with("DSI"))
-    };
-    let Some(chosen) = monitors.iter().find(|m| is_internal(m)).or_else(|| monitors.first())
-    else {
-        return DEFAULT;
-    };
-    let w = chosen.get("width").and_then(|v| v.as_u64());
-    let h = chosen.get("height").and_then(|v| v.as_u64());
-    match (w, h) {
-        (Some(w), Some(h)) if w > 0 && h > 0 => (w as u32, h as u32),
-        _ => DEFAULT,
-    }
+    let mut found: Vec<(bool, (u32, u32))> = entries
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let connector = name.split_once('-')?.1.to_string();
+            let dir = e.path();
+            let status = std::fs::read_to_string(dir.join("status")).ok()?;
+            if status.trim() != "connected" {
+                return None;
+            }
+            let modes = std::fs::read_to_string(dir.join("modes")).ok()?;
+            let size = parse_size(modes.lines().next()?)?;
+            let internal = ["eDP", "LVDS", "DSI"].iter().any(|p| connector.starts_with(p));
+            Some((internal, size))
+        })
+        .collect();
+    found.sort_by_key(|(internal, _)| !internal);
+    found.into_iter().map(|(_, s)| s).collect()
+}
+
+/// "1920x1200" (a DRM mode may carry a suffix: "1920x1080i").
+fn parse_size(s: &str) -> Option<(u32, u32)> {
+    let (w, h) = s.trim().split_once('x')?;
+    let h: String = h.chars().take_while(|c| c.is_ascii_digit()).collect();
+    Some((w.parse().ok()?, h.parse().ok()?))
 }
 
 /// Dimensions of the image scaled on the safe axis only -- same integer
@@ -268,34 +329,14 @@ fn fit_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32, landscape: boo
     }
 }
 
-/// Dimensions covering the whole target canvas (like `-resize WxH^`) --
-/// never smaller than the target on either axis, rounding up to the next
-/// pixel if needed.
-fn cover_dims(src_w: u32, src_h: u32, target_w: u32, target_h: u32) -> (u32, u32) {
-    let scale = (target_w as f64 / src_w as f64).max(target_h as f64 / src_h as f64);
-    let cover_w = ((src_w as f64 * scale).ceil() as u32).max(target_w);
-    let cover_h = ((src_h as f64 * scale).ceil() as u32).max(target_h);
-    (cover_w, cover_h)
-}
-
-/// Center-crops `img` (already scaled to cover_w x cover_h) down to
-/// exactly target_w x target_h.
-fn center_crop(img: &DynamicImage, target_w: u32, target_h: u32) -> DynamicImage {
-    let (w, h) = img.dimensions();
-    let x = w.saturating_sub(target_w) / 2;
-    let y = h.saturating_sub(target_h) / 2;
-    img.crop_imm(x, y, target_w.min(w), target_h.min(h))
-}
-
 /// Average color of the 4 corners if their combined standard deviation
 /// (noise within each corner AND hue difference between corners) is below
 /// UNIFORM_THRESHOLD -- same principle as the old bash version, but
 /// measured directly on the decoded pixels rather than calling `magick`
 /// again. Sample size as a % of the smallest dimension.
-fn uniform_corner_color(img: &DynamicImage) -> Option<Rgb<u8>> {
-    let (w, h) = img.dimensions();
+fn uniform_corner_color(rgb: &RgbImage) -> Option<Rgb<u8>> {
+    let (w, h) = rgb.dimensions();
     let cs = (w.min(h) * 6 / 100).clamp(24, 200).min(w).min(h);
-    let rgb = img.to_rgb8();
     let corners = [(0, 0), (w - cs, 0), (0, h - cs), (w - cs, h - cs)];
 
     let mut sum = [0f64; 3];
@@ -339,14 +380,10 @@ fn uniform_corner_color(img: &DynamicImage) -> Option<Rgb<u8>> {
 /// image leaves uncovered) darkens the result further out -- see
 /// `veil_alpha` -- to keep a "cover + crop" background from reading as an
 /// obvious duplicate of the sharp subject on portrait sources.
-fn build_background(img: &DynamicImage, target_w: u32, target_h: u32, extension_ratio: f64) -> RgbImage {
+fn build_background(img: &RgbImage, target_w: u32, target_h: u32, extension_ratio: f64) -> RgbImage {
     let base = match uniform_corner_color(img) {
         Some(color) => RgbImage::from_pixel(target_w, target_h, color),
-        None => {
-            let (cover_w, cover_h) = cover_dims(img.width(), img.height(), target_w, target_h);
-            let covered = img.resize_exact(cover_w, cover_h, FilterType::Lanczos3);
-            center_crop(&covered, target_w, target_h).to_rgb8()
-        }
+        None => resize(img, target_w, target_h, FilterType::Lanczos3, true),
     };
     let mut blurred = image::imageops::blur(&base, BLUR_SIGMA);
     apply_dark_veil(&mut blurred, veil_alpha(extension_ratio));
@@ -406,10 +443,60 @@ fn compose(bg: RgbImage, fit: &RgbImage, target_w: u32, target_h: u32, landscape
     composed
 }
 
-fn main() {
-    let Some(arg) = std::env::args().nth(1) else {
-        return;
+/// One screen size, safe mode (rare: images listed in
+/// wallpaper-safe-mode.conf): the subject's axis is only scaled; the other
+/// one is cropped, or extended over a blurred background when too short.
+fn fit_safe(img: &RgbImage, target_w: u32, target_h: u32) -> RgbImage {
+    let (src_w, src_h) = img.dimensions();
+    let landscape = target_w >= target_h;
+    // Crop or extend (cross multiplication in integers -- no floats, no
+    // rounding ambiguity).
+    let crop_mode = if landscape {
+        src_w as u64 * target_h as u64 >= target_w as u64 * src_h as u64
+    } else {
+        src_h as u64 * target_w as u64 >= target_h as u64 * src_w as u64
     };
+    if crop_mode {
+        // Scaling the safe axis to fit then cropping the other one is a
+        // centered cover crop.
+        return resize(img, target_w, target_h, FilterType::Lanczos3, true);
+    }
+    let (fit_w, fit_h) = fit_dims(src_w, src_h, target_w, target_h, landscape);
+    let fit = resize(img, fit_w, fit_h, FilterType::Lanczos3, false);
+    let extension_ratio = if landscape {
+        1.0 - (fit_w as f64 / target_w as f64)
+    } else {
+        1.0 - (fit_h as f64 / target_h as f64)
+    };
+    let bg = build_background(img, target_w, target_h, extension_ratio);
+    compose(bg, &fit, target_w, target_h, landscape)
+}
+
+fn main() {
+    let mut sizes = Vec::new();
+    let mut image_arg = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        if a == "--size" {
+            match args.next().as_deref().and_then(parse_size) {
+                Some(s) => sizes.push(s),
+                None => {
+                    eprintln!("wallpaper-filter: --size takes WxH");
+                    std::process::exit(2);
+                }
+            }
+        } else {
+            image_arg = Some(a);
+        }
+    }
+    let Some(arg) = image_arg else {
+        eprintln!("usage: wallpaper-filter [--size WxH]... <image>");
+        std::process::exit(2);
+    };
+    if sizes.is_empty() {
+        sizes = screens();
+    }
+
     let img_path = PathBuf::from(arg);
     if !has_known_extension(&img_path) {
         return;
@@ -417,84 +504,52 @@ fn main() {
     let Some(filename) = img_path.file_name() else {
         return;
     };
-    let cached = cache_dir().join(filename);
+    let name = filename.to_string_lossy().into_owned();
     let thumb_cached = thumb_cache_path(filename);
-    let screen_fresh = cache_is_fresh(&img_path, &cached);
     let thumb_fresh = cache_is_fresh(&img_path, &thumb_cached);
-    if screen_fresh && thumb_fresh {
+    let stale: Vec<(u32, u32)> = sizes
+        .iter()
+        .copied()
+        .filter(|&(w, h)| !cache_is_fresh(&img_path, &cache_dir().join(format!("{w}x{h}")).join(filename)))
+        .collect();
+    if stale.is_empty() && thumb_fresh {
         return;
     }
 
     let Some(img) = open_image(&img_path) else {
         return;
     };
+    let img = img.into_rgb8();
 
     if !thumb_fresh {
         // Reuses this same decode -- no second pass over the original.
-        // Aspect ratio preserved (only `height` is capped): thumbs.rs
-        // needs it intact to size each card.
-        let thumb = img.resize(8192, THUMB_HEIGHT, FilterType::Triangle).to_rgb8();
+        // Aspect ratio preserved (only the height is set): thumbs.rs needs
+        // it intact to size each card.
+        let (w, h) = img.dimensions();
+        let thumb_h = THUMB_HEIGHT.min(h);
+        let thumb_w = ((w as u64 * thumb_h as u64 + h as u64 / 2) / h as u64) as u32;
+        let thumb = resize(&img, thumb_w, thumb_h, FilterType::Bilinear, false);
         let _ = std::fs::create_dir_all(thumb_cache_dir());
         save_jpeg(&thumb, &thumb_cached);
     }
 
-    if screen_fresh {
-        return;
-    }
-
-    let (src_w, src_h) = img.dimensions();
-    let (target_w, target_h) = target_resolution();
-    let landscape = target_w >= target_h;
-
-    let result = if !is_safe_mode(&filename.to_string_lossy()) {
-        // Fill mode: plain cover + center-crop, no safe axis, no
-        // background -- see the module doc comment.
-        let (cover_w, cover_h) = cover_dims(src_w, src_h, target_w, target_h);
-        let covered = img.resize_exact(cover_w, cover_h, FilterType::Lanczos3);
-        center_crop(&covered, target_w, target_h).to_rgb8()
-    } else {
-        // Safe axis + crop/extend decision (cross multiplication in
-        // integers -- no floats, no rounding ambiguity).
-        let crop_mode = if landscape {
-            src_w as u64 * target_h as u64 >= target_w as u64 * src_h as u64
+    let safe = is_safe_mode(&name);
+    for (target_w, target_h) in stale {
+        let result = if safe {
+            fit_safe(&img, target_w, target_h)
         } else {
-            src_h as u64 * target_w as u64 >= target_h as u64 * src_w as u64
+            // Fill mode: centered cover crop -- see the module doc comment.
+            resize(&img, target_w, target_h, FilterType::Lanczos3, true)
         };
-
-        let (fit_w, fit_h) = fit_dims(src_w, src_h, target_w, target_h, landscape);
-        if crop_mode {
-            let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3);
-            center_crop(&fit, target_w, target_h).to_rgb8()
-        } else {
-            let fit = img.resize_exact(fit_w, fit_h, FilterType::Lanczos3).to_rgb8();
-            let extension_ratio = if landscape {
-                1.0 - (fit_w as f64 / target_w as f64)
-            } else {
-                1.0 - (fit_h as f64 / target_h as f64)
-            };
-            let bg = build_background(&img, target_w, target_h, extension_ratio);
-            compose(bg, &fit, target_w, target_h, landscape)
+        let dir = cache_dir().join(format!("{target_w}x{target_h}"));
+        let _ = std::fs::create_dir_all(&dir);
+        // Always JPEG-encoded (at JPEG_QUALITY, see save_jpeg) whatever the
+        // file's own extension, which stays the original's -- wallpaper-set
+        // resolves the cache by plain basename. `.save()` would pick an
+        // encoder from the extension and fail for "jxl" (decode-only here);
+        // awww and the `image` crate sniff content, not extensions.
+        if save_jpeg(&result, &dir.join(filename)) {
+            println!("fitted {name} {target_w}x{target_h}");
         }
-    };
-
-    let _ = std::fs::create_dir_all(cache_dir());
-    // Always JPEG-encoded (at JPEG_QUALITY, see save_jpeg) regardless of
-    // the source's/cached path's own extension (kept identical to the
-    // original -- apply.rs and wallpaper-slideshow.sh resolve the cache by
-    // plain basename, so it can't change): `.save()` would instead pick an
-    // encoder from that extension, which fails outright for "jxl" (not a
-    // supported *write* format here, decode-only via jxl-oxide). awww/the
-    // `image` crate on the reading end sniff content rather than trust the
-    // extension, so a JPEG-content ".jxl" cache file opens the same as any
-    // other.
-    if save_jpeg(&result, &cached) {
-        let _ = Command::new("notify-send")
-            .arg("Wallpaper ready")
-            .arg(format!(
-                "{} fitted {target_w}x{target_h}",
-                filename.to_string_lossy()
-            ))
-            .args(["--expire-time", "2000"])
-            .status();
     }
 }
