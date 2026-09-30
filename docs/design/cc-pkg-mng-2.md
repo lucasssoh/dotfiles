@@ -327,7 +327,7 @@ Rofi: `Super + V` (clipboard), `display-layout.sh` (menu), `set_wallpaper.sh` (l
 
 ## Licence (M7)
 
-- `LICENSE` at the root: personal use; no redistribution, modified or not; the name *coucou-shell* reserved.
+- `LICENSE.md` at the root: personal use; no redistribution, modified or not; the name *coucou-shell* reserved.
 - Remove `license = "MIT"` from the three `Cargo.toml`.
 - Keep Orbit's MIT notice for the Balise code derived from it (`LifeOfATitan/orbit`).
 - `wallpapers/` (GNOME) stays CC BY-SA 3.0, stated in `wallpapers/CREDITS.md`.

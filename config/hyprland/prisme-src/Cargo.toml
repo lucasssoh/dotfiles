@@ -3,7 +3,7 @@ name = "prisme"
 version = "0.1.0"
 edition = "2021"
 description = "Native Wayland wallpaper picker (parallelogram cards)"
-license-file = "../../../LICENSE"
+license-file = "../../../LICENSE.md"
 
 [dependencies]
 gtk4 = { version = "0.9", features = ["v4_14"] }

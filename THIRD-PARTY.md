@@ -1,6 +1,6 @@
 # Third-party material
 
-These parts of the repository are not covered by coucou-shell's [LICENSE](LICENSE). Each stays under its own license, whose full text is in [`LICENSES/`](LICENSES/) or linked below.
+These parts of the repository are not covered by coucou-shell's [LICENSE.md](LICENSE.md). Each stays under its own license, whose full text is in [`LICENSES/`](LICENSES/) or linked below.
 
 | Material | Where | License | Source |
 |---|---|---|---|

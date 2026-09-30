@@ -3,7 +3,7 @@ name = "cc-pkg-mng"
 version = "2.0.0-dev"
 edition = "2024"
 description = "coucou-shell package manager"
-license-file = "../../LICENSE"
+license-file = "../../LICENSE.md"
 
 [dependencies]
 anyhow = "1.0.104"

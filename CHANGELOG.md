@@ -41,4 +41,4 @@ Versions follow `MAJOR.MINOR.PATCH`. Each release is a git tag (`v1.0.0`) with a
 - Fedora 44, x86_64.
 
 ### Licence
-- coucou-shell is for personal use; see `LICENSE`. Third-party parts keep their own licences, listed in `THIRD-PARTY.md`.
+- coucou-shell is for personal use; see `LICENSE.md`. Third-party parts keep their own licences, listed in `THIRD-PARTY.md`.

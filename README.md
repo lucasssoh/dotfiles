@@ -46,7 +46,7 @@ cc-pkg-mng verify     # check that everything is still in place
 
 ## Licence
 
-coucou-shell is for personal use: install it, use it and adapt it on your own machines, but don't redistribute it — see [LICENSE](LICENSE). Third-party parts keep their own licences, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
+coucou-shell is for personal use: install it, use it and adapt it on your own machines, but don't redistribute it — see [LICENSE.md](LICENSE.md). Third-party parts keep their own licences, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
 
 ## Monitors & HDR
 
