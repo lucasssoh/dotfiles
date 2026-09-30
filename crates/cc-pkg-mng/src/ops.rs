@@ -83,9 +83,16 @@ struct SudoSession(Arc<AtomicBool>);
 
 impl SudoSession {
     fn start() -> Result<SudoSession> {
-        let status = Command::new("sudo").arg("-v").status().context("running sudo")?;
-        if !status.success() {
-            bail!("sudo authentication failed");
+        // `sudo -n true` first: it succeeds when no password is needed
+        // (NOPASSWD, or credentials already cached), where `sudo -v` would
+        // still ask for one as soon as any of the user's rules requires it —
+        // and with no terminal (unattended installs) cannot.
+        let ready = Command::new("sudo").args(["-n", "true"]).stderr(Stdio::null()).status();
+        if !matches!(ready, Ok(s) if s.success()) {
+            let status = Command::new("sudo").arg("-v").status().context("running sudo")?;
+            if !status.success() {
+                bail!("sudo authentication failed");
+            }
         }
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
