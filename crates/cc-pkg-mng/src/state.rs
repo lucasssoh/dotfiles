@@ -18,6 +18,15 @@ pub struct State {
     /// The checkout this machine follows.
     #[serde(default)]
     pub repo: Option<PathBuf>,
+    /// "stable" (release tags) or "edge" (the default branch).
+    #[serde(default)]
+    pub channel: Option<String>,
+    /// What is checked out: a tag on stable, a commit on edge.
+    #[serde(default)]
+    pub version: Option<String>,
+    /// The version before the last upgrade, for `rollback`.
+    #[serde(default)]
+    pub previous: Option<String>,
     #[serde(default)]
     pub units: BTreeMap<String, UnitState>,
 }

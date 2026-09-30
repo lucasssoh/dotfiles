@@ -1,6 +1,8 @@
 //! cc-pkg-mng 2 — the coucou-shell package manager.
 //! Design: docs/design/cc-pkg-mng-2.md.
 
+mod git;
+mod lifecycle;
 mod manifest;
 mod ops;
 mod plan;
@@ -9,8 +11,7 @@ mod state;
 mod sys;
 mod ui;
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::IsTerminal;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -69,9 +70,36 @@ enum Cmd {
     },
     /// Installed units and their health.
     Status,
+    /// Set up this machine: checkout, channel, units — or adopt an existing
+    /// checkout and the previous manager's state.
+    Init {
+        #[arg(long, value_name = "stable|edge")]
+        channel: Option<String>,
+        /// Unattended: every answer from a TOML file.
+        #[arg(long, value_name = "FILE")]
+        answers: Option<PathBuf>,
+    },
+    /// Show or switch the channel: stable (releases) or edge (every commit).
+    Channel { name: Option<String> },
+    /// Move to the latest release (stable) or commit (edge), then re-apply.
+    Upgrade {
+        /// A specific release (stable only).
+        #[arg(long, value_name = "vX.Y.Z")]
+        to: Option<String>,
+    },
+    /// Back to the release before the last upgrade (stable only).
+    Rollback,
+    /// Change an answer (e.g. `set wezterm variant smear`); `install` applies it.
+    Set { unit: String, question: String, value: String },
 }
 
 fn main() -> ExitCode {
+    // `cc-pkg-mng list | head`: stop quietly when the reader goes away,
+    // like any Unix tool, instead of panicking on the broken pipe.
+    // SAFETY: restoring a signal's default action, before any thread exists.
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
     let cli = Cli::parse();
     let mut ui = Ui::new(cli.no_color, cli.quiet, cli.verbose);
     match run(&cli, &mut ui) {
@@ -84,6 +112,11 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: &Cli, ui: &mut Ui) -> Result<()> {
+    let flags = lifecycle::Flags { dry_run: cli.dry_run, yes: cli.yes };
+    if let Cmd::Init { channel, answers } = &cli.cmd {
+        return lifecycle::init(ui, &flags, cli.dir.as_deref(), channel.as_deref(), answers.as_deref());
+    }
+
     let mut state = State::load()?;
     let repo = resolve_repo(cli.dir.as_deref(), &state)?;
     let units = manifest::load_all(&repo)?;
@@ -93,32 +126,12 @@ fn run(cli: &Cli, ui: &mut Ui) -> Result<()> {
     }
 
     match &cli.cmd {
+        Cmd::Init { .. } => unreachable!(),
         Cmd::List { installed, layer } => list(ui, &units, &state, *installed, layer.as_deref()),
-        Cmd::Info { unit } => info(ui, &repo, &units, &state, unit),
+        Cmd::Info { unit } => info(ui, &units, &state, unit),
         Cmd::Status => status(ui, &repo, &units, &state),
         Cmd::Install { units: names } => {
-            let order = resolve::closure(&units, names)?;
-            let answers = ask(ui, cli, &units, &state, &order)?;
-            let plan = plan::build(&repo, &units, &state, &order, &answers)?;
-            ops::show_plan(ui, &plan);
-            if cli.dry_run {
-                return Ok(());
-            }
-            if !plan.has_work() && order.iter().all(|n| state.installed(n)) {
-                ui.line("\nNothing to do.");
-                return Ok(());
-            }
-            if !cli.yes && ui.tty && std::io::stdin().is_terminal() {
-                println!();
-                let go = dialoguer::Confirm::new().with_prompt("Proceed?").default(true).interact()?;
-                if !go {
-                    bail!("cancelled");
-                }
-            }
-            ui.open_log(&state::state_dir().join("logs"), "install")?;
-            ops::apply(ui, &repo, &units, &mut state, &plan)?;
-            ui.line(&format!("\n{} {} unit(s) in place.", ui.green("Done."), plan.units.len()));
-            Ok(())
+            lifecycle::install_units(ui, &flags, &repo, &units, &mut state, names, &lifecycle::Answers::new())
         }
         Cmd::Remove { units: names } => {
             if !cli.dry_run {
@@ -126,6 +139,10 @@ fn run(cli: &Cli, ui: &mut Ui) -> Result<()> {
             }
             ops::remove(ui, &units, &mut state, names, cli.dry_run)
         }
+        Cmd::Channel { name } => lifecycle::channel(ui, &flags, &repo, &mut state, name.as_deref()),
+        Cmd::Upgrade { to } => lifecycle::upgrade(ui, &flags, &repo, &mut state, to.as_deref()),
+        Cmd::Rollback => lifecycle::rollback(ui, &flags, &repo, &mut state),
+        Cmd::Set { unit, question, value } => lifecycle::set(ui, &units, &mut state, unit, question, value),
     }
 }
 
@@ -141,41 +158,6 @@ fn resolve_repo(flag: Option<&Path>, state: &State) -> Result<PathBuf> {
         bail!("no coucou-shell checkout known — pass --dir PATH");
     };
     std::fs::canonicalize(&dir).with_context(|| format!("{} does not exist", dir.display()))
-}
-
-/// Answers for every question of `order`: remembered ones, then asked
-/// (or defaults with --yes / without a terminal).
-fn ask(
-    ui: &mut Ui,
-    cli: &Cli,
-    units: &Units,
-    state: &State,
-    order: &[String],
-) -> Result<BTreeMap<String, BTreeMap<String, String>>> {
-    let interactive = !cli.yes && ui.tty && std::io::stdin().is_terminal();
-    let mut all = BTreeMap::new();
-    for name in order {
-        let mut answers = state.units.get(name).map(|u| u.answers.clone()).unwrap_or_default();
-        for q in &units[name].questions {
-            if answers.contains_key(&q.id) {
-                continue;
-            }
-            let value = if interactive {
-                let default = q.choices.iter().position(|c| *c == q.default).unwrap_or(0);
-                let i = dialoguer::Select::new()
-                    .with_prompt(format!("{name}: {}", q.ask))
-                    .items(&q.choices)
-                    .default(default)
-                    .interact()?;
-                q.choices[i].clone()
-            } else {
-                q.default.clone()
-            };
-            answers.insert(q.id.clone(), value);
-        }
-        all.insert(name.clone(), answers);
-    }
-    Ok(all)
 }
 
 fn list(ui: &mut Ui, units: &Units, state: &State, installed_only: bool, layer: Option<&str>) -> Result<()> {
@@ -208,7 +190,7 @@ fn list(ui: &mut Ui, units: &Units, state: &State, installed_only: bool, layer: 
     Ok(())
 }
 
-fn info(ui: &mut Ui, repo: &Path, units: &Units, state: &State, name: &str) -> Result<()> {
+fn info(ui: &mut Ui, units: &Units, state: &State, name: &str) -> Result<()> {
     let u = units.get(name).with_context(|| format!("no unit named \"{name}\""))?;
     ui.heading(&format!("{} ({})", u.name, u.layer));
     ui.line(&format!("  {}", u.summary));
@@ -259,7 +241,6 @@ fn info(ui: &mut Ui, repo: &Path, units: &Units, state: &State, name: &str) -> R
     for c in &u.verify.commands {
         ui.line(&format!("  verify     {c}"));
     }
-    let _ = repo;
     Ok(())
 }
 
@@ -271,6 +252,11 @@ fn status(ui: &mut Ui, repo: &Path, units: &Units, state: &State) -> Result<()> 
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_default();
     ui.line(&format!("{}  {} {}", ui.bold("repo"), repo.display(), ui.dim(&rev)));
+    ui.line(&format!(
+        "{} {}",
+        ui.bold("chan"),
+        state.channel.as_deref().unwrap_or("none — run `cc-pkg-mng init`")
+    ));
     ui.line(&format!("{} {}", ui.bold("state"), sys::tilde(&state::state_dir())));
 
     if state.units.is_empty() {

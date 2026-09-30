@@ -8,6 +8,8 @@
 # A hook declared run_as = "root" calls `as_root` for its system steps; the
 # manager holds the sudo session for the whole run.
 set -Eeuo pipefail
+# Under errexit a failing command ends the hook silently; say which one.
+trap 'echo "[FAIL]  ${BASH_SOURCE[0]##*/}:$LINENO: $BASH_COMMAND (exit $?)" >&2' ERR
 
 REPO="${COUCOU_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 HOOK_STATE="${CCPKG_HOOK_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/coucou-shell/hooks/${CCPKG_UNIT:-manual}}"

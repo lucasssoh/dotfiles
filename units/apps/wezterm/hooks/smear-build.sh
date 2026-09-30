@@ -34,7 +34,8 @@ stable)
     fi
     ;;
 smear)
-    key="$BASE|$(sha "$PATCH")|$(cargo --version 2>/dev/null)"
+    # cargo may not be installed yet (it comes with the build deps below).
+    key="$BASE|$(sha "$PATCH")|$(cargo --version 2>/dev/null || echo no-cargo)"
     if ours && grep -qx "key=$key" "$STAMP"; then
         ok "smear build up to date"
         exit 0

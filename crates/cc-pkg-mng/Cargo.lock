@@ -81,6 +81,7 @@ dependencies = [
  "clap",
  "dialoguer",
  "humantime",
+ "libc",
  "serde",
  "sha2",
  "terminal_size",

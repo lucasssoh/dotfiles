@@ -158,6 +158,7 @@ cc-pkg-mng release <config…>      # the reverse: restore the user's files
 cc-pkg-mng upgrade [--to vX.Y.Z]
 cc-pkg-mng rollback
 cc-pkg-mng channel [stable|edge]
+cc-pkg-mng set <unit> <question> <value>   # e.g. set wezterm variant smear; `install <unit>` applies it
 cc-pkg-mng status | verify [--fix] | doctor
 cc-pkg-mng needs-restart
 ```
@@ -178,7 +179,19 @@ Global: `-n/--dry-run`, `-y/--yes` (take defaults), `-q`, `--verbose` (stream ev
 6. **Run.** One password prompt, then the whole plan.
 7. **End.** Summary, what to restart, "reboot".
 
-`--answers FILE` replays a saved set of answers for unattended installs (VM tests).
+`--answers FILE` replays a saved set of answers for unattended installs (VM tests):
+
+```toml
+dir     = "~/coucou-shell"
+channel = "stable"
+units   = ["plymouth", "wezterm", "config-shell"]   # optional core, apps, configs to take
+[answers.wezterm]
+variant = "smear"
+```
+
+Core units that are not optional are always installed. `init` refuses a machine that already has a channel and units; a state with units but no channel (installed by an earlier 2.x build) is completed rather than refused.
+
+**Migration from 1.x**: when `~/.local/state/dotfiles/state.v1` exists and 2.x has no unit recorded yet, every module 1.x applied successfully (`mod.<name>.rc = 0`) preselects the units `units/legacy-map.toml` maps it to, and `wezterm.variant` becomes the wezterm answer. The plan then finds almost everything already in place and records it.
 
 ## Adopting and keeping configs
 
@@ -189,8 +202,9 @@ Global: `-n/--dry-run`, `-y/--yes` (take defaults), `-q`, `--verbose` (stream ev
 ## Versions and channels
 
 - A release is an annotated tag `vMAJOR.MINOR.PATCH`, with a code name in its message (`v1.0.0` — *Coucou à tous*), and an entry in `CHANGELOG.md`.
-- **stable** follows tags: `upgrade` moves to the newest tag, `rollback` back to the previously applied one (recorded in state).
-- **edge** follows `master` with a fast-forward pull.
+- **stable** follows tags: `upgrade` checks out the newest tag (detached), `upgrade --to vX.Y.Z` a given one, `rollback` the one before the last upgrade (recorded in state).
+- **edge** follows the remote's default branch with a fast-forward; `rollback` is refused there (check out a commit with git).
+- After the checkout moves, every installed unit is re-applied, core units the new version adds are installed, and units the version no longer has are dropped from the state (their links left as they are).
 - Uncommitted changes block `upgrade` (unchanged from today).
 - The manager's own version is its RPM version. A release may state `requires-manager = ">=2.1"`; `upgrade` refuses and says to update `cc-pkg-mng` first.
 
@@ -287,7 +301,7 @@ cc-pkg-mng init
 | M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done** — reviewable, nothing changes yet |
 | M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done** — `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
 | M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done** — no step left to the old modules |
-| M3 | `init`, channels, `upgrade`, `rollback`, migration from 1.x | full lifecycle on an existing machine |
+| M3 | `init`, channels, `upgrade`, `rollback`, `set`, migration from 1.x | **done** — tested on a simulated fresh machine with local releases |
 | M4 | `roles` unit, key bindings moved to roles | apps replaceable |
 | M5 | COPR packages | installable from `dnf` |
 | M6 | VM test from a Fedora 44 netinstall with an answers file | acceptance |
