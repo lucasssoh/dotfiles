@@ -17,3 +17,10 @@ build = ["rust", "cargo", "gtk4-devel", "gtk4-layer-shell-devel"]
 
 [links]
 "config/hyprland/prisme" = "~/.config/prisme"
+
+[[hooks]]
+name   = "wallpaper-cache"
+run_as = "user"
+does   = "fit every wallpaper to each connected screen's resolution (read from the kernel before any session)"
+run    = "units/core/prisme/hooks/wallpaper-cache.sh"
+watch  = ["config/hyprland/scripts/wallpaper-cache-watcher.sh", "wallpapers"]
