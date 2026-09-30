@@ -27,6 +27,7 @@ cc-pkg-mng verify     # check that everything is still in place
 | [**Modules**](docs/modules.md) | What each module installs, and where to configure it |
 | [**Hardware detection**](docs/hardware.md) | CPU/GPU profiles, codec swaps, manual follow-ups |
 | [**Key bindings**](docs/keybindings.md) | The full list, AZERTY |
+| [**Changelog**](CHANGELOG.md) | What each release brings |
 
 ## What's in here
 
