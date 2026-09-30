@@ -1,0 +1,55 @@
+name: Release
+
+# A vX.Y.Z tag: build and sign the RPMs, attach them to a GitHub release
+# titled from CHANGELOG.md, then republish Pages so the dnf repository
+# carries them.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  rpms:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Build dependencies
+        run: >
+          dnf -y install git-core rpm-build rpm-sign gnupg2 gh
+          cargo rust gcc 'pkgconfig(gtk4)' 'pkgconfig(gtk4-layer-shell-0)'
+
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          packaging/build-rpms.sh "$GITHUB_REF_NAME" out
+
+      - name: Sign
+        env:
+          RPM_SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
+        run: |
+          printf '%s\n' "$RPM_SIGNING_KEY" | gpg --batch --import
+          key="$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')"
+          rpmsign --addsign --define "_gpg_name $key" out/*.rpm
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="$(grep -m1 "^## ${GITHUB_REF_NAME#v} " CHANGELOG.md | sed 's/^## [^ ]* — //')"
+          packaging/release-notes.sh "$GITHUB_REF_NAME" > notes.md
+          gh release create "$GITHUB_REF_NAME" out/*.rpm \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME « $name »" \
+            --notes-file notes.md
+
+  pages:
+    needs: rpms
+    uses: ./.github/workflows/site.yml
+    secrets: inherit
