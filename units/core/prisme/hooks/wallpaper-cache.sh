@@ -5,3 +5,20 @@
 
 bash "$REPO/config/hyprland/scripts/wallpaper-cache-watcher.sh" --once
 ok "wallpaper cache ready"
+
+# A new machine starts on coucou-shell's own wallpaper; a playlist that
+# already exists is the user's choice and is never replaced.
+playlist="$HOME/.config/hypr/wallpaper-playlist.json"
+default="coucou-aube-relief.jxl"
+if [ ! -e "$playlist" ]; then
+    wall_dir="$HOME/Images/Wallpapers"
+    conf="$HOME/.config/prisme/wallpapers.conf"
+    if [ -f "$conf" ]; then
+        configured="$(grep -vE '^[[:space:]]*(#|$)' "$conf" | head -n1)"
+        [ -n "$configured" ] && wall_dir="${configured/#\~\//$HOME/}"
+    fi
+    mkdir -p "$(dirname "$playlist")"
+    printf '{"mode":"static","source":"%s","walls":["%s"],"last_static":"%s"}\n' \
+        "$wall_dir" "$default" "$default" > "$playlist"
+    ok "default wallpaper: $default"
+fi
