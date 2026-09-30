@@ -1,68 +1,74 @@
 # Installation
 
-## First install
+coucou-shell needs **Fedora 44, x86_64** — a netinstall ("Fedora Everything") with nothing selected is enough — and a user with `sudo`.
+
+## Install
 
 ```bash
-git clone https://github.com/lucasssoh/dotfiles.git
-cd dotfiles
-./install
+sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo
+sudo dnf install cc-pkg-mng
+cc-pkg-mng init
 ```
 
-`./install` is for a bare clone. Once it has run, use `cc-pkg-mng` — see [cc-pkg-mng.md](cc-pkg-mng.md).
+The first line adds coucou-shell's package repository; dnf asks once to trust its signing key. Run `init` as your user, not as root: it asks for your password once, when it needs it.
 
-| Command | What it installs | sudo |
-|---|---|---|
-| `./install` | Everything: the system phase, then every module | yes |
-| `./install system` | Base Fedora packages and services ([`setup_fedora.sh`](../setup_fedora.sh)), then the hardware drivers this machine needs | yes |
-| `./install hardware` | The hardware drivers only | yes |
-| `./install user` | Modules, symlinks, Rust binaries — nothing root-owned | no |
-| `./install greeter` | greetd + tuigreet, console in JetBrains Mono. Interactive | yes |
+Then log out and back in, and pick the Hyprland session (or reboot, with the login screen).
 
-| Option | |
+## What `init` asks
+
+Everything is asked up front; the install then runs without stopping.
+
+| Question | Default |
 |---|---|
-| `--dry-run` | Print the ordered list of what would run, change nothing |
-| `--wezterm=stable\|smear` | Which wezterm to install — see [modules.md](modules.md#wezterm) |
-| `--detect` | Print the hardware detection and exit |
-| `--help` | Usage |
+| Where to put coucou-shell | `~/coucou-shell`. An existing coucou-shell checkout is used as it is |
+| Channel | **stable**, the latest release. **edge** follows every commit — see [channels](cc-pkg-mng.md#channels) |
+| The login screen (greetd + tuigreet) | no |
+| The boot splash | no |
+| Applications | WezTerm, Firefox, Nemo, Neovim, mpv. Also offered: Brave, MangoHud, fastfetch, ccnote, ccslide |
+| WezTerm build | `stable`, the packaged build. `smear` builds it from source with a cursor smear |
+| Each configuration (shell, WezTerm, Neovim, extras) | keep yours. Taking one backs up every file it replaces |
 
-`boot/login` (the `greeter` verb) and `kde` are [opt-in](modules.md#opt-in): never part of a default run.
+Before changing anything, `init` shows the plan: packages, links, services, and what each step does. Nothing happens until you confirm.
 
-## What the phases do
+The core of coucou-shell — Hyprland, the bar, Roue, Prisme, Balise, Liseuse, fonts and theme — is always installed. See [units](modules.md) for what each part contains.
 
-**`system`** installs the base package set — network, bluetooth, the pipewire stack, Mesa, input, storage, dbus/polkit, xdg, the GTK/Qt libraries — enables the matching services, then runs the hardware phase.
+## Unattended install
 
-**`hardware`** detects the CPU and GPU and installs only what this machine needs — see [hardware.md](hardware.md).
-
-**`user`** runs every module in registry order, symlinks the repo into `~/.config`, and builds the Rust binaries. Nothing here needs root on a machine whose packages are already present.
-
-## After a fresh install
-
-Re-login, or start Hyprland directly:
+Every answer can come from a file:
 
 ```bash
-Hyprland
+cc-pkg-mng init --answers answers.toml
 ```
 
-Check output names and adjust [`config/hyprland/hypr/monitors.lua`](../config/hyprland/hypr/monitors.lua) if needed — it is symlinked, so changes apply on the next `hyprctl reload`:
+```toml
+dir     = "~/coucou-shell"
+channel = "stable"
+# Optional parts, applications and configurations to take;
+# the core is always installed.
+units   = ["plymouth", "wezterm", "firefox", "nemo", "neovim", "mpv", "config-shell"]
+
+[answers.wezterm]
+variant = "stable"
+```
+
+A key left out takes its default. `cc-pkg-mng init --yes` takes every default without a file.
+
+## After the install
+
+Check the screen names and adjust [`monitors.lua`](../config/hyprland/hypr/monitors.lua) if needed; `hyprctl reload` (`Super + Shift + R`) applies it:
 
 ```bash
 hyprctl monitors
 ```
 
-Then confirm the machine matches the repo:
+Drivers for the detected CPU and GPU are installed with the rest; anything that has to be done by hand is printed at the end — see [hardware.md](hardware.md).
+
+`cc-pkg-mng status` shows what is installed and whether it is in place. To keep up to date, see [cc-pkg-mng.md](cc-pkg-mng.md).
+
+## Coming from an earlier setup
+
+If this machine already has a checkout of these dotfiles, point `init` at it; it picks up the checkout and what the previous manager had installed, and only does what is missing:
 
 ```bash
-cc-pkg-mng verify --full
+cc-pkg-mng init --dir ~/code/dotfiles
 ```
-
-## Running a single module
-
-Every `config/*/install.sh` remains executable on its own, as do `install_all.sh` and `setup_fedora.sh`:
-
-```bash
-bash config/nvim/install.sh
-```
-
-A module run this way may install packages and will ask for sudo if something is missing. The same module run through `cc-pkg-mng update` will not.
-
-`cc-pkg-mng` lives in `~/.local/bin`, which reaches `PATH` through [`config/bash/.bashrc`](../config/bash/.bashrc): open a new shell after the first install.

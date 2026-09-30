@@ -1,121 +1,83 @@
 # `cc-pkg-mng`
 
-The install and update manager for this repo: [`bin/cc-pkg-mng`](../bin/cc-pkg-mng).
-
-For the first install, see [installation.md](installation.md). For state, environment variables and the module registry, see [configuration.md](configuration.md).
+The coucou-shell package manager: it installs coucou-shell's parts, keeps them up to date, and moves between releases. For the first install, see [installation.md](installation.md).
 
 ## Everyday use
 
 ```bash
-cc-pkg-mng update     # pull, then apply the modules whose contents changed
-cc-pkg-mng verify     # check links, binaries, packages and units
+cc-pkg-mng upgrade    # move to the latest release (or commit, on edge) and apply it
+cc-pkg-mng status     # what is installed, and whether it is in place
 ```
+
+## Units and layers
+
+coucou-shell is made of **units**, in three layers:
+
+| Layer | What | Installed |
+|---|---|---|
+| **core** | The shell itself: Hyprland, the bar, Roue, Prisme, Balise, Liseuse, fonts, theme, drivers | always; the login screen and the boot splash are optional |
+| **apps** | Default applications: WezTerm, Firefox, Nemo, Neovim, mpv, and a few extras | the ones you pick; each is replaceable by any other app |
+| **configs** | Personal setups for the shell, WezTerm, Neovim and a few apps | only when you adopt them |
+
+`cc-pkg-mng list` shows every unit, `cc-pkg-mng info <unit>` what one contains. The units themselves are described in [modules.md](modules.md).
 
 ## Commands
 
-| Command | Description |
+| Command | |
 |---|---|
-| `status` | Per-module state: up to date, changed, never applied, or last run failed. Also crate staleness and repo paths no module claims. Read-only |
-| `update` | Pulls (fast-forward only), then runs every module whose contents changed, in registry order |
-| `install` | Fresh-machine path: runs every module regardless of state. System scope unless `--user`. This is what `./install` calls |
-| `verify` | Checks the registry, symlinks, binaries, packages, systemd units, and with `--full` the runtime dependencies |
-| `prune` | Removes the links left behind by files deleted from the repo (disabling a user unit first). `-n` to preview |
-| `build [crate…]` | Builds the Rust crates that changed. No argument: all of them |
-| `wezterm [stable\|smear]` | Prints or switches the wezterm variant — see [modules.md](modules.md#wezterm) |
-| `needs-restart` | Lists processes still running a binary that has since been replaced |
-| `clean --cargo` | Removes the cargo target directory and old build caches |
-| `help` | Usage |
+| `init` | Sets up the machine: the checkout, the channel, the units — see [installation.md](installation.md) |
+| `list` | Every unit, by layer, `●` when installed. `--installed`, `--layer core\|apps\|configs` |
+| `info <unit>` | What a unit installs, links and runs, and what it requires |
+| `install <unit>…` | Installs units, and the units they require |
+| `remove <unit>…` | Takes units away: unlinks their files, puts back what they replaced, turns their services off. Their packages stay installed |
+| `status` | The checkout, the channel, and each installed unit: up to date, changed since installed, or with broken links |
+| `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies what changed. `--to vX.Y.Z` picks a release |
+| `rollback` | Back to the release before the last upgrade (stable only) |
+| `channel [stable\|edge]` | Shows or switches the channel; the next `upgrade` follows it |
+| `set <unit> <question> <value>` | Changes an answer, e.g. `set wezterm variant smear`; `install wezterm` then applies it |
 
 ## Options
 
-| Flag | Applies to | Effect |
+| Flag | |
+|---|---|
+| `-n`, `--dry-run` | Show the plan; change nothing |
+| `-y`, `--yes` | Take every default: no questions, no confirmation |
+| `--dir <path>` | The coucou-shell checkout to use; remembered for next time |
+| `-q`, `--quiet` | Warnings and errors only |
+| `--verbose` | Show every command's output as it runs |
+| `--no-color` | Plain output |
+| `-V`, `--version` | The manager's version |
+
+## Channels
+
+| Channel | Follows | Roue, Prisme, Balise |
 |---|---|---|
-| `-n`, `--dry-run` | all | Print what would happen; change nothing |
-| `--only <module>` | `update`, `install` | Restrict to one module. Repeatable |
-| `--force` | `update`, `build` | Act even when nothing changed |
-| `--no-pull` | `update` | Apply the working tree as it is, without pulling |
-| `--system` | `update` | Allow root-owned steps |
-| `--user` | `install` | User scope only |
-| `--wezterm <variant>` | `install` | `stable` or `smear` |
-| `--adopt` | `update` | Mark the current state as applied, without running anything |
-| `--strict` | `update`, `verify` | Treat deferrals and warnings as failures |
-| `--fetch` | `status` | Report how many commits behind origin |
-| `--porcelain` | `status` | `key<TAB>value` output |
-| `--full` | `verify` | Also check runtime dependencies |
-| `--fix` | `verify` | Re-run the modules owning a hard problem |
-| `-q`, `--quiet` | all | Warnings and errors only |
-| `--no-color` | all | Plain output |
-| `-V`, `--version` | | Print the repo revision |
+| **stable** | releases (`v1.0.0`, …) | installed from coucou-shell's repository, at the release's version |
+| **edge** | every commit on the default branch | built on the machine into `~/.local/bin`, again whenever their sources change (the Rust toolchain is installed for it) |
 
-## Behaviour
+Switching from edge to stable removes the local builds, so the packaged ones take over.
 
-### Privilege scope
+A release's changes are listed in the [changelog](../CHANGELOG.md).
 
-`update` never asks for a password. A root-owned step it cannot do — a missing package, a system file — is **deferred** and listed at the end:
+## How it behaves
 
-```
-Deferred (needs --system):
-  firefox	cmd: mkdir -p /etc/firefox/policies
-  hyprland	cmd: dnf copr enable -y mineiro/satty
-  → cc-pkg-mng update --system
-```
+- **One plan, one confirmation.** Every command that changes the machine first shows what it will do. The password is asked once, and every package goes in one dnf transaction.
+- **Only what changed.** A unit whose files did not change since it was applied is left alone; running the same command twice does nothing the second time.
+- **Your files are kept.** A file that a unit would replace is moved to the backups first, and `remove` puts it back.
+- **Local edits block a version change.** `upgrade` and `rollback` stop if the checkout has uncommitted changes, and say which files.
+- **Nothing is restarted** except the audio stack when its configuration changes. Running programs keep their old version until they restart; the bar reloads itself.
+- **dnf and the Rust apps.** A plain `sudo dnf upgrade` also upgrades Roue, Prisme and Balise to the newest release; the next `cc-pkg-mng upgrade` brings the rest up to the same release.
 
-Deferrals do not fail the run unless `--strict` is given. `install` is the reverse: system scope unless `--user`.
+## Files
 
-### Nothing is restarted
+Everything the manager keeps is in `~/.local/state/coucou-shell/`:
 
-Running programs keep their old version until they restart (the exceptions are the `pipewire` and `wireplumber` modules, which restart the audio stack). What is affected is reported at the end of an `update`, or with:
-
-```
-$ cc-pkg-mng needs-restart
-These are still running an older version:
-  balise               binary replaced since it started
-                       -> systemctl --user restart balise.service
-```
-
-Quickshell is not listed: it reloads itself.
-
-### Uncommitted changes stop the pull
-
-```
-Uncommitted local changes:
-   M config/nvim/init.lua
-[ ERR]  refusing to pull over them. Commit, stash, or re-run with --no-pull to apply local work only.
-```
-
-`--no-pull` is also how to test an edit before committing it.
-
-### Failures and interruptions
-
-A module that failed is retried on the next `update`, even if unchanged. A run stopped with Ctrl-C keeps the modules it finished; the next `update` does the rest.
+| Path | |
+|---|---|
+| `state.toml` | The checkout, the channel, the version, and each installed unit with its answers |
+| `backups/` | Files that units replaced, by date |
+| `logs/` | The full output of every run |
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| 0 | Success (deferrals included, unless `--strict`) |
-| 1 | `update`: a module failed, or `--strict` with deferrals. `verify`: a hard problem, or `--strict` with warnings. Also: inconsistent registry, dirty worktree, diverged branch |
-| 2 | `verify`: could not run at all (not a git repository) |
-
-`status` always exits 0.
-
-## What `verify` checks
-
-| Check | Level |
-|---|---|
-| Registry matches `config/` | hard |
-| Every recorded symlink is in place | hard |
-| Binaries in `~/.local/bin`, first on `PATH` | hard (missing or shadowed), warning (stale) |
-| Every package a module declared is installed | hard |
-| `systemd --user` units linked and not failed | warning |
-| Runtime dependencies ([`scripts/check-deps.sh`](../scripts/check-deps.sh)) | warning, `--full` only |
-
-Only modules that have run at least once on the machine are checked. `--fix` re-runs the modules owning a hard problem.
-
-## Logs
-
-Each run writes a full log under `~/.local/state/dotfiles/`:
-
-```bash
-less ~/.local/state/dotfiles/latest.log
-```
+`0` on success, `1` on any error: a failed step, a cancelled plan, an unknown unit, uncommitted changes.

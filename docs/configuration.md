@@ -1,139 +1,79 @@
 # Configuration
 
-How the manager stores state, what you can change, and how to add to it. For the commands themselves see [cc-pkg-mng.md](cc-pkg-mng.md).
+What can be changed around the manager, and how to add a unit of your own. For the commands, see [cc-pkg-mng.md](cc-pkg-mng.md); for what each unit installs and where its settings live, see [modules.md](modules.md).
 
-## State and logs
+## Editing coucou-shell
 
-Everything the manager remembers lives in `${XDG_STATE_HOME:-~/.local/state}/dotfiles/`:
+Configuration files are **linked** from the checkout into place, never copied: edit the file in the checkout and the change is live once the program concerned reloads. `cc-pkg-mng status` then shows the unit as *changed since installed*; `cc-pkg-mng install <unit>` re-applies it when a change needs more than a reload (a new package, a hook).
 
-| File | Contents |
-|---|---|
-| `state.v1` | `key<TAB>value`: per-module fingerprint, exit code, duration and timestamp; per-crate build key |
-| `links.ledger` | `module<TAB>source<TAB>destination` for every link created. Read by `verify` and `prune` |
-| `packages.ledger` | `module<TAB>package`: what each module currently depends on. Read by `verify` |
-| `deferred.ledger` | Root-owned steps skipped during the last run |
-| `install-*.log`, `latest.log` | Full output of each run, one file per run |
-
-`state.v1` is plain, sorted text:
-
-```
-schema	1
-mod.nvim.applied	2026-09-17T09:39:49+02:00
-mod.nvim.fp	a6a0406707b41f8c…
-mod.nvim.rc	0
-crate.roue.key	54c00228…|cargo 1.98.1 (797e8a9bc 2026-08-05)
-```
-
-| To | Do |
-|---|---|
-| Force a full re-apply | `rm ~/.local/state/dotfiles/state.v1`, or `cc-pkg-mng update --force` |
-| Mark an already-configured machine as current | `cc-pkg-mng update --adopt` — records fingerprints without running anything |
-| Re-apply one module | `cc-pkg-mng update --force --only <name>` |
-
-Bumping `STATE_SCHEMA` in [`scripts/lib/state.sh`](../scripts/lib/state.sh) makes every machine do one full re-apply.
+On the stable channel, commit or stash your edits before `upgrade`: it refuses to move over uncommitted changes.
 
 ## Environment variables
 
 | Variable | Default | Effect |
 |---|---|---|
-| `STATE_DIR` | `~/.local/state/dotfiles` | Where state, ledgers and logs are written |
-| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Shared cargo target directory for the Rust crates |
-| `HOST_PROFILE` | from the DMI product name | Force a machine profile — see [modules.md](modules.md#per-machine-profiles) |
-| `CCPKG_ALLOW_ROOT` | `1` | `0` defers every root-owned step instead of running it. `update` sets this itself |
-| `CCPKG_MODULE` | the module's path under `config/` | Which module the ledgers attribute an entry to |
+| `COUCOU_SHELL_URL` | `https://github.com/lucasssoh/dotfiles.git` | What `init` clones |
+| `CCPKG_STATE_DIR` | `~/.local/state/coucou-shell` | Where the manager keeps its state, backups and logs |
+| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Build directory for Roue, Prisme and Balise on edge |
+| `HOST_PROFILE` | from the machine's DMI product name | Forces a machine profile — see [per-machine profiles](modules.md#per-machine-profiles) |
 
-## The module registry
+## Adding a unit
 
-[`scripts/lib/modules.sh`](../scripts/lib/modules.sh) holds the list and its constraints:
+A unit is a directory `units/<layer>/<name>/` with a `unit.toml`. The next `cc-pkg-mng list` shows it, and `cc-pkg-mng install <name>` installs it.
 
-| Name | Purpose |
+```toml
+name     = "tmux"
+layer    = "apps"                 # core, apps or configs
+summary  = "tmux, with the clipboard wired to Wayland"
+requires = ["base"]               # installed first
+default  = true                   # apps: ticked in init's list
+
+[packages]
+dnf   = ["tmux", "wl-clipboard"]
+copr  = []                        # COPRs to enable first
+repos = []                        # .repo URLs to add first
+
+[links]                           # checkout path → destination
+"config/tmux/.tmux.conf" = "~/.tmux.conf"
+
+[services]
+user   = []                       # systemd --user units to enable
+system = []                       # system units to enable
+
+[[questions]]                     # asked once, changed later with `set`
+id      = "variant"
+ask     = "Which build?"
+choices = ["stable", "smear"]
+default = "stable"
+
+[[hooks]]                         # a script for what a declaration cannot say
+name   = "plugins"
+run_as = "user"                   # or "root"
+does   = "clone the plugin manager into ~/.tmux/plugins"
+run    = "units/apps/tmux/hooks/plugins.sh"
+watch  = ["config/tmux"]          # re-run when any of these changes
+```
+
+| Key | |
 |---|---|
-| `MODULE_ORDER` | The modules, in the order they run. The order is the contract |
-| `MODULE_OPTIN` | Modules that exist but are never run by default, each with its reason |
-| `MODULE_AFTER` | Ordering constraints — `[liseuse]="fuzzel"`, or `"@last"` for the trailing block |
-| `MODULE_LAST_BLOCK` | How many entries form that trailing block |
+| `optional`, `ask` | core only: not installed unless `init` asks `ask` and you say yes |
+| `[links_if]` | `unit = ["path", …]`: links made only when that unit is installed |
+| `[files]` | checkout path → system path, copied as root |
+| `[binaries]` | a Rust app: `rpm` (its package), `source` (its crate), `bins` (what it builds) |
+| `[verify] commands` | commands that must succeed for the unit to count as working |
 
-Every `cc-pkg-mng` command first checks that:
-
-1. every registered module has an `install.sh`;
-2. every `config/*/install.sh` on disk is registered somewhere;
-3. no duplicates in `MODULE_ORDER`;
-4. every `MODULE_AFTER` constraint holds.
-
-Any failure stops the command and names the module and the file to edit.
-
-### Adding a module
-
-1. Create `config/<name>/install.sh` and make it executable.
-2. Add `<name>` to `MODULE_ORDER`, at the position its dependencies require — or to `MODULE_OPTIN` to keep it out of default runs.
-3. Add an entry to `MODULE_AFTER` if it must follow another module.
-
-Until step 2 is done, every `cc-pkg-mng` command fails and says which file to edit.
-
-Inside the module, source the shared helpers rather than writing your own:
+A hook is re-run when the unit is first installed and whenever the unit's files or its `watch` paths change. It starts with:
 
 ```bash
 #!/usr/bin/env bash
-set -Eeuo pipefail
-
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/pkg.sh"
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../scripts/lib/link.sh"
-
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
-pkg_ensure tmux wl-clipboard                       # only installs what is missing
-pkg_ensure "$(pkg_pick fd-find fd fd-find)"        # dnf / pacman / apt name
-sudo_maybe systemctl enable --now foo              # deferred in user scope
-safe_link "$DOTFILES_DIR/config/<name>/x.conf" "$HOME/.config/x.conf"
+. "$(dirname "$(readlink -f "$0")")/../../../lib/hook.sh"
 ```
 
-| Helper | Source | Behaviour |
-|---|---|---|
-| `pkg_ensure` | [`pkg.sh`](../scripts/lib/pkg.sh) | Records every name in the ledger, installs only the absent ones, defers when not allowed to use root |
-| `pkg_pick` | `pkg.sh` | Picks the right package name for the current distro |
-| `pkg_installed` | `pkg.sh` | Query only, no root |
-| `sudo_maybe` | `pkg.sh` | Runs under sudo, or defers and reports |
-| `safe_link` | [`link.sh`](../scripts/lib/link.sh) | Returns early if the link is already correct; backs a real file up to `.bak` rather than overwriting |
+which gives it `REPO` (the checkout), `as_root` for system steps, `once NAME` for steps done only once, `info`, `ok` and `warn`, and the answers as `CCPKG_ANSWER_<ID>`.
 
-## Rust crates
-
-`RUST_CRATES` in [`scripts/lib/rust.sh`](../scripts/lib/rust.sh) maps each crate to its directory and the binaries it produces:
+Check the manifests before installing:
 
 ```bash
-declare -A RUST_CRATES=(
-    [balise]="config/hyprland/balise-src balise"
-    [prisme]="config/hyprland/prisme-src prisme wallpaper-filter"
-    [roue]="config/hyprland/roue-src roue"
-)
+scripts/check-units.py              # keys, paths, requirements
+scripts/check-units.py --packages   # also: does every package exist in dnf
 ```
-
-A crate is rebuilt when its content fingerprint changes, when the `cargo --version` string changes, or when one of its binaries is missing from `~/.local/bin`. `--force` bypasses the check.
-
-Binaries go to `~/.local/bin`; build output goes to `CARGO_TARGET_ROOT`, outside the repo.
-
-```bash
-cc-pkg-mng build            # all crates, skipping what is current
-cc-pkg-mng build roue       # one
-cc-pkg-mng build --force    # ignore the staleness check
-cc-pkg-mng clean --cargo    # drop the target directory
-```
-
-## How changes are detected
-
-One content fingerprint per `config/<module>/`, stored in `state.v1` and compared on the next run.
-
-- The file list comes from `git ls-files`, so **`.gitignore` decides what is excluded** — build output under `*-src/target/`, `__pycache__/` and the runtime JSON under `hypr/` never count.
-- Contents are compared, not modification times: `touch` alone triggers nothing.
-- Deleting or renaming a file counts as a change.
-- Untracked files that are not ignored count too.
-
-### Paths outside `config/`
-
-| Path | Target |
-|---|---|
-| `setup_fedora.sh` | the system phase |
-| `scripts/lib/hardware.sh`, `scripts/install-hardware.sh`, `scripts/hardware-detect.sh` | the hardware phase |
-| `wallpapers/` | the `hyprland` module |
-| `bin/`, `scripts/`, `install`, `install_all.sh` | nothing |
-| anything else | listed by `status` under **Unmapped paths** |
-

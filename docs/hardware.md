@@ -1,13 +1,12 @@
 # Hardware detection
 
-The hardware phase detects the CPU and GPU and installs only the drivers and tools this machine needs. The profiles and package lists live in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
+The `hardware` unit detects the CPU and GPU and installs only the drivers and tools this machine needs. The profiles and package lists live in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
 
 ```bash
 ./scripts/hardware-detect.sh             # report, packages, codec swaps, manual follow-ups
 ./scripts/hardware-detect.sh --packages  # package names only
 ./scripts/hardware-detect.sh --notes     # manual follow-ups only
 ./scripts/hardware-detect.sh --json      # machine-readable
-./install --detect                       # same report, from a bare clone
 ```
 
 ## Profiles
@@ -23,7 +22,7 @@ CPUs newer than the table are matched by these family/model rules, with no edit 
 
 ## Codec swaps
 
-Fedora's media packages lack H.264/HEVC hardware decoding. The phase replaces them with their RPM Fusion versions, enabling RPM Fusion free and nonfree:
+Fedora's media packages lack H.264/HEVC hardware decoding. The unit replaces them with their RPM Fusion versions, enabling RPM Fusion free and nonfree:
 
 | Fedora | Replaced by |
 |---|---|
@@ -31,7 +30,7 @@ Fedora's media packages lack H.264/HEVC hardware decoding. The phase replaces th
 | `libva-intel-media-driver` | `intel-media-driver` |
 | `mesa-va-drivers` | `mesa-va-drivers-freeworld` |
 
-The table is `hw_codec_swaps` in `hardware.sh`. The phase warns if `vainfo` still shows no H.264 decoding afterwards. Restart Firefox and mpv to pick up the new driver.
+The table is `hw_codec_swaps` in `hardware.sh`. It warns if `vainfo` still shows no H.264 decoding afterwards. Restart Firefox and mpv to pick up the new driver.
 
 ## Manual follow-ups
 
@@ -47,9 +46,10 @@ Printed, never run:
 
 ## Running it
 
+It runs with every install, and again after an `upgrade` or an edit that changes the profiles in `hardware.sh`:
+
 ```bash
-./install hardware              # this phase alone
-cc-pkg-mng update --system      # re-run after editing hardware.sh
+cc-pkg-mng install hardware
 ```
 
 Packages that fail to install are listed at the end of the run.

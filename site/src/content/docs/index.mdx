@@ -16,10 +16,12 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
+On Fedora 44:
+
 ```bash
-git clone https://github.com/lucasssoh/dotfiles.git
-cd dotfiles
-./install
+sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo
+sudo dnf install cc-pkg-mng
+cc-pkg-mng init
 ```
 
 <CardGrid>
@@ -36,9 +38,9 @@ cd dotfiles
     and PlantUML.
   </Card>
   <Card title="cc-pkg-mng" icon="seti:shell">
-    Applies only what changed, rebuilds only what needs it, and verifies the
-    result.
+    Installs the parts you pick, applies only what changed, and moves
+    between releases with upgrade and rollback.
   </Card>
 </CardGrid>
 
-[Browse the modules →](/dotfiles/docs/modules/)
+[Browse the units →](/dotfiles/docs/modules/)

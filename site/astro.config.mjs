@@ -47,7 +47,7 @@ export default defineConfig({
           items: ['docs/hardware', 'docs/keybindings'],
         },
         {
-          label: 'Modules',
+          label: 'Units',
           items: [
             { label: 'Overview', slug: 'docs/modules' },
             ...moduleGroups.map((g) => ({ ...g, collapsed: false })),
