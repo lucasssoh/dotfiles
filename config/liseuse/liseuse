@@ -154,8 +154,13 @@ zathura_config_dir() {
     local out="$ZATHURA_CFG/zathurarc"
     local doc="${1:-}"
     if desktop_is_dark; then
-        # The repo file IS the dark configuration; nothing to add.
+        # The repo file IS the dark configuration; nothing to add -- except
+        # for Markdown, which md2pdf.py already renders dark: recolor would
+        # invert that black page back to white.
         cat -- "$ZATHURARC" > "$out" 2>/dev/null || return 1
+        case "$doc" in
+            "$MD_CACHE"/*) printf '\n# ---- appended by liseuse: already rendered dark ----\nset recolor false\n' >> "$out" ;;
+        esac
     else
         {
             cat -- "$ZATHURARC" 2>/dev/null
