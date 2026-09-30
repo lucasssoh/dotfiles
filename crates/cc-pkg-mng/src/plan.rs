@@ -116,10 +116,12 @@ impl Plan {
 }
 
 /// Repo paths a unit's fingerprint covers: its manifest directory and every
-/// source it links, copies or runs.
+/// source it links, copies, runs or builds.
 pub fn fingerprint_paths(repo: &Path, unit: &Unit) -> Vec<PathBuf> {
     let mut paths = vec![unit.dir.clone()];
     paths.extend(unit.links.keys().chain(unit.files.keys()).map(|s| repo.join(s)));
+    // A Rust app's sources: on edge, a change rebuilds it.
+    paths.extend(unit.binaries.iter().map(|b| repo.join(&b.source)));
     for h in &unit.hooks {
         paths.extend(h.run.iter().chain(&h.watch).map(|s| repo.join(s)));
     }
@@ -223,7 +225,7 @@ pub fn build(
                     }
                 }
                 drop_local = b.bins.iter().map(local_bin).filter(|p| p.exists()).collect();
-            } else if b.bins.iter().any(|bin| !local_bin(bin).exists()) {
+            } else if new || changed || b.bins.iter().any(|bin| !local_bin(bin).exists()) {
                 build = Some(BinPlan { source: repo.join(&b.source), bins: b.bins.clone() });
                 let build_deps = sys::rpm_missing(&u.packages.build)?;
                 for p in &u.packages.build {
