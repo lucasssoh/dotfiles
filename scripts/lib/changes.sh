@@ -140,7 +140,7 @@ path_target() {
         scripts/*)                     printf 'meta:manager' ;;
         *.md|*.jpg|*.png|.gitignore|.gitattributes|LICENSE)
                                        printf 'none' ;;
-        units/*|crates/*)              printf 'none' ;;           # cc-pkg-mng 2, not applied by the modules
+        units/*|crates/*|LICENSES/*)   printf 'none' ;;           # cc-pkg-mng 2, not applied by the modules
         *)                             printf 'unmapped' ;;
     esac
 }

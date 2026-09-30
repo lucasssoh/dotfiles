@@ -43,6 +43,10 @@ cc-pkg-mng verify     # check that everything is still in place
 | **Boot** (`config/boot/`) | Plymouth splash (`boot/plymouth`), and an opt-in greetd + tuigreet login with the console in JetBrains Mono (`boot/login`) |
 | Everything else in `config/` | bash/zsh, tmux, wezterm, nvim, pipewire, wireplumber, nemo, fuzzel, fonts, mpv, mangohud, fastfetch, firefox, brave — plus KDE as an opt-in session. See [docs/modules.md](docs/modules.md) |
 
+## Licence
+
+coucou-shell is for personal use: install it, use it and adapt it on your own machines, but don't redistribute it — see [LICENSE](LICENSE). Third-party parts keep their own licences, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
+
 ## Monitors & HDR
 
 After the first launch, check output names with `hyprctl monitors` and adjust `config/hyprland/hypr/monitors.lua` if needed; `hyprctl reload` applies it. HDR is toggled per screen from the Balise drawer.
