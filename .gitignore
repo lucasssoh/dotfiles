@@ -28,6 +28,12 @@ portfolio-content/
 # package-lock.json and installed by config/liseuse/install.sh.
 config/liseuse/node_modules/
 
-# Docs website (Astro Starlight), kept local for now
-site/
-.github/workflows/site.yml
+# Docs website (Astro Starlight): what npm and the build produce, and the
+# pages copied from docs/ by site/scripts/sync-docs.mjs.
+site/node_modules/
+site/dist/
+site/.astro/
+site/src/content/docs/docs/
+
+# RPMs from packaging/build-rpms.sh
+rpms/

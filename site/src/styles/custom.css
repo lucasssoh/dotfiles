@@ -1,0 +1,13 @@
+/* Neutral inks, as in the bar's drawers: no coloured accent. */
+:root {
+  --sl-color-accent-low: #2c2c2e;
+  --sl-color-accent: #d1d1d6;
+  --sl-color-accent-high: #f2f2f7;
+  --sl-color-black: #000;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e5e5ea;
+  --sl-color-accent: #3a3a3c;
+  --sl-color-accent-high: #1c1c1e;
+}

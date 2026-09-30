@@ -1,0 +1,44 @@
+---
+title: coucou-shell
+description: A Fedora + Hyprland desktop, installed and kept up to date by its own manager.
+template: splash
+hero:
+  tagline: A Fedora + Hyprland desktop, installed and kept up to date by its own manager.
+  actions:
+    - text: Install
+      link: /dotfiles/docs/installation/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/lucasssoh/dotfiles
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+```bash
+git clone https://github.com/lucasssoh/dotfiles.git
+cd dotfiles
+./install
+```
+
+<CardGrid>
+  <Card title="Quickshell bar" icon="laptop">
+    Clock and metrics, workspaces and media, and drawers for network, power,
+    an audio mixer with a per-app equalizer, notifications and a calendar.
+  </Card>
+  <Card title="Native apps" icon="puzzle">
+    Roue, a radial wheel. Prisme, a wallpaper picker. Balise, a network and
+    Bluetooth daemon behind the bar.
+  </Card>
+  <Card title="Liseuse" icon="open-book">
+    A reading library on one key: PDF, EPUB, comics and Markdown with maths
+    and PlantUML.
+  </Card>
+  <Card title="cc-pkg-mng" icon="seti:shell">
+    Applies only what changed, rebuilds only what needs it, and verifies the
+    result.
+  </Card>
+</CardGrid>
+
+[Browse the modules →](/dotfiles/docs/modules/)

@@ -1,0 +1,77 @@
+name: Pages
+
+# One Pages site, two things in it: the documentation (site/) and the dnf
+# repository, rebuilt from every release's RPMs each time.
+
+on:
+  push:
+    branches: [master]
+    paths: ['docs/**', 'site/**', 'packaging/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  repo:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Tools
+        run: dnf -y install git-core createrepo_c gnupg2 gh
+
+      - uses: actions/checkout@v7
+
+      - name: Every release's RPMs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir rpms
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName'); do
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.rpm' --dir rpms
+          done
+
+      - name: Repository
+        env:
+          RPM_SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
+        run: |
+          printf '%s\n' "$RPM_SIGNING_KEY" | gpg --batch --import
+          packaging/make-repo.sh rpms public
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repo
+          path: public
+
+  build:
+    needs: repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Into site/public, which Astro copies as is next to the pages.
+      - uses: actions/download-artifact@v4
+        with:
+          name: repo
+          path: site/public
+
+      - uses: withastro/action@v6
+        with:
+          path: ./site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
