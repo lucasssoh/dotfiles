@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "cc-pkg-mng"
-version = "2.0.0-dev"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "clap",

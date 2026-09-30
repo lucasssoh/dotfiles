@@ -958,7 +958,7 @@ dependencies = [
 
 [[package]]
 name = "prisme"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-channel",
  "fast_image_resize",

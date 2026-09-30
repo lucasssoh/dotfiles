@@ -4,13 +4,15 @@ Versions follow `MAJOR.MINOR.PATCH`. Each release is a git tag (`v1.0.0`) with a
 
 ## 1.0.0 — Coucou à tous
 
-*Unreleased.* The first version installable on a fresh Fedora netinstall.
+The first version installable on a fresh Fedora netinstall.
 
 ### Install and updates
+- **Installed with dnf** from coucou-shell's own signed repository: add `coucou-shell.repo`, install `cc-pkg-mng`, then run `cc-pkg-mng init`. Roue, Prisme and Balise come prebuilt, with no Rust toolchain needed.
 - **cc-pkg-mng 2**, the package manager of coucou-shell: `init` sets up a new machine, `install` and `remove` add or take away parts, `upgrade` and `rollback` move between releases, `channel` switches between stable (releases) and edge (every commit), `set` changes an answer such as the WezTerm build.
 - Everything is asked up front, the password is asked once, and packages install in a single dnf transaction.
 - The system is split in three layers: **core** (the shell itself), **apps** (default applications, replaceable), and **configs** (optional personal setups; each can be adopted or skipped, and files it would replace are backed up).
 - Picks up an existing checkout and the state of the previous manager.
+- The documentation is also a website: https://lucasssoh.github.io/dotfiles/.
 
 ### Desktop
 - **Hyprland**, configured in Lua, with per-machine profiles and an optional private override file.

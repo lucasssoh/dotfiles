@@ -1,6 +1,6 @@
 [package]
 name = "roue"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 description = "Native Wayland radial selection wheel (GTK4 + layer-shell), RPG weapon-menu style"
 license-file = "../../../LICENSE.md"
