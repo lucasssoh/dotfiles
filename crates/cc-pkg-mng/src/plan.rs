@@ -84,12 +84,14 @@ impl UnitPlan {
 pub struct Plan {
     pub units: Vec<UnitPlan>,
     pub coprs: Vec<String>,
+    pub repos: Vec<String>,
     pub packages: Vec<String>,
 }
 
 impl Plan {
     pub fn needs_root(&self) -> bool {
         !self.coprs.is_empty()
+            || !self.repos.is_empty()
             || !self.packages.is_empty()
             || self.units.iter().any(|u| {
                 u.files.iter().any(|f| f.copy)
@@ -108,8 +110,20 @@ impl Plan {
 pub fn fingerprint_paths(repo: &Path, unit: &Unit) -> Vec<PathBuf> {
     let mut paths = vec![unit.dir.clone()];
     paths.extend(unit.links.keys().chain(unit.files.keys()).map(|s| repo.join(s)));
-    paths.extend(unit.hooks.iter().filter_map(|h| h.run.as_ref()).map(|s| repo.join(s)));
+    for h in &unit.hooks {
+        paths.extend(h.run.iter().chain(&h.watch).map(|s| repo.join(s)));
+    }
     paths
+}
+
+/// A changed answer (wezterm: stable → smear) must re-run the unit's hooks,
+/// so the answers are part of the fingerprint.
+pub fn with_answers(files: String, answers: &BTreeMap<String, String>) -> String {
+    if answers.is_empty() {
+        return files;
+    }
+    let joined: Vec<String> = answers.iter().map(|(k, v)| format!("{k}={v}")).collect();
+    format!("{files}+{}", joined.join(","))
 }
 
 /// `order`: the units to install, dependencies first (resolve::closure).
@@ -148,6 +162,7 @@ pub fn build(
     };
 
     let mut coprs = BTreeSet::new();
+    let mut repos = BTreeSet::new();
     let mut packages: Vec<String> = Vec::new();
     let add_pkg = |p: &String, packages: &mut Vec<String>| {
         if missing.contains(p) && !packages.contains(p) {
@@ -158,7 +173,8 @@ pub fn build(
     for name in order {
         let u = &units[name];
         let prior = state.units.get(name);
-        let fingerprint = sys::fingerprint(repo, &fingerprint_paths(repo, u));
+        let unit_answers = answers.get(name).cloned().unwrap_or_default();
+        let fingerprint = with_answers(sys::fingerprint(repo, &fingerprint_paths(repo, u)), &unit_answers);
         let new = prior.is_none();
         let changed = prior.is_some_and(|p| p.fingerprint != fingerprint);
 
@@ -167,6 +183,7 @@ pub fn build(
         }
         if u.packages.dnf.iter().any(|p| missing.contains(p)) {
             coprs.extend(u.packages.copr.iter().filter(|c| !sys::copr_enabled(c)).cloned());
+            repos.extend(u.packages.repos.iter().filter(|r| !sys::repo_added(r)).cloned());
         }
 
         // Rust apps: built locally when a binary is missing (edge; the RPM
@@ -233,7 +250,7 @@ pub fn build(
             new,
             changed,
             fingerprint,
-            answers: answers.get(name).cloned().unwrap_or_default(),
+            answers: unit_answers,
             links,
             files,
             user_services,
@@ -243,6 +260,7 @@ pub fn build(
         });
     }
     plan.coprs = coprs.into_iter().collect();
+    plan.repos = repos.into_iter().collect();
     plan.packages = packages;
     Ok(plan)
 }

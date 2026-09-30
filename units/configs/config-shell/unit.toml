@@ -14,6 +14,7 @@ dnf = ["zsh", "zoxide", "fzf", "ripgrep", "fd-find", "make", "gcc", "tmux", "wl-
 
 [[hooks]]
 name   = "zsh"
-run_as = "user"
+run_as = "root"
 does   = "clone zsh-autosuggestions and zsh-syntax-highlighting into ~/.zsh, make zsh the login shell"
 from   = "config/bash/install.sh"
+run    = "units/configs/config-shell/hooks/zsh.sh"

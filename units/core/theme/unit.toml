@@ -19,9 +19,12 @@ name   = "gtk-theme"
 run_as = "user"
 does   = "build ~/.local/share/themes/Adwaita-dark with config/nemo/theme/build-adwaita-dark.py; align gtk-theme with color-scheme in dconf; restart the GTK portal"
 from   = "config/nemo/install.sh"
+run    = "units/core/theme/hooks/gtk-theme.sh"
+watch  = ["config/nemo/theme"]
 
 [[hooks]]
 name   = "comix-cursors"
 run_as = "user"
 does   = "build Comix Cursors from upstream SVGs when ~/.icons/ComixCursors-White is missing"
 from   = "config/hyprland/install.sh"
+run    = "units/core/theme/hooks/comix-cursors.sh"

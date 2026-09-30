@@ -99,6 +99,7 @@ default  = true                    # apps only: preselected at init
 [packages]
 dnf   = []                         # installed in the single dnf transaction
 copr  = []                         # enabled before it
+repos = []                         # .repo file URLs, added before it
 build = []                         # edge only: build dependencies of [binaries]
 
 [binaries]                         # Rust apps: RPM on stable, local build on edge
@@ -127,14 +128,20 @@ default = "stable"
 
 [[hooks]]                          # what cannot be declared; stdin closed
 name   = "smear-build"
-run_as = "root"                    # user | root
+run_as = "root"                    # root: needs the sudo session (see below)
 does   = "build the smear variant when variant = smear"
-from   = "config/wezterm/install.sh"   # M1: the script that does it today
+from   = "config/wezterm/install.sh"   # the script that did it before
+run    = "units/apps/wezterm/hooks/smear-build.sh"
+watch  = ["config/wezterm/smear"]  # a change here re-runs the hook
 ```
 
 A `# review:` comment in a manifest marks something the current modules do that is questionable or broken, recorded rather than silently changed.
 
-A hook runs when it has a `run` script (repo path) and its unit is new or its fingerprint changed; it gets `CCPKG_UNIT`, `COUCOU_DIR` and one `CCPKG_ANSWER_<ID>` per answered question. A hook without `run` is only described: the plan shows it as not extracted yet.
+A hook runs when its unit is new or its fingerprint changed. The fingerprint covers the manifest's directory (hooks included), every linked or copied source, every hook's `run` script and `watch` paths, and the unit's answers — so a changed answer re-runs the hooks. A hook without `run` is only described: the plan shows it as not extracted yet.
+
+Every hook runs **as the user**, from the repo root, stdin closed, with `COUCOU_DIR`, `CCPKG_UNIT`, `CCPKG_HOOK_STATE` (a directory of its own) and one `CCPKG_ANSWER_<ID>` per answer. `run_as = "root"` means the hook needs root for some steps: the manager then holds a sudo session for the run, and the hook calls `sudo -n` for exactly those steps. Building or cloning as root would land in `/root`. Hooks source `units/lib/hook.sh`.
+
+Plymouth, the greeter and the hardware phase reuse their existing scripts as hooks and declare no `[files]`: Plymouth's script rebuilds the initramfs only when what goes into it changed, so files copied ahead of it would hide the change.
 
 Hooks cover what cannot be declared (Plymouth's initramfs, the GTK theme build, the wezterm smear build). They run with **stdin closed**: a hook that waits for input fails at once with a clear message instead of hanging.
 
@@ -279,6 +286,7 @@ cc-pkg-mng init
 | M0 | Clean-up on the current manager: remove Waybar and Rofi, fix `update`'s missing pull, relative script links, fingerprints survive a dangling link | **done** |
 | M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done** — reviewable, nothing changes yet |
 | M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done** — `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
+| M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done** — no step left to the old modules |
 | M3 | `init`, channels, `upgrade`, `rollback`, migration from 1.x | full lifecycle on an existing machine |
 | M4 | `roles` unit, key bindings moved to roles | apps replaceable |
 | M5 | COPR packages | installable from `dnf` |

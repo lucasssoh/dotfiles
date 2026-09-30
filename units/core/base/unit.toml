@@ -28,9 +28,11 @@ name   = "system-upgrade"
 run_as = "root"
 does   = "dnf upgrade before anything else (fresh machines only)"
 from   = "setup_fedora.sh"
+run    = "units/core/base/hooks/system-upgrade.sh"
 
 [[hooks]]
 name   = "snap-classic"
 run_as = "root"
 does   = "ln -s /var/lib/snapd/snap /snap"
 from   = "setup_fedora.sh"
+run    = "units/core/base/hooks/snap-classic.sh"

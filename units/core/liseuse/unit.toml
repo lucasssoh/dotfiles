@@ -20,9 +20,12 @@ name   = "mathjax"
 run_as = "user"
 does   = "npm ci in config/liseuse when node_modules/mathjax-full is missing"
 from   = "config/liseuse/install.sh"
+run    = "units/core/liseuse/hooks/mathjax.sh"
+watch  = ["config/liseuse/package-lock.json"]
 
 [[hooks]]
 name   = "library-and-mime"
 run_as = "user"
 does   = "create ~/Livres, set zathura as the handler of document MIME types, write liseuse-markdown.desktop"
 from   = "config/liseuse/install.sh"
+run    = "units/core/liseuse/hooks/library-and-mime.sh"

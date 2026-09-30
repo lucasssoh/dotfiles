@@ -19,6 +19,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
     if !plan.coprs.is_empty() {
         ui.line(&format!("  COPRs to enable   {}", plan.coprs.join(" ")));
     }
+    for r in &plan.repos {
+        ui.line(&format!("  repo to add       {r}"));
+    }
     if plan.packages.is_empty() {
         ui.line(&format!("  {}", ui.dim("packages          all present")));
     } else {
@@ -111,10 +114,14 @@ fn sudo(args: &[&str]) -> Command {
 pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
     let _sudo = if plan.needs_root() { Some(SudoSession::start()?) } else { None };
 
-    if !plan.coprs.is_empty() || !plan.packages.is_empty() {
+    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() {
         ui.heading("Packages");
         for copr in &plan.coprs {
             ui.run(&format!("enable COPR {copr}"), &mut sudo(&["dnf", "copr", "enable", "-y", copr]))?;
+        }
+        for r in &plan.repos {
+            let from = format!("--from-repofile={r}");
+            ui.run(&format!("add repo {r}"), &mut sudo(&["dnf", "config-manager", "addrepo", &from]))?;
         }
         if !plan.packages.is_empty() {
             let mut args = vec!["dnf", "install", "-y"];
@@ -257,15 +264,17 @@ fn apply_unit(
     let unit = &units[&u.name];
     for h in &u.hooks {
         if let HookPlan::Run(hook, script) = h {
-            let mut cmd = match hook.run_as {
-                RunAs::User => Command::new(script),
-                RunAs::Root => {
-                    let mut c = sudo(&["--preserve-env=CCPKG_UNIT,COUCOU_DIR"]);
-                    c.arg(script);
-                    c
-                }
-            };
-            cmd.current_dir(repo).env("CCPKG_UNIT", &unit.name).env("COUCOU_DIR", repo);
+            // A root hook runs as the user too and calls `sudo -n` for its
+            // system steps: this run holds the sudo session (SudoSession),
+            // and building or cloning as root would land in /root.
+            let hook_state = state_dir().join("hooks").join(&unit.name);
+            std::fs::create_dir_all(&hook_state)?;
+            let mut cmd = Command::new(script);
+            cmd.current_dir(repo)
+                .env("CCPKG_UNIT", &unit.name)
+                .env("COUCOU_DIR", repo)
+                .env("CCPKG_HOOK_STATE", &hook_state)
+                .env("CCPKG_ROOT", if hook.run_as == RunAs::Root { "1" } else { "0" });
             for (k, v) in &u.answers {
                 cmd.env(format!("CCPKG_ANSWER_{}", k.to_uppercase()), v);
             }

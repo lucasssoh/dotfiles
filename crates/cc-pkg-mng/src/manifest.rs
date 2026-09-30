@@ -39,6 +39,9 @@ pub struct Packages {
     pub dnf: Vec<String>,
     #[serde(default)]
     pub copr: Vec<String>,
+    /// `.repo` file URLs, added (dnf config-manager addrepo) before the transaction.
+    #[serde(default)]
+    pub repos: Vec<String>,
     /// Build dependencies of [binaries], needed only for a local build.
     #[serde(default)]
     pub build: Vec<String>,
@@ -82,6 +85,9 @@ pub struct Hook {
     /// The hook script, relative to the repo. Absent: not extracted yet.
     #[serde(default)]
     pub run: Option<String>,
+    /// Repo paths the script reads: a change to any of them re-runs it.
+    #[serde(default)]
+    pub watch: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]

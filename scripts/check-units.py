@@ -4,7 +4,8 @@
 Checks every units/<layer>/<name>/unit.toml against the repo:
   - known keys only, name and layer match the directory;
   - `requires` names existing units, with no cycle;
-  - every source path in [links], [files] and [binaries] exists;
+  - every source path in [links], [files] and [binaries] exists, and every
+    hook `run` script exists and is executable;
   - [links_if] names existing units and lists paths from [links];
   - units/legacy-map.toml covers every config/*/install.sh on disk and names
     only existing units.
@@ -14,6 +15,7 @@ Checks every units/<layer>/<name>/unit.toml against the repo:
 
 Design: docs/design/cc-pkg-mng-2.md.
 """
+import os
 import pathlib
 import subprocess
 import sys
@@ -27,7 +29,7 @@ KEYS = {
     'packages', 'binaries', 'links', 'links_if', 'files', 'services',
     'questions', 'hooks', 'verify',
 }
-PACKAGE_KEYS = {'dnf', 'copr', 'build'}
+PACKAGE_KEYS = {'dnf', 'copr', 'repos', 'build'}
 
 errors = []
 
@@ -69,6 +71,19 @@ def check_paths(units):
         source = data.get('binaries', {}).get('source')
         if source and not (ROOT / source / 'Cargo.toml').exists():
             err(rel, f'[binaries] source has no Cargo.toml: {source}')
+        for hook in data.get('hooks', []):
+            run = hook.get('run')
+            if run is None:
+                continue
+            script = ROOT / run
+            if not script.is_file():
+                err(rel, f'hook {hook.get("name")}: run script does not exist: {run}')
+            elif not os.access(script, os.X_OK):
+                err(rel, f'hook {hook.get("name")}: run script is not executable: {run}')
+        for hook in data.get('hooks', []):
+            for w in hook.get('watch', []):
+                if not (ROOT / w).exists():
+                    err(rel, f'hook {hook.get("name")}: watched path does not exist: {w}')
         links = data.get('links', {})
         for unit, paths in data.get('links_if', {}).items():
             if unit not in units:

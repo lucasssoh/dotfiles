@@ -29,9 +29,12 @@ name   = "sensors-detect"
 run_as = "root"
 does   = "sensors-detect --auto"
 from   = "config/hyprland/install.sh"
+run    = "units/core/hyprland/hooks/sensors-detect.sh"
 
 [[hooks]]
 name   = "wallpapers"
 run_as = "user"
-does   = "merge wallpapers/ (and wallpapers-private when present) into ~/Images/Wallpapers, register and apply the first one"
+does   = "merge wallpapers/ (and the folders in prisme/wallpapers-extra.conf) into ~/Images/Wallpapers"
 from   = "config/hyprland/set_wallpapers.sh, config/hyprland/install.sh"
+run    = "units/core/hyprland/hooks/wallpapers.sh"
+watch  = ["config/hyprland/set_wallpapers.sh", "wallpapers"]

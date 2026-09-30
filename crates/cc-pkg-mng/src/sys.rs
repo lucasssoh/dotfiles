@@ -61,6 +61,12 @@ pub fn copr_enabled(copr: &str) -> bool {
     Path::new(&format!("/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:{owner}:{project}.repo")).exists()
 }
 
+/// Is the `.repo` file this URL names already in /etc/yum.repos.d?
+pub fn repo_added(url: &str) -> bool {
+    let name = url.rsplit('/').next().unwrap_or(url);
+    Path::new("/etc/yum.repos.d").join(name).exists()
+}
+
 pub fn service_enabled(name: &str, user: bool) -> bool {
     let mut cmd = Command::new("systemctl");
     if user {

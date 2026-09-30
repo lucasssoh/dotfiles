@@ -16,15 +16,18 @@ name   = "download-fonts"
 run_as = "user"
 does   = "download into ~/.local/share/fonts when absent: JetBrainsMono, Iosevka, CascadiaCode Nerd Fonts, MiSans Latin; then fc-cache"
 from   = "config/fonts/install.sh"
+run    = "units/core/fonts/hooks/download-fonts.sh"
 
 [[hooks]]
 name   = "download-icon-fonts"
 run_as = "user"
 does   = "download when absent: JetBrains Mono NF, GoogleSansCode NFM, Phosphor, Lucide, MingCute (pinned: the bar addresses glyphs by codepoint)"
 from   = "config/hyprland/install.sh"
+run    = "units/core/fonts/hooks/download-icon-fonts.sh"
 
 [[hooks]]
 name   = "ui-font"
 run_as = "user"
 does   = "set the UI font through gsettings (and kwriteconfig6 when present)"
 from   = "config/fonts/install.sh"
+run    = "units/core/fonts/hooks/ui-font.sh"

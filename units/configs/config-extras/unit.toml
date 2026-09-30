@@ -18,3 +18,5 @@ name   = "brave-flags"
 run_as = "user"
 does   = "when brave is installed: user .desktop override adding config/brave/brave-flags.conf to every Exec= line"
 from   = "config/brave/install.sh"
+run    = "units/configs/config-extras/hooks/brave-flags.sh"
+watch  = ["config/brave/brave-flags.conf"]

@@ -18,3 +18,5 @@ name   = "smear-build"
 run_as = "root"
 does   = "when variant = smear: build wezterm PR #7737 + smear/pane-handoff.patch, install to /usr/local/bin; remove it again for stable"
 from   = "config/wezterm/install.sh"
+run    = "units/apps/wezterm/hooks/smear-build.sh"
+watch  = ["config/wezterm/smear"]

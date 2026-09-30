@@ -57,8 +57,12 @@ CONSOLE_FONT_DIR="/usr/lib/kbd/consolefonts"
 section "LOGIN SCREEN (GREETD + TUIGREET)"
 
 warn "This script rewrites the system login manager."
-read -rp "Continue? [y/N]: " CONFIRM
-[[ "$CONFIRM" =~ ^[Yy]$ ]] || err "Installation aborted."
+# Run by cc-pkg-mng 2 (CCPKG_UNIT set), the question was already asked when
+# the greeter unit was chosen; a hook has no terminal to answer on.
+if [ -z "${CCPKG_UNIT:-}" ]; then
+    read -rp "Continue? [y/N]: " CONFIRM
+    [[ "$CONFIRM" =~ ^[Yy]$ ]] || err "Installation aborted."
+fi
 
 # ============================================================
 # PACKAGES

@@ -7,18 +7,12 @@ ask      = "Replace the login screen with greetd + tuigreet?"
 [packages]
 dnf = ["greetd", "tuigreet", "kbd", "jetbrains-mono-fonts"]
 
-[files]
-"config/boot/login/greetd/config.toml"                    = "/etc/greetd/config.toml"
-"config/boot/login/console/vconsole.conf"                 = "/etc/vconsole.conf"
-"config/boot/login/console/console-setup-late.sh"         = "/usr/local/libexec/console-setup-late"
-"config/boot/login/console/console-setup-late.service"    = "/etc/systemd/system/console-setup-late.service"
-"config/boot/login/session-splash.sh"                     = "/usr/local/libexec/coucou-session-splash"
-
-[services]
-system = ["greetd", "console-setup-late"]
-
+# The script installs its files and enables greetd and console-setup-late
+# itself, in the order the switch needs.
 [[hooks]]
 name   = "switch-login"
 run_as = "root"
 does   = "install the console font, create the greeter user, disable other display managers and leftovers (regreet, ly)"
 from   = "config/boot/login/install.sh"
+run    = "config/boot/login/install.sh"
+watch  = ["config/boot/login"]

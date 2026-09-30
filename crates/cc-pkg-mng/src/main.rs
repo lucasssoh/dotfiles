@@ -284,7 +284,7 @@ fn status(ui: &mut Ui, repo: &Path, units: &Units, state: &State) -> Result<()> 
             unknown.insert(name.clone());
             continue;
         };
-        let fp = sys::fingerprint(repo, &plan::fingerprint_paths(repo, u));
+        let fp = plan::with_answers(sys::fingerprint(repo, &plan::fingerprint_paths(repo, u)), &rec.answers);
         let broken = rec
             .links
             .iter()
