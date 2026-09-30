@@ -240,48 +240,48 @@ The first run of 2.x migrates `~/.local/state/dotfiles/` (fingerprints, ledgers)
 
 ## Binaries and channels
 
-Git carries text only (configs, QML, Lua, scripts, manifests). The Rust apps reach machines as RPMs from the COPR. A release ties the two together:
+Git carries text only (configs, QML, Lua, scripts, manifests). The Rust apps reach machines as RPMs from coucou-shell's own dnf repository. A release ties the two together:
 
 ```
                     tag v1.2.0
                         │
         ┌───────────────┴────────────────┐
         ▼                                ▼
-   git (the repo)                    COPR (dnf)
+   git (the repo)                    dnf repo (Pages)
    configs, QML, Lua, scripts,       roue, prisme, balise,
    manifests                         built from that same tag
         │                                │
         └──────── cc-pkg-mng upgrade ────┘
 ```
 
-- Pushing a tag triggers the COPR builds of `roue`, `prisme` and `balise` from that tag; their RPM version is the release version.
+- Pushing a tag builds and signs the RPMs of `cc-pkg-mng`, `roue`, `prisme` and `balise` from that tag (`.github/workflows/release.yml`); their RPM version is the release version.
 - A release's manifests state the binary versions they need (`roue = "1.2.0"`). `upgrade` checks out the tag and moves the RPMs in the same dnf transaction as every other package, so configs and binaries never drift apart.
 
 | Channel | Configs | Rust apps |
 |---|---|---|
-| **stable** | the tag | COPR RPMs matching the tag — no Rust toolchain on the machine |
-| **edge** | `master` | built locally (`cc-pkg-mng build`), since `master` is ahead of the last published RPM |
-| **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs — the COPR keeps previous builds |
+| **stable** | the tag | RPMs matching the tag — no Rust toolchain on the machine |
+| **edge** | `master` | built locally into `~/.local/bin` when absent, since `master` is ahead of the last published RPM |
+| **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs — the repository keeps every release |
 
-RPMs rather than raw binaries attached to GitHub releases: dnf installs their system dependencies (gtk4-layer-shell, libnm, bluez), the COPR signs them, `dnf remove` cleans up, and they land in `/usr/bin`, which the Hyprland session's `PATH` already has.
+RPMs rather than raw binaries attached to GitHub releases: dnf installs their system dependencies (gtk4-layer-shell, libnm, bluez), they are signed, `dnf remove` cleans up, and they land in `/usr/bin`, which the Hyprland session's `PATH` already has.
 
-Later, if edge ever needs to work without a Rust toolchain: COPR builds on every `master` commit ("nightly"). Not needed for 1.0.
+Later, if edge ever needs to work without a Rust toolchain: builds on every `master` commit ("nightly"). Not needed for 1.0.
 
 ## Distribution
 
-A COPR, `lucasssoh/coucou-shell`, built from tagged sources:
+Not a COPR: COPR only hosts freely redistributable software, and coucou-shell's licence forbids redistribution. The repository is coucou-shell's own, served from GitHub Pages next to the documentation, built from tagged sources:
 
 | Package | Contents |
 |---|---|
 | `cc-pkg-mng` | the manager; requires `git` and `dnf` |
 | `roue`, `prisme`, `balise` | prebuilt binaries — no Rust toolchain on user machines |
 
-On edge, the Rust apps may still be built locally (`cc-pkg-mng build`) to test unreleased changes.
+On edge, the Rust apps are built locally from the checkout. Switching to stable removes those builds so the RPMs' binaries take over.
 
 Fresh machine:
 
 ```
-sudo dnf copr enable lucasssoh/coucou-shell
+sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo
 sudo dnf install cc-pkg-mng
 cc-pkg-mng init
 ```
@@ -303,7 +303,7 @@ cc-pkg-mng init
 | M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done** — no step left to the old modules |
 | M3 | `init`, channels, `upgrade`, `rollback`, `set`, migration from 1.x | **done** — tested on a simulated fresh machine with local releases |
 | M4 | `roles` unit, key bindings moved to roles | **done** — apps replaceable |
-| M5 | COPR packages | installable from `dnf` |
+| M5 | RPMs in coucou-shell's own dnf repository | installable from `dnf` |
 | M6 | VM test from a Fedora 44 netinstall with an answers file | acceptance |
 | M7 | Licence, `CHANGELOG.md`, captures, tag `v1.0.0` *Coucou à tous*, release | published |
 
@@ -342,4 +342,4 @@ Rofi: `Super + V` (clipboard), `display-layout.sh` (menu), `set_wallpaper.sh` (l
 
 ## Open questions
 
-1. **Arch and Debian**: the current modules carry partial support. Drop it for 2.0 (Fedora only, as the COPR implies)?
+1. **Arch and Debian**: the current modules carry partial support. Drop it for 2.0 (Fedora only, as the RPMs imply)?

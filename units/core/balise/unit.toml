@@ -3,7 +3,7 @@ layer    = "core"
 summary  = "Network and Bluetooth daemon behind the bar's Balise drawer"
 requires = ["hyprland"]
 
-# stable: the RPM from the COPR, same version as the release.
+# stable: the RPM from the coucou-shell repo, same version as the release.
 # edge:   built locally from config/hyprland/balise-src with the build deps.
 [binaries]
 rpm    = "balise"

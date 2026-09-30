@@ -3,7 +3,7 @@ layer    = "core"
 summary  = "Wallpaper picker, and wallpaper-filter to fit wallpapers to each screen"
 requires = ["hyprland"]
 
-# stable: the RPM from the COPR, same version as the release.
+# stable: the RPM from the coucou-shell repo, same version as the release.
 # edge:   built locally from config/hyprland/prisme-src with the build deps.
 [binaries]
 rpm    = "prisme"

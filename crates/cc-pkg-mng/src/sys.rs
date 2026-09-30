@@ -55,6 +55,22 @@ pub fn rpm_missing(names: &[String]) -> Result<BTreeSet<String>> {
         .collect())
 }
 
+/// The installed version of a package, if any.
+pub fn rpm_version(name: &str) -> Option<String> {
+    let out = Command::new("rpm")
+        .args(["-q", "--qf", "%{VERSION}", name])
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Is `a` a later MAJOR.MINOR.PATCH than `b`?
+pub fn newer(a: &str, b: &str) -> bool {
+    let parse = |v: &str| v.split('.').map(|n| n.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>();
+    parse(a) > parse(b)
+}
+
 /// `owner/project` → is its repo file present?
 pub fn copr_enabled(copr: &str) -> bool {
     let Some((owner, project)) = copr.split_once('/') else { return false };
@@ -74,12 +90,6 @@ pub fn service_enabled(name: &str, user: bool) -> bool {
     }
     cmd.arg("is-enabled").arg(name).stderr(Stdio::null());
     matches!(cmd.output(), Ok(o) if String::from_utf8_lossy(&o.stdout).trim() == "enabled")
-}
-
-pub fn on_path(bin: &str) -> bool {
-    std::env::var_os("PATH")
-        .map(|p| std::env::split_paths(&p).any(|d| d.join(bin).is_file()))
-        .unwrap_or(false)
 }
 
 /// Directories never walked when fingerprinting or comparing.
@@ -155,4 +165,17 @@ fn same_file(a: &Path, b: &Path) -> bool {
 pub fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::fs::metadata(p).map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn versions() {
+        assert!(newer("1.10.0", "1.9.3"));
+        assert!(newer("2.0.0", "1.99.99"));
+        assert!(!newer("1.0.0", "1.0.0"));
+        assert!(!newer("1.0.0", "1.0.1"));
+    }
 }

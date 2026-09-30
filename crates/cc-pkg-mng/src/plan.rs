@@ -5,9 +5,13 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
+use crate::git;
 use crate::manifest::{Hook, RunAs, Unit, Units};
 use crate::state::State;
 use crate::sys;
+
+/// Where the Rust apps' RPMs come from on the stable channel.
+pub const RPM_REPO: &str = "https://lucasssoh.github.io/dotfiles/coucou-shell.repo";
 
 #[derive(Debug, PartialEq)]
 pub enum LinkState {
@@ -66,6 +70,8 @@ pub struct UnitPlan {
     pub system_services: Vec<(String, bool)>,
     pub hooks: Vec<HookPlan>,
     pub build: Option<BinPlan>,
+    /// Local builds left from edge, which would shadow the RPM's binaries.
+    pub drop_local: Vec<PathBuf>,
 }
 
 impl UnitPlan {
@@ -77,6 +83,7 @@ impl UnitPlan {
             || self.user_services.iter().chain(&self.system_services).any(|(_, on)| !on)
             || self.hooks.iter().any(|h| matches!(h, HookPlan::Run(..)))
             || self.build.is_some()
+            || !self.drop_local.is_empty()
     }
 }
 
@@ -86,6 +93,8 @@ pub struct Plan {
     pub coprs: Vec<String>,
     pub repos: Vec<String>,
     pub packages: Vec<String>,
+    /// Rust apps newer than the release checked out (after a rollback).
+    pub downgrades: Vec<String>,
 }
 
 impl Plan {
@@ -93,6 +102,7 @@ impl Plan {
         !self.coprs.is_empty()
             || !self.repos.is_empty()
             || !self.packages.is_empty()
+            || !self.downgrades.is_empty()
             || self.units.iter().any(|u| {
                 u.files.iter().any(|f| f.copy)
                     || u.system_services.iter().any(|(_, on)| !on)
@@ -136,6 +146,13 @@ pub fn build(
     answers: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Result<Plan> {
     let mut plan = Plan::default();
+    // On stable, the release checked out: its Rust apps come as RPMs of the
+    // same version.
+    let release = (state.channel.as_deref() == Some("stable"))
+        .then(|| git::exact_tag(repo))
+        .flatten()
+        .and_then(|t| t.strip_prefix('v').map(str::to_string));
+    let mut needs_repo = false;
     let installing: BTreeSet<&str> = order.iter().map(String::as_str).collect();
 
     // Packages: one rpm query for everything, including what conditional
@@ -186,22 +203,33 @@ pub fn build(
             repos.extend(u.packages.repos.iter().filter(|r| !sys::repo_added(r)).cloned());
         }
 
-        // Rust apps: built locally when a binary is missing (edge; the RPM
-        // path arrives with the COPR, M5).
-        let build = u.binaries.as_ref().and_then(|b| {
-            let absent: Vec<String> = b
-                .bins
-                .iter()
-                .filter(|bin| !sys::home().join(".local/bin").join(bin).exists() && !sys::on_path(bin))
-                .cloned()
-                .collect();
-            (!absent.is_empty()).then(|| BinPlan { source: repo.join(&b.source), bins: b.bins.clone() })
-        });
-        if build.is_some() {
-            let build_deps = sys::rpm_missing(&u.packages.build)?;
-            for p in &u.packages.build {
-                if build_deps.contains(p) && !packages.contains(p) {
-                    packages.push(p.clone());
+        // Rust apps: on stable, the release's RPMs; on edge, built locally
+        // from the checkout, since master is ahead of any published RPM.
+        let local_bin = |bin: &String| sys::home().join(".local/bin").join(bin);
+        let mut build = None;
+        let mut drop_local = Vec::new();
+        if let Some(b) = &u.binaries {
+            if let Some(v) = &release {
+                let wanted = format!("{}-{v}", b.rpm);
+                match sys::rpm_version(&b.rpm) {
+                    Some(have) if have == *v => {}
+                    Some(have) if sys::newer(&have, v) => {
+                        plan.downgrades.push(wanted);
+                        needs_repo = true;
+                    }
+                    _ => {
+                        packages.push(wanted);
+                        needs_repo = true;
+                    }
+                }
+                drop_local = b.bins.iter().map(local_bin).filter(|p| p.exists()).collect();
+            } else if b.bins.iter().any(|bin| !local_bin(bin).exists()) {
+                build = Some(BinPlan { source: repo.join(&b.source), bins: b.bins.clone() });
+                let build_deps = sys::rpm_missing(&u.packages.build)?;
+                for p in &u.packages.build {
+                    if build_deps.contains(p) && !packages.contains(p) {
+                        packages.push(p.clone());
+                    }
                 }
             }
         }
@@ -257,7 +285,11 @@ pub fn build(
             system_services,
             hooks,
             build,
+            drop_local,
         });
+    }
+    if needs_repo && !sys::repo_added(RPM_REPO) {
+        repos.insert(RPM_REPO.to_string());
     }
     plan.coprs = coprs.into_iter().collect();
     plan.repos = repos.into_iter().collect();

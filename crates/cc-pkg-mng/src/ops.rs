@@ -27,6 +27,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
     } else {
         ui.line(&format!("  packages          {} to install: {}", plan.packages.len(), plan.packages.join(" ")));
     }
+    if !plan.downgrades.is_empty() {
+        ui.line(&format!("  downgrade         {}", plan.downgrades.join(" ")));
+    }
     for u in &plan.units {
         let tag = if u.new {
             ui.green("new")
@@ -59,6 +62,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
         }
         if let Some(b) = &u.build {
             ui.line(&format!("    {} build {}  {}", ui.dim("·"), b.bins.join(", "), ui.dim("(local cargo build)")));
+        }
+        for p in &u.drop_local {
+            ui.line(&format!("    {} {}  {}", ui.dim("·"), tilde(p), ui.dim("remove the local build (the RPM replaces it)")));
         }
         for h in &u.hooks {
             match h {
@@ -121,7 +127,7 @@ fn sudo(args: &[&str]) -> Command {
 pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
     let _sudo = if plan.needs_root() { Some(SudoSession::start()?) } else { None };
 
-    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() {
+    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() {
         ui.heading("Packages");
         for copr in &plan.coprs {
             ui.run(&format!("enable COPR {copr}"), &mut sudo(&["dnf", "copr", "enable", "-y", copr]))?;
@@ -134,6 +140,11 @@ pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &
             let mut args = vec!["dnf", "install", "-y"];
             args.extend(plan.packages.iter().map(String::as_str));
             ui.run(&format!("dnf install ({} packages)", plan.packages.len()), &mut sudo(&args))?;
+        }
+        if !plan.downgrades.is_empty() {
+            let mut args = vec!["dnf", "downgrade", "-y"];
+            args.extend(plan.downgrades.iter().map(String::as_str));
+            ui.run(&format!("dnf downgrade ({} packages)", plan.downgrades.len()), &mut sudo(&args))?;
         }
     }
 
@@ -202,6 +213,10 @@ fn apply_unit(
             std::fs::rename(&tmp, bin_dir.join(bin))?;
         }
         ui.ok(&format!("installed {} in ~/.local/bin", b.bins.join(", ")));
+    }
+    for p in &u.drop_local {
+        std::fs::remove_file(p).with_context(|| format!("removing {}", p.display()))?;
+        ui.ok(&format!("removed {} (the RPM's binary takes over)", tilde(p)));
     }
 
     let mut files = Vec::new();
@@ -289,6 +304,7 @@ fn apply_unit(
         }
     }
     let acted = u.build.is_some()
+        || !u.drop_local.is_empty()
         || u.files.iter().any(|f| f.copy)
         || u.system_services.iter().chain(&u.user_services).any(|(_, on)| !on)
         || u.links.iter().any(|l| !matches!(l.state, LinkState::Ok))

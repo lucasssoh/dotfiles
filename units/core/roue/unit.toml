@@ -3,7 +3,7 @@ layer    = "core"
 summary  = "Radial selection wheel: power menu, power profile, display layout, actions"
 requires = ["hyprland"]
 
-# stable: the RPM from the COPR, same version as the release.
+# stable: the RPM from the coucou-shell repo, same version as the release.
 # edge:   built locally from config/hyprland/roue-src with the build deps.
 [binaries]
 rpm    = "roue"
