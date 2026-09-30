@@ -8,14 +8,16 @@ Holding `Super` shows every binding as a keyboard in the bar; hold `Shift` as we
 
 | Binding | Action |
 |---|---|
-| `Super + Enter` | WezTerm |
+| `Super + Enter` | Terminal — WezTerm by default |
 | `Super + Space` | App launcher (fuzzel) |
-| `Super + E` | Nemo (file manager) |
-| `Super + B` | Firefox |
+| `Super + E` | File manager — Nemo by default |
+| `Super + B` | Web browser — Firefox by default |
 | `Super + W` | Prisme — wallpaper picker |
 | `Super + F` | Liseuse — resume the book you were reading, or pick one (`F1` inside a book for its manual) |
 | `Super + V` | Clipboard history (cliphist through fuzzel) |
 | `Super + A` | Agenda — add or delete an event (khal, through fuzzel) |
+
+The terminal, file manager and browser follow the machine's defaults — see [Default applications](modules.md#default-applications).
 
 ## Screenshots
 

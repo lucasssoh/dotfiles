@@ -80,7 +80,7 @@ Key bindings target roles, not binaries, so apps stay replaceable:
 | `Super + B` | browser | `xdg-settings get default-web-browser` | Firefox |
 | `Super + E` | files | default handler of `inode/directory` | Nemo |
 
-`coucou-open <role> [--class <class>] [-- command…]` does the resolution. `--class` covers the floating TUIs (`nmtui`, Bluetooth, audio): the adapter knows each common terminal's flag (`--class` for WezTerm and kitty, `--app-id` for foot, …) and falls back to an unclassed window.
+`coucou-open <role> [--class <class>] [-- command…]` does the resolution; it lives in `config/hyprland/hypr/scripts/`, so both managers ship it. With no terminal preference in the config dirs (`xdg-terminals.list`, `<desktop>-xdg-terminals.list`), it opens WezTerm when installed — the distro's own list orders nothing, and would pick kitty over WezTerm alphabetically. `--class` covers floating TUIs: the adapter knows each common terminal's flag (`--class` for WezTerm, kitty, Alacritty, Ghostty; `--app-id` for foot), since their desktop entries do not declare one for `xdg-terminal-exec`. Every role falls back to a working launcher when its standard piece is missing. `--print` shows the command instead of running it.
 
 Window rules stay per application: rules for an app that is not installed never match, so they cost nothing.
 
@@ -302,7 +302,7 @@ cc-pkg-mng init
 | M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done** — `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
 | M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done** — no step left to the old modules |
 | M3 | `init`, channels, `upgrade`, `rollback`, `set`, migration from 1.x | **done** — tested on a simulated fresh machine with local releases |
-| M4 | `roles` unit, key bindings moved to roles | apps replaceable |
+| M4 | `roles` unit, key bindings moved to roles | **done** — apps replaceable |
 | M5 | COPR packages | installable from `dnf` |
 | M6 | VM test from a Fedora 44 netinstall with an answers file | acceptance |
 | M7 | Licence, `CHANGELOG.md`, captures, tag `v1.0.0` *Coucou à tous*, release | published |

@@ -115,6 +115,8 @@ if [ "$DISTRO" = "fedora" ]; then
         # for the config file -- listed here too so a standalone run of this
         # script still yields a usable desktop.
         quickshell fuzzel khal hyprsunset
+        # Super+Enter's terminal role (hypr/scripts/coucou-open)
+        xdg-terminal-exec
         # Wallpaper daemon
         awww
         # Backs `powerprofilesctl`, which hypr/scripts/performance.sh calls

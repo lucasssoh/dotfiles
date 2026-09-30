@@ -1,8 +1,9 @@
 name     = "roles"
 layer    = "core"
-summary  = "coucou-open: terminal, browser and file-manager roles behind Super+Enter, Super+B, Super+E"
+summary  = "Terminal, browser and file-manager roles behind Super+Enter, Super+B, Super+E"
 requires = ["hyprland"]
 
-# New in cc-pkg-mng 2 (milestone M4); nothing in the current modules does this yet.
+# The launcher itself, config/hyprland/hypr/scripts/coucou-open, ships with
+# the hyprland unit's hypr/ link; this unit brings what it resolves roles with.
 [packages]
 dnf = ["xdg-terminal-exec"]

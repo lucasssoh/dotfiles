@@ -77,9 +77,12 @@ end
 -- ============================================================
 -- APPLICATIONS
 -- ============================================================
-bind(mod .. "+ Return",  hl.dsp.exec_cmd("wezterm"), { description = "Terminal" })
-bind(mod .. "+ E",       hl.dsp.exec_cmd("nemo"), { description = "Files" })
-bind(mod .. "+ B",       hl.dsp.exec_cmd("firefox"), { description = "Browser" })
+-- Roles, not binaries: the user's terminal, browser and file manager
+-- (scripts/coucou-open; WezTerm when no terminal preference is set).
+local open = "~/.config/hypr/scripts/coucou-open "
+bind(mod .. "+ Return",  hl.dsp.exec_cmd(open .. "terminal"), { description = "Terminal" })
+bind(mod .. "+ E",       hl.dsp.exec_cmd(open .. "files"), { description = "Files" })
+bind(mod .. "+ B",       hl.dsp.exec_cmd(open .. "browser"), { description = "Browser" })
 bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"), { description = "Launcher" })
 -- Clipboard history: fuzzel shows the text column, returns the whole
 -- "id<TAB>text" line that cliphist decode expects.

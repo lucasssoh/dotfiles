@@ -155,6 +155,20 @@ All under [`config/hyprland/hypr/`](../config/hyprland/hypr/). `hyprctl reload` 
 
 To add a machine: create `hosts/<id>.env` with only the values that differ, and add its product name to `host_profile_id` in [`scripts/host-profile.sh`](../config/hyprland/hypr/scripts/host-profile.sh).
 
+#### Default applications
+
+`Super + Enter`, `Super + E` and `Super + B` open whatever application fills the role, through [`coucou-open`](../config/hyprland/hypr/scripts/coucou-open):
+
+| Role | Default | To change it |
+|---|---|---|
+| Terminal | WezTerm | list desktop ids, most preferred first, in `~/.config/xdg-terminals.list` (e.g. `kitty.desktop`) |
+| Web browser | Firefox | `xdg-settings set default-web-browser brave-browser.desktop` |
+| File manager | Nemo | `xdg-mime default org.gnome.Nautilus.desktop inode/directory` |
+
+```bash
+~/.config/hypr/scripts/coucou-open --print terminal   # what Super+Enter would run
+```
+
 #### Idle
 
 A zathura window visible on screen holds off the idle ladder; a book on another workspace does not. See [`readinghold.lua`](../config/hyprland/hypr/readinghold.lua).
