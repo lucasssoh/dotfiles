@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.1.0 (October 1 2026)
 
 ### Added
 - **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`. `←` `→` step through the fonts in the folder, `+` `−` change the size.
