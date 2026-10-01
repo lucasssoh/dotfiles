@@ -1,7 +1,23 @@
 name     = "mpv"
 layer    = "apps"
-summary  = "mpv media player"
+summary  = "mpv media player, with the uosc interface in the shell's colours and timeline thumbnails"
 default  = true
 
 [packages]
-dnf = ["mpv"]
+dnf = ["mpv", "unzip"]
+
+[links]
+"config/mpv/script-opts/uosc.conf" = "~/.config/mpv/script-opts/uosc.conf"
+
+[[hooks]]
+name   = "uosc"
+run_as = "user"
+does   = "download uosc and thumbfast (pinned, checked by sha256) into ~/.config/mpv"
+run    = "units/apps/mpv/hooks/uosc.sh"
+watch  = ["units/apps/mpv/hooks/uosc.sh"]
+
+[[hooks]]
+name   = "media-player"
+run_as = "user"
+does   = "mpv as the handler of video and audio files"
+run    = "units/apps/mpv/hooks/media-player.sh"
