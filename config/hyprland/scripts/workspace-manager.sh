@@ -558,10 +558,17 @@ for i in 6 7 8 9 10; do apply_workspace_rule "$i" "$range610_target"; done
 # silently gives up (`|| true`) past the deadline -- still a no-op if
 # quickshell isn't running/installed at all (waybar fallback, or between
 # sessions), same as before.
-for _ in $(seq 1 20); do
-    qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 && break
-    sleep 0.25
-done || true
+#
+# At session start the bar is no longer running yet: hypr/hyprland.lua now
+# launches it only after this script, so it reads every workspace on its
+# own. No quickshell process, nothing to nudge -- and no 5 s of retries
+# holding the bar back.
+if pgrep -x quickshell >/dev/null; then
+    for _ in $(seq 1 20); do
+        qs -c bar ipc call bar refreshWorkspaces >/dev/null 2>&1 && break
+        sleep 0.25
+    done || true
+fi
 
 # ---- Hands focus back to whoever had it before the migration step above
 #      possibly switched a monitor's visible workspace out from under it.

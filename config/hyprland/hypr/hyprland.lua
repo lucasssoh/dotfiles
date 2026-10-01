@@ -70,7 +70,8 @@ hl.on("hyprland.start", function()
     -- which replaced dunst for the same reason quickshell replaced
     -- waybar: one process claiming org.freedesktop.Notifications
     -- instead of two competing for it.
-    hl.exec_cmd("quickshell -c bar")
+    -- Started by the workspace-manager.sh line below, once workspaces
+    -- 1-10 exist on their screens (see there).
     -- hypridle: enabled now that every listener routes through
     -- scripts/idle-action.sh, which no-ops on mains. That is what used to
     -- make it unusable here -- docked and plugged in all day, a 5-minute
@@ -112,7 +113,13 @@ hl.on("hyprland.start", function()
     -- Fixed workspaces 1-10, set at runtime via hyprctl eval -- not
     -- persisted in a Lua file, so they must be replayed on every startup
     -- (and on config.reloaded / monitor.added / monitor.removed below).
-    hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+    -- The bar starts only once this has run (~0.2 s): Quickshell reads
+    -- the full workspace list once, when it connects, and afterwards only
+    -- adds a workspace on its creation event or a visit. Launched side by
+    -- side, the bar could connect mid-creation and show workspace 1
+    -- alone (or 1 and 6 on two screens) until each one was visited.
+    -- `;`, not `&&`: a failing script still gets a bar.
+    hl.exec_cmd("bash -c 'bash ~/.config/hypr/scripts/workspace-manager.sh; exec quickshell -c bar'")
 
     -- Balise BACKEND only. The Rust crate in balise-src/ (built by
     -- install.sh) is now two separable things, and this starts just the
