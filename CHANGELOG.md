@@ -9,6 +9,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **swayimg** is the image viewer, in the shell's colours, and opens images by default. `←` `→` go through the folder, `Return` shows a gallery, and `e` opens the image in satty to crop or annotate it, saved as a copy next to the original.
 
 ### Changed
+- **Bar, centre island:** when a track starts, the media pill opens on its title and artist for a few seconds, then folds back to the wave.
 - **mpv** gets a modern interface (uosc) in the shell's colours, with a thumbnail when you hover the timeline (thumbfast). It is now set to open video and audio files.
 
 ## 1.0.2

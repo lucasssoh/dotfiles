@@ -39,6 +39,42 @@ Item {
     readonly property bool playing: root.player !== null && root.player.isPlaying
     readonly property string titleText: root.player
         ? (root.player.trackTitle || root.player.identity || "") : ""
+    readonly property string artistText: root.player ? (root.player.trackArtist || "") : ""
+
+    // The announcement, HyperOS style: when a track starts, the pill opens
+    // on its title and artist for a few seconds, then folds back to the
+    // wave. Only a NEW track announces itself -- resuming the same one, or
+    // the bar starting while something already plays, stays quiet.
+    property bool announcing: false
+    property string announcedKey: ""
+    readonly property string trackKey: root.player ? root.player.dbusName + "\n" + root.titleText : ""
+    readonly property string announceText: root.titleText
+        + (root.artistText ? "  ·  " + root.artistText : "")
+    readonly property real announceTextWidth: Math.min(announceMeasure.implicitWidth, 240)
+
+    function maybeAnnounce() {
+        if (!root.playing || root.titleText === "" || root.trackKey === root.announcedKey) return;
+        root.announcedKey = root.trackKey;
+        root.announcing = true;
+        announceTimer.restart();
+    }
+    onTrackKeyChanged: root.maybeAnnounce()
+    onPlayingChanged: root.maybeAnnounce()
+    Component.onCompleted: root.announcedKey = root.trackKey
+
+    Timer {
+        id: announceTimer
+        interval: 4000
+        onTriggered: root.announcing = false
+    }
+
+    Text {
+        id: announceMeasure
+        text: root.announceText
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        visible: false
+    }
 
     // Scrolls regardless of length again, but this time with a proper
     // fix for the problem that caused a "fixed 200px, always" to look
@@ -125,7 +161,10 @@ Item {
 
     Rectangle {
         id: pill
-        width: root.openWidth
+        // Announcing: the wave keeps its spot, the title opens to its right.
+        width: root.announcing
+            ? (root.openWidth + waveIcon.width) / 2 + mediaRow.spacing + root.announceTextWidth + 12
+            : root.openWidth
         height: 24
         anchors.centerIn: parent
         // Top-square/bottom-rounded, same treatment as Block.qml -- the
@@ -173,12 +212,14 @@ Item {
         }
 
         Row {
+            id: mediaRow
             visible: root.active
-            // Left-anchored instead of centered -- centerIn was adding
-            // an equal gap on both sides (openWidth is wider than the
-            // Row's natural content), leaving the disc floating away
-            // from the pill's left edge instead of sitting snug in it.
-            anchors.centerIn: parent
+            // Left-anchored at the offset that centres the wave in the
+            // closed pill, so the wave stays put while the pill opens on
+            // the announcement to its right.
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: (root.openWidth - waveIcon.width) / 2
             // 4 -> 8: more breathing room specifically between the wave
             // and the scrolling title now that the wave itself is
             // narrower (asked for) -- previously 4 read fine against a
@@ -270,6 +311,22 @@ Item {
                         }
                     }
                 }
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.announceTextWidth
+                text: root.announceText
+                elide: Text.ElideRight
+                color: DrawerTheme.cream
+                font.family: Fonts.ui
+                font.pixelSize: 13
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                // Fades a touch faster than the pill folds, so the text is
+                // gone before the edge reaches it.
+                opacity: root.announcing ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: root.announcing ? 320 : 200 } }
             }
 
             Item {
