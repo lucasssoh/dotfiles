@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## 1.0.2
+
+### Fixed
+- **Bar, centre island:** right after login, the bar now shows every workspace, 1 to 5 and 6 to 10 on two screens. Before, it sometimes showed only one per screen, and the others appeared one by one as you visited them.
+
 ## 1.0.1
 
 ### Fixed
