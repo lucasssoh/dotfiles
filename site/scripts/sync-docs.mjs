@@ -5,7 +5,7 @@
 // modules.md is split into one page per module ("### " heading), grouped by
 // its "## " sections; the grouping is written to .generated/sidebar.json for
 // astro.config.mjs.
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BASE, BRANCH, REPO } from '../site.config.mjs';
@@ -14,6 +14,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const src = resolve(here, '../../docs');
 const out = resolve(here, '../src/content/docs/docs');
 const generated = resolve(here, '../.generated');
+
+// Screenshots are served as they are, from public/.
+cpSync(join(src, 'screenshots'), resolve(here, '../public/screenshots'), { recursive: true });
 
 mkdirSync(join(out, 'modules'), { recursive: true });
 mkdirSync(generated, { recursive: true });
@@ -46,6 +49,7 @@ const route = (page) => `${BASE}/docs/${page}/`;
 
 function rewriteLink(target) {
   if (/^[a-z]+:/i.test(target)) return target;
+  if (target.startsWith('screenshots/')) return `${BASE}/${target}`;
   let [path, anchor = ''] = target.split('#');
   if (path === '' || /^[\w-]+\.md$/.test(path)) {
     const doc = path === '' ? current : path.slice(0, -3);

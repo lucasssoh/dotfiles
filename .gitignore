@@ -34,6 +34,7 @@ site/node_modules/
 site/dist/
 site/.astro/
 site/src/content/docs/docs/
+site/public/screenshots/
 
 # RPMs from packaging/build-rpms.sh
 rpms/

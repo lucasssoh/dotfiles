@@ -2,7 +2,7 @@
 
 A Fedora + [Hyprland](https://hyprland.org/) desktop, installed and kept up to date by its own manager. Besides the configuration of existing tools, it ships three native Rust/GTK4 apps: **[Roue](config/hyprland/roue-src)** (a radial selection wheel), **[Prisme](config/hyprland/prisme-src)** (a wallpaper picker) and **[Balise](config/hyprland/balise-src)** (a WiFi/Bluetooth/Ethernet daemon behind a panel in the bar).
 
-![The coucou-shell desktop](docs/screenshots/v1.0.0/01-desktop.webp)
+![The coucou-shell desktop](docs/screenshots/v1.0.0/desktop.webp)
 
 ## Quick start
 
@@ -23,19 +23,11 @@ cc-pkg-mng status     # check that everything is in place
 
 The documentation is also online: https://lucasssoh.github.io/dotfiles/
 
-## Screenshots
+## At work
 
-| | |
-|:---:|:---:|
-| [![Balise](docs/screenshots/v1.0.0/02-balise.webp)](docs/screenshots/v1.0.0/02-balise.webp)<br>**Balise** — network, brightness, night mode, HDR | [![Power](docs/screenshots/v1.0.0/03-power.webp)](docs/screenshots/v1.0.0/03-power.webp)<br>**Power** — battery, charge limit, profile and history |
-| [![Mixer](docs/screenshots/v1.0.0/04-mixer.webp)](docs/screenshots/v1.0.0/04-mixer.webp)<br>**Mixer** — outputs, inputs and what's playing | [![Notifications](docs/screenshots/v1.0.0/05-notifications.webp)](docs/screenshots/v1.0.0/05-notifications.webp)<br>**Notifications** |
-| [![Calendar](docs/screenshots/v1.0.0/06-calendar.webp)](docs/screenshots/v1.0.0/06-calendar.webp)<br>**Calendar** | [![Launcher](docs/screenshots/v1.0.0/14-launcher.webp)](docs/screenshots/v1.0.0/14-launcher.webp)<br>**Launcher** |
-| [![Key bindings](docs/screenshots/v1.0.0/08-keybinds.webp)](docs/screenshots/v1.0.0/08-keybinds.webp)<br>**Key bindings**, held on `Super` | [![Key bindings with Shift](docs/screenshots/v1.0.0/09-keybinds-shift.webp)](docs/screenshots/v1.0.0/09-keybinds-shift.webp)<br>… and with `Shift` |
-| [![Brightness OSD](docs/screenshots/v1.0.0/10-osd.webp)](docs/screenshots/v1.0.0/10-osd.webp)<br>**Brightness OSD** | [![Battery alert](docs/screenshots/v1.0.0/11-battery-alert.webp)](docs/screenshots/v1.0.0/11-battery-alert.webp)<br>**Battery alert** |
-| [![Veille](docs/screenshots/v1.0.0/12-veille.webp)](docs/screenshots/v1.0.0/12-veille.webp)<br>**Veille** — the late-night clock | [![Zen mode](docs/screenshots/v1.0.0/13-zen.webp)](docs/screenshots/v1.0.0/13-zen.webp)<br>**Zen mode** |
-| [![Roue](docs/screenshots/v1.0.0/15-roue.webp)](docs/screenshots/v1.0.0/15-roue.webp)<br>**Roue** — the radial wheel | [![Prisme](docs/screenshots/v1.0.0/16-prisme.webp)](docs/screenshots/v1.0.0/16-prisme.webp)<br>**Prisme** — the wallpaper picker |
+![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/v1.0.0/work.webp)
 
-[![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/v1.0.0/17-work.webp)](docs/screenshots/v1.0.0/17-work.webp)
+Each part — the bar's drawers, Veille, Roue, Prisme, the boot splash — is pictured on its page in the [units](docs/modules.md) documentation.
 
 ## Documentation
 

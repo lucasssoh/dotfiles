@@ -95,6 +95,8 @@ A zathura window visible on screen holds off the idle ladder; a book on another 
 
 Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). It reloads itself when a QML file changes. Also brings the screenshot tools (grim, slurp, satty) and the clipboard history.
 
+![The bar](screenshots/v1.0.0/bar.webp)
+
 | Area | Contents |
 |---|---|
 | Left | Clock (click: month calendar and agenda), CPU, temperature, fan (hidden when the machine has no fan sensor), memory |
@@ -112,7 +114,19 @@ Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell
 | [Power](../config/hyprland/quickshell/bar/modules/power/) | the battery | time remaining, charge limit, fast charge, power profile, charge curve |
 | [Mixer](../config/hyprland/quickshell/bar/modules/mixer/) | either audio icon | output and input levels, device lists, per-app volume, per-app equalizer |
 
-Only one of the right-hand drawers is open at a time. Holding `Super` shows the key bindings as a live keyboard in the centre island (`Shift` switches layer).
+| | | |
+|:---:|:---:|:---:|
+| ![Balise](screenshots/v1.0.0/balise.webp)<br>Balise | ![Power](screenshots/v1.0.0/power.webp)<br>Power | ![Mixer](screenshots/v1.0.0/mixer.webp)<br>Mixer |
+| ![Notification centre](screenshots/v1.0.0/notifications.webp)<br>Notification centre | ![Calendar](screenshots/v1.0.0/calendar.webp)<br>Calendar | |
+
+Only one of the right-hand drawers is open at a time. Holding `Super` shows the key bindings as a live keyboard in the centre island (`Shift` switches layer) — see [key bindings](keybindings.md).
+
+#### Indicators
+
+| | |
+|:---:|:---:|
+| ![Brightness indicator](screenshots/v1.0.0/osd.webp) | ![Battery alert](screenshots/v1.0.0/battery-alert.webp) |
+| Volume, microphone and brightness changes show as a dial at the bottom of the screen | The battery alert, at 20 %, 10 % and 5 % while discharging: switch to the power saver profile, or dismiss |
 
 #### Mixer and equalizer
 
@@ -123,7 +137,11 @@ Only one of the right-hand drawers is open at a time. Holding `Super` shows the 
 
 #### Veille
 
-A large clock overlay for late sessions, with occasional messages. Configured in [`quickshell/bar/veille.json`](../config/hyprland/quickshell/bar/veille.json), reloaded on save:
+A large clock overlay for late sessions, with occasional messages.
+
+![Veille at 2 a.m.](screenshots/v1.0.0/veille.webp)
+
+Configured in [`quickshell/bar/veille.json`](../config/hyprland/quickshell/bar/veille.json), reloaded on save:
 
 | Key | |
 |---|---|
@@ -148,9 +166,15 @@ The three native apps. On the stable channel they are installed as packages; on 
 | **Prisme** | Wallpaper picker (`Super + W`). Every wallpaper is fitted to each connected screen's resolution, in `~/.cache/filtered_wallpapers/<W>x<H>/`, at install and again when a new screen is plugged in; until then that screen shows the original | [`config/hyprland/prisme/`](../config/hyprland/prisme/): `wallpapers.conf` (which folder), `wallpapers-extra.conf` (folders merged in) |
 | **Balise** | Network and Bluetooth service behind the bar's Balise drawer, as a `systemd --user` service. `balise wifi-share <ssid>` prints a QR code | [`config/hyprland/balise/`](../config/hyprland/balise/) |
 
+![Roue, the power wheel](screenshots/v1.0.0/roue.webp)
+
+![Prisme](screenshots/v1.0.0/prisme.webp)
+
 ### `fuzzel`
 
 The launcher (`Super + Space`), and the picker behind the clipboard history (`Super + V`), Liseuse and the agenda. Configured in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
+
+![The launcher](screenshots/v1.0.0/launcher.webp)
 
 ### `liseuse`
 
@@ -186,7 +210,13 @@ Rendered Markdown is cached in `~/.cache/liseuse/md/`.
 
 ### `plymouth`
 
-*Optional.* The boot splash: the word mark on black (**coucou** at boot, **byebye** on shutdown), a thin progress bar at boot, and the boot log one line at a time, in JetBrains Mono. Installing it selects the theme and rebuilds the initramfs of every installed kernel; each new kernel's initramfs is checked as it is installed.
+*Optional.* The boot splash: the word mark on black (**coucou** at boot, **byebye** on shutdown), a thin progress bar at boot, and the boot log one line at a time, in JetBrains Mono.
+
+| | |
+|:---:|:---:|
+| ![Boot splash](screenshots/v1.0.0/plymouth-boot.webp)<br>Boot | ![Shutdown splash](screenshots/v1.0.0/plymouth-shutdown.webp)<br>Shutdown |
+
+Installing it selects the theme and rebuilds the initramfs of every installed kernel; each new kernel's initramfs is checked as it is installed.
 
 | Tool | Use |
 |---|---|

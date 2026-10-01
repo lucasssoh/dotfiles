@@ -4,6 +4,10 @@ AZERTY layout. The source of truth is [`config/hyprland/hypr/keybinds.lua`](../c
 
 Holding `Super` shows every binding as a keyboard in the bar; hold `Shift` as well for the `Shift` layer. It disappears on release.
 
+![Key bindings, held on Super](screenshots/v1.0.0/keybinds.webp)
+
+![The Shift layer](screenshots/v1.0.0/keybinds-shift.webp)
+
 ## Launching
 
 | Binding | Action |
