@@ -45,15 +45,22 @@ Item {
     // on its title and artist for a few seconds, then folds back to the
     // wave. Only a NEW track announces itself -- resuming the same one, or
     // the bar starting while something already plays, stays quiet.
+    //
+    // Keyed on the real trackTitle, not titleText: browsers blank their
+    // metadata for a moment around pause/resume, and with the identity
+    // fallback that blip read as two new tracks ("Firefox", then the title
+    // again), so resuming re-opened the pill. An empty title now just
+    // leaves the last key in place.
     property bool announcing: false
     property string announcedKey: ""
-    readonly property string trackKey: root.player ? root.player.dbusName + "\n" + root.titleText : ""
+    readonly property string trackKey: root.player && root.player.trackTitle
+        ? root.player.dbusName + "\n" + root.player.trackTitle : ""
     readonly property string announceText: root.titleText
         + (root.artistText ? "  ·  " + root.artistText : "")
     readonly property real announceTextWidth: Math.min(announceMeasure.implicitWidth, 240)
 
     function maybeAnnounce() {
-        if (!root.playing || root.titleText === "" || root.trackKey === root.announcedKey) return;
+        if (!root.playing || root.trackKey === "" || root.trackKey === root.announcedKey) return;
         root.announcedKey = root.trackKey;
         root.announcing = true;
         announceTimer.restart();
