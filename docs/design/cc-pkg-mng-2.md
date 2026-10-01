@@ -1,4 +1,4 @@
-# cc-pkg-mng 2 — design
+# cc-pkg-mng 2: design
 
 Status: **draft for review**. Not user documentation: this page explains the design of the next manager, so it is allowed to talk about *why*.
 
@@ -40,8 +40,8 @@ A **unit** is the installable thing. The current 20 modules become:
 | `fuzzel` | `fuzzel` | launcher and its config |
 | `liseuse` | `liseuse` | zathura stack, Markdown pipeline, MathJax, PlantUML |
 | `theme` | `nemo` (part), `hyprland` (part) | generated GTK3 theme, icons, cursor, Qt settings |
-| `plymouth` | `boot/plymouth` | boot splash — **optional**, asked at `init` |
-| `greeter` | `boot/login` | greetd + tuigreet — **optional**, asked at `init` |
+| `plymouth` | `boot/plymouth` | boot splash, **optional**, asked at `init` |
+| `greeter` | `boot/login` | greetd + tuigreet, **optional**, asked at `init` |
 | `roles` | new | `coucou-open` and the terminal adapters, see [Roles](#roles) |
 
 ### apps
@@ -65,10 +65,10 @@ Each is proposed at `init` as **adopt** or **keep mine**.
 
 | Unit | Requires | Contents |
 |---|---|---|
-| `config-shell` | — | bash, zsh and its plugins, prompt, aliases, zoxide, fzf, ripgrep, fd, tmux, login shell |
+| `config-shell` | | bash, zsh and its plugins, prompt, aliases, zoxide, fzf, ripgrep, fd, tmux, login shell |
 | `config-wezterm` | `wezterm` | `wezterm.lua` |
 | `config-nvim` | `neovim`, `liseuse` | `init.lua`, `lua/`, `ftplugin/`, `colors/`, `bin/` (Markdown and PlantUML previews included), PlantUML LSP |
-| `config-extras` | — | mpv, MangoHud, fastfetch configs; each file only if its app is installed |
+| `config-extras` | | mpv, MangoHud, fastfetch configs; each file only if its app is installed |
 
 ## Roles
 
@@ -80,7 +80,7 @@ Key bindings target roles, not binaries, so apps stay replaceable:
 | `Super + B` | browser | `xdg-settings get default-web-browser` | Firefox |
 | `Super + E` | files | default handler of `inode/directory` | Nemo |
 
-`coucou-open <role> [--class <class>] [-- command…]` does the resolution; it lives in `config/hyprland/hypr/scripts/`, so both managers ship it. With no terminal preference in the config dirs (`xdg-terminals.list`, `<desktop>-xdg-terminals.list`), it opens WezTerm when installed — the distro's own list orders nothing, and would pick kitty over WezTerm alphabetically. `--class` covers floating TUIs: the adapter knows each common terminal's flag (`--class` for WezTerm, kitty, Alacritty, Ghostty; `--app-id` for foot), since their desktop entries do not declare one for `xdg-terminal-exec`. Every role falls back to a working launcher when its standard piece is missing. `--print` shows the command instead of running it.
+`coucou-open <role> [--class <class>] [-- command…]` does the resolution; it lives in `config/hyprland/hypr/scripts/`, so both managers ship it. With no terminal preference in the config dirs (`xdg-terminals.list`, `<desktop>-xdg-terminals.list`), it opens WezTerm when installed. The distro's own list orders nothing, and would pick kitty over WezTerm alphabetically. `--class` covers floating TUIs: the adapter knows each common terminal's flag (`--class` for WezTerm, kitty, Alacritty, Ghostty; `--app-id` for foot), since their desktop entries do not declare one for `xdg-terminal-exec`. Every role falls back to a working launcher when its standard piece is missing. `--print` shows the command instead of running it.
 
 Window rules stay per application: rules for an app that is not installed never match, so they cost nothing.
 
@@ -137,7 +137,7 @@ watch  = ["config/wezterm/smear"]  # a change here re-runs the hook
 
 A `# review:` comment in a manifest marks something the current modules do that is questionable or broken, recorded rather than silently changed.
 
-A hook runs when its unit is new or its fingerprint changed. The fingerprint covers the manifest's directory (hooks included), every linked or copied source, every hook's `run` script and `watch` paths, and the unit's answers — so a changed answer re-runs the hooks. A hook without `run` is only described: the plan shows it as not extracted yet.
+A hook runs when its unit is new or its fingerprint changed. The fingerprint covers the manifest's directory (hooks included), every linked or copied source, every hook's `run` script and `watch` paths, and the unit's answers, so a changed answer re-runs the hooks. A hook without `run` is only described: the plan shows it as not extracted yet.
 
 Every hook runs **as the user**, from the repo root, stdin closed, with `COUCOU_DIR`, `CCPKG_UNIT`, `CCPKG_HOOK_STATE` (a directory of its own) and one `CCPKG_ANSWER_<ID>` per answer. `run_as = "root"` means the hook needs root for some steps: the manager then holds a sudo session for the run, and the hook calls `sudo -n` for exactly those steps. Building or cloning as root would land in `/root`. Hooks source `units/lib/hook.sh`.
 
@@ -201,7 +201,7 @@ Core units that are not optional are always installed. `init` refuses a machine 
 
 ## Versions and channels
 
-- A release is an annotated tag `vMAJOR.MINOR.PATCH`, with a code name in its message (`v1.0.0` — *Coucou à tous*), and an entry in `CHANGELOG.md`.
+- A release is an annotated tag `vMAJOR.MINOR.PATCH` with an entry in `CHANGELOG.md`. Major and minor releases carry a name in the tag message and the changelog heading (`v1.0.0 « Coucou à tous »`); patch releases don't.
 - **stable** follows tags: `upgrade` checks out the newest tag (detached), `upgrade --to vX.Y.Z` a given one, `rollback` the one before the last upgrade (recorded in state).
 - **edge** follows the remote's default branch with a fast-forward; `rollback` is refused there (check out a commit with git).
 - After the checkout moves, every installed unit is re-applied, core units the new version adds are installed, and units the version no longer has are dropped from the state (their links left as they are).
@@ -259,9 +259,9 @@ Git carries text only (configs, QML, Lua, scripts, manifests). The Rust apps rea
 
 | Channel | Configs | Rust apps |
 |---|---|---|
-| **stable** | the tag | RPMs matching the tag — no Rust toolchain on the machine |
+| **stable** | the tag | RPMs matching the tag, no Rust toolchain on the machine |
 | **edge** | `master` | built locally into `~/.local/bin` when absent, since `master` is ahead of the last published RPM |
-| **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs — the repository keeps every release |
+| **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs (the repository keeps every release) |
 
 RPMs rather than raw binaries attached to GitHub releases: dnf installs their system dependencies (gtk4-layer-shell, libnm, bluez), they are signed, `dnf remove` cleans up, and they land in `/usr/bin`, which the Hyprland session's `PATH` already has.
 
@@ -274,7 +274,7 @@ Not a COPR: COPR only hosts freely redistributable software, and coucou-shell's 
 | Package | Contents |
 |---|---|
 | `cc-pkg-mng` | the manager; requires `git` and `dnf` |
-| `roue`, `prisme`, `balise` | prebuilt binaries — no Rust toolchain on user machines |
+| `roue`, `prisme`, `balise` | prebuilt binaries, no Rust toolchain on user machines |
 
 On edge, the Rust apps are built locally from the checkout. Switching to stable removes those builds so the RPMs' binaries take over.
 
@@ -298,16 +298,16 @@ cc-pkg-mng init
 | | Deliverable | Usable when done |
 |---|---|---|
 | M0 | Clean-up on the current manager: remove Waybar and Rofi, fix `update`'s missing pull, relative script links, fingerprints survive a dangling link | **done** |
-| M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done** — reviewable, nothing changes yet |
-| M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done** — `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
-| M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done** — no step left to the old modules |
-| M3 | `init`, channels, `upgrade`, `rollback`, `set`, migration from 1.x | **done** — tested on a simulated fresh machine with local releases |
-| M4 | `roles` unit, key bindings moved to roles | **done** — apps replaceable |
+| M1 | Manifests for every unit, next to the current modules (`units/`, checked by `scripts/check-units.py`) | **done**: reviewable, nothing changes yet |
+| M2 | Rust core: resolve, plan, questions, one dnf transaction, links, state, display (`crates/cc-pkg-mng`) | **done**: `list/info/install/remove/status` on Lucas's machine; hooks run once they have a `run` script |
+| M2b | Every hook extracted into a script (`run`), `watch`, `repos` | **done**: no step left to the old modules |
+| M3 | `init`, channels, `upgrade`, `rollback`, `set`, migration from 1.x | **done**: tested on a simulated fresh machine with local releases |
+| M4 | `roles` unit, key bindings moved to roles | **done**: apps replaceable |
 | M5 | RPMs in coucou-shell's own dnf repository | installable from `dnf` |
 | M6 | VM test from a Fedora 44 netinstall with an answers file | acceptance |
 | M7 | Licence, `CHANGELOG.md`, captures, tag `v1.0.0` *Coucou à tous*, release | published |
 
-## M0 — clean-up
+## M0: clean-up
 
 Scripts under `config/hyprland/waybar/` and who still uses them:
 

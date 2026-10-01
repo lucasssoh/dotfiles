@@ -21,7 +21,7 @@ un à chaque fois.
 - Thème : `config/hyprland/balise/style.css` fait autorité, rechargeable
   à chaud (`balise reload-theme`, sans redémarrer le daemon).
   `src/theme.rs` en contient une copie de secours, utilisée uniquement
-  si le fichier n'est pas atteignable — les deux doivent rester
+  si le fichier n'est pas atteignable. Les deux doivent rester
   synchronisés.
 
 ## Commandes
@@ -32,7 +32,7 @@ un à chaque fois.
     balise reload-theme            # relit style.css
     balise reload-config           # relit config.toml (position, marges)
 
-Sondes headless, sans daemon ni GTK — utilisées pour valider chaque
+Sondes headless, sans daemon ni GTK, utilisées pour valider chaque
 capacité du backend contre `nmcli` / `bluetoothctl` avant de construire
 l'UI par-dessus :
 
@@ -51,7 +51,7 @@ bascule** : il reste consultable dans l'historique git.
 
 De nombreux commentaires du code disent « adapted from
 orbit-vendor/src/… » avec un numéro de ligne. Ces chemins ne résolvent
-plus dans l'arbre de travail — ils renvoient à cet historique, et sont
+plus dans l'arbre de travail : ils renvoient à cet historique, et sont
 conservés parce qu'ils expliquent *pourquoi* telle logique a la forme
 qu'elle a.
 
@@ -81,11 +81,11 @@ un réseau déjà enregistré dont le secret ne marche plus.
 
 Deux formes :
 
-- **Personnel** — un champ mot de passe. `key-mgmt` est choisi d'après le
+- **Personnel** : un champ mot de passe. `key-mgmt` est choisi d'après le
   type réel du réseau : `wpa-psk`, `sae` pour du WPA3, ou la clé statique
   WEP. Avant, tout réseau sécurisé recevait `wpa-psk`, ce qu'un point
   d'accès WPA3-only refuse.
-- **Entreprise (802.1X : eduroam & compagnie)** — identifiant + mot de
+- **Entreprise (802.1X, eduroam & compagnie)** : identifiant + mot de
   passe, plus une section repliée pour la méthode EAP (PEAP / TTLS /
   PWD), la phase 2 (MSCHAPv2 / PAP / GTC) et l'identité anonyme. Les
   défauts (PEAP + MSCHAPv2) couvrent la quasi-totalité des déploiements
@@ -94,7 +94,7 @@ Deux formes :
 Deux points à savoir :
 
 - **Le bandeau doit prendre le focus clavier pour ça.** C'est une surface
-  layer-shell déclarée `focusable: false` — sans quoi le compositeur ne
+  layer-shell déclarée `focusable: false`, et tant qu'elle l'est le compositeur ne
   lui envoie aucun événement clavier et un champ de saisie y est
   simplement mort. `shell.qml` bascule `focusable` le temps que le
   formulaire est à l'écran, et seulement sur l'écran concerné.
@@ -121,12 +121,12 @@ Trois choses valent d'être sues.
 - **eduroam n'est pas partageable, et le bouton n'apparaît pas.** Le
   format `WIFI:` ne sait transporter ni identifiant, ni méthode EAP, ni
   certificat : un QR eduroam se scannerait puis échouerait à se
-  connecter. Le refus est double — l'UI ne propose pas l'action, et
+  connecter. Le refus est double : l'UI ne propose pas l'action, et
   `wifi_share_uri` la refuse aussi, avec une phrase affichable.
 - **Il faut un profil enregistré.** La clé est lue dans le profil local
   (`Settings.Connection.GetSecrets`), pas captée sur l'air. Sur cette
-  machine l'appel passe sans invite polkit — `settings.modify.own` est
-  accordé à une session locale active — et échoue proprement ailleurs.
+  machine l'appel passe sans invite polkit (`settings.modify.own` est
+  accordé à une session locale active), et échoue proprement ailleurs.
 
 Le format lui-même est celui de ZXing, que toutes les caméras de
 téléphone implémentent. Il a été recoupé octet par octet avec celui de
@@ -143,8 +143,8 @@ Sonde headless, comme pour chaque capacité du backend :
     balise wifi-share <ssid>
 
 Elle imprime l'URI et dessine le QR dans le terminal. **Elle affiche
-donc la passphrase en clair**, comme `nmcli device wifi show-password` —
-c'est ce que le QR encode, et un partage invérifiable à l'œil est
+donc la passphrase en clair**, comme `nmcli device wifi show-password`.
+C'est ce que le QR encode, et un partage invérifiable à l'œil est
 indébogable.
 
 ## Limite connue

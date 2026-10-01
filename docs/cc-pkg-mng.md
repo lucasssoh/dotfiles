@@ -1,83 +1,83 @@
 # `cc-pkg-mng`
 
-The coucou-shell package manager: it installs coucou-shell's parts, keeps them up to date, and moves between releases. For the first install, see [installation.md](installation.md).
+This is coucou-shell's own package manager. It installs the parts of coucou-shell, keeps them up to date, and lets you move between releases. For the very first install, start with [installation.md](installation.md).
 
 ## Everyday use
 
 ```bash
-cc-pkg-mng upgrade    # move to the latest release (or commit, on edge) and apply it
-cc-pkg-mng status     # what is installed, and whether it is in place
+cc-pkg-mng upgrade    # move to the latest release (or the latest commit, on edge) and apply it
+cc-pkg-mng status     # what's installed, and whether it's in place
 ```
 
 ## Units and layers
 
-coucou-shell is made of **units**, in three layers:
+coucou-shell is split into **units**, grouped in three layers:
 
-| Layer | What | Installed |
+| Layer | What's in it | When it's installed |
 |---|---|---|
-| **core** | The shell itself: Hyprland, the bar, Roue, Prisme, Balise, Liseuse, fonts, theme, drivers | always; the login screen and the boot splash are optional |
-| **apps** | Default applications: WezTerm, Firefox, Nemo, Neovim, mpv, and a few extras | the ones you pick; each is replaceable by any other app |
-| **configs** | Personal setups for the shell, WezTerm, Neovim and a few apps | only when you adopt them |
+| **core** | The shell itself: Hyprland, the bar, Roue, Prisme, Balise, Liseuse, fonts, theme, drivers | Always. The login screen and the boot splash are optional |
+| **apps** | Default applications: WezTerm, Firefox, Nemo, Neovim, mpv, and a few extras | Only the ones you pick. You can swap any of them for another app |
+| **configs** | My personal setups for the shell, WezTerm, Neovim and a few apps | Only if you choose to adopt them |
 
-`cc-pkg-mng list` shows every unit, `cc-pkg-mng info <unit>` what one contains. The units themselves are described in [modules.md](modules.md).
+`cc-pkg-mng list` shows every unit, and `cc-pkg-mng info <unit>` shows what one contains. The [units](modules.md) page describes them all.
 
 ## Commands
 
-| Command | |
+| Command | What it does |
 |---|---|
-| `init` | Sets up the machine: the checkout, the channel, the units — see [installation.md](installation.md) |
-| `list` | Every unit, by layer, `●` when installed. `--installed`, `--layer core\|apps\|configs` |
-| `info <unit>` | What a unit installs, links and runs, and what it requires |
-| `install <unit>…` | Installs units, and the units they require |
-| `remove <unit>…` | Takes units away: unlinks their files, puts back what they replaced, turns their services off. Their packages stay installed |
-| `status` | The checkout, the channel, and each installed unit: up to date, changed since installed, or with broken links |
-| `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies what changed. `--to vX.Y.Z` picks a release |
-| `rollback` | Back to the release before the last upgrade (stable only) |
-| `channel [stable\|edge]` | Shows or switches the channel; the next `upgrade` follows it |
-| `set <unit> <question> <value>` | Changes an answer, e.g. `set wezterm variant smear`; `install wezterm` then applies it |
+| `init` | Sets up the machine: the checkout, the channel and the units. See [installation.md](installation.md) |
+| `list` | Lists every unit by layer, with `●` next to the installed ones. Takes `--installed` and `--layer core\|apps\|configs` |
+| `info <unit>` | Shows what a unit installs, links and runs, and which units it needs |
+| `install <unit>…` | Installs units, along with any units they need |
+| `remove <unit>…` | Removes units: unlinks their files, restores what they replaced, and turns their services off. Their packages stay installed |
+| `status` | Shows the checkout, the channel, and the state of each installed unit: up to date, changed since it was installed, or with broken links |
+| `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies whatever changed. `--to vX.Y.Z` picks a specific release |
+| `rollback` | Goes back to the release you had before the last upgrade (stable only) |
+| `channel [stable\|edge]` | Shows the current channel, or switches to another one. The next `upgrade` follows it |
+| `set <unit> <question> <value>` | Changes one of your answers, for example `set wezterm variant smear`. Run `install wezterm` afterwards to apply it |
 
 ## Options
 
-| Flag | |
+| Flag | Effect |
 |---|---|
-| `-n`, `--dry-run` | Show the plan; change nothing |
-| `-y`, `--yes` | Take every default: no questions, no confirmation |
-| `--dir <path>` | The coucou-shell checkout to use; remembered for next time |
-| `-q`, `--quiet` | Warnings and errors only |
-| `--verbose` | Show every command's output as it runs |
-| `--no-color` | Plain output |
-| `-V`, `--version` | The manager's version |
+| `-n`, `--dry-run` | Show the plan without changing anything |
+| `-y`, `--yes` | Accept every default: no questions, no confirmation |
+| `--dir <path>` | Use this coucou-shell checkout. It's remembered for next time |
+| `-q`, `--quiet` | Only print warnings and errors |
+| `--verbose` | Show the output of every command as it runs |
+| `--no-color` | Plain output, no colours |
+| `-V`, `--version` | Print the manager's version |
 
 ## Channels
 
-| Channel | Follows | Roue, Prisme, Balise |
+| Channel | Follows | Roue, Prisme and Balise |
 |---|---|---|
-| **stable** | releases (`v1.0.0`, …) | installed from coucou-shell's repository, at the release's version |
-| **edge** | every commit on the default branch | built on the machine into `~/.local/bin`, again whenever their sources change (the Rust toolchain is installed for it) |
+| **stable** | releases (`v1.0.0` and so on) | Installed from coucou-shell's repository, at the version that matches the release |
+| **edge** | every commit on the default branch | Built on your machine into `~/.local/bin`, and rebuilt whenever their code changes. The Rust toolchain is installed for this |
 
-Switching from edge to stable removes the local builds, so the packaged ones take over.
+If you switch from edge back to stable, the local builds are removed so the packaged versions take over.
 
-A release's changes are listed in the [changelog](../CHANGELOG.md).
+You can see what each release changed in the [changelog](../CHANGELOG.md).
 
 ## How it behaves
 
-- **One plan, one confirmation.** Every command that changes the machine first shows what it will do. The password is asked once, and every package goes in one dnf transaction.
-- **Only what changed.** A unit whose files did not change since it was applied is left alone; running the same command twice does nothing the second time.
-- **Your files are kept.** A file that a unit would replace is moved to the backups first, and `remove` puts it back.
-- **Local edits block a version change.** `upgrade` and `rollback` stop if the checkout has uncommitted changes, and say which files.
-- **Nothing is restarted** except the audio stack when its configuration changes. Running programs keep their old version until they restart; the bar reloads itself.
-- **dnf and the Rust apps.** A plain `sudo dnf upgrade` also upgrades Roue, Prisme and Balise to the newest release; the next `cc-pkg-mng upgrade` brings the rest up to the same release.
+- **You see the plan first.** Any command that changes the machine shows you what it's about to do and waits for your OK. Your password is asked once, and all packages go into a single dnf transaction.
+- **Only what changed gets redone.** A unit whose files haven't changed since it was applied is left alone. Running the same command twice does nothing the second time.
+- **Your files are safe.** If a unit would replace one of your files, that file goes into the backups first, and `remove` puts it back.
+- **Local edits block a version change.** If the checkout has uncommitted changes, `upgrade` and `rollback` stop and tell you which files.
+- **Nothing gets restarted behind your back**, except the audio stack when its configuration changes. Programs that are already running keep the old version until you restart them. The bar reloads itself.
+- **A word about dnf.** A plain `sudo dnf upgrade` will also bring Roue, Prisme and Balise up to the newest release. Your next `cc-pkg-mng upgrade` then brings everything else up to the same release.
 
 ## Files
 
-Everything the manager keeps is in `~/.local/state/coucou-shell/`:
+Everything the manager keeps track of is in `~/.local/state/coucou-shell/`:
 
-| Path | |
+| Path | Contents |
 |---|---|
-| `state.toml` | The checkout, the channel, the version, and each installed unit with its answers |
-| `backups/` | Files that units replaced, by date |
+| `state.toml` | The checkout, the channel, the version, and each installed unit with your answers |
+| `backups/` | Files that units replaced, sorted by date |
 | `logs/` | The full output of every run |
 
 ## Exit codes
 
-`0` on success, `1` on any error: a failed step, a cancelled plan, an unknown unit, uncommitted changes.
+`0` when everything went fine. `1` for any error, such as a step that failed, a plan you cancelled, a unit that doesn't exist, or uncommitted changes in the way.

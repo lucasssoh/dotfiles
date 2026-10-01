@@ -1,8 +1,13 @@
 # Units
 
-coucou-shell is installed as **units**, in three layers: the **core** (always installed, except the login screen and the boot splash, which are optional), **applications** (the ones you pick), and **configurations** (the ones you adopt). `cc-pkg-mng info <unit>` shows exactly what a unit installs, links and runs; see [cc-pkg-mng.md](cc-pkg-mng.md) to install or remove one.
+coucou-shell is installed as **units**, in three layers:
+- the **core**, which is always installed (only the login screen and the boot splash are optional);
+- **applications**, the ones you pick;
+- **configurations**, the personal setups you choose to adopt.
 
-Configuration files are **linked** from the checkout, never copied: edit the file in the checkout and the change is live once the program concerned reloads.
+`cc-pkg-mng info <unit>` shows exactly what a unit installs, links and runs. To install or remove one, see [cc-pkg-mng.md](cc-pkg-mng.md).
+
+Configuration files are **linked** from the checkout, never copied. Edit a file in the checkout, and the change takes effect as soon as the program reloads it.
 
 ---
 
@@ -10,161 +15,165 @@ Configuration files are **linked** from the checkout, never copied: edit the fil
 
 ### `base`
 
-The Fedora base: shell utilities, NetworkManager, Bluetooth, the PipeWire stack, Mesa and Vulkan, input, storage (NTFS, exFAT), D-Bus and polkit, xdg, the GTK and Qt libraries, and snapd. Enables NetworkManager and Bluetooth. On a fresh machine, upgrades the system first.
+The Fedora foundation: shell utilities, NetworkManager, Bluetooth, the PipeWire stack, Mesa and Vulkan, input, storage (NTFS and exFAT), D-Bus and polkit, xdg, the GTK and Qt libraries, and snapd. It turns on NetworkManager and Bluetooth. On a fresh machine, it upgrades the system first.
 
 ### `hardware`
 
-Drivers and tools for the detected CPU and GPU, and the RPM Fusion codec swaps for hardware video decoding. See [hardware.md](hardware.md).
+Drivers and tools for your CPU and GPU, plus the RPM Fusion codec swaps that enable hardware video decoding. See [hardware.md](hardware.md).
 
 ### `fonts`
 
-Downloads JetBrains Mono, Iosevka and Cascadia Code Nerd Fonts and MiSans Latin into `~/.local/share/fonts/` when absent, plus the icon fonts the bar draws with (Phosphor, Lucide, MingCute, GoogleSansCode Nerd Font Mono). Links the fontconfig rule and sets the UI font.
+Downloads the JetBrains Mono, Iosevka and Cascadia Code Nerd Fonts and MiSans Latin into `~/.local/share/fonts/` if they're missing, along with the icon fonts the bar uses (Phosphor, Lucide, MingCute, GoogleSansCode Nerd Font Mono). It also links the fontconfig rule and sets the interface font.
 
 ### `theme`
 
-Themes every GTK3 app (Nemo, the file chooser) in the bar's palette: a generated `Adwaita-dark` in `~/.local/share/themes/`, following the desktop's light/dark setting. Also the Papirus icons, Comix Cursors (built when `~/.icons/ComixCursors-White` is missing) and the Qt settings.
+Gives every GTK3 app (Nemo, the file chooser) the bar's colours, through a generated `Adwaita-dark` theme in `~/.local/share/themes/` that follows the desktop's light or dark setting. It also brings the Papirus icons, Comix Cursors (built if `~/.icons/ComixCursors-White` is missing) and the Qt settings.
 
-| To change | Edit, then `cc-pkg-mng install theme` |
+| To change | Edit this, then run `cc-pkg-mng install theme` |
 |---|---|
-| Colours | [`theme/build-adwaita-dark.py`](../config/nemo/theme/build-adwaita-dark.py) (mapped from `quickshell/bar/theme/DrawerTheme.qml`) |
-| Nemo-specific styling | [`theme/overlay.css`](../config/nemo/theme/overlay.css) — needs a Nemo restart |
+| The colours | [`theme/build-adwaita-dark.py`](../config/nemo/theme/build-adwaita-dark.py), which takes them from `quickshell/bar/theme/DrawerTheme.qml` |
+| Nemo's own styling | [`theme/overlay.css`](../config/nemo/theme/overlay.css). Restart Nemo to see it |
 
 ### `audio`
 
-Links [`50-equalizer.conf`](../config/pipewire/50-equalizer.conf) — four five-band filter chains (60 / 250 / 1k / 4k / 12k Hz) used by the mixer's equalizer — and the WirePlumber Bluetooth policy, with `bt-audio-switch` as a `systemd --user` service. **Restarts the audio stack** when this configuration changes, which cuts sound for a moment.
+Links [`50-equalizer.conf`](../config/pipewire/50-equalizer.conf), which holds the four five-band filter chains (60, 250, 1k, 4k and 12k Hz) behind the mixer's equalizer. It also links the WirePlumber Bluetooth policy and runs `bt-audio-switch` as a `systemd --user` service.
 
-Any node added to the equalizer file must keep the `eq_slot_` / `eq_out_` prefix, or the bar treats it as a real output device.
+When this configuration changes, **the audio stack is restarted**, so the sound cuts out for a moment.
+
+If you add a node to the equalizer file, keep the `eq_slot_` or `eq_out_` prefix in its name. Otherwise the bar will think it's a real output device.
 
 ### `hyprland`
 
-The compositor and the session: Hyprland, hyprlock, hypridle, hyprsunset, the portals, brightness and power-profile tools, and the wallpaper slideshow as `systemd --user` services. Merges [`wallpapers/`](../wallpapers/) into `~/Images/Wallpapers`.
+The compositor and the session: Hyprland, hyprlock, hypridle, hyprsunset, the portals, the brightness and power-profile tools, and the wallpaper slideshow, which runs as `systemd --user` services. It also adds the wallpapers from [`wallpapers/`](../wallpapers/) to `~/Images/Wallpapers`.
 
 #### Configuration files
 
-All under [`config/hyprland/hypr/`](../config/hyprland/hypr/). `hyprctl reload` (`Super + Shift + R`) applies the Lua files.
+They're all in [`config/hyprland/hypr/`](../config/hyprland/hypr/). `hyprctl reload` (`Super + Shift + R`) applies the Lua files.
 
-| File | Contents |
+| File | What's in it |
 |---|---|
 | `hyprland.lua` | General settings, input, animations, gestures |
-| `keybinds.lua` | Key bindings — see [keybindings.md](keybindings.md) |
+| `keybinds.lua` | Key bindings, listed in [keybindings.md](keybindings.md) |
 | `windowrules.lua` | Window rules |
-| `monitors.lua` | Outputs, resolutions, positions. Check names with `hyprctl monitors` |
-| `colors.lua` | The shared palette |
-| `private.lua` | Machine-local overrides (per-game rules, anything not worth versioning). Git-ignored, optional, loaded last when present |
-| `hypridle.conf` | Idle ladder: dim, lock, screen off, suspend |
-| `hyprlock.conf` | Lock screen |
+| `monitors.lua` | Screens, resolutions and positions. Check the names with `hyprctl monitors` |
+| `colors.lua` | The shared colour palette |
+| `private.lua` | Anything specific to this machine that isn't worth committing, like rules for particular games. It's optional and git-ignored, and it's loaded last when it exists |
+| `hypridle.conf` | What happens when you're idle: dim, lock, screen off, suspend |
+| `hyprlock.conf` | The lock screen |
 | `hyprsunset.conf` | Night mode |
 | `hosts/*.env` | Per-machine behaviour, see below |
-| `wallpaper-playlist.json` | Wallpaper slideshow |
+| `wallpaper-playlist.json` | The wallpaper slideshow |
 
 #### Per-machine profiles
 
-`hosts/default.env` is loaded on every machine, then `hosts/<id>.env` on top when one exists. The id comes from the DMI product name, or from `HOST_PROFILE` if set.
+`hosts/default.env` is loaded on every machine. Then, if there's a `hosts/<id>.env` for this machine, it's loaded on top. The id comes from the DMI product name, or from `HOST_PROFILE` if you set it.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `IDLE_ENABLED` | `1` | `0` turns every hypridle action into a no-op |
-| `IDLE_ALLOW` | `dim undim lock dpms-off dpms-on suspend` | Actions this machine may perform |
-| `IDLE_REQUIRE_BATTERY` | `1` | Only act when a battery is present |
+| `IDLE_ENABLED` | `1` | Set it to `0` and hypridle does nothing at all |
+| `IDLE_ALLOW` | `dim undim lock dpms-off dpms-on suspend` | The idle actions this machine is allowed to take |
+| `IDLE_REQUIRE_BATTERY` | `1` | Only act when the machine has a battery |
 
 ```bash
-~/.config/hypr/scripts/host-profile.sh --report    # which profile, which values
+~/.config/hypr/scripts/host-profile.sh --report    # which profile is used, and with which values
 ```
 
-To add a machine: create `hosts/<id>.env` with only the values that differ, and add its product name to `host_profile_id` in [`scripts/host-profile.sh`](../config/hyprland/hypr/scripts/host-profile.sh).
+To add a machine, create `hosts/<id>.env` with only the values that differ from the default. Then add its product name to `host_profile_id` in [`scripts/host-profile.sh`](../config/hyprland/hypr/scripts/host-profile.sh).
 
 #### Default applications
 
-`Super + Enter`, `Super + E` and `Super + B` open whatever application fills the role (the `roles` unit), through [`coucou-open`](../config/hyprland/hypr/scripts/coucou-open):
+`Super + Enter`, `Super + E` and `Super + B` open whichever app fills that role (the `roles` unit), through [`coucou-open`](../config/hyprland/hypr/scripts/coucou-open):
 
 | Role | Default | To change it |
 |---|---|---|
-| Terminal | WezTerm | list desktop ids, most preferred first, in `~/.config/xdg-terminals.list` (e.g. `kitty.desktop`) |
+| Terminal | WezTerm | List desktop ids in `~/.config/xdg-terminals.list`, favourite first (for example `kitty.desktop`) |
 | Web browser | Firefox | `xdg-settings set default-web-browser brave-browser.desktop` |
 | File manager | Nemo | `xdg-mime default org.gnome.Nautilus.desktop inode/directory` |
 
 ```bash
-~/.config/hypr/scripts/coucou-open --print terminal   # what Super+Enter would run
+~/.config/hypr/scripts/coucou-open --print terminal   # what Super+Enter would open
 ```
 
 #### Idle
 
-A zathura window visible on screen holds off the idle ladder; a book on another workspace does not. See [`readinghold.lua`](../config/hyprland/hypr/readinghold.lua).
+While a zathura window is visible, the screen won't dim, lock or turn off. A book left open on another workspace doesn't count. See [`readinghold.lua`](../config/hyprland/hypr/readinghold.lua).
 
 ### `bar`
 
-Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/). It reloads itself when a QML file changes. Also brings the screenshot tools (grim, slurp, satty) and the clipboard history.
+The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history.
 
 ![The bar](screenshots/v1.0.0/bar.webp)
 
-| Area | Contents |
+| Area | What's there |
 |---|---|
-| Left | Clock (click: month calendar and agenda), CPU, temperature, fan (hidden when the machine has no fan sensor), memory |
-| Centre island | Active window, workspaces, media |
-| Launchers | Open apps. Right click on a chip: focus, close or quit |
+| Left | The clock (click it for the calendar and agenda), CPU, temperature, fan speed (hidden if the machine has no fan sensor), memory |
+| Centre island | The active window, workspaces, and what's playing |
+| Launchers | Your open apps. Right-click one to focus, close or quit it |
 | Right | HDR, audio output and input, network rate, Balise, power profile, battery, notifications |
 
 #### Drawers
 
-| Drawer | Opened by | Holds |
+| Drawer | Opens from | What's in it |
 |---|---|---|
-| Calendar | the clock | month view, khal agenda and reminders |
-| Notification centre | the bell, `Super + I` | history grouped by app, do-not-disturb, media controls, clear all |
-| [Balise](../config/hyprland/quickshell/bar/modules/balise/) | its button | Wi-Fi, Bluetooth, Ethernet with device lists; brightness, night mode, HDR; dark mode; screenshot |
-| [Power](../config/hyprland/quickshell/bar/modules/power/) | the battery | time remaining, charge limit, fast charge, power profile, charge curve |
-| [Mixer](../config/hyprland/quickshell/bar/modules/mixer/) | either audio icon | output and input levels, device lists, per-app volume, per-app equalizer |
+| Calendar | the clock | The month, your khal agenda and reminders |
+| Notification centre | the bell, or `Super + I` | Notifications grouped by app, do not disturb, media controls, clear all |
+| [Balise](../config/hyprland/quickshell/bar/modules/balise/) | its button | Wi-Fi, Bluetooth and Ethernet with their device lists; brightness, night mode and HDR; dark mode; a screenshot button |
+| [Power](../config/hyprland/quickshell/bar/modules/power/) | the battery | Time left, charge limit, fast charge, power profile, and a history of the charge |
+| [Mixer](../config/hyprland/quickshell/bar/modules/mixer/) | either audio icon | Output and input levels, device lists, volume and equalizer for each app |
 
 | | | |
 |:---:|:---:|:---:|
 | ![Balise](screenshots/v1.0.0/balise.webp)<br>Balise | ![Power](screenshots/v1.0.0/power.webp)<br>Power | ![Mixer](screenshots/v1.0.0/mixer.webp)<br>Mixer |
 | ![Notification centre](screenshots/v1.0.0/notifications.webp)<br>Notification centre | ![Calendar](screenshots/v1.0.0/calendar.webp)<br>Calendar | |
 
-Only one of the right-hand drawers is open at a time. Holding `Super` shows the key bindings as a live keyboard in the centre island (`Shift` switches layer) — see [key bindings](keybindings.md).
+Only one of the drawers on the right can be open at a time.
+
+Hold `Super` and the centre island turns into a keyboard showing every key binding. Press `Shift` as well to see the second layer. The full list is in [key bindings](keybindings.md).
 
 #### Indicators
 
 | | |
 |:---:|:---:|
 | ![Brightness indicator](screenshots/v1.0.0/osd.webp) | ![Battery alert](screenshots/v1.0.0/battery-alert.webp) |
-| Volume, microphone and brightness changes show as a dial at the bottom of the screen | The battery alert, at 20 %, 10 % and 5 % while discharging: switch to the power saver profile, or dismiss |
+| When you change the volume, the microphone level or the brightness, a dial shows up at the bottom of the screen | The battery alert shows up at 20 %, 10 % and 5 % while on battery. You can switch to the power saver profile, or dismiss it |
 
 #### Mixer and equalizer
 
-- Right click on an audio icon opens pavucontrol, for card profiles and stream moves.
-- A newly connected output or input becomes the default.
-- The equalizer is per application: the chevron on an app's row opens its page — five bands, ten presets, an on/off switch. Up to four apps can be equalized at once (the chains come from the `audio` unit).
-- Curves are saved per application name in `~/.local/state/bar-equalizer.json`.
+- Right-click an audio icon to open pavucontrol, for card profiles and moving streams between devices.
+- When you plug in a new output or input, it becomes the default.
+- Each app gets its own equalizer. Click the chevron on an app's row to open it: five bands, ten presets and an on/off switch. Up to four apps can have an equalizer at the same time (the filter chains come from the `audio` unit).
+- Your curves are saved by app name in `~/.local/state/bar-equalizer.json`.
 
 #### Veille
 
-A large clock overlay for late sessions, with occasional messages.
+A big clock that appears when you're up late, with the occasional message.
 
 ![Veille at 2 a.m.](screenshots/v1.0.0/veille.webp)
 
-Configured in [`quickshell/bar/veille.json`](../config/hyprland/quickshell/bar/veille.json), reloaded on save:
+Its settings are in [`quickshell/bar/veille.json`](../config/hyprland/quickshell/bar/veille.json), and changes apply as soon as you save:
 
-| Key | |
+| Key | Controls |
 |---|---|
-| `enabled`, `language`, `monitor` | on/off, message language, target output (empty = focused) |
-| `showSeconds`, `showDate` | clock format |
-| `messageIntervalMinutes`, `messageHoldSeconds`, `curatedRatio` | message frequency |
-| `thresholds` | times at which each phase starts |
-| `phases` | visibility and look per phase |
-| `muteWhileGaming`, `respectZenMode` | when to stay hidden |
+| `enabled`, `language`, `monitor` | On or off, the language of the messages, and which screen it shows on (empty means the focused one) |
+| `showSeconds`, `showDate` | How the clock looks |
+| `messageIntervalMinutes`, `messageHoldSeconds`, `curatedRatio` | How often messages appear |
+| `thresholds` | The time each phase starts |
+| `phases` | Whether it shows, and how it looks, in each phase |
+| `muteWhileGaming`, `respectZenMode` | When it stays out of the way |
 
 #### Agenda
 
-`Super + A` adds or deletes an event through fuzzel. Events are stored by khal (config in [`config/hyprland/khal/config`](../config/hyprland/khal/config)); the calendar drawer shows them and rings their reminders.
+`Super + A` lets you add or delete an event through fuzzel. Events are stored by khal (its config is in [`config/hyprland/khal/config`](../config/hyprland/khal/config)). The calendar drawer shows them and rings their reminders.
 
 ### `roue` · `prisme` · `balise`
 
-The three native apps. On the stable channel they are installed as packages; on edge they are built on the machine from [`roue-src`](../config/hyprland/roue-src/), [`prisme-src`](../config/hyprland/prisme-src/) and [`balise-src`](../config/hyprland/balise-src/).
+The three apps written for coucou-shell. On the stable channel they're installed as packages. On edge they're built on your machine from [`roue-src`](../config/hyprland/roue-src/), [`prisme-src`](../config/hyprland/prisme-src/) and [`balise-src`](../config/hyprland/balise-src/).
 
-| App | Use | Configuration |
+| App | What it does | Settings |
 |---|---|---|
-| **Roue** | Radial wheel: press, aim, release. Power menu, power profile, display layout, actions | [`config/hyprland/roue/`](../config/hyprland/roue/) |
-| **Prisme** | Wallpaper picker (`Super + W`). Every wallpaper is fitted to each connected screen's resolution, in `~/.cache/filtered_wallpapers/<W>x<H>/`, at install and again when a new screen is plugged in; until then that screen shows the original | [`config/hyprland/prisme/`](../config/hyprland/prisme/): `wallpapers.conf` (which folder), `wallpapers-extra.conf` (folders merged in) |
-| **Balise** | Network and Bluetooth service behind the bar's Balise drawer, as a `systemd --user` service. `balise wifi-share <ssid>` prints a QR code | [`config/hyprland/balise/`](../config/hyprland/balise/) |
+| **Roue** | A radial wheel: press, aim, let go. Used for the power menu, power profiles, display layouts and actions | [`config/hyprland/roue/`](../config/hyprland/roue/) |
+| **Prisme** | The wallpaper picker (`Super + W`). Each wallpaper is fitted to the resolution of every connected screen and stored in `~/.cache/filtered_wallpapers/<W>x<H>/`. This happens at install, and again when you plug in a new screen. Until then, that screen shows the original | [`config/hyprland/prisme/`](../config/hyprland/prisme/): `wallpapers.conf` (which folder to use) and `wallpapers-extra.conf` (extra folders to include) |
+| **Balise** | The network and Bluetooth service behind the bar's Balise drawer, running as a `systemd --user` service. `balise wifi-share <ssid>` prints a QR code for a saved network | [`config/hyprland/balise/`](../config/hyprland/balise/) |
 
 ![Roue, the power wheel](screenshots/v1.0.0/roue.webp)
 
@@ -172,90 +181,90 @@ The three native apps. On the stable channel they are installed as packages; on 
 
 ### `fuzzel`
 
-The launcher (`Super + Space`), and the picker behind the clipboard history (`Super + V`), Liseuse and the agenda. Configured in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
+The app launcher (`Super + Space`). It's also the list you pick from for the clipboard history (`Super + V`), Liseuse and the agenda. Its settings are in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
 
 ![The launcher](screenshots/v1.0.0/launcher.webp)
 
 ### `liseuse`
 
-The reading library, on `Super + F`: resumes the book open on the current workspace, otherwise opens a picker. `F1` inside a book shows the reading manual.
+A reading library on `Super + F`. If a book is already open on the current workspace, it brings it back. Otherwise it opens a list to choose from. Press `F1` inside a book for the reading manual.
 
 | | |
 |---|---|
 | Installs | zathura with the mupdf, cb and djvu plugins, mupdf; the Markdown renderer (python-markdown, Pygments, WeasyPrint, MathJax); `plantuml` |
-| Links | `zathurarc`, `sources.conf`, the `liseuse` launcher into `~/.local/bin` |
-| Creates | `~/Livres`, the document MIME associations |
+| Links | `zathurarc`, `sources.conf`, and the `liseuse` launcher into `~/.local/bin` |
+| Creates | `~/Livres`, and the file associations for documents |
 
-**Formats**: PDF, EPUB, MOBI, AZW3, FB2, CBZ/CBR, DjVu, XPS, Markdown and PlantUML (`.puml`). Markdown is rendered as GitHub-flavoured, with syntax highlighting, maths (`$…$`, `$$…$$`), PlantUML blocks and working links between documents.
+**Formats**: PDF, EPUB, MOBI, AZW3, FB2, CBZ/CBR, DjVu, XPS, Markdown and PlantUML (`.puml`). Markdown is rendered the way GitHub does it, with syntax highlighting, maths (`$…$`, `$$…$$`), PlantUML blocks, and links between documents that work.
 
 | To change | Edit |
 |---|---|
-| Folders scanned (besides `~/Livres`) | [`sources.conf`](../config/liseuse/sources.conf), one path per line |
+| Folders to look in (besides `~/Livres`) | [`sources.conf`](../config/liseuse/sources.conf), one path per line |
 | Reader keys and colours | [`zathurarc`](../config/liseuse/zathurarc) |
-| Markdown page style | [`markdown.css`](../config/liseuse/markdown.css) |
+| How Markdown pages look | [`markdown.css`](../config/liseuse/markdown.css) |
 
-In the picker, the book in progress comes first, and search matches the full path as well as the title (`md`, `dotfiles keybind`). Light and dark follow the desktop setting. `Space` / `Return` turn the page, `Shift` goes back.
+In the list, the book you're currently reading comes first. Search looks at the full path as well as the title, so `md` or `dotfiles keybind` both work. Light and dark follow the desktop setting. `Space` and `Return` turn the page, and `Shift` goes back.
 
-A book opens as an ordinary window; `Super + Shift + F` for fullscreen. While reading, notifications are silenced, and the screen stays on while a book is visible (see [Idle](#idle)).
+A book opens as a normal window. Use `Super + Shift + F` for fullscreen. While you're reading, notifications are silenced, and the screen stays on as long as a book is visible (see [Idle](#idle)).
 
-Office documents are converted on demand, to a PDF next to the original:
+Office documents can be converted to a PDF, saved next to the original:
 
 ```bash
-liseuse convert [FILE…]    # no argument: pick from what was found
+liseuse convert [FILE…]    # with no argument, pick from the documents it found
 ```
 
-This needs LibreOffice, which is not installed with Liseuse (`libreoffice-writer libreoffice-impress libreoffice-calc`).
+This needs LibreOffice, which isn't installed with Liseuse (`libreoffice-writer libreoffice-impress libreoffice-calc`).
 
 Rendered Markdown is cached in `~/.cache/liseuse/md/`.
 
 ### `plymouth`
 
-*Optional.* The boot splash: the word mark on black (**coucou** at boot, **byebye** on shutdown), a thin progress bar at boot, and the boot log one line at a time, in JetBrains Mono.
+*Optional.* The boot splash: the word **coucou** on black when the machine starts, **byebye** when it shuts down, with a thin progress bar and the boot log scrolling one line at a time underneath, in JetBrains Mono.
 
 | | |
 |:---:|:---:|
 | ![Boot splash](screenshots/v1.0.0/plymouth-boot.webp)<br>Boot | ![Shutdown splash](screenshots/v1.0.0/plymouth-shutdown.webp)<br>Shutdown |
 
-Installing it selects the theme and rebuilds the initramfs of every installed kernel; each new kernel's initramfs is checked as it is installed.
+Installing it selects the theme and rebuilds the initramfs for every installed kernel. Each new kernel is checked as it comes in.
 
 | Tool | Use |
 |---|---|
-| [`make-assets.py`](../config/boot/plymouth/make-assets.py) | Regenerates the PNGs. `--width` for a panel that is not 1920 px wide |
-| [`simulate.py`](../config/boot/plymouth/simulate.py) | Renders the animation to a video. `--width/--height`, `--heads 1920x1200,3840x2160` for several screens |
-| [`preview.sh`](../config/boot/plymouth/preview.sh) | Shows the real splash on a spare VT. `--sweep`, `--password`, `--status`. Does not work on machines whose firmware framebuffer disappears after boot |
+| [`make-assets.py`](../config/boot/plymouth/make-assets.py) | Regenerates the images. Use `--width` if your screen isn't 1920 px wide |
+| [`simulate.py`](../config/boot/plymouth/simulate.py) | Renders the animation to a video. Takes `--width/--height`, or `--heads 1920x1200,3840x2160` for several screens |
+| [`preview.sh`](../config/boot/plymouth/preview.sh) | Shows the real splash on a spare console. Takes `--sweep`, `--password` and `--status`. It doesn't work on machines whose firmware framebuffer goes away after boot |
 
-Placement and motion are in [`theme/coucou.script`](../config/boot/plymouth/theme/coucou.script). On several screens the splash is sized for the smallest one.
+The layout and animation are in [`theme/coucou.script`](../config/boot/plymouth/theme/coucou.script). With several screens, the splash is sized for the smallest one.
 
-For a real-boot diagnosis, add `plymouth.debug` to the kernel command line and read `/var/log/plymouth-debug.log`.
+If something goes wrong during a real boot, add `plymouth.debug` to the kernel command line and read `/var/log/plymouth-debug.log`.
 
 ### `greeter`
 
-*Optional.* greetd + tuigreet on VT1 as the login screen, replacing any other display manager, with the console in JetBrains Mono.
+*Optional.* A login screen with greetd and tuigreet on the first console. It replaces any other display manager, and sets the console font to JetBrains Mono.
 
 ```bash
 cc-pkg-mng install greeter
 ```
 
-| Piece | |
+| Piece | What it is |
 |---|---|
-| [`greetd/`](../config/boot/login/greetd/) | greetd configuration |
-| [`console/`](../config/boot/login/console/) | the console font, generated by [`make-console-font.py`](../config/boot/login/make-console-font.py) (`--cell WxH`, `--preview`) |
-| [`session-splash.sh`](../config/boot/login/session-splash.sh) | keeps the word mark on screen until Hyprland draws |
+| [`greetd/`](../config/boot/login/greetd/) | The greetd configuration |
+| [`console/`](../config/boot/login/console/) | The console font, generated by [`make-console-font.py`](../config/boot/login/make-console-font.py) (`--cell WxH`, `--preview`) |
+| [`session-splash.sh`](../config/boot/login/session-splash.sh) | Keeps the word mark on screen until Hyprland has drawn its first frame |
 
 ---
 
 ## Applications
 
-Each one is only the application. Any other app can take its place: install it, then make it the default for its role (see [Default applications](#default-applications)).
+Each of these is just the application, nothing more. You can use any other app instead: install it, then make it the default for its role (see [default applications](#default-applications)).
 
 ### `wezterm`
 
-The terminal. Two builds:
+The terminal. It comes in two builds:
 
 | Variant | |
 |---|---|
 | `stable` (default) | The packaged build |
-| `smear` | Built from source with a native cursor smear (wezterm PR #7737), installed to `/usr/local/bin`. Neovim's own smear-cursor turns itself off under it |
+| `smear` | Built from source with a cursor smear effect (wezterm PR #7737), installed to `/usr/local/bin`. Neovim's own smear-cursor plugin turns itself off when it runs in this build |
 
 ```bash
 cc-pkg-mng set wezterm variant smear
@@ -268,33 +277,33 @@ The default browser, with a system policy in `/etc/firefox/policies/`.
 
 ### `brave`
 
-From Brave's own repository. Not installed by default.
+Installed from Brave's own repository. Not installed by default.
 
 ### `nemo`
 
-The default file manager: handles folders and `org.freedesktop.FileManager1`, with thumbnails for files up to 32 MiB.
+The default file manager. It opens folders, answers to `org.freedesktop.FileManager1`, and shows thumbnails for files up to 32 MiB.
 
 ### `neovim`
 
-The editor, without configuration — see [`config-nvim`](#config-nvim) for one.
+The editor, on its own with no configuration. If you want mine, see [`config-nvim`](#config-nvim).
 
 ### `mpv` · `mangohud` · `fastfetch`
 
-The media player (default), the gaming overlay with GOverlay, and the system summary. Their configurations are in [`config-extras`](#config-extras).
+The media player (installed by default), the gaming overlay along with GOverlay, and the system summary tool. Their settings are in [`config-extras`](#config-extras).
 
 ### `ccnote` · `ccslide`
 
-Two small shell tools: quick notes, and Markdown slides in the terminal through `mdp` (built from source, as Fedora does not package it). Not installed by default.
+Two small terminal tools: one for quick notes, the other for Markdown slides through `mdp` (built from source, because Fedora doesn't package it). Not installed by default.
 
 ---
 
 ## Configurations
 
-Personal setups, adopted or not at `init`. Adopting one moves every file it replaces to the backups; `cc-pkg-mng remove` puts them back.
+My personal setups. `init` asks whether you want each one. If you adopt one, every file it would replace is moved to the backups first, and `cc-pkg-mng remove` puts them back.
 
 ### `config-shell`
 
-zsh and bash with the prompt, aliases, zoxide, fzf, ripgrep, fd, and tmux. Makes zsh the login shell, with zsh-autosuggestions and zsh-syntax-highlighting.
+zsh and bash with my prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux. It makes zsh your login shell, with zsh-autosuggestions and zsh-syntax-highlighting.
 
 | To change | Edit |
 |---|---|
@@ -304,19 +313,19 @@ zsh and bash with the prompt, aliases, zoxide, fzf, ripgrep, fd, and tmux. Makes
 
 ### `config-wezterm`
 
-The WezTerm setup: [`config/wezterm/wezterm.lua`](../config/wezterm/wezterm.lua).
+My WezTerm setup: [`config/wezterm/wezterm.lua`](../config/wezterm/wezterm.lua).
 
 ### `config-nvim`
 
-The Neovim setup: `init.lua`, `lua/`, `ftplugin/`, `colors/`, `bin/` linked into `~/.config/nvim/`. Directories are linked whole: a new file under `config/nvim/lua/` is live at once.
+My Neovim setup: `init.lua`, `lua/`, `ftplugin/`, `colors/` and `bin/`, linked into `~/.config/nvim/`. Folders are linked as a whole, so a new file under `config/nvim/lua/` works straight away.
 
-| Feature | Use |
+| Feature | How to use it |
 |---|---|
-| Markdown live preview | `Alt + P` — a GTK 4 window that updates block by block, maths included |
-| PlantUML | highlighting, lint, completion, and a live preview window. `:PumlFromJava` draws a class diagram from Java sources, `:PumlExport` exports it |
+| Live Markdown preview | `Alt + P` opens a GTK 4 window that updates block by block, maths included |
+| PlantUML | Highlighting, linting, completion, and a live preview window. `:PumlFromJava` draws a class diagram from Java sources, and `:PumlExport` exports it |
 
-Every optional tool degrades gracefully: without `plantuml-lsp` there is no PlantUML completion, and without MathJax the preview shows maths as TeX source.
+The optional tools are just that: without `plantuml-lsp` you lose PlantUML completion, and without MathJax the preview shows maths as raw TeX. Everything else keeps working.
 
 ### `config-extras`
 
-The configurations for mpv, MangoHud, fastfetch and Brave — each only when that app is installed: `~/.config/mpv/mpv.conf`, `~/.config/MangoHud/MangoHud.conf`, `~/.config/fastfetch/config.jsonc`, and Brave's flags from [`config/brave/brave-flags.conf`](../config/brave/brave-flags.conf).
+Settings for mpv, MangoHud, fastfetch and Brave, each one only if that app is installed: `~/.config/mpv/mpv.conf`, `~/.config/MangoHud/MangoHud.conf`, `~/.config/fastfetch/config.jsonc`, and Brave's flags from [`config/brave/brave-flags.conf`](../config/brave/brave-flags.conf).

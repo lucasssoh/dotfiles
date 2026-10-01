@@ -1,12 +1,12 @@
 # coucou-shell
 
-A Fedora + [Hyprland](https://hyprland.org/) desktop, installed and kept up to date by its own manager. Besides the configuration of existing tools, it ships three native Rust/GTK4 apps: **[Roue](config/hyprland/roue-src)** (a radial selection wheel), **[Prisme](config/hyprland/prisme-src)** (a wallpaper picker) and **[Balise](config/hyprland/balise-src)** (a WiFi/Bluetooth/Ethernet daemon behind a panel in the bar).
+My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own little package manager to install it and keep it up to date. Most of it is configuration for existing tools, but it also comes with three apps I wrote in Rust and GTK4: **[Roue](config/hyprland/roue-src)**, a radial wheel, **[Prisme](config/hyprland/prisme-src)**, a wallpaper picker, and **[Balise](config/hyprland/balise-src)**, which handles Wi-Fi, Bluetooth and Ethernet from a panel in the bar.
 
 ![The coucou-shell desktop](docs/screenshots/v1.0.0/desktop.webp)
 
 ## Quick start
 
-On Fedora 44 (a netinstall is enough):
+You need Fedora 44. A minimal netinstall is enough.
 
 ```bash
 sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo
@@ -14,52 +14,52 @@ sudo dnf install cc-pkg-mng
 cc-pkg-mng init
 ```
 
-Then, to stay up to date:
+After that, two commands cover most days:
 
 ```bash
 cc-pkg-mng upgrade    # move to the latest release and apply it
 cc-pkg-mng status     # check that everything is in place
 ```
 
-The documentation is also online: https://lucasssoh.github.io/dotfiles/
+The documentation is also on the web: https://lucasssoh.github.io/dotfiles/
 
 ## At work
 
 ![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/v1.0.0/work.webp)
 
-Each part — the bar's drawers, Veille, Roue, Prisme, the boot splash — is pictured on its page in the [units](docs/modules.md) documentation.
+The bar's drawers, Veille, Roue, Prisme and the boot splash each have their own screenshots in the [units](docs/modules.md) documentation.
 
 ## Documentation
 
-| Page | Contents |
+| Page | What you'll find |
 |---|---|
-| [**Installation**](docs/installation.md) | Installing with dnf, what `init` asks, unattended installs |
-| [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Layers, commands, options, channels, upgrade and rollback |
-| [**Configuration**](docs/configuration.md) | Editing coucou-shell, environment variables, adding a unit |
-| [**Units**](docs/modules.md) | What each part installs, and where to configure it |
-| [**Hardware detection**](docs/hardware.md) | CPU/GPU profiles, codec swaps, manual follow-ups |
-| [**Key bindings**](docs/keybindings.md) | The full list, AZERTY |
-| [**Changelog**](CHANGELOG.md) | What each release brings |
+| [**Installation**](docs/installation.md) | Installing with dnf, the questions `init` asks, unattended installs |
+| [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Layers, commands, options, channels, upgrading and rolling back |
+| [**Configuration**](docs/configuration.md) | Editing coucou-shell, environment variables, writing your own unit |
+| [**Units**](docs/modules.md) | What each part installs, and where its settings live |
+| [**Hardware detection**](docs/hardware.md) | CPU and GPU profiles, codec swaps, things left for you to do by hand |
+| [**Key bindings**](docs/keybindings.md) | Every shortcut, on an AZERTY keyboard |
+| [**Changelog**](CHANGELOG.md) | What changed in each release |
 
 ## What's in here
 
 | Piece | What it is |
 |---|---|
-| **Hyprland** (`config/hyprland/hypr/`) | Compositor config, in Hyprland's Lua API: `hyprland.lua`, `keybinds.lua`, `windowrules.lua`, `monitors.lua`, plus per-machine profiles in `hosts/` and an optional git-ignored `private.lua` |
-| **Quickshell bar** (`config/hyprland/quickshell/bar/`) | The status bar: clock and metrics, workspaces and media, and drawers for network, power, audio mixer with per-app equalizer, notifications and calendar |
-| **Veille** (`quickshell/bar/modules/veille/`) | A large clock overlay for late sessions, with occasional messages. Configured in `quickshell/bar/veille.json` |
-| **Roue** (`config/hyprland/roue-src/`) | Radial wheel: power menu, power profile, display layout, actions |
-| **Prisme** (`config/hyprland/prisme-src/`) | Wallpaper picker, and `wallpaper-filter` to fit wallpapers to each screen |
-| **Balise** (`config/hyprland/balise-src/` + `quickshell/bar/modules/balise/`) | Rust daemon for NetworkManager/BlueZ, and the bar panel that drives it. Shares a saved network as a QR code. No VPN |
-| **Liseuse** (`config/liseuse/`) | Reading library on `Super + F`: a picker over `~/Livres` and the folders in `sources.conf`, opening PDF, EPUB, comics, Markdown (with maths and PlantUML) in zathura. `liseuse convert` turns office documents into PDFs |
-| **cc-pkg-mng** (`crates/cc-pkg-mng/`, `units/`) | The package manager: installs the parts you pick, applies only what changed, and moves between releases |
-| **Boot** (`config/boot/`) | An optional Plymouth splash, and an optional greetd + tuigreet login with the console in JetBrains Mono |
-| Everything else in `config/` | Audio, fonts, theme, fuzzel, and the applications and personal configurations offered at install. See [docs/modules.md](docs/modules.md) |
+| **Hyprland** (`config/hyprland/hypr/`) | The compositor config, written with Hyprland's Lua API: `hyprland.lua`, `keybinds.lua`, `windowrules.lua` and `monitors.lua`, plus per-machine profiles in `hosts/` and an optional, git-ignored `private.lua` |
+| **Quickshell bar** (`config/hyprland/quickshell/bar/`) | The status bar. Clock and system stats on the left, workspaces and media in the middle, and drawers for the network, power, an audio mixer with a per-app equalizer, notifications and a calendar |
+| **Veille** (`quickshell/bar/modules/veille/`) | A big clock that shows up when you're still at it late at night, with the odd message. Its settings are in `quickshell/bar/veille.json` |
+| **Roue** (`config/hyprland/roue-src/`) | A radial wheel for the power menu, power profiles, display layouts and quick actions |
+| **Prisme** (`config/hyprland/prisme-src/`) | The wallpaper picker, along with `wallpaper-filter`, which fits each wallpaper to each screen |
+| **Balise** (`config/hyprland/balise-src/` and `quickshell/bar/modules/balise/`) | A Rust daemon that talks to NetworkManager and BlueZ, and the bar panel that drives it. It can share a saved network as a QR code. There's no VPN support |
+| **Liseuse** (`config/liseuse/`) | A reading library on `Super + F`. It lists what's in `~/Livres` and the folders in `sources.conf`, and opens PDFs, EPUBs, comics and Markdown (maths and PlantUML included) in zathura. `liseuse convert` turns office documents into PDFs |
+| **cc-pkg-mng** (`crates/cc-pkg-mng/`, `units/`) | The package manager. It installs the parts you choose, only redoes what changed, and moves between releases |
+| **Boot** (`config/boot/`) | An optional Plymouth splash, and an optional greetd + tuigreet login screen with the console in JetBrains Mono |
+| Everything else in `config/` | Audio, fonts, theme, fuzzel, and the apps and personal setups offered during install. See [docs/modules.md](docs/modules.md) |
 
 ## Licence
 
-coucou-shell is for personal use: install it, use it and adapt it on your own machines, but don't redistribute it — see [LICENSE.md](LICENSE.md). Third-party parts keep their own licences, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
+coucou-shell is for personal use. You're welcome to install it, use it and tweak it on your own machines, but please don't redistribute it. The details are in [LICENSE.md](LICENSE.md). Third-party parts keep their own licences, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
 
-## Monitors & HDR
+## Monitors and HDR
 
-After the first launch, check output names with `hyprctl monitors` and adjust `config/hyprland/hypr/monitors.lua` if needed; `hyprctl reload` applies it. HDR is toggled per screen from the Balise drawer.
+After your first login, run `hyprctl monitors` to see your screens' names, and adjust `config/hyprland/hypr/monitors.lua` if they don't match. `hyprctl reload` applies the change. HDR can be turned on or off for each screen from the Balise drawer.
