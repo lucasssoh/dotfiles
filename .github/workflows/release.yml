@@ -42,11 +42,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          name="$(grep -m1 "^## ${GITHUB_REF_NAME#v} " CHANGELOG.md | sed 's/^## [^ ]* — //')"
+          # "## 1.1.0 — Name", or "## 1.0.1" for a release without a name.
+          name="$(grep -m1 "^## ${GITHUB_REF_NAME#v} — " CHANGELOG.md | sed 's/^## [^ ]* — //' || true)"
+          title="$GITHUB_REF_NAME${name:+ « $name »}"
           packaging/release-notes.sh "$GITHUB_REF_NAME" > notes.md
           gh release create "$GITHUB_REF_NAME" out/*.rpm \
             --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME « $name »" \
+            --title "$title" \
             --notes-file notes.md
 
   pages:

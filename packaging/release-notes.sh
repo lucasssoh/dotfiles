@@ -7,6 +7,6 @@ set -euo pipefail
 version="${1:?usage: release-notes.sh <tag>}"
 version="${version#v}"
 awk -v v="$version" '
-    /^## / { on = (index($0, "## " v " ") == 1); next }
+    /^## / { on = ($0 == "## " v || index($0, "## " v " ") == 1); next }
     on
 ' "$(dirname "$0")/../CHANGELOG.md"

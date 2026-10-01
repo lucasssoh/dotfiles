@@ -1,8 +1,8 @@
 # Changelog
 
-Versions follow `MAJOR.MINOR.PATCH`. Each release is a git tag (`v1.0.0`) with a code name; `cc-pkg-mng upgrade` moves between them on the stable channel.
+Versions follow `MAJOR.MINOR.PATCH`. Each release is a git tag (`v1.0.0`); major and minor releases also get a name, patch releases do not; `cc-pkg-mng upgrade` moves between them on the stable channel.
 
-## 1.0.1 — Le correctif
+## 1.0.1
 
 ### Fixed
 - **Bar, centre island:** a workspace no longer shows as occupied after its last window has closed. A window could stay counted when the close went unnoticed (seen with a Java popup); the bar now trusts Hyprland's own window count.
