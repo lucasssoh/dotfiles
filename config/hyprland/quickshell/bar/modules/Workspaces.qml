@@ -66,16 +66,16 @@ Item {
                 // bar with nothing lit), occupied, empty -- and the active
                 // one drawn hollow when it holds no window.
                 //
-                // `toplevels` (this workspace's live window list, from
-                // wlr-foreign-toplevel-management -- separate from
-                // Hyprland's IPC socket) is the primary signal, not
-                // `lastIpcObject.windows`, which was seen stuck at its
-                // Quickshell-startup value. The latter stays as an OR'd
-                // safety net for any window without a foreign-toplevel
-                // handle.
+                // Occupancy is Hyprland's own per-workspace window count
+                // (`lastIpcObject.windows`), re-read by shell.qml's
+                // refreshWorkspaces() on every raw IPC event. Not
+                // `toplevels`: Quickshell only ever drops a toplevel on a
+                // `closewindow` event, and refreshToplevels() adds but
+                // never removes -- an XWayland popup (Filius's "win5")
+                // whose closewindow never arrived stayed a ghost there,
+                // keeping its workspace lit while Hyprland reported 0.
                 readonly property bool hasWindows:
-                    (modelData.toplevels && modelData.toplevels.values.length > 0)
-                    || (modelData.lastIpcObject && modelData.lastIpcObject.windows > 0)
+                    !!modelData.lastIpcObject && modelData.lastIpcObject.windows > 0
                 readonly property bool occupied: !modelData.active && pill.hasWindows
 
                 width: mark.width
