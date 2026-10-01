@@ -69,6 +69,88 @@ Item {
     onPlayingChanged: root.maybeAnnounce()
     Component.onCompleted: root.announcedKey = root.trackKey
 
+    // Dusk spectrum: one colour per bar while playing, from the indigo of
+    // the high sky to the amber of the horizon, each anchor pulled a third
+    // of the way toward the cover's hue -- a blue cover gives a cold dusk,
+    // an orange one a burning dusk. Paused, the bars go back to the cream
+    // of the rest of the bar. Anchors are [hue°, saturation, lightness],
+    // kept light and soft so they read on the island's black.
+    readonly property var duskAnchors: [
+        [248, 0.42, 0.66], [282, 0.44, 0.68], [328, 0.52, 0.72],
+        [8, 0.62, 0.73], [32, 0.70, 0.75]
+    ]
+
+    // The cover's own colour, read off a 16 px copy of the art: pixels go
+    // into 12 hue buckets weighted by how vivid they are (saturation x
+    // value), and the heaviest bucket's average stands for the cover -- a
+    // plain average of a dark sleeve is a muddy brown. A Canvas rather
+    // than Quickshell's ColorQuantizer, which only opens local files:
+    // mpv-mpris hands its art out as data: URLs. Runs once per cover, not
+    // per frame. No art, or a greyscale one, leaves coverTint transparent
+    // and the bars on the bare dusk anchors.
+    readonly property string artUrl: root.player ? root.player.trackArtUrl : ""
+    property color coverTint: "transparent"
+    onArtUrlChanged: {
+        root.coverTint = "transparent";
+        if (artCanvas.loadedUrl !== "") artCanvas.unloadImage(artCanvas.loadedUrl);
+        artCanvas.loadedUrl = root.artUrl;
+        if (root.artUrl !== "") { artCanvas.loadImage(root.artUrl); artCanvas.requestPaint(); }
+    }
+
+    Canvas {
+        id: artCanvas
+        property string loadedUrl: ""
+        width: 16
+        height: 16
+        opacity: 0   // not `visible: false` -- a hidden Canvas never paints
+        onImageLoaded: requestPaint()
+        onPaint: {
+            const url = artCanvas.loadedUrl;
+            if (url === "" || !artCanvas.isImageLoaded(url)) return;
+            const ctx = artCanvas.getContext("2d");
+            ctx.clearRect(0, 0, 16, 16);
+            ctx.drawImage(url, 0, 0, 16, 16);
+            const px = ctx.getImageData(0, 0, 16, 16).data;
+            const w = new Array(12).fill(0), r = new Array(12).fill(0),
+                  g = new Array(12).fill(0), b = new Array(12).fill(0);
+            let total = 0;
+            for (let i = 0; i < px.length; i += 4) {
+                const c = Qt.rgba(px[i] / 255, px[i + 1] / 255, px[i + 2] / 255, 1);
+                const k = c.hsvSaturation * c.hsvValue;
+                if (k < 0.08) continue;
+                const h = Math.floor(Math.max(c.hsvHue, 0) * 12) % 12;
+                w[h] += k; r[h] += c.r * k; g[h] += c.g * k; b[h] += c.b * k;
+                total += k;
+            }
+            let best = 0;
+            for (let i = 1; i < 12; i++) if (w[i] > w[best]) best = i;
+            // Under a few vivid pixels' worth: a greyscale cover, no pull.
+            root.coverTint = total < 2 ? "transparent"
+                : Qt.rgba(r[best] / w[best], g[best] / w[best], b[best] / w[best], 1);
+        }
+    }
+    readonly property var spectrum: {
+        const tint = root.coverTint;
+        const pull = tint.a > 0;
+        return root.duskAnchors.map(a => {
+            let h = a[0], s = a[1];
+            if (pull) {
+                // Shortest way round the wheel, unless it lands in the
+                // greens: amber pulled toward a blue cover would turn
+                // yellow-green, so it goes round through the violets.
+                let d = ((tint.hslHue * 360 - h + 540) % 360) - 180;
+                let to = (h + d * 0.35 + 360) % 360;
+                if (to > 50 && to < 190) {
+                    d += d > 0 ? -360 : 360;
+                    to = (h + d * 0.35 + 360) % 360;
+                }
+                h = to;
+                s = s * 0.75 + tint.hslSaturation * 0.25;
+            }
+            return Qt.hsla(h / 360, s, a[2], 1);
+        });
+    }
+
     Timer {
         id: announceTimer
         interval: 4000
@@ -264,10 +346,9 @@ Item {
 
                 readonly property real minBar: 3
                 readonly property real maxBar: 14
-                // The island's cream, like the window title and the
-                // workspace marks beside it ("Net" layout, 2026-09-29) --
-                // it was the green #237823 while playing. Paused still
-                // reads through the whole pill's opacity dip above.
+                // Paused: the island's cream, like the window title and
+                // the workspace marks beside it. Playing: each bar takes
+                // its own colour from root.spectrum (dusk, see above).
                 readonly property color barColor: DrawerTheme.cream2
 
                 Row {
@@ -287,8 +368,8 @@ Item {
                             width: 2
                             radius: 1
                             anchors.verticalCenter: parent.verticalCenter
-                            color: waveIcon.barColor
-                            Behavior on color { ColorAnimation { duration: 200 } }
+                            color: root.playing ? root.spectrum[bar.index] : waveIcon.barColor
+                            Behavior on color { ColorAnimation { duration: 600 } }
 
                             // Randomised while playing, pinned to
                             // `minBar` otherwise -- the height binding
