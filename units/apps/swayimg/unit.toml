@@ -1,0 +1,16 @@
+name     = "swayimg"
+layer    = "apps"
+summary  = "swayimg image viewer, in the shell's colours; e edits in satty"
+default  = true
+
+[packages]
+dnf = ["swayimg"]
+
+[links]
+"config/swayimg/init.lua" = "~/.config/swayimg/init.lua"
+
+[[hooks]]
+name   = "image-viewer"
+run_as = "user"
+does   = "swayimg as the handler of image files"
+run    = "units/apps/swayimg/hooks/image-viewer.sh"
