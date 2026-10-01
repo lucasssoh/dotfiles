@@ -4,10 +4,12 @@
 --
 --   ← →      previous / next image in the folder
 --   Return   gallery (and back)
---   e        edit in satty (crop, annotate), saved next to the original
+--   w h e    fit the width, the height, the whole image (as in Liseuse)
+--   + -      zoom             Backspace  back to the default fit
+--   E        edit in satty (crop, annotate), saved next to the original
 --   f        fullscreen       [ ]  rotate       q / Esc  quit
 
-local ink    = 0xfff2f2f7  -- DrawerTheme.primary
+local faint  = 0x80f2f2f7  -- DrawerTheme.primary at half strength
 local ink2   = 0xff8e8e93  -- DrawerTheme.secondary
 local cream  = 0xffefece5  -- DrawerTheme.cream
 local black  = 0xff000000
@@ -18,15 +20,28 @@ swayimg.decoration = false
 swayimg.imagelist.adjacent = true   -- opened from Nemo, the whole folder follows
 
 swayimg.text.font = "sans-serif"    -- MiSans, through 70-ui-font.conf
-swayimg.text.size = 15
-swayimg.text.padding = 18
-swayimg.text.color = ink
-swayimg.text.shadow = 0x80000000
-swayimg.text.timeout = 2
+swayimg.text.size = 13
+swayimg.text.padding = 16
+swayimg.text.shadow = 0x60000000
+
+-- A watermark rather than a caption: the text stays, faint enough to
+-- read past, so the keys are there when you need them and the image is
+-- never hidden behind a panel. swayimg has one colour and one timeout
+-- for the whole layer, so the name and the counter take the same faint
+-- ink and stay too. Press t to hide all of it.
+swayimg.text.color = faint
+swayimg.text.timeout = 0
+
+local keys = "w width   h height   e whole   + − zoom   ← → browse   Return gallery   E edit   t hide"
 
 swayimg.viewer.text = {
-  topleft  = { "{name}" },
-  topright = { "{list.index} / {list.total}" },
+  topleft     = { "{name}" },
+  topright    = { "{list.index} / {list.total}" },
+  bottomleft  = { keys },
+  bottomright = { "{scale}" },
+}
+swayimg.slideshow.text = {
+  bottomleft = { keys },
 }
 swayimg.viewer.set_window_background(black)
 swayimg.viewer.set_image_chessboard(16, 0xff1c1c20, 0xff2a2a2f)
@@ -43,7 +58,10 @@ swayimg.gallery.selected_color = card
 swayimg.gallery.unselected_color = deep
 swayimg.gallery.window_color = black
 swayimg.gallery.pstore = true       -- thumbnails kept on disk between runs
-swayimg.gallery.text = { topright = { "{list.index} / {list.total}" } }
+swayimg.gallery.text = {
+  topright   = { "{list.index} / {list.total}" },
+  bottomleft = { "← → ↑ ↓ choose   Return open   E edit   t hide" },
+}
 
 -- satty writes "photo-edit.png" beside "photo.jpg"; the original is never
 -- touched. Single quotes escaped for the shell, '%' doubled because satty
@@ -62,8 +80,16 @@ for _, mode in ipairs({ swayimg.viewer, swayimg.slideshow }) do
   mode.on_key("Left",  function() mode.open("prev") end)
   mode.on_key("Right", function() mode.open("next") end)
 end
-swayimg.viewer.on_key("e", function() edit(swayimg.viewer.get_image()) end)
-swayimg.gallery.on_key("e", function() edit(swayimg.gallery.get_image()) end)
+swayimg.viewer.on_key("Shift+e", function() edit(swayimg.viewer.get_image()) end)
+swayimg.gallery.on_key("Shift+e", function() edit(swayimg.gallery.get_image()) end)
+
+-- The fits use the same letters as Liseuse, so a photo and a page are
+-- fitted the same way.
+for _, mode in ipairs({ swayimg.viewer, swayimg.slideshow }) do
+  mode.on_key("w", function() mode.set_fix_scale("width") end)
+  mode.on_key("h", function() mode.set_fix_scale("height") end)
+  mode.on_key("e", function() mode.set_fix_scale("fit") end)
+end
 
 for _, mode in ipairs({ swayimg.viewer, swayimg.slideshow, swayimg.gallery }) do
   mode.on_key("q", function() swayimg.exit() end)
