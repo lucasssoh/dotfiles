@@ -203,7 +203,7 @@ A reading library on `Super + F`. If a book is already open on the current works
 | Reader keys and colours | [`zathurarc`](../config/liseuse/zathurarc) |
 | How Markdown pages look | [`markdown.css`](../config/liseuse/markdown.css) |
 
-In the list, the book you're currently reading comes first. Search looks at the full path as well as the title, so `md` or `dotfiles keybind` both work. Light and dark follow the desktop setting. `Space` and `Return` turn the page, and `Shift` goes back.
+In the list, the book you're currently reading comes first. Search looks at the full path as well as the title, so `md` or `dotfiles keybind` both work. Light and dark follow the desktop setting. `Space` and `Return` move forward, and `Shift` goes back: on slides they turn the page and fit the next one whole, in a book they scroll exactly one screen, so nothing is skipped. `F1` lists every key.
 
 A book opens as a normal window. Use `Super + Shift + F` for fullscreen. While you're reading, notifications are silenced, and the screen stays on as long as a book is visible (see [Idle](#idle)).
 

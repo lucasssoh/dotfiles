@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Liseuse:** in a book, `Space` now scrolls exactly one screen instead of jumping to the next page. Before, it landed halfway down the next page and could skip the end of the current one. On slides, `Space` still turns the page.
+
 ## 1.1.0 (October 1 2026)
 
 ### Added

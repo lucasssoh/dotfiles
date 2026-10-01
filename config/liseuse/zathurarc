@@ -333,9 +333,9 @@ map <F1> feedkeys ":exec liseuse keys<Return>"
 #
 # These four are the LANDSCAPE behaviour, which is also the default here.
 # For a portrait document liseuse overrides them in the config it
-# generates (see zathura_config_dir): there, a page turn keeps your zoom
-# instead of re-fitting, because a portrait page read at full width is
-# meant to be scrolled through, not replaced.
+# generates (see zathura_config_dir): there, Space scrolls a screen and
+# keeps your zoom instead of re-fitting, because a portrait page read at
+# full width is meant to be scrolled through, not replaced.
 map <Space> feedkeys "Ja"
 map <S-Space> feedkeys "Ka"
 map <Return> feedkeys "Ja"

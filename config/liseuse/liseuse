@@ -208,20 +208,31 @@ LIGHT
 # dead at it. That is how a book or a handout is read.
 set single-page-mode false
 
-# And the page turn drops the `a` the landscape bindings carry. On a
-# slide, re-fitting is the point -- the next slide must arrive whole. On
-# a portrait page it is the opposite: you have chosen a zoom that makes
-# the text readable (often `s`, fit-width), and forcing whole-page on
-# every turn throws that away.
+# And Space reads on instead of jumping: it scrolls exactly one screen,
+# the way Evince and Okular do. Read at fit-width (`s`) a page is taller
+# than the window, so a screen can show the end of one page and the top
+# of the next -- but nothing is ever skipped. At whole-page fit (`a`) a
+# page is exactly one screen tall, so the same press is a clean page
+# turn. The zoom you chose is kept either way.
 #
-# `J`/`K` alone still frame the new page properly rather than dumping you
-# at an arbitrary offset: sc_navigate ends in position_set, and with
-# vertical-center set it puts the page mid-point at the viewport
-# mid-point -- centred on the page you asked for, at the zoom you chose.
-map <Space> feedkeys "J"
-map <S-Space> feedkeys "K"
-map <Return> feedkeys "J"
-map <S-Return> feedkeys "K"
+# scroll-page-aware goes off for that, and it has to: it snaps a scroll
+# that crosses a page boundary to the next page's top, and that snap
+# SKIPS whatever was left of the current page whenever the page is
+# between one and one and a half screens tall -- an A4 at fit-width in
+# a tiled window is about 1.16. Measured on a numbered A4: lines 54 to
+# 61 of page 2 were never on screen. Single-page mode did no better (its
+# first press jumped page 1 the same way).
+#
+# vertical-center goes off too. page_set ends in position_set(-1, -1),
+# which with it on puts the new page's MIDDLE at the window's middle:
+# at fit-width, J, K and 42G landed halfway down the page. Off, they
+# land on its top.
+set scroll-page-aware false
+set vertical-center false
+map <Space> scroll full-down
+map <S-Space> scroll full-up
+map <Return> scroll full-down
+map <S-Return> scroll full-up
 PORTRAIT
     fi
 
@@ -708,22 +719,23 @@ touches() {
     Alt+j  Alt+k      partial scroll
 
   TURN PAGES
-    Space  Return              next page
-    Shift+Space  Shift+Return  previous page
-    J  K                       same, always keeping your zoom
+    Space  Return              forward
+    Shift+Space  Shift+Return  back
+    J  K                       next / previous page, keeping your zoom
     PgDn  PgUp                 same
     Alt+→  Alt+←               same
 
-    What a page turn does depends on the shape of the document, and
-    Liseuse picks that from its first page:
+    What Space does depends on the shape of the document, and Liseuse
+    picks that from its first page:
 
-      landscape (slides)  the next one arrives whole, re-fitted to the
-                          screen — so zooming in on a detail does not
-                          leave the following slide cropped
-      portrait  (books)   the document scrolls as one continuous strip,
-                          j/k and Ctrl+d carry on across a page break,
-                          and a page turn centres the new page WITHOUT
-                          touching the zoom you chose
+      landscape (slides)  the next slide arrives whole, re-fitted to
+                          the screen — so zooming in on a detail does
+                          not leave the following slide cropped
+      portrait  (books)   Space reads on exactly one screen, keeping
+                          your zoom: at s (width) nothing is skipped
+                          even across a page break, at a (whole page)
+                          each press is one page. j/k and Ctrl+d carry
+                          on across page breaks too
 
   GO SOMEWHERE
     42G               jump to page 42
