@@ -1,10 +1,10 @@
 name     = "mpv"
 layer    = "apps"
-summary  = "mpv media player, with the uosc interface in the shell's colours and timeline thumbnails"
+summary  = "mpv media player, with the uosc interface in the shell's colours, timeline thumbnails, and MPRIS for the bar"
 default  = true
 
 [packages]
-dnf = ["mpv", "unzip"]
+dnf = ["mpv", "mpv-mpris", "unzip"]  # mpv-mpris: the bar's media pill sees mpv
 
 [links]
 "config/mpv/script-opts/uosc.conf" = "~/.config/mpv/script-opts/uosc.conf"

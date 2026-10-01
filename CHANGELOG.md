@@ -11,7 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Changed
 - **Balise:** pressing Scan now shows it working, a spinning ring and "Scanning" until the results are in, and an empty list reads "Searching…" meanwhile.
 - **Bar, centre island:** when a track starts, the media pill opens on its title and artist for a few seconds, then folds back to the wave.
-- **mpv** gets a modern interface (uosc) in the shell's colours, with a thumbnail when you hover the timeline (thumbfast). It is now set to open video and audio files.
+- **mpv** gets a modern interface (uosc) in the shell's colours, with a thumbnail when you hover the timeline (thumbfast). It is now set to open video and audio files, and what it plays shows in the bar's media pill, like any other player.
 
 ## 1.0.2
 
