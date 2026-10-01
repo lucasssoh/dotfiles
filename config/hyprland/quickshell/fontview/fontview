@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# fontview FILE|DIR: shows a font file, imv style. The arrows step through
+# the other fonts in the same folder; a folder opens on its first font.
+set -euo pipefail
+
+target="$(realpath -- "${1:?usage: fontview FILE|DIR}")"
+if [[ -d "$target" ]]; then dir="$target"; else dir="$(dirname -- "$target")"; fi
+
+mapfile -t fonts < <(find "$dir" -maxdepth 1 -type f \
+    \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' -o -iname '*.woff' -o -iname '*.woff2' \) | sort)
+# A file with an unusual extension is still shown, alone if need be.
+if [[ -f "$target" ]]; then
+    listed=false
+    for f in "${fonts[@]}"; do [[ "$f" == "$target" ]] && listed=true; done
+    $listed || fonts=("$target" "${fonts[@]}")
+fi
+[[ -f "$target" ]] || target="${fonts[0]:-}"
+
+FONTVIEW_FILE="$target" FONTVIEW_FILES="$(printf '%s\n' "${fonts[@]}")" \
+    exec quickshell -c fontview >/dev/null 2>&1

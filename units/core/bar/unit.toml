@@ -1,6 +1,6 @@
 name     = "bar"
 layer    = "core"
-summary  = "The Quickshell bar: drawers, notifications, Veille, calendar; screenshot and clipboard tools"
+summary  = "The Quickshell bar: drawers, notifications, Veille, calendar; screenshot and clipboard tools; fontview"
 requires = ["hyprland", "fonts", "audio", "balise", "fuzzel"]
 
 [packages]
@@ -16,3 +16,10 @@ copr = ["errornointernet/quickshell", "mineiro/satty"]
 [links]
 "config/hyprland/quickshell" = "~/.config/quickshell"
 "config/hyprland/khal"       = "~/.config/khal"
+"config/hyprland/quickshell/fontview/fontview" = "~/.local/bin/fontview"
+
+[[hooks]]
+name   = "fontview-mime"
+run_as = "user"
+does   = "write fontview.desktop and make fontview the handler of font files"
+run    = "units/core/bar/hooks/fontview-mime.sh"
