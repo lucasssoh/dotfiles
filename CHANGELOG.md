@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Added
+- **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`. `←` `→` step through the fonts in the folder, `+` `−` change the size.
+- **swayimg** is the image viewer, in the shell's colours, and opens images by default. `←` `→` go through the folder, `Return` shows a gallery, and `e` opens the image in satty to crop or annotate it, saved as a copy next to the original.
+
+### Changed
+- **mpv** gets a modern interface (uosc) in the shell's colours, with a thumbnail when you hover the timeline (thumbfast). It is now set to open video and audio files.
+
 ## 1.0.2
 
 ### Fixed

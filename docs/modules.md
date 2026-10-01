@@ -100,7 +100,7 @@ While a zathura window is visible, the screen won't dim, lock or turn off. A boo
 
 ### `bar`
 
-The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history.
+The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history. It also brings **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`; `←` `→` step through the fonts in the folder, `+` `−` change the size, `q` quits.
 
 ![The bar](screenshots/v1.0.0/bar.webp)
 
@@ -287,9 +287,25 @@ The default file manager. It opens folders, answers to `org.freedesktop.FileMana
 
 The editor, on its own with no configuration. If you want mine, see [`config-nvim`](#config-nvim).
 
-### `mpv` · `mangohud` · `fastfetch`
+### `mpv`
 
-The media player (installed by default), the gaming overlay along with GOverlay, and the system summary tool. Their settings are in [`config-extras`](#config-extras).
+The video and music player, installed by default and set to open video and audio files. It comes with [uosc](https://github.com/tomasklaen/uosc), a modern interface in the shell's colours, and [thumbfast](https://github.com/po5/thumbfast), which shows a thumbnail when you hover the timeline. The colours are in [`config/mpv/script-opts/uosc.conf`](../config/mpv/script-opts/uosc.conf). Playback settings are in [`config-extras`](#config-extras).
+
+### `swayimg`
+
+The image viewer, installed by default and set to open images. Its settings are in [`config/swayimg/init.lua`](../config/swayimg/init.lua).
+
+| Key | Does |
+|---|---|
+| `←` `→` | Previous or next image in the folder |
+| `Return` | Gallery, and back |
+| `e` | Edit in satty (crop, arrows, text, blur), saved as `name-edit.png` next to the original |
+| `f`, `[` `]` | Fullscreen, rotate |
+| `q`, `Esc` | Quit |
+
+### `mangohud` · `fastfetch`
+
+The gaming overlay along with GOverlay, and the system summary tool. Their settings are in [`config-extras`](#config-extras).
 
 ### `ccnote` · `ccslide`
 
