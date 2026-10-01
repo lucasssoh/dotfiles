@@ -161,8 +161,8 @@ Item {
         running: root.drawerOpen && (root.currentPage === "wifi" || root.currentPage === "bluetooth")
         triggeredOnStart: false
         onTriggered: {
-            if (root.currentPage === "wifi" && BaliseState.wifiEnabled) BaliseState.scanWifi();
-            else if (root.currentPage === "bluetooth" && BaliseState.bluetoothEnabled) BaliseState.scanBluetooth();
+            if (root.currentPage === "wifi" && BaliseState.wifiEnabled) BaliseState.scanWifi(true);
+            else if (root.currentPage === "bluetooth" && BaliseState.bluetoothEnabled) BaliseState.scanBluetooth(true);
         }
     }
 
@@ -822,7 +822,9 @@ Item {
             grouped: true
             rowDelegate: networkRowDelegate
             showScan: true
-            emptyText: BaliseState.wifiEnabled ? "No networks found" : "WiFi is off"
+            scanning: BaliseState.wifiScanning
+            emptyText: !BaliseState.wifiEnabled ? "WiFi is off"
+                : (BaliseState.wifiScanning ? "Searching…" : "No networks found")
             showMaster: true
             masterTitle: "WiFi"
             masterSubtitle: "Search for networks automatically"
@@ -840,7 +842,9 @@ Item {
             grouped: true
             rowDelegate: deviceRowDelegate
             showScan: true
-            emptyText: BaliseState.bluetoothEnabled ? "No devices found" : "Bluetooth is off"
+            scanning: BaliseState.bluetoothScanning
+            emptyText: !BaliseState.bluetoothEnabled ? "Bluetooth is off"
+                : (BaliseState.bluetoothScanning ? "Searching…" : "No devices found")
             showMaster: true
             masterTitle: "Bluetooth"
             masterSubtitle: "Discoverable and ready to connect"

@@ -23,6 +23,9 @@ Item {
     property alias model: listView.model
     property Component rowDelegate: null
     property bool showScan: false
+    // A scan running: "Scan" turns into a spinning ring and "Scanning",
+    // and can't be clicked again until the results are in.
+    property bool scanning: false
     property string emptyText: "No results"
     // Whether `model`'s items carry a `_group` field to render small-caps
     // section headers off (BaliseHome.qml's groupedWifiNetworks/
@@ -123,26 +126,62 @@ Item {
             elide: Text.ElideRight
         }
 
-        Text {
+        Row {
             id: scanLabel
             visible: root.showScan
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: "Scan"
-            color: scanArea.containsMouse ? DrawerTheme.primary : root.accent
-            font.family: Fonts.ui
-            font.pixelSize: 13
+            spacing: 7
 
-            MouseArea {
-                id: scanArea
-                anchors.fill: parent
-                anchors.margins: -8
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.scanRequested()
+            // A three-quarter ring turning on the render thread
+            // (RotationAnimator), only while a scan runs.
+            Canvas {
+                id: spinner
+                visible: root.scanning
+                width: 12
+                height: 12
+                anchors.verticalCenter: parent.verticalCenter
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.lineWidth = 1.6;
+                    ctx.lineCap = "round";
+                    ctx.strokeStyle = DrawerTheme.secondary;
+                    ctx.beginPath();
+                    ctx.arc(6, 6, 4.8, 0, Math.PI * 1.5);
+                    ctx.stroke();
+                }
+                RotationAnimator on rotation {
+                    running: root.scanning && spinner.visible
+                    from: 0; to: 360
+                    duration: 900
+                    loops: Animation.Infinite
+                }
             }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: root.scanning ? "Scanning" : "Scan"
+                color: root.scanning ? DrawerTheme.secondary
+                    : (scanArea.containsMouse ? DrawerTheme.primary : root.accent)
+                font.family: Fonts.ui
+                font.pixelSize: 13
+            }
+        }
+
+        // Outside the Row, which would otherwise lay it out as one more
+        // item; same 8 px of slack around the label as before.
+        MouseArea {
+            id: scanArea
+            visible: root.showScan
+            anchors.fill: scanLabel
+            anchors.margins: -8
+            enabled: !root.scanning
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.scanRequested()
         }
     }
 

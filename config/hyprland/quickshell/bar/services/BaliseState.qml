@@ -147,7 +147,26 @@ Singleton {
     // so "already-existing profile only" no longer applies to it; the
     // Bluetooth half still does, since pairing needs the BlueZ agent
     // bridged to QML and that is its own pass.
-    function scanWifi() { root._send({ cmd: "wifi_scan" }); }
+    // A scan answers with its list once done: ~1.5 s for WiFi, a fixed
+    // 5 s discovery window for Bluetooth (see balise-src's WifiScan/BtScan
+    // handlers). Lists also arrive mid-scan (a device appearing), so a
+    // list only ends `*Scanning` past the scan's minimum length; the
+    // watchdog ends it if nothing comes back at all. `quiet` scans (the
+    // section's 12 s auto-rescan) show nothing, or the indicator would
+    // never rest.
+    property bool wifiScanning: false
+    property bool bluetoothScanning: false
+    property real _wifiScanStart: 0
+    property real _btScanStart: 0
+    Timer { id: wifiScanWatchdog; interval: 6000; onTriggered: root.wifiScanning = false }
+    Timer { id: btScanWatchdog; interval: 9000; onTriggered: root.bluetoothScanning = false }
+
+    function scanWifi(quiet) {
+        if (!root._send({ cmd: "wifi_scan" }) || quiet) return;
+        root.wifiScanning = true;
+        root._wifiScanStart = Date.now();
+        wifiScanWatchdog.restart();
+    }
     // `security` is the same snake_case token the daemon put in the
     // access-point list ("none"/"wpa2"/"wpa3"/"enterprise"/...), echoed
     // back so the daemon writes the right key-mgmt without re-deriving it
@@ -168,7 +187,12 @@ Singleton {
         connectWatchdog.restart();
     }
     function disconnectWifi(ssid) { root._send({ cmd: "wifi_disconnect", ssid: ssid }); }
-    function scanBluetooth() { root._send({ cmd: "bt_scan" }); }
+    function scanBluetooth(quiet) {
+        if (!root._send({ cmd: "bt_scan" }) || quiet) return;
+        root.bluetoothScanning = true;
+        root._btScanStart = Date.now();
+        btScanWatchdog.restart();
+    }
     // Pair + trust + connect, in one call -- the daemon does all three
     // (see run_bt_action in balise-src/src/app/mod.rs). Separate from
     // connectBluetooth because BlueZ itself separates them: Connect on a
@@ -358,8 +382,10 @@ Singleton {
             root.nightModeEnabled = !!(msg.night_mode && msg.night_mode.active);
         } else if (msg.type === "wifi_list") {
             root._assignList("wifiNetworks", msg.access_points);
+            if (Date.now() - root._wifiScanStart >= 1200) root.wifiScanning = false;
         } else if (msg.type === "bluetooth_list") {
             root._assignList("bluetoothDevices", msg.devices);
+            if (Date.now() - root._btScanStart >= 4800) root.bluetoothScanning = false;
         } else if (msg.type === "wired_list") {
             root._assignList("wiredProfiles", msg.profiles);
         } else if (msg.type === "wifi_detail") {
