@@ -1,6 +1,7 @@
 //! cc-pkg-mng 2 — the coucou-shell package manager.
 //! Design: docs/design/cc-pkg-mng-2.md.
 
+mod dev;
 mod git;
 mod lifecycle;
 mod manifest;
@@ -89,6 +90,17 @@ enum Cmd {
     },
     /// Back to the release before the last upgrade (stable only).
     Rollback,
+    /// Run Roue, Prisme or Balise built from your working checkout instead of
+    /// the release's, until `dev --off` (stable only). No unit: what runs now.
+    Dev {
+        units: Vec<String>,
+        /// Back to the release's binaries: every dev build, or the units named.
+        #[arg(long)]
+        off: bool,
+        /// The checkout to build from (default: the one you are in).
+        #[arg(long, value_name = "PATH")]
+        from: Option<PathBuf>,
+    },
     /// Change an answer (e.g. `set wezterm variant smear`); `install` applies it.
     Set { unit: String, question: String, value: String },
 }
@@ -142,6 +154,7 @@ fn run(cli: &Cli, ui: &mut Ui) -> Result<()> {
         Cmd::Channel { name } => lifecycle::channel(ui, &flags, &repo, &mut state, name.as_deref()),
         Cmd::Upgrade { to } => lifecycle::upgrade(ui, &flags, &repo, &mut state, to.as_deref()),
         Cmd::Rollback => lifecycle::rollback(ui, &flags, &repo, &mut state),
+        Cmd::Dev { units: names, off, from } => dev::run(ui, &flags, &state, &repo, from.as_deref(), names, *off),
         Cmd::Set { unit, question, value } => lifecycle::set(ui, &units, &mut state, unit, question, value),
     }
 }
@@ -259,6 +272,14 @@ fn status(ui: &mut Ui, repo: &Path, units: &Units, state: &State) -> Result<()> 
     ));
     ui.line(&format!("{} {}", ui.bold("state"), sys::tilde(&state::state_dir())));
 
+    let dev_builds = dev::active();
+    if !dev_builds.is_empty() {
+        ui.heading("Dev builds");
+        for (name, rec) in &dev_builds {
+            ui.line(&format!("  {:<16} {} {}", name, sys::tilde(&rec.checkout), ui.dim(&rec.revision)));
+        }
+        ui.line(&format!("  {}", ui.dim("back to the release: cc-pkg-mng dev --off")));
+    }
     if state.units.is_empty() {
         ui.line("\nNo unit installed through cc-pkg-mng 2 yet.");
         return Ok(());
@@ -274,10 +295,12 @@ fn status(ui: &mut Ui, repo: &Path, units: &Units, state: &State) -> Result<()> 
         let broken = rec
             .links
             .iter()
-            .filter(|l| plan::link_state(&l.src, &l.dst) != plan::LinkState::Ok)
+            .filter(|l| !dev::is_dev_link(&l.dst) && plan::link_state(&l.src, &l.dst) != plan::LinkState::Ok)
             .count();
         let health = if broken > 0 {
             ui.red(&format!("{broken} link(s) broken"))
+        } else if dev_builds.iter().any(|(n, _)| n == name) {
+            ui.yellow("dev build running")
         } else if fp != rec.fingerprint {
             ui.yellow("changed since installed")
         } else {

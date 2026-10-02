@@ -48,6 +48,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
             let what = match &l.state {
                 LinkState::Ok => continue,
                 LinkState::Create => "link".to_string(),
+                LinkState::Replace(old) if old.starts_with(crate::dev::dir()) => {
+                    "back to the release's binary (ends the dev build)".to_string()
+                }
                 LinkState::Replace(old) => format!("relink (was → {})", old.display()),
                 LinkState::Backup => "back up the existing file, then link".to_string(),
                 LinkState::Unmet(cond) => format!("skip (needs {cond})"),
@@ -85,10 +88,10 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
 }
 
 /// Keeps the sudo timestamp fresh for the whole run.
-struct SudoSession(Arc<AtomicBool>);
+pub struct SudoSession(Arc<AtomicBool>);
 
 impl SudoSession {
-    fn start() -> Result<SudoSession> {
+    pub fn start() -> Result<SudoSession> {
         // `sudo -n true` first: it succeeds when no password is needed
         // (NOPASSWD, or credentials already cached), where `sudo -v` would
         // still ask for one as soon as any of the user's rules requires it —
@@ -118,7 +121,7 @@ impl Drop for SudoSession {
     }
 }
 
-fn sudo(args: &[&str]) -> Command {
+pub fn sudo(args: &[&str]) -> Command {
     let mut c = Command::new("sudo");
     c.arg("-n").args(args);
     c
@@ -184,6 +187,7 @@ pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &
             }
         }
     }
+    crate::dev::prune();
     if !failed.is_empty() {
         bail!("{} unit(s) failed: {} — re-run to retry", failed.len(), failed.join(", "));
     }
@@ -198,20 +202,7 @@ fn apply_unit(
     backup_dir: &Path,
 ) -> Result<(Vec<LinkRecord>, Vec<String>)> {
     if let Some(b) = &u.build {
-        let target = std::env::var_os("CARGO_TARGET_ROOT")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| sys::home().join(".cache/dotfiles/cargo-target"));
-        let mut cargo = Command::new("cargo");
-        cargo.args(["build", "--release"]).current_dir(&b.source).env("CARGO_TARGET_DIR", &target);
-        ui.run(&format!("build {}", b.bins.join(", ")), &mut cargo)?;
-        let bin_dir = sys::home().join(".local/bin");
-        std::fs::create_dir_all(&bin_dir)?;
-        for bin in &b.bins {
-            let tmp = bin_dir.join(format!(".{bin}.new"));
-            let built = target.join("release").join(bin);
-            std::fs::copy(&built, &tmp).with_context(|| format!("copying {}", built.display()))?;
-            std::fs::rename(&tmp, bin_dir.join(bin))?;
-        }
+        build_bins(ui, &b.source, &b.bins, &sys::home().join(".local/bin"), false)?;
         ui.ok(&format!("installed {} in ~/.local/bin", b.bins.join(", ")));
     }
     for p in &u.drop_local {
@@ -313,6 +304,31 @@ fn apply_unit(
         ui.ok("already in place — recorded");
     }
     Ok((links, files))
+}
+
+/// `cargo build --release` in `source`, then each binary moved into `dest`
+/// whole (copy beside it, rename over): a running one keeps its old file.
+/// `quick`: a dev build, same optimisation but no LTO and incremental, in
+/// its own target dir so it never invalidates the release artifacts.
+pub fn build_bins(ui: &mut Ui, source: &Path, bins: &[String], dest: &Path, quick: bool) -> Result<()> {
+    let mut target = std::env::var_os("CARGO_TARGET_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| sys::home().join(".cache/dotfiles/cargo-target"));
+    let mut cargo = Command::new("cargo");
+    if quick {
+        target.push("dev");
+        cargo.env("CARGO_PROFILE_RELEASE_LTO", "off").env("CARGO_PROFILE_RELEASE_INCREMENTAL", "true");
+    }
+    cargo.args(["build", "--release"]).current_dir(source).env("CARGO_TARGET_DIR", &target);
+    ui.run(&format!("build {}", bins.join(", ")), &mut cargo)?;
+    std::fs::create_dir_all(dest)?;
+    for bin in bins {
+        let tmp = dest.join(format!(".{bin}.new"));
+        let built = target.join("release").join(bin);
+        std::fs::copy(&built, &tmp).with_context(|| format!("copying {}", built.display()))?;
+        std::fs::rename(&tmp, dest.join(bin))?;
+    }
+    Ok(())
 }
 
 fn make_link(src: &Path, dst: &Path) -> Result<()> {
