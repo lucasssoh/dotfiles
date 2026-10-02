@@ -11,6 +11,17 @@ pub fn home() -> PathBuf {
     std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"))
 }
 
+/// Where the session runs a Rust app from: `~/.local/bin/<bin>`, on every
+/// channel (keybinds, the bar and balise.service name this path).
+pub fn entry_point(bin: &str) -> PathBuf {
+    home().join(".local/bin").join(bin)
+}
+
+/// A real file, not a symlink (an edge build, as opposed to a link).
+pub fn is_regular_file(p: &Path) -> bool {
+    std::fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_file())
+}
+
 /// `~/x` → `$HOME/x`.
 pub fn expand(p: &str) -> PathBuf {
     match p.strip_prefix("~/") {

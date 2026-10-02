@@ -70,7 +70,7 @@ pub struct UnitPlan {
     pub system_services: Vec<(String, bool)>,
     pub hooks: Vec<HookPlan>,
     pub build: Option<BinPlan>,
-    /// Local builds left from edge, which would shadow the RPM's binaries.
+    /// Local builds left from edge, replaced by links to the RPM's binaries.
     pub drop_local: Vec<PathBuf>,
 }
 
@@ -207,9 +207,13 @@ pub fn build(
 
         // Rust apps: on stable, the release's RPMs; on edge, built locally
         // from the checkout, since master is ahead of any published RPM.
-        let local_bin = |bin: &String| sys::home().join(".local/bin").join(bin);
+        // Either way ~/.local/bin/<bin> is the entry point the session calls
+        // (Hyprland's PATH has no ~/.local/bin): the build itself on edge, a
+        // link to the RPM's binary on stable.
+        let local_bin = |bin: &String| sys::entry_point(bin);
         let mut build = None;
         let mut drop_local = Vec::new();
+        let mut bin_links = Vec::new();
         if let Some(b) = &u.binaries {
             if let Some(v) = &release {
                 let wanted = format!("{}-{v}", b.rpm);
@@ -224,8 +228,18 @@ pub fn build(
                         needs_repo = true;
                     }
                 }
-                drop_local = b.bins.iter().map(local_bin).filter(|p| p.exists()).collect();
-            } else if new || changed || b.bins.iter().any(|bin| !local_bin(bin).exists()) {
+                for bin in &b.bins {
+                    let dst = local_bin(bin);
+                    let src = PathBuf::from("/usr/bin").join(bin);
+                    let state = if sys::is_regular_file(&dst) {
+                        drop_local.push(dst.clone());
+                        LinkState::Create
+                    } else {
+                        link_state(&src, &dst)
+                    };
+                    bin_links.push(LinkPlan { src, dst, state });
+                }
+            } else if new || changed || b.bins.iter().any(|bin| !sys::is_regular_file(&local_bin(bin))) {
                 build = Some(BinPlan { source: repo.join(&b.source), bins: b.bins.clone() });
                 let build_deps = sys::rpm_missing(&u.packages.build)?;
                 for p in &u.packages.build {
@@ -236,10 +250,9 @@ pub fn build(
             }
         }
 
-        let links = u
-            .links
-            .iter()
-            .map(|(src, dst)| {
+        let links = bin_links
+            .into_iter()
+            .chain(u.links.iter().map(|(src, dst)| {
                 let src = repo.join(src);
                 let dst = sys::expand(dst);
                 let rel = src.strip_prefix(repo).unwrap().to_string_lossy().into_owned();
@@ -248,7 +261,7 @@ pub fn build(
                     _ => link_state(&src, &dst),
                 };
                 LinkPlan { src, dst, state }
-            })
+            }))
             .collect();
 
         let files = u

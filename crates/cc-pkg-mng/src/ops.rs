@@ -41,6 +41,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
             ui.dim("up to date")
         };
         ui.line(&format!("\n  {} {}", ui.bold(&u.name), tag));
+        for p in &u.drop_local {
+            ui.line(&format!("    {} {}  {}", ui.dim("·"), tilde(p), ui.dim("remove the local build (a link to the RPM's replaces it)")));
+        }
         for l in &u.links {
             let what = match &l.state {
                 LinkState::Ok => continue,
@@ -62,9 +65,6 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
         }
         if let Some(b) = &u.build {
             ui.line(&format!("    {} build {}  {}", ui.dim("·"), b.bins.join(", "), ui.dim("(local cargo build)")));
-        }
-        for p in &u.drop_local {
-            ui.line(&format!("    {} {}  {}", ui.dim("·"), tilde(p), ui.dim("remove the local build (the RPM replaces it)")));
         }
         for h in &u.hooks {
             match h {
@@ -216,7 +216,7 @@ fn apply_unit(
     }
     for p in &u.drop_local {
         std::fs::remove_file(p).with_context(|| format!("removing {}", p.display()))?;
-        ui.ok(&format!("removed {} (the RPM's binary takes over)", tilde(p)));
+        ui.ok(&format!("removed the local build {}", tilde(p)));
     }
 
     let mut files = Vec::new();
