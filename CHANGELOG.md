@@ -4,13 +4,13 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
-### Fixed
-- **Roue, Prisme and Balise on the stable channel:** their shortcuts, the bar's buttons and Balise's background service work again after you install or upgrade. Moving to stable used to remove the copies the session starts them from, so nothing opened.
-
 ### Added
 - **cc-pkg-mng:** `cc-pkg-mng dev roue` runs Roue built from the checkout you're working in, in place of the release's, on the stable channel. Your shortcuts and the bar pick it up straight away, with nothing to change in your configuration, and running it again after an edit takes a couple of seconds. `cc-pkg-mng dev` shows what is running, and `cc-pkg-mng dev --off` puts the release's Roue, Prisme and Balise back. It works for Prisme and Balise too.
 
-### Changed
+## 1.1.1
+
+### Fixed
+- **Roue, Prisme and Balise on the stable channel:** their shortcuts, the bar's buttons and Balise's background service work again after you install or upgrade. Moving to stable used to remove the copies the session starts them from, so nothing opened.
 - **Liseuse:** in a book, `Space` now scrolls exactly one screen instead of jumping to the next page. Before, it landed halfway down the next page and could skip the end of the current one. On slides, `Space` still turns the page.
 
 ## 1.1.0 (October 1 2026)
