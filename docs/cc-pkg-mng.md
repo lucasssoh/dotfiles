@@ -34,6 +34,7 @@ coucou-shell is split into **units**, grouped in three layers:
 | `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies whatever changed. `--to vX.Y.Z` picks a specific release |
 | `rollback` | Goes back to the release you had before the last upgrade (stable only) |
 | `channel [stable\|edge]` | Shows the current channel, or switches to another one. The next `upgrade` follows it |
+| `dev [<unit>…]` | Runs Roue, Prisme or Balise built from the checkout you're in, in place of the release's (stable only). With no unit, shows what is running. `--off` goes back to the release's, `--from <path>` builds from another checkout. See [testing your changes](#testing-your-changes-on-stable) |
 | `set <unit> <question> <value>` | Changes one of your answers, for example `set wezterm variant smear`. Run `install wezterm` afterwards to apply it |
 
 ## Options
@@ -55,7 +56,25 @@ coucou-shell is split into **units**, grouped in three layers:
 | **stable** | releases (`v1.0.0` and so on) | Installed from coucou-shell's repository, at the version that matches the release |
 | **edge** | every commit on the default branch | Built on your machine into `~/.local/bin`, and rebuilt whenever their code changes. The Rust toolchain is installed for this |
 
-If you switch from edge back to stable, the local builds are removed so the packaged versions take over.
+Either way, the session starts them from `~/.local/bin`. If you switch from edge back to stable, the local builds there are replaced by the packaged versions.
+
+## Testing your changes on stable
+
+You can stay on stable and still work on Roue, Prisme or Balise. Keep a separate checkout to code in (for example `~/code/dotfiles`, on `master`), so the one your machine follows stays on its release. Then, from that checkout:
+
+```bash
+cc-pkg-mng dev roue       # build Roue from here, and run it instead of the release's
+cc-pkg-mng dev            # what is running instead of the release
+cc-pkg-mng dev --off      # back to the release's Roue, Prisme and Balise
+```
+
+- **Your shortcuts and the bar use the new build straight away.** There's nothing to change in your configuration. Balise's background service restarts on its own.
+- **Run it again after each change.** The first build takes a minute or two; after that, a small change is live in a few seconds.
+- **The rest of the machine stays on its release.** Your channel and version don't change, and `upgrade` still moves you from one release to the next. An `install` or `upgrade` that touches the unit puts the release's version back, and its plan says so.
+- **`status` shows the dev builds** that are running.
+- The first `dev` installs the Rust toolchain and the build dependencies.
+
+On edge, the checkout already is what runs: `cc-pkg-mng install roue` rebuilds what changed.
 
 You can see what each release changed in the [changelog](../CHANGELOG.md).
 
@@ -75,6 +94,7 @@ Everything the manager keeps track of is in `~/.local/state/coucou-shell/`:
 | Path | Contents |
 |---|---|
 | `state.toml` | The checkout, the channel, the version, and each installed unit with your answers |
+| `dev/` | The dev builds running in place of the release's, and where each came from |
 | `backups/` | Files that units replaced, sorted by date |
 | `logs/` | The full output of every run |
 

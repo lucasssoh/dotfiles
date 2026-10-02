@@ -262,6 +262,11 @@ Git carries text only (configs, QML, Lua, scripts, manifests). The Rust apps rea
 | **stable** | the tag | RPMs matching the tag, no Rust toolchain on the machine |
 | **edge** | `master` | built locally into `~/.local/bin` when absent, since `master` is ahead of the last published RPM |
 | **rollback** | the previous tag | `dnf downgrade` to that tag's RPMs (the repository keeps every release) |
+| **dev** (on stable) | the tag, unchanged | the units named built from a working checkout into `dev/`, until `dev --off` |
+
+The session always starts a Rust app from `~/.local/bin/<bin>`: Hyprland's `PATH` has no `~/.local/bin`, so keybinds, the bar, Roue's wheels, `balise.service` and the wallpaper watcher name that path. On edge it is the build itself; on stable, a link to `/usr/bin/<bin>`.
+
+A dev build answers "this machine follows releases, and I am coding on it". `cc-pkg-mng dev roue` builds from the checkout the shell is in (or `--from`), into `$STATE/dev/`, and points the entry point there with one rename; `dev --off` points it back at `/usr/bin`. Nothing goes into `state.toml`: the entry point says what runs, and `dev/<unit>.toml` where it came from. A plan that touches the unit sees a link that isn't the RPM's and relinks it, so an `upgrade` ends dev builds visibly instead of keeping them silently. Dev builds keep `opt-level = 3` but drop LTO and build incrementally, in their own target dir: about 1.5 s for a one-line change in Roue, 54 s with LTO. Refused on edge, where the checkout already is what runs.
 
 RPMs rather than raw binaries attached to GitHub releases: dnf installs their system dependencies (gtk4-layer-shell, libnm, bluez), they are signed, `dnf remove` cleans up, and they land in `/usr/bin`, which the Hyprland session's `PATH` already has.
 
@@ -276,7 +281,7 @@ Not a COPR: COPR only hosts freely redistributable software, and coucou-shell's 
 | `cc-pkg-mng` | the manager; requires `git` and `dnf` |
 | `roue`, `prisme`, `balise` | prebuilt binaries, no Rust toolchain on user machines |
 
-On edge, the Rust apps are built locally from the checkout. Switching to stable removes those builds so the RPMs' binaries take over.
+On edge, the Rust apps are built locally from the checkout. Switching to stable replaces those builds with links to the RPMs' binaries.
 
 Fresh machine:
 
