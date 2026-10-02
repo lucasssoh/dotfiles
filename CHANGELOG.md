@@ -2,12 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.1.1
 
 ### Fixed
 - **Roue, Prisme and Balise on the stable channel:** their shortcuts, the bar's buttons and Balise's background service work again after you install or upgrade. Moving to stable used to remove the copies the session starts them from, so nothing opened.
-
-### Changed
 - **Liseuse:** in a book, `Space` now scrolls exactly one screen instead of jumping to the next page. Before, it landed halfway down the next page and could skip the end of the current one. On slides, `Space` still turns the page.
 
 ## 1.1.0 (October 1 2026)
