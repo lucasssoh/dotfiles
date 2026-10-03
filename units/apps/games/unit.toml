@@ -1,0 +1,8 @@
+name     = "games"
+layer    = "apps"
+summary  = "Steam and Lutris, both reachable from the controller popup"
+default  = false
+
+[packages]
+# steam comes from RPM Fusion nonfree, which the hardware unit enables.
+dnf = ["steam", "lutris"]
