@@ -179,6 +179,42 @@ The three apps written for coucou-shell. On the stable channel they're installed
 
 ![Prisme](screenshots/v1.0.0/prisme.webp)
 
+### `manette`
+
+Game controllers in the shell. Plug one in or pair it over Bluetooth, and a pill at the bottom of the screen says it's connected. Xbox, PlayStation, Switch and Steam controllers all work, and so does any other pad Linux recognises as one. Over USB, Xbox controllers need the `xpad` driver, which this unit installs (`kernel-modules-extra`): restart once after installing it.
+
+Press the **Guide button** (the Xbox, PS or Home logo) to open the controller menu:
+
+| Tile | What it does |
+|---|---|
+| **Steam** | Opens Steam in Big Picture |
+| **Lutris** | Opens Lutris |
+| **Apps** | Every application, in a grid you browse with the controller |
+| **Sleep** | Suspends the machine |
+| **Turn off** | Disconnects a Bluetooth controller, which then switches off |
+
+Steam and Lutris only show up once they're installed (see [`games`](#games)).
+
+While a controller is connected, a controller icon sits at the start of the bar's right-hand group, next to `hdr`, with its battery when the controller reports one. The level turns red under 15 %.
+
+The menu shows your controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, and dots marking the position on a pad it doesn't know.
+
+| Button | In the menu |
+|---|---|
+| D-pad, left stick | Move |
+| Bottom button (`A` on Xbox, ✕ on PlayStation, `B` on Switch) | Open |
+| Right button (`B`, ○, `A` on Switch) | Back, or close |
+| Shoulder buttons (`LB` `RB`, `L1` `R1`, `L` `R`) | Volume down, up |
+| Guide | Close |
+
+While the menu is open, the game behind it receives nothing from the controller. The keyboard and mouse work in it too (arrows, `Return`, `Esc`).
+
+Over Steam or a fullscreen game, a short press on Guide is left to the game: **hold Guide** to open the menu there. A controller without a Guide button opens it with `Select` + `Start` held together. If Steam also reacts to Guide outside a game, turn off *Guide button focuses Steam* in Steam's controller settings.
+
+`qs -c bar ipc call bar controllerMenu` opens or closes the menu without a controller, so you can bind it to a key.
+
+The service behind it runs as `systemd --user` (`manette.service`). It's built from [`manette-src`](../config/hyprland/manette-src/) on edge and installed as a package on stable, like Roue, Prisme and Balise.
+
 ### `fuzzel`
 
 The app launcher (`Super + Space`). It's also the list you pick from for the clipboard history (`Super + V`), Liseuse and the agenda. Its settings are in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
@@ -302,6 +338,10 @@ The image viewer, installed by default and set to open images. Its settings are 
 | `e` | Edit in satty (crop, arrows, text, blur), saved as `name-edit.png` next to the original |
 | `f`, `[` `]` | Fullscreen, rotate |
 | `q`, `Esc` | Quit |
+
+### `games`
+
+Steam (from RPM Fusion) and Lutris, both opened from the [controller menu](#manette). Not installed by default.
 
 ### `mangohud` · `fastfetch`
 
