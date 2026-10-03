@@ -2,12 +2,28 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.2.0 (October 3 2026)
 
 ### Added
-- **Game controllers, the menu:** it opens on the game you played last, then your Steam and Lutris games side by side with their artwork, and starts them directly, without the launchers' windows. `Y` shows every app and game in a grid, one tab per launcher.
-- **Game controllers:** plug in or pair a controller (Xbox, PlayStation, Switch, Steam or any other) and the shell says so. Its Guide button opens a menu you browse with the controller, which shows that controller's own buttons (letters, PlayStation shapes), sets the volume on `LB` `RB` and can turn off a Bluetooth controller. Over a game, hold Guide to open it. While a controller is connected, its silhouette in the bar fills up with its battery.
-- **Steam and Lutris** can be installed together as the `games` unit.
+- **Game controllers:** Xbox, PlayStation, Switch and Steam controllers work in the shell, over USB or Bluetooth, and so does any other controller Linux recognises as one. Nothing to set up: plug it in or pair it and it is there.
+- **Game controllers, Xbox over USB:** after this update, restart your computer once, so the Xbox controller driver loads. Until then a wired Xbox controller stays off.
+- **Game controllers, Xbox over Bluetooth:** if the Xbox button keeps blinking and the controller drops the connection, its firmware is too old for Linux. Update it once from the Xbox Accessories app on Windows or from an Xbox console, and it then pairs and reconnects on its own.
+- **Game controllers, arrival:** when a controller connects, a pill at the bottom of the screen shows its name, how it is connected, its battery when it reports one, and which button opens the menu.
+- **Bar, right-hand group:** while a controller is connected, its silhouette sits next to `hdr` and fills up from the left like a battery gauge. It turns green while charging and red under 15 %. A wired controller with no battery to report is drawn as an outline, and two controllers show two silhouettes.
+- **Controller menu:** the Guide button (the Xbox, PS, Steam or Home logo) opens a menu on the screen you are using. A controller without a Guide button opens it with `Select` + `Start` held together. Guide again, or `B`, closes it.
+- **Controller menu, over a game:** while Steam or a fullscreen window has focus, a short press on Guide is left to the game; hold Guide to open the menu. The press that wakes a controller up never opens it.
+- **Controller menu, while open:** the game behind receives nothing from the controller, so nothing you do in the menu reaches it. The keyboard (arrows, `Return`, `Esc`, `Tab`) and the mouse work in it too.
+- **Controller menu, Continue:** the menu opens on the game you played last, with its artwork, its launcher and when you last played it. `A` starts it.
+- **Controller menu, Library:** your other games in one row, Steam and Lutris together with their covers, plus the games other launchers (Heroic, Bottles, itch) add to the applications menu. Each card says where the game comes from. Tools filed as games, such as GOverlay, are left out.
+- **Controller menu, Launchers:** a shortcut for each launcher installed among Steam, Lutris, Heroic, Bottles and itch. Steam opens in Big Picture, and Lutris shows how many games it has.
+- **Controller menu, System:** Apps, Sleep, and Turn off, which disconnects a Bluetooth controller so it switches off.
+- **Controller menu, starting games:** games start straight from the menu. A Lutris game starts without the Lutris window, and Steam starts quietly in the background for its games, without its library.
+- **Controller menu, all apps and games:** `Y` opens a grid of every application and game, with a tab for All, one for Games and one for each launcher, each with its count. `LT` `RT` switch tabs, `X` jumps to the next letter, `B` goes back.
+- **Controller menu, buttons:** the menu draws the buttons of the controller in your hands: coloured letters on an Xbox controller, the four shapes on a PlayStation one, letters on Switch and Steam controllers, and dots marking the position on a controller it does not know. Shoulder buttons and triggers carry their own names (`LB` `RB`, `L1` `R1`, `L` `R`, `LT` `RT`, `L2` `R2`, `ZL` `ZR`). On every controller the bottom button opens and the right one goes back, so on a Switch controller `B` opens.
+- **Controller menu, moving around:** the d-pad or the left stick moves the selection the way the menu is laid out, and holding a direction keeps moving. Each row remembers where you were in it.
+- **Controller menu, volume:** `LB` `RB` (or `L1` `R1`, `L` `R`) turn the volume down and up from anywhere in the menu; the level shows in the menu and on the usual dial.
+- **Controller menu, key binding:** `qs -c bar ipc call bar controllerMenu` opens or closes the menu without a controller, so you can bind it to a key.
+- **Steam and Lutris** can be installed together as the `games` unit. It is not installed by default.
 - **cc-pkg-mng:** `cc-pkg-mng dev roue` runs Roue built from the checkout you're working in, in place of the release's, on the stable channel. Your shortcuts and the bar pick it up straight away, with nothing to change in your configuration, and running it again after an edit takes a couple of seconds. `cc-pkg-mng dev` shows what is running, and `cc-pkg-mng dev --off` puts the release's Roue, Prisme and Balise back. It works for Prisme and Balise too.
 
 ## 1.1.1
