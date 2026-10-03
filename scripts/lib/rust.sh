@@ -65,10 +65,11 @@ RUST_LEGACY_BUILD_DIRS=(
 # wallpaper cache.
 declare -A RUST_CRATES=(
     [balise]="config/hyprland/balise-src balise"
+    [manette]="config/hyprland/manette-src manette"
     [prisme]="config/hyprland/prisme-src prisme wallpaper-filter"
     [roue]="config/hyprland/roue-src roue"
 )
-RUST_CRATE_ORDER=(balise prisme roue)
+RUST_CRATE_ORDER=(balise manette prisme roue)
 
 # Fall back to plain echo when the caller has no narration helpers of its own
 # (every config/*/install.sh defines info/ok/warn; a bare `bash -c` may not).

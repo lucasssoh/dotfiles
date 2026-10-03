@@ -1,0 +1,22 @@
+name     = "manette"
+layer    = "core"
+summary  = "Gamepad daemon behind the bar's controller popup: Guide opens Steam, Lutris, the apps"
+requires = ["hyprland"]
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/manette-src with the build deps.
+[binaries]
+rpm    = "manette"
+source = "config/hyprland/manette-src"
+bins   = ["manette"]
+
+[packages]
+# kernel-modules-extra carries xpad, the driver for Xbox pads over USB.
+dnf   = ["kernel-modules-extra"]
+build = ["rust", "cargo"]
+
+[links]
+"config/hyprland/systemd/manette.service" = "~/.config/systemd/user/manette.service"
+
+[services]
+user = ["manette"]

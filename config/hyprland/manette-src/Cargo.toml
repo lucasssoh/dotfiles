@@ -1,0 +1,19 @@
+[package]
+name = "manette"
+version = "1.0.0"
+edition = "2021"
+description = "Gamepad daemon behind coucou-shell's controller popup"
+license-file = "../../../LICENSE.md"
+
+# No async runtime and no libudev: one thread blocked in poll(2) on the pads,
+# /dev/input (inotify) and the socket. libc for the evdev ioctls, serde_json
+# for the JSON-lines protocol the bar already speaks with Balise.
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"

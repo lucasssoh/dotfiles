@@ -19,7 +19,7 @@ mkdir -p "$top/SOURCES" "$out"
 
 git -C "$repo" archive --format=tar.gz --prefix="coucou-shell-$version/" \
     -o "$top/SOURCES/coucou-shell-$version.tar.gz" "$ref" \
-    LICENSE.md LICENSES crates config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src
+    LICENSE.md LICENSES crates config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src
 
 rpmbuild -bb \
     --define "_topdir $top" \

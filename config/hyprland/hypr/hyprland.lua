@@ -142,6 +142,9 @@ hl.on("hyprland.start", function()
     -- than via WantedBy=graphical-session.target, for the same reason as
     -- above (this target never activates on its own on this session).
     hl.exec_cmd("systemctl --user start balise.service")
+    -- Manette, the gamepad daemon behind the bar's controller popup: the
+    -- same target problem, so started here too (systemd/manette.service).
+    hl.exec_cmd("systemctl --user start manette.service")
     -- balise-autoclose.sh is NOT started here any more. It ran `balise
     -- hide` on every activewindow event, and that acts ONLY on the legacy
     -- GTK window, which nothing opens -- so it was a permanent socat +

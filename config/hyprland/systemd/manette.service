@@ -1,0 +1,16 @@
+# Manette: the gamepad daemon behind the bar's controller popup. Reads the
+# pads' event nodes (the seat's ACL lets the session do it, no root) and
+# talks to the bar over $XDG_RUNTIME_DIR/manette.sock. Idle, it sleeps in
+# poll(2) and only the Guide button wakes it.
+[Unit]
+Description=Manette — gamepad daemon behind the bar's controller popup
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/manette
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

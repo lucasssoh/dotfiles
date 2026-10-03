@@ -1,4 +1,4 @@
-# coucou-shell's binaries: the manager and the three native apps, built from
+# coucou-shell's binaries: the manager and the native apps, built from
 # one tagged source tarball. The configs are not packaged -- `cc-pkg-mng init`
 # clones them.
 #
@@ -60,11 +60,18 @@ Requires:       bluez
 The daemon behind the Balise drawer of coucou-shell's bar: Wi-Fi, Bluetooth
 and Ethernet.
 
+%package -n manette
+Summary:        Gamepad daemon for coucou-shell
+
+%description -n manette
+The daemon behind the controller popup of coucou-shell's bar: it notices
+gamepads as they arrive and opens the popup on the Guide button.
+
 %prep
 %autosetup
 
 %build
-for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src; do
+for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src; do
     cargo build --release --locked --manifest-path "$crate/Cargo.toml" --target-dir target
 done
 
@@ -74,6 +81,7 @@ install -Dm755 target/release/roue             %{buildroot}%{_bindir}/roue
 install -Dm755 target/release/prisme           %{buildroot}%{_bindir}/prisme
 install -Dm755 target/release/wallpaper-filter %{buildroot}%{_bindir}/wallpaper-filter
 install -Dm755 target/release/balise           %{buildroot}%{_bindir}/balise
+install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
 
 %files -n cc-pkg-mng
 %license LICENSE.md
@@ -92,3 +100,6 @@ install -Dm755 target/release/balise           %{buildroot}%{_bindir}/balise
 %license LICENSE.md LICENSES/MIT-Orbit.txt
 %{_bindir}/balise
 
+%files -n manette
+%license LICENSE.md
+%{_bindir}/manette
