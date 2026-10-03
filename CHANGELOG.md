@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **cc-pkg-mng:** `cc-pkg-mng upgrade` no longer leaves Hyprland's red "hyprland.lua: No such file or directory" banner on screen. Hyprland now reloads once, on the new version, when the upgrade has put it in place. The same goes for `rollback` and for switching channels.
+
 ## 1.2.0 (October 3 2026)
 
 ### Added

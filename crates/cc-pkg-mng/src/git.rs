@@ -71,10 +71,12 @@ pub fn default_branch(repo: &Path) -> String {
 }
 
 pub fn checkout(repo: &Path, rev: &str) -> Result<()> {
+    let _hold = HyprlandHold::new();
     git(repo, &["checkout", "--quiet", rev]).map(|_| ())
 }
 
 pub fn checkout_detached(repo: &Path, rev: &str) -> Result<()> {
+    let _hold = HyprlandHold::new();
     git(repo, &["checkout", "--quiet", "--detach", rev]).map(|_| ())
 }
 
@@ -83,7 +85,51 @@ pub fn fast_forward(repo: &Path) -> Result<()> {
     if git_ok(repo, &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).is_none() {
         bail!("the current branch has no upstream to follow");
     }
+    let _hold = HyprlandHold::new();
     git(repo, &["merge", "--ff-only", "--quiet", "@{u}"])
         .map(|_| ())
         .context("the local branch has diverged from its upstream — rebase or merge by hand")
+}
+
+
+/// Hyprland reloads its config as soon as a file it watches changes, and
+/// git replaces a changed file by deleting it and writing a new one. Caught
+/// in that gap, Hyprland reports `hyprland.lua: No such file or directory`,
+/// and the banner stays: it was watching the deleted file and never sees
+/// the new one. So, while the checkout moves, autoreload is paused, then
+/// Hyprland reloads once on the new files. The reload also puts the option
+/// back as the config sets it, and hyprland.lua's `config.reloaded` hook
+/// replays the monitor setup.
+///
+/// Only inside a Hyprland session (over SSH or from a TTY there is nothing
+/// to pause), and only reloads if the pause took.
+struct HyprlandHold {
+    held: bool,
+}
+
+impl HyprlandHold {
+    fn new() -> Self {
+        let held = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
+            && Command::new("hyprctl")
+                .args(["eval", "hl.config({ misc = { disable_autoreload = true } })"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .is_ok_and(|s| s.success());
+        HyprlandHold { held }
+    }
+}
+
+impl Drop for HyprlandHold {
+    fn drop(&mut self) {
+        if self.held {
+            let _ = Command::new("hyprctl")
+                .arg("reload")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+    }
 }
