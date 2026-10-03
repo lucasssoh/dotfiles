@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.3.0 (October 3 2026)
 
 ### Changed
 - **cc-pkg-mng, installing and upgrading:** the work shows as a live list instead of a scroll of lines. Everything to do is listed from the start, the part in progress unfolds with its steps and a spinner, finished parts fold to one line with their time, and a bar at the top counts them with the time elapsed. Package installs show how many packages are done. If something fails, it stays unfolded with its last lines and where the full log is.
