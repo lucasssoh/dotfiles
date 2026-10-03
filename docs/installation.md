@@ -32,7 +32,7 @@ All the questions come first. Once you've answered them, the install runs to the
 
 Before touching anything, `init` shows you the full plan: packages, links, services, and what each step does. Nothing happens until you say yes.
 
-The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Liseuse, the fonts and the theme. The [units](modules.md) page describes each part.
+The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Manette, Liseuse, the fonts and the theme. The [units](modules.md) page describes each part.
 
 ## Unattended install
 

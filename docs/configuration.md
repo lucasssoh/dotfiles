@@ -16,7 +16,7 @@ On the stable channel, commit or stash your edits before you `upgrade`. It won't
 |---|---|---|
 | `COUCOU_SHELL_URL` | `https://github.com/lucasssoh/dotfiles.git` | What `init` clones |
 | `CCPKG_STATE_DIR` | `~/.local/state/coucou-shell` | Where the manager keeps its state, backups and logs |
-| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Where Roue, Prisme and Balise are built on edge |
+| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Where Roue, Prisme, Balise and Manette are built on edge |
 | `HOST_PROFILE` | taken from the machine's DMI product name | Forces a machine profile. See [per-machine profiles](modules.md#per-machine-profiles) |
 
 ## Adding a unit

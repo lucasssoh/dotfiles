@@ -1,6 +1,6 @@
 # coucou-shell
 
-My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own little package manager to install it and keep it up to date. Most of it is configuration for existing tools, but it also comes with three apps I wrote in Rust and GTK4: **[Roue](config/hyprland/roue-src)**, a radial wheel, **[Prisme](config/hyprland/prisme-src)**, a wallpaper picker, and **[Balise](config/hyprland/balise-src)**, which handles Wi-Fi, Bluetooth and Ethernet from a panel in the bar.
+My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own little package manager to install it and keep it up to date. Most of it is configuration for existing tools, but it also comes with four apps I wrote in Rust, three of them with GTK4: **[Roue](config/hyprland/roue-src)**, a radial wheel, **[Prisme](config/hyprland/prisme-src)**, a wallpaper picker, **[Balise](config/hyprland/balise-src)**, which handles Wi-Fi, Bluetooth and Ethernet from a panel in the bar, and **[Manette](config/hyprland/manette-src)**, a small daemon behind the game controller menu.
 
 ![The coucou-shell desktop](docs/screenshots/v1.0.0/desktop.webp)
 

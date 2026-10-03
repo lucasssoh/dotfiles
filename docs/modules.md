@@ -183,6 +183,8 @@ The three apps written for coucou-shell. On the stable channel they're installed
 
 Game controllers in the shell. Plug one in or pair it over Bluetooth, and a pill at the bottom of the screen says it's connected. Xbox, PlayStation, Switch and Steam controllers all work, and so does any other pad Linux recognises as one. Over USB, Xbox controllers need the `xpad` driver, which this unit installs (`kernel-modules-extra`): restart once after installing it.
 
+![A controller arriving](screenshots/v1.3.0/controller-pill.webp)
+
 Press the **Guide button** (the Xbox, PS or Home logo) to open the controller menu:
 
 | Row | What it holds |
@@ -192,9 +194,21 @@ Press the **Guide button** (the Xbox, PS or Home logo) to open the controller me
 | **Launchers** | Steam (opens in Big Picture), Lutris, Heroic, Bottles, itch: the ones installed |
 | **System** | Apps, Sleep, and Turn off for a Bluetooth controller |
 
+| | |
+|:---:|:---:|
+| ![The controller menu with an Xbox controller](screenshots/v1.3.0/controller-menu.webp) | ![The same menu with a PlayStation controller](screenshots/v1.3.0/controller-menu-playstation.webp) |
+| With an Xbox controller | With a PlayStation controller, charging |
+
 Games start straight from the menu, without opening Lutris's window. Steam starts quietly in the background, since it must be running for its games. `Y` opens every app and game in a grid, with a tab for each source: `LT` `RT` switch tabs, `X` jumps to the next letter. Steam and Lutris come with the [`games`](#games) unit.
 
+![Every app and game, in a grid](screenshots/v1.3.0/controller-apps.webp)
+
 While a controller is connected, its silhouette sits at the start of the bar's right-hand group, next to `hdr`, and fills up like a battery gauge: green while charging, red under 15 %. A wired controller with no battery to report is drawn as an outline.
+
+| | |
+|:---:|:---:|
+| ![The controller in the bar](screenshots/v1.3.0/bar-controller.webp) | ![A controller charging](screenshots/v1.3.0/bar-controller-charging.webp) |
+| On battery | Charging |
 
 The menu shows your controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, and dots marking the position on a pad it doesn't know.
 
