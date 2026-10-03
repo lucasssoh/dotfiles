@@ -35,12 +35,13 @@ swayimg : the image viewer in the shell's colours, e edits in satty
 
 Versions follow `MAJOR.MINOR.PATCH`.
 
-| You did… | Bump | Example | Name |
+| You did… | Bump | Example | Heading |
 |---|---|---|---|
-| A bug fix | PATCH | 1.0.2 → 1.0.3 | none |
-| A new feature or a visible change (theme, app, key binding, wallpaper) | MINOR | 1.0.x → 1.1.0 | yes |
-| A change that breaks existing installs (config format, component removed, a manual step needed) | MAJOR | 1.x → 2.0.0 | yes |
+| A bug fix | PATCH | 1.0.2 → 1.0.3 | the version alone |
+| A new feature or a visible change (theme, app, key binding, wallpaper) | MINOR | 1.0.x → 1.1.0 | the date |
+| A change that breaks existing installs (config format, component removed, a manual step needed) | MAJOR | 1.x → 2.0.0 | a code name |
 
+- The version and the code name are the maintainer's call. Propose them, don't decide them.
 - A minor release may contain fixes. A patch release never contains a new feature.
 - Bump a Rust crate's `version` (Roue, Prisme, Balise, cc-pkg-mng) only when that crate changed. The RPM version comes from the tag.
 - **A pushed tag never moves.** If a release turns out broken, publish the next one.
@@ -58,7 +59,7 @@ Versions follow `MAJOR.MINOR.PATCH`.
   ```
 
 - Leave out what users don't notice: refactors, internal docs, build tweaks.
-- Release headings: `## 1.1.0 « Name »` for a major or minor release, `## 1.0.3` alone for a patch.
+- Release headings: `## 2.0.0 « Name »` for a major release, `## 1.1.0 (October 1 2026)` for a minor one, `## 1.0.3` alone for a patch. A patch's section is just its list of fixes.
 
 ## Releasing
 
@@ -69,12 +70,12 @@ Versions follow `MAJOR.MINOR.PATCH`.
    git log $(git describe --tags --abbrev=0)..HEAD --oneline
    ```
 
-2. Rename `## Unreleased` to `## 1.1.0 « Name »` (or `## 1.0.3`).
+2. Rename `## Unreleased` to `## 1.1.0 (October 1 2026)`, `## 1.0.3` or `## 2.0.0 « Name »`.
 3. Commit, tag, push:
 
    ```
    git commit -am "1.1.0 : the changelog ready for the tag"
-   git tag -a v1.1.0 -m "v1.1.0 « Name »"
+   git tag -a v1.1.0 -m "v1.1.0 (October 1 2026)"
    git push origin master v1.1.0
    ```
 
