@@ -130,6 +130,27 @@ pub fn sudo(args: &[&str]) -> Command {
 pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
     let _sudo = if plan.needs_root() { Some(SudoSession::start()?) } else { None };
 
+    // Everything there is to do, listed up front for the progress board.
+    let mut work = Vec::new();
+    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() {
+        let n = plan.packages.len() + plan.downgrades.len();
+        work.push(("Packages".to_string(), format!("{n} to install")));
+    }
+    for u in &plan.units {
+        if !u.has_work() && state.installed(&u.name) {
+            continue;
+        }
+        let note = if u.new { "new" } else if u.changed { "changed" } else if u.has_work() { "repair" } else { "record" };
+        work.push((u.name.clone(), note.to_string()));
+    }
+    ui.board_begin(work);
+    let result = apply_work(ui, repo, units, state, plan);
+    ui.board_end();
+    result
+}
+
+fn apply_work(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
+
     if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() {
         ui.heading("Packages");
         for copr in &plan.coprs {

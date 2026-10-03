@@ -1,6 +1,14 @@
 # Changelog
 
-Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
+Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
+
+## Unreleased
+
+### Changed
+- **cc-pkg-mng, installing and upgrading:** the work shows as a live list instead of a scroll of lines. Everything to do is listed from the start, the part in progress unfolds with its steps and a spinner, finished parts fold to one line with their time, and a bar at the top counts them with the time elapsed. Package installs show how many packages are done. If something fails, it stays unfolded with its last lines and where the full log is.
+- **cc-pkg-mng, help:** `cc-pkg-mng` alone or `--help` shows the coucou logo and the commands grouped by what they are for, from everyday upgrades to setting up a machine.
+- **cc-pkg-mng, version:** `cc-pkg-mng --version` also says which release this machine runs, on which channel, whether a newer one is out, and which apps run from your checkout. `-V` still prints the bare version.
+- **cc-pkg-mng, init:** setting up a machine opens on the logo and numbers its steps (where, channel, applications, summary), and every question has a clearer look.
 
 ## 1.2.2
 

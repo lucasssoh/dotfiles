@@ -112,6 +112,22 @@ fn main() -> ExitCode {
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
+    // The front page and the long version are ours; `-V`, `<command>
+    // --help` and `help <command>` stay clap's.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let no_color = args.iter().any(|a| a == "--no-color");
+    let bare: Vec<&str> = args.iter().map(String::as_str).filter(|a| *a != "--no-color").collect();
+    match bare.as_slice() {
+        [] | ["-h"] | ["--help"] | ["help"] => {
+            front_page(&Ui::new(no_color, false, false));
+            return ExitCode::SUCCESS;
+        }
+        ["--version"] | ["version"] => {
+            long_version(&Ui::new(no_color, false, false));
+            return ExitCode::SUCCESS;
+        }
+        _ => {}
+    }
     let cli = Cli::parse();
     let mut ui = Ui::new(cli.no_color, cli.quiet, cli.verbose);
     match run(&cli, &mut ui) {
@@ -157,6 +173,89 @@ fn run(cli: &Cli, ui: &mut Ui) -> Result<()> {
         Cmd::Dev { units: names, off, from } => dev::run(ui, &flags, &state, &repo, from.as_deref(), names, *off),
         Cmd::Set { unit, question, value } => lifecycle::set(ui, &units, &mut state, unit, question, value),
     }
+}
+
+/// `cc-pkg-mng`, `--help`: the logo, then the commands by what they are
+/// for. Each command's own options are in `cc-pkg-mng <command> --help`.
+fn front_page(ui: &Ui) {
+    let groups: [(&str, &[(&str, &str)]); 5] = [
+        ("everyday", &[
+            ("upgrade", "move to the latest release, then re-apply"),
+            ("status", "what is installed, and whether it is healthy"),
+            ("install <unit>…", "add units, and what they need"),
+            ("remove <unit>…", "unlink, and put back what they replaced"),
+        ]),
+        ("releases", &[
+            ("channel [stable|edge]", "which updates this machine follows"),
+            ("rollback", "back to the release before the last upgrade"),
+        ]),
+        ("explore", &[
+            ("list", "every unit"),
+            ("info <unit>", "what a unit contains"),
+        ]),
+        ("working on the shell", &[
+            ("dev <unit>…", "run an app built from your checkout (stable)"),
+            ("set <unit> <q> <value>", "change an answer; install applies it"),
+        ]),
+        ("first time", &[("init", "set up this machine")]),
+    ];
+    println!();
+    println!(" {}   cc-pkg-mng {}", ui.bold(ui::LOGO[0]), env!("CARGO_PKG_VERSION"));
+    println!(" {}   {}", ui.bold(ui::LOGO[1]), ui.dim("installs and updates coucou-shell"));
+    for (group, cmds) in groups {
+        println!("\n  {}", ui.dim(group));
+        for (cmd, what) in cmds {
+            println!("    {}{}", ui.bold(&format!("{cmd:<24}")), what);
+        }
+    }
+    println!(
+        "\n  {} {}   {} {}   {} {}   {} {}",
+        ui.bold("-n"),
+        ui.dim("dry run"),
+        ui.bold("-y"),
+        ui.dim("take defaults"),
+        ui.bold("-q"),
+        ui.dim("quiet"),
+        ui.bold("--verbose"),
+        ui.dim("every line")
+    );
+    println!("  cc-pkg-mng <command> --help {}", ui.dim("for one command's options"));
+    println!();
+}
+
+/// `--version`: the manager's version, and what this machine follows.
+/// `-V` keeps the bare line, for scripts.
+fn long_version(ui: &Ui) {
+    let state = State::load().unwrap_or_default();
+    let repo = state.repo.clone().filter(|r| r.join("units").is_dir());
+    let channel = state.channel.clone().unwrap_or_else(|| "not set up".into());
+    let shell = repo.as_deref().map(git::describe).unwrap_or_else(|| "—".into());
+    println!();
+    println!(" {}   cc-pkg-mng {}", ui.bold(ui::LOGO[0]), ui.bold(env!("CARGO_PKG_VERSION")));
+    println!(" {}   coucou-shell {} · {}", ui.bold(ui::LOGO[1]), ui.bold(&shell), ui.green(&channel));
+    println!();
+    if let Some(repo) = &repo {
+        println!("  {}  {}", ui.dim("checkout "), sys::tilde(repo));
+        if channel == "stable" {
+            let tags = git::release_tags(repo).unwrap_or_default();
+            match tags.first() {
+                Some(latest) if git::exact_tag(repo).as_deref() == Some(latest.as_str()) => {
+                    println!("  {}  {}  {}", ui.dim("latest   "), latest, ui.green("up to date"));
+                }
+                Some(latest) => {
+                    println!("  {}  {}  {}", ui.dim("latest   "), latest, ui.yellow("cc-pkg-mng upgrade gets it"));
+                }
+                None => {}
+            }
+        } else if let Some(b) = git::branch(repo) {
+            println!("  {}  {}", ui.dim("follows  "), b);
+        }
+        println!("  {}  {} installed", ui.dim("units    "), state.units.len());
+    }
+    for (unit, rec) in dev::active() {
+        println!("  {}  {} {}", ui.dim("dev      "), ui.yellow(&unit), ui.dim(&format!("from {}", sys::tilde(&rec.checkout))));
+    }
+    println!();
 }
 
 /// --dir, then $COUCOU_SHELL_DIR, then the remembered checkout, then the

@@ -26,6 +26,11 @@ impl Flags {
     }
 }
 
+/// Every question's look: a green `?`, `❯` on the choice, ◉/◯ boxes.
+fn theme() -> dialoguer::theme::ColorfulTheme {
+    dialoguer::theme::ColorfulTheme::default()
+}
+
 // ───────────────────────────── installing ─────────────────────────────
 
 /// Resolve, ask, plan, confirm, apply. Every command that changes the
@@ -52,13 +57,21 @@ pub fn install_units(
     }
     if flags.interactive(ui) {
         println!();
-        if !dialoguer::Confirm::new().with_prompt("Proceed?").default(true).interact()? {
+        if !dialoguer::Confirm::with_theme(&theme()).with_prompt("Proceed?").default(true).interact()? {
             bail!("cancelled");
         }
     }
     ui.open_log(&state::state_dir().join("logs"), "install")?;
+    let start = std::time::Instant::now();
     ops::apply(ui, repo, units, state, &plan)?;
-    ui.line(&format!("\n{} {} unit(s) in place.", ui.green("Done."), plan.units.len()));
+    let secs = start.elapsed().as_secs();
+    ui.line(&format!(
+        "\n{} {} unit(s) in place in {}:{:02}.",
+        ui.green("Done."),
+        plan.units.len(),
+        secs / 60,
+        secs % 60
+    ));
     Ok(())
 }
 
@@ -78,7 +91,7 @@ fn ask(ui: &mut Ui, flags: &Flags, units: &Units, state: &State, order: &[String
             }
             let value = if interactive {
                 let default = q.choices.iter().position(|c| *c == q.default).unwrap_or(0);
-                let i = dialoguer::Select::new()
+                let i = dialoguer::Select::with_theme(&theme())
                     .with_prompt(format!("{name}: {}", q.ask))
                     .items(&q.choices)
                     .default(default)
@@ -129,6 +142,10 @@ pub fn init(
         None => AnswersFile::default(),
     };
     let interactive = flags.interactive(ui) && answers_file.is_none();
+    if interactive {
+        ui.welcome();
+        ui.step(1, 4, "Where");
+    }
 
     // 1. Where.
     let default_dir = sys::home().join("coucou-shell");
@@ -137,7 +154,7 @@ pub fn init(
         (None, Some(d), _) => sys::expand(d),
         (None, None, Some(d)) => d.clone(),
         (None, None, None) if interactive => {
-            let answer: String = dialoguer::Input::new()
+            let answer: String = dialoguer::Input::with_theme(&theme())
                 .with_prompt("Install coucou-shell in")
                 .default(sys::tilde(&default_dir))
                 .interact_text()?;
@@ -161,6 +178,9 @@ pub fn init(
     let repo = std::fs::canonicalize(&dir)?;
 
     // 2. Which channel.
+    if interactive {
+        ui.step(2, 4, "Channel");
+    }
     let tags = git::release_tags(&repo)?;
     let channel = match (channel_flag, file.channel.as_deref()) {
         (Some(c), _) | (None, Some(c)) => c.to_string(),
@@ -169,7 +189,7 @@ pub fn init(
                 format!("stable — releases (latest {})", tags[0]),
                 "edge — every commit on the default branch".to_string(),
             ];
-            let i = dialoguer::Select::new().with_prompt("Channel").items(&items).default(0).interact()?;
+            let i = dialoguer::Select::with_theme(&theme()).with_prompt("Channel").items(&items).default(0).interact()?;
             if i == 0 { "stable".into() } else { "edge".into() }
         }
         _ if tags.is_empty() => "edge".into(),
@@ -207,6 +227,9 @@ pub fn init(
     }
 
     // 3. What.
+    if interactive {
+        ui.step(3, 4, "Applications");
+    }
     let units = manifest::load_all(&repo)?;
     let (migrated, mut preset) = match migrate(&repo)? {
         Some((u, a)) if state.units.is_empty() => {
@@ -240,6 +263,10 @@ pub fn init(
         }
     }
 
+    // 4. The summary: install_units shows the plan and asks before anything.
+    if interactive {
+        ui.step(4, 4, "Summary");
+    }
     install_units(ui, flags, &repo, &units, &mut state, &names, &preset)?;
     if !flags.dry_run {
         ui.line(&format!(
@@ -259,7 +286,7 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
     for u in units.values().filter(|u| u.layer == Layer::Core && u.optional) {
         let default = had(&u.name);
         let yes = if interactive {
-            dialoguer::Confirm::new()
+            dialoguer::Confirm::with_theme(&theme())
                 .with_prompt(u.ask.clone().unwrap_or_else(|| format!("Install {}?", u.name)))
                 .default(default)
                 .interact()?
@@ -275,7 +302,7 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
     let defaults: Vec<bool> = apps.iter().map(|u| had(&u.name) || u.default.unwrap_or(true)).collect();
     let picked: Vec<usize> = if interactive {
         let items: Vec<String> = apps.iter().map(|u| format!("{:<10} {}", u.name, u.summary)).collect();
-        dialoguer::MultiSelect::new()
+        dialoguer::MultiSelect::with_theme(&theme())
             .with_prompt("Applications (space to toggle, enter to confirm)")
             .items(&items)
             .defaults(&defaults)
@@ -301,7 +328,7 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
                 format!(" (you have {})", existing.iter().take(2).cloned().collect::<Vec<_>>().join(", "))
             };
             let items = ["keep mine", "use this one — replaced files are backed up"];
-            dialoguer::Select::new()
+            dialoguer::Select::with_theme(&theme())
                 .with_prompt(format!("{}: {}{hint}", u.name, u.summary))
                 .items(&items)
                 .default(if default { 1 } else { 0 })
@@ -447,6 +474,7 @@ pub fn upgrade(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, to: O
     }
     let after = short(repo)?;
     ui.ok(&format!("{before} → {after}"));
+    ui.set_title(&format!("upgrade {before} → {after}"));
     state.previous = Some(before);
     state.version = Some(after);
     state.save()?;
@@ -468,6 +496,7 @@ pub fn rollback(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State) -> R
     }
     git::checkout_detached(repo, &previous)?;
     ui.ok(&format!("{current} → {previous}"));
+    ui.set_title(&format!("rollback {current} → {previous}"));
     state.previous = Some(current);
     state.version = Some(previous);
     state.save()?;
