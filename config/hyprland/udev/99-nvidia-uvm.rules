@@ -1,0 +1,28 @@
+# NVIDIA UVM device nodes — create /dev/nvidia-uvm{,-tools} at boot.
+#
+# The nvidia_uvm module is loaded at boot (the driver's modprobe.d carries
+# `softdep nvidia post: nvidia-uvm`), but loading it does NOT create its
+# device nodes: nothing in the RPM Fusion packaging does, for UVM. They
+# only appear the first time something calls nvidia-modprobe -u, and the
+# usual something is nvidia-smi. Until then CUDA cannot initialise, and
+# with it NGX -- so DLSS through dxvk-nvapi fails, and games that probe
+# for it at startup (KCD2, The Witcher 3 remastered) refuse to launch
+# with a GPU-incompatibility error. Running nvidia-smi once after boot
+# "fixed" it for exactly that reason.
+#
+# nvidia-modprobe rather than a hand-rolled mknod: it reads the dynamic
+# major from /proc/devices itself (it is not fixed -- 507 here, but it
+# moves with the set of char drivers loaded), and it is what nvidia-smi
+# runs under the hood, so the nodes come out identical, 0666 root:root.
+# -c0 also makes sure /dev/nvidia0 exists, which is a no-op when the
+# modeset driver already made it.
+#
+# SUBSYSTEM=="module" fires when the module is loaded, and coldplug
+# (systemd-udev-trigger replays "add" for everything at boot) replays it
+# if the module was loaded before udev's rules were read.
+#
+# Installed by scripts/install-hardware.sh (the hardware unit) on any
+# machine with an NVIDIA GPU, whether or not the driver is in yet: until
+# it is, there is no nvidia_uvm to load and the rule never matches.
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia_uvm", \
+  RUN+="/usr/bin/nvidia-modprobe -c0 -u"

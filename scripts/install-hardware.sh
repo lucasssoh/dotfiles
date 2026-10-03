@@ -248,6 +248,36 @@ else
     info "No battery offering a Fast charge_types here — skipping the fast-charge rule."
 fi
 
+# NVIDIA UVM device nodes. Gated on an NVIDIA GPU being detected, NOT on
+# the driver being installed: the driver is installed by hand (see
+# hw_notes), usually after this phase has run, and nothing would re-run it
+# then -- the unit's fingerprint only covers repo files. Installed ahead
+# of the driver, the rule just never matches: there is no nvidia_uvm
+# module to load until the driver lands, and from then on it fires.
+has_nvidia=no
+for gpu in ${HW_GPUS[@]+"${HW_GPUS[@]}"}; do
+    [ "$gpu" = nvidia-dgpu ] && has_nvidia=yes
+done
+
+if [ "$has_nvidia" = yes ]; then
+    info "NVIDIA GPU found — installing the UVM device-node rule."
+    if install_udev_rule "$DOTFILES_DIR/config/hyprland/udev/99-nvidia-uvm.rules"; then
+        sudo udevadm control --reload-rules 2>/dev/null || true
+        # Same as above: the rule fires on the next module load, i.e. the
+        # next boot. With the driver already here, make the nodes now so
+        # CUDA/DLSS work without one.
+        if [ ! -x /usr/bin/nvidia-modprobe ]; then
+            info "NVIDIA driver not installed yet — the rule takes over once it is."
+        elif sudo /usr/bin/nvidia-modprobe -c0 -u && [ -e /dev/nvidia-uvm ]; then
+            ok "/dev/nvidia-uvm is present."
+        else
+            warn "Rule installed, but the nodes could not be created now — they will appear on the next boot."
+        fi
+    fi
+else
+    info "No NVIDIA GPU — skipping the UVM rule."
+fi
+
 # ============================================================
 # MANUAL FOLLOW-UPS
 # ============================================================

@@ -11,4 +11,4 @@ run_as = "root"
 does   = "detect the profile, install its packages, enable RPM Fusion and apply codec swaps, print manual follow-ups"
 from   = "scripts/install-hardware.sh"
 run    = "scripts/install-hardware.sh"
-watch  = ["scripts/lib/hardware.sh", "scripts/hardware-detect.sh"]
+watch  = ["scripts/lib/hardware.sh", "scripts/hardware-detect.sh", "config/hyprland/udev"]
