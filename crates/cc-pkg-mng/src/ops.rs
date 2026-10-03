@@ -158,7 +158,13 @@ fn apply_work(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: 
         }
         for r in &plan.repos {
             let from = format!("--from-repofile={r}");
-            ui.run(&format!("add repo {r}"), &mut sudo(&["dnf", "config-manager", "addrepo", &from]))?;
+            ui.run(&format!("add repo {r}"), &mut sudo(&["dnf", "config-manager", "addrepo", "--overwrite", &from]))?;
+        }
+        if plan.refresh_repo {
+            ui.run(
+                "refresh coucou-shell's repository",
+                &mut sudo(&["dnf", "makecache", "--refresh", "--repo=coucou-shell"]),
+            )?;
         }
         if !plan.packages.is_empty() {
             let mut args = vec!["dnf", "install", "-y"];

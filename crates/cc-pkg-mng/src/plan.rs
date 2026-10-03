@@ -95,6 +95,9 @@ pub struct Plan {
     pub packages: Vec<String>,
     /// Rust apps newer than the release checked out (after a rollback).
     pub downgrades: Vec<String>,
+    /// Release RPMs to fetch: coucou-shell's repository is re-read first,
+    /// or dnf may not know yet about a release published today.
+    pub refresh_repo: bool,
 }
 
 impl Plan {
@@ -309,6 +312,7 @@ pub fn build(
     plan.coprs = coprs.into_iter().collect();
     plan.repos = repos.into_iter().collect();
     plan.packages = packages;
+    plan.refresh_repo = needs_repo;
     Ok(plan)
 }
 

@@ -89,9 +89,11 @@ pub fn copr_enabled(copr: &str) -> bool {
 }
 
 /// Is the `.repo` file this URL names already in /etc/yum.repos.d?
+/// The repo file is in place, and current: one installed before it gained
+/// `metadata_expire` (1.3.0) counts as missing, so the plan re-adds it.
 pub fn repo_added(url: &str) -> bool {
     let name = url.rsplit('/').next().unwrap_or(url);
-    Path::new("/etc/yum.repos.d").join(name).exists()
+    std::fs::read_to_string(Path::new("/etc/yum.repos.d").join(name)).is_ok_and(|s| s.contains("metadata_expire"))
 }
 
 pub fn service_enabled(name: &str, user: bool) -> bool {

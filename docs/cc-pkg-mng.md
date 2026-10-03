@@ -98,7 +98,7 @@ You can see what each release changed in the [changelog](../CHANGELOG.md).
 - **Your files are safe.** If a unit would replace one of your files, that file goes into the backups first, and `remove` puts it back.
 - **Local edits block a version change.** If the checkout has uncommitted changes, `upgrade` and `rollback` stop and tell you which files.
 - **Nothing gets restarted behind your back**, except the audio stack when its configuration changes. Programs that are already running keep the old version until you restart them. The bar reloads itself.
-- **A word about dnf.** A plain `sudo dnf upgrade` will also bring Roue, Prisme, Balise and Manette up to the newest release. dnf only re-reads coucou-shell's repository every couple of days, so on the day a release comes out, use `sudo dnf upgrade --refresh` to see it. Your next `cc-pkg-mng upgrade` then brings everything else up to the same release.
+- **A word about dnf.** A plain `sudo dnf upgrade` will also bring Roue, Prisme, Balise and Manette up to the newest release. dnf looks for a new release at most an hour after it comes out; `sudo dnf upgrade --refresh` sees it at once. `cc-pkg-mng upgrade` always re-reads coucou-shell's repository before installing a release's packages. Your next `cc-pkg-mng upgrade` then brings everything else up to the same release.
 
 ## Files
 

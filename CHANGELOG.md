@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **cc-pkg-mng and dnf:** on the day a release comes out, `sudo dnf upgrade` and `cc-pkg-mng upgrade` now see it. dnf used to keep its list of coucou-shell's packages for two days, so the new `cc-pkg-mng` did not show up and an upgrade could fail to find the release's packages. dnf now checks coucou-shell's repository at most an hour after a release, and `cc-pkg-mng upgrade` re-reads it before installing. Your next upgrade updates the repository's settings on your machine.
+
 ## 1.3.0 (October 3 2026)
 
 ### Changed
