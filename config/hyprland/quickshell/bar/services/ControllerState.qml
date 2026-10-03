@@ -34,6 +34,9 @@ Singleton {
     readonly property var pad: root.hasPad ? root.pads[root.pads.length - 1] : null
 
     property bool open: false
+    // True while the popup is on screen or fading out: the window, and the
+    // whole popup with it, exists only then (see shell.qml).
+    readonly property bool shown: root.open || lingerTimer.running
     property string screenName: ""
     // "home" | "apps"
     property string page: "home"
@@ -45,8 +48,7 @@ Singleton {
 
     // Xbox pads over Bluetooth report their battery to BlueZ, not to the
     // driver: Balise has it, with the device path a "Turn off" needs.
-    readonly property var btDevice: {
-        const p = root.pad;
+    function btDeviceOf(p) {
         if (!p || p.bus !== "bluetooth" || !p.address) return null;
         const list = BaliseState.bluetoothDevices || [];
         for (let i = 0; i < list.length; i++) {
@@ -54,13 +56,19 @@ Singleton {
         }
         return null;
     }
-    readonly property var battery: {
-        const p = root.pad;
+    function batteryOf(p) {
         if (!p) return null;
         if (p.battery !== null && p.battery !== undefined) return p.battery;
-        const d = root.btDevice;
+        const d = root.btDeviceOf(p);
         return d && d.battery_percentage !== null && d.battery_percentage !== undefined ? d.battery_percentage : null;
     }
+    readonly property var btDevice: root.btDeviceOf(root.pad)
+    readonly property var battery: root.batteryOf(root.pad)
+
+    // The installed Steam and Lutris games, newest played first, as the
+    // daemon reads them each time the popup opens:
+    // [{ id, title, source, last, cover, hero, launch: [argv] }].
+    property var games: []
 
     readonly property real volume: OsdState.sinkVolume
 
@@ -75,15 +83,15 @@ Singleton {
         const b = (kind, label, tint) => ({ kind: kind, label: label, tint: tint || ink });
         switch (family) {
         case "xbox":
-            return { south: b("letter", "A", "#8fd49a"), east: b("letter", "B", "#ef8f8f"), lb: "LB", rb: "RB", guide: "Guide" };
+            return { south: b("letter", "A", "#8fd49a"), east: b("letter", "B", "#ef8f8f"), north: b("letter", "Y", "#e9cf7d"), west: b("letter", "X", "#86aef0"), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };
         case "playstation":
-            return { south: b("cross", "", "#95b8f2"), east: b("circle", "", "#f09aa4"), lb: "L1", rb: "R1", guide: "PS button" };
+            return { south: b("cross", "", "#95b8f2"), east: b("circle", "", "#f09aa4"), north: b("triangle", "", "#86d6c8"), west: b("square", "", "#e7a6d4"), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "PS button" };
         case "nintendo":
-            return { south: b("letter", "B"), east: b("letter", "A"), lb: "L", rb: "R", guide: "Home" };
+            return { south: b("letter", "B"), east: b("letter", "A"), north: b("letter", "X"), west: b("letter", "Y"), lb: "L", rb: "R", lt: "ZL", rt: "ZR", guide: "Home" };
         case "steam":
-            return { south: b("letter", "A"), east: b("letter", "B"), lb: "L1", rb: "R1", guide: "Guide" };
+            return { south: b("letter", "A"), east: b("letter", "B"), north: b("letter", "Y"), west: b("letter", "X"), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "Guide" };
         }
-        return { south: b("dots", ""), east: b("dots", ""), lb: "L", rb: "R", guide: "Guide" };
+        return { south: b("dots", ""), east: b("dots", ""), north: b("dots", ""), west: b("dots", ""), lb: "L", rb: "R", lt: "L2", rt: "R2", guide: "Guide" };
     }
 
     function show() {
@@ -93,12 +101,14 @@ Singleton {
         root.open = true;
         root._send({ cmd: "grab" });
         root._send({ cmd: "refresh" });
+        root._send({ cmd: "library" });
         if (root.pad && root.pad.bus === "bluetooth") BaliseState.refreshState();
     }
 
     function close() {
         if (!root.open) return;
         root.open = false;
+        lingerTimer.restart();
         root._send({ cmd: "release" });
     }
 
@@ -140,6 +150,9 @@ Singleton {
             // is in Balise's device list, which may not be loaded yet.
             if (root.pad && root.pad.bus === "bluetooth" && !root.btDevice) BaliseState.refreshState();
             if (root.open && !root.hasPad) root.close();
+        } else if (msg.event === "library") {
+            const g = (msg.games || []).slice().sort((a, b) => (b.last || 0) - (a.last || 0) || a.title.localeCompare(b.title));
+            if (JSON.stringify(g) !== JSON.stringify(root.games)) root.games = g;
         } else if (msg.event === "connected") {
             root.banner = msg.pad;
             if (msg.pad.bus === "bluetooth") BaliseState.refreshState();
@@ -154,6 +167,12 @@ Singleton {
             else if (msg.button === "rb") root.nudgeVolume(0.05);
             else root.nav(msg.button);
         }
+    }
+
+    // Outlives the close by the fade, so the popup is not cut mid-animation.
+    Timer {
+        id: lingerTimer
+        interval: 220
     }
 
     Timer {

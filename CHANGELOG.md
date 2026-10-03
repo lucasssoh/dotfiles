@@ -5,7 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
-- **Game controllers:** plug in or pair a controller (Xbox, PlayStation, Switch, Steam or any other) and the shell says so. Its Guide button opens a menu you browse with the controller, which shows that controller's own buttons (letters, PlayStation shapes): Steam in Big Picture, Lutris, all your apps, sleep, volume on `LB` `RB`, and turning off a Bluetooth controller. Over a game, hold Guide to open it. While a controller is connected, an icon in the bar says so, with its battery.
+- **Game controllers, the menu:** it opens on the game you played last, then your Steam and Lutris games side by side with their artwork, and starts them directly, without the launchers' windows. `Y` shows every app and game in a grid, one tab per launcher.
+- **Game controllers:** plug in or pair a controller (Xbox, PlayStation, Switch, Steam or any other) and the shell says so. Its Guide button opens a menu you browse with the controller, which shows that controller's own buttons (letters, PlayStation shapes), sets the volume on `LB` `RB` and can turn off a Bluetooth controller. Over a game, hold Guide to open it. While a controller is connected, its silhouette in the bar fills up with its battery.
 - **Steam and Lutris** can be installed together as the `games` unit.
 - **cc-pkg-mng:** `cc-pkg-mng dev roue` runs Roue built from the checkout you're working in, in place of the release's, on the stable channel. Your shortcuts and the bar pick it up straight away, with nothing to change in your configuration, and running it again after an edit takes a couple of seconds. `cc-pkg-mng dev` shows what is running, and `cc-pkg-mng dev --off` puts the release's Roue, Prisme and Balise back. It works for Prisme and Balise too.
 

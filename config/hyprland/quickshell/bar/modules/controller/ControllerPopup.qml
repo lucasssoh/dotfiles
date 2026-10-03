@@ -4,66 +4,168 @@ import Quickshell.Widgets
 import "../../theme"
 import "../../services"
 
-// The controller popup: what a Guide press opens. A row of large tiles
-// (Steam's Big Picture, Lutris, the app grid, sleep, and turning a
-// Bluetooth pad off), driven from the pad through ControllerState.nav, and
-// just as well from the keyboard or the mouse. LB/RB set the volume from
-// anywhere in it; the OSD shows the level as usual.
+// The controller popup: what a Guide press opens. Built each time it opens
+// and destroyed once it has faded (shell.qml's Loader), so nothing here
+// exists while the popup is closed.
 //
-// Focus is an outline, not the drawers' inverted "on" fill: these tiles are
+// Home, top to bottom, one focus row each:
+//   - Continue: the game played last, large, from the daemon's library;
+//   - Library: the games after it, Steam and Lutris read by the daemon,
+//     every other launcher's games through their "Game" desktop entries;
+//   - Launchers: the ones installed, Steam opening in Big Picture;
+//   - System: the app grid, sleep, and turning a Bluetooth pad off.
+// Y opens the full grid, where LT/RT step through the tabs (All, Games,
+// then one per source) and X jumps to the next letter. LB/RB set the volume
+// from anywhere (ControllerState). The keyboard and the mouse drive it all
+// the same way.
+//
+// Focus is an outline, not the drawers' inverted "on" fill: these cards are
 // large, and a white slab moving across them is what the shell avoids.
 Item {
     id: root
 
     implicitWidth: card.width
     implicitHeight: card.height
-    // The window stays mapped until the fade has finished (see shell.qml).
     readonly property real cardOpacity: card.opacity
 
-    // Looked up on every opening: byId is a call, not a binding, and the
-    // desktop entries are still loading when the bar starts.
-    property var steamEntry: null
-    property var lutrisEntry: null
+    // ---- what there is to show ------------------------------------------
 
-    readonly property var tiles: {
-        const t = [];
-        if (root.steamEntry) t.push({ key: "steam", label: "Steam", icon: root.steamEntry.icon });
-        if (root.lutrisEntry) t.push({ key: "lutris", label: "Lutris", icon: root.lutrisEntry.icon });
-        t.push({ key: "apps", label: "Apps", glyph: "" });
-        t.push({ key: "sleep", label: "Sleep", glyph: "" });
+    // Desktop entries are read once, when the popup is built.
+    property var launchers: []
+    property var desktopGames: []
+    property var apps: []
+
+    readonly property var games: ControllerState.games.concat(root.desktopGames)
+    readonly property var hero: {
+        const g = ControllerState.games;
+        return g.length > 0 && g[0].last > 0 ? g[0] : null;
+    }
+    readonly property var shelf: root.games.filter(g => g !== root.hero).slice(0, 6)
+    readonly property var system: {
+        const t = [{ key: "apps", label: "Apps", glyph: "" }, { key: "sleep", label: "Sleep", glyph: "" }];
         if (ControllerState.btDevice) t.push({ key: "off", label: "Turn off", glyph: "" });
         return t;
     }
-    property int focusIndex: 0
 
-    // Built when the page opens, not at start-up: the bar never pays for a
-    // list of every application unless someone asks for it.
-    property var apps: []
-
-    readonly property bool showing: ControllerState.open
-    onShowingChanged: {
-        if (showing) {
-            root.steamEntry = DesktopEntries.byId("steam");
-            root.lutrisEntry = DesktopEntries.byId("net.lutris.Lutris");
-            root.focusIndex = 0;
-            keys.forceActiveFocus();
-        }
+    // The rows of the home page that have something in them, as they sit
+    // on screen: Launchers and System share one line, so they are one row,
+    // the launchers first, and left/right walks from one into the other.
+    readonly property var rows: {
+        const r = [];
+        if (root.hero) r.push("hero");
+        if (root.shelf.length > 0) r.push("shelf");
+        r.push("bottom");
+        return r;
+    }
+    property int row: 0
+    property var col: ({ hero: 0, shelf: 0, bottom: 0 })
+    readonly property string rowName: root.rows[Math.min(root.row, root.rows.length - 1)]
+    function lengthOf(name) {
+        return name === "hero" ? 1 : name === "shelf" ? root.shelf.length
+             : root.launchers.length + root.system.length;
+    }
+    function focused(name, i) {
+        return ControllerState.page === "home" && root.rowName === name && root.col[name] === i;
+    }
+    function focus(name, i) {
+        const r = root.rows.indexOf(name);
+        if (r < 0) return;
+        root.row = r;
+        const c = Object.assign({}, root.col);
+        c[name] = i;
+        root.col = c;
     }
 
-    function activate(key) {
-        if (key === "steam") ControllerState.launch(["steam", "steam://open/bigpicture"]);
-        else if (key === "lutris") { root.lutrisEntry.execute(); ControllerState.close(); }
-        else if (key === "apps") root.openApps();
+    // Grid tabs: All, Games, then one per source that has games.
+    readonly property var tabs: {
+        const t = [{ name: "All", items: root.apps.concat(root.games.map(root.asTile)).sort(root.byName) },
+                   { name: "Games", items: root.games.map(root.asTile).sort(root.byName) }];
+        const seen = [];
+        root.games.forEach(g => { if (seen.indexOf(g.source) < 0) seen.push(g.source); });
+        seen.forEach(s => t.push({ name: s, items: root.games.filter(g => g.source === s).map(root.asTile).sort(root.byName) }));
+        return t;
+    }
+    property int tab: 0
+    readonly property var gridItems: root.tabs[Math.min(root.tab, root.tabs.length - 1)].items
+
+    function byName(a, b) { return a.name.localeCompare(b.name); }
+    function asTile(g) {
+        return { name: g.title, icon: g.icon || "", cover: g.cover || "", source: g.source, game: g };
+    }
+
+    // ---- reading the desktop entries ------------------------------------
+
+    readonly property var launcherDefs: [
+        { ids: ["steam", "com.valvesoftware.Steam"], name: "Steam", sub: "Big Picture", argv: ["steam", "steam://open/bigpicture"] },
+        { ids: ["net.lutris.Lutris"], name: "Lutris", source: "Lutris" },
+        { ids: ["com.heroicgameslauncher.hgl", "heroic"], name: "Heroic", sub: "Epic · GOG · Amazon" },
+        { ids: ["com.usebottles.bottles"], name: "Bottles", sub: "Windows apps" },
+        { ids: ["io.itch.itch", "itch"], name: "itch", sub: "itch.io" }
+    ]
+
+    Component.onCompleted: {
+        const all = DesktopEntries.applications.values.filter(e => !e.noDisplay && e.name);
+        const launcherIds = [];
+        const found = [];
+        root.launcherDefs.forEach(d => {
+            for (const id of d.ids) {
+                const e = DesktopEntries.byId(id);
+                if (e) { found.push({ def: d, entry: e }); launcherIds.push(e.id); break; }
+            }
+        });
+        root.launchers = found;
+
+        // Games other launchers put in the menu (Heroic, Bottles, itch,
+        // emulators…). Steam and Lutris shortcuts are left out: the daemon
+        // already lists those games, with their artwork.
+        root.desktopGames = all
+            .filter(e => root.isGame(e) && launcherIds.indexOf(e.id) < 0)
+            .filter(e => !/steam:\/\/rungameid|lutris:rungameid/.test((e.command || []).join(" ") + " " + (e.execString || "")))
+            .map(e => ({ id: "desktop:" + e.id, title: e.name, source: root.sourceOf(e), last: 0, icon: e.icon, entry: e }));
+
+        root.apps = all
+            .filter(e => !root.isGame(e) || launcherIds.indexOf(e.id) >= 0)
+            .map(e => ({ name: e.name, icon: e.icon || "", cover: "", source: "", entry: e }));
+
+        keys.forceActiveFocus();
+    }
+
+    // A game, as opposed to a tool for games, which also files itself under
+    // "Game": by its other categories, or by name for the ones that say
+    // nothing else (GOverlay, which the mangohud unit installs).
+    readonly property var gameTools: ["io.github.benjamimgois.goverlay"]
+    function isGame(e) {
+        const c = e.categories || [];
+        return c.indexOf("Game") >= 0 && root.gameTools.indexOf(e.id) < 0
+            && !c.some(x => x === "Utility" || x === "Settings" || x === "System");
+    }
+    // Which launcher a game's desktop entry runs through.
+    function sourceOf(e) {
+        const cmd = ((e.command || []).join(" ") + " " + (e.execString || "")).toLowerCase();
+        if (cmd.indexOf("heroic") >= 0) return "Heroic";
+        if (cmd.indexOf("bottles") >= 0) return "Bottles";
+        if (cmd.indexOf("itch") >= 0) return "itch";
+        return "Other";
+    }
+
+    // ---- actions --------------------------------------------------------
+
+    function play(g) {
+        if (g.launch) ControllerState.launch(g.launch);
+        else if (g.entry) { g.entry.execute(); ControllerState.close(); }
+    }
+    function openLauncher(l) {
+        if (l.def.argv) ControllerState.launch(l.def.argv);
+        else { l.entry.execute(); ControllerState.close(); }
+    }
+    function runSystem(key) {
+        if (key === "apps") { root.tab = 0; appGrid.currentIndex = 0; ControllerState.page = "apps"; }
         else if (key === "sleep") ControllerState.launch(["systemctl", "suspend"]);
         else if (key === "off") ControllerState.turnOffPad();
     }
-
-    function openApps() {
-        root.apps = DesktopEntries.applications.values
-            .filter(e => !e.noDisplay && e.name)
-            .sort((a, b) => a.name.localeCompare(b.name));
-        appGrid.currentIndex = 0;
-        ControllerState.page = "apps";
+    function openTile(t) {
+        if (t.game) root.play(t.game);
+        else { t.entry.execute(); ControllerState.close(); }
     }
 
     function handle(button) {
@@ -72,16 +174,39 @@ Item {
             else if (button === "right") appGrid.moveCurrentIndexRight();
             else if (button === "up") appGrid.moveCurrentIndexUp();
             else if (button === "down") appGrid.moveCurrentIndexDown();
-            else if (button === "a" && root.apps[appGrid.currentIndex]) {
-                root.apps[appGrid.currentIndex].execute();
-                ControllerState.close();
-            } else if (button === "b") ControllerState.page = "home";
+            else if (button === "lt") { root.tab = (root.tab + root.tabs.length - 1) % root.tabs.length; appGrid.currentIndex = 0; }
+            else if (button === "rt") { root.tab = (root.tab + 1) % root.tabs.length; appGrid.currentIndex = 0; }
+            else if (button === "x") root.nextLetter();
+            else if (button === "a" && root.gridItems[appGrid.currentIndex]) root.openTile(root.gridItems[appGrid.currentIndex]);
+            else if (button === "b") ControllerState.page = "home";
             return;
         }
-        if (button === "left") root.focusIndex = Math.max(0, root.focusIndex - 1);
-        else if (button === "right") root.focusIndex = Math.min(root.tiles.length - 1, root.focusIndex + 1);
-        else if (button === "a" && root.tiles[root.focusIndex]) root.activate(root.tiles[root.focusIndex].key);
+        const name = root.rowName;
+        if (button === "up") root.row = Math.max(0, root.row - 1);
+        else if (button === "down") root.row = Math.min(root.rows.length - 1, root.row + 1);
+        else if (button === "left" || button === "right") {
+            const c = Object.assign({}, root.col);
+            c[name] = Math.max(0, Math.min(root.lengthOf(name) - 1, c[name] + (button === "left" ? -1 : 1)));
+            root.col = c;
+        }
+        else if (button === "y") root.runSystem("apps");
         else if (button === "b") ControllerState.close();
+        else if (button === "a") {
+            const i = root.col[name];
+            if (name === "hero") root.play(root.hero);
+            else if (name === "shelf") root.play(root.shelf[i]);
+            else if (i < root.launchers.length) root.openLauncher(root.launchers[i]);
+            else root.runSystem(root.system[i - root.launchers.length].key);
+        }
+    }
+
+    // X in the grid: the first item whose name starts after the current one's letter.
+    function nextLetter() {
+        const items = root.gridItems;
+        if (items.length === 0) return;
+        const here = (items[appGrid.currentIndex] || items[0]).name.charAt(0).toUpperCase();
+        const i = items.findIndex(t => t.name.charAt(0).toUpperCase() > here);
+        appGrid.currentIndex = i < 0 ? 0 : i;
     }
 
     Connections {
@@ -96,7 +221,7 @@ Item {
             const map = {
                 [Qt.Key_Left]: "left", [Qt.Key_Right]: "right", [Qt.Key_Up]: "up", [Qt.Key_Down]: "down",
                 [Qt.Key_Return]: "a", [Qt.Key_Enter]: "a", [Qt.Key_Space]: "a",
-                [Qt.Key_Escape]: "b", [Qt.Key_Backspace]: "b",
+                [Qt.Key_Escape]: "b", [Qt.Key_Backspace]: "b", [Qt.Key_Tab]: "rt", [Qt.Key_Backtab]: "lt",
             };
             if (map[event.key] !== undefined) {
                 root.handle(map[event.key]);
@@ -105,46 +230,45 @@ Item {
         }
     }
 
-    // ---- card --------------------------------------------------------
+    // ---- card -----------------------------------------------------------
+
     Rectangle {
         id: card
-        width: 24 * 2 + Math.max(tileRow.width, 5 * 112 + 4 * 12)
-        height: column.height + 24 * 2
-        radius: 32
+        width: 940
+        height: column.height + 26 * 2
+        radius: 34
         color: DrawerTheme.panelTop
         border.width: 1
         border.color: DrawerTheme.ink(0.08)
 
-        opacity: root.showing ? 1 : 0
-        scale: root.showing ? 1 : 0.94
-        Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        opacity: ControllerState.open ? 1 : 0
+        scale: ControllerState.open ? 1 : 0.96
+        Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
         Column {
             id: column
-            x: 24
-            y: 24
-            width: card.width - 48
+            x: 26
+            y: 26
+            width: card.width - 52
             spacing: 20
 
-            // ---- header: the pad, its battery, the volume -------------
+            // ---- header -------------------------------------------------
             Item {
                 width: parent.width
-                height: 40
+                height: 42
 
                 Rectangle {
                     id: badge
-                    width: 40
-                    height: 40
+                    width: 42
+                    height: 42
                     radius: 14
                     color: DrawerTheme.card
-                    Text {
+                    PadSilhouette {
                         anchors.centerIn: parent
-                        renderType: Text.NativeRendering
-                        text: ""
-                        color: DrawerTheme.primary
-                        font.family: Fonts.iconMingcute
-                        font.pixelSize: 20
+                        width: 24
+                        height: 16
+                        level: 100
                     }
                 }
                 Column {
@@ -153,31 +277,79 @@ Item {
                     anchors.right: volume.left
                     anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
+                    spacing: 3
                     Text {
                         width: parent.width
                         renderType: Text.NativeRendering
-                        text: ControllerState.page === "apps" ? "Apps" : (ControllerState.pad ? ControllerState.pad.name : "Controller")
+                        text: ControllerState.page === "apps" ? "Apps and games" : (ControllerState.pad ? ControllerState.pad.name : "Controller")
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
-                    Text {
-                        width: parent.width
-                        renderType: Text.NativeRendering
-                        text: {
-                            const p = ControllerState.pad;
-                            if (!p) return "";
-                            const parts = [p.bus === "bluetooth" ? "Bluetooth" : p.bus === "usb" ? "USB" : "Connected"];
-                            if (ControllerState.battery !== null) parts.push(ControllerState.battery + " %" + (p.charging ? ", charging" : ""));
-                            return parts.join(" · ");
+                    Row {
+                        spacing: 7
+                        visible: ControllerState.page === "home" && ControllerState.pad !== null
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            text: !ControllerState.pad ? "" : ControllerState.pad.bus === "bluetooth" ? "Bluetooth" : ControllerState.pad.bus === "usb" ? "USB" : "Connected"
+                            color: DrawerTheme.secondary
+                            font.family: Fonts.ui
+                            font.pixelSize: 12
                         }
-                        color: DrawerTheme.secondary
-                        font.family: Fonts.ui
-                        font.pixelSize: 12
-                        elide: Text.ElideRight
+                        PadSilhouette {
+                            visible: ControllerState.battery !== null
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 12
+                            level: ControllerState.battery
+                            charging: ControllerState.pad ? ControllerState.pad.charging : false
+                        }
+                        Text {
+                            visible: ControllerState.battery !== null
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            text: ControllerState.battery + " %"
+                            color: DrawerTheme.secondary
+                            font.family: Fonts.ui
+                            font.pixelSize: 12
+                        }
+                    }
+                    // The tabs, on the grid page.
+                    Row {
+                        spacing: 6
+                        visible: ControllerState.page === "apps"
+                        Repeater {
+                            model: root.tabs
+                            Rectangle {
+                                required property var modelData
+                                required property int index
+                                readonly property bool on: index === root.tab
+                                width: tabLabel.implicitWidth + 20
+                                height: 24
+                                radius: 12
+                                color: on ? DrawerTheme.cardRaised : "transparent"
+                                border.width: on ? 1.5 : 0
+                                border.color: DrawerTheme.primary
+                                Text {
+                                    id: tabLabel
+                                    anchors.centerIn: parent
+                                    renderType: Text.NativeRendering
+                                    text: modelData.name + "  " + modelData.items.length
+                                    color: parent.on ? DrawerTheme.primary : DrawerTheme.secondary
+                                    font.family: Fonts.ui
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: { root.tab = index; appGrid.currentIndex = 0; }
+                                }
+                            }
+                        }
                     }
                 }
                 Row {
@@ -210,151 +382,457 @@ Item {
                 }
             }
 
-            // ---- home: the tiles --------------------------------------
-            Row {
-                id: tileRow
-                visible: ControllerState.page === "home"
-                anchors.horizontalCenter: parent.horizontalCenter
+            // ---- home: Continue ----------------------------------------
+            Rectangle {
+                id: heroCard
+                visible: ControllerState.page === "home" && root.hero !== null
+                readonly property bool on: root.focused("hero", 0)
+                width: parent.width
+                height: 196
+                radius: 26
+                color: on ? DrawerTheme.cardRaised : DrawerTheme.card
+                border.width: 2
+                border.color: on ? DrawerTheme.primary : "transparent"
+
+                ClippingRectangle {
+                    x: 14
+                    y: 14
+                    width: 300
+                    height: parent.height - 28
+                    radius: 18
+                    color: DrawerTheme.cardRaised
+                    Image {
+                        anchors.fill: parent
+                        source: root.hero && root.hero.hero ? "file://" + root.hero.hero : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize.width: 600
+                    }
+                }
+                Column {
+                    x: 14 + 300 + 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - x - 20
+                    spacing: 10
+                    Text {
+                        renderType: Text.NativeRendering
+                        text: "CONTINUE"
+                        color: DrawerTheme.secondary
+                        font.family: Fonts.ui
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        font.letterSpacing: 0.8
+                    }
+                    Text {
+                        width: parent.width
+                        renderType: Text.NativeRendering
+                        text: root.hero ? root.hero.title : ""
+                        color: DrawerTheme.primary
+                        font.family: Fonts.ui
+                        font.pixelSize: 26
+                        font.weight: Font.Bold
+                        elide: Text.ElideRight
+                    }
+                    Row {
+                        spacing: 8
+                        SourceChip { label: root.hero ? root.hero.source : "" }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            text: root.hero ? root.since(root.hero.last) : ""
+                            color: DrawerTheme.secondary
+                            font.family: Fonts.ui
+                            font.pixelSize: 13
+                        }
+                    }
+                    Row {
+                        spacing: 7
+                        topPadding: 6
+                        FaceButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            kind: ControllerState.labels.south.kind
+                            label: ControllerState.labels.south.label
+                            tint: ControllerState.labels.south.tint
+                            pos: "s"
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            text: "Play"
+                            color: DrawerTheme.primary
+                            font.family: Fonts.ui
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                        }
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: root.focus("hero", 0)
+                    onClicked: root.play(root.hero)
+                }
+            }
+
+            // ---- home: Library -----------------------------------------
+            Column {
+                visible: ControllerState.page === "home" && root.shelf.length > 0
+                width: parent.width
                 spacing: 12
-                Repeater {
-                    model: root.tiles
-                    Tile {
-                        required property var modelData
-                        required property int index
-                        label: modelData.label
-                        icon: modelData.icon || ""
-                        glyph: modelData.glyph || ""
-                        focused: root.focusIndex === index
-                        onHovered: root.focusIndex = index
-                        onClicked: root.activate(modelData.key)
+                SectionLabel { text: "Library" }
+                Row {
+                    spacing: 12
+                    Repeater {
+                        model: root.shelf
+                        Rectangle {
+                            id: coverCard
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: root.focused("shelf", index)
+                            width: 136
+                            height: 210
+                            radius: 18
+                            color: on ? DrawerTheme.cardRaised : DrawerTheme.card
+                            border.width: 2
+                            border.color: on ? DrawerTheme.primary : "transparent"
+                            scale: on ? 1.04 : 1
+                            Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+
+                            ClippingRectangle {
+                                x: 6
+                                y: 6
+                                width: parent.width - 12
+                                height: 160
+                                radius: 13
+                                color: DrawerTheme.cardRaised
+                                Image {
+                                    visible: !!coverCard.modelData.cover
+                                    anchors.fill: parent
+                                    source: coverCard.modelData.cover ? "file://" + coverCard.modelData.cover : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    sourceSize.width: 256
+                                }
+                                IconImage {
+                                    visible: !coverCard.modelData.cover
+                                    anchors.centerIn: parent
+                                    implicitSize: 56
+                                    source: coverCard.modelData.icon ? Quickshell.iconPath(coverCard.modelData.icon, true) : ""
+                                }
+                                SourceChip {
+                                    x: 7
+                                    y: parent.height - height - 7
+                                    label: coverCard.modelData.source
+                                    dark: true
+                                }
+                            }
+                            Text {
+                                x: 10
+                                y: 172
+                                width: parent.width - 20
+                                renderType: Text.NativeRendering
+                                text: coverCard.modelData.title
+                                color: coverCard.on ? DrawerTheme.primary : DrawerTheme.secondary
+                                font.family: Fonts.ui
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: root.focus("shelf", coverCard.index)
+                                onClicked: root.play(coverCard.modelData)
+                            }
+                        }
                     }
                 }
             }
 
-            // ---- apps: every application, in a grid -------------------
+            // ---- home: Launchers and System -----------------------------
+            Row {
+                visible: ControllerState.page === "home"
+                width: parent.width
+                spacing: 24
+
+                Column {
+                    visible: root.launchers.length > 0
+                    spacing: 12
+                    SectionLabel { text: "Launchers" }
+                    Row {
+                        spacing: 10
+                        Repeater {
+                            model: root.launchers
+                            Rectangle {
+                                id: launcherCard
+                                required property var modelData
+                                required property int index
+                                readonly property bool on: root.focused("bottom", index)
+                                width: Math.max(150, launcherText.implicitWidth + 30 + 34 + 24)
+                                height: 56
+                                radius: 16
+                                color: on ? DrawerTheme.cardRaised : DrawerTheme.card
+                                border.width: 2
+                                border.color: on ? DrawerTheme.primary : "transparent"
+                                IconImage {
+                                    x: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    implicitSize: 30
+                                    source: Quickshell.iconPath(launcherCard.modelData.entry.icon || "", true)
+                                }
+                                Column {
+                                    id: launcherText
+                                    x: 12 + 30 + 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Text {
+                                        renderType: Text.NativeRendering
+                                        text: launcherCard.modelData.def.name
+                                        color: DrawerTheme.primary
+                                        font.family: Fonts.ui
+                                        font.pixelSize: 13
+                                        font.weight: Font.Bold
+                                    }
+                                    Text {
+                                        renderType: Text.NativeRendering
+                                        text: launcherCard.modelData.def.source
+                                            ? ControllerState.games.filter(g => g.source === launcherCard.modelData.def.source).length + " games"
+                                            : (launcherCard.modelData.def.sub || "")
+                                        color: DrawerTheme.secondary
+                                        font.family: Fonts.ui
+                                        font.pixelSize: 11
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onEntered: root.focus("bottom", launcherCard.index)
+                                    onClicked: root.openLauncher(launcherCard.modelData)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Column {
+                    spacing: 12
+                    SectionLabel { text: "System" }
+                    Row {
+                        spacing: 10
+                        Repeater {
+                            model: root.system
+                            Rectangle {
+                                id: sysCard
+                                required property var modelData
+                                required property int index
+                                readonly property bool on: root.focused("bottom", root.launchers.length + index)
+                                width: sysRow.implicitWidth + 32
+                                height: 56
+                                radius: 16
+                                color: on ? DrawerTheme.cardRaised : DrawerTheme.card
+                                border.width: 2
+                                border.color: on ? DrawerTheme.primary : "transparent"
+                                Row {
+                                    id: sysRow
+                                    anchors.centerIn: parent
+                                    spacing: 8
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        renderType: Text.NativeRendering
+                                        text: sysCard.modelData.glyph
+                                        color: DrawerTheme.primary
+                                        font.family: Fonts.iconMingcute
+                                        font.pixelSize: 17
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        renderType: Text.NativeRendering
+                                        text: sysCard.modelData.label
+                                        color: sysCard.on ? DrawerTheme.primary : DrawerTheme.secondary
+                                        font.family: Fonts.ui
+                                        font.pixelSize: 13
+                                        font.weight: Font.Bold
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onEntered: root.focus("bottom", root.launchers.length + sysCard.index)
+                                    onClicked: root.runSystem(sysCard.modelData.key)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---- apps: the grid -----------------------------------------
             GridView {
                 id: appGrid
                 visible: ControllerState.page === "apps"
                 width: parent.width
                 height: 3 * cellHeight
-                cellWidth: Math.floor(width / 5)
-                cellHeight: 112
+                cellWidth: Math.floor(width / 7)
+                cellHeight: 132
                 clip: true
-                model: root.apps
+                model: root.gridItems
                 keyNavigationWraps: false
                 highlightMoveDuration: 0
                 preferredHighlightBegin: 0
                 preferredHighlightEnd: height
                 highlightRangeMode: GridView.ApplyRange
                 delegate: Item {
+                    id: cell
                     required property var modelData
                     required property int index
+                    readonly property bool on: appGrid.currentIndex === index
                     width: appGrid.cellWidth
                     height: appGrid.cellHeight
-                    Tile {
-                        anchors.centerIn: parent
-                        width: parent.width - 12
-                        height: parent.height - 12
-                        label: modelData.name
-                        icon: modelData.icon || ""
-                        glyph: ""
-                        focused: appGrid.currentIndex === index
-                        onHovered: appGrid.currentIndex = index
-                        onClicked: { modelData.execute(); ControllerState.close(); }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        radius: 22
+                        color: cell.on ? DrawerTheme.cardRaised : DrawerTheme.card
+                        border.width: 2
+                        border.color: cell.on ? DrawerTheme.primary : "transparent"
+                        scale: cell.on ? 1.04 : 1
+                        Column {
+                            anchors.centerIn: parent
+                            width: parent.width - 16
+                            spacing: 8
+                            Item {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: 52
+                                height: 52
+                                ClippingRectangle {
+                                    visible: cell.modelData.cover !== ""
+                                    anchors.fill: parent
+                                    radius: 14
+                                    color: DrawerTheme.cardRaised
+                                    Image {
+                                        anchors.fill: parent
+                                        source: cell.modelData.cover ? "file://" + cell.modelData.cover : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        asynchronous: true
+                                        sourceSize.width: 104
+                                    }
+                                }
+                                IconImage {
+                                    visible: cell.modelData.cover === ""
+                                    anchors.centerIn: parent
+                                    implicitSize: 48
+                                    source: cell.modelData.icon ? Quickshell.iconPath(cell.modelData.icon, true) : ""
+                                }
+                            }
+                            Text {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                renderType: Text.NativeRendering
+                                text: cell.modelData.name
+                                color: cell.on ? DrawerTheme.primary : DrawerTheme.secondary
+                                font.family: Fonts.ui
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                // Per-source tabs say it already.
+                                visible: cell.modelData.source !== "" && root.tab < 2
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                renderType: Text.NativeRendering
+                                text: cell.modelData.source
+                                color: DrawerTheme.muted
+                                font.family: Fonts.ui
+                                font.pixelSize: 10
+                                font.weight: Font.DemiBold
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: appGrid.currentIndex = cell.index
+                            onClicked: root.openTile(cell.modelData)
+                        }
                     }
                 }
             }
 
-            // ---- what the buttons do ----------------------------------
+            // ---- what the buttons do ------------------------------------
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 18
+                spacing: 20
+                Hint { face: ControllerState.labels.south; pos: "s"; text: "Open" }
+                Hint { face: ControllerState.labels.east; pos: "e"; text: ControllerState.page === "apps" ? "Back" : "Close" }
+                Hint { visible: ControllerState.page === "home"; face: ControllerState.labels.north; pos: "n"; text: "All games and apps" }
                 Row {
-                    spacing: 7
-                    FaceButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        kind: ControllerState.labels.south.kind
-                        label: ControllerState.labels.south.label
-                        tint: ControllerState.labels.south.tint
-                        pos: "s"
-                    }
-                    HintText { text: "Open" }
+                    visible: ControllerState.page === "apps"
+                    spacing: 6
+                    ShoulderButton { label: ControllerState.labels.lt }
+                    ShoulderButton { label: ControllerState.labels.rt }
+                    HintText { text: "Tabs" }
                 }
-                Row {
-                    spacing: 7
-                    FaceButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        kind: ControllerState.labels.east.kind
-                        label: ControllerState.labels.east.label
-                        tint: ControllerState.labels.east.tint
-                        pos: "e"
-                    }
-                    HintText { text: ControllerState.page === "apps" ? "Back" : "Close" }
-                }
+                Hint { visible: ControllerState.page === "apps"; face: ControllerState.labels.west; pos: "w"; text: "Next letter" }
             }
         }
     }
 
-    // ---- pieces --------------------------------------------------------
-    component Tile: Rectangle {
-        id: tile
+    // "Played yesterday", "Played 3 days ago"…, from a Unix time.
+    function since(t) {
+        if (!t) return "";
+        const days = Math.floor((Date.now() / 1000 - t) / 86400);
+        if (days <= 0) return "Played today";
+        if (days === 1) return "Played yesterday";
+        if (days < 30) return "Played " + days + " days ago";
+        return "Played " + Qt.formatDate(new Date(t * 1000), "d MMM yyyy");
+    }
+
+    // ---- pieces ---------------------------------------------------------
+
+    component SectionLabel: Text {
+        renderType: Text.NativeRendering
+        color: DrawerTheme.ink(0.75)
+        font.family: Fonts.ui
+        font.pixelSize: 13
+        font.weight: Font.Bold
+    }
+
+    component SourceChip: Rectangle {
         property string label: ""
-        property string icon: ""
-        property string glyph: ""
-        property bool focused: false
-        signal hovered()
-        signal clicked()
-
-        readonly property string iconSource: tile.icon !== "" ? Quickshell.iconPath(tile.icon, true) : ""
-
-        width: 112
-        height: 120
-        radius: 22
-        color: tile.focused ? DrawerTheme.cardRaised : DrawerTheme.card
-        border.width: 2
-        border.color: tile.focused ? DrawerTheme.primary : "transparent"
-        scale: tile.focused ? 1.04 : 1
-        Behavior on color { ColorAnimation { duration: 100 } }
-        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-
-        IconImage {
-            visible: tile.iconSource !== ""
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: tile.height * 0.2
-            implicitSize: 44
-            source: tile.iconSource
-        }
+        property bool dark: false
+        width: chipText.implicitWidth + 16
+        height: 20
+        radius: 10
+        color: dark ? Qt.rgba(0, 0, 0, 0.6) : DrawerTheme.card
         Text {
-            visible: tile.iconSource === ""
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: tile.height * 0.2 + 4
+            id: chipText
+            anchors.centerIn: parent
             renderType: Text.NativeRendering
-            text: tile.glyph
-            color: DrawerTheme.primary
-            font.family: Fonts.iconMingcute
-            font.pixelSize: 34
-        }
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 14
-            width: parent.width - 16
-            horizontalAlignment: Text.AlignHCenter
-            renderType: Text.NativeRendering
-            text: tile.label
-            color: tile.focused ? DrawerTheme.primary : DrawerTheme.secondary
+            text: parent.label
+            color: DrawerTheme.ink(0.75)
             font.family: Fonts.ui
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
+            font.pixelSize: 10
+            font.weight: Font.Bold
         }
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onEntered: tile.hovered()
-            onClicked: tile.clicked()
+    }
+
+    component Hint: Row {
+        property var face
+        property string pos: "s"
+        property alias text: hintText.text
+        spacing: 7
+        FaceButton {
+            anchors.verticalCenter: parent.verticalCenter
+            kind: parent.face ? parent.face.kind : "letter"
+            label: parent.face ? parent.face.label : ""
+            tint: parent.face ? parent.face.tint : DrawerTheme.primary
+            pos: parent.pos
         }
+        HintText { id: hintText }
     }
 
     component HintText: Text {

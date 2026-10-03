@@ -1,11 +1,13 @@
 import QtQuick
 import "../theme"
 import "../services"
+import "controller"
 
-// A controller glyph at the head of the TOOLS row, next to "hdr", present
-// only while a controller is connected. Same contract as HdrLabel.qml: an
-// indicator, not a control, so presence is the whole signal and there is
-// no "off" look. The battery follows the glyph when the pad reports one.
+// The connected controllers at the head of the TOOLS row, next to "hdr",
+// present only while there is one. Same contract as HdrLabel.qml: an
+// indicator, not a control, so presence is the signal and there is no
+// "off" look. Each pad is a silhouette that doubles as its battery gauge
+// (PadSilhouette.qml); two pads, two silhouettes.
 Item {
     id: root
 
@@ -20,30 +22,17 @@ Item {
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
+        spacing: 3
 
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: ""
-            color: root.ink.primary
-            font.family: Fonts.iconMingcute
-            font.pixelSize: 15
-        }
-        Text {
-            visible: ControllerState.battery !== null
-            anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: ControllerState.battery + "%"
-            // Red under 15 %, like the power dot: the one moment the
-            // number asks for something.
-            color: ControllerState.battery !== null && ControllerState.battery < 15 ? root.ink.danger : root.ink.primary
-            font.family: Fonts.ui
-            font.pixelSize: 13
-            font.weight: Font.Medium
-            font.features: { "tnum": 1 }
+        Repeater {
+            model: ControllerState.pads
+            PadSilhouette {
+                required property var modelData
+                anchors.verticalCenter: parent.verticalCenter
+                ink: root.ink
+                level: ControllerState.batteryOf(modelData)
+                charging: modelData.charging
+            }
         }
     }
 }

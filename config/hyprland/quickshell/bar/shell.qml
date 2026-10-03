@@ -293,6 +293,12 @@ ShellRoot {
             if (ControllerState.open) ControllerState.close();
             else ControllerState.show();
         }
+        // A controller button, as if pressed while the popup is open:
+        // up, down, left, right, a, b, x, y, lt, rt.
+        //   qs -c bar ipc call bar controllerNav y
+        function controllerNav(button: string): void {
+            if (ControllerState.open) ControllerState.nav(button);
+        }
         function pokeBrightness(): void {
             OsdState.pokeBrightness();
         }
@@ -2276,19 +2282,16 @@ ShellRoot {
     // layer-shell surface, one fewer place to keep animation timing in
     // sync by hand.
 
-    // Controller popup -- see services/ControllerState.qml. One window per
-    // screen like the OSD, mapped only on the monitor that had focus when
-    // Guide was pressed, and only while the card shows or fades.
-    Variants {
-        model: Quickshell.screens
+    // Controller popup -- see services/ControllerState.qml. Built only while
+    // it shows or fades (ControllerState.shown), on the monitor that had
+    // focus when Guide was pressed: closed, neither the window nor anything
+    // in it exists.
+    LazyLoader {
+        active: ControllerState.shown
 
         PanelWindow {
             id: controllerWindow
-            required property var modelData
-            screen: modelData
-
-            visible: modelData.name === ControllerState.screenName
-                && (ControllerState.open || controllerPopup.cardOpacity > 0)
+            screen: Quickshell.screens.find(s => s.name === ControllerState.screenName) || Quickshell.screens[0]
 
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore

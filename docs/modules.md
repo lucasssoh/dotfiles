@@ -185,17 +185,16 @@ Game controllers in the shell. Plug one in or pair it over Bluetooth, and a pill
 
 Press the **Guide button** (the Xbox, PS or Home logo) to open the controller menu:
 
-| Tile | What it does |
+| Row | What it holds |
 |---|---|
-| **Steam** | Opens Steam in Big Picture |
-| **Lutris** | Opens Lutris |
-| **Apps** | Every application, in a grid you browse with the controller |
-| **Sleep** | Suspends the machine |
-| **Turn off** | Disconnects a Bluetooth controller, which then switches off |
+| **Continue** | The game you played last, with its artwork. `A` starts it |
+| **Library** | Your other games, Steam and Lutris together, plus any game another launcher (Heroic, Bottles, itch…) put in the applications menu |
+| **Launchers** | Steam (opens in Big Picture), Lutris, Heroic, Bottles, itch: the ones installed |
+| **System** | Apps, Sleep, and Turn off for a Bluetooth controller |
 
-Steam and Lutris only show up once they're installed (see [`games`](#games)).
+Games start straight from the menu, without opening Lutris's window. Steam starts quietly in the background, since it must be running for its games. `Y` opens every app and game in a grid, with a tab for each source: `LT` `RT` switch tabs, `X` jumps to the next letter. Steam and Lutris come with the [`games`](#games) unit.
 
-While a controller is connected, a controller icon sits at the start of the bar's right-hand group, next to `hdr`, with its battery when the controller reports one. The level turns red under 15 %.
+While a controller is connected, its silhouette sits at the start of the bar's right-hand group, next to `hdr`, and fills up like a battery gauge: green while charging, red under 15 %. A wired controller with no battery to report is drawn as an outline.
 
 The menu shows your controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, and dots marking the position on a pad it doesn't know.
 
@@ -204,7 +203,10 @@ The menu shows your controller's own buttons: letters in their colours on an Xbo
 | D-pad, left stick | Move |
 | Bottom button (`A` on Xbox, ✕ on PlayStation, `B` on Switch) | Open |
 | Right button (`B`, ○, `A` on Switch) | Back, or close |
+| Top button (`Y`, △, `X` on Switch) | All apps and games |
+| Left button (`X`, □, `Y` on Switch) | In the grid, next letter |
 | Shoulder buttons (`LB` `RB`, `L1` `R1`, `L` `R`) | Volume down, up |
+| Triggers (`LT` `RT`, `L2` `R2`, `ZL` `ZR`) | In the grid, previous and next tab |
 | Guide | Close |
 
 While the menu is open, the game behind it receives nothing from the controller. The keyboard and mouse work in it too (arrows, `Return`, `Esc`).
