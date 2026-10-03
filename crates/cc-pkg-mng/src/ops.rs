@@ -61,7 +61,7 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
             ui.line(&format!("    {} {}  {}", ui.dim("·"), f.dst.display(), ui.dim("copy (root)")));
         }
         for (s, _) in u.user_services.iter().filter(|(_, on)| !on) {
-            ui.line(&format!("    {} {s}  {}", ui.dim("·"), ui.dim("enable (user)")));
+            ui.line(&format!("    {} {s}  {}", ui.dim("·"), ui.dim("enable and start (user)")));
         }
         for (s, _) in u.system_services.iter().filter(|(_, on)| !on) {
             ui.line(&format!("    {} {s}  {}", ui.dim("·"), ui.dim("enable (system, next boot)")));
@@ -270,8 +270,22 @@ fn apply_unit(
     if unit_files_linked || !to_enable.is_empty() {
         ui.run("systemctl --user daemon-reload", Command::new("systemctl").args(["--user", "daemon-reload"]))?;
     }
+    // Started as well as enabled when run from the session: the services
+    // hang off graphical-session.target, which this Hyprland session never
+    // activates (hyprland.lua starts them at login instead), so a service
+    // enabled by an upgrade would otherwise sit stopped until the next
+    // login. Only the ones enabled here and now: nothing already running is
+    // restarted. From a TTY or over SSH there is no session to start them in.
+    let in_session = std::env::var_os("WAYLAND_DISPLAY").is_some();
     for s in to_enable {
-        ui.run(&format!("enable {s} (user)"), Command::new("systemctl").args(["--user", "enable", s]))?;
+        let mut cmd = Command::new("systemctl");
+        cmd.args(["--user", "enable"]);
+        if in_session {
+            cmd.arg("--now");
+        }
+        cmd.arg(s);
+        let what = if in_session { "enable and start" } else { "enable" };
+        ui.run(&format!("{what} {s} (user)"), &mut cmd)?;
     }
 
     let unit = &units[&u.name];

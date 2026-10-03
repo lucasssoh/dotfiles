@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major and minor releases also get a name; patch releases don't. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **cc-pkg-mng:** a background service that an upgrade adds now starts right away, instead of waiting for your next login. After updating to 1.2.0, Manette stayed off until then, so the controller menu did nothing.
+
 ## 1.2.1
 
 ### Fixed

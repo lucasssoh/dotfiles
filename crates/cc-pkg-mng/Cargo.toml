@@ -1,6 +1,6 @@
 [package]
 name = "cc-pkg-mng"
-version = "1.1.1"
+version = "1.1.2"
 edition = "2024"
 description = "coucou-shell package manager"
 license-file = "../../LICENSE.md"
