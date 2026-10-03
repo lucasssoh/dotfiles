@@ -12,11 +12,14 @@
 //!             {"event":"connected","pad":{…}}     a pad arrived (not at start-up)
 //!             {"event":"disconnected","pad":{…}}
 //!             {"event":"guide","long":false|true}
-//!             {"event":"nav","button":"up|down|left|right|a|b|x|y|lb|rb|select|start|guide"}
+//!             {"event":"nav","button":"up|down|left|right|a|b|x|y|lb|rb|lt|rt|select|start|guide"}
+//!             {"event":"library","games":[…]}   in answer to "library"
 //!   accepted: {"cmd":"grab"}     the popup is open: pads navigate it, games see nothing
 //!             {"cmd":"release"}  (also implied when the grabbing client goes away)
 //!             {"cmd":"refresh"}  push "pads" again, batteries re-read
+//!             {"cmd":"library"}  the installed Steam and Lutris games (library.rs)
 
+mod library;
 mod pad;
 
 use std::collections::HashSet;
@@ -186,6 +189,9 @@ impl Daemon {
         }
         match Pad::open(name) {
             Ok(Some(mut pad)) => {
+                if announce {
+                    pad.arrived(Instant::now());
+                }
                 if self.grab_owner.is_some() {
                     let _ = pad.set_grab(true);
                 }
@@ -298,6 +304,10 @@ impl Daemon {
                 Some("release") if self.grab_owner == Some(id) => self.set_grab(None),
                 Some("refresh") => {
                     let msg = self.pads_msg();
+                    self.send_to(id, &msg);
+                }
+                Some("library") => {
+                    let msg = library::read();
                     self.send_to(id, &msg);
                 }
                 _ => {}

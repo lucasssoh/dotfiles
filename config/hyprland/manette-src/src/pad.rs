@@ -31,6 +31,8 @@ const BTN_NORTH: u16 = 0x133;
 const BTN_WEST: u16 = 0x134;
 const BTN_TL: u16 = 0x136;
 const BTN_TR: u16 = 0x137;
+const BTN_TL2: u16 = 0x138;
+const BTN_TR2: u16 = 0x139;
 const BTN_SELECT: u16 = 0x13a;
 const BTN_START: u16 = 0x13b;
 const BTN_MODE: u16 = 0x13c;
@@ -41,6 +43,11 @@ const BTN_DPAD_RIGHT: u16 = 0x223;
 
 const ABS_X: u16 = 0x00;
 const ABS_Y: u16 = 0x01;
+const ABS_Z: u16 = 0x02;
+const ABS_RX: u16 = 0x03;
+const ABS_RZ: u16 = 0x05;
+const ABS_GAS: u16 = 0x09;
+const ABS_BRAKE: u16 = 0x0a;
 const ABS_HAT0X: u16 = 0x10;
 const ABS_HAT0Y: u16 = 0x11;
 
@@ -61,6 +68,9 @@ const REPEAT_EVERY: Duration = Duration::from_millis(110);
 /// travel it has to fall back under before it can count again.
 const STICK_ON: f32 = 0.6;
 const STICK_OFF: f32 = 0.35;
+/// The press that wakes a pad up is often Guide itself: for this long after
+/// a pad arrives, Guide does not open the popup.
+const WAKE_QUIET: Duration = Duration::from_millis(2000);
 
 const fn ioc(dir: u64, nr: u64, size: usize) -> u64 {
     (dir << 30) | ((size as u64) << 16) | ((b'E' as u64) << 8) | nr
@@ -146,6 +156,13 @@ pub struct Pad {
     has_guide: bool,
     has_hat: bool,
     stick: [Option<Axis>; 2],
+    /// The analog triggers, LT then RT, as (code, range), when the pad has
+    /// them. Which codes they are depends on the driver: xpad reports
+    /// ABS_Z/ABS_RZ, the Bluetooth Xbox pad ABS_BRAKE/ABS_GAS, and uses
+    /// ABS_Z/ABS_RZ for the right stick instead.
+    triggers: Option<[(u16, Axis); 2]>,
+    trigger_down: [bool; 2],
+    quiet_until: Option<Instant>,
 
     grabbed: bool,
     dropped: bool,
@@ -212,6 +229,14 @@ impl Pad {
             (half > 0.0).then(|| Axis { centre: info.minimum as f32 + half, half })
         };
 
+        let triggers = if bit(&abs, ABS_BRAKE) && bit(&abs, ABS_GAS) {
+            axis(ABS_BRAKE).zip(axis(ABS_GAS)).map(|(l, r)| [(ABS_BRAKE, l), (ABS_GAS, r)])
+        } else if bit(&abs, ABS_RX) && bit(&abs, ABS_Z) && bit(&abs, ABS_RZ) {
+            axis(ABS_Z).zip(axis(ABS_RZ)).map(|(l, r)| [(ABS_Z, l), (ABS_RZ, r)])
+        } else {
+            None
+        };
+
         let mut pad = Pad {
             id: id.to_string(),
             name: string_ioctl(fd, eviocgname),
@@ -227,6 +252,9 @@ impl Pad {
             has_guide: bit(&keys, BTN_MODE),
             has_hat: bit(&abs, ABS_HAT0X),
             stick: [axis(ABS_X), axis(ABS_Y)],
+            triggers,
+            trigger_down: [false; 2],
+            quiet_until: None,
             file,
             grabbed: false,
             dropped: false,
@@ -241,6 +269,12 @@ impl Pad {
         };
         pad.apply_mask()?;
         Ok(Some(pad))
+    }
+
+    /// Called for a pad that just arrived, as opposed to one already there
+    /// when the daemon started.
+    pub fn arrived(&mut self, now: Instant) {
+        self.quiet_until = Some(now + WAKE_QUIET);
     }
 
     pub fn describe(&self) -> Value {
@@ -292,6 +326,7 @@ impl Pad {
         self.stick_dir = None;
         self.held = None;
         self.repeat_at = None;
+        self.trigger_down = [false; 2];
         self.apply_mask()
     }
 
@@ -308,12 +343,16 @@ impl Pad {
         }
         if self.grabbed {
             set(&mut types, EV_ABS);
-            for k in [BTN_SOUTH, BTN_EAST, BTN_NORTH, BTN_WEST, BTN_TL, BTN_TR,
+            for k in [BTN_SOUTH, BTN_EAST, BTN_NORTH, BTN_WEST, BTN_TL, BTN_TR, BTN_TL2, BTN_TR2,
                       BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT] {
                 set(&mut keys, k);
             }
             for a in [ABS_X, ABS_Y, ABS_HAT0X, ABS_HAT0Y] {
                 set(&mut abs, a);
+            }
+            if let Some(t) = self.triggers {
+                set(&mut abs, t[0].0);
+                set(&mut abs, t[1].0);
             }
         }
         for (kind, bits) in [(0u32, &mut types[..]), (EV_KEY as u32, &mut keys[..]), (EV_ABS as u32, &mut abs[..])] {
@@ -366,6 +405,9 @@ impl Pad {
     fn idle_key(&mut self, code: u16, value: i32, now: Instant, out: &mut Vec<Out>) {
         match (code, value) {
             (BTN_MODE, 1) => {
+                if self.quiet_until.is_some_and(|t| now < t) {
+                    return;
+                }
                 self.guide_down = Some(now);
                 self.long_sent = false;
             }
@@ -410,6 +452,8 @@ impl Pad {
             BTN_WEST => "x",
             BTN_TL => "lb",
             BTN_TR => "rb",
+            BTN_TL2 => "lt",
+            BTN_TR2 => "rt",
             BTN_SELECT => "select",
             BTN_START => "start",
             BTN_MODE => "guide",
@@ -418,6 +462,19 @@ impl Pad {
     }
 
     fn nav_abs(&mut self, code: u16, value: i32, now: Instant, out: &mut Vec<Out>) {
+        if let Some(t) = self.triggers {
+            if let Some(i) = t.iter().position(|(c, _)| *c == code) {
+                let a = t[i].1;
+                let level = (value as f32 - (a.centre - a.half)) / (2.0 * a.half);
+                if !self.trigger_down[i] && level > 0.6 {
+                    self.trigger_down[i] = true;
+                    out.push(Out::Nav(if i == 0 { "lt" } else { "rt" }));
+                } else if self.trigger_down[i] && level < 0.3 {
+                    self.trigger_down[i] = false;
+                }
+                return;
+            }
+        }
         match code {
             ABS_HAT0X | ABS_HAT0Y if self.has_hat => {
                 let (neg, pos) = if code == ABS_HAT0X { ("left", "right") } else { ("up", "down") };
