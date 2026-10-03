@@ -14,3 +14,4 @@ singleton LauncherActionsState 1.0 LauncherActionsState.qml
 singleton CalendarState 1.0 CalendarState.qml
 singleton HyprGaps 1.0 HyprGaps.qml
 singleton KeybindsState 1.0 KeybindsState.qml
+singleton ControllerState 1.0 ControllerState.qml

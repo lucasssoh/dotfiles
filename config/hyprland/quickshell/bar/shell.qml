@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import "modules" as Modules
 import "modules/veille"
 import "modules/balise"
@@ -10,6 +11,7 @@ import "modules/power"
 import "modules/mixer"
 import "modules/launcher"
 import "modules/calendar"
+import "modules/controller"
 import "services"
 import "theme"
 
@@ -285,6 +287,12 @@ ShellRoot {
         // services/OsdState.qml's header) -- keybinds.lua calls this
         // right after brightnessctl so the OSD shows the freshly-set
         // level. `quickshell ipc call -c bar bar pokeBrightness`.
+        // The controller popup without a controller: from a key binding,
+        // or to look at it. `qs -c bar ipc call bar controllerMenu`.
+        function controllerMenu(): void {
+            if (ControllerState.open) ControllerState.close();
+            else ControllerState.show();
+        }
         function pokeBrightness(): void {
             OsdState.pokeBrightness();
         }
@@ -1681,6 +1689,11 @@ ShellRoot {
                     // without stranding a spacer behind it.
                     Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen); ink: toolsInk }
 
+                    // A controller glyph while one is connected, same
+                    // indicator contract as "hdr" just above: see
+                    // ControllerIndicator.qml.
+                    Modules.ControllerIndicator { ink: toolsInk }
+
                     // The Hdr badge used to open this row (before the
                     // display-layout status, asked for at the time). It
                     // moved into Balise's SYSTEM block, next to Night
@@ -2262,4 +2275,62 @@ ShellRoot {
     // living inside this window rather than in their own: one fewer
     // layer-shell surface, one fewer place to keep animation timing in
     // sync by hand.
+
+    // Controller popup -- see services/ControllerState.qml. One window per
+    // screen like the OSD, mapped only on the monitor that had focus when
+    // Guide was pressed, and only while the card shows or fades.
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: controllerWindow
+            required property var modelData
+            screen: modelData
+
+            visible: modelData.name === ControllerState.screenName
+                && (ControllerState.open || controllerPopup.cardOpacity > 0)
+
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+            // The keyboard drives it too (arrows, Enter, Escape), and
+            // nothing behind should take keys while it is up.
+            WlrLayershell.keyboardFocus: ControllerState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            implicitWidth: controllerPopup.implicitWidth
+            implicitHeight: controllerPopup.implicitHeight
+            mask: Region {
+                width: ControllerState.open ? controllerPopup.implicitWidth : 0
+                height: ControllerState.open ? controllerPopup.implicitHeight : 0
+            }
+
+            ControllerPopup { id: controllerPopup }
+        }
+    }
+
+    // The pill announcing a controller that just arrived. Bottom-centre,
+    // where the OSD sits, and never taking input.
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+
+            visible: (ControllerState.banner !== null || controllerBanner.pillOpacity > 0)
+                && (!Hyprland.focusedMonitor || Hyprland.focusedMonitor.name === modelData.name)
+
+            focusable: false
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+            anchors { bottom: true }
+            margins.bottom: 48
+            implicitWidth: controllerBanner.implicitWidth
+            implicitHeight: controllerBanner.implicitHeight
+            mask: Region { width: 0; height: 0 }
+
+            ControllerBanner { id: controllerBanner }
+        }
+    }
 }
