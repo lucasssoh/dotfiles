@@ -29,7 +29,7 @@ fn the_state_is_rebuilt_from_the_journal_and_undo_is_one_more_line() {
     let now = at(MON, "21:50");
     let a = "ALGO/Ch1/10_Bloc/11_A.md";
     s.record(Event::Files { items: vec![a.into()], inclusion: Inclusion::Planned }, now).unwrap();
-    s.record(Event::Started { session: "2026-10-05-evening1".into(), at: at(MON, "20:40") }, now).unwrap();
+    s.record(Event::Started { session: "2026-10-05-evening1".into(), at: at(MON, "20:40"), planned: None }, now).unwrap();
     let mut ex = BTreeMap::new();
     ex.insert(1, Exercise::Solo);
     ex.insert(2, Exercise::Failed);

@@ -695,6 +695,7 @@ impl Service {
         for session in missed {
             let _ = self.store.record(Event::Missed { session }, now);
         }
+        self.suivi_resume();
         let previous = self.plan.clone();
         let fresh = self.compute(&self.store.state, &[], &[], (previous.made.is_some()).then_some(&previous));
         let changed = fresh.sessions != previous.sessions || fresh.offers != previous.offers;
@@ -843,7 +844,8 @@ impl Service {
     /// Starts a session and opens its first file in Liseuse.
     pub(crate) fn start(&mut self, session: &str) -> io::Result<()> {
         let now = self.now();
-        self.store.record(Event::Started { session: session.into(), at: now }, now)?;
+        let planned = self.plan.sessions.iter().find(|s| s.id == session).cloned().map(Box::new);
+        self.store.record(Event::Started { session: session.into(), at: now, planned }, now)?;
         self.session_started(session);
         let item = self.plan.sessions.iter().find(|s| s.id == session).and_then(|s| {
             s.parts.iter().find_map(|p| match &p.work {
@@ -989,7 +991,7 @@ impl Service {
         let io = |e: io::Error| e.to_string();
         let session_arg = |me: &Self| -> Result<Session, String> {
             match s("session") {
-                Some(id) => me.plan.session(&id).cloned().ok_or_else(|| format!("{id}?")),
+                Some(id) => me.session_any(&id).ok_or_else(|| format!("{id}?")),
                 None => me
                     .plan
                     .sessions
@@ -1061,6 +1063,15 @@ impl Service {
                 let x = session_arg(self)?;
                 let d = self.draft(&x.id).ok_or("draft")?;
                 (draft_text(&d, &x, lang), serde_json::to_value(&d).unwrap())
+            }
+            "week" => {
+                let days = cmd.get("days").and_then(Value::as_i64).unwrap_or(7) as i32;
+                (String::new(), self.week(now.date, days))
+            }
+            "closing" => {
+                let x = session_arg(self)?;
+                let v = self.closing(&x.id).ok_or("closing")?;
+                (String::new(), v)
             }
             "close" => {
                 let x = session_arg(self)?;

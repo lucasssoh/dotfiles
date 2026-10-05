@@ -428,6 +428,25 @@ impl Service {
 
     // ─── Session ─────────────────────────────────────────────────────────
 
+    /// A session started again (a close undone) is followed again.
+    pub(crate) fn suivi_resume(&mut self) {
+        if self.suivi.tracker.is_some() {
+            return;
+        }
+        let today = self.now().date.to_string();
+        let id = self
+            .store
+            .state
+            .outcomes
+            .iter()
+            .find(|(id, o)| matches!(o, Outcome::Started { .. }) && id.starts_with(&today))
+            .map(|(id, _)| id.clone());
+        if let Some(id) = id {
+            self.suivi.tracker = Some(Tracker::start(Some(id), now_secs()));
+            self.save_tracker(true);
+        }
+    }
+
     pub(crate) fn session_started(&mut self, id: &str) {
         let now = now_secs();
         self.flush_free();
@@ -479,9 +498,14 @@ impl Service {
         })
     }
 
+    /// A session from today's plan, or one started another day.
+    pub(crate) fn session_any(&self, id: &str) -> Option<crate::plan::Session> {
+        self.plan.session(id).cloned().or_else(|| self.store.state.started.get(id).cloned())
+    }
+
     /// The pre-filled close of a session.
     pub(crate) fn draft(&mut self, id: &str) -> Option<Draft> {
-        let session = self.plan.sessions.iter().find(|s| s.id == id)?.clone();
+        let session = self.session_any(id)?;
         let mut t = self.suivi.tracker.clone().filter(|t| t.session.as_deref() == Some(id)).unwrap_or_default();
         t.advance(now_secs());
         let maps: BTreeMap<String, Map> = t.dwell.keys().filter_map(|i| Some((i.clone(), self.map_of(i)?.clone()))).collect();

@@ -250,17 +250,32 @@ impl Service {
     /// Today, for the drawer's first page: courses, sessions and offers in
     /// order, each with what it is and how it went.
     pub(crate) fn today(&self) -> Value {
+        self.day_rows(self.now().date)
+    }
+
+    /// Several days from `from`, each with its name and its rows.
+    pub(crate) fn week(&self, from: crate::time::Date, days: i32) -> Value {
+        let lang = self.lang();
+        Value::Array(
+            (0..days)
+                .map(|i| from.add(i))
+                .map(|d| json!({ "date": d.to_string(), "label": i18n::date(d, lang), "rows": self.day_rows(d) }))
+                .collect(),
+        )
+    }
+
+    fn day_rows(&self, date: crate::time::Date) -> Value {
         let lang = self.lang();
         let now = self.now();
         let (courses, _) = self.timetable();
         let mut rows: Vec<(Hm, Value)> = Vec::new();
-        for c in courses.iter().filter(|c| c.start.date == now.date) {
+        for c in courses.iter().filter(|c| c.start.date == date) {
             rows.push((
                 c.start.time,
                 json!({ "type": "course", "start": c.start.time.to_string(), "end": c.end.time.to_string(), "title": c.title, "past": c.end <= now }),
             ));
         }
-        for s in self.plan.sessions.iter().chain(&self.plan.offers).filter(|s| s.date == now.date && !s.parts.is_empty()) {
+        for s in self.plan.sessions.iter().chain(&self.plan.offers).filter(|s| s.date == date && !s.parts.is_empty()) {
             let state = match self.store.state.outcomes.get(&s.id) {
                 Some(Outcome::Closed { .. }) => "closed",
                 Some(Outcome::Skipped) => "skipped",
@@ -295,5 +310,90 @@ impl Service {
         }
         rows.sort_by_key(|r| r.0);
         Value::Array(rows.into_iter().map(|r| r.1).collect())
+    }
+
+    /// The close form of a session: what Liseuse saw, in a sentence, and per
+    /// task what can be declared, pre-filled. Sheets get their sections and
+    /// exercises; anything else is done or not.
+    pub(crate) fn closing(&mut self, id: &str) -> Option<Value> {
+        let s = self.session_any(id)?;
+        let d = self.draft(id)?;
+        let lang = self.lang();
+        let fr = lang == Lang::Fr;
+        let span = |r: &[u32]| match (r.first(), r.last()) {
+            (Some(a), Some(b)) if a == b => format!("p. {a}"),
+            (Some(a), Some(b)) => format!("p. {a}-{b}"),
+            _ => String::new(),
+        };
+        let seen: Vec<String> = d
+            .files
+            .iter()
+            .map(|f| {
+                let name = i18n::item_name(&f.item);
+                let read = match (f.read_upto, f.read.is_empty()) {
+                    (Some(u), _) if fr => format!("§1-{u} lus ({})", span(&f.read)),
+                    (Some(u), _) => format!("§1-{u} read ({})", span(&f.read)),
+                    (None, false) if fr => format!("{} pages lues", f.read.len()),
+                    (None, false) => format!("{} pages read", f.read.len()),
+                    _ => String::new(),
+                };
+                let skim = match (f.skimmed.len(), fr) {
+                    (0, _) => String::new(),
+                    (n, true) => format!("{n} pages survolées"),
+                    (n, false) => format!("{n} pages skimmed"),
+                };
+                let what: Vec<String> = [read, skim].into_iter().filter(|x| !x.is_empty()).collect();
+                format!("{name}{}{}", if fr { " : " } else { ": " }, what.join(", "))
+            })
+            .collect();
+        let parts: Vec<Value> = s
+            .parts
+            .iter()
+            .zip(&d.parts)
+            .map(|(p, r)| {
+                let label = match &p.domain {
+                    Some(dm) => format!("{dm} · {}", i18n::work(&p.work, lang)),
+                    None => i18n::work(&p.work, lang),
+                };
+                match &p.work {
+                    Work::Study { item, sections, exercises } => {
+                        let it = self.catalogue.get(item);
+                        let secs: Vec<Value> = it
+                            .map(|i| i.sections.iter().map(|x| json!({ "num": x.num, "title": x.title })).collect())
+                            .unwrap_or_default();
+                        let seen_upto = d.files.iter().find(|f| f.item == *item).and_then(|f| f.read_upto);
+                        let done_before = self.store.state.progress.items.get(item).map_or(0, |pg| pg.read_upto);
+                        json!({
+                            "kind": "study",
+                            "task": p.task,
+                            "label": label,
+                            "planned": p.minutes,
+                            "sections": secs,
+                            "planned_sections": sections,
+                            "read_upto": r.read_upto.unwrap_or(done_before).max(done_before),
+                            "seen_upto": seen_upto,
+                            "exercises": it.map_or(0, |i| i.exercises),
+                            "planned_exercises": exercises,
+                            "already": self.store.state.progress.items.get(item).map(|pg| &pg.exercises),
+                        })
+                    }
+                    _ => json!({ "kind": "other", "task": p.task, "label": label, "planned": p.minutes, "done": r.done }),
+                }
+            })
+            .collect();
+        let minutes = |m: i32| format!("{} h {:02}", m / 60, m % 60);
+        Some(json!({
+            "session": s.id,
+            "title": self.headline(&s),
+            "start": s.start.to_string(),
+            "end": s.end.to_string(),
+            "date": s.date.to_string(),
+            "effective": d.effective_minutes,
+            "effective_text": minutes(d.effective_minutes),
+            "media_minutes": d.media_minutes,
+            "game_minutes": d.game_minutes,
+            "seen": seen,
+            "parts": parts,
+        }))
     }
 }

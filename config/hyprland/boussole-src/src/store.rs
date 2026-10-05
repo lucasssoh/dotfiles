@@ -101,7 +101,13 @@ mod number_keys {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "ev", rename_all = "kebab-case")]
 pub enum Event {
-    Started { session: String, at: Local },
+    Started {
+        session: String,
+        at: Local,
+        /// The session as planned when it started, to close it on another day.
+        #[serde(default)]
+        planned: Option<Box<crate::plan::Session>>,
+    },
     /// "Later": always to a precise time.
     Postponed { session: String, to: Local },
     /// "Not tonight".
@@ -188,6 +194,8 @@ pub struct State {
     pub missed_streak: u32,
     /// Notes left at "Close", per task.
     pub notes: Vec<(String, Date, String)>,
+    /// Sessions as they were when started (until closed).
+    pub started: BTreeMap<String, crate::plan::Session>,
     /// Free reading per file: (day, § reached), the latest.
     pub free_reading: BTreeMap<String, (Date, u32)>,
     /// Per domain, (actual, planned) minutes of closed parts, oldest first.
@@ -327,8 +335,11 @@ pub fn reduce(entries: &[Entry]) -> State {
             continue;
         }
         match &e.event {
-            Event::Started { session, at } => {
+            Event::Started { session, at, planned } => {
                 st.outcomes.insert(session.clone(), Outcome::Started { at: *at });
+                if let Some(p) = planned {
+                    st.started.insert(session.clone(), (**p).clone());
+                }
                 if session.contains("-evening") {
                     st.starts.push((at.date, at.time));
                 }
@@ -358,6 +369,7 @@ pub fn reduce(entries: &[Entry]) -> State {
                 let date = session_date(session).unwrap_or(at.date);
                 // A session started late at night still belongs to its day.
                 st.outcomes.insert(session.clone(), Outcome::Closed { at: *at });
+                st.started.remove(session);
                 for p in parts {
                     apply_part(&mut st, date, p);
                     if let (Some(d), true) = (domain_of(&p.task), p.planned > 0 && p.minutes > 0) {
