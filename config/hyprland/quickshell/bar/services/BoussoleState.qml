@@ -39,6 +39,53 @@ Singleton {
     // ---- the drawer ---------------------------------------------------
     property bool panelOpen: false
     property var activeScreen: null
+    // "today" | "week" | "close"
+    property string page: "today"
+    // The close form being filled, as the service describes it.
+    property var closing: null
+    property var week: []
+    // The page takes the keyboard (the note of a close): the bar's window
+    // turns focusable for it, like Balise's password field.
+    readonly property bool textInput: root.panelOpen && root.page === "close"
+
+    function show(page) {
+        root.page = page;
+        if (page === "week") root.request({ cmd: "week", days: 7 }, (r) => root.week = r.data || []);
+    }
+
+    // Opens the close of a session (today's, or one left open another day).
+    function openClose(session, screen) {
+        root.request({ cmd: "closing", session: session }, (r) => {
+            if (!r.ok) return;
+            root.closing = r.data;
+            root.page = "close";
+            if (!root.panelOpen) root.togglePanel(screen || Quickshell.screens[0]);
+        });
+    }
+
+    function submitClose(parts, mediaForCourse) {
+        if (!root.closing) return;
+        root._send({ cmd: "close", session: root.closing.session, parts: parts, media_for_course: mediaForCourse });
+        root.justClosed = root.closing.session;
+        undoTimer.restart();
+        root.closing = null;
+        root.page = "today";
+    }
+
+    // "Closed · Undo" stays this long under Today.
+    property string justClosed: ""
+    Timer {
+        id: undoTimer
+        interval: 10000
+        onTriggered: root.justClosed = ""
+    }
+    // Takes the close back and opens its form again.
+    function undoClose() {
+        const s = root.justClosed;
+        root.justClosed = "";
+        undoTimer.stop();
+        root.request({ cmd: "undo" }, () => root.openClose(s));
+    }
 
     function togglePanel(screen) {
         if (root.panelOpen && root.activeScreen === screen) {
@@ -52,6 +99,8 @@ Singleton {
         LauncherActionsState.close();
         CalendarState.close();
         root.activeScreen = screen;
+        // A new opening starts on today, unless a close is under way.
+        if (root.page !== "close") root.page = "today";
         root.panelOpen = true;
     }
 
@@ -142,6 +191,15 @@ Singleton {
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
     function setActivity(idle, media) { root._send({ cmd: "activity", idle: idle, media: media }); }
 
+    // Commands whose answer is wanted: called back with the reply.
+    property var _pending: ({})
+    function request(obj, cb) {
+        const list = root._pending[obj.cmd] || [];
+        list.push(cb);
+        root._pending[obj.cmd] = list;
+        root._send(obj);
+    }
+
     function _handleLine(line) {
         let msg;
         try {
@@ -154,6 +212,9 @@ Singleton {
             root.nowMs = Date.now();
         } else if (msg.event === "plan") {
             root._send({ cmd: "status" });
+        } else if (msg.reply && (root._pending[msg.reply] || []).length > 0) {
+            const cb = root._pending[msg.reply].shift();
+            cb(msg);
         } else if (msg.reply === "answer") {
             root.ackText = msg.text || "";
             // Nothing to say (a dismissal, a refusal): close at once.

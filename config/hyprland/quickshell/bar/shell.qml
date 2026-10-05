@@ -655,9 +655,12 @@ ShellRoot {
             // rather than seized the moment the flag goes up. Scoped per
             // screen (`activeScreen`) so the other monitor's bar, which
             // has no form on it, stays inert.
-            focusable: BaliseState.textInputActive
-                && BaliseState.panelOpen
-                && BaliseState.activeScreen === bar.screen
+            // Boussole's close form has a note field: the same need, the
+            // same scope.
+            focusable: (BaliseState.textInputActive
+                        && BaliseState.panelOpen
+                        && BaliseState.activeScreen === bar.screen)
+                       || (BoussoleState.textInput && BoussoleState.activeScreen === bar.screen)
             visible: !shell.zenMode
             // exclusiveZone stays at the main bar's own height (24), not
             // the window's full implicitHeight below (30) -- the metrics
@@ -1194,6 +1197,7 @@ ShellRoot {
                 drawerItems: [
                     BoussoleHome {
                         drawerOpen: BoussoleState.panelOpen && BoussoleState.activeScreen === bar.screen
+                        maxHeight: bar.screen ? bar.screen.height - 160 : 900
                     }
                 ]
 
