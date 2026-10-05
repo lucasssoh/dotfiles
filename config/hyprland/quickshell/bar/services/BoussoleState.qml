@@ -248,6 +248,21 @@ Singleton {
     onMediaPlayingChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
     onSessionActiveChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
 
+    // Games during a session ask first (the controller popup, fuzzel's
+    // launch prefix), unless the lock is off in the settings.
+    readonly property bool lockGames: root.sessionActive && root.status.gate !== false
+    readonly property string lockText: {
+        if (!root.tracking) return "";
+        for (const r of root.today) {
+            if (r.id === root.tracking.session)
+                return root.tr("Session ", "Séance ") + r.title + root.tr(" until ", " jusqu'à ") + r.end;
+        }
+        return root.tr("A session is under way", "Une séance est en cours");
+    }
+    function pauseForGame() {
+        if (root.tracking) root._send({ cmd: "pause-session", session: root.tracking.session });
+    }
+
     // Veille is quiet during a session, until bedtime.
     readonly property bool holdsVeille: {
         if (!root.sessionActive) return false;

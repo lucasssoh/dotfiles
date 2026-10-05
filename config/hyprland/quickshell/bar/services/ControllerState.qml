@@ -120,6 +120,25 @@ Singleton {
         root.close();
     }
 
+    // A game during a Boussole session asks first, here in the popup, with
+    // the pad: A launches anyway (the session waits), B goes back to it.
+    property var pendingLaunch: null
+    function launchGame(argv) {
+        if (BoussoleState.lockGames) {
+            root.pendingLaunch = argv;
+            root.page = "confirm";
+            return;
+        }
+        root.launch(argv);
+    }
+    function confirmLaunch() {
+        const argv = root.pendingLaunch;
+        root.pendingLaunch = null;
+        if (!argv) return;
+        BoussoleState.pauseForGame();
+        root.launch(argv);
+    }
+
     function nudgeVolume(step) {
         const sink = Pipewire.defaultAudioSink;
         if (!sink || !sink.audio) return;

@@ -151,11 +151,15 @@ Item {
     // ---- actions --------------------------------------------------------
 
     function play(g) {
-        if (g.launch) ControllerState.launch(g.launch);
+        if (g.launch) ControllerState.launchGame(g.launch);
         else if (g.entry) { g.entry.execute(); ControllerState.close(); }
     }
     function openLauncher(l) {
-        if (l.def.argv) ControllerState.launch(l.def.argv);
+        // Steam, Lutris, Heroic: game launchers, asked about during a session.
+        if (l.def.argv) {
+            if (/steam|lutris|heroic/.test(l.def.argv.join(" ").toLowerCase())) ControllerState.launchGame(l.def.argv);
+            else ControllerState.launch(l.def.argv);
+        }
         else { l.entry.execute(); ControllerState.close(); }
     }
     function runSystem(key) {
@@ -169,6 +173,11 @@ Item {
     }
 
     function handle(button) {
+        if (ControllerState.page === "confirm") {
+            if (button === "a") ControllerState.confirmLaunch();
+            else if (button === "b") ControllerState.close();
+            return;
+        }
         if (ControllerState.page === "apps") {
             if (button === "left") appGrid.moveCurrentIndexLeft();
             else if (button === "right") appGrid.moveCurrentIndexRight();
@@ -762,12 +771,48 @@ Item {
                 }
             }
 
+            // ---- a game during a Boussole session ------------------------
+            Column {
+                visible: ControllerState.page === "confirm"
+                width: parent.width
+                spacing: 10
+                topPadding: 10
+                bottomPadding: 10
+                Text {
+                    width: parent.width
+                    renderType: Text.NativeRendering
+                    text: BoussoleState.lockText
+                    color: DrawerTheme.primary
+                    font.family: Fonts.ui
+                    font.pixelSize: 20
+                    font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    width: parent.width
+                    renderType: Text.NativeRendering
+                    text: BoussoleState.tr("Launch anyway? The session waits, its time is not counted while you play.",
+                                           "Lancer quand même ? La séance attend, son temps n'est pas compté pendant que tu joues.")
+                    color: DrawerTheme.secondary
+                    font.family: Fonts.ui
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                }
+            }
+
             // ---- what the buttons do ------------------------------------
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 20
-                Hint { face: ControllerState.labels.south; pos: "s"; text: "Open" }
-                Hint { face: ControllerState.labels.east; pos: "e"; text: ControllerState.page === "apps" ? "Back" : "Close" }
+                Hint {
+                    face: ControllerState.labels.south; pos: "s"
+                    text: ControllerState.page === "confirm" ? BoussoleState.tr("Launch anyway", "Lancer quand même") : "Open"
+                }
+                Hint {
+                    face: ControllerState.labels.east; pos: "e"
+                    text: ControllerState.page === "confirm" ? BoussoleState.tr("Back to the session", "Retour à la séance")
+                        : ControllerState.page === "apps" ? "Back" : "Close"
+                }
                 Hint { visible: ControllerState.page === "home"; face: ControllerState.labels.north; pos: "n"; text: "All games and apps" }
                 Row {
                     visible: ControllerState.page === "apps"
