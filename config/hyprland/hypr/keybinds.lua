@@ -83,7 +83,7 @@ local open = "~/.config/hypr/scripts/coucou-open "
 bind(mod .. "+ Return",  hl.dsp.exec_cmd(open .. "terminal"), { description = "Terminal" })
 bind(mod .. "+ E",       hl.dsp.exec_cmd(open .. "files"), { description = "Files" })
 bind(mod .. "+ B",       hl.dsp.exec_cmd(open .. "browser"), { description = "Browser" })
-bind(mod .. "+ Space",   hl.dsp.exec_cmd("fuzzel"), { description = "Launcher" })
+bind(mod .. "+ Space",   hl.dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"), { description = "Launcher" })
 -- Clipboard history: fuzzel shows the text column, returns the whole
 -- "id<TAB>text" line that cliphist decode expects.
 bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu --with-nth=2 --only-match --prompt='Clipboard  ' | cliphist decode | wl-copy"), { description = "Clipboard" })
@@ -99,6 +99,9 @@ bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"), { 
 
 -- Boussole: the study planner's drawer, under its place in the bar.
 bind(mod .. "+ D",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleBoussole"), { description = "Boussole" })
+-- Quick add: one line in fuzzel ("examen L&MC 18/12"), shown as understood
+-- before it is kept. Does nothing without the boussole unit.
+bind(mod .. "+SHIFT+ D", hl.dsp.exec_cmd("[ -x $HOME/.local/bin/boussole ] && $HOME/.local/bin/boussole add --fuzzel"), { description = "Boussole: quick add" })
 
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
