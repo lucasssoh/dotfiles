@@ -48,7 +48,20 @@ Singleton {
     property var week: []
     // The page takes the keyboard (the note of a close): the bar's window
     // turns focusable for it, like Balise's password field.
-    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus")
+    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus" || root.page === "setup")
+    readonly property bool setupNeeded: root.status.setup_needed === true
+    // The first run: 1 courses, 2 timetable, 3 subjects, 4 rhythm, 5 ready.
+    property int setupStep: 1
+    property var suggestions: ({})
+    function openSetup() {
+        root.setupStep = 1;
+        root.page = "setup";
+        root.loadPlus();
+        root.refreshFiles();
+    }
+    function loadSuggestions() {
+        root.request({ cmd: "suggestions" }, (r) => root.suggestions = r.data || ({}));
+    }
 
     property var files: null
     property var progress: []

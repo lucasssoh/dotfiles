@@ -459,7 +459,8 @@ ShellRoot {
         function showBoussole(page: string): void {
             if (!BoussoleState.panelOpen) BoussoleState.togglePanel(Quickshell.screens[0]);
             // "plus/calendars": a page of Plus.
-            if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
+            if (page === "setup") BoussoleState.openSetup();
+            else if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
             else BoussoleState.show(page);
         }
         // Poked by hypr/scripts/agenda.py after each add/delete.
@@ -1201,7 +1202,13 @@ ShellRoot {
                 drawerRadius: 28
                 drawerGap: 0
                 drawerTop: bar.bandHeight
+                // Flush with the clock's left edge, so with the screen's,
+                // the way the notification centre sits on the right one
+                // ("aligne avec le bord gauche comme notif avec bord
+                // droit"): the anchor that puts the band's outer edge
+                // at the clock island's x.
                 drawerAnchorX: boussoleIsland.margin + boussoleIsland.drawerContentWidth / 2
+                               - (boussoleIsland.x - clockIsland.x)
 
                 drawerItems: [
                     BoussoleHome {

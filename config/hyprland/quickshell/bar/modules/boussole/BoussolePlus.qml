@@ -106,6 +106,27 @@ Column {
             detail: root.b.tr("typical week · holidays · status", "semaine type · vacances · statut")
         }
         Section { text: root.b.tr("The app", "L'appli") }
+        Rectangle {
+            width: root.width
+            height: 56
+            radius: 14
+            color: rerunHit.containsMouse ? DrawerTheme.cardHover : "transparent"
+            border.width: 1
+            border.color: DrawerTheme.faint
+            Column {
+                x: 14
+                anchors.verticalCenter: parent.verticalCenter
+                BoussoleText { text: root.b.tr("Run the first launch again", "Refaire le premier lancement"); font.weight: Font.Bold }
+                BoussoleText { text: root.b.tr("nothing is erased, every step is pre-filled", "rien n'est effacé, chaque étape est préremplie"); color: DrawerTheme.secondary; font.pixelSize: 13 }
+            }
+            MouseArea {
+                id: rerunHit
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.b.openSetup()
+            }
+        }
         Entry {
             target: "settings"
             title: root.b.tr("Settings", "Réglages")

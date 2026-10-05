@@ -31,6 +31,31 @@ Column {
         color: DrawerTheme.secondary
     }
 
+    // ---- nothing set up yet ------------------------------------------------
+    Rectangle {
+        visible: root.b.daemonConnected && root.b.setupNeeded
+        width: parent.width
+        height: setupCol.implicitHeight + 28
+        radius: 18
+        color: DrawerTheme.card
+        Column {
+            id: setupCol
+            x: 16
+            y: 14
+            width: parent.width - 32
+            spacing: 8
+            BoussoleText { width: parent.width; text: root.b.tr("Let's set Boussole up", "On règle Boussole"); font.pixelSize: 17; font.weight: Font.Bold }
+            BoussoleText {
+                width: parent.width
+                text: root.b.tr("Five short steps: your courses, your timetable, how they go together, your rhythm. Everything can be changed later in More.",
+                                "Cinq étapes courtes : tes cours, ton emploi du temps, le lien entre les deux, ton rythme. Tout se change ensuite dans Plus.")
+                color: DrawerTheme.secondary
+                font.pixelSize: 13
+            }
+            BoussolePill { primary: true; text: root.b.tr("Start", "Commencer"); onClicked: root.b.openSetup() }
+        }
+    }
+
     // ---- just closed: a way back ------------------------------------------
     Rectangle {
         visible: root.b.justClosed !== ""

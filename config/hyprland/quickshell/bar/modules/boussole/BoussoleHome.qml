@@ -32,7 +32,7 @@ Item {
 
     Row {
         id: tabs
-        visible: root.b.page !== "close"
+        visible: root.b.page !== "close" && root.b.page !== "setup"
         anchors.left: parent.left
         anchors.leftMargin: 20
         anchors.top: handle.bottom
@@ -77,6 +77,7 @@ Item {
                            : root.b.page === "progress" ? progress
                            : root.b.page === "files" ? files
                            : root.b.page === "plus" ? plus
+                           : root.b.page === "setup" ? setup
                            : (root.b.page === "close" && root.b.closing) ? closing : today
             onLoaded: flick.contentY = 0
         }
@@ -88,4 +89,5 @@ Item {
     Component { id: progress; BoussoleProgress {} }
     Component { id: files; BoussoleFiles {} }
     Component { id: plus; BoussolePlus {} }
+    Component { id: setup; BoussoleSetup {} }
 }
