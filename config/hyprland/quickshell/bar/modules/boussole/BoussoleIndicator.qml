@@ -2,10 +2,11 @@ import QtQuick
 import "../../theme"
 import "../../services"
 
-// Boussole's place in the bar, right of the clock. Text only while
-// nothing presses; an outline under fifteen minutes; during a session a
-// ring that empties over the Pomodoro's 25 minutes. Gone entirely when
-// there is nothing to say (no service, a pause, nothing planned).
+// Boussole's place in the bar, right of the clock, always there once
+// Boussole is installed. Text only while nothing presses; an outline under
+// fifteen minutes; during a session a ring that empties over the
+// Pomodoro's 25 minutes. With nothing going on, the compass alone (dimmed
+// when the service is stopped), or "Set up" / "Paused".
 // A click, or Super + D, opens the drawer.
 Item {
     id: root
@@ -40,7 +41,11 @@ Item {
         if (root.b.gap) return "gap";
         if (root.b.next && root.minutesToNext >= 0 && root.minutesToNext < 15) return "soon";
         if (root.b.next && !root.b.paused) return "next";
-        return "";
+        // Nothing going on: the place stays, with a quiet placeholder.
+        if (!root.b.daemonConnected) return root.b.installed ? "off" : "";
+        if (root.b.setupNeeded) return "setup";
+        if (root.b.paused) return "pause";
+        return "idle";
     }
 
     readonly property string label: {
@@ -57,6 +62,10 @@ Item {
         case "declare": return b.declare.length + b.tr(" to declare", " à déclarer");
         case "gap": return b.tr("Free ", "Creux ") + b.gap.start + "-" + b.gap.end + (b.gap.parts.length ? " · " + root.domainOf(b.gap) + " ?" : "");
         case "soon": return root.domainOf(b.next) + b.tr(" in ", " dans ") + root.minutesToNext + " min";
+        case "setup": return b.tr("Set up", "À régler");
+        case "pause": return b.tr("Paused", "En pause");
+        case "off":
+        case "idle": return "";
         case "next": {
             const day = root.nextToday ? "" : (new Date(b.next.date + "T12:00").toLocaleDateString(Qt.locale(b.fr ? "fr_FR" : "en_US"), "ddd") + " ");
             return root.domainOf(b.next) + " · " + day + b.next.start;
@@ -116,11 +125,14 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.mode === "game" ? "" : root.mode === "paused" ? "" : ""
             color: root.ink.primary
+            // The service stopped: still there, dimmed.
+            opacity: root.mode === "off" ? 0.45 : 1
             font.family: Fonts.iconLucide
             font.pixelSize: 14
         }
 
         Text {
+            visible: root.label !== ""
             anchors.verticalCenter: parent.verticalCenter
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting

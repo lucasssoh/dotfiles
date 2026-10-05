@@ -376,6 +376,17 @@ Singleton {
     }
 
     readonly property bool daemonConnected: socketLoader.item ? socketLoader.item.connected : false
+
+    // Installed (the binary is there), whether or not its service runs: the
+    // bar then keeps Boussole's place, so a stopped service still shows.
+    // Checked at start and at each reconnection attempt, not polled.
+    property bool installed: false
+    Process {
+        id: installedCheck
+        command: ["test", "-x", Quickshell.env("HOME") + "/.local/bin/boussole"]
+        running: true
+        onExited: (code) => root.installed = code === 0
+    }
     // Saying who it is makes the service send alerts here rather than as
     // notifications.
     onDaemonConnectedChanged: {
@@ -413,6 +424,7 @@ Singleton {
             tries++;
             socketLoader.active = false;
             socketLoader.active = true;
+            installedCheck.running = true;
         }
     }
 }
