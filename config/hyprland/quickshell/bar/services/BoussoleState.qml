@@ -50,9 +50,22 @@ Singleton {
     // turns focusable for it, like Balise's password field.
     readonly property bool textInput: root.panelOpen && root.page === "close"
 
+    property var files: null
+    property var progress: []
+
     function show(page) {
         root.page = page;
         if (page === "week") root.request({ cmd: "week", days: 7 }, (r) => root.week = r.data || []);
+        if (page === "files") root.refreshFiles();
+        if (page === "progress") root.request({ cmd: "progress-view" }, (r) => root.progress = r.data || []);
+    }
+
+    function refreshFiles() {
+        root.request({ cmd: "files-view" }, (r) => root.files = r.data || null);
+    }
+    // "planned" or "ignored", for one file or several.
+    function decide(items, inclusion) {
+        root.request({ cmd: "files", items: items, inclusion: inclusion }, () => root.refreshFiles());
     }
 
     // Opens the close of a session (today's, or one left open another day).

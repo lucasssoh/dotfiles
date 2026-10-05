@@ -453,6 +453,11 @@ ShellRoot {
         function toggleBoussole(): void {
             BoussoleState.togglePanel(Quickshell.screens[0]);
         }
+        // Opens Boussole's drawer on a page: today, week, progress, files.
+        function showBoussole(page: string): void {
+            if (!BoussoleState.panelOpen) BoussoleState.togglePanel(Quickshell.screens[0]);
+            BoussoleState.show(page);
+        }
         // Poked by hypr/scripts/agenda.py after each add/delete.
         function reloadEvents(): void {
             CalendarState.reloadEvents();

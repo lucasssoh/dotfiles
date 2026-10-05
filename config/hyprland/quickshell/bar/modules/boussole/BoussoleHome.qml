@@ -42,7 +42,9 @@ Item {
         Repeater {
             model: [
                 { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
-                { id: "week", label: root.b.tr("Week", "Semaine") }
+                { id: "week", label: root.b.tr("Week", "Semaine") },
+                { id: "progress", label: root.b.tr("Progress", "Progrès") },
+                { id: "files", label: root.b.tr("Files", "Fichiers") }
             ]
             delegate: BoussoleChip {
                 required property var modelData
@@ -70,7 +72,10 @@ Item {
         Loader {
             id: page
             width: flick.width
-            sourceComponent: root.b.page === "week" ? week : (root.b.page === "close" && root.b.closing) ? closing : today
+            sourceComponent: root.b.page === "week" ? week
+                           : root.b.page === "progress" ? progress
+                           : root.b.page === "files" ? files
+                           : (root.b.page === "close" && root.b.closing) ? closing : today
             onLoaded: flick.contentY = 0
         }
     }
@@ -78,4 +83,6 @@ Item {
     Component { id: today; BoussoleToday {} }
     Component { id: week; BoussoleWeek {} }
     Component { id: closing; BoussoleClose {} }
+    Component { id: progress; BoussoleProgress {} }
+    Component { id: files; BoussoleFiles {} }
 }
