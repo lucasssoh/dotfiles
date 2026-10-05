@@ -62,6 +62,8 @@ pub(crate) struct Client {
     id: u64,
     stream: UnixStream,
     inbox: Vec<u8>,
+    /// The bar said hello: alerts go to the island rather than notifications.
+    pub(crate) bar: bool,
 }
 
 pub struct Service {
@@ -91,6 +93,8 @@ pub struct Service {
     /// BOOTTIME − MONOTONIC: grows across a suspend.
     pub(crate) slept: i64,
     pub(crate) suivi: crate::suivi::Suivi,
+    /// The alert the central island shows, until answered.
+    pub(crate) alert: Option<Value>,
 }
 
 fn clock(id: libc::clockid_t) -> i64 {
@@ -159,6 +163,7 @@ pub fn run(paths: Paths) -> io::Result<()> {
         next_fetch: None,
         slept: clock(libc::CLOCK_BOOTTIME) - clock(libc::CLOCK_MONOTONIC),
         suivi: crate::suivi::Suivi::default(),
+        alert: None,
     };
     s.rescan();
     s.suivi_start();
@@ -446,7 +451,7 @@ impl Service {
         self.next_fetch = Some(self.tz.to_utc(t));
     }
 
-    fn timetable(&self) -> (Vec<Course>, Vec<Deadline>) {
+    pub(crate) fn timetable(&self) -> (Vec<Course>, Vec<Deadline>) {
         let Some(snap) = &self.ade else { return (Vec::new(), Vec::new()) };
         let s = &self.store.settings;
         ade::timetable(&snap.events, &s.groups, &s.domains, &self.tz)
@@ -698,6 +703,7 @@ impl Service {
         let (courses, _) = self.timetable();
         self.sync_khal(&courses);
         self.send_alerts();
+        self.expire_alert();
         if self.next_fetch.is_none() {
             self.schedule_fetch();
         }
@@ -752,28 +758,6 @@ impl Service {
             .join("\n")
     }
 
-    fn session_actions(&self, s: &Session, from: Hm) -> Vec<(String, String)> {
-        let fr = self.fr();
-        let r = &self.store.settings.rhythm;
-        let len = s.end.0 - s.start.0;
-        let slot = journee::Slot {
-            date: s.date,
-            start: s.start,
-            end: s.end,
-            kind: s.kind,
-            counted: true,
-            place: s.place,
-            shortened: s.shortened,
-            limit: if s.kind == journee::SlotKind::Block { r.block_range.1 } else { r.latest_end },
-        };
-        let mut a = vec![("start".to_string(), (if fr { "Commencer" } else { "Start" }).to_string())];
-        for (t, _) in journee::later_options(&slot, from, len, r.min_session).into_iter().take(2) {
-            a.push((format!("later:{t}"), if fr { format!("À {t}") } else { format!("At {t}") }));
-        }
-        a.push(("skip".into(), (if fr { "Pas ce soir" } else { "Not tonight" }).into()));
-        a
-    }
-
     fn send_alerts(&mut self) {
         let now = self.now();
         let sent: BTreeSet<String> = self.sent.keys().cloned().collect();
@@ -790,16 +774,7 @@ impl Service {
             match a.kind {
                 Kind::Start | Kind::Reminder => {
                     let Some(s) = a.session.as_ref().and_then(|id| self.plan.sessions.iter().find(|s| s.id == *id)).cloned() else { continue };
-                    let span = format!("{}–{}", a.at.time.max(s.start), s.end);
-                    let title = match (a.kind, fr) {
-                        (Kind::Start, true) => format!("Séance · {span}"),
-                        (Kind::Start, false) => format!("Session · {span}"),
-                        (_, true) => format!("Toujours partant ? Séance de {}", a.at.time.plus(-15)),
-                        (_, false) => format!("Still on? The {} session", a.at.time.plus(-15)),
-                    };
-                    let body = self.session_body(&s);
-                    let actions = self.session_actions(&s, now.time);
-                    self.notify(&title, &body, &actions, Some(s.id.clone()));
+                    self.session_alert(&s, a.at, a.kind == Kind::Reminder);
                 }
                 Kind::Recap => {
                     let Some(day) = a.day else { continue };
@@ -844,7 +819,7 @@ impl Service {
         let _ = store::write_json(&self.store.paths.data.join("alerts.json"), &self.sent);
     }
 
-    fn on_action(&mut self, session: &str, action: &str) {
+    pub(crate) fn on_action(&mut self, session: &str, action: &str) {
         let now = self.now();
         let result = if action == "start" {
             self.start(session)
@@ -929,6 +904,8 @@ impl Service {
             },
             "undecided": self.catalogue.undecided(&st.progress.files).len(),
             "suivi": self.suivi_status(),
+            "alert": self.alert,
+            "today": self.today(),
         })
     }
 
@@ -960,7 +937,7 @@ impl Service {
             }
             let id = self.next_client;
             self.next_client += 1;
-            self.clients.push(Client { id, stream, inbox: Vec::new() });
+            self.clients.push(Client { id, stream, inbox: Vec::new(), bar: false });
             let msg = self.status();
             self.send_to(id, &msg);
         }
@@ -986,6 +963,12 @@ impl Service {
         for line in lines {
             let Ok(cmd) = serde_json::from_slice::<Value>(&line) else { continue };
             let name = cmd.get("cmd").and_then(Value::as_str).unwrap_or("").to_string();
+            if name == "hello" {
+                let bar = cmd.get("role").and_then(Value::as_str) == Some("bar");
+                if let Some(c) = self.clients.iter_mut().find(|c| c.id == id) {
+                    c.bar = bar;
+                }
+            }
             let reply = match self.command(&name, &cmd) {
                 Ok((text, data)) => json!({ "reply": name, "ok": true, "text": text, "data": data }),
                 Err(text) => json!({ "reply": name, "ok": false, "text": text }),
@@ -1058,6 +1041,13 @@ impl Service {
                 self.session_paused(false);
                 self.replan();
                 (String::new(), Value::Null)
+            }
+            "hello" => (String::new(), Value::Null),
+            "answer" => {
+                let key = s("key").ok_or("key")?;
+                let action = s("action").ok_or("action")?;
+                let done = self.answer(&key, &action)?;
+                (done, Value::Null)
             }
             "activity" => {
                 self.set_activity(cmd.get("idle").and_then(Value::as_bool), cmd.get("media").and_then(Value::as_bool));

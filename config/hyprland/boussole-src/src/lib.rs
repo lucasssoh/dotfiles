@@ -12,6 +12,7 @@ pub mod catalogue;
 pub mod cli;
 pub mod daemon;
 pub mod i18n;
+pub mod ilot;
 pub mod journee;
 pub mod khal;
 pub mod liseuse;

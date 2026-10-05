@@ -26,7 +26,6 @@ use serde_json::{json, Value};
 
 use crate::daemon::{now_secs, set_nonblocking, which, Job, Service};
 use crate::liseuse::{self, Map};
-use crate::model::Lang;
 use crate::plan::Work;
 use crate::seance::{self, Draft, Prompt, Tracker};
 use crate::store::{self, Event, Outcome, Tracking};
@@ -558,20 +557,8 @@ impl Service {
             return;
         }
         self.suivi.asked = prompt;
-        let fr = self.lang() == Lang::Fr;
-        match prompt {
-            Some(Prompt::StillWorking) => {
-                let (yes, no) = if fr { ("Oui, sur papier", "Non, j'ai arrêté") } else { ("Yes, on paper", "No, I stopped") };
-                let title = if fr { "Toujours sur les exercices ?" } else { "Still on the exercises?" };
-                self.notify(title, "", &[("still:yes".into(), yes.into()), ("still:no".into(), no.into())], session);
-            }
-            Some(Prompt::Closing) => {
-                let title = if fr { "Séance terminée : la clore ?" } else { "Session over: close it?" };
-                let body = if fr { "Ce que Liseuse a vu est prérempli." } else { "What Liseuse saw is pre-filled." };
-                let close = if fr { "Clore comme prérempli" } else { "Close as pre-filled" };
-                self.notify(title, body, &[("close".into(), close.into())], session);
-            }
-            None => {}
+        if let (Some(id), Some(p)) = (session, prompt) {
+            self.prompt_alert(&id, p == Prompt::Closing);
         }
         self.push_status();
     }

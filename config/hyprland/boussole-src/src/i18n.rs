@@ -89,11 +89,12 @@ pub fn work(w: &Work, lang: Lang) -> String {
                 format!("{} · subject {n}, timed", item_name(item))
             }
         }
-        Work::Prepare { title, at, .. } => {
+        Work::Prepare { at, .. } => {
+            // The subject is shown beside it: the day and hour are enough.
             if fr {
-                format!("préparer {title} ({})", local(*at, lang))
+                format!("préparer le TD du {}", local(*at, lang))
             } else {
-                format!("prepare {title} ({})", local(*at, lang))
+                format!("prepare the tutorial, {}", local(*at, lang))
             }
         }
         Work::Project { project, step } => format!("{project} · {step}"),
