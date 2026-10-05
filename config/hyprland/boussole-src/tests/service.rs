@@ -41,12 +41,14 @@ fn the_state_is_rebuilt_from_the_journal_and_undo_is_one_more_line() {
             parts: vec![PartReport {
                 task: format!("study:{a}"),
                 minutes: 70,
+                planned: 75,
                 done: false,
                 read_upto: Some(4),
                 exercises: ex,
                 assessment: Some(Assessment::Blocked),
                 note: Some("stuck on the induction".into()),
             }],
+            tracking: None,
         },
         now,
     )
@@ -104,6 +106,7 @@ fn every_kind_of_part_moves_progress() {
             part("read:X/notes.md", true),
             part("ask:X/b.md", true),
         ],
+        tracking: None,
     });
     push(Event::Missed { session: "2026-10-06-evening1".into() });
     push(Event::Skipped { session: "2026-10-07-evening1".into() });
@@ -117,6 +120,37 @@ fn every_kind_of_part_moves_progress() {
     assert_eq!(st.projects[0].steps[0].spent_minutes, 30);
     assert!(st.progress.items["X/notes.md"].done);
     assert_eq!(st.missed_streak, 2);
+}
+
+#[test]
+fn the_pace_is_measured_from_closed_sessions() {
+    let mut entries = Vec::new();
+    for (i, (actual, planned)) in [(90, 75), (80, 75), (100, 75)].into_iter().enumerate() {
+        let mut pages = BTreeMap::new();
+        pages.insert(format!("A&C/Ch/1{i}_S.md"), 10u32);
+        entries.push(store::Entry {
+            seq: i as u64 + 1,
+            at: at(MON.add(i as i32), "22:00"),
+            event: Event::Closed {
+                session: format!("{}-evening1", MON.add(i as i32)),
+                at: at(MON.add(i as i32), "22:00"),
+                minutes: actual,
+                parts: vec![PartReport { task: format!("study:A&C/Ch/1{i}_S.md"), minutes: actual, planned, ..PartReport::default() }],
+                tracking: Some(store::Tracking { pages, ..store::Tracking::default() }),
+            },
+        });
+    }
+    let st = store::reduce(&entries);
+    let f = st.factor("A&C").unwrap();
+    assert!((f - 270.0 / 225.0).abs() < 1e-3, "{f}");
+    assert_eq!(st.factor("OC"), None);
+    assert!((st.minutes_per_page("A&C").unwrap() - 9.0).abs() < 1e-3);
+    // Free reading is kept for the next close, never as done.
+    let mut e2 = entries.clone();
+    e2.push(store::Entry { seq: 9, at: at(MON, "18:00"), event: Event::FreeReading { item: "OC/x.md".into(), upto: 2, pages: 3, minutes: 12 } });
+    let st = store::reduce(&e2);
+    assert_eq!(st.free_reading["OC/x.md"], (MON, 2));
+    assert!(st.progress.items.get("OC/x.md").is_none());
 }
 
 // ─── Quick add ───────────────────────────────────────────────────────────────

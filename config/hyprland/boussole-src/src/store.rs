@@ -66,6 +66,8 @@ impl Paths {
 pub struct PartReport {
     pub task: String,
     pub minutes: i32,
+    /// What the plan gave it: actual against planned is the measured pace.
+    pub planned: i32,
     /// Finished (a sheet's first pass, a review, a step…).
     pub done: bool,
     pub read_upto: Option<u32>,
@@ -108,7 +110,17 @@ pub enum Event {
     Missed { session: String },
     /// A game launched anyway: the session waits.
     Paused { session: String, at: Local },
-    Closed { session: String, at: Local, minutes: i32, parts: Vec<PartReport> },
+    Resumed { session: String, at: Local },
+    Closed {
+        session: String,
+        at: Local,
+        minutes: i32,
+        parts: Vec<PartReport>,
+        #[serde(default)]
+        tracking: Option<Tracking>,
+    },
+    /// Liseuse open on a sheet outside any session.
+    FreeReading { item: String, upto: u32, pages: u32, minutes: i32 },
     Files { items: Vec<String>, inclusion: Inclusion },
     Deadline { deadline: Deadline },
     DeadlineRemoved { id: String },
@@ -131,6 +143,19 @@ pub struct Entry {
     pub at: Local,
     #[serde(flatten)]
     pub event: Event,
+}
+
+/// What the session's tracking measured, kept with its close.
+#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Tracking {
+    pub idle_minutes: i32,
+    pub game_minutes: i32,
+    pub media_minutes: i32,
+    /// The user's answer about the media: counted as work or not.
+    pub media_for_course: Option<bool>,
+    /// Pages read per file.
+    pub pages: BTreeMap<String, u32>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -163,6 +188,35 @@ pub struct State {
     pub missed_streak: u32,
     /// Notes left at "Close", per task.
     pub notes: Vec<(String, Date, String)>,
+    /// Free reading per file: (day, § reached), the latest.
+    pub free_reading: BTreeMap<String, (Date, u32)>,
+    /// Per domain, (actual, planned) minutes of closed parts, oldest first.
+    pub pace: BTreeMap<String, Vec<(i32, i32)>>,
+    /// Per domain, (minutes, pages read), oldest first.
+    pub page_pace: BTreeMap<String, Vec<(i32, u32)>>,
+}
+
+impl State {
+    /// Measured over planned, from the last ten parts of a domain.
+    pub fn factor(&self, domain: &str) -> Option<f32> {
+        let v = self.pace.get(domain)?;
+        let last = &v[v.len().saturating_sub(10)..];
+        let (a, p) = last.iter().fold((0, 0), |(a, p), (x, y)| (a + x, p + y));
+        (last.len() >= 3 && p > 0).then(|| (a as f32 / p as f32).clamp(0.5, 2.0))
+    }
+
+    /// Minutes per page in a domain, from the last ten sessions that read.
+    pub fn minutes_per_page(&self, domain: &str) -> Option<f32> {
+        let v = self.page_pace.get(domain)?;
+        let last = &v[v.len().saturating_sub(10)..];
+        let (m, p) = last.iter().fold((0, 0), |(m, p), (x, y)| (m + x, p + y));
+        (p > 0).then(|| m as f32 / p as f32)
+    }
+}
+
+fn domain_of(task: &str) -> Option<&str> {
+    let (_, rest) = task.split_once(':')?;
+    rest.split('/').next().filter(|d| !d.is_empty())
 }
 
 fn session_date(id: &str) -> Option<Date> {
@@ -280,6 +334,12 @@ pub fn reduce(entries: &[Entry]) -> State {
                 }
                 st.missed_streak = 0;
             }
+            Event::Resumed { session, at } => {
+                st.outcomes.insert(session.clone(), Outcome::Started { at: *at });
+            }
+            Event::FreeReading { item, upto, .. } => {
+                st.free_reading.insert(item.clone(), (e.at.date, *upto));
+            }
             Event::Postponed { session, to } => {
                 st.outcomes.insert(session.clone(), Outcome::Postponed { to: *to });
             }
@@ -294,12 +354,23 @@ pub fn reduce(entries: &[Entry]) -> State {
             Event::Paused { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Paused { at: *at });
             }
-            Event::Closed { session, at, parts, .. } => {
+            Event::Closed { session, at, parts, tracking, .. } => {
                 let date = session_date(session).unwrap_or(at.date);
                 // A session started late at night still belongs to its day.
                 st.outcomes.insert(session.clone(), Outcome::Closed { at: *at });
                 for p in parts {
                     apply_part(&mut st, date, p);
+                    if let (Some(d), true) = (domain_of(&p.task), p.planned > 0 && p.minutes > 0) {
+                        if p.task.starts_with("study:") || p.task.starts_with("read:") {
+                            st.pace.entry(d.to_string()).or_default().push((p.minutes, p.planned));
+                        }
+                    }
+                }
+                for (item, pages) in tracking.iter().flat_map(|t| &t.pages) {
+                    let minutes: i32 = parts.iter().filter(|p| p.task.ends_with(item.as_str())).map(|p| p.minutes).sum();
+                    if let (Some(d), true) = (item.split('/').next(), *pages > 0 && minutes > 0) {
+                        st.page_pace.entry(d.to_string()).or_default().push((minutes, *pages));
+                    }
                 }
                 st.missed_streak = 0;
             }

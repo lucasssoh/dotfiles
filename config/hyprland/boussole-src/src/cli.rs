@@ -17,6 +17,9 @@ boussole                       what comes next
 boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional)
 boussole start|skip|done [ID]  the next session, or the one given
 boussole later [ID] HH:MM      later today, at a precise time
+boussole draft [ID]            what Liseuse saw, pre-filling the close
+boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
+boussole continue [ID]         back to a session paused for a game
 boussole add LINE…             quick add, shown before it is kept (-y keeps it)
     examen L&MC 18/12 · cc OC 12/11 14h · rendu ARGOS 12/11 30h
     indispo sam 14h-18h · tâche relire TD3 A&C 45m · candidature Entreprise F · libre 1h
@@ -126,6 +129,13 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["week"] => req(json!({ "cmd": "plan", "days": 7 })),
         ["week", n] => req(json!({ "cmd": "plan", "days": n.parse::<i64>().map_err(|_| "DAYS")? })),
         ["start" | "skip" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
+        ["draft", ..] => req(json!({ "cmd": "draft", "session": sess(1) })),
+        ["close", rest @ ..] => {
+            let video = rest.iter().position(|a| *a == "--video").and_then(|i| rest.get(i + 1)).map(|v| *v == "yes");
+            let id = rest.first().filter(|a| !a.starts_with("--")).map(|s| json!(s)).unwrap_or(Value::Null);
+            req(json!({ "cmd": "close", "session": id, "media_for_course": video }))
+        }
+        ["continue", ..] => req(json!({ "cmd": "resume-session", "session": sess(1) })),
         ["later", at] => req(json!({ "cmd": "later", "at": at })),
         ["later", id, at] => req(json!({ "cmd": "later", "session": id, "at": at })),
         ["add", "--fuzzel"] => add_fuzzel(paths),

@@ -124,6 +124,7 @@ pub struct Fx {
     pub pinned: Vec<Pin>,
     pub learned: [Option<Hm>; 7],
     pub missed_streak: u32,
+    pub spent: Vec<String>,
 }
 
 impl Fx {
@@ -157,6 +158,7 @@ impl Fx {
             pinned: Vec::new(),
             learned: [None; 7],
             missed_streak: 0,
+            spent: Vec::new(),
         }
     }
 
@@ -181,6 +183,7 @@ impl Fx {
             pinned: &self.pinned,
             learned: self.learned,
             missed_streak: self.missed_streak,
+            spent: &self.spent,
             previous,
         }
     }

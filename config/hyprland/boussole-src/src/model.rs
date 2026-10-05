@@ -196,6 +196,8 @@ pub struct Settings {
     pub gate: bool,
     /// Commands the gate asks about (a word of the command line).
     pub gate_match: Vec<String>,
+    /// Process names that mean a game is running (Steam's reaper, …).
+    pub game_processes: Vec<String>,
 }
 
 impl Default for Settings {
@@ -219,6 +221,9 @@ impl Default for Settings {
             recap: Hm::new(21, 30),
             gate: true,
             gate_match: ["steam", "lutris", "heroic", "gamescope", "umu-run", "wine"].map(String::from).to_vec(),
+            game_processes: ["reaper", "gamescope", "gamescope-wl", "lutris-wrapper", "umu-run", "wine64-preloader", "wine-preloader"]
+                .map(String::from)
+                .to_vec(),
         }
     }
 }

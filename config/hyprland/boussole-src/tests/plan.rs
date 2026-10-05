@@ -436,3 +436,13 @@ fn a_tutorial_tomorrow_takes_tonight_even_against_an_exam() {
     // The timed subject has no Sunday before Thursday: said, not hidden.
     assert!(p.changes.iter().any(|c| matches!(c, Change::AtRisk { task, .. } if task.starts_with("exam:LOGIC"))));
 }
+
+#[test]
+fn a_closed_session_keeps_its_slot() {
+    let mut fx = Fx::new("spent");
+    let p0 = fx.plan(at(MON, "06:00"));
+    let first = p0.sessions.iter().find(|s| s.date == MON).unwrap().id.clone();
+    fx.spent.push(first.clone());
+    let p1 = fx.plan(at(MON, "21:00"));
+    assert!(p1.sessions.iter().all(|s| s.id != first), "not filled again after its close");
+}

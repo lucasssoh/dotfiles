@@ -47,6 +47,8 @@ pub struct Input<'a> {
     pub learned: [Option<Hm>; 7],
     /// Counted sessions missed in a row, from the journal.
     pub missed_streak: u32,
+    /// Sessions already over (closed, skipped, missed): their slot is not reused.
+    pub spent: &'a [String],
     pub previous: Option<&'a Plan>,
 }
 
@@ -631,6 +633,9 @@ pub fn plan(input: &Input) -> Plan {
                         continue;
                     }
                 }
+            }
+            if input.spent.contains(&id) {
+                continue;
             }
             let cell = Cell { cap: slot.minutes(), slot, id, parts: Vec::new(), reasons: Vec::new(), pinned: false, closed: false };
             if cell.slot.counted {

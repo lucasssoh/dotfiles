@@ -129,6 +129,7 @@ fn preview(args: &[String]) -> Result<(), String> {
         pinned: &[],
         learned: [None; 7],
         missed_streak: 0,
+        spent: &[],
         previous: None,
     };
     let p = plan::plan(&input);
