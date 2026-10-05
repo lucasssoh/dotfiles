@@ -908,6 +908,8 @@ impl Service {
             "suivi": self.suivi_status(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
+            // Nothing set up yet: the bar offers the first run.
+            "setup_needed": self.store.settings.courses.is_none() || self.store.settings.domains.is_empty(),
             "today": self.today(),
         })
     }
@@ -1070,6 +1072,11 @@ impl Service {
                 (String::new(), self.week(now.date, days))
             }
             "files-view" => (String::new(), self.files_view()),
+            "suggestions" => (String::new(), self.suggestions()),
+            "plan-structured" => {
+                let n = self.plan_structured().map_err(io)?;
+                (n.to_string(), json!(n))
+            }
             "progress-view" => (String::new(), self.progress_view()),
             "closing" => {
                 let x = session_arg(self)?;

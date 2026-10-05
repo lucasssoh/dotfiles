@@ -498,6 +498,46 @@ impl Service {
         }
         Value::Array(out)
     }
+
+    /// The first run's suggestions: for each course folder, the timetable's
+    /// course names that look like it ("Logique et modèles de calculs" for
+    /// L&MC). To confirm, never applied on their own.
+    pub(crate) fn suggestions(&self) -> Value {
+        let ids = self.catalogue.domains();
+        let mut out: std::collections::BTreeMap<String, Vec<String>> = ids.iter().map(|d| (d.to_string(), Vec::new())).collect();
+        if let Some(snap) = &self.ade {
+            for e in &snap.events {
+                let name = crate::ade::read_title(&e.summary).name;
+                if let Some(id) = crate::ade::suggest_domain(&name, &ids) {
+                    let v = out.entry(id.to_string()).or_default();
+                    if !name.is_empty() && !v.contains(&name) {
+                        v.push(name);
+                    }
+                }
+            }
+        }
+        json!(out)
+    }
+
+    /// Plans every structured file (maps, sheets, exercises) still waiting,
+    /// leaving PDFs and notes to decide one by one.
+    pub(crate) fn plan_structured(&mut self) -> std::io::Result<usize> {
+        use crate::catalogue::{Inclusion, ItemKind};
+        let items: Vec<String> = self
+            .catalogue
+            .undecided(&self.store.state.progress.files)
+            .into_iter()
+            .filter(|i| !matches!(i.kind, ItemKind::Pdf | ItemKind::Notes))
+            .map(|i| i.id.clone())
+            .collect();
+        let n = items.len();
+        if n > 0 {
+            let now = self.now();
+            self.store.record(crate::store::Event::Files { items, inclusion: Inclusion::Planned }, now)?;
+            self.replan();
+        }
+        Ok(n)
+    }
 }
 
 fn self_t(lang: Lang, en: &'static str, fr: &'static str) -> &'static str {
