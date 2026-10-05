@@ -908,6 +908,7 @@ impl Service {
             "suivi": self.suivi_status(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
+            "gate": self.store.settings.gate,
             // Nothing set up yet: the bar offers the first run.
             "setup_needed": self.store.settings.courses.is_none() || self.store.settings.domains.is_empty(),
             "today": self.today(),
