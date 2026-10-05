@@ -89,7 +89,7 @@ Rectangle {
     // down to 15%, red from 5%, blended between).
     readonly property color accent: {
         if (card.charging) return DrawerTheme.positive;
-        const warm = Qt.rgba(1.0, 0.706, 0.329, 1);   // #ffb454
+        const warm = DrawerTheme.warning;
         if (card.adapterLost) return warm;
         const p = Math.max(0, Math.min(100, card.percent));
         if (p >= 15) return warm;

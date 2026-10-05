@@ -875,7 +875,7 @@ Item {
             y: frontCard.height - 14
             height: 24
             radius: 14
-            color: "#0d0d10"
+            color: DrawerTheme.stackBack
         }
         Rectangle {
             visible: stack.ghosts >= 1
@@ -884,7 +884,7 @@ Item {
             y: frontCard.height - 14
             height: 19
             radius: 14
-            color: "#121215"
+            color: DrawerTheme.stackMid
         }
         NotificationCard {
             id: frontCard

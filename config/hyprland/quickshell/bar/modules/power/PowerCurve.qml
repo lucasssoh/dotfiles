@@ -46,7 +46,7 @@ Item {
     // saturated blue/green of a phone's battery screen -- this drawer is
     // greyed glass, and two fully saturated primaries in it would read as
     // a different application.
-    readonly property color dischargeColor: "#8ecae6"
+    readonly property color dischargeColor: DrawerTheme.conserve
     readonly property color chargeColor: DrawerTheme.positive
 
     // Room on the right for "100%". Everything that draws inside the plot

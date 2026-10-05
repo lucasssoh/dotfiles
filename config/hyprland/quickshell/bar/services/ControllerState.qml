@@ -80,7 +80,10 @@ Singleton {
     readonly property var labels: root._labels(root.pad ? root.pad.family : "generic")
     function _labels(family) {
         const ink = DrawerTheme.primary;
-        const b = (kind, label, tint) => ({ kind: kind, label: label, tint: tint || ink });
+        // The tints are pastels made for the dark drawer; on the light one
+        // they are taken down to a readable ink.
+        const tone = (t) => DrawerTheme.dark ? t : Qt.darker(t, 2.0);
+        const b = (kind, label, tint) => ({ kind: kind, label: label, tint: tint ? tone(tint) : ink });
         switch (family) {
         case "xbox":
             return { south: b("letter", "A", "#8fd49a"), east: b("letter", "B", "#ef8f8f"), north: b("letter", "Y", "#e9cf7d"), west: b("letter", "X", "#86aef0"), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };

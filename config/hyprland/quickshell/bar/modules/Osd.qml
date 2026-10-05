@@ -81,7 +81,7 @@ Item {
         radius: width / 2
         color: DrawerTheme.panelTop
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.color: DrawerTheme.ink(0.08)
     }
 
     // ---- arc: track, level, cursor ------------------------------------
