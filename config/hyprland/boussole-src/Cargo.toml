@@ -1,0 +1,20 @@
+[package]
+name = "boussole"
+version = "0.1.0"
+edition = "2021"
+description = "Study planner behind coucou-shell's Boussole drawer"
+license-file = "../../../LICENSE.md"
+
+# Built like Manette: no async runtime, no date or iCal crate. Civil dates,
+# the TZif reader and the iCal parser are a few hundred lines each, and the
+# planner is a pure function over plain structs, so serde is all it needs to
+# read and write its state. libc arrives with the service (poll, timerfd).
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"
