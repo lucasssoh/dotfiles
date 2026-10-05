@@ -453,10 +453,14 @@ ShellRoot {
         function toggleBoussole(): void {
             BoussoleState.togglePanel(Quickshell.screens[0]);
         }
-        // Opens Boussole's drawer on a page: today, week, progress, files.
+        // Opens Boussole's drawer on a page: today, week, progress, files,
+        // plus, or plus/<page> (deadlines, projects, campaign, subjects,
+        // calendars, rhythm, settings).
         function showBoussole(page: string): void {
             if (!BoussoleState.panelOpen) BoussoleState.togglePanel(Quickshell.screens[0]);
-            BoussoleState.show(page);
+            // "plus/calendars": a page of Plus.
+            if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
+            else BoussoleState.show(page);
         }
         // Poked by hypr/scripts/agenda.py after each add/delete.
         function reloadEvents(): void {

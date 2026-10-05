@@ -44,7 +44,8 @@ Item {
                 { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
                 { id: "week", label: root.b.tr("Week", "Semaine") },
                 { id: "progress", label: root.b.tr("Progress", "Progrès") },
-                { id: "files", label: root.b.tr("Files", "Fichiers") }
+                { id: "files", label: root.b.tr("Files", "Fichiers") },
+                { id: "plus", label: root.b.tr("More", "Plus") }
             ]
             delegate: BoussoleChip {
                 required property var modelData
@@ -75,6 +76,7 @@ Item {
             sourceComponent: root.b.page === "week" ? week
                            : root.b.page === "progress" ? progress
                            : root.b.page === "files" ? files
+                           : root.b.page === "plus" ? plus
                            : (root.b.page === "close" && root.b.closing) ? closing : today
             onLoaded: flick.contentY = 0
         }
@@ -85,4 +87,5 @@ Item {
     Component { id: closing; BoussoleClose {} }
     Component { id: progress; BoussoleProgress {} }
     Component { id: files; BoussoleFiles {} }
+    Component { id: plus; BoussolePlus {} }
 }

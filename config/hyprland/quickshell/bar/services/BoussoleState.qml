@@ -48,7 +48,7 @@ Singleton {
     property var week: []
     // The page takes the keyboard (the note of a close): the bar's window
     // turns focusable for it, like Balise's password field.
-    readonly property bool textInput: root.panelOpen && root.page === "close"
+    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus")
 
     property var files: null
     property var progress: []
@@ -58,6 +58,74 @@ Singleton {
         if (page === "week") root.request({ cmd: "week", days: 7 }, (r) => root.week = r.data || []);
         if (page === "files") root.refreshFiles();
         if (page === "progress") root.request({ cmd: "progress-view" }, (r) => root.progress = r.data || []);
+        if (page === "plus") {
+            root.plusPage = "";
+            root.loadPlus();
+        }
+    }
+
+    // ---- Plus: everything that can be set ----------------------------
+    // "" (the menu) or a sub-page: deadlines, projects, campaign,
+    // subjects, calendars, rhythm, settings.
+    property string plusPage: ""
+    property var settings: ({})
+    property var deadlines: []
+    property var projects: []
+    property var campaigns: []
+    property var families: []
+
+    function openPlus(sub) {
+        root.plusPage = sub;
+        root.page = "plus";
+        root.loadPlus();
+    }
+    function loadPlus() {
+        root.request({ cmd: "settings" }, (r) => root.settings = r.data || ({}));
+        root.request({ cmd: "deadlines" }, (r) => root.deadlines = r.data || []);
+        root.request({ cmd: "projects" }, (r) => root.projects = r.data || []);
+        root.request({ cmd: "campaigns" }, (r) => root.campaigns = r.data || []);
+        root.request({ cmd: "groups" }, (r) => root.families = r.data || []);
+    }
+    // A merge patch over the settings; `done(reply)` once applied.
+    function setSettings(patch, done) {
+        root.request({ cmd: "set", patch: patch }, (r) => {
+            root.loadPlus();
+            if (done) done(r);
+        });
+    }
+    // Quick add: `apply` false only says what was understood.
+    function addLine(line, apply, done) {
+        root.request({ cmd: "add", line: line, apply: apply }, (r) => {
+            if (apply) root.loadPlus();
+            if (done) done(r);
+        });
+    }
+    function send(obj, done) {
+        root.request(obj, (r) => {
+            root.loadPlus();
+            if (done) done(r);
+        });
+    }
+
+    // "18/12", "18/12/2026", "2026-12-18", "today", "demain" → "2026-12-18",
+    // or "" when not a date. A day already past this year means next year.
+    function parseDate(text) {
+        const t = (text || "").trim().toLowerCase();
+        const pad = (n) => ("0" + n).slice(-2);
+        const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (t === "today" || t === "auj" || t === "aujourd'hui") return iso(today);
+        if (t === "tomorrow" || t === "demain") return iso(new Date(today.getTime() + 86400000));
+        let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m) return m[1] + "-" + pad(+m[2]) + "-" + pad(+m[3]);
+        m = t.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+        if (!m) return "";
+        let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : today.getFullYear();
+        let d = new Date(y, +m[2] - 1, +m[1]);
+        if (d.getMonth() !== +m[2] - 1) return "";
+        if (!m[3] && d < today) d = new Date(y + 1, +m[2] - 1, +m[1]);
+        return iso(d);
     }
 
     function refreshFiles() {
