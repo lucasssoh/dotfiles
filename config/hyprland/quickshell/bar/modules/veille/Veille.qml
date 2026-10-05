@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
+import "../../services"
 
 // VEILLE -- logic only. Computes WHEN the sleep-awareness clock should
 // be showing and WHAT it should say (see VeillePhase.qml's `inPulse` for
@@ -133,6 +134,8 @@ Scope {
         || root.dismissed
         || (config.respectZenMode && root.zenMode)
         || (config.muteWhileGaming && root.gaming)
+        // A Boussole session under way, until bedtime.
+        || BoussoleState.holdsVeille
 
     // ---- placement ----------------------------------------------------
     // Which single screen's bar gets to open its drawer -- unaffected by

@@ -3,6 +3,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
+import Quickshell.Services.Mpris
 import "."
 
 // State + IPC for Boussole, the study planner. The planning, the alarm
@@ -130,6 +132,34 @@ Singleton {
         running: root.tracking !== null && root.tracking.counting
         triggeredOnStart: true
         onTriggered: root.nowMs = Date.now()
+    }
+
+    // ---- what the bar sees, during a session ----------------------------
+    // No keyboard or mouse for five minutes: the time is not counted.
+    // Media playing: counted apart, and asked about at the close. Sent only
+    // while a session is followed; nothing at all otherwise.
+    readonly property bool sessionActive: root.tracking !== null
+    IdleMonitor {
+        id: idle
+        enabled: root.sessionActive
+        timeout: 300
+        respectInhibitors: true
+        onIsIdleChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
+    }
+    readonly property bool mediaPlaying: {
+        const ps = Mpris.players.values.filter(p => p.dbusName.indexOf("playerctld") === -1);
+        for (let i = 0; i < ps.length; i++) if (ps[i].isPlaying) return true;
+        return false;
+    }
+    onMediaPlayingChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
+    onSessionActiveChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
+
+    // Veille is quiet during a session, until bedtime.
+    readonly property bool holdsVeille: {
+        if (!root.sessionActive) return false;
+        const b = (root.status.bedtime || "22:30").split(":");
+        const now = new Date(root.nowMs);
+        return now.getHours() * 60 + now.getMinutes() < (+b[0]) * 60 + (+b[1]);
     }
 
     // ---- the island's alert -------------------------------------------
