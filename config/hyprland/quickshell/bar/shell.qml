@@ -12,6 +12,7 @@ import "modules/mixer"
 import "modules/launcher"
 import "modules/calendar"
 import "modules/controller"
+import "modules/boussole"
 import "services"
 import "theme"
 
@@ -99,6 +100,8 @@ ShellRoot {
     // its exclusiveZone reservation, same as waybar hiding did -- tiled
     // windows actually reclaim the space instead of leaving a dead gap.
     property bool zenMode: false
+    // Boussole's alert waits out zen mode, like everything else in the bar.
+    Binding { target: BoussoleState; property: "zen"; value: shell.zenMode }
 
     // Keybinds cheatsheet, shown while SUPER is HELD (see
     // hypr/keybinds.lua's "Super_L" bind, press/release calling
@@ -447,6 +450,9 @@ ShellRoot {
         function toggleCalendar(): void {
             CalendarState.togglePanel(Quickshell.screens[0]);
         }
+        function toggleBoussole(): void {
+            BoussoleState.togglePanel(Quickshell.screens[0]);
+        }
         // Poked by hypr/scripts/agenda.py after each add/delete.
         function reloadEvents(): void {
             CalendarState.reloadEvents();
@@ -554,6 +560,10 @@ ShellRoot {
             if (CalendarState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 CalendarState.close();
+            }
+            if (BoussoleState.panelOpen
+                && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
+                BoussoleState.close();
             }
         }
     }
@@ -862,6 +872,27 @@ ShellRoot {
                     width: launchers.drawerBandWidth
                     height: launchers.height
                 }
+                // Boussole's drawer, the same band-shaped hole as the
+                // clock's.
+                Region {
+                    x: boussoleIsland.x + boussoleIsland.drawerBandX
+                    y: 0
+                    width: boussoleIsland.visible ? boussoleIsland.drawerBandWidth : 0
+                    height: boussoleIsland.height
+                }
+                // Boussole's alert in the central island: unlike Veille's
+                // pulse, its buttons are the point, so the whole card takes
+                // clicks while it shows. It stacks under Veille's entry,
+                // hence that entry's live height in the offset.
+                Region {
+                    x: centerIsland.x + centerIsland.drawerBandX
+                       + centerIsland.margin + boussoleAlert.hitX
+                    y: centerIsland.y + centerIsland.rowHeight
+                       + centerIsland.drawerGap * centerIsland.opaqueProgress
+                       + veilleDrawer.height + boussoleAlert.hitY
+                    width: boussoleAlert.hitWidth
+                    height: boussoleAlert.hitHeight
+                }
                 // SEVENTH, the clock island's calendar drawer -- the same
                 // band-shaped hole as TOOLS' and Launchers' own, for the
                 // drawer that moved over with the clock.
@@ -1033,6 +1064,12 @@ ShellRoot {
                         veille: shell.veille
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
                     },
+                    // Boussole's alerts, under Veille's pulse when both
+                    // happen to show (Veille is quiet during a session).
+                    BoussoleAlert {
+                        id: boussoleAlert
+                        drawerOpen: BoussoleState.alertShown && bar.screen === shell.veille.activeScreen
+                    },
                     Modules.KeybindsDrawerContent {
                         drawerOpen: shell.keybindsVisible
                         shiftHeld: shell.keybindsShift
@@ -1122,6 +1159,47 @@ ShellRoot {
             // almost-transparent fill (#0c0c0e at ~45% alpha) instead of
             // the main bar's solid one, so it reads as a lightweight
             // overlay, not another equally-weighted bar.
+            // ── BOUSSOLE (right of the clock) ─────────────────
+            // The study planner's place: what comes next, or the session
+            // under way, and its drawer under it -- the same island as the
+            // clock's, with a drawer of its own width. Gone when there is
+            // nothing to say.
+            Modules.DrawerIsland {
+                id: boussoleIsland
+
+                visible: boussoleIndicator.visible || BoussoleState.panelOpen
+                rowPane: false
+                rowHeight: 24
+                anchors.top: parent.top
+                anchors.topMargin: Math.round((barBand.height - boussoleIsland.rowHeight) / 2)
+                anchors.left: clockIsland.right
+                flushTop: false
+
+                twoPhase: false
+                revealDuration: 220
+                contentFadeDuration: 150
+                contentFadeOutDuration: 110
+                panelFadeDuration: 200
+                widenDuration: 180
+                fixedDrawerWidth: 440
+                widenOnOpen: false
+                splitDrawer: true
+                drawerFillTop: DrawerTheme.panelTop
+                drawerFillBottom: DrawerTheme.panelBottom
+                drawerRadius: 28
+                drawerGap: 0
+                drawerTop: bar.bandHeight
+                drawerAnchorX: boussoleIsland.margin + boussoleIsland.drawerContentWidth / 2
+
+                drawerItems: [
+                    BoussoleHome {
+                        drawerOpen: BoussoleState.panelOpen && BoussoleState.activeScreen === bar.screen
+                    }
+                ]
+
+                BoussoleIndicator { id: boussoleIndicator; ink: clockInk; screen: bar.screen }
+            }
+
             Modules.Block {
                 id: metrics
 
@@ -1138,7 +1216,7 @@ ShellRoot {
                 // which left the clock alone on a very empty left half
                 // (asked for: "place quand même les metrics à gauche
                 // après l'horloge").
-                anchors.left: clockIsland.right
+                anchors.left: boussoleIsland.visible ? boussoleIsland.right : clockIsland.right
                 flushTop: false
                 color: "transparent"
                 // Glass. These three float free of every screen edge, so

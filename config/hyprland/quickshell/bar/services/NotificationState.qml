@@ -84,6 +84,7 @@ Singleton {
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
         CalendarState.close();
+        BoussoleState.close();
         root.activeScreen = screen;
         root.centerOpen = true;
         root.hasUnseen = false;

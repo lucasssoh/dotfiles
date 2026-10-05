@@ -32,6 +32,7 @@ Singleton {
             root.close();
             return;
         }
+        BoussoleState.close();
         NotificationState.close();
         BaliseState.close();
         PowerState.close();

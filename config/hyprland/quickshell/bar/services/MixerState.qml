@@ -63,6 +63,7 @@ Singleton {
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
         CalendarState.close();
+        BoussoleState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // Availability can change while the drawer is shut (a cable goes
