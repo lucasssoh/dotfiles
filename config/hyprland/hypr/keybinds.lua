@@ -97,6 +97,9 @@ bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { descripti
 -- the bar's calendar drawer shows it and rings its reminders.
 bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"), { description = "Agenda" })
 
+-- Boussole: the study planner's drawer, under its place in the bar.
+bind(mod .. "+ D",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleBoussole"), { description = "Boussole" })
+
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
 -- equivalent to hyprlang's `bindr`) confirms immediately -- holding +
