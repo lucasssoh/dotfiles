@@ -8,6 +8,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **cc-pkg-mng and dnf:** on the day a release comes out, `sudo dnf upgrade` and `cc-pkg-mng upgrade` now see it. dnf used to keep its list of coucou-shell's packages for two days, so the new `cc-pkg-mng` did not show up and an upgrade could fail to find the release's packages. dnf now checks coucou-shell's repository at most an hour after a release, and `cc-pkg-mng upgrade` re-reads it before installing. Your next upgrade updates the repository's settings on your machine.
 - **Games, NVIDIA:** games that use DLSS, such as Kingdom Come: Deliverance II or The Witcher 3, start right after boot. Before, they reported an incompatible GPU until you had run `nvidia-smi` once. If you install the NVIDIA driver yourself later, this works from the next restart.
 
+### Added
+- **Boussole:** a study planner in the bar, optional. It plans study sessions from your course folder and your timetable, rings them in the bar's central island with a chime, follows them through Liseuse, and replans when you close them. `Super + D` opens its drawer, `Super + Shift + D` adds an exam, a hand-in or a task in one line.
+
 ### Changed
 - **Bar:** drawers, notifications, OSD and the controller popup now follow light and dark mode.
 

@@ -67,11 +67,21 @@ Summary:        Gamepad daemon for coucou-shell
 The daemon behind the controller popup of coucou-shell's bar: it notices
 gamepads as they arrive and opens the popup on the Guide button.
 
+%package -n boussole
+Summary:        Study planner for coucou-shell
+Requires:       mupdf
+Requires:       curl
+
+%description -n boussole
+The service behind the Boussole drawer of coucou-shell's bar: it plans study
+sessions from a course folder and a timetable, rings their alerts and follows
+them through Liseuse.
+
 %prep
 %autosetup
 
 %build
-for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src; do
+for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/boussole-src; do
     cargo build --release --locked --manifest-path "$crate/Cargo.toml" --target-dir target
 done
 
@@ -82,6 +92,7 @@ install -Dm755 target/release/prisme           %{buildroot}%{_bindir}/prisme
 install -Dm755 target/release/wallpaper-filter %{buildroot}%{_bindir}/wallpaper-filter
 install -Dm755 target/release/balise           %{buildroot}%{_bindir}/balise
 install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
+install -Dm755 target/release/boussole         %{buildroot}%{_bindir}/boussole
 
 %files -n cc-pkg-mng
 %license LICENSE.md
@@ -103,3 +114,7 @@ install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
 %files -n manette
 %license LICENSE.md
 %{_bindir}/manette
+
+%files -n boussole
+%license LICENSE.md
+%{_bindir}/boussole

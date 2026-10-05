@@ -1,0 +1,28 @@
+name     = "boussole"
+layer    = "core"
+summary  = "Study planner: sessions from your timetable and course folder, alerts in the bar, followed through Liseuse"
+requires = ["bar", "liseuse", "fuzzel"]
+optional = true
+ask      = "Install Boussole, the study planner?"
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/boussole-src with the build deps.
+[binaries]
+rpm    = "boussole"
+source = "config/hyprland/boussole-src"
+bins   = ["boussole"]
+
+[packages]
+# mupdf: mutool, for the sections of a sheet open in Liseuse.
+# pipewire-utils: pw-play, the alert's chime.
+dnf   = ["mupdf", "curl", "pipewire-utils"]
+build = ["rust", "cargo"]
+
+[links]
+"config/hyprland/systemd/boussole.service" = "~/.config/systemd/user/boussole.service"
+
+[services]
+user = ["boussole"]
+
+[verify]
+commands = ["boussole --version"]
