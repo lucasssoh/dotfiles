@@ -3,6 +3,17 @@
 path = ~/.local/share/khal/calendars/personal
 color = light blue
 
+# Boussole's sessions and the timetable's courses, written by the boussole
+# service (one .ics per event). Declared for everyone: the bar unit creates
+# the folders, and an empty calendar costs nothing.
+[[etude]]
+path = ~/.local/share/khal/calendars/etude
+color = light green
+
+[[cours]]
+path = ~/.local/share/khal/calendars/cours
+color = light gray
+
 [sqlite]
 path = ~/.local/share/khal/khal.db
 

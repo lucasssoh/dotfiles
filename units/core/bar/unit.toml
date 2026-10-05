@@ -23,3 +23,10 @@ name   = "fontview-mime"
 run_as = "user"
 does   = "write fontview.desktop and make fontview the handler of font files"
 run    = "units/core/bar/hooks/fontview-mime.sh"
+
+[[hooks]]
+name   = "khal-calendars"
+run_as = "user"
+does   = "create the folders of khal's calendars, so khal never meets a missing one"
+run    = "units/core/bar/hooks/khal-calendars.sh"
+watch  = ["config/hyprland/khal"]
