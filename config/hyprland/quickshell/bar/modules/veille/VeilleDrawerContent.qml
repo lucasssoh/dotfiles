@@ -91,6 +91,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         width: 120
+        tint: DrawerTheme.islandAccent
         onCloseRequested: if (root.veille) root.veille.dismiss()
     }
 

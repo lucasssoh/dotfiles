@@ -238,7 +238,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             visible: root.parts.ctx !== ""
             text: root.parts.ctx
-            color: DrawerTheme.muted
+            color: DrawerTheme.islandMuted
             font.family: Fonts.ui
             font.pixelSize: 14
         }

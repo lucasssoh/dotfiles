@@ -128,7 +128,7 @@ Item {
             anchors.right: parent.right
             anchors.baseline: layoutLabel.baseline
             text: root.shiftHeld ? "Super + Shift" : "Super · hold ⇧ for the second layer"
-            color: DrawerTheme.muted
+            color: DrawerTheme.islandMuted
             font.family: Fonts.ui
             font.pixelSize: 13
             renderType: Text.NativeRendering
@@ -176,7 +176,7 @@ Item {
                 // from unbound at a glance; the held modifiers take the
                 // raised grey instead, so they read as pressed rather than
                 // as one more bound key.
-                color: cap.held ? DrawerTheme.cardRaised : DrawerTheme.card
+                color: cap.held ? DrawerTheme.islandCardRaised : DrawerTheme.islandCard
                 border.width: cap.lit ? 1.5 : 0
                 border.color: DrawerTheme.creamInk(0.55)
                 opacity: cap.elsewhere ? 0.55 : 1
@@ -184,7 +184,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: 150 } }
 
                 // Cream like Veille's, the other drawer under the island.
-                readonly property color ink: (cap.lit || cap.held) ? DrawerTheme.cream : DrawerTheme.faint
+                readonly property color ink: (cap.lit || cap.held) ? DrawerTheme.cream : DrawerTheme.islandFaint
 
                 // What the key prints: its name for the fixed keys, the
                 // layout's glyph otherwise -- letters upper-cased like a

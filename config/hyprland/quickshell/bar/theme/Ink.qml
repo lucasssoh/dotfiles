@@ -81,10 +81,8 @@ QtObject {
     // moves the crossover to grey 115 where both sides score ~8.7:1, and
     // guarantees 8.65:1 across the whole 0-255 range.
     //
-    // The OSD, BatteryAlert and the central island keep the dark ramp
-    // above permanently -- which is why this is a plain second token and
-    // not a mode switch on `primary`. So do the band's drawers, which
-    // read theme/DrawerTheme.qml (dark only; a wallpaper-driven light
-    // material was tried there and dropped).
+    // The OSD, BatteryAlert and the band's drawers read
+    // theme/DrawerTheme.qml instead, which follows the desktop's light/dark
+    // preference rather than the wallpaper; the central island stays dark.
     readonly property color onLight: "#0c0c0e"
 }
