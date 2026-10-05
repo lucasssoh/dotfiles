@@ -231,6 +231,46 @@ Over Steam or a fullscreen game, a short press on Guide is left to the game: **h
 
 The service behind it runs as `systemd --user` (`manette.service`). It's built from [`manette-src`](../config/hyprland/manette-src/) on edge and installed as a package on stable, like Roue, Prisme and Balise.
 
+### `boussole`
+
+A study planner in the bar, optional (`init` asks). It reads your course folder and your timetable, plans study sessions around your courses and your evenings, rings them, and follows them through [Liseuse](#liseuse). It never writes in the course folder.
+
+**In the bar.** Right of the clock: the next session (`A&C · 20:30`), outlined in its last 15 minutes. During a session, a ring that empties over a 25-minute Pomodoro, with its 5-minute break. `2 à déclarer` with a red dot when sessions were left open. Click it, or press `Super + D`, for the drawer.
+
+**Alerts.** A session's start opens in the bar's central island, like Veille, with a chime: `Start`, `At 21:00`, `Not tonight`. It stays until you answer, comes back 15 minutes later if nothing started, and waits out a fullscreen game or zen mode. The evening before, a notification sums up tomorrow; a course cancelled or moved in the timetable, today or tomorrow, gets one too. Nothing after the latest end of the evening.
+
+**The drawer.**
+
+| Tab | What it holds |
+|---|---|
+| **Today** | The session under way or the next one, sessions left open, then the day: courses, sessions, free periods at school |
+| **Week** | The seven days ahead |
+| **Progress** | Per subject: sheets studied, exercises solved alone, reviews waiting, the next exam and the sessions to spare before it |
+| **Files** | New files, waiting for you to plan or ignore them, then every file by subject |
+| **More** | Exams and hand-ins, projects, campaigns, subjects, calendars, rhythm and periods, settings, and the first run again |
+
+**A session.** `Start` opens the sheet in Liseuse at the planned section. Boussole counts the pages Liseuse shows on screen (not the window in front), leaves out the time without keyboard or mouse for 5 minutes, and pauses while a game runs. A video playing is asked about when you close. Closing Liseuse ends nothing: work goes on on paper. **Close**, in the drawer, is pre-filled with what Liseuse saw: confirm the section understood, each exercise (solved alone, with the solution, failed), how it went and a note. The plan follows: reviews at about 7 and 21 days, failed exercises back 3 days later without the solution, stuck becomes a question to ask.
+
+**First run.** Under Today, five steps: language and course folder, the timetable's iCal link and your groups (ticked, never typed), which courses go with which folder, your rhythm, ready. Every setting is in **More** afterwards, and `boussole help` lists the same from a terminal.
+
+**Quick add** (`Super + Shift + D`, or `boussole add` in a terminal) reads one line and shows what it understood before keeping it:
+
+| Line | Adds |
+|---|---|
+| `examen L&MC 18/12` | an exam |
+| `cc OC 12/11 14h` | a test, prepared 3 days ahead |
+| `rendu ARGOS 12/11 30h` | a hand-in with its hours of work |
+| `indispo sam 14h-18h` | a busy slot |
+| `tâche relire TD3 A&C 45m` | a task |
+| `candidature Entreprise F` | a company in the running campaign |
+| `libre 1h` | what fits in an hour you did not expect |
+
+**Games during a session.** Launched from the [controller menu](#manette) or the launcher (`Super + Space`), a game asks first: launching anyway pauses the session. A game started from Steam directly is noticed, not stopped. Turn it off in More › Settings.
+
+**Calendars.** Sessions go to khal's `etude` calendar and your courses to `cours`, so both show in the calendar drawer; your own events (`Super + A`) count as busy.
+
+Settings live in `~/.config/boussole/settings.json` and your history in `~/.local/share/boussole/`; both are written by the app. The service runs as `systemd --user` (`boussole.service`), built from [`boussole-src`](../config/hyprland/boussole-src/) on edge and installed as a package on stable.
+
 ### `fuzzel`
 
 The app launcher (`Super + Space`). It's also the list you pick from for the clipboard history (`Super + V`), Liseuse and the agenda. Its settings are in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
