@@ -907,6 +907,7 @@ impl Service {
             "undecided": self.catalogue.undecided(&st.progress.files).len(),
             "suivi": self.suivi_status(),
             "alert": self.alert,
+            "bedtime": self.store.settings.rhythm.bedtime,
             "today": self.today(),
         })
     }
