@@ -372,10 +372,15 @@ fn work_study_weeks() {
 fn pinned_sessions_and_a_restart() {
     let mut fx = Fx::new("pinned");
     let c = fx.id("21_C.md");
-    fx.pinned.push(Pin { task: format!("study:{c}"), date: MON.add(3), start: hm("20:30"), minutes: 60, work: None });
+    fx.pinned.push(Pin { task: format!("study:{c}"), date: MON.add(3), start: hm("20:30"), minutes: 60, work: None, domain: None });
     let p = fx.plan(at(MON, "06:00"));
     let s = p.sessions.iter().find(|s| s.date == MON.add(3) && s.kind == SlotKind::Evening).unwrap();
     assert!(s.pinned && s.parts[0].task == format!("study:{c}") && s.reasons.contains(&Reason::Pinned));
+    assert_eq!(s.start, hm("20:30"));
+    fx.pinned[0].start = hm("21:00");
+    let p = fx.plan(at(MON, "06:00"));
+    let s = p.sessions.iter().find(|s| s.date == MON.add(3) && s.kind == SlotKind::Evening).unwrap();
+    assert_eq!((s.start, s.end), (hm("21:00"), hm("21:45")), "at the time asked for");
     assert_eq!(parts(&p).iter().filter(|(_, _, x)| x.task == format!("study:{c}")).count(), 1);
 
     fx.missed_streak = 2;
@@ -417,4 +422,17 @@ fn a_slower_domain_gets_longer_estimates() {
     let normal = minutes(&fx);
     fx.settings.pace.domain_factor.insert("ALGO".into(), 1.5);
     assert!(minutes(&fx) > normal);
+}
+
+#[test]
+fn a_tutorial_tomorrow_takes_tonight_even_against_an_exam() {
+    let mut fx = Fx::new("forced");
+    fx.exam("LOGIC", MON.add(3));
+    let td = course(MON.add(1), "13:30", "15:30", CourseKind::Tutorial, "ALGO");
+    fx.courses.push(td.clone());
+    let p = fx.plan(at(MON, "06:00"));
+    assert_eq!(first_date(&p, &format!("prepare:{}", td.uid)), Some(MON), "tonight is the only slot before it");
+    assert!(!p.changes.iter().any(|c| matches!(c, Change::AtRisk { task, .. } if task.starts_with("prepare:"))));
+    // The timed subject has no Sunday before Thursday: said, not hidden.
+    assert!(p.changes.iter().any(|c| matches!(c, Change::AtRisk { task, .. } if task.starts_with("exam:LOGIC"))));
 }

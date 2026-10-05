@@ -59,6 +59,8 @@ pub struct Pin {
     pub minutes: i32,
     #[serde(default)]
     pub work: Option<Work>,
+    #[serde(default)]
+    pub domain: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -651,7 +653,7 @@ pub fn plan(input: &Input) -> Plan {
         let Some(cell) = cell else { continue };
         let task = all.iter_mut().find(|t| t.key == pin.task);
         let (work, domain) = match (&pin.work, task.as_deref()) {
-            (Some(w), t) => (w.clone(), t.and_then(|t| t.domain.clone())),
+            (Some(w), t) => (w.clone(), t.and_then(|t| t.domain.clone()).or_else(|| pin.domain.clone())),
             (None, Some(t)) => (t.work.clone(), t.domain.clone()),
             (None, None) => continue,
         };
@@ -659,6 +661,11 @@ pub fn plan(input: &Input) -> Plan {
             t.done = true;
         }
         pinned_keys.insert(pin.task.clone());
+        // At the time asked for, when the slot holds it.
+        if !cell.pinned && pin.start > cell.slot.start && pin.start.plus(r.min_session) <= cell.slot.end {
+            cell.slot.start = pin.start;
+            cell.cap = cell.slot.minutes();
+        }
         cell.pinned = true;
         cell.reasons.push(Reason::Pinned);
         cell.push(Part { task: pin.task.clone(), domain, minutes: pin.minutes.min(cell.cap), work, timed: false });
@@ -846,9 +853,6 @@ pub fn plan(input: &Input) -> Plan {
     // 3. Fill the counted slots.
     let targets = domain_targets(input, &cells, today);
     let pressure = domain_pressure(input, &all, &cells, &targets);
-    // Home slots long enough for a timed subject, by date: they are scarce.
-    let timed_room: Vec<(Date, i32)> =
-        cells.iter().filter(|c| c.slot.place == Place::Home).map(|c| (c.slot.date, c.free())).collect();
     let mut last_study: Option<String> = None;
     let mut last_seen: BTreeMap<String, Date> = input
         .progress
@@ -889,23 +893,30 @@ pub fn plan(input: &Input) -> Plan {
                 break;
             }
             let due_of = |t: &Task| t.due.or_else(|| t.domain.as_ref().and_then(|d| targets.get(d)).copied());
+            // What is left of every slot from this one on, for the tasks
+            // that must be done before a date.
+            let room: Vec<(Date, i32, Place)> = cells[ci..].iter().map(|c| (c.slot.date, c.free(), c.slot.place)).collect();
             let key = |i: &usize| {
                 let t = &all[*i];
-                let mut tier = bucket(due_of(t).map(|d| date.days_until(d)));
-                if t.timed {
-                    // Few slots can hold a timed subject: urgent once the
-                    // slots left before its date barely cover those due by then.
-                    let due = t.before.unwrap_or(horizon);
-                    let room = timed_room.iter().filter(|(d, m)| *d >= date && *d < due && *m >= t.minutes).count();
-                    let pending = all.iter().filter(|o| o.timed && !o.done && o.before.unwrap_or(horizon) <= due).count();
-                    if room <= pending + 1 {
-                        tier = 0;
-                    }
-                }
+                let tier = bucket(due_of(t).map(|d| date.days_until(d)));
+                // Due before a date and the slots left barely cover what is
+                // due by then: it goes first, whatever else is pressing.
+                let forced = t.before.is_some_and(|before| {
+                    let fits = |&&(d, free, place): &&(Date, i32, Place)| {
+                        d < before && free >= t.minutes && (!t.timed || place == Place::Home)
+                    };
+                    let left = room.iter().filter(fits).count();
+                    let pending = all
+                        .iter()
+                        .filter(|o| !o.done && o.timed == t.timed && o.before.is_some_and(|b| b <= before))
+                        .count();
+                    left <= pending
+                });
                 let p = t.domain.as_ref().and_then(|d| pressure.get(d)).copied().unwrap_or(0.0);
                 (
                     // Once a session has its main work, short tasks fill it.
-                    main && !t.short,
+                    main && !t.short && !forced,
+                    !forced,
                     tier,
                     !(t.in_progress && t.kind == TaskKind::Sheet),
                     -(p * 1000.0) as i64,
@@ -920,8 +931,8 @@ pub fn plan(input: &Input) -> Plan {
             // same urgency; a sheet already started keeps its place.
             let turn = |i: usize| all[i].seq && !(all[i].in_progress && all[i].kind == TaskKind::Sheet);
             if turn(pick) && all[pick].domain.is_some() && all[pick].domain == last_study {
-                let tier = key(&pick).1;
-                if let Some(&other) = cands.iter().find(|&&i| all[i].seq && all[i].domain != last_study && key(&i).1 == tier) {
+                let tier = key(&pick).2;
+                if let Some(&other) = cands.iter().find(|&&i| all[i].seq && all[i].domain != last_study && key(&i).2 == tier) {
                     pick = other;
                 }
             }
