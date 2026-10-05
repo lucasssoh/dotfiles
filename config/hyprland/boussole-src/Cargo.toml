@@ -8,8 +8,9 @@ license-file = "../../../LICENSE.md"
 # Built like Manette: no async runtime, no date or iCal crate. Civil dates,
 # the TZif reader and the iCal parser are a few hundred lines each, and the
 # planner is a pure function over plain structs, so serde is all it needs to
-# read and write its state. libc arrives with the service (poll, timerfd).
+# read and write its state. libc for the service's poll, timerfd and inotify.
 [dependencies]
+libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

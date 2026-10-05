@@ -4,6 +4,7 @@
 //! the interface's study mode.
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -181,6 +182,20 @@ pub struct Settings {
     pub pace: Pace,
     /// Measured estimate bias on projects: 1.4 = takes 40 % longer than guessed.
     pub project_bias: f32,
+    /// The course folder, read only.
+    pub courses: Option<PathBuf>,
+    pub ignore: crate::catalogue::Ignore,
+    pub domains: Vec<Domain>,
+    /// The timetable's iCal address (never in the repository).
+    pub calendar_url: Option<String>,
+    /// Group values ticked per family of the feed.
+    pub groups: BTreeMap<String, Vec<String>>,
+    /// When the evening recap falls if no session ends the day.
+    pub recap: Hm,
+    /// Ask before a game starts during a session.
+    pub gate: bool,
+    /// Commands the gate asks about (a word of the command line).
+    pub gate_match: Vec<String>,
 }
 
 impl Default for Settings {
@@ -196,6 +211,14 @@ impl Default for Settings {
             horizon_days: 28,
             pace: Pace::default(),
             project_bias: 1.0,
+            courses: None,
+            ignore: crate::catalogue::Ignore::default(),
+            domains: Vec::new(),
+            calendar_url: None,
+            groups: BTreeMap::new(),
+            recap: Hm::new(21, 30),
+            gate: true,
+            gate_match: ["steam", "lutris", "heroic", "gamescope", "umu-run", "wine"].map(String::from).to_vec(),
         }
     }
 }

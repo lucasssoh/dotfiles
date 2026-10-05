@@ -132,8 +132,20 @@ fn sessions(n: i32, lang: Lang) -> String {
     }
 }
 
+/// A sentence ending on an abbreviation ("oct.") takes no second period.
+fn tidy(mut s: String) -> String {
+    if s.ends_with("..") {
+        s.pop();
+    }
+    s
+}
+
 /// One line of "Why this session?".
 pub fn reason(r: &Reason, lang: Lang) -> String {
+    tidy(reason_raw(r, lang))
+}
+
+fn reason_raw(r: &Reason, lang: Lang) -> String {
     let fr = lang == Lang::Fr;
     match r {
         Reason::Deadline { title, days, margin, .. } => {
@@ -206,8 +218,33 @@ pub fn reason(r: &Reason, lang: Lang) -> String {
     }
 }
 
+/// "What moved", in detail for the next two weeks and counted beyond.
+pub fn changes(list: &[Change], today: Date, lang: Lang) -> String {
+    let soon = |d: Date| today.days_until(d) <= 14;
+    let near = |c: &&Change| match c {
+        Change::Moved { from, to, .. } => soon(*from.min(to)),
+        Change::Unplaced { was, .. } => soon(*was),
+        Change::Margin { .. } | Change::AtRisk { .. } => true,
+    };
+    let mut lines: Vec<String> = list.iter().filter(near).map(|c| change(c, lang)).collect();
+    let far = list.len() - lines.len();
+    if far > 0 {
+        lines.push(match (lang, far) {
+            (Lang::Fr, 1) => "Et 1 décalage plus loin.".into(),
+            (Lang::Fr, n) => format!("Et {n} décalages plus loin."),
+            (Lang::En, 1) => "And 1 change further on.".into(),
+            (Lang::En, n) => format!("And {n} changes further on."),
+        });
+    }
+    lines.join("\n")
+}
+
 /// One line of "what moved".
 pub fn change(c: &Change, lang: Lang) -> String {
+    tidy(change_raw(c, lang))
+}
+
+fn change_raw(c: &Change, lang: Lang) -> String {
     let fr = lang == Lang::Fr;
     let with_domain = |w: &Work, d: &Option<String>| match d {
         Some(d) => format!("{d} {}", work(w, lang)),

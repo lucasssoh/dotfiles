@@ -1,11 +1,12 @@
-//! `boussole`: for now a single command, `preview`, which plans from a course
-//! folder and an iCal file without touching anything, to check the planner
-//! on real data. The service and the full CLI come next.
+//! `boussole`: the service (`boussole daemon`), its command line, and
+//! `preview`, which plans from a course folder and an iCal file without
+//! touching anything.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use boussole::ade;
+use boussole::store::Paths;
+use boussole::{ade, cli, daemon};
 use boussole::catalogue::{Catalogue, Ignore, Inclusion, ItemKind};
 use boussole::i18n;
 use boussole::model::{Domain, Lang, Progress, Settings};
@@ -17,17 +18,23 @@ const USAGE: &str = "usage: boussole preview --courses DIR [--ics FILE] [--group
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    match args.first().map(String::as_str) {
-        Some("--version" | "-V") => println!("boussole {}", env!("CARGO_PKG_VERSION")),
-        Some("preview") => {
-            if let Err(e) = preview(&args[1..]) {
-                eprintln!("boussole: {e}");
-                std::process::exit(1);
-            }
+    let paths = Paths::from_env();
+    let result = match args.first().map(String::as_str) {
+        Some("--version" | "-V") => Ok(format!("boussole {}", env!("CARGO_PKG_VERSION"))),
+        Some("preview") => preview(&args[1..]).map(|_| String::new()),
+        Some("daemon") => daemon::run(paths).map(|_| String::new()).map_err(|e| e.to_string()),
+        Some("gate") => {
+            let rest: Vec<String> = args[1..].iter().skip_while(|a| *a == "--").cloned().collect();
+            Err(cli::gate(&paths, &rest).to_string())
         }
-        _ => {
-            eprintln!("{USAGE}");
-            std::process::exit(2);
+        _ => cli::main(&paths, &args),
+    };
+    match result {
+        Ok(text) if text.is_empty() => {}
+        Ok(text) => println!("{text}"),
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
         }
     }
 }

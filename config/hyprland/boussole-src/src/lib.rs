@@ -1,14 +1,20 @@
 //! Boussole, the study planner behind the bar's Boussole drawer.
 //!
-//! This crate holds the parts without side effects: the course catalogue,
-//! the iCal timetable, the shape of each day and the planner itself. The
-//! service around them (socket, alarm clock, khal, notifications) builds on
-//! these and keeps the planner a pure function.
+//! The parts without side effects (catalogue, iCal timetable, the shape of
+//! each day, the planner, alerts, quick add, journal) are plain functions
+//! with their tests; `daemon` puts them around a socket, an alarm clock and
+//! a few child processes, and `cli` talks to it.
 
 pub mod ade;
+pub mod ajout;
+pub mod alertes;
 pub mod catalogue;
+pub mod cli;
+pub mod daemon;
 pub mod i18n;
 pub mod journee;
+pub mod khal;
 pub mod model;
 pub mod plan;
+pub mod store;
 pub mod time;
