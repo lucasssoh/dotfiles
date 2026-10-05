@@ -1069,6 +1069,8 @@ impl Service {
                 let days = cmd.get("days").and_then(Value::as_i64).unwrap_or(7) as i32;
                 (String::new(), self.week(now.date, days))
             }
+            "files-view" => (String::new(), self.files_view()),
+            "progress-view" => (String::new(), self.progress_view()),
             "closing" => {
                 let x = session_arg(self)?;
                 let v = self.closing(&x.id).ok_or("closing")?;

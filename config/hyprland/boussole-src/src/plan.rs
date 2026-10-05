@@ -171,7 +171,7 @@ pub struct Plan {
 
 impl Plan {
     /// The first counted date of each task.
-    fn first_dates(&self, from: Date) -> BTreeMap<String, (Date, Work, Option<String>)> {
+    pub fn first_dates(&self, from: Date) -> BTreeMap<String, (Date, Work, Option<String>)> {
         let mut m = BTreeMap::new();
         for s in self.sessions.iter().filter(|s| s.date >= from) {
             for p in &s.parts {

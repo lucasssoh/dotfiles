@@ -396,4 +396,114 @@ impl Service {
             "parts": parts,
         }))
     }
+
+    /// The Files page: new files first, then every file by subject, with
+    /// what was decided and when it comes next.
+    pub(crate) fn files_view(&self) -> Value {
+        use crate::catalogue::{Inclusion, ItemKind};
+        let lang = self.lang();
+        let today = self.now().date;
+        let first = self.plan.first_dates(today);
+        let kind = |k: ItemKind| match k {
+            ItemKind::Pdf => "PDF",
+            ItemKind::Notes => "MD",
+            ItemKind::Map => self_t(lang, "Map", "Carte"),
+            ItemKind::Sheet => self_t(lang, "Sheet", "Fiche"),
+            ItemKind::Synthesis => self_t(lang, "Exercises", "Exercices"),
+            ItemKind::ExamPractice => self_t(lang, "Exam-type", "Type examen"),
+            ItemKind::TdExercise => "TD",
+        };
+        let decisions = &self.store.state.progress.files;
+        let row = |i: &crate::catalogue::Item| {
+            let dir = i.id.rsplit_once('/').map_or("", |(d, _)| d);
+            let next = ["study:", "read:"].iter().find_map(|p| first.get(&format!("{p}{}", i.id))).map(|(d, _, _)| i18n::date(*d, lang));
+            let done = self.store.state.progress.items.get(&i.id).is_some_and(|p| p.done || p.studied_on.is_some());
+            json!({
+                "id": i.id,
+                "title": i18n::item_name(&i.id),
+                "kind": kind(i.kind),
+                "dir": dir,
+                "inclusion": decisions.get(&i.id).map(|d| if *d == Inclusion::Planned { "planned" } else { "ignored" }),
+                "next": next,
+                "done": done,
+                "star": i.starred,
+            })
+        };
+        let undecided: Vec<Value> = self.catalogue.undecided(decisions).into_iter().map(row).collect();
+        let mut by_domain: Vec<Value> = Vec::new();
+        for d in self.catalogue.domains() {
+            let items: Vec<Value> = self.catalogue.items.iter().filter(|i| i.domain == d).map(row).collect();
+            by_domain.push(json!({ "domain": d, "items": items }));
+        }
+        json!({
+            "root": self.store.settings.courses,
+            "count": self.catalogue.items.len(),
+            "undecided": undecided,
+            "domains": by_domain,
+        })
+    }
+
+    /// The Progress page: per subject, sheets studied, exercises solved
+    /// alone, reviews due, and the next exam with its margin.
+    pub(crate) fn progress_view(&self) -> Value {
+        use crate::catalogue::{Inclusion, ItemKind};
+        use crate::model::Exercise;
+        let lang = self.lang();
+        let today = self.now().date;
+        let st = &self.store.state;
+        let mut out = Vec::new();
+        for d in self.store.settings.domains.iter().filter(|d| !d.archived) {
+            let items: Vec<&crate::catalogue::Item> = self
+                .catalogue
+                .items
+                .iter()
+                .filter(|i| i.domain == d.id && st.progress.files.get(&i.id) == Some(&Inclusion::Planned))
+                .filter(|i| matches!(i.kind, ItemKind::Sheet | ItemKind::Synthesis | ItemKind::Map | ItemKind::TdExercise | ItemKind::Pdf | ItemKind::Notes))
+                .collect();
+            if items.is_empty() {
+                continue;
+            }
+            let prog = |i: &crate::catalogue::Item| st.progress.items.get(&i.id);
+            let studied = items.iter().filter(|i| prog(i).is_some_and(|p| p.done || p.studied_on.is_some())).count();
+            let ex_total: u32 = items.iter().map(|i| i.exercises).sum();
+            let ex_solo: usize = items
+                .iter()
+                .filter_map(|i| prog(i))
+                .map(|p| p.exercises.values().filter(|e| **e == Exercise::Solo).count())
+                .sum();
+            // Reviews due: a first pass done, and its J+7 (or J+3) passed.
+            let due = items
+                .iter()
+                .filter_map(|i| prog(i))
+                .filter(|p| d.spaced && p.studied_on.is_some_and(|on| {
+                    let wait = if p.assessment == Some(crate::model::Assessment::Review) { 3 } else { 7 };
+                    p.reviews_done.is_empty() && on.add(wait) <= today
+                }))
+                .count();
+            let exam = self.plan.margins.iter().filter(|m| m.domain.as_deref() == Some(&d.id)).min_by_key(|m| m.date);
+            out.push(json!({
+                "domain": d.id,
+                "studied": studied,
+                "total": items.len(),
+                "exercises_solo": ex_solo,
+                "exercises": ex_total,
+                "reviews_due": due,
+                "exam": exam.map(|m| json!({
+                    "title": m.title,
+                    "date": i18n::date(m.date, lang),
+                    "days": today.days_until(m.date),
+                    "margin": m.sessions,
+                })),
+            }));
+        }
+        Value::Array(out)
+    }
+}
+
+fn self_t(lang: Lang, en: &'static str, fr: &'static str) -> &'static str {
+    if lang == Lang::Fr {
+        fr
+    } else {
+        en
+    }
 }
