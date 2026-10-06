@@ -251,6 +251,10 @@ A study planner in the bar, optional (`init` asks). It reads your course folder 
 
 **A session.** `Start` opens the sheet in Liseuse at the planned section. Boussole counts the pages Liseuse shows on screen (not the window in front), leaves out the time without keyboard or mouse for 5 minutes, and pauses while a game runs. A video playing is asked about when you close. Closing Liseuse ends nothing: work goes on on paper. **Close**, in the drawer, is pre-filled with what Liseuse saw: confirm the section understood, each exercise (solved alone, with the solution, failed), how it went and a note. The plan follows: reviews at about 7 and 21 days, failed exercises back 3 days later without the solution, stuck becomes a question to ask.
 
+**Where you stand.** In More › Subjects, each subject has a level: *Behind* gets more time per sheet and goes first, *Unsure* a little of both, *Fine* nothing special, and *Tutorials only* has nothing to read: only its tutorials to prepare, its projects and its exams. From a terminal: `boussole subject level A&C behind` (`behind`, `shaky`, `fine`, `td-only`).
+
+**The days.** Weekday evenings, two blocks on Sunday, Saturday as a bonus that is never counted, and Friday evening free. A school day whose courses end by the midday break gives its afternoon a 90-minute block (`boussole rhythm half_day_minutes 0` turns it off). A campaign's daily time goes to a free period at school, a free afternoon or the morning before the evening, and never to a free evening.
+
 **First run.** Under Today, five steps: language and course folder, the timetable's iCal link and your groups (ticked, never typed), which courses go with which folder, your rhythm, ready. Every setting is in **More** afterwards, and `boussole help` lists the same from a terminal.
 
 **Quick add** (`Super + Shift + D`, or `boussole add` in a terminal) reads one line and shows what it understood before keeping it:
