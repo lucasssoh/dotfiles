@@ -235,7 +235,7 @@ The service behind it runs as `systemd --user` (`manette.service`). It's built f
 
 A study planner in the bar, optional (`init` asks). It reads your course folder and your timetable, plans study sessions around your courses and your evenings, rings them, and follows them through [Liseuse](#liseuse). It never writes in the course folder.
 
-**In the bar.** Right of the clock: the next session (`A&C · 20:30`), outlined in its last 15 minutes. During a session, a ring that empties over a 25-minute Pomodoro, with its 5-minute break. `2 à déclarer` with a red dot when sessions were left open. Click it, or press `Super + D`, for the drawer.
+**In the bar.** Right of the clock: the next session and what it is about (`A&C · 20:30`, `Alternance · 20:30`), outlined with a countdown in its last 15 minutes, then `now` while it waits to be started. During a session, a ring that empties over a 25-minute Pomodoro, with its 5-minute break. `2 à déclarer` with a red dot when sessions were left open. Click it, or press `Super + D`, for the drawer.
 
 **Alerts.** A session's start opens in the bar's central island, like Veille, with a chime: `Start`, `At 21:00`, `Not tonight`. It stays until you answer, comes back 15 minutes later if nothing started, and waits out a fullscreen game or zen mode. The evening before, a notification sums up tomorrow; a course cancelled or moved in the timetable, today or tomorrow, gets one too. Nothing after the latest end of the evening.
 
