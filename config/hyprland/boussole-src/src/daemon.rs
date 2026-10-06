@@ -22,7 +22,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io::{self, ErrorKind, Read, Write};
 use std::os::fd::{AsRawFd, RawFd};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -95,6 +95,8 @@ pub struct Service {
     pub(crate) suivi: crate::suivi::Suivi,
     /// The alert the central island shows, until answered.
     pub(crate) alert: Option<Value>,
+    /// Focus mode's workspace and parked windows.
+    pub(crate) focus: crate::focus::FocusState,
 }
 
 fn clock(id: libc::clockid_t) -> i64 {
@@ -116,8 +118,12 @@ pub(crate) fn set_nonblocking(fd: RawFd) {
     }
 }
 
+/// A command's path. ~/.local/bin is looked in too: a user service starts
+/// with systemd's PATH, which leaves it out, and Liseuse lives there.
 pub(crate) fn which(cmd: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH")?.to_str()?.split(':').map(|d| Path::new(d).join(cmd)).find(|p| p.is_file())
+    let local = std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/bin"));
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    std::env::split_paths(&path).chain(local).map(|d| d.join(cmd)).find(|p| p.is_file())
 }
 
 pub fn run(paths: Paths) -> io::Result<()> {
@@ -164,9 +170,12 @@ pub fn run(paths: Paths) -> io::Result<()> {
         slept: clock(libc::CLOCK_BOOTTIME) - clock(libc::CLOCK_MONOTONIC),
         suivi: crate::suivi::Suivi::default(),
         alert: None,
+        focus: crate::focus::FocusState::default(),
     };
+    s.focus_load();
     s.rescan();
     s.suivi_start();
+    s.focus_arrange();
     s.watch_khal();
     s.spawn_khal();
     s.fetch_if_stale(0);
@@ -858,6 +867,16 @@ impl Service {
             Ok(())
         } else if action == "close" {
             self.close(session, None, None).map(|_| ())
+        } else if action == "reopen" {
+            self.focus_reopen();
+            Ok(())
+        } else if action == "pause" {
+            self.store.record(Event::Paused { session: session.into(), at: now }, now).map(|_| {
+                self.session_paused(true);
+                self.focus_pause(true);
+            })
+        } else if action.starts_with("detour:") {
+            Ok(())
         } else if let Some(t) = action.strip_prefix("later:").and_then(Hm::parse) {
             self.store.record(Event::Postponed { session: session.into(), to: Local::new(now.date, t) }, now).map(|_| ())
         } else {
@@ -868,25 +887,21 @@ impl Service {
         }
     }
 
-    /// Starts a session and opens its first file in Liseuse.
+    /// Starts a session and opens its file in Liseuse (in focus mode, on
+    /// the session's own workspace).
     pub(crate) fn start(&mut self, session: &str) -> io::Result<()> {
+        self.start_as(session, None)
+    }
+
+    /// `as_planned`: the session as it was when chosen, should the plan
+    /// have moved it meanwhile ("Next file", chosen before the close
+    /// replans the evening).
+    pub(crate) fn start_as(&mut self, session: &str, as_planned: Option<Session>) -> io::Result<()> {
         let now = self.now();
-        let planned = self.plan.sessions.iter().find(|s| s.id == session).cloned().map(Box::new);
+        let planned = self.plan.sessions.iter().find(|s| s.id == session).cloned().or(as_planned).map(Box::new);
         self.store.record(Event::Started { session: session.into(), at: now, planned }, now)?;
         self.session_started(session);
-        let item = self.plan.sessions.iter().find(|s| s.id == session).and_then(|s| {
-            s.parts.iter().find_map(|p| match &p.work {
-                Work::Study { item, .. } | Work::Read { item } | Work::Review { item, .. } | Work::Redo { item, .. } | Work::ExamSubject { item, .. } => {
-                    Some(item.clone())
-                }
-                _ => None,
-            })
-        });
-        if let (Some(item), Some(root)) = (item, self.store.settings.courses.clone()) {
-            let path = root.join(item);
-            let opener = if which("liseuse").is_some() { "liseuse" } else { "xdg-open" };
-            self.spawn(Command::new(opener).arg(path), Job::Quiet);
-        }
+        self.focus_open(session);
         Ok(())
     }
 
@@ -935,6 +950,7 @@ impl Service {
             },
             "undecided": self.catalogue.pending(&st.progress.files, &self.store.settings.domains).len(),
             "suivi": self.suivi_status(),
+            "focus": self.focus_status(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
             "gate": self.store.settings.gate,
@@ -1082,6 +1098,7 @@ impl Service {
                 let x = session_arg(self)?;
                 self.store.record(Event::Paused { session: x.id.clone(), at: now }, now).map_err(io)?;
                 self.session_paused(true);
+                self.focus_pause(true);
                 self.replan();
                 (String::new(), Value::Null)
             }
@@ -1089,6 +1106,7 @@ impl Service {
                 let x = session_arg(self)?;
                 self.store.record(Event::Resumed { session: x.id.clone(), at: now }, now).map_err(io)?;
                 self.session_paused(false);
+                self.focus_pause(false);
                 self.replan();
                 (String::new(), Value::Null)
             }
@@ -1100,7 +1118,22 @@ impl Service {
                 (done, Value::Null)
             }
             "activity" => {
-                self.set_activity(cmd.get("idle").and_then(Value::as_bool), cmd.get("media").and_then(Value::as_bool));
+                self.set_activity(cmd.get("idle").and_then(Value::as_bool), cmd.get("media").and_then(Value::as_bool), s("title"));
+                (String::new(), Value::Null)
+            }
+            "editor" => {
+                let file = s("file").map(PathBuf::from);
+                let focused = cmd.get("focus").and_then(Value::as_bool).unwrap_or(false);
+                let written = cmd.get("written").and_then(Value::as_i64).unwrap_or(0);
+                self.editor(file, focused, written);
+                (String::new(), Value::Null)
+            }
+            "paper" => {
+                self.still_working(true);
+                (String::new(), Value::Null)
+            }
+            "reopen" => {
+                self.focus_reopen();
                 (String::new(), Value::Null)
             }
             "still" => {
@@ -1135,7 +1168,16 @@ impl Service {
                     None => None,
                 };
                 let media = cmd.get("media_for_course").and_then(Value::as_bool);
-                self.close(&x.id, parts, media).map_err(io)?;
+                // "Next file": the next session of the evening starts in place.
+                let then = s("then").and_then(|t| self.plan.session(&t).cloned());
+                self.focus.chaining = then.is_some() && self.focus_active();
+                let closed = self.close(&x.id, parts, media);
+                self.focus.chaining = false;
+                closed.map_err(io)?;
+                if let Some(next) = then {
+                    self.start_as(&next.id.clone(), Some(next)).map_err(io)?;
+                    self.replan();
+                }
                 (self.changes_text(), Value::Null)
             }
             "done" => {
@@ -1281,6 +1323,12 @@ impl Service {
             "project" => {
                 let p: Project = serde_json::from_value(cmd.get("project").cloned().ok_or("project")?).map_err(|e| e.to_string())?;
                 self.store.record(Event::Project { project: p }, now).map_err(io)?;
+                self.replan();
+                (self.changes_text(), Value::Null)
+            }
+            "chore" => {
+                let c: Chore = serde_json::from_value(cmd.get("chore").cloned().ok_or("chore")?).map_err(|e| e.to_string())?;
+                self.store.record(Event::Chore { chore: c }, now).map_err(io)?;
                 self.replan();
                 (self.changes_text(), Value::Null)
             }
@@ -1527,6 +1575,7 @@ impl Service {
         let tracking = self.session_closed(media_for_course);
         self.store.record(Event::Closed { session: session.into(), at: now, minutes, parts, tracking }, now)?;
         self.replan();
+        self.focus_end();
         Ok(())
     }
 }
@@ -1606,6 +1655,7 @@ fn event_label(e: &Event) -> String {
         Event::Undo { of } => format!("undo #{of}"),
         Event::Resumed { session, .. } => format!("resume {session}"),
         Event::FreeReading { item, upto, .. } => format!("{} §{upto}", i18n::item_name(item)),
+        Event::Context { label, verdict, .. } => format!("{label}: {verdict:?}"),
     }
 }
 

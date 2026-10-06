@@ -202,6 +202,16 @@ pub struct Settings {
     pub gate_match: Vec<String>,
     /// Process names that mean a game is running (Steam's reaper, …).
     pub game_processes: Vec<String>,
+    /// Starting a session puts you in front of its file.
+    pub focus: Focus,
+}
+
+/// Focus mode: a session happens in the study dimension (workspaces of
+/// its own), its file open in Liseuse beside the session's panel.
+#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Focus {
+    pub enabled: bool,
 }
 
 impl Default for Settings {
@@ -228,6 +238,7 @@ impl Default for Settings {
             game_processes: ["reaper", "gamescope", "gamescope-wl", "lutris-wrapper", "umu-run", "wine64-preloader", "wine-preloader"]
                 .map(String::from)
                 .to_vec(),
+            focus: Focus::default(),
         }
     }
 }
