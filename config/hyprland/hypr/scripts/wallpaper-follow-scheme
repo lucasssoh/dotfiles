@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# wallpaper-follow-scheme — swap a light/dark wallpaper pair when the
+# desktop's colour scheme changes (the bar's toggle, or any other tool).
+#
+# Asks wallpaper-set which file the wallpaper on screen should be now, and
+# puts it up only when that is the other half of a pair. A wallpaper with
+# no partner never moves. Idle between changes: `gsettings monitor` blocks
+# until the setting changes. Started once per session by hyprland.lua.
+set -uo pipefail
+
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/wallpaper-follow-scheme.lock"
+flock -n 9 || exit 0
+
+SET="$HOME/.config/hypr/scripts/wallpaper-set"
+
+# The image awww shows on the first screen: a fitted copy from the cache,
+# whose name is the original's.
+on_screen() {
+    awww query 2>/dev/null | sed -n 's/.*currently displaying: image: //p' | head -n1
+}
+
+gsettings monitor org.gnome.desktop.interface color-scheme | while read -r _; do
+    current="$(on_screen)"
+    [ -n "$current" ] || continue
+    wanted="$("$SET" --resolve "$current" 2>/dev/null)" || continue
+    [ "${wanted##*/}" = "${current##*/}" ] || "$SET" "$wanted"
+done

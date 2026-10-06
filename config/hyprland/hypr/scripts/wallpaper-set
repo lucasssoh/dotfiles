@@ -2,6 +2,7 @@
 # wallpaper-set — put a wallpaper on every connected screen.
 #
 #   wallpaper-set [--instant] NAME|PATH
+#   wallpaper-set --resolve NAME|PATH   print the file that would be used
 #
 # Each screen gets the version fitted to its own resolution from the cache
 # (~/.cache/filtered_wallpapers/<W>x<H>/NAME, written by wallpaper-filter),
@@ -13,14 +14,24 @@
 # flat cache (~/.cache/filtered_wallpapers/NAME, written by playlists before
 # the cache was split per resolution) is mapped back to NAME.
 #
-# The one place that talks to awww for a wallpaper: Prisme, the slideshow and
-# the login restore all go through here. Also refreshes the bar's tint.
+# A light/dark pair is NAME.ext beside NAME-dark.ext (the extensions may
+# differ). Either file of a pair stands for the pair: the one put on screen
+# is the one matching the desktop's colour scheme (org.gnome.desktop.
+# interface color-scheme, prefer-dark meaning dark). A file without its
+# partner is used as it is, in both modes.
+#
+# The one place that talks to awww for a wallpaper: Prisme, the slideshow,
+# the login restore and wallpaper-follow-scheme all go through here. Also
+# refreshes the bar's tint.
 set -uo pipefail
 
-instant=0
-[ "${1:-}" = "--instant" ] && { instant=1; shift; }
+instant=0 resolve=0
+case "${1:-}" in
+    --instant) instant=1; shift ;;
+    --resolve) resolve=1; shift ;;
+esac
 arg="${1:-}"
-[ -n "$arg" ] || { echo "usage: wallpaper-set [--instant] NAME|PATH" >&2; exit 2; }
+[ -n "$arg" ] || { echo "usage: wallpaper-set [--instant|--resolve] NAME|PATH" >&2; exit 2; }
 
 WALL_DIR="$HOME/Images/Wallpapers"
 conf="$HOME/.config/prisme/wallpapers.conf"
@@ -36,7 +47,33 @@ case "$arg" in
     */*)            source="$arg" ;;
     *)              source="$WALL_DIR/$name" ;;
 esac
+
+# DIR/STEM.<image extension>, if there is one.
+image_named() {
+    local f
+    for f in "$1/$2".*; do
+        [ -f "$f" ] && [ "${f%.*}" = "$1/$2" ] || continue
+        case "${f##*.}" in
+            [Jj][Pp][Gg]|[Jj][Pp][Ee][Gg]|[Pp][Nn][Gg]|[Ww][Ee][Bb][Pp]|[Jj][Xx][Ll]) printf '%s\n' "$f"; return 0 ;;
+        esac
+    done
+    return 1
+}
+
+# The pair's light and dark files, then the one the colour scheme asks for.
+dir="${source%/*}" stem="${name%.*}"
+base="${stem%-dark}"
+if light="$(image_named "$dir" "$base")" && dark="$(image_named "$dir" "$base-dark")"; then
+    if gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | grep -q prefer-dark; then
+        source="$dark"
+    else
+        source="$light"
+    fi
+    name="${source##*/}"
+fi
+
 [ -e "$source" ] || { echo "wallpaper-set: $source not found" >&2; exit 1; }
+[ "$resolve" = 1 ] && { printf '%s\n' "$source"; exit 0; }
 
 if ! pidof awww-daemon >/dev/null; then
     awww-daemon >/dev/null 2>&1 &

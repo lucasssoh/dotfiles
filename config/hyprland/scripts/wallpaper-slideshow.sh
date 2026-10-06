@@ -71,6 +71,16 @@ else
     SOURCE="$WALL_DIR"
     mapfile -t walls < <(find "$WALL_DIR" -maxdepth 1 \
         -iregex '.*\.\(jpg\|jpeg\|png\|webp\|jxl\)' -printf '%f\n')
+    # A light/dark pair is one wallpaper: drop NAME-dark when NAME is there,
+    # wallpaper-set puts up whichever half the colour scheme asks for.
+    declare -A stems=()
+    for img in "${walls[@]}"; do stems["${img%.*}"]=1; done
+    kept=()
+    for img in "${walls[@]}"; do
+        stem="${img%.*}"
+        [[ "$stem" == *-dark && -n "${stems[${stem%-dark}]:-}" ]] || kept+=("$img")
+    done
+    walls=("${kept[@]}")
 fi
 
 [ ${#walls[@]} -eq 0 ] && exit 1

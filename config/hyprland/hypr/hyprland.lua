@@ -88,6 +88,8 @@ hl.on("hyprland.start", function()
     -- thumbnail cache in the background.
     hl.exec_cmd("~/.config/hypr/scripts/restore_wallpaper.sh")
     hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh")
+    -- Swaps a light/dark wallpaper pair when the colour scheme changes.
+    hl.exec_cmd("~/.config/hypr/scripts/wallpaper-follow-scheme")
     -- Forces the combo jack back to the headset mic port -- wireplumber
     -- otherwise picks the internal mic on every boot (higher static
     -- priority, no jack-sensing on either port). See the script for the
