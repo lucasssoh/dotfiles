@@ -109,7 +109,9 @@ fn every_kind_of_part_moves_progress() {
         tracking: None,
     });
     push(Event::Missed { session: "2026-10-06-evening1".into() });
-    push(Event::Skipped { session: "2026-10-07-evening1".into() });
+    // Two tasks of one evening said "not tonight": one session missed.
+    push(Event::Skipped { session: "2026-10-07-evening1~aaaaaa".into(), tasks: vec!["read:X/notes.md".into()], planned: None });
+    push(Event::Skipped { session: "2026-10-07-evening1~bbbbbb".into(), tasks: vec!["ask:X/b.md".into()], planned: None });
     let st: State = store::reduce(&entries);
     assert_eq!(st.progress.items["X/a.md"].reviews_done, [MON]);
     assert_eq!(st.progress.items["X/93.md"].subjects_done, 2);
@@ -238,15 +240,17 @@ fn alerts_fall_at_the_right_time_and_never_pile_up() {
     let st = State::default();
     let s = &fx.settings;
     let sent = BTreeSet::new();
-    let eve = p.sessions.iter().find(|x| x.date == MON).unwrap();
+    let eve = p.sessions.iter().find(|x| x.date == MON && !x.parts.is_empty()).unwrap();
     assert_eq!(eve.start, hm("20:30"));
+    // The evening's last task, one after the other.
+    let last = p.sessions.iter().filter(|x| x.date == MON && x.counted).map(|x| x.end).max().unwrap();
 
     let all = alertes::planned(&p, &st, s, MON);
     let kinds: Vec<(Kind, String)> = all.iter().filter(|a| a.at.date == MON).map(|a| (a.kind, a.at.time.to_string())).collect();
     // Start, reminder, then the recap of Tuesday once Monday's session ends.
     assert_eq!(kinds[0], (Kind::Start, "20:30".into()));
     assert_eq!(kinds[1], (Kind::Reminder, "20:45".into()));
-    assert!(kinds.contains(&(Kind::Recap, eve.end.to_string())));
+    assert!(kinds.contains(&(Kind::Recap, last.to_string())));
 
     // Nothing before its time; the start at 20:30; the next wake is the reminder.
     assert!(alertes::due(&p, &st, s, &sent, at(MON, "20:29")).is_empty());
@@ -256,10 +260,12 @@ fn alerts_fall_at_the_right_time_and_never_pile_up() {
     let mut sent: BTreeSet<String> = due.iter().map(|a| a.key.clone()).collect();
     assert_eq!(alertes::next(&p, &st, s, &sent, at(MON, "20:30")), Some(at(MON, "20:45")));
 
-    // Started: no reminder.
+    // Started: no reminder, and the next task of the evening keeps quiet
+    // while this one is under way.
     let mut started = State::default();
     started.outcomes.insert(eve.id.clone(), Outcome::Started { at: at(MON, "20:35") });
     assert!(alertes::due(&p, &started, s, &sent, at(MON, "20:46")).iter().all(|a| a.kind != Kind::Reminder));
+    assert!(alertes::due(&p, &started, s, &sent, Local::new(MON, eve.end)).iter().all(|a| a.kind == Kind::Recap));
 
     // Postponed to 21:00: a new start then.
     let mut later = State::default();
@@ -271,8 +277,8 @@ fn alerts_fall_at_the_right_time_and_never_pile_up() {
     sent.clear();
     let due = alertes::due(&p, &st, s, &sent, at(MON, "20:52"));
     assert_eq!(due.len(), 1, "{due:?}");
-    // Waking after the session: nothing, it goes to the check-in.
-    let late = Local::new(MON, eve.end.plus(5));
+    // Waking after the evening: nothing, it goes to the check-in.
+    let late = Local::new(MON, last.plus(5));
     assert!(alertes::due(&p, &st, s, &sent, late).iter().all(|a| a.kind == Kind::Recap));
     let gone = alertes::expired(&p, &st, s, &sent, late);
     assert!(gone.iter().any(|k| k.starts_with("start:")));
@@ -296,8 +302,10 @@ fn khal_files_one_uid_each_rewritten_only_when_they_change() {
         assert_eq!(text.matches("BEGIN:VEVENT").count(), 1);
         assert!(text.lines().all(|l| l.len() <= 76), "folded");
     }
-    let monday = &files["boussole-2026-10-05-evening1.ics"];
-    assert!(monday.contains("DTSTART:20261005T183000Z"), "{monday}");
+    // One file per task of the evening, the first at 20:30.
+    let monday: Vec<&String> = files.iter().filter(|(n, _)| n.starts_with("boussole-2026-10-05-evening1_")).map(|(_, t)| t).collect();
+    assert!(monday.len() >= 2, "{monday:?}");
+    assert!(monday.iter().any(|t| t.contains("DTSTART:20261005T183000Z")), "{monday:?}");
 
     let dir = scratch("khal");
     std::fs::write(dir.join("mine.ics"), "not Boussole's").unwrap();
@@ -327,4 +335,19 @@ fn personal_events_from_khal_list() {
     assert_eq!((busy[0].start, busy[0].end), (at(MON.add(2), "21:00"), at(MON.add(2), "22:00")));
     assert_eq!((busy[1].start, busy[1].end), (at(MON.add(5), "00:00"), at(MON.add(6), "00:00")));
     assert_eq!(khal::format("%d/%m/%Y %H:%M", Local::new(MON, Hm::new(9, 5))), "05/10/2026 09:05");
+}
+
+#[test]
+fn not_tonight_can_be_taken_back() {
+    let mut entries = Vec::new();
+    let push = |entries: &mut Vec<store::Entry>, event: Event| {
+        let seq = entries.len() as u64 + 1;
+        entries.push(store::Entry { seq, at: at(MON, "20:00"), event });
+    };
+    push(&mut entries, Event::Skipped { session: "2026-10-05-evening1~aaaaaa".into(), tasks: vec!["read:X/a.md".into()], planned: None });
+    let st = store::reduce(&entries);
+    assert_eq!(st.skipped.len(), 1);
+    push(&mut entries, Event::Undo { of: 1 });
+    let st = store::reduce(&entries);
+    assert!(st.skipped.is_empty() && st.outcomes.is_empty() && st.missed_streak == 0, "as if never said");
 }

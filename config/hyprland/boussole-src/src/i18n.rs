@@ -178,6 +178,7 @@ fn reason_raw(r: &Reason, lang: Lang) -> String {
                 format!("{domain} is behind for the time left.")
             }
         }
+        Reason::CampaignTime => (if fr { "Le temps de la campagne, aujourd'hui." } else { "Today's time for the campaign." }).into(),
         Reason::SaidBehind { domain } => {
             if fr {
                 format!("Tu t'es noté en retard en {domain} : elle passe devant.")

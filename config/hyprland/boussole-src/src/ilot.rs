@@ -25,7 +25,7 @@ impl Service {
     }
 
     /// "A&C · 32 Analyse 2 − 1/m ★": the session's main work, in a line.
-    fn headline(&self, s: &Session) -> String {
+    pub(crate) fn headline(&self, s: &Session) -> String {
         let Some(p) = s.parts.first() else { return String::new() };
         let what = match &p.work {
             Work::Study { item, .. } | Work::Read { item } | Work::Review { item, .. } | Work::Redo { item, .. } | Work::ExamSubject { item, .. } => {
@@ -304,6 +304,35 @@ impl Service {
                     "why": why,
                     "state": state,
                     "shortened": s.shortened,
+                    "past": Local::new(s.date, s.end) <= now,
+                }),
+            ));
+        }
+        // Said "not tonight": no longer in the plan, still shown, to be
+        // brought back.
+        for (id, (day, _, planned)) in &self.store.state.skipped {
+            if *day != date || self.plan.sessions.iter().any(|s| &s.id == id) {
+                continue;
+            }
+            let Some(s) = planned else { continue };
+            let parts: Vec<Value> = s
+                .parts
+                .iter()
+                .map(|p| json!({ "domain": p.domain, "what": i18n::work(&p.work, lang), "minutes": p.minutes }))
+                .collect();
+            rows.push((
+                s.start,
+                json!({
+                    "type": "session",
+                    "id": id,
+                    "kind": s.kind,
+                    "start": s.start.to_string(),
+                    "end": s.end.to_string(),
+                    "title": self.headline(s),
+                    "parts": parts,
+                    "why": [],
+                    "state": "skipped",
+                    "shortened": false,
                     "past": Local::new(s.date, s.end) <= now,
                 }),
             ));

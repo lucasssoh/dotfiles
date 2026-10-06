@@ -110,8 +110,18 @@ pub enum Event {
     },
     /// "Later": always to a precise time.
     Postponed { session: String, to: Local },
-    /// "Not tonight".
-    Skipped { session: String },
+    /// "Not tonight", for one task: the others of the evening stay.
+    Skipped {
+        session: String,
+        /// Its task, kept away until tomorrow.
+        #[serde(default)]
+        tasks: Vec<String>,
+        /// The session as it was, to show it and bring it back.
+        #[serde(default)]
+        planned: Option<Box<crate::plan::Session>>,
+    },
+    /// Time found on the spot ("I have time"): a session from `start`.
+    Extra { extra: crate::journee::Extra },
     /// Its time went by without a start.
     Missed { session: String },
     /// A game launched anyway: the session waits.
@@ -198,6 +208,15 @@ pub struct State {
     pub started: BTreeMap<String, crate::plan::Session>,
     /// Free reading per file: (day, § reached), the latest.
     pub free_reading: BTreeMap<String, (Date, u32)>,
+    /// Sessions said "not tonight": their day, their tasks, how they were.
+    pub skipped: BTreeMap<String, (Date, Vec<String>, Option<crate::plan::Session>)>,
+    /// Sessions closed: their day and their tasks.
+    pub closed: BTreeMap<String, (Date, Vec<String>)>,
+    /// Time found on the spot.
+    pub extra: Vec<crate::journee::Extra>,
+    /// The slot of the last miss counted, so that several tasks of one
+    /// evening count as one session missed.
+    pub last_missed_slot: String,
     /// Per domain, (actual, planned) minutes of closed parts, oldest first.
     pub pace: BTreeMap<String, Vec<(i32, i32)>>,
     /// Per domain, (minutes, pages read), oldest first.
@@ -225,6 +244,15 @@ impl State {
 fn domain_of(task: &str) -> Option<&str> {
     let (_, rest) = task.split_once(':')?;
     rest.split('/').next().filter(|d| !d.is_empty())
+}
+
+/// A miss counts once per slot, however many tasks it held.
+fn missed(st: &mut State, session: &str) {
+    let slot = session.split('~').next().unwrap_or(session);
+    if st.last_missed_slot != slot {
+        st.missed_streak += 1;
+        st.last_missed_slot = slot.to_string();
+    }
 }
 
 fn session_date(id: &str) -> Option<Date> {
@@ -340,10 +368,13 @@ pub fn reduce(entries: &[Entry]) -> State {
                 if let Some(p) = planned {
                     st.started.insert(session.clone(), (**p).clone());
                 }
-                if session.contains("-evening") {
+                // The evening's first start only: the next task of the
+                // same evening says nothing of when it begins.
+                if session.contains("-evening") && !st.starts.iter().any(|(d, _)| *d == at.date) {
                     st.starts.push((at.date, at.time));
                 }
                 st.missed_streak = 0;
+                st.last_missed_slot.clear();
             }
             Event::Resumed { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Started { at: *at });
@@ -354,14 +385,17 @@ pub fn reduce(entries: &[Entry]) -> State {
             Event::Postponed { session, to } => {
                 st.outcomes.insert(session.clone(), Outcome::Postponed { to: *to });
             }
-            Event::Skipped { session } => {
+            Event::Skipped { session, tasks, planned } => {
                 st.outcomes.insert(session.clone(), Outcome::Skipped);
-                st.missed_streak += 1;
+                let date = session_date(session).unwrap_or(e.at.date);
+                st.skipped.insert(session.clone(), (date, tasks.clone(), planned.as_deref().cloned()));
+                missed(&mut st, session);
             }
             Event::Missed { session } => {
                 st.outcomes.insert(session.clone(), Outcome::Missed);
-                st.missed_streak += 1;
+                missed(&mut st, session);
             }
+            Event::Extra { extra } => st.extra.push(extra.clone()),
             Event::Paused { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Paused { at: *at });
             }
@@ -370,6 +404,7 @@ pub fn reduce(entries: &[Entry]) -> State {
                 // A session started late at night still belongs to its day.
                 st.outcomes.insert(session.clone(), Outcome::Closed { at: *at });
                 st.started.remove(session);
+                st.closed.insert(session.clone(), (date, parts.iter().map(|p| p.task.clone()).collect()));
                 for p in parts {
                     apply_part(&mut st, date, p);
                     if let (Some(d), true) = (domain_of(&p.task), p.planned > 0 && p.minutes > 0) {
@@ -385,6 +420,7 @@ pub fn reduce(entries: &[Entry]) -> State {
                     }
                 }
                 st.missed_streak = 0;
+                st.last_missed_slot.clear();
             }
             Event::Files { items, inclusion } => {
                 for i in items {
@@ -461,6 +497,20 @@ impl Store {
         self.state = reduce(&self.entries);
         write_json(&self.paths.data.join("state.json"), &self.state)?;
         Ok(seq)
+    }
+
+    /// Undoes the last entry matching `which`, not already undone.
+    pub fn undo_where(&mut self, now: Local, which: impl Fn(&Event) -> bool) -> io::Result<Option<Entry>> {
+        let undone: BTreeSet<u64> = self
+            .entries
+            .iter()
+            .filter_map(|e| if let Event::Undo { of } = e.event { Some(of) } else { None })
+            .collect();
+        let Some(e) = self.entries.iter().rev().find(|e| which(&e.event) && !undone.contains(&e.seq)).cloned() else {
+            return Ok(None);
+        };
+        self.record(Event::Undo { of: e.seq }, now)?;
+        Ok(Some(e))
     }
 
     /// Undoes the last change that can be undone (not an undo, not one

@@ -652,6 +652,13 @@ impl Service {
             .filter(|(_, o)| matches!(o, Outcome::Closed { .. } | Outcome::Skipped | Outcome::Missed))
             .map(|(id, _)| id.clone())
             .collect();
+        let away_today: Vec<String> = st
+            .skipped
+            .values()
+            .filter(|(d, _, _)| *d == now.date)
+            .flat_map(|(_, t, _)| t.iter().cloned())
+            .chain(st.closed.values().filter(|(d, _)| *d == now.date).flat_map(|(_, t)| t.iter().cloned()))
+            .collect();
         // The measured pace, per subject, unless set by hand.
         let mut settings = self.store.settings.clone();
         for d in &settings.domains {
@@ -673,6 +680,8 @@ impl Service {
             campaigns: &st.campaigns,
             chores: &st.chores,
             pinned: &pins,
+            away_today: &away_today,
+            extra: &st.extra,
             learned,
             missed_streak: st.missed_streak,
             spent: &spent,
@@ -825,7 +834,7 @@ impl Service {
         let result = if action == "start" {
             self.start(session)
         } else if action == "skip" {
-            self.store.record(Event::Skipped { session: session.into() }, now).map(|_| ())
+            self.skip(session).map(|_| ())
         } else if action == "still:yes" || action == "still:no" {
             self.still_working(action == "still:yes");
             Ok(())
@@ -1030,9 +1039,24 @@ impl Service {
             }
             "skip" => {
                 let x = session_arg(self)?;
-                self.store.record(Event::Skipped { session: x.id.clone() }, now).map_err(io)?;
+                self.skip(&x.id).map_err(io)?;
                 self.replan();
                 (self.changes_text(), Value::Null)
+            }
+            "unskip" => {
+                let id = s("session").ok_or("session")?;
+                let back = self.store.undo_where(now, |e| matches!(e, Event::Skipped { session, .. } if *session == id)).map_err(io)?;
+                self.replan();
+                match back {
+                    Some(_) => ((if fr { "Remise au planning." } else { "Back in the plan." }).into(), Value::Null),
+                    None => ((if fr { "Rien à reprendre." } else { "Nothing to bring back." }).into(), Value::Null),
+                }
+            }
+            "free" => {
+                let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(60) as i32;
+                let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
+                let (text, id) = self.free_time(minutes, place).map_err(io)?;
+                (text, json!({ "session": id }))
             }
             "pause-session" => {
                 let x = session_arg(self)?;
@@ -1128,7 +1152,11 @@ impl Service {
                 let cx = ajout::Context { today: now.date, lang, domains: &domains, projects: &projects, campaigns: &self.store.state.campaigns };
                 let u = ajout::parse(&line, &cx).map_err(|e| ajout::explain(&e, lang))?;
                 if let Action::Free { minutes, place } = u.action {
-                    return Ok((format!("{}\n{}", u.sentence, self.free_time(minutes, place)), Value::Null));
+                    if !apply {
+                        return Ok((u.sentence, json!({ "understood": true })));
+                    }
+                    let (text, id) = self.free_time(minutes, place).map_err(io)?;
+                    return Ok((format!("{}\n{text}", u.sentence), json!({ "session": id })));
                 }
                 let ev = match u.action {
                     Action::Deadline(d) => Event::Deadline { deadline: d },
@@ -1408,28 +1436,55 @@ impl Service {
     }
 
     /// "I have time": the most useful work that fits, from what is planned next.
-    fn free_time(&self, minutes: i32, place: Place) -> String {
+    /// "Not tonight" for one session: its task waits for another day, the
+    /// rest of the evening stays.
+    pub(crate) fn skip(&mut self, session: &str) -> io::Result<()> {
+        let now = self.now();
+        let planned = self.session_any(session);
+        let tasks = planned.as_ref().map(|s| s.parts.iter().map(|p| p.task.clone()).collect()).unwrap_or_default();
+        self.store.record(Event::Skipped { session: session.into(), tasks, planned: planned.map(Box::new) }, now)?;
+        Ok(())
+    }
+
+    /// "I have time": a session right away. When one is already due now, that
+    /// one; else time found on the spot, filled like any slot.
+    fn free_time(&mut self, minutes: i32, place: Place) -> io::Result<(String, Option<String>)> {
         let fr = self.fr();
         let lang = self.lang();
         let now = self.now();
-        let found = self
+        let due = self.plan.sessions.iter().find(|s| {
+            s.date == now.date
+                && s.counted
+                && !s.parts.is_empty()
+                && s.start <= now.time.plus(10)
+                && s.end > now.time
+                && self.store.state.outcomes.get(&s.id).is_none()
+        });
+        if let Some(s) = due {
+            let what = self.headline(s);
+            let text = if fr { format!("Déjà prévu maintenant : {what}.") } else { format!("Already planned now: {what}.") };
+            return Ok((text, Some(s.id.clone())));
+        }
+        let extra = crate::journee::Extra { date: now.date, start: now.time.ceil(5), minutes: minutes.max(10), place };
+        self.store.record(Event::Extra { extra: extra.clone() }, now)?;
+        self.replan();
+        let first = self
             .plan
             .sessions
             .iter()
-            .filter(|s| Local::new(s.date, s.start) >= now)
-            .flat_map(|s| s.parts.iter().map(move |p| (s, p)))
-            .find(|(_, p)| p.minutes <= minutes && (place == Place::Home || !p.timed) && !matches!(p.work, Work::Campaign { .. } | Work::Recall { .. }));
-        match found {
-            Some((s, p)) => {
-                let what = format!("{}{}", p.domain.as_deref().map(|d| format!("{d} ")).unwrap_or_default(), i18n::work(&p.work, lang));
-                if fr {
-                    format!("{what} ({} min), prévue {} à {}. La faire maintenant avance le programme.", p.minutes, i18n::date(s.date, lang), s.start)
+            .find(|s| s.date == now.date && s.kind == crate::journee::SlotKind::Extra && s.start >= extra.start && !s.parts.is_empty());
+        Ok(match first {
+            Some(s) => {
+                let what = format!("{}{}", s.parts[0].domain.as_deref().map(|d| format!("{d} ")).unwrap_or_default(), i18n::work(&s.parts[0].work, lang));
+                let text = if fr {
+                    format!("{what} ({} min), maintenant. Ce que tu fais là avance le programme.", s.parts[0].minutes)
                 } else {
-                    format!("{what} ({} min), planned {} at {}. Doing it now moves the plan forward.", p.minutes, i18n::date(s.date, lang), s.start)
-                }
+                    format!("{what} ({} min), now. What you do here moves the plan forward.", s.parts[0].minutes)
+                };
+                (text, Some(s.id.clone()))
             }
-            None => (if fr { "Rien de prévu ne tient dans ce temps." } else { "Nothing planned fits in that time." }).into(),
-        }
+            None => ((if fr { "Rien de prévu ne tient dans ce temps." } else { "Nothing planned fits in that time." }).into(), None),
+        })
     }
 }
 
@@ -1512,7 +1567,8 @@ fn event_label(e: &Event) -> String {
     match e {
         Event::Started { session, .. } => format!("start {session}"),
         Event::Postponed { session, to } => format!("later {session} → {}", to.time),
-        Event::Skipped { session } => format!("skip {session}"),
+        Event::Skipped { session, .. } => format!("skip {session}"),
+        Event::Extra { extra } => format!("time found {} {} ({} min)", extra.date, extra.start, extra.minutes),
         Event::Missed { session } => format!("missed {session}"),
         Event::Paused { session, .. } => format!("pause {session}"),
         Event::Closed { session, .. } => format!("close {session}"),

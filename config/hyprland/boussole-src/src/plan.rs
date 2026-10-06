@@ -43,6 +43,11 @@ pub struct Input<'a> {
     pub campaigns: &'a [Campaign],
     pub chores: &'a [Chore],
     pub pinned: &'a [Pin],
+    /// Tasks done with for today, said "not tonight" or closed: they do
+    /// not come back before tomorrow.
+    pub away_today: &'a [String],
+    /// Time found on the spot.
+    pub extra: &'a [journee::Extra],
     /// Learnt evening start per weekday (journee::learn_start).
     pub learned: [Option<Hm>; 7],
     /// Counted sessions missed in a row, from the journal.
@@ -120,6 +125,8 @@ pub enum Reason {
     Restart { missed: u32 },
     /// An optional slot: doing it gives a head start.
     HeadStart,
+    /// The day's time for a campaign.
+    CampaignTime,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -136,6 +143,13 @@ pub struct Session {
     pub pinned: bool,
     pub parts: Vec<Part>,
     pub reasons: Vec<Reason>,
+}
+
+impl Session {
+    /// The slot it was cut from: tasks of one evening share it.
+    pub fn slot(&self) -> &str {
+        self.id.split('~').next().unwrap_or(&self.id)
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -503,7 +517,8 @@ struct Cell {
     id: String,
     cap: i32,
     parts: Vec<Part>,
-    reasons: Vec<Reason>,
+    /// Why, per task (None: the whole slot).
+    why: Vec<(Option<String>, Reason)>,
     pinned: bool,
     /// Nothing else goes in (the short restart session).
     closed: bool,
@@ -522,28 +537,80 @@ impl Cell {
         self.parts.push(p);
     }
 
-    fn session(self) -> Session {
-        let used: i32 = self.parts.iter().map(|p| p.minutes).sum();
-        // A session ends with its work, unless it is pinned.
-        let end = if self.slot.counted && used > 0 && used < self.slot.minutes() && !self.pinned {
-            self.slot.start.plus(used)
-        } else {
-            self.slot.end
-        };
-        Session {
-            id: self.id,
-            date: self.slot.date,
-            start: self.slot.start,
-            end,
-            kind: self.slot.kind,
-            counted: self.slot.counted,
-            place: self.slot.place,
-            shortened: self.slot.shortened,
-            pinned: self.pinned,
-            parts: self.parts,
-            reasons: self.reasons,
+    fn because(&mut self, task: &str, r: Reason) {
+        let w = (Some(task.to_string()), r);
+        if !self.why.contains(&w) {
+            self.why.push(w);
         }
     }
+
+    /// One session per task, one after the other: one thing at a time,
+    /// each started, put off or said "not tonight" on its own.
+    fn sessions(self) -> Vec<Session> {
+        let mut out = Vec::new();
+        let n = self.parts.len();
+        // An empty slot still counts, for the margins before an exam.
+        if n == 0 {
+            let reasons = self.why.into_iter().map(|w| w.1).collect();
+            return vec![Session {
+                id: self.id,
+                date: self.slot.date,
+                start: self.slot.start,
+                end: self.slot.end,
+                kind: self.slot.kind,
+                counted: self.slot.counted,
+                place: self.slot.place,
+                shortened: self.slot.shortened,
+                pinned: self.pinned,
+                parts: Vec::new(),
+                reasons,
+            }];
+        }
+        let mut start = self.slot.start;
+        for (i, p) in self.parts.into_iter().enumerate() {
+            // The last one runs to the slot's end when it is pinned or optional.
+            let end = if i + 1 == n && (self.pinned || !self.slot.counted) {
+                self.slot.end
+            } else {
+                start.plus(p.minutes).min(self.slot.end)
+            };
+            let mut reasons: Vec<Reason> = Vec::new();
+            for (t, r) in &self.why {
+                if (t.is_none() || t.as_deref() == Some(p.task.as_str())) && !reasons.contains(r) {
+                    reasons.push(r.clone());
+                }
+            }
+            if reasons.is_empty() {
+                reasons.push(Reason::CourseOrder);
+            }
+            out.push(Session {
+                id: format!("{}~{}", self.id, short_hash(&p.task)),
+                date: self.slot.date,
+                start,
+                end,
+                kind: self.slot.kind,
+                counted: self.slot.counted,
+                place: self.slot.place,
+                shortened: self.slot.shortened,
+                pinned: self.pinned,
+                parts: vec![p],
+                reasons,
+            });
+            start = end;
+        }
+        out
+    }
+}
+
+/// Six hex digits of a task key, so a session's id stays the same while its
+/// task stays in its slot.
+fn short_hash(s: &str) -> String {
+    let mut h: u32 = 0x811c9dc5;
+    for b in s.bytes() {
+        h ^= b as u32;
+        h = h.wrapping_mul(0x01000193);
+    }
+    format!("{:06x}", h & 0xffffff)
 }
 
 fn bucket(days: Option<i32>) -> u8 {
@@ -645,7 +712,7 @@ pub fn plan(input: &Input) -> Plan {
             if input.spent.contains(&id) {
                 continue;
             }
-            let cell = Cell { cap: slot.minutes(), slot, id, parts: Vec::new(), reasons: Vec::new(), pinned: false, closed: false };
+            let cell = Cell { cap: slot.minutes(), slot, id, parts: Vec::new(), why: Vec::new(), pinned: false, closed: false };
             if cell.slot.counted {
                 cells.push(cell);
             } else {
@@ -680,7 +747,7 @@ pub fn plan(input: &Input) -> Plan {
             cell.cap = cell.slot.minutes();
         }
         cell.pinned = true;
-        cell.reasons.push(Reason::Pinned);
+        cell.because(&pin.task, Reason::Pinned);
         cell.push(Part { task: pin.task.clone(), domain, minutes: pin.minutes.min(cell.cap), work, timed: false });
     }
 
@@ -695,7 +762,7 @@ pub fn plan(input: &Input) -> Plan {
             .map(|(_, id)| id);
         if let Some(cell) = cells.iter_mut().find(|c| !c.pinned) {
             cell.cap = 10.min(cell.cap);
-            cell.reasons.push(Reason::Restart { missed: input.missed_streak });
+            cell.because("recall", Reason::Restart { missed: input.missed_streak });
             cell.push(Part {
                 task: "recall".into(),
                 domain: last.as_ref().and_then(|id| input.catalogue.get(id)).map(|i| i.domain.clone()),
@@ -723,28 +790,32 @@ pub fn plan(input: &Input) -> Plan {
         while day <= c.end.min(horizon) {
             let worked = input.progress.campaign_days.iter().any(|(id, d)| *id == c.id && *d == day);
             let own = cells.iter_mut().find(|x| x.slot.date == day && x.slot.kind == SlotKind::Campaign);
+            let key = format!("campaign:{}:{day}", c.id);
+            // Said "not tonight": not today any more.
+            let skipped = day == today && input.away_today.contains(&key);
             if let Some(cell) = own {
-                if !worked {
+                if !worked && !skipped {
                     let m = cell.free();
                     cell.push(Part {
-                        task: format!("campaign:{}:{day}", c.id),
+                        task: key.clone(),
                         domain: None,
                         minutes: m,
                         work: Work::Campaign { campaign: c.id.clone() },
                         timed: false,
                     });
+                    cell.because(&key, Reason::CampaignTime);
                 }
                 day = day.add(1);
                 continue;
             }
             let school = input.courses.iter().any(|x| x.start.date == day);
             let morning_block = cells.iter().any(|x| x.slot.date == day && x.slot.kind == SlotKind::Morning);
-            if worked || !school || day.weekday() >= 5 || morning_block && !school {
+            if worked || skipped || !school || day.weekday() >= 5 || morning_block && !school {
                 day = day.add(1);
                 continue;
             }
             let part = Part {
-                task: format!("campaign:{}:{day}", c.id),
+                task: key.clone(),
                 domain: None,
                 minutes: c.school_day_minutes,
                 work: Work::Campaign { campaign: c.id.clone() },
@@ -759,12 +830,14 @@ pub fn plan(input: &Input) -> Plan {
                 gap.slot.end = gap.slot.start.plus(c.school_day_minutes);
                 gap.cap = c.school_day_minutes;
                 gap.push(part);
+                gap.because(&key, Reason::CampaignTime);
                 cells.push(gap);
             } else if let Some(cell) = [SlotKind::Block, SlotKind::Morning, SlotKind::Evening].iter().find_map(|&kind| {
                 // Daytime first: the evening is kept for study when it can be.
                 cells.iter().position(|x| x.slot.date == day && x.slot.kind == kind && x.free() >= c.school_day_minutes)
             }) {
                 cells[cell].push(part);
+                cells[cell].because(&key, Reason::CampaignTime);
             }
             day = day.add(1);
         }
@@ -775,10 +848,14 @@ pub fn plan(input: &Input) -> Plan {
             }
             let eve = at.date.add(-1);
             let m = input.settings.pace.interview_prep;
-            if let Some(cell) = cells.iter_mut().find(|x| x.slot.date == eve.max(today) && x.free() >= m.min(x.cap)) {
+            let key = format!("interview:{}:{}", c.id, row.name);
+            if let Some(cell) = cells.iter_mut().find(|x| {
+                x.slot.date == eve.max(today) && x.free() >= m.min(x.cap) && !(x.slot.date == today && input.away_today.contains(&key))
+            }) {
                 let minutes = m.min(cell.free());
+                cell.because(&key, Reason::CampaignTime);
                 cell.parts.insert(0, Part {
-                    task: format!("interview:{}:{}", c.id, row.name),
+                    task: key.clone(),
                     domain: None,
                     minutes,
                     work: Work::Interview { campaign: c.id.clone(), company: row.name.clone() },
@@ -815,8 +892,10 @@ pub fn plan(input: &Input) -> Plan {
         if need == 0 {
             continue;
         }
+        let not_tonight = input.away_today.iter().any(|t| t.starts_with(&format!("project:{id}:")));
         let open: Vec<usize> = (0..cells.len())
             .filter(|&i| cells[i].slot.date <= due && cells[i].free() >= r.min_session && cells[i].slot.place == Place::Home)
+            .filter(|&i| !(not_tonight && cells[i].slot.date == today))
             .collect();
         let avg = if open.is_empty() { 1 } else { open.iter().map(|&i| cells[i].free()).sum::<i32>() / open.len() as i32 };
         let mut n = ((need + avg - 1) / avg.max(1)) as usize;
@@ -843,9 +922,7 @@ pub fn plan(input: &Input) -> Plan {
                     work: Work::Project { project: id.clone(), step: step.clone() },
                     timed: false,
                 });
-                if cell.reasons.is_empty() {
-                    cell.reasons.push(Reason::ProjectDue { name: name.clone(), due: due.add(3) });
-                }
+                cell.because(&format!("project:{id}:{step}"), Reason::ProjectDue { name: name.clone(), due: due.add(3) });
                 left_in_step -= m;
                 if left_in_step == 0 {
                     steps.next();
@@ -894,6 +971,7 @@ pub fn plan(input: &Input) -> Plan {
                 .filter(|&i| {
                     let t = &all[i];
                     !t.done
+                        && !(date == today && input.away_today.contains(&t.key))
                         && t.available <= date
                         && t.before.is_none_or(|b| date < b)
                         && (!t.seq || heads.contains(&i))
@@ -1009,11 +1087,11 @@ pub fn plan(input: &Input) -> Plan {
                     why.push(Reason::CourseOrder);
                 }
                 for w in why {
-                    if !cell.reasons.contains(&w) {
-                        cell.reasons.push(w);
-                    }
+                    cell.because(&part.task, w);
                 }
                 main = true;
+            } else if let Some(r) = &t.reason {
+                cell.because(&part.task, r.clone());
             }
             if t.seq && studied.is_none() {
                 studied = t.domain.clone();
@@ -1036,7 +1114,7 @@ pub fn plan(input: &Input) -> Plan {
     }
 
     // 4. Offers: the next counted work that fits the optional slot.
-    let counted: Vec<Session> = cells.into_iter().map(Cell::session).collect();
+    let counted: Vec<Session> = cells.into_iter().flat_map(Cell::sessions).collect();
     let mut offered: BTreeSet<String> = BTreeSet::new();
     for mut o in offers {
         let after = |s: &Session| (s.date, s.start) > (o.slot.date, o.slot.start);
@@ -1066,8 +1144,8 @@ pub fn plan(input: &Input) -> Plan {
             }
         }
         if !o.parts.is_empty() {
-            o.reasons.push(Reason::HeadStart);
-            plan.offers.push(o.session());
+            o.why.push((None, Reason::HeadStart));
+            plan.offers.extend(o.sessions());
         }
     }
     plan.sessions = counted;
@@ -1185,7 +1263,13 @@ fn margins(input: &Input, plan: &Plan, all: &[Task], exams: &[&Deadline], today:
                 -((left + r.evening_minutes - 1) / r.evening_minutes)
             } else {
                 let from = last.unwrap_or((today.add(-1), Hm(1440)));
-                plan.sessions.iter().filter(|s| (s.date, s.start) > from && s.date < e.at.date).count() as i32
+                // Slots, not tasks: an evening of three tasks is one session.
+                plan.sessions
+                    .iter()
+                    .filter(|s| (s.date, s.start) > from && s.date < e.at.date)
+                    .map(|s| s.slot())
+                    .collect::<BTreeSet<_>>()
+                    .len() as i32
             };
             Margin { deadline: e.id.clone(), title: e.title.clone(), date: e.at.date, domain: e.domain.clone(), sessions }
         })

@@ -53,7 +53,13 @@ fn waiting(state: &State, s: &Session) -> Option<Local> {
 pub fn planned(plan: &Plan, state: &State, settings: &Settings, today: Date) -> Vec<Alert> {
     let mut out = Vec::new();
     let worth = |s: &&Session| s.counted && !s.parts.is_empty();
-    for s in plan.sessions.iter().filter(worth).filter(|s| s.date == today || s.date == today.add(1)) {
+    // One thing at a time: while a session is under way, the next ones of
+    // the evening keep quiet.
+    let busy = plan
+        .sessions
+        .iter()
+        .any(|s| matches!(state.outcomes.get(&s.id), Some(Outcome::Started { .. } | Outcome::Paused { .. })));
+    for s in plan.sessions.iter().filter(worth).filter(|s| !busy && (s.date == today || s.date == today.add(1))) {
         let Some(at) = waiting(state, s) else { continue };
         let tag = format!("{}@{}", s.id, at.time);
         out.push(Alert { key: format!("start:{tag}"), at, kind: Kind::Start, session: Some(s.id.clone()), day: None });

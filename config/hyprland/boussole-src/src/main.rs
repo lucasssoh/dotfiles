@@ -127,6 +127,8 @@ fn preview(args: &[String]) -> Result<(), String> {
         campaigns: &[],
         chores: &[],
         pinned: &[],
+        away_today: &[],
+        extra: &[],
         learned: [None; 7],
         missed_streak: 0,
         spent: &[],

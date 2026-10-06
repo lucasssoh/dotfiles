@@ -25,6 +25,18 @@ pub enum SlotKind {
     Short,
     /// Time kept for a campaign on a day free of study.
     Campaign,
+    /// Time found on the spot ("I have time").
+    Extra,
+}
+
+/// Time the user found on the spot: a counted slot from `start`, whatever
+/// the day was meant to hold.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct Extra {
+    pub date: Date,
+    pub start: Hm,
+    pub minutes: i32,
+    pub place: Place,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -172,8 +184,46 @@ fn campaign_minutes(input: &Input, date: Date, free_day: bool) -> i32 {
         .unwrap_or(0)
 }
 
-/// The day's slots, before "now" is taken into account.
+/// The day's slots, before "now" is taken into account, with the time found
+/// on the spot: it takes its place, and what it overlaps gives way.
 pub fn day(input: &Input, date: Date) -> Day {
+    let mut out = planned_day(input, date);
+    let min = input.settings.rhythm.min_session;
+    for x in input.extra.iter().filter(|x| x.date == date) {
+        let (a, b) = (x.start.0, x.start.0 + x.minutes);
+        out.slots = out
+            .slots
+            .drain(..)
+            .flat_map(|s| {
+                if s.end.0 <= a || s.start.0 >= b {
+                    return vec![s];
+                }
+                let mut v = Vec::new();
+                if a - s.start.0 >= min {
+                    v.push(Slot { end: Hm(a), shortened: true, ..s.clone() });
+                }
+                if s.end.0 - b >= min {
+                    v.push(Slot { start: Hm(b), shortened: true, ..s.clone() });
+                }
+                v
+            })
+            .collect();
+        out.slots.push(Slot {
+            date,
+            start: x.start,
+            end: Hm(b),
+            kind: SlotKind::Extra,
+            counted: true,
+            place: x.place,
+            shortened: false,
+            limit: Hm(b),
+        });
+    }
+    out.slots.sort_by_key(|s| s.start);
+    out
+}
+
+fn planned_day(input: &Input, date: Date) -> Day {
     let r = &input.settings.rhythm;
     let wd = date.weekday();
     let weekday = wd < 5;

@@ -15,7 +15,9 @@ use crate::store::Paths;
 pub const HELP: &str = "\
 boussole                       what comes next
 boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional)
-boussole start|skip|done [ID]  the next session, or the one given
+boussole start|skip|done [ID]  the next session, or the one given: one task each
+boussole unskip ID             bring back a session said not tonight
+boussole free MINUTES          I have time: a session right away
 boussole later [ID] HH:MM      later today, at a precise time
 boussole draft [ID]            what Liseuse saw, pre-filling the close
 boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
@@ -130,6 +132,8 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["week"] => req(json!({ "cmd": "plan", "days": 7 })),
         ["week", n] => req(json!({ "cmd": "plan", "days": n.parse::<i64>().map_err(|_| "DAYS")? })),
         ["start" | "skip" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
+        ["unskip", id] => req(json!({ "cmd": "unskip", "session": id })),
+        ["free", m] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")? })),
         ["draft", ..] => req(json!({ "cmd": "draft", "session": sess(1) })),
         ["close", rest @ ..] => {
             let video = rest.iter().position(|a| *a == "--video").and_then(|i| rest.get(i + 1)).map(|v| *v == "yes");

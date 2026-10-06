@@ -52,7 +52,8 @@ fn sessions_respect_the_day() {
         }
     }
     let sundays: Vec<_> = p.sessions.iter().filter(|s| s.date == MON.add(6)).collect();
-    assert_eq!(sundays.len(), 2);
+    assert_eq!(sundays.iter().map(|s| s.slot()).collect::<std::collections::BTreeSet<_>>().len(), 2, "two blocks");
+    assert!(sundays.iter().all(|s| s.parts.len() <= 1), "one task per session");
     assert!(sundays.iter().all(|s| s.kind == SlotKind::Block));
     // Same input, same plan.
     assert_eq!(p, fx.plan(at(MON, "06:00")));
@@ -340,8 +341,9 @@ fn holidays_and_pause() {
     let p = fx.plan(at(MON, "06:00"));
     assert!(p.sessions.iter().filter(|s| s.date >= w && s.date <= w.add(6)).all(|s| s.parts.is_empty()));
     let mornings: Vec<_> = p.sessions.iter().filter(|s| s.date >= w.add(7) && s.date <= w.add(11)).collect();
-    assert_eq!(mornings.len(), 5);
-    assert!(mornings.iter().all(|s| s.kind == SlotKind::Morning && s.start == hm("08:30")));
+    assert_eq!(mornings.iter().map(|s| s.slot()).collect::<std::collections::BTreeSet<_>>().len(), 5);
+    assert!(mornings.iter().all(|s| s.kind == SlotKind::Morning && s.start >= hm("08:30")));
+    assert!(mornings.iter().any(|s| s.start == hm("08:30")));
 
     fx.settings.periods.clear();
     fx.settings.paused_until = Some(MON.add(6));
@@ -363,7 +365,7 @@ fn work_study_weeks() {
     let p = fx.plan(at(MON, "06:00"));
     let weekdays: Vec<_> = p.sessions.iter().filter(|s| s.date >= w && s.date <= w.add(11) && s.date.weekday() < 5).collect();
     assert!(weekdays.iter().all(|s| s.kind == SlotKind::Evening), "no morning at the company");
-    assert_eq!(weekdays.len(), 8, "Monday to Thursday, two weeks");
+    assert_eq!(weekdays.iter().map(|s| s.slot()).collect::<std::collections::BTreeSet<_>>().len(), 8, "Monday to Thursday, two weeks");
     fx.settings.status = Status::Initial;
     let p = fx.plan(at(MON, "06:00"));
     assert!(p.sessions.iter().any(|s| s.date >= w && s.date <= w.add(4) && s.kind == SlotKind::Morning));
@@ -442,10 +444,12 @@ fn a_tutorial_tomorrow_takes_tonight_even_against_an_exam() {
 fn a_closed_session_keeps_its_slot() {
     let mut fx = Fx::new("spent");
     let p0 = fx.plan(at(MON, "06:00"));
-    let first = p0.sessions.iter().find(|s| s.date == MON).unwrap().id.clone();
-    fx.spent.push(first.clone());
-    let p1 = fx.plan(at(MON, "21:00"));
-    assert!(p1.sessions.iter().all(|s| s.id != first), "not filled again after its close");
+    let first = p0.sessions.iter().find(|s| s.date == MON && !s.parts.is_empty()).unwrap().clone();
+    fx.spent.push(first.id.clone());
+    fx.away_today.push(first.parts[0].task.clone());
+    let p1 = fx.plan(at(MON, "20:00"));
+    assert!(p1.sessions.iter().all(|s| s.id != first.id), "not filled again after its close");
+    assert!(p1.sessions.iter().filter(|s| s.date == MON).all(|s| s.parts.iter().all(|x| x.task != first.parts[0].task)), "its task not again today");
 }
 
 #[test]
@@ -503,4 +507,30 @@ fn the_campaign_takes_daytime_before_the_evening() {
     assert_eq!(kind(MON.add(2)), Some(SlotKind::Morning), "Wednesday's morning");
     assert_eq!(kind(MON), Some(SlotKind::Gap), "a gap at school still comes first");
     assert_eq!(kind(MON.add(3)), Some(SlotKind::Gap));
+}
+
+#[test]
+fn not_tonight_is_for_one_task_and_the_others_stay() {
+    let mut fx = Fx::new("one-thing");
+    let p0 = fx.plan(at(MON, "06:00"));
+    let tonight: Vec<_> = p0.sessions.iter().filter(|s| s.date == MON && s.kind == SlotKind::Evening && !s.parts.is_empty()).collect();
+    assert!(tonight.len() >= 2, "an evening of several tasks, one session each");
+    assert!(tonight.iter().all(|s| s.parts.len() == 1));
+    assert!(tonight.windows(2).all(|w| w[0].end <= w[1].start), "one after the other");
+    let skipped = tonight[0].parts[0].task.clone();
+    fx.away_today.push(skipped.clone());
+    let p1 = fx.plan(at(MON, "20:00"));
+    let still: Vec<_> = p1.sessions.iter().filter(|s| s.date == MON && !s.parts.is_empty()).collect();
+    assert!(!still.is_empty(), "the rest of the evening stays");
+    assert!(still.iter().all(|s| s.parts[0].task != skipped), "and that task waits for another day");
+}
+
+#[test]
+fn time_found_on_the_spot_is_a_session() {
+    let mut fx = Fx::new("extra");
+    fx.extra.push(boussole::journee::Extra { date: MON, start: hm("17:00"), minutes: 60, place: Place::Home });
+    let p = fx.plan(at(MON, "16:55"));
+    let found: Vec<_> = p.sessions.iter().filter(|s| s.date == MON && s.kind == SlotKind::Extra).collect();
+    assert!(!found.is_empty() && found[0].start == hm("17:00"), "{found:?}");
+    assert!(found.iter().all(|s| s.end <= hm("18:00") && s.counted));
 }
