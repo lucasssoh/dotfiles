@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Boussole:** a study planner in the bar, optional. It plans study sessions from your course folder and your timetable, rings them in the bar's central island with a chime, follows them through Liseuse, and replans when you close them. `Super + D` opens its drawer, `Super + Shift + D` adds an exam, a hand-in or a task in one line.
 - **Boussole, subjects:** tell it where you stand in each subject. One you are behind in gets more time per sheet and goes first; one where the tutorials are enough has nothing to read, only its tutorials, projects and exams.
+- **Boussole, one thing at a time:** each task is its own session, started, put off or said "not tonight" on its own; putting off one no longer takes the rest of the evening with it. A "not tonight" said by mistake can be brought back, and "I have time" starts a session right away, even on an evening you had said no to.
 - **Boussole, days:** an afternoon without courses becomes a real study block, and a campaign's daily time goes to the daytime (a free period at school, that afternoon, the morning) before the evening. Friday evening stays free.
 
 ### Changed

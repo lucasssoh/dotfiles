@@ -23,6 +23,9 @@ Column {
         return null;
     }
     readonly property var current: root.active || root.upcoming
+    // Said "not tonight" today and not over yet: they can come back.
+    readonly property var skipped: root.b.today.filter(r => r.state === "skipped" && !r.past)
+    property string freeNote: ""
 
     BoussoleText {
         visible: !root.b.daemonConnected
@@ -192,6 +195,91 @@ Column {
                     onClicked: root.b.openClose(root.active.id)
                 }
             }
+        }
+    }
+
+    // ---- said "not tonight", by mistake maybe -----------------------------
+    Rectangle {
+        visible: root.skipped.length > 0
+        width: parent.width
+        height: skippedCol.implicitHeight + 28
+        radius: 18
+        color: "transparent"
+        border.width: 1
+        border.color: DrawerTheme.faint
+        Column {
+            id: skippedCol
+            x: 16
+            y: 14
+            width: parent.width - 32
+            spacing: 8
+            BoussoleText {
+                text: root.b.tr("Not tonight", "Pas ce soir")
+                color: DrawerTheme.secondary
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: 1
+                font.capitalization: Font.AllUppercase
+            }
+            Repeater {
+                model: root.skipped
+                delegate: Item {
+                    required property var modelData
+                    width: skippedCol.width
+                    height: Math.max(skippedTitle.implicitHeight, back.height)
+                    BoussoleText {
+                        id: skippedTitle
+                        anchors.left: parent.left
+                        anchors.right: back.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: modelData.start + "  " + modelData.title
+                        elide: Text.ElideRight
+                        font.pixelSize: 14
+                    }
+                    BoussolePill {
+                        id: back
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.b.tr("Bring back", "Reprendre")
+                        onClicked: root.b.unskip(modelData.id)
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- I have time ------------------------------------------------------
+    Column {
+        visible: root.b.daemonConnected && !root.b.setupNeeded && !root.active
+        width: parent.width
+        spacing: 8
+        BoussoleText {
+            text: root.b.tr("I have time", "J'ai du temps")
+            color: DrawerTheme.secondary
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: 1
+            font.capitalization: Font.AllUppercase
+        }
+        Flow {
+            width: parent.width
+            spacing: 8
+            Repeater {
+                model: [30, 45, 60, 90]
+                delegate: BoussoleChip {
+                    required property var modelData
+                    text: modelData < 60 ? modelData + " min" : Math.floor(modelData / 60) + " h" + (modelData % 60 ? " " + (modelData % 60) : "")
+                    onClicked: root.b.freeTime(modelData, r => root.freeNote = r.text || "")
+                }
+            }
+        }
+        BoussoleText {
+            visible: root.freeNote !== ""
+            width: parent.width
+            text: root.freeNote
+            color: DrawerTheme.secondary
+            font.pixelSize: 13
         }
     }
 

@@ -327,6 +327,10 @@ Singleton {
     function start(session) { root._send({ cmd: "start", session: session }); }
     function later(session, at) { root._send({ cmd: "later", session: session, at: at }); }
     function skip(session) { root._send({ cmd: "skip", session: session }); }
+    // A "not tonight" said by mistake: the session comes back.
+    function unskip(session) { root._send({ cmd: "unskip", session: session }); }
+    // "I have time": a session right away; `cb` gets the reply.
+    function freeTime(minutes, cb) { root.request({ cmd: "free", minutes: minutes }, cb); }
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
     function setActivity(idle, media) { root._send({ cmd: "activity", idle: idle, media: media }); }
 
