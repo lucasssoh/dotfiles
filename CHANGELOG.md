@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Boussole:** a study planner in the bar, optional. It plans study sessions from your course folder and your timetable, rings them in the bar's central island with a chime, follows them through Liseuse, and replans when you close them. `Super + D` opens its drawer, `Super + Shift + D` adds an exam, a hand-in or a task in one line.
 - **Boussole, subjects:** tell it where you stand in each subject. One you are behind in gets more time per sheet and goes first; one where the tutorials are enough has nothing to read, only its tutorials, projects and exams.
+- **Boussole, days:** an afternoon without courses becomes a real study block, and a campaign's daily time goes to the daytime (a free period at school, that afternoon, the morning) before the evening. Friday evening stays free.
 
 ### Changed
 - **Bar:** drawers, notifications, OSD and the controller popup now follow light and dark mode.

@@ -299,6 +299,20 @@ pub fn day(input: &Input, date: Date) -> Day {
             if let Some(s) = evening(r.evening_minutes, true, SlotKind::Evening, &busy) {
                 out.slots.push(s);
             }
+            // Courses over by the midday break: the afternoon at home is a
+            // real block, half an hour after the gym or the way back, and
+            // done before dinner.
+            let noon = r.midday.map_or(13 * 60, |(a, _)| a.0 + 30);
+            let last = today.iter().map(|c| c.end.time.0).max();
+            if let (false, Some(last), Some(home), true) = (company, last, out.home, r.half_day_minutes > 0) {
+                if last <= noon {
+                    let start = home.0.max(r.midday.map_or(0, |(_, b)| b.0)) + 30;
+                    let limit = out.slots.iter().find(|s| s.kind == SlotKind::Evening).map_or(r.evening_target, |s| s.start).0 - r.dinner;
+                    if let Some((s, e, short)) = place(start, r.half_day_minutes, r.min_session, limit, &busy) {
+                        out.slots.push(slot(s, e, SlotKind::Block, true, Place::Home, short, Hm(limit)));
+                    }
+                }
+            }
             if !company {
                 let leave = out.leave.map_or(r.midday.map_or(r.latest_end.0, |(a, _)| a.0), |l| l.0);
                 if leave - r.morning_ready.0 >= r.morning_lead {
@@ -315,16 +329,8 @@ pub fn day(input: &Input, date: Date) -> Day {
                     out.slots.push(s);
                 }
             }
-            // A free evening still owes a school day's campaign time.
-            let m = campaign_minutes(input, date, false);
-            if m > 0 && weekday && out.home.is_some() {
-                let mut busy = busy.clone();
-                busy.extend(out.slots.iter().map(|s| (s.start.0, s.end.0)));
-                busy.sort();
-                if let Some(s) = evening(m, true, SlotKind::Campaign, &busy) {
-                    out.slots.push(s);
-                }
-            }
+            // A free evening stays free, campaign or not: a school day's
+            // campaign time goes to a gap that day, or is not owed.
         }
         DayKind::Bonus => out.slots.extend(blocks(false, SlotKind::Bonus, &mut busy)),
         DayKind::Blocks => out.slots.extend(blocks(true, SlotKind::Block, &mut busy)),

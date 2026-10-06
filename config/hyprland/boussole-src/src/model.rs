@@ -113,6 +113,9 @@ pub struct Rhythm {
     pub short_minutes: i32,
     /// The morning block of a "morning block" period.
     pub period_morning_minutes: i32,
+    /// A school day whose courses end by the midday break gives its
+    /// afternoon a counted block this long; 0 turns it off.
+    pub half_day_minutes: i32,
 }
 
 impl Default for Rhythm {
@@ -140,6 +143,7 @@ impl Default for Rhythm {
             exam_soon_days: 14,
             short_minutes: 40,
             period_morning_minutes: 90,
+            half_day_minutes: 90,
         }
     }
 }

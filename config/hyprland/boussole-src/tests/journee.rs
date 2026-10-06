@@ -185,3 +185,18 @@ fn no_courses_left_means_a_pause() {
     fx.calendar = false;
     assert!(!journee::paused(&fx.input(at(after, "08:00"), None), after));
 }
+
+#[test]
+fn a_free_afternoon_is_a_real_block() {
+    let mut fx = Fx::new("half-day");
+    // Tuesday: courses 08:00-12:00, back at 12:45, gym until 13:30: a block
+    // half an hour later, besides the evening.
+    assert_eq!(
+        slots(&fx, MON.add(1)),
+        [(SlotKind::Block, "14:00".into(), "15:30".into(), true), (SlotKind::Evening, "20:30".into(), "21:45".into(), true)]
+    );
+    // Monday ends at 15:30: an afternoon at school, nothing more than the evening.
+    assert!(slots(&fx, MON).iter().all(|s| s.0 != SlotKind::Block));
+    fx.settings.rhythm.half_day_minutes = 0;
+    assert!(slots(&fx, MON.add(1)).iter().all(|s| s.0 != SlotKind::Block), "0 turns it off");
+}

@@ -314,7 +314,8 @@ fn the_campaign_gets_its_time() {
         closed: false,
     });
     let p = fx.plan(at(MON, "06:00"));
-    for day in (0..12).map(|i| MON.add(i)).filter(|d| d.weekday() < 5) {
+    // Friday evening is free, and that Friday has no gap.
+    for day in (0..12).map(|i| MON.add(i)).filter(|d| d.weekday() < 4) {
         let c: Vec<_> = parts(&p).into_iter().filter(|(d, _, x)| *d == day && matches!(x.work, Work::Campaign { .. })).collect();
         assert_eq!(c.len(), 1, "{day}: 30 minutes each school day");
         assert_eq!(c[0].2.minutes, 30);
@@ -480,3 +481,26 @@ fn a_domain_where_tutorials_are_enough_has_nothing_to_read() {
     assert!(fx.catalogue.pending(&Default::default(), &fx.domains).iter().all(|i| i.domain != "ALGO"), "nor asks about its files");
 }
 
+#[test]
+fn the_campaign_takes_daytime_before_the_evening() {
+    let mut fx = Fx::new("campaign-day");
+    fx.campaigns.push(Campaign {
+        id: "jobs".into(),
+        name: "Work-study".into(),
+        start: MON,
+        end: MON.add(6),
+        school_day_minutes: 30,
+        free_day_minutes: 120,
+        weekly_target: 8,
+        rows: Vec::new(),
+        closed: false,
+    });
+    let p = fx.plan(at(MON, "06:00"));
+    let kind = |day: Date| {
+        parts(&p).into_iter().find(|(d, _, x)| *d == day && matches!(x.work, Work::Campaign { .. })).map(|(_, s, _)| s.kind)
+    };
+    assert_eq!(kind(MON.add(1)), Some(SlotKind::Block), "Tuesday's free afternoon");
+    assert_eq!(kind(MON.add(2)), Some(SlotKind::Morning), "Wednesday's morning");
+    assert_eq!(kind(MON), Some(SlotKind::Gap), "a gap at school still comes first");
+    assert_eq!(kind(MON.add(3)), Some(SlotKind::Gap));
+}

@@ -715,7 +715,8 @@ pub fn plan(input: &Input) -> Plan {
     exams.sort_by_key(|d| d.at);
 
     // 2c. Campaigns: time on each school day (a gap at school if one is long
-    // enough, else the start of the evening), the whole of their own slots,
+    // enough, else a free afternoon, the morning block, the evening), the
+    // whole of their own slots,
     // and 45 minutes the day before an interview.
     for c in input.campaigns.iter().filter(|c| !c.closed) {
         let mut day = today.max(c.start);
@@ -759,10 +760,11 @@ pub fn plan(input: &Input) -> Plan {
                 gap.cap = c.school_day_minutes;
                 gap.push(part);
                 cells.push(gap);
-            } else if let Some(cell) = cells.iter_mut().find(|x| {
-                x.slot.date == day && x.slot.kind == SlotKind::Evening && x.free() >= c.school_day_minutes
+            } else if let Some(cell) = [SlotKind::Block, SlotKind::Morning, SlotKind::Evening].iter().find_map(|&kind| {
+                // Daytime first: the evening is kept for study when it can be.
+                cells.iter().position(|x| x.slot.date == day && x.slot.kind == kind && x.free() >= c.school_day_minutes)
             }) {
-                cell.push(part);
+                cells[cell].push(part);
             }
             day = day.add(1);
         }
