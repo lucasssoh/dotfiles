@@ -295,6 +295,24 @@ impl Service {
         if let Some(q) = self.suivi_deadline() {
             t = t.min(q);
         }
+        // Whenever what the bar shows changes on its own: 15 minutes
+        // before a session, its start, its end, 15 minutes after (left
+        // open, to declare), and free periods at school coming and going.
+        let marks = self
+            .plan
+            .sessions
+            .iter()
+            .chain(&self.plan.offers)
+            .filter(|s| s.date == now.date || s.date == now.date.add(1))
+            .flat_map(|s| {
+                let (a, b) = (Local::new(s.date, s.start), Local::new(s.date, s.end));
+                [a.plus(-15), a, b, b.plus(15)]
+            })
+            .filter(|&m| m > now)
+            .min();
+        if let Some(m) = marks {
+            t = t.min(self.tz.to_utc(m));
+        }
         let spec = libc::itimerspec {
             it_interval: libc::timespec { tv_sec: 0, tv_nsec: 0 },
             it_value: libc::timespec { tv_sec: t.max(now_secs() + 1) as libc::time_t, tv_nsec: 0 },
@@ -904,6 +922,8 @@ impl Service {
             "lang": self.lang(),
             "paused": self.plan.paused,
             "next": next,
+            "next_label": next.map(|s| self.short_label(s)),
+            "active_label": active.map(|s| self.short_label(s)),
             "active": active.map(|s| json!({ "session": s, "outcome": st.outcomes.get(&s.id) })),
             "declare": declare,
             "gap": gap,

@@ -40,6 +40,23 @@ impl Service {
         }
     }
 
+    /// A few words for the bar: the subject, else what it is about
+    /// ("Alternance", a project's name, a company).
+    pub(crate) fn short_label(&self, s: &Session) -> String {
+        let Some(p) = s.parts.first() else { return String::new() };
+        if let Some(d) = &p.domain {
+            return d.clone();
+        }
+        let st = &self.store.state;
+        match &p.work {
+            Work::Campaign { campaign } | Work::Interview { campaign, .. } => {
+                st.campaigns.iter().find(|c| &c.id == campaign).map_or_else(|| campaign.clone(), |c| c.name.clone())
+            }
+            Work::Project { project, .. } => st.projects.iter().find(|x| &x.id == project).map_or_else(|| project.clone(), |x| x.name.clone()),
+            w => i18n::work(w, self.lang()).chars().take(24).collect(),
+        }
+    }
+
     fn actions(&self, s: &Session, from: Hm, start: bool) -> Vec<Value> {
         let r = &self.store.settings.rhythm;
         let slot = journee::Slot {
