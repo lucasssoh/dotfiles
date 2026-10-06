@@ -1701,15 +1701,9 @@ ShellRoot {
                 drawerGap: 0
                 drawerTop: bar.bandHeight
 
+                // The notification centre is a panel of its own, down the
+                // screen's right edge (the LazyLoader after the bars).
                 drawerItems: [
-                    Modules.NotificationCenter {
-                        drawerOpen: NotificationState.centerOpen && NotificationState.activeScreen === bar.screen
-                        // Down to the bottom edge of the tiled windows (their
-                        // border's outer edge, `gaps_out` above the screen's
-                        // bottom) -- see HyprGaps.qml.
-                        availableHeight: bar.screen.height - HyprGaps.gapBottom
-                                         - toolsIsland.y - bar.bandHeight
-                    },
                     BaliseHome {
                         drawerOpen: BaliseState.panelOpen && BaliseState.activeScreen === bar.screen
                         // For the HDR row -- each bar's Balise reflects
@@ -2459,6 +2453,57 @@ ShellRoot {
                     anchors.topMargin: 8
                     drawerOpen: BoussoleState.panelOpen
                     fill: true
+                }
+            }
+        }
+    }
+
+    // The notification centre, the same panel mirrored on the right edge
+    // ("il faut faire de même pour notif à droite"): under the bar, down to
+    // the bottom, sliding in from the right.
+    property bool notificationsMapped: false
+    Connections {
+        target: NotificationState
+        function onCenterOpenChanged() {
+            if (NotificationState.centerOpen) {
+                notificationsUnmap.stop();
+                shell.notificationsMapped = true;
+            } else {
+                notificationsUnmap.restart();
+            }
+        }
+    }
+    Timer { id: notificationsUnmap; interval: 260; onTriggered: shell.notificationsMapped = false }
+
+    LazyLoader {
+        active: shell.notificationsMapped
+
+        PanelWindow {
+            screen: NotificationState.activeScreen || Quickshell.screens[0]
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+            anchors { top: true; right: true; bottom: true }
+            margins.top: 31
+            implicitWidth: 440
+
+            Rectangle {
+                id: notificationsSheet
+                property bool entered: false
+                width: parent.width
+                height: parent.height
+                x: entered && NotificationState.centerOpen ? 0 : width
+                Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                Component.onCompleted: Qt.callLater(() => notificationsSheet.entered = true)
+                color: DrawerTheme.panelTop
+                topLeftRadius: 28
+                bottomLeftRadius: 28
+
+                Modules.NotificationCenter {
+                    anchors.fill: parent
+                    anchors.topMargin: 8
+                    drawerOpen: NotificationState.centerOpen
+                    availableHeight: notificationsSheet.height - 8
                 }
             }
         }

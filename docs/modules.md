@@ -126,7 +126,7 @@ The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../conf
 | ![Balise](screenshots/v1.0.0/balise.webp)<br>Balise | ![Power](screenshots/v1.0.0/power.webp)<br>Power | ![Mixer](screenshots/v1.0.0/mixer.webp)<br>Mixer |
 | ![Notification centre](screenshots/v1.0.0/notifications.webp)<br>Notification centre | ![Calendar](screenshots/v1.0.0/calendar.webp)<br>Calendar | |
 
-Only one of the drawers on the right can be open at a time.
+The notification centre is a panel from under the bar to the bottom of the screen, flush with its right edge, sliding in from the right. Only one of the drawers on the right can be open at a time.
 
 Hold `Super` and the centre island turns into a keyboard showing every key binding. Press `Shift` as well to see the second layer. The full list is in [key bindings](keybindings.md).
 
