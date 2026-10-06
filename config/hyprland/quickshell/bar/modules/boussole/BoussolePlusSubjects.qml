@@ -58,6 +58,41 @@ Column {
                     placeholder: root.b.tr("Course name in ADE, then Enter", "Nom du cours dans ADE, puis Entrée")
                     onAccepted: root.save(dom.d.id, d => d.calendar_names = names.text.split("|").map(x => x.trim()).filter(x => x !== ""))
                 }
+                BoussoleText {
+                    text: root.b.tr("Where you stand", "Où tu en es")
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 12
+                }
+                Flow {
+                    width: parent.width
+                    spacing: 6
+                    Repeater {
+                        model: [
+                            { id: "behind", en: "Behind", fr: "En retard" },
+                            { id: "shaky", en: "Unsure", fr: "Moyen" },
+                            { id: "fine", en: "Fine", fr: "À l'aise" },
+                            { id: "td-only", en: "Tutorials only", fr: "TD seulement" }
+                        ]
+                        delegate: BoussoleChip {
+                            required property var modelData
+                            text: root.b.tr(modelData.en, modelData.fr)
+                            on: (dom.d.level || "fine") === modelData.id
+                            onClicked: root.save(dom.d.id, d => d.level = modelData.id)
+                        }
+                    }
+                }
+                BoussoleText {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 12
+                    text: (dom.d.level || "fine") === "behind"
+                        ? root.b.tr("More time per sheet, and it goes first.", "Plus de temps par fiche, et elle passe devant.")
+                        : (dom.d.level === "td-only"
+                            ? root.b.tr("Nothing to read: tutorials, projects and exams only.", "Rien à lire : seulement les TD, les projets et les examens.")
+                            : "")
+                    visible: text !== ""
+                }
                 Flow {
                     width: parent.width
                     spacing: 6
