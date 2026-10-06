@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import "../theme"
+import "../services"
 
 // Native port of waybar's `hyprland/workspaces` module. No exec, no
 // poll: Hyprland.workspaces is a live model kept in sync over the
@@ -46,8 +47,11 @@ Item {
             // which is exactly the "2 before 1, 4 before 1/2/3" the
             // laptop screen was showing. Sorting explicitly here doesn't
             // depend on that guarantee holding at all.
+            // Boussole's study workspaces are a dimension of their own:
+            // shown while you are in it, and only then.
             model: Hyprland.workspaces.values
                 .filter(w => w.monitor === root.monitor)
+                .filter(w => BoussoleState.isStudy(w.id) === BoussoleState.inStudy)
                 .sort((a, b) => a.id - b.id)
 
             // The page-indicator layout (2026-09-29): no digits, like a

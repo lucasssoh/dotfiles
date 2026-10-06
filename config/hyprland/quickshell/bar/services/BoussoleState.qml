@@ -37,6 +37,18 @@ Singleton {
     readonly property var gap: root.status.gap || null
     readonly property var alert: root.status.alert || null
     readonly property bool paused: root.status.paused === true
+    // Focus mode: the study dimension (its own workspaces), the session's
+    // panel on each of them, the evening's files.
+    readonly property var focus: root.status.focus || null
+    readonly property int studyFirst: root.focus && root.focus.study ? root.focus.study[0] : 11
+    readonly property int studyLast: root.focus && root.focus.study ? root.focus.study[1] : 14
+    function isStudy(id) { return id >= root.studyFirst && id <= root.studyLast; }
+    readonly property bool inStudy: Hyprland.focusedWorkspace !== null && root.isStudy(Hyprland.focusedWorkspace.id)
+    // The panel: a session holds the dimension and you are in it.
+    readonly property bool studyHere: root.focus !== null && root.focus.active === true && root.inStudy
+    function goStudy(id) {
+        Quickshell.execDetached(["hyprctl", "eval", "hl.dispatch(hl.dsp.focus({ workspace = \"" + id + "\" }))"]);
+    }
 
     // ---- the drawer ---------------------------------------------------
     property bool panelOpen: false
@@ -150,7 +162,10 @@ Singleton {
     }
 
     // Opens the close of a session (today's, or one left open another day).
-    function openClose(session, screen) {
+    // `then`: the session to start right after, in place ("Next file").
+    property string thenStart: ""
+    function openClose(session, screen, then) {
+        root.thenStart = then || "";
         root.request({ cmd: "closing", session: session }, (r) => {
             if (!r.ok) return;
             root.closing = r.data;
@@ -161,9 +176,17 @@ Singleton {
 
     function submitClose(parts, mediaForCourse) {
         if (!root.closing) return;
-        root._send({ cmd: "close", session: root.closing.session, parts: parts, media_for_course: mediaForCourse });
-        root.justClosed = root.closing.session;
-        undoTimer.restart();
+        const msg = { cmd: "close", session: root.closing.session, parts: parts, media_for_course: mediaForCourse };
+        const chained = root.thenStart !== "";
+        if (chained) msg.then = root.thenStart;
+        root._send(msg);
+        root.thenStart = "";
+        // Undo takes back the last thing done: after "Next file" that is
+        // the next session's start, not this close, so none is offered.
+        if (!chained) {
+            root.justClosed = root.closing.session;
+            undoTimer.restart();
+        }
         root.closing = null;
         root.page = "today";
     }
@@ -258,12 +281,17 @@ Singleton {
         respectInhibitors: true
         onIsIdleChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
     }
-    readonly property bool mediaPlaying: {
+    readonly property var playingPlayer: {
         const ps = Mpris.players.values.filter(p => p.dbusName.indexOf("playerctld") === -1);
-        for (let i = 0; i < ps.length; i++) if (ps[i].isPlaying) return true;
-        return false;
+        for (let i = 0; i < ps.length; i++) if (ps[i].isPlaying) return ps[i];
+        return null;
     }
+    readonly property bool mediaPlaying: root.playingPlayer !== null
+    // What plays, so a video can be asked about by name ("is it for the
+    // session?"): its title, else the player's.
+    readonly property string mediaTitle: root.playingPlayer ? (root.playingPlayer.trackTitle || root.playingPlayer.identity || "") : ""
     onMediaPlayingChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
+    onMediaTitleChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
     onSessionActiveChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
 
     // Games during a session ask first (the controller popup, fuzzel's
@@ -350,7 +378,17 @@ Singleton {
     // "I have time": a session right away; `cb` gets the reply.
     function freeTime(minutes, cb) { root.request({ cmd: "free", minutes: minutes }, cb); }
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
-    function setActivity(idle, media) { root._send({ cmd: "activity", idle: idle, media: media }); }
+    // The session's sheet closed: open it again, or go on on paper.
+    function reopen() { root._send({ cmd: "reopen" }); }
+    function onPaper() { root._send({ cmd: "paper" }); }
+    function pauseSession() { if (root.tracking) root._send({ cmd: "pause-session", session: root.tracking.session }); }
+    function resumeSession() { if (root.tracking) root._send({ cmd: "resume-session", session: root.tracking.session }); }
+    // "Next file": this session's close first, then the next one in place.
+    function nextFile(screen) {
+        if (!root.tracking || !root.focus || !root.focus.next) return;
+        root.openClose(root.tracking.session, screen, root.focus.next);
+    }
+    function setActivity(idle, media) { root._send({ cmd: "activity", idle: idle, media: media, title: root.mediaTitle }); }
 
     // Commands whose answer is wanted: called back with the reply.
     property var _pending: ({})

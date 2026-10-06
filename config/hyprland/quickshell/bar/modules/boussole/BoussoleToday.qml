@@ -188,9 +188,22 @@ Column {
                     text: root.b.tr("Not tonight", "Pas ce soir")
                     onClicked: root.b.skip(root.current.id)
                 }
+                // Paused (by hand, or by a game launched anyway): it goes on
+                // from here, in front of its file in focus mode.
+                BoussolePill {
+                    visible: root.active !== null && root.active.state === "paused"
+                    primary: true
+                    text: root.b.tr("Resume", "Reprendre")
+                    onClicked: root.b.resumeSession()
+                }
+                BoussolePill {
+                    visible: root.active !== null && root.active.state === "started"
+                    text: root.b.tr("Pause", "Pause")
+                    onClicked: root.b.pauseSession()
+                }
                 BoussolePill {
                     visible: root.active !== null
-                    primary: true
+                    primary: root.active !== null && root.active.state !== "paused"
                     text: root.b.tr("Close…", "Clore…")
                     onClicked: root.b.openClose(root.active.id)
                 }

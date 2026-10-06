@@ -273,13 +273,16 @@ Column {
         spacing: 8
         BoussolePill {
             primary: true
-            text: root.b.tr("Close and replan", "Clore et replanifier")
+            text: root.b.thenStart !== ""
+                  ? root.b.tr("Close and open the next file", "Clore et ouvrir le fichier suivant")
+                  : root.b.tr("Close and replan", "Clore et replanifier")
             onClicked: root.submit()
         }
         BoussolePill {
             text: root.b.tr("Cancel", "Annuler")
             onClicked: {
                 root.b.closing = null;
+                root.b.thenStart = "";
                 root.b.page = "today";
             }
         }

@@ -59,6 +59,30 @@ Column {
         font.weight: Font.Bold
     }
 
+    // Focus mode: starting a session puts you in front of its file.
+    readonly property var fm: root.b.settings.focus || ({})
+    Section { text: root.b.tr("Focus mode", "Mode focus") }
+    Row {
+        spacing: 6
+        BoussoleChip {
+            text: root.b.tr("On", "Activé")
+            on: root.fm.enabled === true
+            onClicked: root.b.setSettings({ focus: { enabled: true } })
+        }
+        BoussoleChip {
+            text: root.b.tr("Off", "Désactivé")
+            on: root.fm.enabled !== true
+            onClicked: root.b.setSettings({ focus: { enabled: false } })
+        }
+    }
+    BoussoleText {
+        width: parent.width
+        text: root.b.tr("Starting a session takes you to the study workspaces, a dimension of their own, with its file in Liseuse and the session's panel on the right: the time, the objective, the evening's files and Next. Your own workspaces stay as they are; Pause and Close bring you back. Whatever you open there counts for the session.",
+                        "Démarrer une séance t'emmène sur les bureaux d'étude, une dimension à part, avec son fichier dans Liseuse et le panneau de séance à droite : le temps, l'objectif, les fichiers de la soirée et Suivant. Tes bureaux restent comme ils sont ; Pause et Clore t'y ramènent. Tout ce que tu ouvres là-bas compte pour la séance.")
+        color: DrawerTheme.secondary
+        font.pixelSize: 12
+    }
+
     Section { text: root.b.tr("Typical week · touch a day", "Semaine type · touche un jour") }
     Row {
         spacing: 4

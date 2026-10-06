@@ -68,7 +68,13 @@ Singleton {
     // resolvable here) -- this used to shell out to the external GTK
     // app's own `balise hide` CLI, back when Balise wasn't a QML drawer
     // in this same process yet.
+    // Boussole's study workspaces (focus mode) are kept quiet: no toasts
+    // and no centre there. Notifications still land in the history.
+    readonly property bool studyQuiet: BoussoleState.studyHere
+    onStudyQuietChanged: if (root.studyQuiet) root.close()
+
     function toggleNotificationCenter(screen) {
+        if (root.studyQuiet) return;
         if (root.centerOpen && root.activeScreen === screen) {
             root.close();
             return;
@@ -175,7 +181,7 @@ Singleton {
         root.receivedAt = stamps;
         n.closed.connect(() => root._removeToast(n.id));
 
-        if (root.dnd) return;   // still tracked/in history, just no popup
+        if (root.dnd || root.studyQuiet) return;   // still tracked/in history, just no popup
 
         // Battery-aware suppression (deliberately NOT implemented yet --
         // a product decision on threshold/scope, not a technical one):

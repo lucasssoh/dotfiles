@@ -17,6 +17,10 @@ Rectangle {
     color: chip.on ? DrawerTheme.on : (hit.containsMouse ? DrawerTheme.cardHover : "transparent")
     border.width: chip.on || chip.hinted ? 0 : 1
     border.color: DrawerTheme.faint
+    // Like Balise's controls: the state change eases, the press gives.
+    Behavior on color { ColorAnimation { duration: 120 } }
+    scale: hit.pressed ? 0.96 : 1
+    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
 
     Canvas {
         anchors.fill: parent
@@ -38,6 +42,7 @@ Rectangle {
         anchors.centerIn: parent
         text: chip.text
         color: chip.on ? DrawerTheme.onInk : DrawerTheme.primary
+        Behavior on color { ColorAnimation { duration: 120 } }
         font.family: Fonts.ui
         font.pixelSize: 13
         font.weight: Font.DemiBold

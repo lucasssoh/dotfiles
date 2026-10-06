@@ -2458,6 +2458,43 @@ ShellRoot {
         }
     }
 
+    // Boussole's session panel, in focus mode: fixed down the left edge of
+    // every study workspace (boussole-src/src/focus.rs), keeping its room so
+    // Liseuse and the rest tile beside it. Gone outside the dimension. The
+    // drawer opens over the same edge: the panel steps aside meanwhile
+    // ("il faut pas que lui et boussole s'ouvrent en même temps"), its room
+    // kept so nothing beside it moves.
+    LazyLoader {
+        active: BoussoleState.studyHere
+
+        PanelWindow {
+            screen: Quickshell.screens[0]
+            color: "transparent"
+            anchors { top: true; left: true; bottom: true }
+            // Under the bar's band like the drawer (y 31): a panel that
+            // keeps its room is placed below the bar's own reserved 24 px,
+            // so the margin counts from there.
+            margins.top: 7
+            implicitWidth: 320
+            exclusiveZone: 320
+            WlrLayershell.namespace: "boussole-session"
+
+            Rectangle {
+                anchors.fill: parent
+                color: DrawerTheme.panelTop
+                topRightRadius: 28
+                bottomRightRadius: 28
+                opacity: BoussoleState.panelOpen ? 0 : 1
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+                BoussoleColumn {
+                    anchors.fill: parent
+                    color: "transparent"
+                }
+            }
+        }
+    }
+
     // The notification centre, the same panel mirrored on the right edge
     // ("il faut faire de même pour notif à droite"): under the bar, down to
     // the bottom, sliding in from the right.
