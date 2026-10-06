@@ -101,6 +101,12 @@ mod imp {
     #[derive(Default)]
     pub struct Card {
         pub texture: RefCell<Option<gdk::Texture>>,
+        /// The dark half of a light/dark pair (see wallpapers.rs), loaded
+        /// alongside `texture`; stays None for a wallpaper without one.
+        pub dark_texture: RefCell<Option<gdk::Texture>>,
+        /// The desktop's colour scheme: which half of a pair is shown at
+        /// rest, see `snapshot`.
+        pub dark_scheme: Cell<bool>,
         /// Dimensions of the source file (not the downscaled texture), for
         /// the caption -- e.g. "3840×2160" even though the displayed
         /// thumbnail is smaller.
@@ -145,20 +151,48 @@ mod imp {
             // Fill clipped to the parallelogram -- GPU equivalent of the
             // old implementation's Cairo clip + paint.
             snapshot.push_fill(&path, gsk::FillRule::Winding);
-            match &*self.texture.borrow() {
+            let light = self.texture.borrow();
+            let dark = self.dark_texture.borrow();
+            let dark_scheme = self.dark_scheme.get();
+            // At rest, the half of a pair the colour scheme asks for (or
+            // whichever has loaded first); `other` is the half that the
+            // focus opens beside it.
+            let (shown, other) = if dark_scheme && dark.is_some() {
+                (dark.as_ref(), light.as_ref())
+            } else {
+                (light.as_ref().or(dark.as_ref()), dark.as_ref().filter(|_| light.is_some()))
+            };
+            match shown {
                 Some(tex) => {
-                    let tw = tex.width() as f64;
-                    let th = tex.height() as f64;
-                    // "cover": the larger of the two ratios fills the
-                    // whole box, cropping if needed.
-                    let scale = (w / tw).max(h / th).max(0.0001);
-                    let dw = tw * scale;
-                    let dh = th * scale;
-                    let dx = (w - dw) / 2.0;
-                    let dy = (h - dh) / 2.0;
-                    let bounds =
-                        graphene::Rect::new(dx as f32, dy as f32, dw as f32, dh as f32);
-                    snapshot.append_scaled_texture(tex, gsk::ScalingFilter::Trilinear, &bounds);
+                    draw_cover(snapshot, tex, w, h);
+
+                    // A pair opens with focus: the other half slides in
+                    // along a cut parallel to the card's slant, light on
+                    // the left and dark on the right, until the card is
+                    // split down the middle.
+                    let open = ((self.focus.get() - 0.35) / 0.65).clamp(0.0, 1.0);
+                    let open = open * open * (3.0 - 2.0 * open);
+                    if let (Some(other), true) = (other, open > 0.001) {
+                        let reach = open * (w - skew) / 2.0;
+                        let x_left = |y: f64| skew * (1.0 - y / h);
+                        let x_right = |y: f64| w - skew * (y / h);
+                        // 1px past the card's edge, so anti-aliasing
+                        // leaves no sliver of the half beneath.
+                        let (top, bottom) = if dark_scheme {
+                            ((x_left(0.0) - 1.0, x_left(0.0) + reach), (x_left(h) - 1.0, x_left(h) + reach))
+                        } else {
+                            ((x_right(0.0) - reach, x_right(0.0) + 1.0), (x_right(h) - reach, x_right(h) + 1.0))
+                        };
+                        let cut = gsk::PathBuilder::new();
+                        cut.move_to(top.0 as f32, 0.0);
+                        cut.line_to(top.1 as f32, 0.0);
+                        cut.line_to(bottom.1 as f32, h as f32);
+                        cut.line_to(bottom.0 as f32, h as f32);
+                        cut.close();
+                        snapshot.push_fill(&cut.to_path(), gsk::FillRule::Winding);
+                        draw_cover(snapshot, other, w, h);
+                        snapshot.pop();
+                    }
 
                     // Non-focused cards are dimmed.
                     let dim = (1.0 - self.focus.get()) * 0.55;
@@ -174,6 +208,7 @@ mod imp {
                         .append_color(&gdk::RGBA::new(0.11, 0.11, 0.12, 1.0), &full);
                 }
             }
+            drop((light, dark));
             snapshot.pop();
 
             // No outline -- focus and selection already read clearly from
@@ -220,11 +255,27 @@ mod imp {
                     name_layout.set_width(((w - skew - PAD_X * 2.0).max(0.0) * pango::SCALE as f64) as i32);
                     let name_h = name_layout.pixel_size().1 as f64;
 
+                    // Second line: the true dimensions, then for a pair
+                    // "Light · Dark" with the half the scheme uses lit.
+                    // Drawn in full colour under push_opacity (see below),
+                    // so the markup's own colours fade with the caption.
                     let (dw, dh) = self.orig_dims.get();
-                    let dims_layout = (dw > 0 && dh > 0).then(|| {
+                    let mut parts: Vec<String> = Vec::new();
+                    if dw > 0 && dh > 0 {
+                        parts.push(format!("{dw}\u{00d7}{dh}"));
+                    }
+                    if wallpaper.dark.is_some() {
+                        let lit = |on: bool, word: &str| {
+                            if on { format!("<span foreground=\"#f2f2f7\">{word}</span>") } else { word.to_string() }
+                        };
+                        let dark = self.dark_scheme.get();
+                        parts.push(format!("{} \u{00b7} {}", lit(!dark, "Light"), lit(dark, "Dark")));
+                    }
+                    let dims_layout = (!parts.is_empty()).then(|| {
                         let mut dims_font = pango::FontDescription::new();
                         dims_font.set_absolute_size(DIMS_FONT_PX * pango::SCALE as f64);
-                        let layout = widget.create_pango_layout(Some(&format!("{dw}\u{00d7}{dh}")));
+                        let layout = widget.create_pango_layout(None);
+                        layout.set_markup(&parts.join("   "));
                         layout.set_font_description(Some(&dims_font));
                         layout.set_alignment(pango::Alignment::Right);
                         layout.set_width(((w - skew - PAD_X * 2.0).max(0.0) * pango::SCALE as f64) as i32);
@@ -258,12 +309,14 @@ mod imp {
                     snapshot.restore();
 
                     if let Some(dims_layout) = dims_layout {
-                        let dims_color = gdk::RGBA::new(0.557, 0.557, 0.576, alpha);
+                        let dims_color = gdk::RGBA::new(0.557, 0.557, 0.576, 1.0);
                         let dims_y = name_y + name_h + LINE_GAP;
+                        snapshot.push_opacity(alpha as f64);
                         snapshot.save();
                         snapshot.translate(&graphene::Point::new(PAD_X as f32, dims_y as f32));
                         snapshot.append_layout(&dims_layout, &dims_color);
                         snapshot.restore();
+                        snapshot.pop();
                     }
                 }
             }
@@ -293,11 +346,24 @@ impl Card {
     }
 
     /// Received from thumbs.rs once the thumbnail has decoded in the
-    /// background.
-    pub fn set_texture(&self, texture: gdk::Texture, orig_width: i32, orig_height: i32) {
-        self.imp().orig_dims.set((orig_width, orig_height));
-        *self.imp().texture.borrow_mut() = Some(texture);
+    /// background -- `dark` for the dark half of a pair. The caption's
+    /// dimensions are the light file's when it has one.
+    pub fn set_texture(&self, dark: bool, texture: gdk::Texture, orig_width: i32, orig_height: i32) {
+        let imp = self.imp();
+        if !dark || imp.texture.borrow().is_none() {
+            imp.orig_dims.set((orig_width, orig_height));
+        }
+        let slot = if dark { &imp.dark_texture } else { &imp.texture };
+        *slot.borrow_mut() = Some(texture);
         self.queue_draw();
+    }
+
+    /// The desktop's colour scheme changed (or is read at launch): pairs
+    /// show their other half.
+    pub fn set_dark_scheme(&self, dark: bool) {
+        if self.imp().dark_scheme.replace(dark) != dark {
+            self.queue_draw();
+        }
     }
 
     /// Frees the texture of a card that fell out of the loading window
@@ -308,6 +374,7 @@ impl Card {
     /// that no longer shows anything.
     pub fn clear_texture(&self) {
         *self.imp().texture.borrow_mut() = None;
+        *self.imp().dark_texture.borrow_mut() = None;
         self.imp().orig_dims.set((0, 0));
         self.queue_draw();
     }
@@ -344,6 +411,21 @@ impl Card {
     pub fn is_selected(&self) -> bool {
         self.imp().selected.get()
     }
+}
+
+/// Draws `tex` to fill a w×h box ("cover": the larger of the two ratios
+/// fills the whole box, cropping if needed), clipped by whatever fill the
+/// caller has pushed.
+fn draw_cover(snapshot: &gtk4::Snapshot, tex: &gdk::Texture, w: f64, h: f64) {
+    let tw = tex.width() as f64;
+    let th = tex.height() as f64;
+    let scale = (w / tw).max(h / th).max(0.0001);
+    let dw = tw * scale;
+    let dh = th * scale;
+    let dx = (w - dw) / 2.0;
+    let dy = (h - dh) / 2.0;
+    let bounds = graphene::Rect::new(dx as f32, dy as f32, dw as f32, dh as f32);
+    snapshot.append_scaled_texture(tex, gsk::ScalingFilter::Trilinear, &bounds);
 }
 
 /// Builds the outline of the card's "italic" parallelogram, slanted by

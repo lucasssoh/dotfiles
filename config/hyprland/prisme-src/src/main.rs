@@ -12,7 +12,7 @@ mod theme;
 mod thumbs;
 mod wallpapers;
 
-use gtk4::gio::ApplicationFlags;
+use gtk4::gio::{self, ApplicationFlags};
 use gtk4::prelude::*;
 use gtk4::{glib, Application};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -46,6 +46,20 @@ const THUMB_WINDOW_RADIUS: i64 = 24;
 const MODE_STATIC: &str = "Static";
 const MODE_DYNAMIC: &str = "Slideshow";
 const FOOTER_HINT: &str = "Esc close · ← → h l navigate · ↓ j select · ↑ k deselect · Tab mode · Enter apply";
+
+/// The desktop's colour scheme, as the bar's light/dark toggle writes it
+/// (quickshell's AppearanceState.qml) -- None when the schema isn't
+/// installed, rather than GSettings aborting the process.
+fn scheme_settings() -> Option<gio::Settings> {
+    const SCHEMA: &str = "org.gnome.desktop.interface";
+    gio::SettingsSchemaSource::default()?.lookup(SCHEMA, true)?;
+    Some(gio::Settings::new(SCHEMA))
+}
+
+/// Same reading as wallpaper-set: prefer-dark is dark, anything else light.
+fn prefers_dark(settings: &gio::Settings) -> bool {
+    settings.string("color-scheme") == "prefer-dark"
+}
 
 /// Label for the selection counter in the bottom bar.
 fn selected_count(n: usize) -> String {
@@ -246,11 +260,34 @@ fn build_ui(app: &Application) {
         let new_carousel = carousel::Carousel::new(cards);
         carousel_mount.append(&new_carousel);
 
+        // Each pair shows the half the desktop's colour scheme asks for,
+        // and follows it live if the scheme changes while Prisme is open.
+        if let Some(settings) = scheme_settings() {
+            let set_all = {
+                let carousel = new_carousel.clone();
+                move |settings: &gio::Settings| {
+                    let dark = prefers_dark(settings);
+                    for i in 0..carousel.len() {
+                        if let Some(card) = carousel.card_at(i) {
+                            card.set_dark_scheme(dark);
+                        }
+                    }
+                }
+            };
+            set_all(&settings);
+            settings.connect_changed(Some("color-scheme"), move |s, _| set_all(s));
+            // Kept alive with the window: a dropped GSettings stops
+            // emitting `changed`.
+            window.connect_destroy(move |_| {
+                let _ = &settings;
+            });
+        }
+
         // Opens directly on the last wallpaper applied in Static mode
         // (independent of the current mode -- switching to Dynamic must
         // not lose this reference point, see apply::last_static) rather
         // than the first card in the list.
-        let initial_index = apply::last_static().and_then(|name| walls.iter().position(|w| w.name == name));
+        let initial_index = apply::last_static().and_then(|name| walls.iter().position(|w| w.answers_to(&name)));
         if let Some(index) = initial_index {
             new_carousel.set_focus_index(index);
         }
@@ -267,7 +304,7 @@ fn build_ui(app: &Application) {
             while let Ok(result) = thumb_rx.recv().await {
                 if let Some(card) = carousel_for_thumbs.card_at(result.index) {
                     if let Some(tex) = result.texture {
-                        card.set_texture(tex, result.orig_width, result.orig_height);
+                        card.set_texture(result.dark, tex, result.orig_width, result.orig_height);
                     }
                 }
             }
@@ -315,7 +352,10 @@ fn build_ui(app: &Application) {
                     // `insert` returns true only if the index wasn't
                     // already there -- neither loaded nor already queued.
                     if loaded.insert(i) {
-                        loader.request(i, walls[i].path.clone());
+                        loader.request(i, false, walls[i].path.clone());
+                        if let Some(dark) = &walls[i].dark {
+                            loader.request(i, true, dark.clone());
+                        }
                     }
                 }
                 loaded.retain(|&i| {

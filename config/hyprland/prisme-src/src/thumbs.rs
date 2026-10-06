@@ -34,6 +34,9 @@ struct DecodedImage {
 /// `texture` is `None` if the image couldn't be decoded.
 pub struct ThumbResult {
     pub index: usize,
+    /// Which half of a light/dark pair this is (see wallpapers.rs) --
+    /// always false for a wallpaper without a pair.
+    pub dark: bool,
     pub texture: Option<gdk::Texture>,
     pub orig_width: i32,
     pub orig_height: i32,
@@ -59,7 +62,7 @@ const WORKER_COUNT: usize = 4;
 /// channel), no new threads.
 #[derive(Clone)]
 pub struct ThumbLoader {
-    request_tx: async_channel::Sender<(usize, PathBuf)>,
+    request_tx: async_channel::Sender<(usize, bool, PathBuf)>,
 }
 
 impl ThumbLoader {
@@ -68,20 +71,20 @@ impl ThumbLoader {
     /// thread. The returned receiver is consumed exactly like the old
     /// `spawn_loader`'s was.
     pub fn new() -> (Self, async_channel::Receiver<ThumbResult>) {
-        let (request_tx, request_rx) = async_channel::unbounded::<(usize, PathBuf)>();
+        let (request_tx, request_rx) = async_channel::unbounded::<(usize, bool, PathBuf)>();
         let (raw_tx, raw_rx) = async_channel::unbounded();
 
         for _ in 0..WORKER_COUNT {
             let request_rx = request_rx.clone();
             let raw_tx = raw_tx.clone();
             std::thread::spawn(move || {
-                while let Ok((index, path)) = request_rx.recv_blocking() {
+                while let Ok((index, dark, path)) = request_rx.recv_blocking() {
                     let decoded = decode_and_scale(&path);
                     // Texture (GObject) construction must stay on the GTK
                     // thread -- the channel only carries raw bytes up to
                     // this point; it's the receiver below that calls
                     // MemoryTexture::new.
-                    if raw_tx.send_blocking((index, decoded)).is_err() {
+                    if raw_tx.send_blocking((index, dark, decoded)).is_err() {
                         break;
                     }
                 }
@@ -90,7 +93,7 @@ impl ThumbLoader {
 
         let (out_tx, out_rx) = async_channel::unbounded();
         glib::MainContext::default().spawn_local(async move {
-            while let Ok((index, decoded)) = raw_rx.recv().await {
+            while let Ok((index, dark, decoded)) = raw_rx.recv().await {
                 let (texture, orig_width, orig_height) = match decoded {
                     Some(d) => {
                         let rowstride = (d.width * 4) as usize;
@@ -109,6 +112,7 @@ impl ThumbLoader {
                 if out_tx
                     .send(ThumbResult {
                         index,
+                        dark,
                         texture,
                         orig_width,
                         orig_height,
@@ -124,12 +128,13 @@ impl ThumbLoader {
         (Self { request_tx }, out_rx)
     }
 
-    /// Requests decoding of `path` for card `index` -- result delivered
+    /// Requests decoding of `path` for card `index` (`dark`: the dark half
+    /// of its pair) -- result delivered
     /// later via the receiver returned by `new()`. Any unbounded channel
     /// accepts the send without ever blocking the caller (GTK thread),
     /// even if the workers are busy: the request just waits in the queue.
-    pub fn request(&self, index: usize, path: PathBuf) {
-        let _ = self.request_tx.send_blocking((index, path));
+    pub fn request(&self, index: usize, dark: bool, path: PathBuf) {
+        let _ = self.request_tx.send_blocking((index, dark, path));
     }
 }
 

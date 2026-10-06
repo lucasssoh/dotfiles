@@ -1,6 +1,7 @@
 //! Discovery of wallpaper files on disk: resolving the source directory
 //! and a filtered/sorted listing, with no dependency on UI state.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 /// Recognized extensions -- same as scripts/set_wallpaper.sh
@@ -46,12 +47,28 @@ pub fn originals_dir() -> PathBuf {
     configured_dir().unwrap_or_else(|| home().join("Images/Wallpapers"))
 }
 
-/// A wallpaper image found on disk: full path and filename (shown in the
-/// UI, written as-is into the JSON playlist).
+/// A wallpaper as Prisme shows it: one card. `path`/`name` are the file the
+/// playlist records; `dark` is the other half of a light/dark pair, if the
+/// folder has one (see `scan`). wallpaper-set puts up whichever half the
+/// colour scheme asks for, so the playlist only ever names the light file.
 #[derive(Clone, Debug)]
 pub struct Wallpaper {
     pub path: PathBuf,
     pub name: String,
+    pub dark: Option<PathBuf>,
+}
+
+impl Wallpaper {
+    /// Filename of the dark half, if this is a pair.
+    pub fn dark_name(&self) -> Option<String> {
+        self.dark.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned())
+    }
+
+    /// True if `name` is either file of this wallpaper -- a playlist written
+    /// before pairs existed may name the dark one.
+    pub fn answers_to(&self, name: &str) -> bool {
+        self.name == name || self.dark_name().as_deref() == Some(name)
+    }
 }
 
 fn has_known_extension(path: &Path) -> bool {
@@ -61,9 +78,15 @@ fn has_known_extension(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn stem(name: &str) -> &str {
+    Path::new(name).file_stem().and_then(|s| s.to_str()).unwrap_or(name)
+}
+
 /// Lists a directory's wallpapers, sorted by name -- same sort as
 /// `for img in "$SRC_DIR"/*` in set_wallpaper.sh (alphabetical shell glob
-/// order).
+/// order). NAME.ext and NAME-dark.ext (any of the known extensions) make one
+/// entry, the light file carrying the dark one; a NAME-dark.ext alone stays
+/// an entry of its own. Same rule as wallpaper-set.
 pub fn scan(dir: &Path) -> Vec<Wallpaper> {
     let mut entries: Vec<Wallpaper> = match std::fs::read_dir(dir) {
         Ok(read_dir) => read_dir
@@ -75,11 +98,62 @@ pub fn scan(dir: &Path) -> Vec<Wallpaper> {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
-                Wallpaper { path, name }
+                Wallpaper { path, name, dark: None }
             })
             .collect(),
         Err(_) => Vec::new(),
     };
     entries.sort_by(|a, b| a.name.cmp(&b.name));
+
+    // First file per stem, the one a pair attaches to.
+    let mut by_stem: HashMap<String, usize> = HashMap::new();
+    for (i, w) in entries.iter().enumerate() {
+        by_stem.entry(stem(&w.name).to_string()).or_insert(i);
+    }
+    let mut paired = vec![false; entries.len()];
+    for i in 0..entries.len() {
+        let Some(base) = stem(&entries[i].name).strip_suffix("-dark") else {
+            continue;
+        };
+        if let Some(&light) = by_stem.get(base) {
+            if entries[light].dark.is_none() {
+                entries[light].dark = Some(entries[i].path.clone());
+                paired[i] = true;
+            }
+        }
+    }
+    let mut paired = paired.into_iter();
+    entries.retain(|_| !paired.next().unwrap_or(false));
     entries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn names(files: &[&str]) -> Vec<(String, Option<String>)> {
+        let dir = std::env::temp_dir().join(format!("prisme-scan-{}-{}", std::process::id(), files.len()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for f in files {
+            std::fs::write(dir.join(f), b"").unwrap();
+        }
+        let out = scan(&dir).iter().map(|w| (w.name.clone(), w.dark_name())).collect();
+        let _ = std::fs::remove_dir_all(&dir);
+        out
+    }
+
+    #[test]
+    fn pairs_by_name() {
+        let got = names(&["fold.jxl", "fold-dark.jxl", "road.jpg", "nuit-dark.jpg", "morph.jpg", "morph-dark.png", "notes.txt"]);
+        assert_eq!(
+            got,
+            vec![
+                ("fold.jxl".into(), Some("fold-dark.jxl".into())),
+                ("morph.jpg".into(), Some("morph-dark.png".into())),
+                ("nuit-dark.jpg".into(), None),
+                ("road.jpg".into(), None),
+            ]
+        );
+    }
 }
