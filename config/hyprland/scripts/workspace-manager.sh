@@ -487,7 +487,7 @@ migrate_workspace_if_needed() {
     hyprctl eval "hl.dispatch(hl.dsp.workspace.move({ workspace = $ws, monitor = \"$target\" }))" >/dev/null
 }
 
-for i in 1 2 3 4 5; do migrate_workspace_if_needed "$i" "$range15_target"; done
+for i in 1 2 3 4 5 11 12 13 14; do migrate_workspace_if_needed "$i" "$range15_target"; done
 for i in 6 7 8 9 10; do migrate_workspace_if_needed "$i" "$range610_target"; done
 
 # ---- Turns off whatever's left to turn off, AFTER activating the others,
@@ -520,6 +520,10 @@ apply_workspace_rule() {
 
 for i in 1 2 3 4 5; do apply_workspace_rule "$i" "$range15_target"; done
 for i in 6 7 8 9 10; do apply_workspace_rule "$i" "$range610_target"; done
+# Boussole's study workspaces (focus mode), with 1-5: persistent so the
+# 3-finger swipe reaches them all, shown by the bar only while you are in
+# them (bar/modules/Workspaces.qml).
+for i in 11 12 13 14; do apply_workspace_rule "$i" "$range15_target"; done
 
 # ---- Nudges Quickshell's workspace/monitor cache -----------------------
 # Same quirk as compact-workspaces.sh (see its own comment on this exact

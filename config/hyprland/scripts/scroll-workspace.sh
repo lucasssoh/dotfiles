@@ -22,7 +22,7 @@ set -euo pipefail
 # the range becomes impossible by construction, not just unlikely.
 # =========================================================
 
-direction="${1:?usage: scroll-workspace.sh {next|prev}}"
+direction="${1:?usage: scroll-workspace.sh next or prev}"
 
 mons_json="$(hyprctl monitors -j)"
 focused_monitor="$(jq -r '.[] | select(.focused==true) | .name' <<<"$mons_json")"
@@ -38,6 +38,13 @@ read -r lo hi < <(hyprctl workspacerules -j | jq -r --arg m "$focused_monitor" '
 ')
 
 [[ -z "$active" ]] && active=$lo
+
+# Boussole's study workspaces (11-14, focus mode) are a dimension of their
+# own: the wheel stays in whichever one you are in (see keybinds.lua).
+if (( active >= 11 && active <= 14 )); then
+    lo=11
+    hi=14
+fi
 
 if [[ "$direction" == "next" ]]; then
     target=$(( active + 1 ))

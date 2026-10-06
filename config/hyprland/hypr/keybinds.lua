@@ -266,16 +266,43 @@ end)
 -- SUPER+SHIFT+ampersand would have collided with it. By keycode, the
 -- row is the workspace row in every layout, and the sheet just prints
 -- whatever glyph the active layout puts on each key.
+--
+-- Boussole's study workspaces (11-14, focus mode) are a dimension of
+-- their own: in it, the row's first four keys reach them and the rest do
+-- nothing; out of it, the row is 1-10 as ever. Nothing crosses between
+-- the two by hand, a window included: only Boussole does (start, pause,
+-- resume, close).
+local STUDY_FIRST, STUDY_LAST = 11, 14
+local function in_study()
+    local ws = hl.get_active_workspace()
+    return ws ~= nil and ws.id >= STUDY_FIRST and ws.id <= STUDY_LAST
+end
+-- The workspace the row's nth key means here, or nil.
+local function row_target(n)
+    if not in_study() then
+        return tostring(n)
+    end
+    local t = STUDY_FIRST + n - 1
+    if t > STUDY_LAST then
+        return nil
+    end
+    return tostring(t)
+end
+
 for n = 1, 10 do
     local key = "code:" .. (9 + n)
 
-    -- SUPER+key: switches focus to workspace n
-    bind(mod .. "+ " .. key, hl.dsp.focus({ workspace = tostring(n) }),
-         { description = "WS " .. n })
+    -- SUPER+key: switches focus to workspace n (of this dimension)
+    bind(mod .. "+ " .. key, function()
+        local t = row_target(n)
+        if t then hl.dispatch(hl.dsp.focus({ workspace = t })) end
+    end, { description = "WS " .. n })
 
-    -- SUPER+SHIFT+key: moves the active window to workspace n
-    bind(mod .. "+ SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(n) }),
-         { description = "→ WS " .. n })
+    -- SUPER+SHIFT+key: moves the active window to workspace n (of this dimension)
+    bind(mod .. "+ SHIFT + " .. key, function()
+        local t = row_target(n)
+        if t then hl.dispatch(hl.dsp.window.move({ workspace = t })) end
+    end, { description = "→ WS " .. n })
 end
 
 -- Mouse wheel: navigates between workspaces on the monitor under the

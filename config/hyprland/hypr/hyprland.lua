@@ -199,12 +199,45 @@ hl.config({
     },
 })
 
--- 3-finger horizontal swipe to navigate between workspaces (trackpad)
-hl.gesture({
-    fingers = 3,
-    direction = "horizontal",
-    action = "workspace",
-})
+-- 3-finger horizontal swipe to navigate between workspaces (trackpad).
+-- Hyprland's own, under the finger. Boussole's study workspaces (11-14)
+-- exist like 1-10 (workspace-manager.sh) so it reaches them, and the two
+-- dimensions are walled off from each other at 10 | 11 the way 1 and 14
+-- are ends: on 10 only the swipe back towards 9 exists, on 11 only the
+-- one on towards 12. Re-set whenever the active workspace changes.
+--
+-- How, since it is not obvious: a one-direction swipe always moves the
+-- same way, whichever direction it is registered for (its distance is
+-- always positive), and that way is BACK under the default
+-- workspace_swipe_invert. So on 10 the fingers' "back" direction is the
+-- only swipe (right, on this touchpad); on 11 the fingers' "on" direction
+-- (left), with invert turned off so that it goes on rather than back.
+-- Checked by hand on both edges. Boussole's service still undoes any
+-- other crossing by hand (focus.rs, the guard).
+local swipe_mode = nil
+local function set_swipe(mode)
+    if mode == swipe_mode then return end
+    local dirs = { both = "horizontal", back = "right", on = "left" }
+    if swipe_mode ~= nil then
+        hl.gesture({ fingers = 3, direction = dirs[swipe_mode], action = "unset" })
+    end
+    hl.config({ gestures = { workspace_swipe_invert = mode ~= "on" } })
+    hl.gesture({ fingers = 3, direction = dirs[mode], action = "workspace" })
+    swipe_mode = mode
+end
+local function swipe_here()
+    local ws = hl.get_active_workspace()
+    local id = ws ~= nil and ws.id or 1
+    if id == 10 then
+        set_swipe("back")
+    elseif id == 11 then
+        set_swipe("on")
+    else
+        set_swipe("both")
+    end
+end
+swipe_here()
+hl.on("workspace.active", swipe_here)
 
 -- ============================================================
 -- GENERAL
