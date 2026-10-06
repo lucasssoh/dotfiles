@@ -1,6 +1,6 @@
 [package]
 name = "prisme"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "Native Wayland wallpaper picker (parallelogram cards)"
 license-file = "../../../LICENSE.md"
