@@ -249,6 +249,10 @@ A study planner in the bar, optional (`init` asks). It reads your course folder 
 | **Files** | New files, waiting for you to plan or ignore them, then every file by subject |
 | **More** | Exams and hand-ins, projects, campaigns, subjects, calendars, rhythm and periods, settings, and the first run again |
 
+**One thing at a time.** Each task is a session of its own: an evening of applications then a tutorial to prepare is two sessions, one after the other, each with its own `Start`, `Later`, `Not tonight` and close. `Not tonight` puts off that task alone, until tomorrow, and the rest of the evening stays. Said by mistake, it comes back with **Bring back** under Today (`boussole unskip ID`). While one session is under way, the next ones keep quiet.
+
+**I have time.** Under Today, pick 30 minutes to an hour and a half: a session starts right away with the most useful work that fits, even on an evening you had said no to. `boussole free 45` or `libre 45m` in the quick add do the same.
+
 **A session.** `Start` opens the sheet in Liseuse at the planned section. Boussole counts the pages Liseuse shows on screen (not the window in front), leaves out the time without keyboard or mouse for 5 minutes, and pauses while a game runs. A video playing is asked about when you close. Closing Liseuse ends nothing: work goes on on paper. **Close**, in the drawer, is pre-filled with what Liseuse saw: confirm the section understood, each exercise (solved alone, with the solution, failed), how it went and a note. The plan follows: reviews at about 7 and 21 days, failed exercises back 3 days later without the solution, stuck becomes a question to ask.
 
 **Where you stand.** In More › Subjects, each subject has a level: *Behind* gets more time per sheet and goes first, *Unsure* a little of both, *Fine* nothing special, and *Tutorials only* has nothing to read: only its tutorials to prepare, its projects and its exams. From a terminal: `boussole subject level A&C behind` (`behind`, `shaky`, `fine`, `td-only`).
