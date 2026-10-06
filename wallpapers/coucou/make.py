@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The coucou wallpapers: one cream light rising from the lower left, on
-three surfaces (folds, draped silk, contour lines).
+three surfaces (folds, draped silk, contour lines), each in a light and a
+dark version -- `coucou-aube-relief.jxl` and `coucou-aube-relief-dark.jxl`,
+the pair that follows the desktop's light/dark mode.
 
     python3 wallpapers/coucou/make.py [--size 5120x3200] [--out wallpapers] [--format jxl|png|jpg]
 
@@ -25,6 +27,13 @@ from PIL import Image
 INK = np.array([11, 11, 12], np.float32)
 CREAM = np.array([233, 220, 195], np.float32)
 
+# The light versions: a sand ground that dims toward the far corner, the
+# same light turned warm, and the lines drawn in a gilded brown.
+DUSK = np.array([212, 207, 199], np.float32)
+DAWN = np.array([243, 236, 222], np.float32)
+SUN = np.array([250, 238, 212], np.float32)
+TAN = np.array([150, 128, 96], np.float32)
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -43,11 +52,11 @@ def main():
         d = np.sqrt(((nx - 0.12) * aspect) ** 2 + (ny - 1.05) ** 2)
         return np.exp(-(d / r) ** 2)
 
-    def grain(img, seed):
-        noise = np.random.default_rng(seed).normal(0, 2.0, (h, w)).astype(np.float32)
+    def grain(img, seed, sigma=2.0):
+        noise = np.random.default_rng(seed).normal(0, sigma, (h, w)).astype(np.float32)
         return img + noise[..., None]
 
-    distance = {'coucou-aube-relief': '0.5'}   # others: 1.0
+    distance = {'coucou-aube-relief': '0.5', 'coucou-aube-relief-dark': '0.5'}   # others: 1.0
 
     def save(img, name):
         im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), 'RGB')
@@ -64,19 +73,31 @@ def main():
         print(path)
 
     L = light()[..., None]
+    ground = DUSK + (DAWN - DUSK) * light(1.25)[..., None]
 
     # ── Plis: soft folds, their rims lit near the light ─────────────────
-    img = np.broadcast_to(INK, (h, w, 3)).copy()
-    for base, amp, freq, phase, shade in [(0.60, 0.10, 1.1, 0.4, 16), (0.69, 0.08, 1.4, 2.1, 22),
-                                           (0.78, 0.07, 0.9, 4.0, 28), (0.88, 0.05, 1.7, 1.2, 36)]:
+    folds = [(0.60, 0.10, 1.1, 0.4, 16), (0.69, 0.08, 1.4, 2.1, 22),
+             (0.78, 0.07, 0.9, 4.0, 28), (0.88, 0.05, 1.7, 1.2, 36)]
+    dark, lite = np.broadcast_to(INK, (h, w, 3)).copy(), ground.copy()
+    for n, (base, amp, freq, phase, shade) in enumerate(folds):
         edge = base + amp * np.sin(2 * np.pi * freq * nx + phase) + 0.02 * np.sin(9 * nx + phase)
-        depth = np.clip((ny - edge) / 0.30, 0, 1)
-        fill = shade + 14 * (1 - depth) ** 2
-        img = np.where((ny > edge)[..., None], fill[..., None] * np.array([1.0, 0.99, 0.97], np.float32), img)
-        rim = np.exp(-((ny - edge) * h / (2.6 * px_scale)) ** 2)[..., None] * (0.12 + 0.55 * L)
-        img = img * (1 - rim) + CREAM * rim
-    img = img * (1 - 0.30 * L) + CREAM * 0.30 * L
-    save(grain(img, 1), 'coucou-aube-plis')
+        below = (ny > edge)[..., None]
+        depth = np.clip((ny - edge) / 0.30, 0, 1)[..., None]
+        rim = np.exp(-((ny - edge) * h / (2.6 * px_scale)) ** 2)[..., None]
+        # dark: each fold a little lighter, brightest under its rim
+        fill = (shade + 14 * (1 - depth) ** 2) * np.array([1.0, 0.99, 0.97], np.float32)
+        dark = np.where(below, fill, dark)
+        a = rim * (0.12 + 0.55 * L)
+        dark = dark * (1 - a) + CREAM * a
+        # light: each fold a little deeper, with a soft shadow under its rim
+        fill = (ground - 6 * (n + 1) - 14 * np.exp(-depth * 9) + 6 * depth) * np.array([1.0, 0.995, 0.985], np.float32)
+        lite = np.where(below, fill, lite)
+        a = rim * (0.18 + 0.50 * L)
+        lite = lite * (1 - a) + TAN * a
+    dark = dark * (1 - 0.30 * L) + CREAM * 0.30 * L
+    lite = lite * (1 - 0.30 * L) + SUN * 0.30 * L
+    save(grain(lite, 1, 1.6), 'coucou-aube-plis')
+    save(grain(dark, 1), 'coucou-aube-plis-dark')
 
     # ── Soie: long diagonal drapery folds, shaded, satin on the crests ──
     lx, ly = nx * aspect, ny
@@ -99,7 +120,13 @@ def main():
     Ls = np.exp(-(np.sqrt(((nx - 0.12) * aspect) ** 2 + (ny - 1.05) ** 2) / 0.85) ** 2)
     lum = (0.06 + 0.60 * diffuse ** 1.6) * (0.18 + 0.82 * Ls) + 0.55 * sheen * Ls
     img = INK + (CREAM - INK) * np.clip(lum, 0, 1)[..., None] * 0.62
-    save(grain(img, 5), 'coucou-aube-soie')
+    save(grain(img, 5), 'coucou-aube-soie-dark')
+    # light: unbleached linen, greige in the hollows, near white on the crests
+    shadow, high = np.array([176, 169, 158], np.float32), np.array([250, 245, 234], np.float32)
+    lum = (0.22 + 0.62 * diffuse ** 1.4) * (0.55 + 0.45 * Ls) + 0.35 * sheen * Ls
+    img = shadow + (high - shadow) * np.clip(lum, 0, 1)[..., None]
+    img = img * (1 - 0.38 * Ls[..., None]) + SUN * 0.38 * Ls[..., None]
+    save(grain(img, 5, 1.6), 'coucou-aube-soie')
 
     # ── Relief: contour lines that light up in the glow ─────────────────
     rng = np.random.default_rng(23)
@@ -117,7 +144,12 @@ def main():
     img = img * (1 - 0.35 * L) + CREAM * 0.35 * L
     glow = (0.10 + 0.75 * L[..., 0]) * line
     img = img * (1 - glow[..., None]) + CREAM * glow[..., None]
-    save(grain(img, 3), 'coucou-aube-relief')
+    save(grain(img, 3), 'coucou-aube-relief-dark')
+    # light: brown lines on cream paper, darker in the glow
+    img = ground - np.array([7, 7, 8], np.float32) * (0.5 + 0.5 * f[..., None])
+    ink = (0.16 + 0.55 * L[..., 0]) * line
+    img = img * (1 - ink[..., None]) + TAN * ink[..., None]
+    save(grain(img, 3, 1.6), 'coucou-aube-relief')
 
 
 if __name__ == '__main__':
