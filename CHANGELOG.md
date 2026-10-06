@@ -4,6 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
+### Added
+- **Boussole, focus mode:** starting a session can take you to study workspaces of their own, with its file in Liseuse and the session's panel beside it: the time left, the objective, the evening's files and a Next file button. Your own workspaces stay as they are, and Pause or Close brings you back to them. Notifications keep quiet while you are there. Turn it on in More › Rhythm.
+- **Boussole, away from the sheet:** when something outside the study workspaces has the screen for a while during a session, Boussole asks whether it is for the session, sooner when the exam is close or the subject is one you are behind in. A video playing is asked about after 30 seconds, even beside the sheet. Personal time is taken out, and your answer is remembered. Neovim tells it which file you edit.
+
+### Fixed
+- **Workspaces:** `Super` + scroll up goes to the next workspace again; both directions used to go back.
+- **Boussole:** a session's sheet opens in Liseuse again, rather than in another app; the service could not find Liseuse.
+
 ### Changed
 - **Liseuse:** in dark mode, books and notes now sit on a dark grey page with softer white text instead of white on pure black, which was tiring to read for long.
 
