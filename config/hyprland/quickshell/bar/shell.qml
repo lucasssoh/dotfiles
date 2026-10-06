@@ -2406,7 +2406,7 @@ ShellRoot {
     // Boussole's drawer: a panel down the whole left edge of the screen,
     // whatever its content, sliding in from the left (asked for: "toute la
     // hauteur de l'écran, l'animation de gauche à droite, collé au bord
-    // gauche et bas"). A window of its own rather than the bar's: the bar's
+    // gauche et bas"), starting under the bar ("il faut l'espace en haut"). A window of its own rather than the bar's: the bar's
     // surface is kept short on purpose (see its implicitHeight), and this
     // one only exists while the drawer is open or sliding out.
     property bool boussoleMapped: false
@@ -2431,12 +2431,13 @@ ShellRoot {
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
-            // Over the bar's corner too: the whole height, top to bottom.
-            WlrLayershell.layer: WlrLayer.Overlay
             // Its forms (close, settings, first run) need the keyboard;
             // on demand, so it is handed over on a click, not seized.
             WlrLayershell.keyboardFocus: BoussoleState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
             anchors { top: true; left: true; bottom: true }
+            // Under the bar, never over it: from the band's bottom line
+            // (bar.bandHeight) down to the screen's bottom edge.
+            margins.top: 31
             implicitWidth: 440
 
             Rectangle {
@@ -2448,7 +2449,8 @@ ShellRoot {
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => boussoleSheet.entered = true)
                 color: DrawerTheme.panelTop
-                // Flush on the left, rounded where it meets the desktop.
+                // Flush on the left and the bottom, rounded where it meets
+                // the desktop.
                 topRightRadius: 28
                 bottomRightRadius: 28
 

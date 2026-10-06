@@ -239,7 +239,7 @@ A study planner in the bar, optional (`init` asks). It reads your course folder 
 
 **Alerts.** A session's start opens in the bar's central island, like Veille, with a chime: `Start`, `At 21:00`, `Not tonight`. It stays until you answer, comes back 15 minutes later if nothing started, and waits out a fullscreen game or zen mode. The evening before, a notification sums up tomorrow; a course cancelled or moved in the timetable, today or tomorrow, gets one too. Nothing after the latest end of the evening.
 
-**The drawer.** A panel the whole height of the screen, flush with its left edge, sliding in from the left.
+**The drawer.** A panel from under the bar to the bottom of the screen, flush with its left edge, sliding in from the left.
 
 | Tab | What it holds |
 |---|---|
