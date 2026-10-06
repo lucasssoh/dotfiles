@@ -247,7 +247,7 @@ EXTENSIONS.append("md2pdf:unglue_math_extension")
 # error's line number by their own count. A diagram's own skinparams
 # come after the config and still win.
 _UML_PALETTE = {
-    "dark":  {"fg": "#e5e5ea", "line": "#8e8e93", "fill": "#2c2c2e", "note": "#141416"},
+    "dark":  {"fg": "#d1d1d6", "line": "#8e8e93", "fill": "#36363a", "note": "#27272a"},
     "light": {"fg": "#1c1c1e", "line": "#636366", "fill": "#ececf0", "note": "#f7f7f9"},
 }
 _UML_CONFIG = """skinparam backgroundColor transparent

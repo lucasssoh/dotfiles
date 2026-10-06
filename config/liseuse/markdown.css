@@ -25,24 +25,20 @@
    ============================================================ */
 
 /* ---- Palette -----------------------------------------------------
-   Dark is the default, and its values are hypr/colors.lua -- the same
-   hand-kept mirror zathurarc and fuzzel.ini carry -- with one deliberate
-   exception, `--bg`. The page is pure black, matching zathurarc's
-   recolor-lightcolor rather than the palette's #1c1c1e, for the reason
-   written out at length there: the palette is tuned for small surfaces
-   glimpsed over a wallpaper, and a document is the whole screen for an
-   hour. A .md and a .pdf opened back to back have to sit on the same
-   ground, or the switch between them is a visible flash.
+   Dark is the default. Its ground is zathurarc's recolor-lightcolor,
+   #1f1f21, and its ink the same softened #d1d1d6, for the reason
+   written out there: black paper under near-white ink was too much
+   contrast for an hour of reading. A .md and a .pdf opened back to back
+   have to sit on the same ground, or the switch between them is a
+   visible flash.
 
-   That inverts the elevation scale. When the page was #1c1c1e, a code
-   block sank BELOW it (#161618); against black there is no below, so
-   everything raised now goes UP from 0 instead:
+   Everything raised goes UP from the page:
 
-       #000000  the page
-       #141416  recessed-looking blocks: listings, alternate table rows
-       #242426  hairlines
-       #2c2c2e  real surfaces: inline code, table headers, <mark>
-       #3a3a3c  strong rules, blockquote bars
+       #1f1f21  the page
+       #27272a  recessed-looking blocks: listings, alternate table rows
+       #2f2f33  hairlines
+       #36363a  real surfaces: inline code, table headers, <mark>
+       #48484c  strong rules, blockquote bars
 
    The light set is the Adwaita-ish neutral the desktop switches GTK apps
    to, kept slightly off-white rather than pure white so a full page of
@@ -54,16 +50,16 @@
    are GitHub's own palettes, by name. Its `.highlight` background never
    shows: the <pre> inside it paints --code-bg over the whole area. */
 :root {
-    --bg:        #000000;
-    --fg:        #e5e5ea;
-    --heading:   #ffffff;
+    --bg:        #1f1f21;
+    --fg:        #d1d1d6;
+    --heading:   #ececf0;
     --muted:     #8e8e93;
     --faint:     #636366;
-    --rule:      #3a3a3c;
-    --rule-soft: #242426;
-    --surface:   #2c2c2e;
-    --surface-2: #141416;
-    --code-bg:   #141416;
+    --rule:      #48484c;
+    --rule-soft: #2f2f33;
+    --surface:   #36363a;
+    --surface-2: #27272a;
+    --code-bg:   #27272a;
     --link:      #a8b4c4;
     --accent:    #c8823c;
 }

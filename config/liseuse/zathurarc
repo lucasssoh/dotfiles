@@ -26,28 +26,22 @@
 # the page's tonal range onto the two colors below, which is why this is
 # a real inversion rather than a dimmed backlight.
 #
-# The ink is hypr/colors.lua's `text`, by hand -- the same hand-kept CSS
-# mirror situation fuzzel.ini and rofi/launcher.rasi are in (zathurarc
-# can't require() a Lua file either). If colors.lua moves, that value
-# moves with it.
+# Neither end is pure. The page is a dark grey, #1f1f21, and the ink a
+# softened white, #d1d1d6, rather than the palette's #e5e5ea on black.
+# Black paper with near-white ink was tried first and hurt to read: at
+# full contrast, for an hour, in a dark room, every line glows against
+# the ground and the eyes tire long before the chapter ends. A grey
+# ground and a dimmer ink keep the page clearly dark while taking the
+# edge off that contrast, which is what a long read needs from it.
 #
-# The paper is NOT colors.lua's `background`, and that is deliberate.
-# The palette's #1c1c1e is designed for a bar and a launcher: small
-# surfaces, seen for a second, floating over a wallpaper, where a
-# near-black is what makes them read as SURFACES at all. A book is the
-# opposite -- the whole screen, for an hour, in a dark room. There a
-# ground that is not quite black is a faint grey glow behind every line,
-# and the page's ink is spread over the top 89% of the tonal range
-# instead of all of it.
-#
-# One consequence, and it is the wanted one: with default-bg below set
-# to the same black, the page EDGE disappears. In fullscreen best-fit a
-# slide stops sitting on a visible sheet and simply floats, which is the
-# distraction-free half of this file doing its job. Put default-bg back
-# to "#1c1c1e" if you would rather still see where the paper stops.
+# The paper is still darker than anything floating over it (#2c2c2e
+# below), so panels read as raised. With default-bg set to the same
+# grey, the page EDGE disappears: in fullscreen best-fit a slide simply
+# floats. Put default-bg one step lighter if you would rather still see
+# where the paper stops.
 set recolor true
-set recolor-darkcolor  "#e5e5ea"
-set recolor-lightcolor "#000000"
+set recolor-darkcolor  "#d1d1d6"
+set recolor-lightcolor "#1f1f21"
 
 # The two options that stop recolor from wrecking the document.
 #
@@ -69,28 +63,27 @@ set recolor-reverse-video true
 # instant before the first page renders. Without these, opening a book
 # flashes zathura's default light grey.
 #
-# Everything that is BEHIND the page is the same black as the page, so
+# Everything that is BEHIND the page is the same grey as the page, so
 # the two never separate. Everything that floats IN FRONT of it -- the
-# `:` completion list, a notification -- is #1c1c1e instead: one step up
-# from black is enough to read as a raised panel once the ground is 0,
-# and the palette value gets to be exactly what it was designed for.
-set default-bg "#000000"
-set default-fg "#e5e5ea"
-set statusbar-bg "#000000"
+# `:` completion list, a notification -- is #2c2c2e instead: one step up
+# from the page, enough to read as a raised panel.
+set default-bg "#1f1f21"
+set default-fg "#d1d1d6"
+set statusbar-bg "#1f1f21"
 set statusbar-fg "#8e8e93"
-set inputbar-bg  "#000000"
-set inputbar-fg  "#e5e5ea"
-set notification-bg          "#1c1c1e"
-set notification-fg          "#e5e5ea"
-set notification-error-bg    "#1c1c1e"
+set inputbar-bg  "#1f1f21"
+set inputbar-fg  "#d1d1d6"
+set notification-bg          "#2c2c2e"
+set notification-fg          "#d1d1d6"
+set notification-error-bg    "#2c2c2e"
 set notification-error-fg    "#ff453a"
-set notification-warning-bg  "#1c1c1e"
+set notification-warning-bg  "#2c2c2e"
 set notification-warning-fg  "#ffd60a"
-set completion-bg            "#1c1c1e"
-set completion-fg            "#e5e5ea"
+set completion-bg            "#2c2c2e"
+set completion-fg            "#d1d1d6"
 set completion-highlight-bg  "#3a3a3c"
 set completion-highlight-fg  "#ffffff"
-set completion-group-bg      "#000000"
+set completion-group-bg      "#1f1f21"
 set completion-group-fg      "#a8b4c4"
 # Search hits and text selection -- `accent3` (fox orange) at low alpha,
 # the one palette token nothing else in a page is likely to collide with
@@ -239,7 +232,7 @@ set scroll-full-overlap 0
 # recolor-lightcolor exactly, or a fast scroll flashes a rectangle one
 # shade off the page it is about to become.
 set render-loading true
-set render-loading-bg "#000000"
+set render-loading-bg "#1f1f21"
 set render-loading-fg "#636366"
 
 # Selecting text should land in the clipboard proper (Ctrl+V), not only

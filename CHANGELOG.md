@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Liseuse:** in dark mode, books and notes now sit on a dark grey page with softer white text instead of white on pure black, which was tiring to read for long.
+
 ## 1.4.0 (October 6 2026)
 
 ### Fixed
