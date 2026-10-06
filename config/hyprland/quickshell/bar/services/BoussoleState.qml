@@ -228,6 +228,24 @@ Singleton {
         onTriggered: root.nowMs = Date.now()
     }
 
+    // The countdown before a session ("in 12 min", then "now"): the bar
+    // keeps its own clock while it is close. Further off, the service wakes
+    // 15 minutes before and says so, and nothing ticks here.
+    readonly property bool nextClose: {
+        const n = root.next;
+        if (!n) return false;
+        const p = n.date.split("-"), hm = n.start.split(":"), e = n.end.split(":");
+        const start = new Date(+p[0], +p[1] - 1, +p[2], +hm[0], +hm[1]).getTime();
+        const end = new Date(+p[0], +p[1] - 1, +p[2], +e[0], +e[1]).getTime();
+        return start - root.nowMs < 16 * 60000 && root.nowMs < end;
+    }
+    Timer {
+        interval: 30000
+        repeat: true
+        running: root.daemonConnected && root.nextClose && root.tracking === null
+        onTriggered: root.nowMs = Date.now()
+    }
+
     // ---- what the bar sees, during a session ----------------------------
     // No keyboard or mouse for five minutes: the time is not counted.
     // Media playing: counted apart, and asked about at the close. Sent only

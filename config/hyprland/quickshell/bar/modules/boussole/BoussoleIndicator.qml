@@ -20,6 +20,9 @@ Item {
     function domainOf(s) {
         return s && s.parts && s.parts.length > 0 ? (s.parts[0].domain || "") : "";
     }
+    // What the next session is about, in a word: its subject, or the
+    // campaign, project or task it serves.
+    readonly property string nextLabel: root.b.status.next_label || root.domainOf(root.b.next)
     readonly property int minutesToNext: {
         const n = root.b.next;
         if (!n) return -1;
@@ -39,6 +42,8 @@ Item {
         }
         if (root.b.declare.length > 0) return "declare";
         if (root.b.gap) return "gap";
+        // Due and not started: said as such, not as a time gone by.
+        if (root.b.next && root.minutesToNext <= 0 && root.nextToday) return "now";
         if (root.b.next && root.minutesToNext >= 0 && root.minutesToNext < 15) return "soon";
         if (root.b.next && !root.b.paused) return "next";
         // Nothing going on: the place stays, with a quiet placeholder.
@@ -61,14 +66,15 @@ Item {
         }
         case "declare": return b.declare.length + b.tr(" to declare", " à déclarer");
         case "gap": return b.tr("Free ", "Creux ") + b.gap.start + "-" + b.gap.end + (b.gap.parts.length ? " · " + root.domainOf(b.gap) + " ?" : "");
-        case "soon": return root.domainOf(b.next) + b.tr(" in ", " dans ") + root.minutesToNext + " min";
+        case "now": return root.nextLabel + b.tr(" · now", " · maintenant");
+        case "soon": return root.nextLabel + b.tr(" in ", " dans ") + Math.max(1, root.minutesToNext) + " min";
         case "setup": return b.tr("Set up", "À régler");
         case "pause": return b.tr("Paused", "En pause");
         case "off":
         case "idle": return "";
         case "next": {
             const day = root.nextToday ? "" : (new Date(b.next.date + "T12:00").toLocaleDateString(Qt.locale(b.fr ? "fr_FR" : "en_US"), "ddd") + " ");
-            return root.domainOf(b.next) + " · " + day + b.next.start;
+            return root.nextLabel + " · " + day + b.next.start;
         }
         }
         return "";
@@ -85,7 +91,7 @@ Item {
         color: "transparent"
         border.width: 1
         border.color: root.ink.primary
-        visible: root.mode === "soon"
+        visible: root.mode === "soon" || root.mode === "now"
         opacity: 0.8
     }
 
