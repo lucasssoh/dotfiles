@@ -665,12 +665,9 @@ ShellRoot {
             // rather than seized the moment the flag goes up. Scoped per
             // screen (`activeScreen`) so the other monitor's bar, which
             // has no form on it, stays inert.
-            // Boussole's close form has a note field: the same need, the
-            // same scope.
-            focusable: (BaliseState.textInputActive
-                        && BaliseState.panelOpen
-                        && BaliseState.activeScreen === bar.screen)
-                       || (BoussoleState.textInput && BoussoleState.activeScreen === bar.screen)
+            focusable: BaliseState.textInputActive
+                       && BaliseState.panelOpen
+                       && BaliseState.activeScreen === bar.screen
             visible: !shell.zenMode
             // exclusiveZone stays at the main bar's own height (24), not
             // the window's full implicitHeight below (30) -- the metrics
@@ -1210,12 +1207,9 @@ ShellRoot {
                 drawerAnchorX: boussoleIsland.margin + boussoleIsland.drawerContentWidth / 2
                                - (boussoleIsland.x - clockIsland.x)
 
-                drawerItems: [
-                    BoussoleHome {
-                        drawerOpen: BoussoleState.panelOpen && BoussoleState.activeScreen === bar.screen
-                        maxHeight: bar.screen ? bar.screen.height - 160 : 900
-                    }
-                ]
+                // The drawer itself is a panel of its own, down the
+                // screen's left edge (the LazyLoader after the bars).
+                drawerItems: []
 
                 BoussoleIndicator { id: boussoleIndicator; ink: clockInk; screen: bar.screen }
             }
@@ -2406,6 +2400,65 @@ ShellRoot {
             }
 
             ControllerPopup { id: controllerPopup }
+        }
+    }
+
+    // Boussole's drawer: a panel down the whole left edge of the screen,
+    // whatever its content, sliding in from the left (asked for: "toute la
+    // hauteur de l'écran, l'animation de gauche à droite, collé au bord
+    // gauche et bas"). A window of its own rather than the bar's: the bar's
+    // surface is kept short on purpose (see its implicitHeight), and this
+    // one only exists while the drawer is open or sliding out.
+    property bool boussoleMapped: false
+    Connections {
+        target: BoussoleState
+        function onPanelOpenChanged() {
+            if (BoussoleState.panelOpen) {
+                boussoleUnmap.stop();
+                shell.boussoleMapped = true;
+            } else {
+                boussoleUnmap.restart();
+            }
+        }
+    }
+    Timer { id: boussoleUnmap; interval: 260; onTriggered: shell.boussoleMapped = false }
+
+    LazyLoader {
+        active: shell.boussoleMapped
+
+        PanelWindow {
+            screen: BoussoleState.activeScreen || Quickshell.screens[0]
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: true
+            // Over the bar's corner too: the whole height, top to bottom.
+            WlrLayershell.layer: WlrLayer.Overlay
+            // Its forms (close, settings, first run) need the keyboard;
+            // on demand, so it is handed over on a click, not seized.
+            WlrLayershell.keyboardFocus: BoussoleState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            anchors { top: true; left: true; bottom: true }
+            implicitWidth: 440
+
+            Rectangle {
+                id: boussoleSheet
+                property bool entered: false
+                width: parent.width
+                height: parent.height
+                x: entered && BoussoleState.panelOpen ? 0 : -width
+                Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                Component.onCompleted: Qt.callLater(() => boussoleSheet.entered = true)
+                color: DrawerTheme.panelTop
+                // Flush on the left, rounded where it meets the desktop.
+                topRightRadius: 28
+                bottomRightRadius: 28
+
+                BoussoleHome {
+                    anchors.fill: parent
+                    anchors.topMargin: 8
+                    drawerOpen: BoussoleState.panelOpen
+                    fill: true
+                }
+            }
         }
     }
 

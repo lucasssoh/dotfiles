@@ -3,9 +3,9 @@ import ".."          // DrawerHandle
 import "../../theme"
 import "../../services"
 
-// Boussole's drawer, under its place in the bar: tabs over one page at a
-// time (Today, Week; Close while a session is being closed). A page taller
-// than the screen allows scrolls inside the drawer.
+// Boussole's drawer, a panel down the screen's left edge: tabs over one
+// page at a time (Today, Week; Close while a session is being closed). A
+// page taller than the screen scrolls inside it.
 //
 // Same entry contract as the calendar's: `drawerOpen` from the caller, the
 // island animates `height` to `implicitHeight`.
@@ -15,12 +15,19 @@ Item {
     property bool drawerOpen: false
     // The most the page area may take; the rest scrolls.
     property int maxHeight: 900
+    // Sized from outside (the full-height panel): the page area runs down
+    // to the bottom, whatever the page holds.
+    property bool fill: false
 
     readonly property var b: BoussoleState
-    readonly property int pageHeight: Math.min(page.item ? page.item.implicitHeight : 0, root.maxHeight)
+    // Handle and tabs, above the page.
+    readonly property int header: handle.implicitHeight + 12 + (tabs.visible ? tabs.height + 14 : 0)
+    readonly property int pageHeight: root.fill
+        ? Math.max(0, root.height - root.header - 20)
+        : Math.min(page.item ? page.item.implicitHeight : 0, root.maxHeight)
 
-    implicitHeight: handle.implicitHeight + 12 + (tabs.visible ? tabs.height + 14 : 0) + root.pageHeight + 20
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    implicitHeight: root.header + root.pageHeight + 20
+    Behavior on height { enabled: !root.fill; NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
 
     DrawerHandle {
         id: handle
