@@ -7,7 +7,7 @@ use common::*;
 use boussole::journee::{Place, SlotKind};
 use boussole::liseuse;
 use boussole::plan::{Part, Session, Work};
-use boussole::seance::{self, Prompt, Tracker, READ_SECS};
+use boussole::seance::{self, Context, Detour, Prompt, Stake, Tracker, READ_SECS};
 
 /// The shape of a real sheet's outline (mutool show … outline): a title,
 /// numbered sections with numbered subsections, then the exercises.
@@ -135,6 +135,78 @@ fn closing_liseuse_ends_nothing_but_asks_once() {
     assert_eq!(t.prompt(end + 15 * 60, end), Some(Prompt::Closing));
     // Outside a session nothing is ever asked.
     assert_eq!(Tracker::start(None, 0).prompt(99_999, end), None);
+}
+
+fn video() -> Context {
+    Context { key: "win:firefox:A video".into(), label: "A video".into(), editor: false, personal: false, media: false }
+}
+
+#[test]
+fn a_video_playing_is_a_detour_even_beside_the_sheet() {
+    let end = 9000;
+    let mut t = Tracker::start(Some("s".into()), 0);
+    t.set(0, |f| f.visible = true);
+    t.page(0, SHEET, 2, 10);
+    let playing = Context { key: "media:A video".into(), label: "A video".into(), media: true, ..video() };
+    t.look(100, Some(playing.clone()), Stake::Calm.delay());
+    assert!(t.elsewhere.is_some(), "the sheet on screen does not cover a video");
+    assert_eq!(t.prompt(100 + 10 * 60, end), Some(Prompt::Elsewhere));
+    // For the session: it plays on, nothing more asked.
+    t.detour(800, Detour::Session);
+    t.look(900, Some(playing), Stake::Calm.delay());
+    assert!(t.elsewhere.is_none());
+}
+
+#[test]
+fn a_detour_is_asked_about_after_the_stakes_delay() {
+    let end = 9000;
+    let mut t = Tracker::start(Some("s".into()), 0);
+    t.set(0, |f| f.visible = true);
+    t.page(0, SHEET, 2, 10);
+    // A browser beside the sheet on screen is no detour.
+    t.look(100, Some(video()), Stake::Tight.delay());
+    assert!(t.elsewhere.is_none());
+    // The sheet gone, the video in front: asked after 6 min, not before.
+    t.set(200, |f| f.visible = false);
+    t.look(200, Some(video()), Stake::Tight.delay());
+    assert_eq!(t.next_prompt(200, end), Some(200 + 6 * 60));
+    assert_eq!(t.prompt(200 + 5 * 60, end), None);
+    assert_eq!(t.prompt(200 + 6 * 60, end), Some(Prompt::Elsewhere));
+    // Back to the sheet before the question: the count starts again.
+    t.set(300, |f| f.visible = true);
+    t.look(300, Some(video()), Stake::Tight.delay());
+    assert!(t.elsewhere.is_none());
+    assert_eq!(t.prompt(200 + 6 * 60, end), None);
+}
+
+#[test]
+fn personal_back_takes_the_detour_out_and_asks_again_later() {
+    let end = 9000;
+    let mut t = Tracker::start(Some("s".into()), 0);
+    t.look(0, Some(video()), Stake::Urgent.delay());
+    t.advance(600);
+    assert_eq!(t.effective, 600);
+    t.elsewhere.as_mut().unwrap().asked = true;
+    assert_eq!(t.prompt(600, end), None, "no paper question during a detour");
+    t.detour(600, Detour::Back);
+    assert_eq!(t.effective, 0, "the 10 min away are taken out");
+    // Still on the video three minutes later: asked again.
+    assert_eq!(t.prompt(600 + 3 * 60, end), Some(Prompt::Elsewhere));
+    // For the session: not asked again until it closes.
+    t.detour(800, Detour::Session);
+    t.look(900, Some(video()), Stake::Urgent.delay());
+    assert!(t.elsewhere.is_none());
+}
+
+#[test]
+fn the_stake_follows_the_exam_and_the_level() {
+    assert_eq!(seance::stake(false, None), Stake::Calm);
+    assert_eq!(seance::stake(false, Some((40, Some(5)))), Stake::Calm);
+    assert_eq!(seance::stake(true, Some((40, Some(5)))), Stake::Tight, "behind in it");
+    assert_eq!(seance::stake(false, Some((40, Some(-3)))), Stake::Tight, "short of sessions, far off");
+    assert_eq!(seance::stake(false, Some((15, Some(-3)))), Stake::Urgent);
+    assert_eq!(seance::stake(false, Some((5, Some(4)))), Stake::Urgent, "within a week");
+    assert_eq!((Stake::Calm.delay(), Stake::Tight.delay(), Stake::Urgent.delay()), (600, 360, 180));
 }
 
 #[test]

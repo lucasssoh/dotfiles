@@ -33,15 +33,20 @@ pub struct Paths {
 }
 
 impl Paths {
+    /// The XDG folders, or BOUSSOLE_DATA_DIR, BOUSSOLE_CONFIG_DIR and
+    /// BOUSSOLE_KHAL_DIR for a second instance with data of its own (a test
+    /// with made-up courses): moving XDG_CONFIG_HOME instead would move it
+    /// for everything the service starts too, Liseuse included, which then
+    /// loses the desktop's settings (dark mode first).
     pub fn from_env() -> Paths {
         let home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
         let env = |k: &str, d: PathBuf| std::env::var_os(k).map(PathBuf::from).unwrap_or(d);
         let data = env("XDG_DATA_HOME", home.join(".local/share"));
         Paths {
-            data: data.join("boussole"),
-            config: env("XDG_CONFIG_HOME", home.join(".config")).join("boussole"),
+            data: env("BOUSSOLE_DATA_DIR", data.join("boussole")),
+            config: env("BOUSSOLE_CONFIG_DIR", env("XDG_CONFIG_HOME", home.join(".config")).join("boussole")),
             runtime: env("XDG_RUNTIME_DIR", std::env::temp_dir()),
-            khal: data.join("khal/calendars"),
+            khal: env("BOUSSOLE_KHAL_DIR", data.join("khal/calendars")),
         }
     }
 
@@ -135,6 +140,9 @@ pub enum Event {
         #[serde(default)]
         tracking: Option<Tracking>,
     },
+    /// What something away from the sheet is, as answered once: a folder
+    /// edited, a page, a window. Asked no more after that.
+    Context { key: String, label: String, verdict: Verdict },
     /// Liseuse open on a sheet outside any session.
     FreeReading { item: String, upto: u32, pages: u32, minutes: i32 },
     Files { items: Vec<String>, inclusion: Inclusion },
@@ -159,6 +167,16 @@ pub struct Entry {
     pub at: Local,
     #[serde(flatten)]
     pub event: Event,
+}
+
+/// What a context away from the sheet is.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Verdict {
+    /// Work for a course or a project: it counts.
+    Course,
+    /// Personal: noted without asking, and a reminder rather than a question.
+    Personal,
 }
 
 /// What the session's tracking measured, kept with its close.
@@ -221,6 +239,8 @@ pub struct State {
     pub pace: BTreeMap<String, Vec<(i32, i32)>>,
     /// Per domain, (minutes, pages read), oldest first.
     pub page_pace: BTreeMap<String, Vec<(i32, u32)>>,
+    /// Contexts away from the sheet, answered once: key → (label, verdict).
+    pub contexts: BTreeMap<String, (String, Verdict)>,
 }
 
 impl State {
@@ -381,6 +401,9 @@ pub fn reduce(entries: &[Entry]) -> State {
             }
             Event::FreeReading { item, upto, .. } => {
                 st.free_reading.insert(item.clone(), (e.at.date, *upto));
+            }
+            Event::Context { key, label, verdict } => {
+                st.contexts.insert(key.clone(), (label.clone(), *verdict));
             }
             Event::Postponed { session, to } => {
                 st.outcomes.insert(session.clone(), Outcome::Postponed { to: *to });

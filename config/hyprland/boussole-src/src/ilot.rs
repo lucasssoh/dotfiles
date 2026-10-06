@@ -157,6 +157,21 @@ impl Service {
                     json!({ "id": "dismiss", "label": self.t("Later", "Plus tard") }),
                 ],
             )
+        } else if self.focus_active() && self.session_has_file(session) {
+            // Focus mode: the sheet was closed in the study dimension.
+            (
+                self.t("The sheet is closed", "La fiche est fermée"),
+                self.t(
+                    "The session goes on. Open it again, or go on on paper: that time counts.",
+                    "La séance continue. Rouvre-la, ou continue sur papier : ce temps compte.",
+                ),
+                vec![
+                    json!({ "id": "reopen", "label": self.t("Open the sheet again", "Rouvrir la fiche"), "primary": true }),
+                    json!({ "id": "still:yes", "label": self.t("On paper", "Sur papier") }),
+                    json!({ "id": "pause", "label": self.t("Pause", "Pause") }),
+                    json!({ "id": "still:no", "label": self.t("I stopped", "J'ai arrêté") }),
+                ],
+            )
         } else {
             (
                 self.t("Still on the exercises?", "Toujours sur les exercices ?"),
@@ -184,7 +199,7 @@ impl Service {
     }
 
     /// To the bar, or as a notification when no bar listens.
-    fn raise(&mut self, alert: Value) {
+    pub(crate) fn raise(&mut self, alert: Value) {
         if self.clients.iter().any(|c| c.bar) {
             self.alert = Some(alert);
             self.push_status();
@@ -217,6 +232,9 @@ impl Service {
             self.push_status();
             return Ok(String::new());
         }
+        if let Some(a) = action.strip_prefix("detour:") {
+            return Ok(self.detour_answer(&session, a));
+        }
         self.on_action(&session, action);
         let fr = self.lang() == Lang::Fr;
         let text = if action == "start" {
@@ -232,7 +250,11 @@ impl Service {
                 None => self.t("Not tonight. The session is placed again.", "Pas ce soir. La séance est replacée."),
             }
         } else if action == "still:yes" {
-            self.t("Noted.", "Noté.")
+            self.t("Noted, on paper: the time counts.", "Noté, sur papier : le temps compte.")
+        } else if action == "reopen" {
+            self.t("The sheet opens again.", "La fiche se rouvre.")
+        } else if action == "pause" {
+            self.t("Session paused.", "Séance en pause.")
         } else if action == "still:no" {
             self.t("Noted, that time is taken out.", "Noté, ce temps est retiré.")
         } else if action == "close" {
@@ -256,6 +278,14 @@ impl Service {
             "start" | "reminder" => {
                 session.is_none_or(|s| Local::new(s.date, s.end) <= now)
                     || matches!(outcome, Some(Outcome::Started { .. } | Outcome::Closed { .. } | Outcome::Skipped))
+            }
+            // Back on the sheet (or on paper): nothing left to ask.
+            "still" => {
+                !matches!(outcome, Some(Outcome::Started { .. }))
+                    || self.suivi.tracker.as_ref().is_none_or(|t| t.away_since.is_none() || t.paper)
+            }
+            "elsewhere" => {
+                !matches!(outcome, Some(Outcome::Started { .. })) || self.suivi.tracker.as_ref().is_none_or(|t| t.elsewhere.is_none())
             }
             _ => !matches!(outcome, Some(Outcome::Started { .. } | Outcome::Paused { .. })),
         };

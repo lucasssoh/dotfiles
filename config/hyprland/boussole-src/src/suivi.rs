@@ -66,9 +66,13 @@ pub struct Suivi {
     pub asked: Option<Prompt>,
     pub saved: i64,
     pub bus_alive: bool,
+    /// Neovim, as its plugin last reported.
+    pub editor: Option<crate::focus::Editor>,
+    /// What the media playing is (its title), from the bar.
+    pub media_title: String,
 }
 
-fn hypr_dir() -> Option<PathBuf> {
+pub(crate) fn hypr_dir() -> Option<PathBuf> {
     let run = PathBuf::from(std::env::var_os("XDG_RUNTIME_DIR")?).join("hypr");
     if let Some(sig) = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE") {
         return Some(run.join(sig));
@@ -88,6 +92,12 @@ fn busctl_json(args: &[&str]) -> Vec<Value> {
 }
 
 impl Service {
+    /// Hyprland's events: while tracking, and always in focus mode (its
+    /// guard watches the dimensions).
+    pub(crate) fn hypr_wanted(&self) -> bool {
+        self.tracking_wanted() || self.store.settings.focus.enabled
+    }
+
     fn tracking_wanted(&self) -> bool {
         self.suivi.tracker.is_some() || self.suivi.docs.values().any(|d| d.item.is_some())
     }
@@ -119,8 +129,8 @@ impl Service {
         // After a restart, what runs now decides, not what ran before.
         if self.suivi.tracker.is_some() {
             self.check_games();
-            self.connect_hypr();
         }
+        self.connect_hypr();
     }
 
     fn spawn_bus(&mut self) {
@@ -195,7 +205,7 @@ impl Service {
         if self.suivi.free.as_ref().is_some_and(current) {
             self.flush_free();
         }
-        if !self.tracking_wanted() {
+        if !self.hypr_wanted() {
             self.suivi.hypr = None;
         }
         self.push_status();
@@ -269,6 +279,7 @@ impl Service {
         if self.suivi.hypr.is_none() {
             self.connect_hypr();
         }
+        self.look_around();
         self.save_tracker(false);
         self.push_status();
     }
@@ -296,7 +307,7 @@ impl Service {
     // ─── Hyprland ────────────────────────────────────────────────────────
 
     fn connect_hypr(&mut self) {
-        if !self.tracking_wanted() {
+        if !self.hypr_wanted() {
             return;
         }
         let Some(dir) = hypr_dir() else { return };
@@ -333,10 +344,14 @@ impl Service {
         }
         let mut screen = false;
         let mut windows = false;
+        let mut landed: Option<i64> = None;
         while let Some(nl) = self.suivi.hypr_buf.iter().position(|&b| b == b'\n') {
             let line: Vec<u8> = self.suivi.hypr_buf.drain(..=nl).collect();
             let line = String::from_utf8_lossy(&line);
             let event = line.split(">>").next().unwrap_or("");
+            if event == "workspacev2" {
+                landed = line.split(">>").nth(1).and_then(|a| a.split(',').next()).and_then(|id| id.trim().parse().ok());
+            }
             match event {
                 "openwindow" | "closewindow" => {
                     windows = true;
@@ -347,11 +362,19 @@ impl Service {
                 _ => {}
             }
         }
+        if let Some(ws) = landed {
+            self.focus_guard(ws);
+        }
         if windows {
             self.check_games();
+            self.focus_arrange();
         }
         if screen {
             self.refresh_hypr();
+            self.look_around();
+            if !windows {
+                self.focus_arrange();
+            }
         }
     }
 
@@ -486,7 +509,7 @@ impl Service {
         let mut t = self.suivi.tracker.take()?;
         t.advance(now_secs());
         let _ = std::fs::remove_file(self.store.paths.data.join("seance.json"));
-        if !self.tracking_wanted() {
+        if !self.hypr_wanted() {
             self.suivi.hypr = None;
         }
         Some(Tracking {
@@ -515,8 +538,11 @@ impl Service {
         Some(seance::draft(&t, &session, &maps, &self.store.state.free_reading, cap))
     }
 
-    pub(crate) fn set_activity(&mut self, idle: Option<bool>, media: Option<bool>) {
+    pub(crate) fn set_activity(&mut self, idle: Option<bool>, media: Option<bool>, title: Option<String>) {
         let now = now_secs();
+        if let Some(t) = title {
+            self.suivi.media_title = t;
+        }
         if let Some(i) = idle {
             self.suivi.idle = i;
         }
@@ -530,6 +556,7 @@ impl Service {
                 f.media = m;
             });
         }
+        self.look_around();
         self.save_tracker(false);
         self.push_status();
     }
@@ -562,12 +589,18 @@ impl Service {
         if !self.suivi.bus_alive {
             self.spawn_bus();
         }
+        if self.suivi.hypr.is_none() && self.hypr_wanted() {
+            self.connect_hypr();
+        }
         let now = now_secs();
         // A session undone or closed elsewhere stops being followed.
         if let Some(id) = self.suivi.tracker.as_ref().and_then(|t| t.session.clone()) {
             if !matches!(self.store.state.outcomes.get(&id), Some(Outcome::Started { .. } | Outcome::Paused { .. })) {
                 self.suivi.tracker = None;
             }
+        }
+        if self.suivi.tracker.is_none() && self.focus_active() {
+            self.focus_end();
         }
         if self.suivi.free.as_ref().is_some_and(|t| self.tz.to_local(t.since).date != self.now().date) {
             self.flush_free();
@@ -577,6 +610,11 @@ impl Service {
         t.advance(now);
         let prompt = t.prompt(now, end);
         let session = t.session.clone();
+        if prompt.is_some_and(crate::focus::asked_by_tracker) {
+            self.elsewhere_alert();
+            self.save_tracker(true);
+            return;
+        }
         if prompt.is_none() || prompt == self.suivi.asked {
             return;
         }
@@ -592,7 +630,7 @@ impl Service {
         let now = now_secs();
         if let Some(t) = self.suivi.tracker.as_mut() {
             if yes {
-                t.asked = true;
+                t.on_paper(now);
             } else {
                 t.not_working(now);
             }
@@ -635,6 +673,7 @@ impl Service {
                 "doc": doc_json(&t),
                 "skims": skims(&t),
                 "prompt": self.suivi.asked,
+                "paper": t.paper,
             })
         });
         let reading = self.suivi.free.as_ref().map(|t| json!({ "doc": doc_json(t), "skims": skims(t) }));
