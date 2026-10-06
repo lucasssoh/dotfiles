@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.4.0 (October 6 2026)
 
 ### Fixed
 - **cc-pkg-mng and dnf:** on the day a release comes out, `sudo dnf upgrade` and `cc-pkg-mng upgrade` now see it. dnf used to keep its list of coucou-shell's packages for two days, so the new `cc-pkg-mng` did not show up and an upgrade could fail to find the release's packages. dnf now checks coucou-shell's repository at most an hour after a release, and `cc-pkg-mng upgrade` re-reads it before installing. Your next upgrade updates the repository's settings on your machine.
@@ -13,11 +13,11 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Boussole, subjects:** tell it where you stand in each subject. One you are behind in gets more time per sheet and goes first; one where the tutorials are enough has nothing to read, only its tutorials, projects and exams.
 - **Boussole, one thing at a time:** each task is its own session, started, put off or said "not tonight" on its own; putting off one no longer takes the rest of the evening with it. A "not tonight" said by mistake can be brought back, and "I have time" starts a session right away, even on an evening you had said no to.
 - **Boussole, days:** an afternoon without courses becomes a real study block, and a campaign's daily time goes to the daytime (a free period at school, that afternoon, the morning) before the evening. Friday evening stays free.
-
 - **Wallpapers, light and dark:** a wallpaper that comes in a light and a dark version follows light and dark mode, like on GNOME: switch modes and the desktop fades to the other version. Prisme shows each pair as one card, in the version for the current mode, and opens it on both halves when you land on it. Every GNOME wallpaper is a pair, and so are coucou-shell's own Plis, Soie and Relief, which now have a light version. Name two of your own wallpapers `name.jpg` and `name-dark.jpg` and they pair up too.
 
 ### Changed
 - **Bar:** drawers, notifications, OSD and the controller popup now follow light and dark mode.
+- **Notification centre:** it is now a panel down the right edge of the screen, from under the bar to the bottom, sliding in from the right.
 - **Wallpapers:** the default wallpaper on a new install is the Relief pair, light or dark with your mode.
 
 ## 1.3.0 (October 3 2026)
