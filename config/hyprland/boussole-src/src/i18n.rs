@@ -178,6 +178,13 @@ fn reason_raw(r: &Reason, lang: Lang) -> String {
                 format!("{domain} is behind for the time left.")
             }
         }
+        Reason::SaidBehind { domain } => {
+            if fr {
+                format!("Tu t'es noté en retard en {domain} : elle passe devant.")
+            } else {
+                format!("You said you are behind in {domain}: it goes first.")
+            }
+        }
         Reason::CourseOrder => (if fr { "Suivante dans l'ordre du cours." } else { "Next in course order." }).into(),
         Reason::ReviewDue { n, studied } => {
             if fr {

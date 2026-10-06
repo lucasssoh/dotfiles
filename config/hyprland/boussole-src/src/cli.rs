@@ -38,6 +38,7 @@ boussole courses DIR           the course folder (read only)
 boussole calendar URL          the timetable's iCal link
 boussole calendar groups [FAMILY=VALUE,…]   groups found in it, ticked with []
 boussole subject list | subject set ID NAME|NAME… | subject spaced ID on|off | subject archive ID
+boussole subject level ID behind|shaky|fine|td-only   where you stand: behind goes first
 boussole rhythm | rhythm KEY VALUE        evening_target 21:00, evening_minutes 90…
 boussole period list | period add NAME FROM TO normal|free|morning-block|bonus-only|pause | period rm NAME
 boussole objective pass|ranked|podium · lang en|fr · gate on|off
@@ -268,7 +269,8 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
                 .map(|d| {
                     let names: Vec<&str> = d["calendar_names"].as_array().into_iter().flatten().filter_map(Value::as_str).collect();
                     let flags = format!(
-                        "{}{}",
+                        " {}{}{}",
+                        d["level"].as_str().unwrap_or("fine"),
                         if d["spaced"] == true { " spaced" } else { "" },
                         if d["archived"] == true { " archived" } else { "" }
                     );
@@ -287,6 +289,7 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             match (*verb, rest) {
                 ("set", names) => d["calendar_names"] = json!(names.join(" ").split('|').map(str::trim).filter(|n| !n.is_empty()).collect::<Vec<_>>()),
                 ("spaced", [on]) => d["spaced"] = json!(*on == "on"),
+                ("level", [l @ ("behind" | "shaky" | "fine" | "td-only")]) => d["level"] = json!(l),
                 ("archive", []) => d["archived"] = json!(true),
                 ("restore", []) => d["archived"] = json!(false),
                 _ => return Err(HELP.into()),

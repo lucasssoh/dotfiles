@@ -286,6 +286,49 @@ pub struct Domain {
     pub order: Vec<String>,
     /// Stars set or removed by hand, over the course map's.
     pub stars: BTreeMap<String, bool>,
+    /// How the user rates themself in it.
+    pub level: Level,
+}
+
+/// Where the user stands in a domain, as they say it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Level {
+    /// Behind: more time per sheet, and first in line.
+    Behind,
+    /// Unsure.
+    Shaky,
+    #[default]
+    Fine,
+    /// The tutorials are enough: nothing to read, only tutorial preparation,
+    /// projects and exams.
+    TdOnly,
+}
+
+impl Level {
+    /// Estimates are stretched by this until the pace is measured.
+    pub fn pace(self) -> f32 {
+        match self {
+            Level::Behind => 1.3,
+            Level::Shaky => 1.15,
+            Level::Fine | Level::TdOnly => 1.0,
+        }
+    }
+
+    /// Weight of the domain's pressure: who goes first.
+    pub fn weight(self) -> f32 {
+        match self {
+            Level::Behind => 1.6,
+            Level::Shaky => 1.25,
+            Level::Fine => 1.0,
+            Level::TdOnly => 0.0,
+        }
+    }
+
+    /// Whether its files are read and studied at all.
+    pub fn studies(self) -> bool {
+        self != Level::TdOnly
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]

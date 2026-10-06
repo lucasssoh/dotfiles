@@ -904,7 +904,7 @@ impl Service {
                 "age_minutes": self.ade.as_ref().map(|s| (now_secs() - s.fetched) / 60),
                 "error": self.ade_error,
             },
-            "undecided": self.catalogue.undecided(&st.progress.files).len(),
+            "undecided": self.catalogue.pending(&st.progress.files, &self.store.settings.domains).len(),
             "suivi": self.suivi_status(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
@@ -1210,7 +1210,12 @@ impl Service {
                     self.store.record(Event::Files { items, inclusion }, now).map_err(io)?;
                     self.replan();
                 }
-                let new: Vec<String> = self.catalogue.undecided(&self.store.state.progress.files).iter().map(|i| i.id.clone()).collect();
+                let new: Vec<String> = self
+                    .catalogue
+                    .pending(&self.store.state.progress.files, &self.store.settings.domains)
+                    .iter()
+                    .map(|i| i.id.clone())
+                    .collect();
                 (new.join("\n"), json!(new))
             }
             "deadlines" => {

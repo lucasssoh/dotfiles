@@ -429,7 +429,7 @@ impl Service {
                 "star": i.starred,
             })
         };
-        let undecided: Vec<Value> = self.catalogue.undecided(decisions).into_iter().map(row).collect();
+        let undecided: Vec<Value> = self.catalogue.pending(decisions, &self.store.settings.domains).into_iter().map(row).collect();
         let mut by_domain: Vec<Value> = Vec::new();
         for d in self.catalogue.domains() {
             let items: Vec<Value> = self.catalogue.items.iter().filter(|i| i.domain == d).map(row).collect();
@@ -525,7 +525,7 @@ impl Service {
         use crate::catalogue::{Inclusion, ItemKind};
         let items: Vec<String> = self
             .catalogue
-            .undecided(&self.store.state.progress.files)
+            .pending(&self.store.state.progress.files, &self.store.settings.domains)
             .into_iter()
             .filter(|i| !matches!(i.kind, ItemKind::Pdf | ItemKind::Notes))
             .map(|i| i.id.clone())

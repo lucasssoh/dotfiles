@@ -372,4 +372,11 @@ impl Catalogue {
     pub fn undecided<'a>(&'a self, decisions: &BTreeMap<String, Inclusion>) -> Vec<&'a Item> {
         self.items.iter().filter(|i| !decisions.contains_key(&i.id)).collect()
     }
+
+    /// The undecided files worth asking about: not those of a domain where
+    /// the tutorials are enough, which has nothing to read.
+    pub fn pending<'a>(&'a self, decisions: &BTreeMap<String, Inclusion>, domains: &[crate::model::Domain]) -> Vec<&'a Item> {
+        let reads = |id: &str| domains.iter().find(|d| d.id == id).is_none_or(|d| d.level.studies());
+        self.undecided(decisions).into_iter().filter(|i| reads(&i.domain)).collect()
+    }
 }

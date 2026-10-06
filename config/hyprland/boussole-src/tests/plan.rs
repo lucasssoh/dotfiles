@@ -446,3 +446,37 @@ fn a_closed_session_keeps_its_slot() {
     let p1 = fx.plan(at(MON, "21:00"));
     assert!(p1.sessions.iter().all(|s| s.id != first), "not filled again after its close");
 }
+
+#[test]
+fn a_domain_said_behind_goes_first() {
+    let mut fx = Fx::new("level");
+    let first = |fx: &Fx| -> Vec<String> {
+        let p = fx.plan(at(MON, "06:00"));
+        let mut seen = std::collections::BTreeSet::new();
+        parts(&p)
+            .into_iter()
+            .filter(|(_, _, x)| x.task.starts_with("study:") || x.task.starts_with("read:"))
+            .filter(|(_, _, x)| seen.insert(x.task.clone()))
+            .filter_map(|(_, _, x)| x.domain.clone())
+            .take(6)
+            .collect()
+    };
+    let before = first(&fx).iter().filter(|d| *d == "NET").count();
+    fx.domains.iter_mut().find(|d| d.id == "NET").unwrap().level = Level::Behind;
+    let after = first(&fx);
+    assert!(after.iter().filter(|d| *d == "NET").count() > before, "{after:?}");
+    let p = fx.plan(at(MON, "06:00"));
+    assert!(p.sessions.iter().any(|s| s.reasons.contains(&Reason::SaidBehind { domain: "NET".into() })), "and says why");
+}
+
+#[test]
+fn a_domain_where_tutorials_are_enough_has_nothing_to_read() {
+    let mut fx = Fx::new("td-only");
+    fx.domains.iter_mut().find(|d| d.id == "ALGO").unwrap().level = Level::TdOnly;
+    let p = fx.plan(at(MON, "06:00"));
+    assert!(study_parts(&p, "ALGO").is_empty());
+    let prep = parts(&p).into_iter().any(|(_, _, x)| x.domain.as_deref() == Some("ALGO") && matches!(x.work, Work::Prepare { .. }));
+    assert!(prep, "its tutorials are still prepared");
+    assert!(fx.catalogue.pending(&Default::default(), &fx.domains).iter().all(|i| i.domain != "ALGO"), "nor asks about its files");
+}
+

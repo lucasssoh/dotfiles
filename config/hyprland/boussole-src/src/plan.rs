@@ -109,6 +109,8 @@ pub enum Reason {
     /// The domain had nothing since `last`: domains alternate.
     Rotation { domain: String, last: Option<Date> },
     Behind { domain: String },
+    /// The user said they are behind in it.
+    SaidBehind { domain: String },
     CourseOrder,
     ReviewDue { n: u32, studied: Date },
     RedoDue { since: Date },
@@ -233,8 +235,13 @@ enum TaskKind {
     Chore,
 }
 
+fn level(input: &Input, domain: &str) -> Level {
+    input.domains.iter().find(|d| d.id == domain).map_or(Level::Fine, |d| d.level)
+}
+
+/// The measured pace when there is one, else what the level says.
 fn factor(input: &Input, domain: &str) -> f32 {
-    input.settings.pace.domain_factor.get(domain).copied().unwrap_or(1.0)
+    input.settings.pace.domain_factor.get(domain).copied().unwrap_or_else(|| level(input, domain).pace())
 }
 
 fn scaled(m: i32, f: f32) -> i32 {
@@ -327,7 +334,8 @@ fn tasks(input: &Input, today: Date) -> Vec<Task> {
     let objective = input.settings.objective;
     let mut out = Vec::new();
     let empty = ItemProgress::default();
-    for d in input.domains.iter().filter(|d| !d.archived) {
+    // A domain where the tutorials are enough has nothing to read.
+    for d in input.domains.iter().filter(|d| !d.archived && d.level.studies()) {
         let f = factor(input, &d.id);
         let exam = domain_deadline(input, &d.id, today);
         for (order, item) in input.catalogue.ordered(d).iter().enumerate() {
@@ -991,6 +999,9 @@ pub fn plan(input: &Input) -> Plan {
                     if p > 1.0 && pressure.values().all(|&o| o <= p) {
                         why.push(Reason::Behind { domain: dm.clone() });
                     }
+                    if level(input, dm) == Level::Behind {
+                        why.push(Reason::SaidBehind { domain: dm.clone() });
+                    }
                 }
                 if why.is_empty() {
                     why.push(Reason::CourseOrder);
@@ -1129,15 +1140,20 @@ fn remaining(t: &Task) -> i32 {
 }
 
 /// A domain's remaining study over its fair share of the counted time left
-/// before its target: above 1, it is behind.
+/// before its target, weighted by the level the user gives it: above 1, it
+/// is behind.
 fn domain_pressure(input: &Input, all: &[Task], cells: &[Cell], targets: &BTreeMap<String, Date>) -> BTreeMap<String, f32> {
-    let active = input.domains.iter().filter(|d| !d.archived).count().max(1) as f32;
+    let active = input.domains.iter().filter(|d| !d.archived && d.level.studies()).count().max(1) as f32;
     targets
         .iter()
         .map(|(d, &target)| {
             let need: i32 = all.iter().filter(|t| t.domain.as_deref() == Some(d) && t.seq && !t.done).map(remaining).sum();
             let room: i32 = cells.iter().filter(|c| c.slot.date <= target).map(|c| c.free()).sum();
-            (d.clone(), need as f32 / (room as f32 / active).max(1.0))
+            // Where the user says they are behind weighs more, and keeps a
+            // head start even with little left to do.
+            let w = level(input, d).weight();
+            let p = need as f32 / (room as f32 / active).max(1.0);
+            (d.clone(), if need > 0 { w * p + (w - 1.0).max(0.0) } else { 0.0 })
         })
         .collect()
 }
