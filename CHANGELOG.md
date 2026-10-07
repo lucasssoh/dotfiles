@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.4.1 (October 7 2026)
 
 ### Added
 - **Boussole, focus mode:** starting a session can take you to study workspaces of their own, with its file in Liseuse and the session's panel beside it: the time left, the objective, the evening's files and a Next file button. Your own workspaces stay as they are, and Pause or Close brings you back to them. Notifications keep quiet while you are there. Turn it on in More › Rhythm.
