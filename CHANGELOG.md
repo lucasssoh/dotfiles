@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Firefox:** the selected tab and the focused address bar are now a plain raised surface without the grey ring around the tab and the bright ring around the bar. Keyboard focus keeps its ordinary focus outline, and the coucou palette is otherwise untouched.
+
 ## 1.4.1
 
 ### Added
@@ -14,6 +19,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Liseuse:** in dark mode, books and notes now sit on a dark grey page with softer white text instead of white on pure black, which was tiring to read for long.
+- **Firefox:** the selected tab and the focused address bar are now a plain raised surface without the grey ring around the tab and the bright ring around the bar. Keyboard focus keeps its ordinary focus outline, and the coucou palette is otherwise untouched.
 
 ## 1.4.0 (October 6 2026)
 

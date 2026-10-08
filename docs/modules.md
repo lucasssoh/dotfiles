@@ -377,7 +377,7 @@ cc-pkg-mng install wezterm
 
 ### `firefox`
 
-The default browser, with a system policy in `/etc/firefox/policies/`.
+The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing.
 
 ### `brave`
 

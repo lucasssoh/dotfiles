@@ -1,0 +1,379 @@
+/*
+ * coucou-shell — Firefox UI theme
+ *
+ * The palette is taken verbatim from DrawerTheme.qml (and, for the ink,
+ * Ink.qml). Dark is the default; light is the same vocabulary inverted on
+ * cream. The layers map straight onto the bar's surfaces:
+ *
+ *   shell         cardDeep (#0b0b0d / #f5f3ee)   window chrome, toolbars,
+ *                                                tab strip, sidebar frame,
+ *                                                the backdrop behind the page
+ *   card          card       (#17171a / #ebe9e3) panels, menus, popups, the
+ *                                                urlbar field, the sidebar
+ *   hover         cardHover  (#1f1f23 / #e3e1da) hovered rows, buttons, tabs
+ *   raised        cardRaised (#2a2a2f / #dbd9d2) pushed, focused, selected
+ *                                                (the selected tab, focused
+ *                                                urlbar, selected result)
+ *   primary/on    #f2f2f7 / #1c1c1e              ink; active control fills,
+ *                                                focus rings (inversion via
+ *                                                `on`, see DrawerTheme)
+ *   onInk         #0c0c0e / #f7f5f0              ink drawn on the `on` fill
+ *   secondary/muted/faint                        de-emphasised tiers
+ *   danger/positive/warning                      state color usage
+ *   onInk2        #3a3a3e / #c9c7c0              hairlines, borders
+ *
+ * Firefox 156 notes:
+ *   - The design tokens live in @layers; userChrome.css is unlayered and
+ *     loaded last, so a plain :root override already beats every layer.
+ *     `!important` is still used because the active lightweight theme
+ *     ("Dark space") sets several of these inline on :root (inline styles
+ *     are author specificity and would otherwise win), and because a couple
+ *     of <popup.css>/<menu.css> rules set backgrounds directly on the
+ *     element rather than through a var we can shadow.
+ *   - popup.css assigns --panel-background-color: Menu right on
+ *     menupopup/panel, so those need an element-level override below.
+ *   - menuitem hover is driven by the GTK system color -moz-menuhover, so
+ *     it needs an explicit [_moz-menuactive] rule.
+ *   - Only existing 156 tokens are used (tab-background-color / menu-* /
+ *     arrowpanel-* etc. no longer exist and were removed).
+ */
+
+/* ==========================================================================
+ * Dark
+ * ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+
+        /* ---- the palette, once, under its own names --------------------- */
+        --coucou-shell: #0b0b0d;          /* cardDeep   */
+        --coucou-card: #17171a;           /* card         */
+        --coucou-card-hover: #1f1f23;     /* cardHover    */
+        --coucou-card-raised: #2a2a2f;    /* cardRaised   */
+        --coucou-dimmed: #121215;         /* stackMid     */
+        --coucou-dimmed-further: #0d0d10; /* stackBack    */
+        --coucou-primary: #f2f2f7;        /* primary / on */
+        --coucou-secondary: #8e8e93;      /* secondary    */
+        --coucou-muted: #636366;          /* muted        */
+        --coucou-faint: #48484a;          /* faint        */
+        --coucou-on-ink: #0c0c0e;         /* onLight      */
+        --coucou-on-ink-2: #3a3a3e;       /* onInk2       */
+        --coucou-danger: #ff6e6e;         /* danger       */
+        --coucou-positive: #a3d9a5;       /* positive     */
+        --coucou-warning: #ffb454;        /* warning      */
+
+        /* ---- neutralise the active lightweight theme -------------------- */
+        --lwt-accent-color: var(--coucou-shell) !important;
+        --lwt-text-color: var(--coucou-primary) !important;
+        --lwt-border-color: var(--coucou-on-ink-2) !important;
+        --lwt-toolbar-field-highlight: color-mix(in srgb, var(--coucou-primary) 22%, transparent) !important;
+        --lwt-toolbar-field-highlight-text: var(--coucou-primary) !important;
+
+        /* ---- surfaces --------------------------------------------------- */
+        --background-color-canvas: var(--coucou-shell) !important;
+        --background-color-box: var(--coucou-card) !important;
+        --background-color-dimmed: var(--coucou-dimmed) !important;
+        --background-color-dimmed-further: var(--coucou-dimmed-further) !important;
+
+        --toolbox-background-color: var(--coucou-shell) !important;
+        --toolbox-background-color-inactive: var(--coucou-shell) !important;
+        --toolbar-background-color: var(--coucou-card) !important;
+        --toolbar-text-color: var(--coucou-primary) !important;
+
+        --tabpanel-background-color: var(--coucou-shell) !important;
+
+        /* ---- text / ink ------------------------------------------------- */
+        --toolbox-text-color: var(--coucou-primary) !important;
+        --toolbox-text-color-inactive: var(--coucou-secondary) !important;
+        --text-color: var(--coucou-primary) !important;
+        --text-color-deemphasized: var(--coucou-secondary) !important;
+        --text-color-disabled: var(--coucou-muted) !important;
+        --text-color-error: var(--coucou-danger) !important;
+        --text-color-list-item-hover: var(--coucou-primary) !important;
+
+        --link-color: var(--coucou-primary) !important;
+
+        --icon-color: var(--coucou-primary) !important;
+        --icon-color-critical: var(--coucou-danger) !important;
+        --icon-color-success: var(--coucou-positive) !important;
+        --icon-color-warning: var(--coucou-warning) !important;
+
+        /* ---- accents / focus -------------------------------------------- */
+        /* DrawerTheme: `on` is carried by inversion, accent === primary.  */
+        --color-accent-primary: var(--coucou-primary) !important;
+        --color-accent-attention: var(--coucou-warning) !important;
+        --focus-outline-color: var(--coucou-primary) !important;
+
+        /* ---- borders / separators ---------------------------------------- */
+        --border-color: var(--coucou-on-ink-2) !important;
+        --border-color-deemphasized: var(--coucou-faint) !important;
+        --border-color-interactive: var(--coucou-on-ink-2) !important;
+        --card-border-color: var(--coucou-on-ink-2) !important;
+        --input-border-color: var(--coucou-on-ink-2) !important;
+        --panel-border-color: var(--coucou-on-ink-2) !important;
+        --panel-separator-color: color-mix(in srgb, var(--coucou-primary) 15%, transparent) !important;
+        --toolbarseparator-color: var(--coucou-secondary) !important;
+
+        /* ---- buttons ------------------------------------------------------ */
+        --button-background-color: var(--coucou-card) !important;
+        --button-background-color-hover: var(--coucou-card-hover) !important;
+        --button-background-color-active: var(--coucou-card-raised) !important;
+        --button-text-color: var(--coucou-primary) !important;
+        --button-text-color-hover: var(--coucou-primary) !important;
+        --button-text-color-active: var(--coucou-primary) !important;
+        --button-text-color-disabled: var(--coucou-faint) !important;
+        /* Primary (inverted, "on") buttons: primary fill, dark ink on it.  */
+        --button-background-color-primary: var(--coucou-primary) !important;
+        --button-background-color-primary-hover: var(--coucou-card-raised) !important;
+        --button-background-color-primary-active: var(--coucou-card-raised) !important;
+        --button-text-color-primary: var(--coucou-on-ink) !important;
+        --button-text-color-primary-hover: var(--coucou-on-ink) !important;
+        --button-text-color-primary-active: var(--coucou-on-ink) !important;
+        --button-background-color-destructive: var(--coucou-danger) !important;
+        --button-background-color-destructive-hover: var(--coucou-danger) !important;
+        --button-background-color-destructive-active: var(--coucou-danger) !important;
+
+        --toolbarbutton-background-color-hover: var(--coucou-card-hover) !important;
+        --toolbarbutton-background-color-active: var(--coucou-card-raised) !important;
+        --toolbarbutton-icon-fill: var(--coucou-secondary) !important;
+        --toolbarbutton-icon-fill-opacity: 1 !important;
+        --toolbarbutton-icon-fill-attention: var(--coucou-warning) !important;
+
+        /* ---- tabs ---------------------------------------------------------- */
+        /* rest = transparent (canvas shows), hover = one step, selected = the
+           raised card, so the progression holds in both modes. */
+        --tab-background-color-hover: var(--coucou-card-hover) !important;
+        --tab-background-color-selected: var(--coucou-card-raised) !important;
+        --tab-selected-textcolor: var(--coucou-primary) !important;
+        --tab-outline-color: transparent !important;
+        --tab-hover-outline-color: transparent !important;
+        --tab-selected-outline-color: transparent !important;
+        --tab-attention-dot-color: var(--coucou-warning) !important;
+
+        /* ---- urlbar / search ---------------------------------------------- */
+        --toolbar-field-background-color: var(--coucou-card) !important;
+        --toolbar-field-background-color-focus: var(--coucou-card-raised) !important;
+        --toolbar-field-border-color: var(--coucou-on-ink-2) !important;
+        --toolbar-field-border-color-focus: var(--coucou-on-ink-2) !important;
+        --toolbar-field-text-color: var(--coucou-primary) !important;
+        --toolbar-field-text-color-focus: var(--coucou-primary) !important;
+
+        --urlbar-background-color: var(--coucou-card) !important;
+        --urlbar-background-color-focus: var(--coucou-card-raised) !important;
+
+        --urlbar-box-background-color: var(--coucou-card) !important;
+        --urlbar-box-background-color-hover: var(--coucou-card-hover) !important;
+        --urlbar-box-background-color-active: var(--coucou-card-raised) !important;
+        --urlbar-box-background-color-focus: var(--coucou-card-raised) !important;
+        --urlbar-box-text-color: var(--coucou-primary) !important;
+
+        /* ---- urlbar results ------------------------------------------------ */
+        --urlbarview-background-color-hover: var(--coucou-card-hover) !important;
+        --urlbarview-background-color-selected: var(--coucou-card-raised) !important;
+        --urlbarview-text-color-selected: var(--coucou-primary) !important;
+        --urlbarview-text-color-action: var(--coucou-secondary) !important;
+        --urlbarview-text-color-secondary: var(--coucou-secondary) !important;
+        --urlbarview-separator-color: color-mix(in srgb, var(--coucou-primary) 18%, transparent) !important;
+        --urlbarview-action-button-background-color: var(--coucou-card-hover) !important;
+        --urlbarview-action-button-background-color-hover: var(--coucou-card-raised) !important;
+
+        /* ---- panels / popups ----------------------------------------------- */
+        --panel-background-color: var(--coucou-card) !important;
+        --panel-background-color-dimmed: var(--coucou-dimmed) !important;
+        --panel-background-color-dimmed-further: var(--coucou-dimmed-further) !important;
+        --panel-text-color: var(--coucou-primary) !important;
+        --panel-list-background-color: var(--coucou-card) !important;
+        --panel-list-text-color: var(--coucou-primary) !important;
+
+        /* ---- sidebar / bookmarks ------------------------------------------- */
+        --sidebar-background-color: var(--coucou-card) !important;
+        --sidebar-text-color: var(--coucou-primary) !important;
+        --sidebar-border-color: var(--coucou-on-ink-2) !important;
+    }
+}
+
+/* ==========================================================================
+ * Light
+ * ========================================================================== */
+
+@media (prefers-color-scheme: light) {
+    :root {
+        color-scheme: light;
+
+        --coucou-shell: #f5f3ee;          /* panelTop (light background) */
+        --coucou-card: #ebe9e3;           /* card                        */
+        --coucou-card-hover: #e3e1da;     /* cardHover                   */
+        --coucou-card-raised: #dbd9d2;    /* cardRaised                  */
+        --coucou-dimmed: #e4e2dc;         /* stackMid                    */
+        --coucou-dimmed-further: #dddbd4; /* stackBack                   */
+        --coucou-primary: #1c1c1e;        /* primary / on                */
+        --coucou-secondary: #56565b;      /* secondary                   */
+        --coucou-muted: #86868b;          /* muted                       */
+        --coucou-faint: #c4c3be;          /* faint                       */
+        --coucou-on-ink: #f7f5f0;         /* onLight                     */
+        --coucou-on-ink-2: #c9c7c0;       /* onInk2                      */
+        --coucou-danger: #b3261e;         /* danger                      */
+        --coucou-positive: #24692a;       /* positive                    */
+        --coucou-warning: #875000;        /* warning                     */
+
+        --lwt-accent-color: var(--coucou-shell) !important;
+        --lwt-text-color: var(--coucou-primary) !important;
+        --lwt-border-color: var(--coucou-on-ink-2) !important;
+        --lwt-toolbar-field-highlight: color-mix(in srgb, var(--coucou-primary) 18%, transparent) !important;
+        --lwt-toolbar-field-highlight-text: var(--coucou-primary) !important;
+
+        --background-color-canvas: var(--coucou-shell) !important;
+        --background-color-box: var(--coucou-card) !important;
+        --background-color-dimmed: var(--coucou-dimmed) !important;
+        --background-color-dimmed-further: var(--coucou-dimmed-further) !important;
+
+        --toolbox-background-color: var(--coucou-shell) !important;
+        --toolbox-background-color-inactive: var(--coucou-shell) !important;
+        --toolbar-background-color: var(--coucou-card) !important;
+        --toolbar-text-color: var(--coucou-primary) !important;
+
+        --tabpanel-background-color: var(--coucou-shell) !important;
+
+        --toolbox-text-color: var(--coucou-primary) !important;
+        --toolbox-text-color-inactive: var(--coucou-secondary) !important;
+        --text-color: var(--coucou-primary) !important;
+        --text-color-deemphasized: var(--coucou-secondary) !important;
+        --text-color-disabled: var(--coucou-muted) !important;
+        --text-color-error: var(--coucou-danger) !important;
+        --text-color-list-item-hover: var(--coucou-primary) !important;
+
+        --link-color: var(--coucou-primary) !important;
+
+        --icon-color: var(--coucou-primary) !important;
+        --icon-color-critical: var(--coucou-danger) !important;
+        --icon-color-success: var(--coucou-positive) !important;
+        --icon-color-warning: var(--coucou-warning) !important;
+
+        --color-accent-primary: var(--coucou-primary) !important;
+        --color-accent-attention: var(--coucou-warning) !important;
+        --focus-outline-color: var(--coucou-primary) !important;
+
+        --border-color: var(--coucou-on-ink-2) !important;
+        --border-color-deemphasized: var(--coucou-faint) !important;
+        --border-color-interactive: var(--coucou-on-ink-2) !important;
+        --card-border-color: var(--coucou-on-ink-2) !important;
+        --input-border-color: var(--coucou-on-ink-2) !important;
+        --panel-border-color: var(--coucou-on-ink-2) !important;
+        --panel-separator-color: color-mix(in srgb, var(--coucou-primary) 15%, transparent) !important;
+        --toolbarseparator-color: var(--coucou-secondary) !important;
+
+        --button-background-color: var(--coucou-card) !important;
+        --button-background-color-hover: var(--coucou-card-hover) !important;
+        --button-background-color-active: var(--coucou-card-raised) !important;
+        --button-text-color: var(--coucou-primary) !important;
+        --button-text-color-hover: var(--coucou-primary) !important;
+        --button-text-color-active: var(--coucou-primary) !important;
+        --button-text-color-disabled: var(--coucou-faint) !important;
+        --button-background-color-primary: var(--coucou-primary) !important;
+        --button-background-color-primary-hover: var(--coucou-card-raised) !important;
+        --button-background-color-primary-active: var(--coucou-card-raised) !important;
+        --button-text-color-primary: var(--coucou-on-ink) !important;
+        --button-text-color-primary-hover: var(--coucou-on-ink) !important;
+        --button-text-color-primary-active: var(--coucou-on-ink) !important;
+        --button-background-color-destructive: var(--coucou-danger) !important;
+        --button-background-color-destructive-hover: var(--coucou-danger) !important;
+        --button-background-color-destructive-active: var(--coucou-danger) !important;
+
+        --toolbarbutton-background-color-hover: var(--coucou-card-hover) !important;
+        --toolbarbutton-background-color-active: var(--coucou-card-raised) !important;
+        --toolbarbutton-icon-fill: var(--coucou-secondary) !important;
+        --toolbarbutton-icon-fill-opacity: 1 !important;
+        --toolbarbutton-icon-fill-attention: var(--coucou-warning) !important;
+
+        --tab-background-color-hover: var(--coucou-card-hover) !important;
+        --tab-background-color-selected: var(--coucou-card-raised) !important;
+        --tab-selected-textcolor: var(--coucou-primary) !important;
+        --tab-outline-color: transparent !important;
+        --tab-hover-outline-color: transparent !important;
+        --tab-selected-outline-color: transparent !important;
+        --tab-attention-dot-color: var(--coucou-warning) !important;
+
+        --toolbar-field-background-color: var(--coucou-card) !important;
+        --toolbar-field-background-color-focus: var(--coucou-card-raised) !important;
+        --toolbar-field-border-color: var(--coucou-on-ink-2) !important;
+        --toolbar-field-border-color-focus: var(--coucou-on-ink-2) !important;
+        --toolbar-field-text-color: var(--coucou-primary) !important;
+        --toolbar-field-text-color-focus: var(--coucou-primary) !important;
+
+        --urlbar-background-color: var(--coucou-card) !important;
+        --urlbar-background-color-focus: var(--coucou-card-raised) !important;
+
+        --urlbar-box-background-color: var(--coucou-card) !important;
+        --urlbar-box-background-color-hover: var(--coucou-card-hover) !important;
+        --urlbar-box-background-color-active: var(--coucou-card-raised) !important;
+        --urlbar-box-background-color-focus: var(--coucou-card-raised) !important;
+        --urlbar-box-text-color: var(--coucou-primary) !important;
+
+        --urlbarview-background-color-hover: var(--coucou-card-hover) !important;
+        --urlbarview-background-color-selected: var(--coucou-card-raised) !important;
+        --urlbarview-text-color-selected: var(--coucou-primary) !important;
+        --urlbarview-text-color-action: var(--coucou-secondary) !important;
+        --urlbarview-text-color-secondary: var(--coucou-secondary) !important;
+        --urlbarview-separator-color: color-mix(in srgb, var(--coucou-primary) 18%, transparent) !important;
+        --urlbarview-action-button-background-color: var(--coucou-card-hover) !important;
+        --urlbarview-action-button-background-color-hover: var(--coucou-card-raised) !important;
+
+        --panel-background-color: var(--coucou-card) !important;
+        --panel-background-color-dimmed: var(--coucou-dimmed) !important;
+        --panel-background-color-dimmed-further: var(--coucou-dimmed-further) !important;
+        --panel-text-color: var(--coucou-primary) !important;
+        --panel-list-background-color: var(--coucou-card) !important;
+        --panel-list-text-color: var(--coucou-primary) !important;
+
+        --sidebar-background-color: var(--coucou-card) !important;
+        --sidebar-text-color: var(--coucou-primary) !important;
+        --sidebar-border-color: var(--coucou-on-ink-2) !important;
+    }
+}
+
+/* ==========================================================================
+ * Element-level rules
+ *
+ * Things popup.css / menu.css / browser.css write onto the element itself
+ * (bypassing the :root vars above), and the findbar, which the lightweight
+ * theme recolours.
+ * ========================================================================== */
+
+/* Non-arrow popups (context menus, bookmarks menu, …): popup.css sets
+   --panel-background-color: Menu directly on these, so override on the
+   element. Arrow panels (app menu, downloads, identity, overflow, …)
+   inherit the :root value, which is already themed above. */
+menupopup:not([type="arrow"]),
+panel:not([type="arrow"]),
+panelview {
+    --panel-background-color: var(--coucou-card) !important;
+    --panel-border-color: var(--coucou-on-ink-2) !important;
+    --panel-text-color: var(--coucou-primary) !important;
+    color: var(--coucou-primary) !important;
+}
+
+/* Menu hover is GTK's -moz-menuhover, not a design token. */
+menupopup > *[_moz-menuactive]:not([disabled]),
+menubar > menu[_moz-menuactive]:not([disabled]) {
+    background-color: var(--coucou-card-hover) !important;
+    color: var(--coucou-primary) !important;
+}
+
+/* Menu bar; also strip the platform accent underline under an open menu. */
+#toolbar-menubar > menu {
+    color: var(--coucou-primary) !important;
+    border-bottom-color: transparent !important;
+}
+
+#toolbar-menubar > menu[open] {
+    background-color: var(--coucou-card) !important;
+}
+
+/* Find bar: toolbar surface, but :root[lwtheme] paints the theme accent. */
+.browserContainer > findbar {
+    background-color: var(--coucou-card) !important;
+    background-image: none !important;
+    color: var(--coucou-primary) !important;
+    border-top-color: var(--coucou-on-ink-2) !important;
+}

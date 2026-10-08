@@ -4,6 +4,10 @@
       "Default": "Google"
     },
     "DontCheckDefaultBrowser": true,
+    "Homepage": {
+      "URL": "about:blank",
+      "StartPage": "homepage"
+    },
     "Preferences": {
       "gfx.wayland.hdr": {
         "Value": true,
@@ -12,11 +16,19 @@
       "browser.newtabpage.activity-stream.showSearch": {
         "Value": false,
         "Status": "default"
+      },
+      "browser.newtabpage.pinned": {
+        "Value": "[]",
+        "Status": "user"
+      },
+      "extensions.activeThemeID": {
+        "Value": "default-theme@mozilla.org",
+        "Status": "default"
+      },
+      "toolkit.legacyUserProfileCustomizations.stylesheets": {
+        "Value": true,
+        "Status": "locked"
       }
-    },
-    "Homepage": {
-      "URL": "https://www.google.com",
-      "StartPage": "homepage"
     }
   }
 }
