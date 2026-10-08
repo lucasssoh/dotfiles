@@ -4,12 +4,41 @@
       "Default": "Google"
     },
     "DontCheckDefaultBrowser": true,
+    "Extensions": {
+      "Install": [
+        "https://addons.mozilla.org/firefox/downloads/latest/new-tab-override/addon-latest.xpi"
+      ]
+    },
     "Homepage": {
-      "URL": "about:blank",
+      "URL": "about:newtab",
       "StartPage": "homepage"
     },
     "Preferences": {
-      "gfx.wayland.hdr": {
+      "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.discoverystream.enabled": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.feeds.section.highlights": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.feeds.section.topstories": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.feeds.snippets": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.feeds.topsites": {
         "Value": true,
         "Status": "default"
       },
@@ -17,12 +46,48 @@
         "Value": false,
         "Status": "default"
       },
+      "browser.newtabpage.activity-stream.showSponsored": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.showSponsoredTopSites": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.showWeather": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.topSitesRows": {
+        "Value": 1,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.unifiedAds.adsFeed.enabled": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.unifiedAds.ohttp.enabled": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.unifiedAds.spocs.enabled": {
+        "Value": false,
+        "Status": "default"
+      },
+      "browser.newtabpage.activity-stream.unifiedAds.tiles.enabled": {
+        "Value": false,
+        "Status": "default"
+      },
       "browser.newtabpage.pinned": {
-        "Value": "[]",
+        "Value": "[{\"url\":\"https://github.com/\",\"title\":\"GitHub\"},{\"url\":\"https://www.youtube.com/\",\"title\":\"YouTube\"},{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\"},{\"url\":\"https://gemini.google.com/\",\"title\":\"Gemini\"},{\"url\":\"https://claude.ai/\",\"title\":\"Claude\"}]",
         "Status": "user"
       },
       "extensions.activeThemeID": {
         "Value": "default-theme@mozilla.org",
+        "Status": "default"
+      },
+      "gfx.wayland.hdr": {
+        "Value": true,
         "Status": "default"
       },
       "toolkit.legacyUserProfileCustomizations.stylesheets": {

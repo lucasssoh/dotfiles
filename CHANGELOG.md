@@ -5,6 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Changed
+- **Firefox, the new tab is now coucou's own page:** a clock and date, a row of five icon shortcuts (GitHub, YouTube, ChatGPT, Gemini, Claude), and below them your most-used sites as a list — in the shell's palette. The list is built from your real browsing by the installer and scrolls when it gets long. A policy-installed add-on (New Tab Override) opens the page, so nothing is configured by hand. The stock page's news feed, sponsored and suggested tiles, weather card and history highlights are turned off underneath it.
+- **Firefox:** launching it now opens the new-tab page instead of a blank one.
 - **Firefox:** the selected tab and the focused address bar are now a plain raised surface without the grey ring around the tab and the bright ring around the bar. Keyboard focus keeps its ordinary focus outline, and the coucou palette is otherwise untouched.
 
 ## 1.4.1

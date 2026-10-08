@@ -152,3 +152,6 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 if [ -f "$HOME/.config/bash/.env.local" ]; then
     source "$HOME/.config/bash/.env.local"
 fi
+
+# opencode
+export PATH=~/.opencode/bin:$PATH

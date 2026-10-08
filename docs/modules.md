@@ -379,6 +379,10 @@ cc-pkg-mng install wezterm
 
 The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing.
 
+The browser's own new-tab page is replaced by a page of our own, in the same colours: a clock, a row of five icon shortcuts (GitHub, YouTube, ChatGPT, Gemini, Claude) and, below them, your most-used sites as a list. It is built from your real browsing by [`config/firefox/newtab/build-newtab.sh`](../config/firefox/newtab/build-newtab.sh) — it reads the profile's history (frecency), skips the five pinned tiles and the localhost dev servers, and writes the page to `~/.local/share/firefox/newtab/index.html`. The list scrolls when it gets long. Re-run the installer (`cc-pkg-mng update`) to refresh it.
+
+The page is wired up without touching the browser by hand: the policy installs the signed *New Tab Override* add-on, and a managed-storage manifest in the profile points it at the local page (`file://`). The stock page's news, sponsored tiles, weather and highlights are turned off underneath, so if the add-on is ever disabled the new tab is still quiet.
+
 ### `brave`
 
 Installed from Brave's own repository. Not installed by default.

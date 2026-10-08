@@ -13,7 +13,7 @@ info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 warn() { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
 
-pkg_ensure firefox
+pkg_ensure firefox "$(pkg_pick sqlite sqlite sqlite3)"
 
 # Resolve the repository root from this script instead of relying on the
 # current working directory. This keeps the installer working whether it is
@@ -185,11 +185,34 @@ if [[ -f "$PROFILES_INI" ]]; then
         FIREFOX_CHROME="$FIREFOX_PROFILE/chrome"
         mkdir -p "$FIREFOX_CHROME"
 
-        safe_link \
+safe_link \
             "$DOTFILES_DIR/config/firefox/chrome/userChrome.css" \
-            "$FIREFOX_CHROME/userChrome.css"
+            "$FIREFOX_PROFILE/chrome/userChrome.css"
+
+        # The new-tab page (coucou's own) is served through New Tab Override,
+        # an add-on installed by policy. The add-on reads the page to open from
+        # managed storage: a native manifest in the profile's managed-storage
+        # directory, written fresh on every install so the file:// URL it
+        # points at always matches where this machine's page is built.
+        NEWTAB_OUT="${NEWTAB_OUT_DIR:-$HOME/.local/share/firefox/newtab}"
+        NEWTAB_OUT_DIR="$NEWTAB_OUT" \
+            "$DOTFILES_DIR/config/firefox/newtab/build-newtab.sh"
+
+        mkdir -p "$FIREFOX_PROFILE/managed-storage"
+        cat > "$FIREFOX_PROFILE/managed-storage/newtaboverride@agenedia.com.json" <<EOF
+{
+  "name": "newtaboverride@agenedia.com",
+  "description": "coucou-shell: open the local new-tab page",
+  "type": "storage",
+  "data": {
+    "type": "custom_url",
+    "url": "file://$NEWTAB_OUT/index.html",
+    "focus_website": true
+  }
+}
+EOF
     else
-        info "Firefox default profile not found; userChrome.css skipped."
+        info "Firefox default profile not found; userChrome.css and the new-tab page are skipped."
     fi
 else
     # Firefox may not have created its profile metadata yet. Do not create a
