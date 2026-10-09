@@ -210,6 +210,54 @@ def _unglue_display_math(lines):
     return out
 
 
+# A <details> block (a hidden solution, "Corrigé") is raw HTML to
+# markdown, so everything in it stayed as typed: $...$ dollars, list
+# numbers, **stars**. md_in_html parses inside a block that asks for it
+# with markdown="1": this asks for it on every <details>, outside fenced
+# code. Pure attribute insertion, nothing else is rewritten.
+_DETAILS = re.compile(r"^(\s*<details)(?![^>]*\bmarkdown=)(\b[^>]*>)", re.I)
+
+
+def _markdown_in_details(lines):
+    out, fence = [], None
+    for line in lines:
+        m = _FENCE.match(line)
+        if fence:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                fence = None
+        elif m:
+            fence = m.group(1)
+        else:
+            line = _DETAILS.sub(r'\1 markdown="1"\2', line)
+        out.append(line)
+    return out
+
+
+# Some editors write display maths between two lines holding a lone `$`
+# rather than `$$`. Paired that way (two such lines, outside fenced code),
+# they become `$$` lines; a lone `$` left without a partner is kept as is.
+def _lone_dollar_blocks(lines):
+    out, fence, opened = list(lines), None, None
+    for i, line in enumerate(lines):
+        m = _FENCE.match(line)
+        if fence:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                fence = None
+            continue
+        if m:
+            fence = m.group(1)
+            continue
+        if line.strip() == "$":
+            if opened is None:
+                opened = i
+            else:
+                # Flush left: indented, arithmatex reads it as text.
+                out[opened] = "$$"
+                out[i] = "$$"
+                opened = None
+    return out
+
+
 def unglue_math_extension(**_config):
     """The preprocessor above, as a markdown extension. Named by string
     in EXTENSIONS ("md2pdf:unglue_math_extension"), which markdown
@@ -219,7 +267,7 @@ def unglue_math_extension(**_config):
 
     class Pre(markdown.preprocessors.Preprocessor):
         def run(self, lines):
-            return _unglue_display_math(lines)
+            return _unglue_display_math(_lone_dollar_blocks(_markdown_in_details(lines)))
 
     class Ext(markdown.Extension):
         def extendMarkdown(self, md):
@@ -513,6 +561,10 @@ def is_fresh(source: str, pdf: str, key: str) -> bool:
         if os.stat(source).st_mtime > out:
             return False
         if os.stat(CSS_PATH).st_mtime > out:
+            return False
+        # This file is the renderer: a fix to it (maths in a <details>,
+        # say) has to reach the documents already rendered with the old one.
+        if os.stat(os.path.abspath(__file__)).st_mtime > out:
             return False
     except OSError:
         return False
