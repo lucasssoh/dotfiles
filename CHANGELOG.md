@@ -4,6 +4,16 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
+### Added
+- **Boussole, I have time:** pick a subject before the duration, and its next task starts now, in the plan's order.
+- **Boussole, free time:** open the drawer with nothing planned, in a free period at school or an evening, and Today starts with what would help most: the nearest tutorial to prepare, the subject furthest behind its exam, a subject you are behind in, or any subject's next task, started in one click. It never shows on its own.
+- **Boussole, the programme:** under Progress, one card per subject with its exam, the sessions to spare before it and the hours planned; a week-by-week list; and "What if…", which shows how each lever (a Saturday of blocks, longer evenings, a study week, a subject's level) would change the margins before you apply it. Today says so when a subject no longer fits before its exam.
+- **Boussole, study weeks:** a holiday period can be a study week (More › Rhythm › Periods): each weekday gets two blocks on top of its evening.
+- **Boussole, subjects:** say how fast a subject's sheets go (quick, as estimated, long), and mark a course subject whose sheets are only read, its exercises left to the exercise files, tutorials and exam subjects.
+
+### Fixed
+- **Liseuse:** maths, lists and bold inside a hidden solution (a `<details>` block, "Corrigé") are rendered instead of shown as typed, and so is display maths written between two lines holding a single `$`. Notes already opened are rendered again the next time.
+
 ### Changed
 - **Firefox, the new tab is now coucou's own page:** a clock and date, a row of five icon shortcuts (GitHub, YouTube, ChatGPT, Gemini, Claude), and below them your most-used sites as a list — in the shell's palette. The list is built from your real browsing by the installer and scrolls when it gets long. A policy-installed add-on (New Tab Override) opens the page, so nothing is configured by hand. The stock page's news feed, sponsored and suggested tiles, weather card and history highlights are turned off underneath it.
 - **Firefox:** launching it now opens the new-tab page instead of a blank one.
