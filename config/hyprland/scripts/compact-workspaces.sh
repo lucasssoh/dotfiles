@@ -38,8 +38,10 @@ declare -A restore_focus  # monitor -> workspace to refocus at the end of the sc
 declare -A moved          # monitor -> non-empty iff a window actually moved on it
 
 for mon in "${monitor_names[@]}"; do
+    # 1-10 only: Boussole's study workspaces (11-14, focus mode) are a
+    # dimension of their own, never compacted into or out of.
     mapfile -t slots < <(jq -r --arg m "$mon" \
-        '[.[] | select(.monitor==$m) | (.workspaceString|tonumber)] | sort | .[]' <<<"$rules_json")
+        '[.[] | select(.monitor==$m) | (.workspaceString|tonumber) | select(. <= 10)] | sort | .[]' <<<"$rules_json")
     [[ ${#slots[@]} -eq 0 ]] && continue
 
     slots_json="$(printf '%s\n' "${slots[@]}" | jq -R 'tonumber' | jq -s '.')"
