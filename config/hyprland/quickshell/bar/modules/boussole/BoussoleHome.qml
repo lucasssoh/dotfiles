@@ -37,28 +37,80 @@ Item {
         onCloseRequested: BoussoleState.close()
     }
 
-    Row {
+    // The pages, as one segmented rail like Balise's: the page shown
+    // inverted, the highlight sliding from one to the next.
+    Rectangle {
         id: tabs
         visible: root.b.page !== "close" && root.b.page !== "setup"
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.leftMargin: 20
+        anchors.rightMargin: 20
         anchors.top: handle.bottom
         anchors.topMargin: 12
-        height: 32
-        spacing: 6
-        Repeater {
-            model: [
-                { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
-                { id: "week", label: root.b.tr("Week", "Semaine") },
-                { id: "progress", label: root.b.tr("Progress", "Progrès") },
-                { id: "files", label: root.b.tr("Files", "Fichiers") },
-                { id: "plus", label: root.b.tr("More", "Plus") }
-            ]
-            delegate: BoussoleChip {
-                required property var modelData
-                text: modelData.label
-                on: root.b.page === modelData.id
-                onClicked: root.b.show(modelData.id)
+        height: 38
+        radius: height / 2
+        color: DrawerTheme.card
+        border.width: 1
+        border.color: DrawerTheme.faint
+
+        readonly property var pages: [
+            { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
+            { id: "week", label: root.b.tr("Week", "Semaine") },
+            { id: "progress", label: root.b.tr("Progress", "Progrès") },
+            { id: "files", label: root.b.tr("Files", "Fichiers") },
+            { id: "plus", label: root.b.tr("More", "Plus") }
+        ]
+        readonly property int current: Math.max(0, tabs.pages.findIndex(p => p.id === root.b.page))
+        readonly property real slot: (tabs.width - 8) / tabs.pages.length
+
+        Rectangle {
+            x: 4 + tabs.current * tabs.slot
+            y: 4
+            width: tabs.slot
+            height: tabs.height - 8
+            radius: height / 2
+            color: DrawerTheme.on
+            Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        }
+        Row {
+            x: 4
+            y: 4
+            Repeater {
+                model: tabs.pages
+                delegate: Item {
+                    id: seg
+                    required property var modelData
+                    required property int index
+                    readonly property bool selected: index === tabs.current
+                    width: tabs.slot
+                    height: tabs.height - 8
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: height / 2
+                        color: !seg.selected && segHit.containsMouse ? DrawerTheme.cardHover : "transparent"
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+                    BoussoleText {
+                        anchors.centerIn: parent
+                        width: parent.width - 8
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.NoWrap
+                        elide: Text.ElideRight
+                        text: seg.modelData.label
+                        color: seg.selected ? DrawerTheme.onInk : DrawerTheme.secondary
+                        Behavior on color { ColorAnimation { duration: 160 } }
+                        font.pixelSize: 12
+                        font.weight: seg.selected ? Font.Bold : Font.DemiBold
+                    }
+                    MouseArea {
+                        id: segHit
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.b.show(seg.modelData.id)
+                    }
+                }
             }
         }
     }

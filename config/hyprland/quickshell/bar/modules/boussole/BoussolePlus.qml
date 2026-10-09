@@ -28,15 +28,36 @@ Column {
         property string title: ""
         property string detail: ""
         property string target: ""
+        // A Lucide glyph, in a small tile ahead of the title.
+        property string icon: ""
         width: root.width
-        height: entryCol.implicitHeight + 24
+        height: Math.max(56, entryCol.implicitHeight + 24)
         radius: 14
         color: entryHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
+        Behavior on color { ColorAnimation { duration: 120 } }
+        scale: entryHit.pressed ? 0.98 : 1
+        Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+        Rectangle {
+            id: entryIcon
+            x: 12
+            anchors.verticalCenter: parent.verticalCenter
+            width: 34
+            height: 34
+            radius: 10
+            color: DrawerTheme.cardRaised
+            Text {
+                anchors.centerIn: parent
+                text: entry.icon
+                color: DrawerTheme.primary
+                font.family: Fonts.iconLucide
+                font.pixelSize: 17
+            }
+        }
         Column {
             id: entryCol
-            x: 14
-            y: 12
-            width: parent.width - 48
+            x: 58
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 58 - 34
             spacing: 2
             BoussoleText { width: parent.width; text: entry.title; font.weight: Font.Bold }
             BoussoleText { width: parent.width; text: entry.detail; color: DrawerTheme.secondary; font.pixelSize: 13; visible: text !== "" }
@@ -64,26 +85,23 @@ Column {
         width: parent.width
         spacing: 10
 
-        BoussoleText {
-            width: parent.width
-            text: root.b.tr("Everything that can be set, without editing a file.", "Tout ce qui se règle, sans éditer de fichier.")
-            color: DrawerTheme.secondary
-            font.pixelSize: 13
-        }
         Section { text: root.b.tr("What sets the priorities", "Ce qui fixe les priorités") }
         Entry {
             target: "deadlines"
+            icon: "\ue234"
             title: root.b.tr("Exams and hand-ins", "Examens et rendus")
             detail: root.upcoming.length + root.b.tr(" ahead", " à venir")
                     + (root.upcoming.length ? root.b.tr(" · next: ", " · prochain : ") + root.upcoming[0].title : "")
         }
         Entry {
             target: "projects"
+            icon: "\ue4c6"
             title: root.b.tr("Projects", "Projets")
             detail: root.b.projects.length === 0 ? root.b.tr("none", "aucun") : root.b.projects.map(p => p.name).join(" · ")
         }
         Entry {
             target: "campaign"
+            icon: "\ue062"
             title: root.b.tr("Campaigns", "Campagnes")
             detail: root.b.campaigns.length === 0 ? root.b.tr("none", "aucune")
                     : root.b.campaigns.map(c => c.name + (c.closed ? root.b.tr(" (closed)", " (close)") : " · " + c.rows.length)).join(" · ")
@@ -91,17 +109,20 @@ Column {
         Section { text: root.b.tr("What describes your life", "Ce qui décrit ta vie") }
         Entry {
             target: "subjects"
+            icon: "\ue05f"
             title: root.b.tr("Subjects", "Matières")
             detail: (root.b.settings.domains || []).filter(d => !d.archived).map(d => d.id).join(" · ")
         }
         Entry {
             target: "calendars"
+            icon: "\ue2b9"
             title: root.b.tr("Calendars", "Calendriers")
             detail: root.b.settings.calendar_url ? root.b.tr("timetable set · personal agenda", "emploi du temps relié · agenda perso")
                                                  : root.b.tr("no timetable yet", "pas encore d'emploi du temps")
         }
         Entry {
             target: "rhythm"
+            icon: "\ue304"
             title: root.b.tr("Rhythm and periods", "Rythme et périodes")
             detail: root.b.tr("typical week · holidays · status", "semaine type · vacances · statut")
         }
@@ -111,10 +132,26 @@ Column {
             height: 56
             radius: 14
             color: rerunHit.containsMouse ? DrawerTheme.cardHover : "transparent"
+            Behavior on color { ColorAnimation { duration: 120 } }
             border.width: 1
             border.color: DrawerTheme.faint
+            Rectangle {
+                x: 12
+                anchors.verticalCenter: parent.verticalCenter
+                width: 34
+                height: 34
+                radius: 10
+                color: DrawerTheme.cardRaised
+                Text {
+                    anchors.centerIn: parent
+                    text: "\ue0d1"
+                    color: DrawerTheme.primary
+                    font.family: Fonts.iconLucide
+                    font.pixelSize: 17
+                }
+            }
             Column {
-                x: 14
+                x: 58
                 anchors.verticalCenter: parent.verticalCenter
                 BoussoleText { text: root.b.tr("Run the first launch again", "Refaire le premier lancement"); font.weight: Font.Bold }
                 BoussoleText { text: root.b.tr("nothing is erased, every step is pre-filled", "rien n'est effacé, chaque étape est préremplie"); color: DrawerTheme.secondary; font.pixelSize: 13 }
@@ -129,6 +166,7 @@ Column {
         }
         Entry {
             target: "settings"
+            icon: "\ue154"
             title: root.b.tr("Settings", "Réglages")
             detail: root.b.tr("language, objective, game lock, course folder", "langue, objectif, verrouillage, dossier de cours")
         }

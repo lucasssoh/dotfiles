@@ -77,12 +77,30 @@ Singleton {
 
     property var files: null
     property var progress: []
+    // The programme, under Progress: "" (the subjects), "weeks", "whatif".
+    property string progressPage: ""
+    property var weeks: []
+    // The margins under a trial of settings ("what if"), nothing kept.
+    property var whatIf: []
+    readonly property var programme: root.status.programme || ({})
+    function openProgramme(sub) {
+        if (root.page !== "progress") root.show("progress");
+        root.progressPage = sub || "";
+        if (sub === "weeks") root.request({ cmd: "weeks-view" }, (r) => root.weeks = r.data || []);
+    }
+    function tryPatch(patch) {
+        root.request({ cmd: "what-if", patch: patch }, (r) => root.whatIf = r.data || []);
+    }
 
     function show(page) {
         root.page = page;
         if (page === "week") root.request({ cmd: "week", days: 7 }, (r) => root.week = r.data || []);
         if (page === "files") root.refreshFiles();
-        if (page === "progress") root.request({ cmd: "progress-view" }, (r) => root.progress = r.data || []);
+        if (page === "progress") {
+            root.progressPage = "";
+            root.request({ cmd: "progress-view" }, (r) => root.progress = r.data || []);
+            root.request({ cmd: "settings" }, (r) => root.settings = r.data || ({}));
+        }
         if (page === "plus") {
             root.plusPage = "";
             root.loadPlus();
@@ -243,8 +261,8 @@ Singleton {
     readonly property real phaseProgress: root.onBreak ? ((root.effectiveSecs % 1800) - 1500) / 300 : (root.effectiveSecs % 1800) / 1500
 
     Timer {
-        // Ten seconds is plenty for a ring and a minute count.
-        interval: 10000
+        // Every second: the bar and the session panel show seconds.
+        interval: 1000
         repeat: true
         running: root.tracking !== null && root.tracking.counting
         triggeredOnStart: true
@@ -263,10 +281,18 @@ Singleton {
         return start - root.nowMs < 16 * 60000 && root.nowMs < end;
     }
     Timer {
-        interval: 30000
+        interval: 1000
         repeat: true
         running: root.daemonConnected && root.nextClose && root.tracking === null
         onTriggered: root.nowMs = Date.now()
+    }
+
+    // "1:04:12", "34:12", "0:45": a count of seconds as the bar shows it.
+    function clock(secs) {
+        const s = Math.max(0, Math.floor(secs));
+        const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, r = s % 60;
+        const two = (n) => ("0" + n).slice(-2);
+        return h > 0 ? h + ":" + two(m) + ":" + two(r) : m + ":" + two(r);
     }
 
     // ---- what the bar sees, during a session ----------------------------
@@ -376,8 +402,17 @@ Singleton {
     // A "not tonight" said by mistake: the session comes back.
     function unskip(session) { root._send({ cmd: "unskip", session: session }); }
     // "I have time": a session right away; `cb` gets the reply.
-    function freeTime(minutes, cb) { root.request({ cmd: "free", minutes: minutes }, cb); }
+    // `subject`: "" for the most useful work, else that subject's next task.
+    function freeTime(minutes, cb, subject) { root.request({ cmd: "free", minutes: minutes, subject: subject || "" }, cb); }
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
+    // Today's free time (nothing planned now): what would help most. Shown
+    // only in the drawer, never on its own.
+    readonly property var nowFree: root.status.now_free || null
+    // One of its suggestions, or a subject's next task, now.
+    function startNow(task, minutes, school, cb) {
+        root.request({ cmd: "start-now", task: task, minutes: minutes, place: school ? "school" : "home" }, cb);
+    }
+
     // The session's sheet closed: open it again, or go on on paper.
     function reopen() { root._send({ cmd: "reopen" }); }
     function onPaper() { root._send({ cmd: "paper" }); }

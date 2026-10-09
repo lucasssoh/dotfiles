@@ -28,7 +28,7 @@ Rectangle {
         d.setHours(+p[0], +p[1], 0, 0);
         return d.getTime();
     }
-    readonly property int minutesLeft: root.current ? Math.max(0, Math.round((root.at(root.current.end) - root.b.nowMs) / 60000)) : 0
+    readonly property int secondsLeft: root.current ? Math.max(0, Math.round((root.at(root.current.end) - root.b.nowMs) / 1000)) : 0
     readonly property real spent: {
         if (!root.current) return 0;
         const a = root.at(root.current.start), z = root.at(root.current.end);
@@ -43,9 +43,9 @@ Rectangle {
     color: DrawerTheme.panelTop
 
     // The bar's clock only ticks while time counts: this one ticks for the
-    // minutes left, which go down paused or not.
+    // time left, which goes down paused or not, by the second.
     Timer {
-        interval: 30000
+        interval: 1000
         repeat: true
         running: true
         onTriggered: root.b.nowMs = Date.now()
@@ -95,7 +95,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 BoussoleText {
-                    text: root.paused ? root.b.tr("Paused", "En pause") : root.minutesLeft + " min"
+                    text: root.paused ? root.b.tr("Paused", "En pause") : root.b.clock(root.secondsLeft)
                     font.pixelSize: 40
                     font.weight: Font.Bold
                     font.features: { "tnum": 1 }

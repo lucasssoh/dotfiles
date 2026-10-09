@@ -461,6 +461,7 @@ ShellRoot {
             // "plus/calendars": a page of Plus.
             if (page === "setup") BoussoleState.openSetup();
             else if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
+            else if (page.startsWith("progress/")) BoussoleState.openProgramme(page.slice(9));
             else BoussoleState.show(page);
         }
         // Poked by hypr/scripts/agenda.py after each add/delete.

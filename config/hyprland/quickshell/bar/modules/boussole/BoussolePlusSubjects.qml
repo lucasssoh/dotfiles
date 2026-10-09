@@ -101,6 +101,50 @@ Column {
                         on: dom.d.spaced === true
                         onClicked: root.save(dom.d.id, d => d.spaced = !d.spaced)
                     }
+                }
+                // How fast its sheets go, over the planner's estimate
+                // (the setting's pace.domain_factor): what was guessed, until
+                // closed sessions measure it.
+                Flow {
+                    width: parent.width
+                    spacing: 6
+                    readonly property real factor: ((root.b.settings.pace || {}).domain_factor || {})[dom.d.id] || 0
+                    BoussoleText {
+                        text: root.b.tr("Sheets", "Fiches")
+                        color: DrawerTheme.secondary
+                        font.pixelSize: 12
+                        height: 32
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    Repeater {
+                        model: [
+                            { f: 0.5, label: root.b.tr("quick", "rapides") },
+                            { f: 0, label: root.b.tr("as estimated", "comme estimé") },
+                            { f: 1.5, label: root.b.tr("long", "longues") }
+                        ]
+                        delegate: BoussoleChip {
+                            required property var modelData
+                            text: modelData.label
+                            on: parent.factor === modelData.f
+                            onClicked: {
+                                const patch = { pace: { domain_factor: {} } };
+                                patch.pace.domain_factor[dom.d.id] = modelData.f === 0 ? null : modelData.f;
+                                root.b.setSettings(patch);
+                            }
+                        }
+                    }
+                }
+                Flow {
+                    width: parent.width
+                    spacing: 6
+                    // A course subject: sheets are lessons, read and
+                    // recalled; the exercises live in the exercise files,
+                    // tutorials and exam subjects.
+                    BoussoleChip {
+                        text: root.b.tr("Lessons: sheets read only", "Cours : fiches lues seulement")
+                        on: dom.d.lessons === true
+                        onClicked: root.save(dom.d.id, d => d.lessons = !d.lessons)
+                    }
                     BoussoleChip {
                         text: dom.d.archived ? root.b.tr("Archived · restore", "Archivée · rétablir") : root.b.tr("Archive", "Archiver")
                         onClicked: root.save(dom.d.id, d => d.archived = !d.archived)

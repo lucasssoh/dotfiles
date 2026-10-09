@@ -31,6 +31,13 @@ Item {
         const at = new Date(+p[0], +p[1] - 1, +p[2], +hm[0], +hm[1]);
         return Math.round((at.getTime() - root.b.nowMs) / 60000);
     }
+    readonly property int secondsToNext: {
+        const n = root.b.next;
+        if (!n) return -1;
+        const p = n.date.split("-");
+        const hm = n.start.split(":");
+        return Math.round((new Date(+p[0], +p[1] - 1, +p[2], +hm[0], +hm[1]).getTime() - root.b.nowMs) / 1000);
+    }
     readonly property bool nextToday: root.b.next !== null && root.b.next.date === Qt.formatDate(new Date(root.b.nowMs), "yyyy-MM-dd")
 
     // What to say, most pressing first.
@@ -55,19 +62,18 @@ Item {
 
     readonly property string label: {
         const b = root.b;
-        const mm = (s) => Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
         switch (root.mode) {
         case "game": return b.tr("Session paused · game open", "Séance en pause · jeu ouvert");
         case "paused": return b.tr("Session paused", "Séance en pause");
-        case "break": return b.tr("Break · ", "Pause · ") + mm(b.phaseLeft);
+        case "break": return b.tr("Break · ", "Pause · ") + b.clock(b.phaseLeft);
         case "session": {
             const doc = root.t.doc;
-            return Math.ceil(b.phaseLeft / 60) + " min" + (doc ? "" : b.tr(" · on paper", " · sur papier"));
+            return b.clock(b.phaseLeft) + (doc ? "" : b.tr(" · on paper", " · sur papier"));
         }
         case "declare": return b.declare.length + b.tr(" to declare", " à déclarer");
         case "gap": return b.tr("Free ", "Creux ") + b.gap.start + "-" + b.gap.end + (b.gap.parts.length ? " · " + root.domainOf(b.gap) + " ?" : "");
         case "now": return root.nextLabel + b.tr(" · now", " · maintenant");
-        case "soon": return root.nextLabel + b.tr(" in ", " dans ") + Math.max(1, root.minutesToNext) + " min";
+        case "soon": return root.nextLabel + b.tr(" in ", " dans ") + b.clock(root.secondsToNext);
         case "setup": return b.tr("Set up", "À régler");
         case "pause": return b.tr("Paused", "En pause");
         case "off":
@@ -147,6 +153,8 @@ Item {
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
+            // Tabular digits: the seconds tick without the pill shifting.
+            font.features: { "tnum": 1 }
         }
 
         // Waiting to be declared: a red dot.

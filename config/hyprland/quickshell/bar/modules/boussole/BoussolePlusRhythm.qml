@@ -183,6 +183,7 @@ Column {
                 { id: "normal", label: root.b.tr("As usual", "Comme d'habitude") },
                 { id: "free", label: root.b.tr("Free", "Libre") },
                 { id: "morning-block", label: root.b.tr("Morning block", "Bloc le matin") },
+                { id: "study", label: root.b.tr("Study week", "Révisions") },
                 { id: "bonus-only", label: root.b.tr("Bonus only", "Bonus seulement") },
                 { id: "pause", label: root.b.tr("Pause", "Pause") }
             ]

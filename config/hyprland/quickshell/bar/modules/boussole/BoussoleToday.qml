@@ -26,6 +26,8 @@ Column {
     // Said "not tonight" today and not over yet: they can come back.
     readonly property var skipped: root.b.today.filter(r => r.state === "skipped" && !r.past)
     property string freeNote: ""
+    // "I have time" for: "" (the most useful) or a subject.
+    property string freeSubject: ""
 
     BoussoleText {
         visible: !root.b.daemonConnected
@@ -56,6 +58,229 @@ Column {
                 font.pixelSize: 13
             }
             BoussolePill { primary: true; text: root.b.tr("Start", "Commencer"); onClicked: root.b.openSetup() }
+        }
+    }
+
+    // ---- nothing planned now: what would help most ------------------------
+    // Only here, when the drawer is opened: never on its own ("c'est moi qui
+    // décide d'ouvrir boussole"). In a free period at school it runs to the
+    // period's end; an evening with nothing on, each suggestion its own length.
+    Rectangle {
+        id: freeCard
+        readonly property var f: root.b.nowFree
+        visible: root.b.daemonConnected && freeCard.f !== null && !root.active
+        width: parent.width
+        height: freeCol.implicitHeight + 32
+        radius: 20
+        color: DrawerTheme.cardDeep
+        border.width: 1
+        border.color: freeCard.f && freeCard.f.school ? DrawerTheme.faint : DrawerTheme.accentStrong
+        // The pick: a suggestion's task (its index) or a subject's.
+        property int rec: 0
+        property string subject: ""
+        onFChanged: if (!freeCard.f) { freeCard.rec = 0; freeCard.subject = ""; }
+        readonly property var recs: freeCard.f ? freeCard.f.recs : []
+        readonly property var pickedSubject: freeCard.f && freeCard.subject !== "" ? freeCard.f.subjects.find(x => x.domain === freeCard.subject) : null
+        readonly property var chosen: freeCard.pickedSubject ? freeCard.pickedSubject : (freeCard.recs[freeCard.rec] || null)
+        property string note: ""
+
+        function hm(m) {
+            return m >= 60 ? Math.floor(m / 60) + " h " + ("0" + (m % 60)).slice(-2) : m + " min";
+        }
+
+        Column {
+            id: freeCol
+            x: 16
+            y: 16
+            width: parent.width - 32
+            spacing: 10
+
+            Column {
+                width: parent.width
+                spacing: 2
+                BoussoleText {
+                    text: freeCard.f ? freeCard.f.label : ""
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: 1
+                    font.capitalization: Font.AllUppercase
+                }
+                BoussoleText {
+                    text: freeCard.f ? (freeCard.f.school
+                                        ? freeCard.hm(freeCard.f.minutes) + root.b.tr(" ahead", " devant toi")
+                                        : root.b.tr("Nothing planned", "Rien de prévu"))
+                                     : ""
+                    font.pixelSize: 20
+                    font.weight: Font.Bold
+                    font.features: { "tnum": 1 }
+                }
+                BoussoleText {
+                    width: parent.width
+                    text: freeCard.f ? freeCard.f.note : ""
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 13
+                }
+            }
+
+            Repeater {
+                model: freeCard.recs
+                delegate: Rectangle {
+                    id: rec
+                    required property var modelData
+                    required property int index
+                    readonly property bool on: freeCard.subject === "" && freeCard.rec === rec.index
+                    width: freeCol.width
+                    height: Math.max(52, recCol.implicitHeight + 20)
+                    radius: 14
+                    color: rec.on ? DrawerTheme.cardHover : DrawerTheme.card
+                    border.width: 1
+                    border.color: rec.on ? DrawerTheme.primary : "transparent"
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    scale: recHit.pressed ? 0.98 : 1
+                    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                    Column {
+                        id: recCol
+                        x: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 24 - why.width - 8
+                        spacing: 1
+                        BoussoleText { width: parent.width; text: rec.modelData.title; font.pixelSize: 14; font.weight: Font.Bold }
+                        BoussoleText { width: parent.width; text: rec.modelData.detail; color: DrawerTheme.secondary; font.pixelSize: 12 }
+                    }
+                    Rectangle {
+                        id: why
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 22
+                        width: whyText.implicitWidth + 16
+                        radius: 11
+                        color: rec.modelData.hot ? "#ff9f5a" : "transparent"
+                        border.width: rec.modelData.hot ? 0 : 1
+                        border.color: DrawerTheme.faint
+                        BoussoleText {
+                            id: whyText
+                            anchors.centerIn: parent
+                            text: rec.modelData.why
+                            color: rec.modelData.hot ? "#1a0d02" : DrawerTheme.secondary
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                        }
+                    }
+                    MouseArea {
+                        id: recHit
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: { freeCard.subject = ""; freeCard.rec = rec.index; }
+                    }
+                }
+            }
+
+            Flow {
+                width: parent.width
+                spacing: 6
+                BoussoleText {
+                    text: root.b.tr("Or", "Ou")
+                    height: 32
+                    verticalAlignment: Text.AlignVCenter
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 13
+                }
+                Repeater {
+                    model: freeCard.f ? freeCard.f.subjects : []
+                    delegate: BoussoleChip {
+                        required property var modelData
+                        text: modelData.label
+                        on: freeCard.subject === modelData.domain
+                        onClicked: freeCard.subject = freeCard.subject === modelData.domain ? "" : modelData.domain
+                    }
+                }
+            }
+            BoussoleText {
+                visible: freeCard.pickedSubject !== null
+                width: parent.width
+                text: freeCard.pickedSubject ? freeCard.pickedSubject.line : ""
+                color: DrawerTheme.cream2
+                font.pixelSize: 13
+            }
+
+            BoussolePill {
+                visible: freeCard.chosen !== null
+                width: parent.width
+                primary: true
+                text: {
+                    const c = freeCard.chosen;
+                    if (!c || !freeCard.f) return "";
+                    const what = (c.title || c.line || "").split(" · ")[0];
+                    return root.b.tr("Start · ", "Commencer · ") + what
+                        + (freeCard.f.school ? root.b.tr(", until ", ", jusqu'à ") + freeCard.f.until : " · " + freeCard.hm(c.minutes));
+                }
+                onClicked: {
+                    const c = freeCard.chosen, f = freeCard.f;
+                    root.b.startNow(c.task, f.school ? f.minutes : c.minutes, f.school, r => freeCard.note = r.ok ? "" : (r.text || ""));
+                }
+            }
+            BoussoleText {
+                visible: freeCard.note !== ""
+                width: parent.width
+                text: freeCard.note
+                color: DrawerTheme.secondary
+                font.pixelSize: 12
+            }
+        }
+    }
+
+    // ---- the programme slipping: one line, the most pressing ---------------
+    Rectangle {
+        id: slip
+        readonly property var short: (root.b.programme || {}).short || null
+        visible: root.b.daemonConnected && slip.short !== null
+        width: parent.width
+        height: slipCol.implicitHeight + 28
+        radius: 18
+        color: DrawerTheme.card
+        border.width: 1
+        border.color: "#ff9f5a"
+        Column {
+            id: slipCol
+            x: 16
+            y: 14
+            width: parent.width - 32
+            spacing: 8
+            BoussoleText {
+                width: parent.width
+                text: slip.short
+                      ? (slip.short.domain === "RESEAUX" ? root.b.tr("Networks", "Réseaux") : slip.short.domain)
+                        + root.b.tr(" does not fit before ", " ne tient pas avant le ") + slip.short.date
+                      : ""
+                font.weight: Font.Bold
+            }
+            BoussoleText {
+                width: parent.width
+                text: {
+                    if (!slip.short) return "";
+                    const undated = ((root.b.programme || {}).undated || []).map(d => d === "RESEAUX" ? root.b.tr("Networks", "Réseaux") : d);
+                    let t = root.b.tr((-slip.short.margin) + " sessions short.", "Il manque " + (-slip.short.margin) + " séances.");
+                    if (undated.length) t += " " + undated.join(root.b.tr(" and ", " et ")) + root.b.tr(" have no exam date.", (undated.length > 1 ? " n'ont pas" : " n'a pas") + " de date d'examen.");
+                    return t;
+                }
+                color: DrawerTheme.secondary
+                font.pixelSize: 13
+            }
+            Row {
+                spacing: 8
+                BoussolePill {
+                    primary: true
+                    text: root.b.tr("See the levers", "Voir les leviers")
+                    onClicked: root.b.openProgramme("whatif")
+                }
+                BoussolePill {
+                    text: root.b.tr("The programme", "Le programme")
+                    onClicked: root.b.openProgramme("")
+                }
+            }
         }
     }
 
@@ -263,8 +488,9 @@ Column {
     }
 
     // ---- I have time ------------------------------------------------------
+    // Not while the free-time card above offers the same, better aimed.
     Column {
-        visible: root.b.daemonConnected && !root.b.setupNeeded && !root.active
+        visible: root.b.daemonConnected && !root.b.setupNeeded && !root.active && !freeCard.visible
         width: parent.width
         spacing: 8
         BoussoleText {
@@ -275,15 +501,30 @@ Column {
             font.letterSpacing: 1
             font.capitalization: Font.AllUppercase
         }
+        // For what: the most useful work, or one subject's next task.
+        Flow {
+            width: parent.width
+            spacing: 6
+            Repeater {
+                model: [""].concat(root.b.status.subjects || [])
+                delegate: BoussoleChip {
+                    required property var modelData
+                    text: modelData === "" ? root.b.tr("Most useful", "Au plus utile") : modelData
+                    on: root.freeSubject === modelData
+                    onClicked: root.freeSubject = modelData
+                }
+            }
+        }
+        // How long: starts it.
         Flow {
             width: parent.width
             spacing: 8
             Repeater {
                 model: [30, 45, 60, 90]
-                delegate: BoussoleChip {
+                delegate: BoussolePill {
                     required property var modelData
                     text: modelData < 60 ? modelData + " min" : Math.floor(modelData / 60) + " h" + (modelData % 60 ? " " + (modelData % 60) : "")
-                    onClicked: root.b.freeTime(modelData, r => root.freeNote = r.text || "")
+                    onClicked: root.b.freeTime(modelData, r => root.freeNote = r.text || "", root.freeSubject)
                 }
             }
         }
