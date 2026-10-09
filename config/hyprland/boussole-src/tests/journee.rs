@@ -150,6 +150,15 @@ fn periods_pause_and_work_study() {
     );
     assert_eq!(slots(&fx, w1.add(13)).len(), 2, "Sunday keeps its blocks");
 
+    // A study week: a weekday gets Sunday's two blocks and its evening.
+    fx.settings.periods[0].rule = PeriodRule::Study;
+    fx.campaigns.clear();
+    let day = slots(&fx, w1.add(1));
+    let blocks = day.iter().filter(|s| s.0 == SlotKind::Block).count();
+    assert_eq!(blocks, 2, "{day:?}");
+    assert!(day.iter().any(|s| s.0 == SlotKind::Evening), "{day:?}");
+    fx.settings.periods[0].rule = PeriodRule::Free;
+
     // Manual pause.
     fx.settings.paused_until = Some(MON.add(1));
     assert_eq!(journee::day(&fx.input(at(MON, "06:00"), None), MON).mode, Mode::Paused);

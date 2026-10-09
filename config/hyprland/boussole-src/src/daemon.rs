@@ -948,9 +948,13 @@ impl Service {
                 "age_minutes": self.ade.as_ref().map(|s| (now_secs() - s.fetched) / 60),
                 "error": self.ade_error,
             },
+            // The subjects "I have time" can be given.
+            "subjects": self.store.settings.domains.iter().filter(|d| !d.archived).map(|d| d.id.clone()).collect::<Vec<_>>(),
             "undecided": self.catalogue.pending(&st.progress.files, &self.store.settings.domains).len(),
             "suivi": self.suivi_status(),
             "focus": self.focus_status(),
+            "programme": self.programme_alert(),
+            "now_free": self.now_free(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
             "gate": self.store.settings.gate,
@@ -1088,10 +1092,25 @@ impl Service {
                     None => ((if fr { "Rien à reprendre." } else { "Nothing to bring back." }).into(), Value::Null),
                 }
             }
+            "start-now" => {
+                // A suggestion of Today's free time: that task, now, for the time there is.
+                let task = s("task").ok_or("task")?;
+                let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(45) as i32;
+                let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
+                let (text, id) = self.free_task(minutes, place, &task)?;
+                if let Some(id) = &id {
+                    self.start(id).map_err(io)?;
+                    self.replan();
+                }
+                (text, json!({ "session": id }))
+            }
             "free" => {
                 let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(60) as i32;
                 let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
-                let (text, id) = self.free_time(minutes, place).map_err(io)?;
+                let (text, id) = match s("subject").filter(|d| !d.is_empty()) {
+                    Some(d) => self.free_time_for(minutes, place, &d)?,
+                    None => self.free_time(minutes, place).map_err(io)?,
+                };
                 (text, json!({ "session": id }))
             }
             "pause-session" => {
@@ -1156,6 +1175,23 @@ impl Service {
                 (n.to_string(), json!(n))
             }
             "progress-view" => (String::new(), self.progress_view()),
+            "weeks-view" => (String::new(), self.weeks_view()),
+            "what-if" => {
+                // The margins with these settings, nothing kept.
+                let patch = cmd.get("patch").cloned().ok_or("patch")?;
+                let mut v = serde_json::to_value(&self.store.settings).unwrap();
+                merge(&mut v, &patch);
+                let trial: Settings = serde_json::from_value(v).map_err(|e| e.to_string())?;
+                let kept = std::mem::replace(&mut self.store.settings, trial);
+                let plan = self.compute(&self.store.state, &[], &[], Some(&self.plan));
+                self.store.settings = kept;
+                let margins: Vec<Value> = plan
+                    .margins
+                    .iter()
+                    .map(|m| json!({ "domain": m.domain, "title": m.title, "date": i18n::date(m.date, lang), "sessions": m.sessions }))
+                    .collect();
+                (String::new(), json!(margins))
+            }
             "closing" => {
                 let x = session_arg(self)?;
                 let v = self.closing(&x.id).ok_or("closing")?;
@@ -1516,6 +1552,63 @@ impl Service {
 
     /// "I have time": a session right away. When one is already due now, that
     /// one; else time found on the spot, filled like any slot.
+    /// "I have time" for one subject: its next planned task, now, in its
+    /// order (the plan's), pinned into the time found.
+    fn free_time_for(&mut self, minutes: i32, place: Place, subject: &str) -> Result<(String, Option<String>), String> {
+        let fr = self.fr();
+        let missing = if fr { format!("Rien de prévu en {subject} pour l'instant.") } else { format!("Nothing planned in {subject} for now.") };
+        self.free_time_with(minutes, place, |p| p.domain.as_deref() == Some(subject), missing)
+    }
+
+    /// One task of the plan, now, in the time found ("Start" on a
+    /// suggestion of Today's free time).
+    pub(crate) fn free_task(&mut self, minutes: i32, place: Place, task: &str) -> Result<(String, Option<String>), String> {
+        let missing = (if self.fr() { "Cette tâche n'est plus au planning." } else { "That task is no longer planned." }).to_string();
+        self.free_time_with(minutes, place, |p| p.task == task, missing)
+    }
+
+    fn free_time_with(&mut self, minutes: i32, place: Place, pick: impl Fn(&crate::plan::Part) -> bool, missing: String) -> Result<(String, Option<String>), String> {
+        let fr = self.fr();
+        let lang = self.lang();
+        let now = self.now();
+        let st = &self.store.state;
+        let part = self
+            .plan
+            .sessions
+            .iter()
+            .filter(|s| Local::new(s.date, s.end) > now && !st.outcomes.contains_key(&s.id))
+            .flat_map(|s| s.parts.iter())
+            .find(|p| pick(p))
+            .cloned()
+            .ok_or(missing)?;
+        let subject = part.domain.clone().unwrap_or_default();
+        let extra = crate::journee::Extra { date: now.date, start: now.time.ceil(5), minutes: minutes.max(10), place };
+        let pin = Pin {
+            task: part.task.clone(),
+            date: now.date,
+            start: extra.start,
+            minutes: part.minutes.min(minutes.max(10)),
+            work: Some(part.work.clone()),
+            domain: part.domain.clone(),
+        };
+        self.store.record(Event::Extra { extra }, now).map_err(|e| e.to_string())?;
+        self.store.record(Event::Pin { pin }, now).map_err(|e| e.to_string())?;
+        self.replan();
+        let s = self.plan.sessions.iter().find(|s| s.date == now.date && s.parts.iter().any(|p| p.task == part.task) && s.end > now.time);
+        Ok(match s {
+            Some(s) => {
+                let what = format!("{subject} {}", i18n::work(&s.parts[0].work, lang));
+                let text = if fr {
+                    format!("{what} ({} min), maintenant, dans l'ordre du programme.", s.parts[0].minutes)
+                } else {
+                    format!("{what} ({} min), now, in the plan's order.", s.parts[0].minutes)
+                };
+                (text, Some(s.id.clone()))
+            }
+            None => ((if fr { "Pas de place pour ça maintenant." } else { "No room for it now." }).into(), None),
+        })
+    }
+
     fn free_time(&mut self, minutes: i32, place: Place) -> io::Result<(String, Option<String>)> {
         let fr = self.fr();
         let lang = self.lang();

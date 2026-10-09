@@ -528,6 +528,27 @@ impl Service {
         let today = self.now().date;
         let st = &self.store.state;
         let mut out = Vec::new();
+        // Hours the plan gives a subject before its exam (or in all, without one).
+        let hours = |domain: &str, until: Option<crate::time::Date>| -> f32 {
+            let m: i32 = self
+                .plan
+                .sessions
+                .iter()
+                .filter(|s| until.is_none_or(|u| s.date <= u))
+                .flat_map(|s| s.parts.iter())
+                .filter(|p| p.domain.as_deref() == Some(domain))
+                .map(|p| p.minutes)
+                .sum();
+            (m as f32 / 60.0 * 2.0).round() / 2.0
+        };
+        let exam_at = |domain: &str, date: crate::time::Date| {
+            self.timetable()
+                .1
+                .into_iter()
+                .chain(st.deadlines.iter().cloned())
+                .find(|x| x.domain.as_deref() == Some(domain) && x.at.date == date)
+                .map(|x| x.at.time)
+        };
         for d in self.store.settings.domains.iter().filter(|d| !d.archived) {
             let items: Vec<&crate::catalogue::Item> = self
                 .catalogue
@@ -536,7 +557,8 @@ impl Service {
                 .filter(|i| i.domain == d.id && st.progress.files.get(&i.id) == Some(&Inclusion::Planned))
                 .filter(|i| matches!(i.kind, ItemKind::Sheet | ItemKind::Synthesis | ItemKind::Map | ItemKind::TdExercise | ItemKind::Pdf | ItemKind::Notes))
                 .collect();
-            if items.is_empty() {
+            let exam = self.plan.margins.iter().filter(|m| m.domain.as_deref() == Some(&d.id) && m.date >= today).min_by_key(|m| m.date);
+            if items.is_empty() && exam.is_none() {
                 continue;
             }
             let prog = |i: &crate::catalogue::Item| st.progress.items.get(&i.id);
@@ -556,9 +578,12 @@ impl Service {
                     p.reviews_done.is_empty() && on.add(wait) <= today
                 }))
                 .count();
-            let exam = self.plan.margins.iter().filter(|m| m.domain.as_deref() == Some(&d.id)).min_by_key(|m| m.date);
             out.push(json!({
                 "domain": d.id,
+                "level": d.level,
+                "lessons": d.lessons,
+                "hours": hours(&d.id, exam.map(|m| m.date)),
+                "iso": exam.map(|m| m.date),
                 "studied": studied,
                 "total": items.len(),
                 "exercises_solo": ex_solo,
@@ -569,10 +594,205 @@ impl Service {
                     "date": i18n::date(m.date, lang),
                     "days": today.days_until(m.date),
                     "margin": m.sessions,
+                    "time": exam_at(&d.id, m.date),
                 })),
             }));
         }
+        // Exams first, the nearest first; then the subjects without one.
+        out.sort_by_key(|v| v["iso"].as_str().map(String::from).unwrap_or_else(|| "9999".into()));
         Value::Array(out)
+    }
+
+    /// Week by week up to the last exam: hours planned, the two subjects
+    /// taking most of them, the exams that week.
+    pub(crate) fn weeks_view(&self) -> Value {
+        let lang = self.lang();
+        let today = self.now().date;
+        let last = self.plan.margins.iter().map(|m| m.date).max().unwrap_or(today.add(42)).max(today.add(42));
+        let mut out = Vec::new();
+        let mut mon = today.monday();
+        while mon <= last {
+            let sun = mon.add(6);
+            let mut per: std::collections::BTreeMap<String, i32> = std::collections::BTreeMap::new();
+            for s in self.plan.sessions.iter().filter(|s| s.date >= mon && s.date <= sun) {
+                for p in &s.parts {
+                    *per.entry(p.domain.clone().unwrap_or_default()).or_default() += p.minutes;
+                }
+            }
+            let total: i32 = per.values().sum();
+            let mut top: Vec<(String, i32)> = per.into_iter().filter(|(k, m)| !k.is_empty() && *m >= 60).collect();
+            top.sort_by(|a, b| b.1.cmp(&a.1));
+            top.truncate(2);
+            let exams: Vec<String> = self
+                .plan
+                .margins
+                .iter()
+                .filter(|m| m.date >= mon && m.date <= sun)
+                .map(|m| format!("{} {}", m.domain.clone().unwrap_or_else(|| m.title.clone()), m.date.parts().2))
+                .collect();
+            out.push(json!({
+                "week": i18n::date(mon, lang),
+                "hours": (total as f32 / 60.0 * 2.0).round() / 2.0,
+                "top": top.iter().map(|(d, m)| json!({ "domain": d, "hours": (*m as f32 / 60.0 * 2.0).round() / 2.0 })).collect::<Vec<_>>(),
+                "exams": exams,
+            }));
+            mon = mon.add(7);
+        }
+        Value::Array(out)
+    }
+
+    /// Nothing planned right now and time ahead (a free period at school, an
+    /// evening with nothing on): what would help most, for Today's top when
+    /// the drawer is opened. Never shown on its own ("c'est moi qui décide
+    /// d'ouvrir boussole"); a session planned keeps its own alerts.
+    pub(crate) fn now_free(&self) -> Value {
+        use crate::model::Level;
+        let fr = self.lang() == Lang::Fr;
+        let lang = self.lang();
+        let now = self.now();
+        let st = &self.store.state;
+        let r = &self.store.settings.rhythm;
+        if self.plan.paused || self.suivi.tracker.is_some() {
+            return Value::Null;
+        }
+        let open = |id: &str| !st.outcomes.contains_key(id);
+        // A session due now or within half an hour: its alert speaks.
+        let soon = self
+            .plan
+            .sessions
+            .iter()
+            .filter(|x| x.date == now.date && x.counted && !x.parts.is_empty() && open(&x.id))
+            .filter(|x| x.end > now.time)
+            .map(|x| x.start)
+            .min();
+        if soon.is_some_and(|t| t.0 <= now.time.0 + 30) {
+            return Value::Null;
+        }
+        let gap = self.plan.offers.iter().find(|o| o.kind == SlotKind::Gap && o.date == now.date && o.start <= now.time && now.time < o.end);
+        let (end, school) = match gap {
+            Some(g) => (g.end, true),
+            None => {
+                let limit = soon.map_or(r.latest_end, |t| t.min(r.latest_end));
+                if now.time < r.morning_ready || now.time >= limit {
+                    return Value::Null;
+                }
+                (limit, false)
+            }
+        };
+        let span = end.0 - now.time.0;
+        if span < r.min_session {
+            return Value::Null;
+        }
+        // What is ahead in the plan, in its order.
+        let ahead: Vec<&crate::plan::Part> = self
+            .plan
+            .sessions
+            .iter()
+            .filter(|x| Local::new(x.date, x.end) > now && open(&x.id))
+            .flat_map(|x| x.parts.iter())
+            .collect();
+        let name = |d: &str| if d == "RESEAUX" { self.t("Networks", "Réseaux") } else { d.to_string() };
+        let mut recs: Vec<Value> = Vec::new();
+        let mut taken: Vec<String> = Vec::new();
+        let mut push = |p: &crate::plan::Part, title: String, why: String, hot: bool, recs: &mut Vec<Value>| {
+            if taken.contains(&p.task) || recs.len() >= 3 {
+                return;
+            }
+            taken.push(p.task.clone());
+            let minutes = p.minutes.min(span);
+            recs.push(json!({
+                "task": p.task,
+                "domain": p.domain,
+                "title": title,
+                "detail": format!("{minutes} min"),
+                "why": why,
+                "hot": hot,
+                "minutes": minutes,
+            }));
+        };
+        // 1. The nearest tutorial to prepare, today's first.
+        let mut prep: Vec<(&crate::plan::Part, Local)> = ahead
+            .iter()
+            .filter_map(|p| match &p.work {
+                Work::Prepare { at, .. } if at.date.0 - now.date.0 <= 3 && *at > now => Some((*p, *at)),
+                _ => None,
+            })
+            .collect();
+        prep.sort_by_key(|(_, at)| *at);
+        for (p, at) in prep.iter().take(2) {
+            let d = name(p.domain.as_deref().unwrap_or(""));
+            let today = at.date == now.date;
+            let when = if today { at.time.to_string() } else { i18n::date(at.date, lang) };
+            let title = if fr { format!("{d} · préparer le TD {}{when}", if today { "de " } else { "du " }) } else { format!("{d} · prepare the tutorial {}{when}", if today { "at " } else { "on " }) };
+            let weekday = i18n::date(at.date, lang).split(' ').next().unwrap_or("").trim_end_matches('.').to_string();
+            let why = if today {
+                self.t(&format!("tutorial at {}", at.time), &format!("TD à {}", at.time))
+            } else {
+                let full = |w: &str| match w { "lun" => "lundi", "mar" => "mardi", "mer" => "mercredi", "jeu" => "jeudi", "ven" => "vendredi", "sam" => "samedi", "dim" => "dimanche", x => x }.to_string();
+                if fr { format!("TD {}", full(&weekday)) } else { format!("tutorial {weekday}") }
+            };
+            push(p, title, why, false, &mut recs);
+        }
+        // 2. The subject furthest behind its exam.
+        if let Some(m) = self.plan.margins.iter().filter(|m| m.sessions < 0 && m.date >= now.date).min_by_key(|m| m.sessions) {
+            if let Some(p) = ahead.iter().find(|p| p.domain == m.domain && !matches!(p.work, Work::Prepare { .. })) {
+                let d = name(p.domain.as_deref().unwrap_or(""));
+                let why = if fr { format!("−{} séances", -m.sessions) } else { format!("−{} sessions", -m.sessions) };
+                push(p, format!("{d} · {}", i18n::work(&p.work, lang)), why, true, &mut recs);
+            }
+        }
+        // 3. A subject said to be behind.
+        for dom in self.store.settings.domains.iter().filter(|d| d.level == Level::Behind && !d.archived) {
+            if let Some(p) = ahead.iter().find(|p| p.domain.as_deref() == Some(&dom.id) && !matches!(p.work, Work::Prepare { .. })) {
+                push(p, format!("{} · {}", name(&dom.id), i18n::work(&p.work, lang)), self.t("behind", "en retard"), false, &mut recs);
+            }
+        }
+        // Each subject's next task, to pick one by hand.
+        let subjects: Vec<Value> = self
+            .store
+            .settings
+            .domains
+            .iter()
+            .filter(|d| !d.archived)
+            .filter_map(|d| {
+                let p = ahead.iter().find(|p| p.domain.as_deref() == Some(&d.id))?;
+                Some(json!({ "domain": d.id, "label": name(&d.id), "task": p.task, "line": format!("{} · {}", name(&d.id), i18n::work(&p.work, lang)), "minutes": p.minutes.min(span) }))
+            })
+            .collect();
+        let day = i18n::date(now.date, lang);
+        json!({
+            "school": school,
+            "until": end,
+            "minutes": span,
+            "label": if school { self.t(&format!("Free period at school · {day}"), &format!("Creux à l'école · {day}")) }
+                     else if now.time.0 >= 17 * 60 { self.t(&format!("Tonight · {day}"), &format!("Ce soir · {day}")) }
+                     else { self.t(&format!("Free · {day}"), &format!("Libre · {day}")) },
+            "note": if school { self.t(&format!("Until {end}. Paper and pen are enough."), &format!("Jusqu'à {end}. Papier et stylo suffisent.")) }
+                    else { self.t(&format!("If you want to get on anyway, what would help most until {end}:"), &format!("Si tu veux quand même avancer, ce qui servirait le plus d'ici {end} :")) },
+            "recs": recs,
+            "subjects": subjects,
+        })
+    }
+
+    /// The most pressing margin below zero, for a line under Today; and
+    /// how many subjects with something to study have no exam date.
+    pub(crate) fn programme_alert(&self) -> Value {
+        let lang = self.lang();
+        let today = self.now().date;
+        let short = self.plan.margins.iter().filter(|m| m.sessions < 0 && m.date >= today).min_by_key(|m| m.date);
+        let undated = self
+            .store
+            .settings
+            .domains
+            .iter()
+            .filter(|d| !d.archived && d.level.studies())
+            .filter(|d| !self.plan.margins.iter().any(|m| m.domain.as_deref() == Some(&d.id)))
+            .map(|d| d.id.clone())
+            .collect::<Vec<_>>();
+        json!({
+            "short": short.map(|m| json!({ "domain": m.domain, "title": m.title, "date": i18n::date(m.date, lang), "margin": m.sessions })),
+            "undated": undated,
+        })
     }
 
     /// The first run's suggestions: for each course folder, the timetable's

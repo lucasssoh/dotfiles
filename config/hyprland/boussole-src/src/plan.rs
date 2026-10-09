@@ -286,7 +286,9 @@ fn sheet_task(input: &Input, item: &Item, p: &ItemProgress, order: usize) -> Opt
         }
     }
     let per_ex = if item.kind == ItemKind::Synthesis { pace.exercise * 2 } else { pace.exercise };
-    for n in 1..=item.exercises {
+    // A lesson sheet in a course subject: read and recalled only.
+    let lessons = item.kind == ItemKind::Sheet && input.domains.iter().any(|d| d.id == item.domain && d.lessons);
+    for n in (1..=item.exercises).filter(|_| !lessons) {
         if !p.exercises.contains_key(&n) {
             units.push((Unit::Exercise(n), scaled(per_ex, f)));
         }

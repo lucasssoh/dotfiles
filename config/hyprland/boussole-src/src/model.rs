@@ -156,6 +156,9 @@ pub enum PeriodRule {
     Free,
     /// One study block each weekday morning.
     MorningBlock,
+    /// A week without courses kept for study: each weekday gets the two
+    /// blocks of a Sunday on top of its evening.
+    Study,
     BonusOnly,
     Pause,
 }
@@ -303,6 +306,10 @@ pub struct Domain {
     pub stars: BTreeMap<String, bool>,
     /// How the user rates themself in it.
     pub level: Level,
+    /// A course subject: its sheets are lessons, read and recalled, their
+    /// exercises left to the exercise files, tutorials and exam subjects
+    /// ("ce sont du cours, seuls les exercices prennent autant de temps").
+    pub lessons: bool,
 }
 
 /// Where the user stands in a domain, as they say it.

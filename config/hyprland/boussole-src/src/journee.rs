@@ -299,6 +299,13 @@ fn planned_day(input: &Input, date: Date) -> Day {
                 return out;
             }
             PeriodRule::MorningBlock => {}
+            // The blocks now; the evening and the rest follow as on any
+            // weekday without courses.
+            PeriodRule::Study if weekday => {
+                out.mode = Mode::Normal;
+                out.slots = blocks(true, SlotKind::Block, &mut busy);
+            }
+            PeriodRule::Study => out.mode = Mode::Normal,
         }
     }
 

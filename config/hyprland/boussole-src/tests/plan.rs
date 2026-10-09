@@ -486,6 +486,24 @@ fn a_domain_where_tutorials_are_enough_has_nothing_to_read() {
 }
 
 #[test]
+fn a_course_subject_reads_its_sheets_and_leaves_exercises_to_the_rest() {
+    let mut fx = Fx::new("lessons");
+    let minutes = |fx: &Fx| -> i32 {
+        let p = fx.plan(at(MON, "06:00"));
+        parts(&p)
+            .into_iter()
+            .filter(|(_, _, x)| x.domain.as_deref() == Some("ALGO") && matches!(x.work, Work::Study { .. }))
+            .map(|(_, _, x)| x.minutes)
+            .sum()
+    };
+    let before = minutes(&fx);
+    fx.domains.iter_mut().find(|d| d.id == "ALGO").unwrap().lessons = true;
+    let after = minutes(&fx);
+    assert!(after < before, "sheets without their exercises take less time: {before} → {after}");
+    assert!(after > 0, "the sheets are still read");
+}
+
+#[test]
 fn the_campaign_takes_daytime_before_the_evening() {
     let mut fx = Fx::new("campaign-day");
     fx.campaigns.push(Campaign {

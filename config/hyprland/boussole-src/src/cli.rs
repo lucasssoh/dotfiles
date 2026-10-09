@@ -17,7 +17,7 @@ boussole                       what comes next
 boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional)
 boussole start|skip|done [ID]  the next session, or the one given: one task each
 boussole unskip ID             bring back a session said not tonight
-boussole free MINUTES          I have time: a session right away
+boussole free MINUTES [SUBJECT] I have time: a session right away (that subject's next task)
 boussole later [ID] HH:MM      later today, at a precise time
 boussole draft [ID]            what Liseuse saw, pre-filling the close
 boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
@@ -41,8 +41,9 @@ boussole calendar URL          the timetable's iCal link
 boussole calendar groups [FAMILY=VALUE,…]   groups found in it, ticked with []
 boussole subject list | subject set ID NAME|NAME… | subject spaced ID on|off | subject archive ID
 boussole subject level ID behind|shaky|fine|td-only   where you stand: behind goes first
+boussole subject lessons ID on|off   a course subject: sheets read and recalled, exercises in exercise files and tutorials
 boussole rhythm | rhythm KEY VALUE        evening_target 21:00, evening_minutes 90…
-boussole period list | period add NAME FROM TO normal|free|morning-block|bonus-only|pause | period rm NAME
+boussole period list | period add NAME FROM TO normal|free|morning-block|study|bonus-only|pause | period rm NAME
 boussole objective pass|ranked|podium · lang en|fr · gate on|off
 boussole pause [UNTIL] | resume
 boussole refresh               download the timetable and rescan now
@@ -134,6 +135,7 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["start" | "skip" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
         ["unskip", id] => req(json!({ "cmd": "unskip", "session": id })),
         ["free", m] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")? })),
+        ["free", m, subject] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "subject": subject })),
         ["draft", ..] => req(json!({ "cmd": "draft", "session": sess(1) })),
         ["close", rest @ ..] => {
             let video = rest.iter().position(|a| *a == "--video").and_then(|i| rest.get(i + 1)).map(|v| *v == "yes");
@@ -293,6 +295,7 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             match (*verb, rest) {
                 ("set", names) => d["calendar_names"] = json!(names.join(" ").split('|').map(str::trim).filter(|n| !n.is_empty()).collect::<Vec<_>>()),
                 ("spaced", [on]) => d["spaced"] = json!(*on == "on"),
+                ("lessons", [on]) => d["lessons"] = json!(*on == "on"),
                 ("level", [l @ ("behind" | "shaky" | "fine" | "td-only")]) => d["level"] = json!(l),
                 ("archive", []) => d["archived"] = json!(true),
                 ("restore", []) => d["archived"] = json!(false),
