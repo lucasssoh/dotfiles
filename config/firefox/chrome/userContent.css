@@ -28,6 +28,7 @@
         --cc-muted: #636366;
         --cc-hair: rgba(242, 242, 247, 0.08);
         --cc-hair-2: rgba(242, 242, 247, 0.16);
+        --cc-grid-line: rgba(242, 242, 247, 0.13);
         --cc-font: "MiSans Latin", "Inter", sans-serif;
 
         /* liquid glass: a tinted, blurred pane, a bright rim catching the
@@ -64,6 +65,7 @@
             --cc-muted: #86868b;
             --cc-hair: rgba(28, 28, 30, 0.08);
             --cc-hair-2: rgba(28, 28, 30, 0.18);
+            --cc-grid-line: rgba(28, 28, 30, 0.11);
             --cc-glass-fill-top: rgba(255, 255, 255, 0.70);
             --cc-glass-fill-bottom: rgba(255, 255, 255, 0.42);
             --cc-glass-rim-strong: rgba(255, 255, 255, 0.95);
@@ -85,12 +87,31 @@
         font-family: var(--cc-font) !important;
     }
 
-    /* the shell colour only while no wallpaper or colour is picked in the
-       page's Customize panel; Firefox marks a chosen one on <body> */
-    html:not(:has(> body:is(.lightWallpaper, .darkWallpaper))),
-    body:not(.lightWallpaper, .darkWallpaper),
+    /* The page's own ground, only while no wallpaper or colour is picked
+       in its Customize panel (Firefox marks a chosen one on <body>): the
+       shell colour under a 32px grid, centred on the page, clear in the
+       middle under the logo and the search field and fading out towards
+       the edges and corners, like a sheet laid in the middle. */
+    /* on <html>, which spans the whole page: <body> is only as tall as its
+       in-flow content, and nearly everything here is fixed over it */
+    html:not(:has(> body:is(.lightWallpaper, .darkWallpaper))) {
+        --cc-grid: 32px;
+        background-color: var(--cc-shell) !important;
+        background-image:
+            radial-gradient(ellipse 75% 70% at 50% 45%, transparent 35%, var(--cc-shell) 100%),
+            linear-gradient(var(--cc-grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--cc-grid-line) 1px, transparent 1px) !important;
+        background-size: 100% 100%, var(--cc-grid) var(--cc-grid), var(--cc-grid) var(--cc-grid) !important;
+        background-position: center, center, center !important;
+        background-attachment: fixed !important;
+    }
+
+    body:not(.lightWallpaper, .darkWallpaper) {
+        background: transparent !important;
+    }
+
     body:not(.lightWallpaper, .darkWallpaper) :is(#root, .nova-outer-wrapper, .container) {
-        background: var(--cc-shell) !important;
+        background: transparent !important;
     }
 
     /* ---- the logo, alone in the middle --------------------------------- */
@@ -304,29 +325,11 @@
         background-size: contain !important;
     }
 
-    /* the name as a bubble above the icon, on hover only */
-    .top-site-outer .title {
-        position: absolute !important;
-        bottom: calc(100% + 12px) !important;
-        left: 50% !important;
-        translate: -50% 0;
-        width: max-content !important;
-        max-width: 200px;
-        padding: 4px 10px !important;
-        border-radius: 10px;
-        background: linear-gradient(var(--cc-glass-fill-top), var(--cc-glass-fill-bottom)), color-mix(in srgb, var(--cc-card) 60%, transparent);
-        backdrop-filter: blur(20px) saturate(180%);
-        box-shadow: inset 0 1px 0 var(--cc-glass-inner), inset 0 0 0 1px var(--cc-glass-rim-soft), 0 6px 18px rgba(0, 0, 0, 0.3);
-        color: var(--cc-primary) !important;
-        font-size: 12px !important;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.15s ease;
-    }
-
-    .top-site-outer:hover .title,
-    .top-site-outer:focus-within .title {
-        opacity: 1;
+    /* no name and no hover card on the dock: the icons speak for
+       themselves (the lists on the right show their titles again below) */
+    .top-site-outer .title,
+    .top-sites-hover-card {
+        display: none !important;
     }
 
     .top-site-outer .title .title-label {
@@ -348,6 +351,9 @@
        row, counted from the line, so neither needs to know the other's
        length. */
     .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) {
+        /* Firefox hides some tiles by itself when the window is narrow
+           (its nova-hide-for-* classes); the lists choose their own six */
+        display: block !important;
         position: fixed !important;
         right: 32px !important;
         width: 250px !important;

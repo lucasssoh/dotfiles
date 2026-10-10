@@ -16,7 +16,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Liseuse:** maths, lists and bold inside a hidden solution (a `<details>` block, "Corrigé") are rendered instead of shown as typed, and so is display maths written between two lines holding a single `$`. Notes already opened are rendered again the next time.
 
 ### Changed
-- **Firefox, new tab:** the Firefox logo in the middle with the search field just under it, your first six pinned shortcuts in a dock at the bottom with a + to add one, and on the right two short lists, your other pinned sites under Favorites, then your frequent sites; the search field, the dock and the lists are frosted glass. The shortcuts you pin are no longer reset at each launch.
+- **Firefox, new tab:** the Firefox logo in the middle with the search field just under it, your first six pinned shortcuts in a dock at the bottom with a + to add one, and on the right two short lists, your other pinned sites under Favorites, then your frequent sites; the search field, the dock and the lists are frosted glass, over a faint square grid that fades out towards the edges. The shortcuts you pin are no longer reset at each launch.
 - **Firefox, dark mode:** OLED black: the tab strip, the toolbars, the sidebar and the new-tab page are pure black, and only the address bar, menus and the selected tab lift off it. The selected tab catches a thin line of light along its top, in light mode too. Firefox's Light and Dark themes switch between the coucou light and dark; any other theme you pick, and any wallpaper chosen in the new tab's Customize panel, shows as it is.
 - **Firefox:** launching it now opens the new-tab page instead of Google's home page.
 
