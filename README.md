@@ -52,6 +52,7 @@ The bar's drawers, Veille, Roue, Prisme and the boot splash each have their own 
 | **Prisme** (`config/hyprland/prisme-src/`) | The wallpaper picker, along with `wallpaper-filter`, which fits each wallpaper to each screen |
 | **Balise** (`config/hyprland/balise-src/` and `quickshell/bar/modules/balise/`) | A Rust daemon that talks to NetworkManager and BlueZ, and the bar panel that drives it. It can share a saved network as a QR code. There's no VPN support |
 | **Manette** (`config/hyprland/manette-src/` and `quickshell/bar/modules/controller/`) | Game controllers: a small Rust daemon that notices them arrive, and the menu their Guide button opens, for Steam, Lutris and your apps |
+| **Sésame** (`config/hyprland/sesame-src/` and `quickshell/bar/modules/sesame/`) | Passwords asked for outside a terminal: a small Rust daemon, the session's polkit agent and ssh's and gpg's prompt, and the card that shows which command asks |
 | **Liseuse** (`config/liseuse/`) | A reading library on `Super + F`. It lists what's in `~/Livres` and the folders in `sources.conf`, and opens PDFs, EPUBs, comics and Markdown (maths and PlantUML included) in zathura. `liseuse convert` turns office documents into PDFs |
 | **cc-pkg-mng** (`crates/cc-pkg-mng/`, `units/`) | The package manager. It installs the parts you choose, only redoes what changed, and moves between releases |
 | **Boot** (`config/boot/`) | An optional Plymouth splash, and an optional greetd + tuigreet login screen with the console in JetBrains Mono |
