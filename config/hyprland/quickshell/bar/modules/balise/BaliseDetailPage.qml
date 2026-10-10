@@ -183,12 +183,12 @@ Item {
         }
     }
 
-    // Sized by whichever page layer holds it (BaliseHome.qml's own two
-    // sliding Loaders, at its fixed `pageHeight`) -- this page no longer
-    // drives the island's height, so there's no `Behavior on height`
-    // here any more either: an endpoint with a lot of metadata scrolls
-    // inside the box below instead of growing it.
-    implicitHeight: layout.implicitHeight
+    // The page's whole natural height, header included: BaliseHome.qml
+    // reads it to grow the island until this page shows whole (see its
+    // `pageHeight`). Past that box's ceiling, an endpoint with a lot of
+    // metadata scrolls inside the body below. No `Behavior on height`
+    // here: the island's own one animates the change.
+    implicitHeight: headerRow.height + body.anchors.topMargin + layout.implicitHeight
 
     // WiFi's title/status fall back to `details` (its own `ssid`/
     // `is_connected`) when `ap` isn't around -- the two are fetched

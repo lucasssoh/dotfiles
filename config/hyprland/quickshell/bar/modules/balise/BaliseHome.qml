@@ -223,8 +223,25 @@ Item {
     // so the height stays put when that page is unloaded during a slide.
     // The floor covers the first frames, before it has ever been
     // measured.
+    //
+    // Except off the lists: asked for ("tant que ce n'est pas un bloc
+    // avec liste, alors il vaut mieux avoir une taille suffisamment
+    // haute"). The three section lists keep the home's height and scroll
+    // (a list can always outgrow any box), but a detail page grows the
+    // island to show itself whole, the home height as its floor and
+    // `maxPageHeight` as its ceiling, past which it scrolls as before.
+    // The change rides the same `Behavior on height` as the drawer.
     property int homeContentHeight: 0
-    readonly property int pageHeight: Math.max(360, root.homeContentHeight + 40)
+    readonly property int basePageHeight: Math.max(360, root.homeContentHeight + 40)
+    readonly property int maxPageHeight: 640
+    readonly property Item _frontItem: (root._frontIsA ? loaderA : loaderB).item
+    readonly property int pageHeight: {
+        if (!root._shownPage.endsWith("-detail") || !root._frontItem)
+            return root.basePageHeight;
+        // + pageArea's 20px top and bottom margins.
+        const wanted = root._frontItem.implicitHeight + 40;
+        return Math.min(root.maxPageHeight, Math.max(root.basePageHeight, wanted));
+    }
     // + the handle's band: pageHeight measures the PAGE, the handle sits
     // above it, so the drawer has to grow by exactly that much.
     implicitHeight: root.pageHeight + handle.implicitHeight
@@ -894,9 +911,9 @@ Item {
     // growing out of the island) is reserved for opening and closing
     // Balise itself, and moving BETWEEN pages once inside is a
     // horizontal push instead, deeper pages entering from the right and
-    // leaving back to the right. Nothing here changes height any more:
-    // `pageHeight` is fixed (see its own comment), so a page change
-    // moves content sideways and never re-sizes the island.
+    // leaving back to the right. Only a detail page changes the height
+    // (see `pageHeight`'s own comment); every other page change moves
+    // content sideways and never re-sizes the island.
     //
     // Two Loaders rather than QtQuick.Controls' StackView: this bar
     // builds its own controls throughout (see NotificationCard.qml's
