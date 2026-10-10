@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Added
+- **Password card:** passwords asked for outside a terminal, by the system, ssh, git or gpg, are typed on one card in the middle of the screen, which shows the command that asks, for example `claude › git push origin master`. No key is kept in memory: every push waits for you.
+
+### Fixed
+- **System dialogs:** an action that needs administrator rights, outside a terminal, asks for your password again; it used to fail without asking.
+
 ## 1.5.0 (October 10 2026)
 
 ### Added

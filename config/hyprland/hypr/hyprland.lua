@@ -21,6 +21,11 @@ hl.env("XDG_CURRENT_DESKTOP",   "Hyprland")
 hl.env("XDG_SESSION_TYPE",      "wayland")
 hl.env("XDG_SESSION_DESKTOP",   "Hyprland")
 hl.env("MOZ_ENABLE_WAYLAND",    "1")
+-- ssh and git ask for passphrases on the bar's password card (Sésame,
+-- see systemd/sesame.service), with the command that asks, even from a
+-- terminal. No ssh-agent keeps the key: every push asks.
+hl.env("SSH_ASKPASS",           (os.getenv("HOME") or "") .. "/.local/bin/sesame-askpass")
+hl.env("SSH_ASKPASS_REQUIRE",   "prefer")
 
 -- ============================================================
 -- SOURCES
@@ -63,7 +68,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/libexec/xdg-desktop-portal")
 
     -- Session services and daemons
-    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
+    -- Sésame: the session's polkit agent, and the daemon behind the bar's
+    -- password card for ssh, git and gpg too (systemd/sesame.service).
+    -- Started here for the same graphical-session.target reason as Balise.
+    hl.exec_cmd("systemctl --user start sesame.service")
     -- The bar (see quickshell/bar/). Notifications (history, DND, mpris controls) are native to
     -- quickshell now (see quickshell/bar/services/NotificationState.qml)
     -- -- no separate daemon to start here any more. Used to be swaync,

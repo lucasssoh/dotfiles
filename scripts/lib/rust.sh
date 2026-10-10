@@ -69,8 +69,9 @@ declare -A RUST_CRATES=(
     [manette]="config/hyprland/manette-src manette"
     [prisme]="config/hyprland/prisme-src prisme wallpaper-filter"
     [roue]="config/hyprland/roue-src roue"
+    [sesame]="config/hyprland/sesame-src sesame"
 )
-RUST_CRATE_ORDER=(balise boussole manette prisme roue)
+RUST_CRATE_ORDER=(balise boussole manette prisme roue sesame)
 
 # Fall back to plain echo when the caller has no narration helpers of its own
 # (every config/*/install.sh defines info/ok/warn; a bare `bash -c` may not).

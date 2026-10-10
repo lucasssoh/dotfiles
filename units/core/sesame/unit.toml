@@ -1,0 +1,29 @@
+name     = "sesame"
+layer    = "core"
+summary  = "Password prompts on the bar's card: polkit, ssh, git and gpg, with the command that asks"
+requires = ["hyprland"]
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/sesame-src with the build deps.
+[binaries]
+rpm    = "sesame"
+source = "config/hyprland/sesame-src"
+bins   = ["sesame"]
+
+[packages]
+dnf   = ["polkit"]
+build = ["rust", "cargo"]
+
+[links]
+"config/hyprland/systemd/sesame.service" = "~/.config/systemd/user/sesame.service"
+"config/hyprland/sesame/askpass"         = "~/.local/bin/sesame-askpass"
+"config/hyprland/sesame/pinentry"        = "~/.local/bin/sesame-pinentry"
+
+[services]
+user = ["sesame"]
+
+[[hooks]]
+name   = "gpg-pinentry"
+run_as = "user"
+does   = "make gpg ask on the bar's password card, unless you chose another pinentry"
+run    = "units/core/sesame/hooks/gpg-pinentry.sh"

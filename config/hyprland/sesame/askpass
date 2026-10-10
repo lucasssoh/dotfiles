@@ -1,0 +1,5 @@
+#!/bin/sh
+# SSH_ASKPASS (set in hypr/hyprland.lua): ssh and git ask on the bar's
+# password card. ssh takes no arguments in SSH_ASKPASS, hence this file.
+bin="$(command -v sesame || echo "$HOME/.local/bin/sesame")"
+exec "$bin" askpass "$@"

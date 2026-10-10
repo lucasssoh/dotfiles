@@ -1,0 +1,6 @@
+#!/bin/sh
+# gpg-agent's pinentry-program (units/core/sesame/hooks/gpg-pinentry.sh):
+# gpg asks on the bar's password card, and on the console's pinentry when
+# the shell is not there. gpg-agent's PATH may lack ~/.local/bin.
+bin="$(command -v sesame || echo "$HOME/.local/bin/sesame")"
+exec "$bin" pinentry "$@"

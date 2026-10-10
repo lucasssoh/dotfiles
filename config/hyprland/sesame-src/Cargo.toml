@@ -1,0 +1,22 @@
+[package]
+name = "sesame"
+version = "1.0.0"
+edition = "2021"
+description = "Password prompts of coucou-shell: polkit agent, SSH askpass and GPG pinentry behind the bar's card"
+license-file = "../../../LICENSE.md"
+
+# Same shape as Manette: one thread blocked in poll(2) on the socket and its
+# clients, JSON lines both ways. zbus (blocking API, its own small executor
+# thread) only for the polkit agent on the system bus; async-channel to hand
+# the user's answer back into zbus's async method.
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+zbus = "5"
+async-channel = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"
