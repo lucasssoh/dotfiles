@@ -13,7 +13,7 @@ info() { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 ok()   { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 warn() { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
 
-pkg_ensure firefox "$(pkg_pick sqlite sqlite sqlite3)"
+pkg_ensure firefox
 
 # Resolve the repository root from this script instead of relying on the
 # current working directory. This keeps the installer working whether it is
@@ -68,6 +68,28 @@ mkdir -p ~/.config/environment.d
 safe_link \
     "$DOTFILES_DIR/config/firefox/firefox.conf" \
     ~/.config/environment.d/firefox.conf
+
+# Retire what the former new-tab setups left behind: the local server's
+# unit, the generated page, and (per profile, below) the managed-storage
+# manifest of the New Tab Override add-on. Each removal only touches the
+# exact file those setups wrote.
+remove_if_empty() {
+    [[ -d "$1" ]] && rmdir --ignore-fail-on-non-empty "$1"
+    return 0
+}
+
+LEGACY_NEWTAB_UNIT="$HOME/.config/systemd/user/coucou-newtab.service"
+if [[ -L "$LEGACY_NEWTAB_UNIT" ]] && \
+   [[ "$(readlink "$LEGACY_NEWTAB_UNIT")" == "$DOTFILES_DIR/config/firefox/systemd/newtab.service" ]]; then
+    systemctl --user disable --now coucou-newtab.service
+    systemctl --user daemon-reload
+fi
+safe_unlink \
+    "$DOTFILES_DIR/config/firefox/systemd/newtab.service" \
+    "$LEGACY_NEWTAB_UNIT"
+
+rm -f "$HOME/.local/share/firefox/newtab/index.html"
+remove_if_empty "$HOME/.local/share/firefox/newtab"
 
 # Firefox stores its profiles under the XDG configuration directory on this
 # system. Respect XDG_CONFIG_HOME when explicitly set, otherwise fall back
@@ -177,52 +199,35 @@ if [[ -f "$PROFILES_INI" ]]; then
     fi
 
     if [[ -n "$FIREFOX_PROFILE" && -d "$FIREFOX_PROFILE" ]]; then
-        # userChrome.css is loaded from the chrome/ directory inside the
-        # Firefox profile. Keep the stylesheet in the coucou-shell repository
-        # and deploy it through safe_link(), which makes the operation
-        # idempotent, records it in the link ledger, and backs up a pre-existing
-        # real file instead of deleting it.
+        # Remove the exact managed-storage manifest previously generated for
+        # the old new-tab extension; leave any other profile data untouched.
+        rm -f "$FIREFOX_PROFILE/managed-storage/newtaboverride@agenedia.com.json"
+        remove_if_empty "$FIREFOX_PROFILE/managed-storage"
+
+        # Firefox loads userChrome.css and userContent.css from the profile's
+        # chrome/ directory when legacy profile stylesheets are enabled.
+        # Deploy both through safe_link() so installs stay idempotent and any
+        # pre-existing files are backed up rather than overwritten.
         FIREFOX_CHROME="$FIREFOX_PROFILE/chrome"
         mkdir -p "$FIREFOX_CHROME"
 
-safe_link \
+        safe_link \
             "$DOTFILES_DIR/config/firefox/chrome/userChrome.css" \
             "$FIREFOX_PROFILE/chrome/userChrome.css"
-
-        # The new-tab page (coucou's own) is served through New Tab Override,
-        # an add-on installed by policy. The add-on reads the page to open from
-        # managed storage: a native manifest in the profile's managed-storage
-        # directory, written fresh on every install so the file:// URL it
-        # points at always matches where this machine's page is built.
-        NEWTAB_OUT="${NEWTAB_OUT_DIR:-$HOME/.local/share/firefox/newtab}"
-        NEWTAB_OUT_DIR="$NEWTAB_OUT" \
-            "$DOTFILES_DIR/config/firefox/newtab/build-newtab.sh"
-
-        mkdir -p "$FIREFOX_PROFILE/managed-storage"
-        cat > "$FIREFOX_PROFILE/managed-storage/newtaboverride@agenedia.com.json" <<EOF
-{
-  "name": "newtaboverride@agenedia.com",
-  "description": "coucou-shell: open the local new-tab page",
-  "type": "storage",
-  "data": {
-    "type": "custom_url",
-    "url": "file://$NEWTAB_OUT/index.html",
-    "focus_website": true
-  }
-}
-EOF
+        safe_link \
+            "$DOTFILES_DIR/config/firefox/chrome/userContent.css" \
+            "$FIREFOX_PROFILE/chrome/userContent.css"
     else
-        info "Firefox default profile not found; userChrome.css and the new-tab page are skipped."
+        info "Firefox default profile not found; userChrome.css and userContent.css are skipped."
     fi
 else
     # Firefox may not have created its profile metadata yet. Do not create a
     # fake profile here; simply leave userChrome.css for a later installer run.
-    info "Firefox profiles.ini not found; userChrome.css skipped."
+    info "Firefox profiles.ini not found; userChrome.css and userContent.css skipped."
 fi
 
-# Policy entries and userChrome.css are both restart-required: a running
-# instance keeps the old state until it is fully quit, which is the one thing
-# a fresh install cannot do by itself.
+# Policy entries and profile stylesheets are restart-required: a running
+# instance keeps the old state until it is fully quit.
 if pgrep -x firefox >/dev/null 2>&1; then
     warn "Firefox is running: quit it completely and relaunch for the policy and theme to take effect."
 fi

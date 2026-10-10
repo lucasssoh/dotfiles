@@ -77,3 +77,20 @@ safe_link() {
     ln -s "$src" "$dst"
     _link_ok "Linked: $dst → $src"
 }
+
+# safe_unlink <src> <dst>
+#   Remove dst only when it is still the symlink deployed from src, then
+#   forget the destination from the ledger.
+safe_unlink() {
+    local src="$1" dst="$2"
+
+    if [ -L "$dst" ] && [ "$(readlink -m "$dst")" = "$(readlink -m "$src")" ]; then
+        rm -f "$dst"
+    fi
+
+    if [ -f "$LINK_LEDGER" ]; then
+        local tmp="$LINK_LEDGER.tmp.$$"
+        awk -F'\t' -v d="$dst" '$3 != d' "$LINK_LEDGER" > "$tmp"
+        mv -f "$tmp" "$LINK_LEDGER"
+    fi
+}

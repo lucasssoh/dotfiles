@@ -12,12 +12,13 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Boussole, subjects:** say how fast a subject's sheets go (quick, as estimated, long), and mark a course subject whose sheets are only read, its exercises left to the exercise files, tutorials and exam subjects.
 
 ### Fixed
+- **Firefox, address bar:** moving through the suggestions with Tab or the arrows highlights the one you are on again; it was invisible.
 - **Liseuse:** maths, lists and bold inside a hidden solution (a `<details>` block, "Corrigé") are rendered instead of shown as typed, and so is display maths written between two lines holding a single `$`. Notes already opened are rendered again the next time.
 
 ### Changed
-- **Firefox, the new tab is now coucou's own page:** a clock and date, a row of five icon shortcuts (GitHub, YouTube, ChatGPT, Gemini, Claude), and below them your most-used sites as a list — in the shell's palette. The list is built from your real browsing by the installer and scrolls when it gets long. A policy-installed add-on (New Tab Override) opens the page, so nothing is configured by hand. The stock page's news feed, sponsored and suggested tiles, weather card and history highlights are turned off underneath it.
-- **Firefox:** launching it now opens the new-tab page instead of a blank one.
-- **Firefox:** the selected tab and the focused address bar are now a plain raised surface without the grey ring around the tab and the bright ring around the bar. Keyboard focus keeps its ordinary focus outline, and the coucou palette is otherwise untouched.
+- **Firefox, new tab:** the Firefox logo in the middle with the search field just under it, your first six pinned shortcuts in a dock at the bottom with a + to add one, and on the right two short lists, your other pinned sites under Favorites, then your frequent sites; the search field, the dock and the lists are frosted glass. The shortcuts you pin are no longer reset at each launch.
+- **Firefox, dark mode:** OLED black: the tab strip, the toolbars, the sidebar and the new-tab page are pure black, and only the address bar, menus and the selected tab lift off it. The selected tab catches a thin line of light along its top, in light mode too. Firefox's Light and Dark themes switch between the coucou light and dark; any other theme you pick, and any wallpaper chosen in the new tab's Customize panel, shows as it is.
+- **Firefox:** launching it now opens the new-tab page instead of Google's home page.
 
 ## 1.4.1
 

@@ -13,7 +13,8 @@
  *   hover         cardHover  (#1f1f23 / #e3e1da) hovered rows, buttons, tabs
  *   raised        cardRaised (#2a2a2f / #dbd9d2) pushed, focused, selected
  *                                                (the selected tab, focused
- *                                                urlbar, selected result)
+ *                                                urlbar; urlbar results are tinted
+ *                                                with the ink instead)
  *   primary/on    #f2f2f7 / #1c1c1e              ink; active control fills,
  *                                                focus rings (inversion via
  *                                                `on`, see DrawerTheme)
@@ -21,6 +22,11 @@
  *   secondary/muted/faint                        de-emphasised tiers
  *   danger/positive/warning                      state color usage
  *   onInk2        #3a3a3e / #c9c7c0              hairlines, borders
+ *
+ * Only with Firefox's default theme: every rule below is scoped to
+ * :root:not([lwtheme]), so a theme picked in Settings or Customize
+ * (Themes) shows as its author made it, and choosing the default theme
+ * again brings the coucou palette back.
  *
  * Firefox 156 notes:
  *   - The design tokens live in @layers; userChrome.css is unlayered and
@@ -43,16 +49,16 @@
  * ========================================================================== */
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([lwtheme]) {
         color-scheme: dark;
 
         /* ---- the palette, once, under its own names --------------------- */
-        --coucou-shell: #0b0b0d;          /* cardDeep   */
-        --coucou-card: #17171a;           /* card         */
-        --coucou-card-hover: #1f1f23;     /* cardHover    */
-        --coucou-card-raised: #2a2a2f;    /* cardRaised   */
-        --coucou-dimmed: #121215;         /* stackMid     */
-        --coucou-dimmed-further: #0d0d10; /* stackBack    */
+        --coucou-shell: #000000;          /* panel (OLED black) */
+        --coucou-card: #121214;           /* card, a step above black */
+        --coucou-card-hover: #1c1c1f;     /* cardHover    */
+        --coucou-card-raised: #26262a;    /* cardRaised   */
+        --coucou-dimmed: #0a0a0b;         /* stackMid     */
+        --coucou-dimmed-further: #050506; /* stackBack    */
         --coucou-primary: #f2f2f7;        /* primary / on */
         --coucou-secondary: #8e8e93;      /* secondary    */
         --coucou-muted: #636366;          /* muted        */
@@ -169,14 +175,18 @@
         --urlbar-box-text-color: var(--coucou-primary) !important;
 
         /* ---- urlbar results ------------------------------------------------ */
-        --urlbarview-background-color-hover: var(--coucou-card-hover) !important;
-        --urlbarview-background-color-selected: var(--coucou-card-raised) !important;
+        /* The open results sit on the focused field's raised surface, so the
+           selected row cannot be raised too: it would vanish while Tab or the
+           arrows move through the suggestions. Rows are tinted with the ink
+           instead, a step for hover and two for the keyboard selection. */
+        --urlbarview-background-color-hover: color-mix(in srgb, var(--coucou-primary) 6%, transparent) !important;
+        --urlbarview-background-color-selected: color-mix(in srgb, var(--coucou-primary) 13%, transparent) !important;
         --urlbarview-text-color-selected: var(--coucou-primary) !important;
         --urlbarview-text-color-action: var(--coucou-secondary) !important;
         --urlbarview-text-color-secondary: var(--coucou-secondary) !important;
         --urlbarview-separator-color: color-mix(in srgb, var(--coucou-primary) 18%, transparent) !important;
-        --urlbarview-action-button-background-color: var(--coucou-card-hover) !important;
-        --urlbarview-action-button-background-color-hover: var(--coucou-card-raised) !important;
+        --urlbarview-action-button-background-color: color-mix(in srgb, var(--coucou-primary) 8%, transparent) !important;
+        --urlbarview-action-button-background-color-hover: color-mix(in srgb, var(--coucou-primary) 16%, transparent) !important;
 
         /* ---- panels / popups ----------------------------------------------- */
         --panel-background-color: var(--coucou-card) !important;
@@ -198,7 +208,7 @@
  * ========================================================================== */
 
 @media (prefers-color-scheme: light) {
-    :root {
+    :root:not([lwtheme]) {
         color-scheme: light;
 
         --coucou-shell: #f5f3ee;          /* panelTop (light background) */
@@ -310,14 +320,14 @@
         --urlbar-box-background-color-focus: var(--coucou-card-raised) !important;
         --urlbar-box-text-color: var(--coucou-primary) !important;
 
-        --urlbarview-background-color-hover: var(--coucou-card-hover) !important;
-        --urlbarview-background-color-selected: var(--coucou-card-raised) !important;
+        --urlbarview-background-color-hover: color-mix(in srgb, var(--coucou-primary) 5%, transparent) !important;
+        --urlbarview-background-color-selected: color-mix(in srgb, var(--coucou-primary) 11%, transparent) !important;
         --urlbarview-text-color-selected: var(--coucou-primary) !important;
         --urlbarview-text-color-action: var(--coucou-secondary) !important;
         --urlbarview-text-color-secondary: var(--coucou-secondary) !important;
         --urlbarview-separator-color: color-mix(in srgb, var(--coucou-primary) 18%, transparent) !important;
-        --urlbarview-action-button-background-color: var(--coucou-card-hover) !important;
-        --urlbarview-action-button-background-color-hover: var(--coucou-card-raised) !important;
+        --urlbarview-action-button-background-color: color-mix(in srgb, var(--coucou-primary) 8%, transparent) !important;
+        --urlbarview-action-button-background-color-hover: color-mix(in srgb, var(--coucou-primary) 16%, transparent) !important;
 
         --panel-background-color: var(--coucou-card) !important;
         --panel-background-color-dimmed: var(--coucou-dimmed) !important;
@@ -344,9 +354,9 @@
    --panel-background-color: Menu directly on these, so override on the
    element. Arrow panels (app menu, downloads, identity, overflow, …)
    inherit the :root value, which is already themed above. */
-menupopup:not([type="arrow"]),
-panel:not([type="arrow"]),
-panelview {
+:root:not([lwtheme]) menupopup:not([type="arrow"]),
+:root:not([lwtheme]) panel:not([type="arrow"]),
+:root:not([lwtheme]) panelview {
     --panel-background-color: var(--coucou-card) !important;
     --panel-border-color: var(--coucou-on-ink-2) !important;
     --panel-text-color: var(--coucou-primary) !important;
@@ -354,26 +364,54 @@ panelview {
 }
 
 /* Menu hover is GTK's -moz-menuhover, not a design token. */
-menupopup > *[_moz-menuactive]:not([disabled]),
-menubar > menu[_moz-menuactive]:not([disabled]) {
+:root:not([lwtheme]) menupopup > *[_moz-menuactive]:not([disabled]),
+:root:not([lwtheme]) menubar > menu[_moz-menuactive]:not([disabled]) {
     background-color: var(--coucou-card-hover) !important;
     color: var(--coucou-primary) !important;
 }
 
 /* Menu bar; also strip the platform accent underline under an open menu. */
-#toolbar-menubar > menu {
+:root:not([lwtheme]) #toolbar-menubar > menu {
     color: var(--coucou-primary) !important;
     border-bottom-color: transparent !important;
 }
 
-#toolbar-menubar > menu[open] {
+:root:not([lwtheme]) #toolbar-menubar > menu[open] {
     background-color: var(--coucou-card) !important;
 }
 
 /* Find bar: toolbar surface, but :root[lwtheme] paints the theme accent. */
-.browserContainer > findbar {
+:root:not([lwtheme]) .browserContainer > findbar {
     background-color: var(--coucou-card) !important;
     background-image: none !important;
     color: var(--coucou-primary) !important;
     border-top-color: var(--coucou-on-ink-2) !important;
+}
+
+/* ==========================================================================
+ * Surfaces
+ *
+ * Firefox's own layout, in both tab modes. In dark the chrome is OLED
+ * black: the tab strip, the toolbars and the sidebar all sit on #000, and
+ * only fields, menus and the selected tab lift off it. The selected tab is
+ * lit from above.
+ * ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root:not([lwtheme]) {
+        --toolbar-background-color: var(--coucou-shell) !important;
+        --sidebar-background-color: var(--coucou-shell) !important;
+        --tab-background-color-selected: var(--coucou-card-hover) !important;
+        --coucou-relief-light: rgba(255, 255, 255, 0.07);
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([lwtheme]) {
+        --coucou-relief-light: rgba(255, 255, 255, 0.9);
+    }
+}
+
+:root:not([lwtheme]) .tabbrowser-tab:is([selected], [multiselected]) .tab-background {
+    box-shadow: inset 0 1px 0 var(--coucou-relief-light) !important;
 }

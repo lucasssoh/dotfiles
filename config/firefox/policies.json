@@ -4,10 +4,11 @@
       "Default": "Google"
     },
     "DontCheckDefaultBrowser": true,
-    "Extensions": {
-      "Install": [
-        "https://addons.mozilla.org/firefox/downloads/latest/new-tab-override/addon-latest.xpi"
-      ]
+    "DisplayBookmarksToolbar": "newtab",
+    "ExtensionSettings": {
+      "newtaboverride@agenedia.com": {
+        "installation_mode": "blocked"
+      }
     },
     "Homepage": {
       "URL": "about:newtab",
@@ -26,10 +27,6 @@
         "Value": false,
         "Status": "default"
       },
-      "browser.newtabpage.activity-stream.feeds.section.highlights": {
-        "Value": false,
-        "Status": "default"
-      },
       "browser.newtabpage.activity-stream.feeds.section.topstories": {
         "Value": false,
         "Status": "default"
@@ -40,10 +37,6 @@
       },
       "browser.newtabpage.activity-stream.feeds.topsites": {
         "Value": true,
-        "Status": "default"
-      },
-      "browser.newtabpage.activity-stream.showSearch": {
-        "Value": false,
         "Status": "default"
       },
       "browser.newtabpage.activity-stream.showSponsored": {
@@ -59,7 +52,7 @@
         "Status": "default"
       },
       "browser.newtabpage.activity-stream.topSitesRows": {
-        "Value": 1,
+        "Value": 2,
         "Status": "default"
       },
       "browser.newtabpage.activity-stream.unifiedAds.adsFeed.enabled": {
@@ -79,8 +72,12 @@
         "Status": "default"
       },
       "browser.newtabpage.pinned": {
-        "Value": "[{\"url\":\"https://github.com/\",\"title\":\"GitHub\"},{\"url\":\"https://www.youtube.com/\",\"title\":\"YouTube\"},{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\"},{\"url\":\"https://gemini.google.com/\",\"title\":\"Gemini\"},{\"url\":\"https://claude.ai/\",\"title\":\"Claude\"}]",
-        "Status": "user"
+        "Value": "[{\"url\":\"https://github.com/\",\"title\":\"GitHub\"},{\"url\":\"https://www.youtube.com/\",\"title\":\"YouTube\"},{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\"},{\"url\":\"https://gemini.google.com/\",\"title\":\"Gemini\"},{\"url\":\"https://claude.ai/\",\"title\":\"Claude\"},{\"url\":\"https://www.wikipedia.org/\",\"title\":\"Wikipedia\"}]",
+        "Status": "default"
+      },
+      "browser.theme.content-theme": {
+        "Value": 2,
+        "Status": "default"
       },
       "extensions.activeThemeID": {
         "Value": "default-theme@mozilla.org",

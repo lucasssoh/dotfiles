@@ -381,9 +381,11 @@ cc-pkg-mng install wezterm
 
 The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing.
 
-The browser's own new-tab page is replaced by a page of our own, in the same colours: a clock, a row of five icon shortcuts (GitHub, YouTube, ChatGPT, Gemini, Claude) and, below them, your most-used sites as a list. It is built from your real browsing by [`config/firefox/newtab/build-newtab.sh`](../config/firefox/newtab/build-newtab.sh) — it reads the profile's history (frecency), skips the five pinned tiles and the localhost dev servers, and writes the page to `~/.local/share/firefox/newtab/index.html`. The list scrolls when it gets long. Re-run the installer (`cc-pkg-mng update`) to refresh it.
+The look comes from two stylesheets in the profile, [`userChrome.css`](../config/firefox/chrome/userChrome.css) for the browser and [`userContent.css`](../config/firefox/chrome/userContent.css) for the new-tab page. Both follow Firefox's **Website appearance** setting (Settings → General → Language and Appearance): Light, Dark or System. Dark is OLED black. The colours apply with Firefox's default, Light and Dark themes; pick any other theme (Settings → Extensions & Themes) and Firefox shows that theme instead. A wallpaper or colour chosen with the pencil on the new tab replaces the black there too.
 
-The page is wired up without touching the browser by hand: the policy installs the signed *New Tab Override* add-on, and a managed-storage manifest in the profile points it at the local page (`file://`). The stock page's news, sponsored tiles, weather and highlights are turned off underneath, so if the add-on is ever disabled the new tab is still quiet.
+**The tabs** run along the top or down the sidebar, Firefox's own switch: right-click the tabs and choose *Turn on vertical tabs* (or *Turn off*). Ctrl+Alt+Z opens or closes the sidebar.
+
+**The new tab** (Ctrl+T) is Firefox's own page, rearranged: the Firefox logo in the middle with a frosted-glass search field under it, a dock at the bottom with the first six pinned shortcuts (names on hover) and a **+** to add one, and two lists on the right. **Favorites** holds the pinned shortcuts after the first five, **Frequent** the sites you visit most (six of each at most). Right-click a site to pin it, edit it or remove it; drag pinned shortcuts to change their order, and so which five sit in the bar. The pencil at the bottom right opens Firefox's own settings for the page. The policy pins GitHub, YouTube, ChatGPT, Gemini, Claude and Wikipedia on a new profile only, turns off sponsored sites, news stories and weather.
 
 ### `brave`
 

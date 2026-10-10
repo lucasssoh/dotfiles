@@ -1,0 +1,601 @@
+/*
+ * coucou-shell — Firefox new-tab page
+ *
+ * Firefox's own about:newtab, rearranged: the Firefox logo alone in the
+ * middle, the frequent sites as a quiet list on the right at the same
+ * height, and one bar at the foot holding the search field and the pinned
+ * shortcuts. Everything stays native (pinning, the context menu, removing a
+ * site, the customize button); only placement and colours change.
+ *
+ * How the pieces are told apart: a pinned shortcut carries the small pin
+ * icon (.icon-pin-small), the frequent ones do not. Firefox lists both in
+ * one <ul>, so the bar is that list with the frequent items taken out of
+ * flow and stacked on the right, one rule per row.
+ *
+ * Nothing in the bar may create a containing block for fixed elements
+ * (transform, filter, backdrop-filter): the frequent rows and the logo are
+ * position: fixed against the page, from inside it.
+ */
+
+@-moz-document url-prefix("about:newtab"), url-prefix("about:home") {
+    :root {
+        --cc-shell: #000000;
+        --cc-card: #121214;
+        --cc-hover: #1c1c1f;
+        --cc-raised: #26262a;
+        --cc-primary: #f2f2f7;
+        --cc-secondary: #8e8e93;
+        --cc-muted: #636366;
+        --cc-hair: rgba(242, 242, 247, 0.08);
+        --cc-hair-2: rgba(242, 242, 247, 0.16);
+        --cc-font: "MiSans Latin", "Inter", sans-serif;
+
+        /* liquid glass: a tinted, blurred pane, a bright rim catching the
+           light at the top, a soft shadow under it */
+        --cc-glass-fill-top: rgba(255, 255, 255, 0.10);
+        --cc-glass-fill-bottom: rgba(255, 255, 255, 0.035);
+        --cc-glass-rim-strong: rgba(255, 255, 255, 0.42);
+        --cc-glass-rim-soft: rgba(255, 255, 255, 0.06);
+        --cc-glass-inner: rgba(255, 255, 255, 0.06);
+        --cc-glass-well: rgba(0, 0, 0, 0.35);
+        --cc-glass-hover: rgba(255, 255, 255, 0.12);
+        --cc-glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+        /* the bar's geometry, shared by the search field and the tiles */
+        --cc-bar-pad: 8px;
+        --cc-tile: 46px;
+        --cc-row: 34px;
+        /* where the logo sits, and the line the lists hang from:
+           favorites stack above it, frequent below */
+        --cc-logo-y: 36vh;
+        --cc-line: 42vh;
+
+        color-scheme: dark;
+    }
+
+    @media (prefers-color-scheme: light) {
+        :root {
+            --cc-shell: #f5f3ee;
+            --cc-card: #ebe9e3;
+            --cc-hover: #e3e1da;
+            --cc-raised: #dbd9d2;
+            --cc-primary: #1c1c1e;
+            --cc-secondary: #56565b;
+            --cc-muted: #86868b;
+            --cc-hair: rgba(28, 28, 30, 0.08);
+            --cc-hair-2: rgba(28, 28, 30, 0.18);
+            --cc-glass-fill-top: rgba(255, 255, 255, 0.70);
+            --cc-glass-fill-bottom: rgba(255, 255, 255, 0.42);
+            --cc-glass-rim-strong: rgba(255, 255, 255, 0.95);
+            --cc-glass-rim-soft: rgba(28, 28, 30, 0.06);
+            --cc-glass-inner: rgba(255, 255, 255, 0.55);
+            --cc-glass-well: rgba(255, 255, 255, 0.55);
+            --cc-glass-hover: rgba(255, 255, 255, 0.75);
+            --cc-glass-shadow: 0 18px 50px rgba(60, 50, 30, 0.18), 0 2px 6px rgba(60, 50, 30, 0.10);
+            color-scheme: light;
+        }
+    }
+
+    html,
+    body,
+    #root,
+    .nova-outer-wrapper,
+    .container {
+        color: var(--cc-primary) !important;
+        font-family: var(--cc-font) !important;
+    }
+
+    /* the shell colour only while no wallpaper or colour is picked in the
+       page's Customize panel; Firefox marks a chosen one on <body> */
+    html:not(:has(> body:is(.lightWallpaper, .darkWallpaper))),
+    body:not(.lightWallpaper, .darkWallpaper),
+    body:not(.lightWallpaper, .darkWallpaper) :is(#root, .nova-outer-wrapper, .container) {
+        background: var(--cc-shell) !important;
+    }
+
+    /* ---- the logo, alone in the middle --------------------------------- */
+    .logo-and-wordmark-wrapper {
+        position: fixed !important;
+        top: var(--cc-logo-y) !important;
+        inset-inline: 0 !important;
+        width: fit-content !important;
+        margin: 0 auto !important;
+        translate: 0 -50%;
+        padding: 0 !important;
+    }
+
+    /* Firefox drops the wordmark in a narrow window; keep the name */
+    .logo-and-wordmark .wordmark {
+        display: block !important;
+    }
+
+    .sticky-search-sentinel {
+        display: none !important;
+    }
+
+    /* ---- the search field under the logo, the shortcuts at the foot -----
+       Two pieces of liquid glass: a tinted, blurred pane, a bright rim
+       catching the light at the top, a soft shadow. */
+    .content {
+        position: fixed !important;
+        bottom: 24px !important;
+        inset-inline: 0 !important;
+        width: fit-content !important;
+        max-width: calc(100vw - 32px);
+        margin: 0 auto !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 14px !important;
+        /* Firefox makes .content a size container, which would give it no
+           intrinsic width and squash it to nothing. */
+        container-type: normal !important;
+        background: transparent !important;
+    }
+
+    /* the search field rides up under the logo; only the dock stays at
+       the foot. It is fixed to the page like the logo, from inside the
+       bar, which has no transform to capture it. */
+    .search-wrapper {
+        position: fixed !important;
+        top: calc(var(--cc-logo-y) + 52px) !important;
+        inset-inline: 0 !important;
+        flex: none !important;
+        width: min(560px, calc(100vw - 64px)) !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+    }
+
+    .search-inner-wrapper {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+    }
+
+    /* inside content-search-handoff-ui's shadow tree; nothing fixed lives
+       under it, so the glass can sit on the button itself */
+    .search-handoff-button {
+        height: 50px !important;
+        min-height: 0 !important;
+        border: 0 !important;
+        border-radius: 25px !important;
+        /* a flat tint: the button's background-image is the search
+           engine's icon, so the gradient of the dock cannot be used here */
+        background-color: color-mix(in srgb, var(--cc-glass-fill-top) 70%, var(--cc-glass-fill-bottom)) !important;
+        backdrop-filter: blur(28px) saturate(180%);
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 1px var(--cc-glass-inner),
+            inset 0 0 0 1px var(--cc-glass-rim-soft) !important;
+        color: var(--cc-secondary) !important;
+        font-family: var(--cc-font) !important;
+        font-size: 14px !important;
+        transition: box-shadow 0.15s ease;
+    }
+
+    .search-handoff-button:hover {
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 1px var(--cc-glass-inner),
+            inset 0 0 0 1px var(--cc-hair-2) !important;
+    }
+
+    .fake-textbox {
+        color: var(--cc-secondary) !important;
+    }
+
+    /* The dock's glass is painted on pseudo-elements: a backdrop-filter
+       on the section would become the containing block of the frequent
+       list, which is fixed to the page from inside it. */
+    section.top-sites {
+        display: block !important;
+        position: relative !important;
+        isolation: isolate;
+        margin: 0 !important;
+        padding: var(--cc-bar-pad) !important;
+        border-radius: 22px;
+        min-width: 0 !important;
+    }
+
+    section.top-sites::before,
+    section.top-sites::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+    }
+
+    section.top-sites::before {
+        z-index: -1;
+        background: linear-gradient(var(--cc-glass-fill-top), var(--cc-glass-fill-bottom));
+        backdrop-filter: blur(28px) saturate(180%);
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 1px var(--cc-glass-inner),
+            inset 0 -8px 16px -12px var(--cc-glass-inner);
+    }
+
+    /* the rim: bright top left, fading round the sides, catching again at
+       the bottom right */
+    section.top-sites::after {
+        padding: 1px;
+        background: linear-gradient(135deg,
+            var(--cc-glass-rim-strong),
+            var(--cc-glass-rim-soft) 35%,
+            var(--cc-glass-rim-soft) 65%,
+            color-mix(in srgb, var(--cc-glass-rim-strong) 55%, transparent));
+        mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    }
+
+    section.top-sites,
+    .top-sites-list-wrapper,
+    .top-sites-list {
+        container-type: normal !important;
+    }
+
+    .top-sites-list-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .top-sites-list {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        grid-template-columns: none !important;
+    }
+
+    .top-sites-list > .top-site-outer {
+        flex: none !important;
+        width: var(--cc-tile) !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: relative !important;
+    }
+
+    .top-site-outer .top-site-inner,
+    .top-site-outer .top-site-button {
+        display: block !important;
+        width: 100% !important;
+        height: var(--cc-tile) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    content-search-handoff-ui {
+        width: 100% !important;
+    }
+
+    .search-handoff-button {
+        width: 100% !important;
+    }
+
+    .top-site-outer .tile {
+        width: var(--cc-tile) !important;
+        height: var(--cc-tile) !important;
+        border-radius: 14px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        transition: background 0.15s ease, translate 0.15s ease;
+    }
+
+    .top-site-outer:hover .tile,
+    .top-site-outer:focus-within .tile {
+        background: var(--cc-glass-hover) !important;
+        box-shadow: inset 0 1px 0 var(--cc-glass-inner) !important;
+        translate: 0 -2px;
+    }
+
+    .top-site-outer .tile .icon-wrapper,
+    .top-site-outer .tile .top-site-icon {
+        width: 26px !important;
+        height: 26px !important;
+        border-radius: 6px !important;
+        background-size: contain !important;
+    }
+
+    /* the name as a bubble above the icon, on hover only */
+    .top-site-outer .title {
+        position: absolute !important;
+        bottom: calc(100% + 12px) !important;
+        left: 50% !important;
+        translate: -50% 0;
+        width: max-content !important;
+        max-width: 200px;
+        padding: 4px 10px !important;
+        border-radius: 10px;
+        background: linear-gradient(var(--cc-glass-fill-top), var(--cc-glass-fill-bottom)), color-mix(in srgb, var(--cc-card) 60%, transparent);
+        backdrop-filter: blur(20px) saturate(180%);
+        box-shadow: inset 0 1px 0 var(--cc-glass-inner), inset 0 0 0 1px var(--cc-glass-rim-soft), 0 6px 18px rgba(0, 0, 0, 0.3);
+        color: var(--cc-primary) !important;
+        font-size: 12px !important;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+
+    .top-site-outer:hover .title,
+    .top-site-outer:focus-within .title {
+        opacity: 1;
+    }
+
+    .top-site-outer .title .title-label {
+        padding: 0 !important;
+    }
+
+    /* pin marker and the ⋯ button stay out of sight: right-click still
+       opens the same menu */
+    .top-site-outer .icon-pin-small,
+    .top-site-outer .context-menu-button,
+    .top-site-outer .sponsored-label {
+        display: none !important;
+    }
+
+    /* ---- two lists on the right: favorites above, frequent below --------
+       The first six pinned shortcuts make the dock; any pinned after them
+       are the favorites, stacked upwards from the logo's line; the
+       frequent sites run downwards from it. Each list is placed row by
+       row, counted from the line, so neither needs to know the other's
+       length. */
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) {
+        position: fixed !important;
+        right: 32px !important;
+        width: 250px !important;
+        height: var(--cc-row) !important;
+    }
+
+    /* at most six favorites and six frequent sites */
+    .top-sites-list > .top-site-outer:nth-child(n + 13 of :has(.icon-pin-small)),
+    .top-sites-list > .top-site-outer:not(:has(.icon-pin-small)):nth-child(n + 7 of .top-site-outer:not(:has(.icon-pin-small), .add-button-tile)) {
+        display: none !important;
+    }
+
+    .top-sites-list > .top-site-outer:nth-child(1 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 0 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(2 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 1 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(3 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 2 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(4 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 3 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(5 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 4 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile)) { top: calc(var(--cc-line) + 30px + 5 * var(--cc-row)) !important; }
+
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(1 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 1 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(2 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 2 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(3 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 3 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(4 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 4 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(5 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 5 * var(--cc-row)) !important; }
+    .top-sites-list > .top-site-outer:nth-child(n + 7 of :has(.icon-pin-small)):nth-last-child(6 of :has(.icon-pin-small)) { top: calc(var(--cc-line) - 10px - 6 * var(--cc-row)) !important; }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .top-site-button {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 12px;
+        height: var(--cc-row) !important;
+        padding: 0 10px !important;
+        margin: 0 4px !important;
+        width: calc(100% - 8px) !important;
+        border-radius: 10px;
+        transition: background 0.15s ease;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))):hover .top-site-button {
+        background: var(--cc-glass-hover);
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .tile {
+        width: 18px !important;
+        height: 18px !important;
+        flex: none;
+        align-self: center !important;
+        border-radius: 4px !important;
+        background: transparent !important;
+        translate: none !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .tile .icon-wrapper,
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .tile .top-site-icon {
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 4px !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .title {
+        position: static !important;
+        translate: none;
+        opacity: 1;
+        padding: 0 !important;
+        background: none;
+        backdrop-filter: none;
+        box-shadow: none;
+        max-width: none;
+        width: auto !important;
+        flex: 1;
+        min-width: 0;
+        max-width: none !important;
+        margin: 0 !important;
+        font-size: 13px !important;
+        line-height: var(--cc-row) !important;
+        color: var(--cc-secondary) !important;
+        text-align: start !important;
+        transition: color 0.15s ease;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))):hover .title {
+        color: var(--cc-primary) !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .title {
+        display: block !important;
+        height: var(--cc-row) !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) .title-label {
+        display: inline !important;
+        width: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        line-height: var(--cc-row) !important;
+        white-space: nowrap !important;
+    }
+
+    /* ---- the lists in liquid glass ----------------------------------------
+       One pane behind each whole list. There is no element around a list,
+       only rows placed one by one, so the pane is drawn by one of its rows
+       and sized from where that row sits: the frequent list's by its last
+       row, reaching up over the rows above it; the favorites' by their
+       first row, reaching down. That row is put under its neighbours, so
+       the pane lies beneath every row of its list. */
+    .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) {
+        z-index: 2 !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))),
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)) {
+        z-index: 1 !important;
+    }
+
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile)))::after,
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small))::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        z-index: -1;
+        border-radius: 16px;
+        background: linear-gradient(var(--cc-glass-fill-top), var(--cc-glass-fill-bottom));
+        backdrop-filter: blur(28px) saturate(180%);
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 0 var(--cc-glass-rim-strong),
+            inset 0 0 0 1px var(--cc-glass-rim-soft);
+        pointer-events: none;
+    }
+
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile)))::after {
+        bottom: 0;
+    }
+
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small))::after {
+        top: 0;
+    }
+
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(1 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(1 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(2 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(2 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(3 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(3 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(4 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(4 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(5 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(5 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:is(:nth-last-child(1 of :not(:has(.icon-pin-small), .add-button-tile)), :nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))):nth-child(6 of :not(:has(.icon-pin-small), .add-button-tile))::after { height: calc(6 * var(--cc-row)); }
+
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(1 of :has(.icon-pin-small))::after { height: calc(1 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(2 of :has(.icon-pin-small))::after { height: calc(2 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(3 of :has(.icon-pin-small))::after { height: calc(3 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(4 of :has(.icon-pin-small))::after { height: calc(4 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(5 of :has(.icon-pin-small))::after { height: calc(5 * var(--cc-row)); }
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small)):nth-last-child(6 of :has(.icon-pin-small))::after { height: calc(6 * var(--cc-row)); }
+
+    /* the headings, carried by each list's first row (a :has() cannot
+       sit inside another, so the section itself cannot ask) */
+    .top-sites-list > .top-site-outer:nth-child(1 of :not(:has(.icon-pin-small), .add-button-tile))::before,
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small))::before {
+        content: "Frequent";
+        position: absolute;
+        bottom: calc(100% + 6px);
+        inset-inline-start: 10px;
+        font-size: 12px;
+        color: var(--cc-muted);
+    }
+
+    .top-sites-list > .top-site-outer:nth-child(7 of :has(.icon-pin-small))::before {
+        content: "Favorites";
+    }
+
+    /* the add-shortcut "+", a tile at the end of the bar */
+    .top-sites-list > .add-button-tile {
+        position: static !important;
+        align-self: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: grid !important;
+        place-items: center;
+        width: var(--cc-tile) !important;
+        height: var(--cc-tile) !important;
+    }
+
+    .top-sites-list > .add-button-tile .add-button {
+        --button-background-color-primary: transparent;
+        --button-background-color-primary-hover: var(--cc-raised);
+        --button-background-color-primary-active: var(--cc-raised);
+        --button-text-color-primary: var(--cc-muted);
+        --button-text-color-primary-hover: var(--cc-primary);
+        --button-border-color-primary: transparent;
+        --button-border-color-primary-hover: transparent;
+        --button-border-radius: 14px;
+        --button-size-icon: var(--cc-tile);
+        --button-min-height: var(--cc-tile);
+        position: static !important;
+        inset: auto !important;
+        transform: none !important;
+        margin: 0 !important;
+        width: var(--cc-tile);
+        height: var(--cc-tile);
+    }
+
+    /* ---- the customize button, discreet --------------------------------
+       a moz-button: its colours come from tokens read inside its shadow
+       tree, so they are set on the host. */
+    moz-button.open-customization-button {
+        --button-background-color-primary: transparent;
+        --button-background-color-primary-hover: var(--cc-card);
+        --button-background-color-primary-active: var(--cc-raised);
+        --button-text-color-primary: var(--cc-muted);
+        --button-text-color-primary-hover: var(--cc-primary);
+        --button-text-color-primary-active: var(--cc-primary);
+        --button-border-color-primary: transparent;
+        --button-border-color-primary-hover: transparent;
+    }
+
+    /* no purple anywhere: the accent is the ink, as in the shell */
+    :root {
+        --color-accent-primary: var(--cc-primary) !important;
+        --color-accent-primary-hover: var(--cc-secondary) !important;
+        --color-accent-primary-active: var(--cc-secondary) !important;
+        --color-accent-primary-selected: var(--cc-primary) !important;
+        --focus-outline-color: color-mix(in srgb, var(--cc-primary) 48%, transparent) !important;
+    }
+
+    :focus-visible {
+        outline-color: color-mix(in srgb, var(--cc-primary) 48%, transparent) !important;
+    }
+
+    /* ---- a narrow page (vertical tabs, half a screen) -------------------
+       No room beside the logo: the logo moves up, the lists sit centred
+       under it, and the search field gives way to the shortcuts. */
+    @media (max-width: 1000px) {
+        :root {
+            --cc-line: 50vh;
+        }
+
+        :root {
+            --cc-logo-y: 18vh;
+        }
+
+        .top-sites-list > .top-site-outer:is(:not(:has(.icon-pin-small), .add-button-tile), :nth-child(n + 7 of :has(.icon-pin-small))) {
+            right: calc(50% - 125px) !important;
+        }
+
+    }
+}
