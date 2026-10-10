@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import "."
 
 // The drawer behind the Launchers chips -- same panelOpen/activeScreen/
@@ -65,15 +66,35 @@ Singleton {
     // size passes earlier) needs a small manual nudge to look centered
     // -- the mathematical center isn't the same thing as the perceived
     // one.
+    // `process` is the name the app's process carries (/proc/<pid>/comm,
+    // what `pgrep -x` matches), `desktop` the entry that relaunches it --
+    // both for the background state further down.
     readonly property var knownApps: [
-        { pattern: /steam/i, label: "Steam", icon: "" },
-        { pattern: /lutris/i, label: "Lutris", image: "../assets/lutris.svg" },
+        { pattern: /steam/i, label: "Steam", icon: "", process: "steam", desktop: "steam" },
+        { pattern: /lutris/i, label: "Lutris", image: "../assets/lutris.svg", process: "lutris", desktop: "net.lutris.Lutris" },
         // -2 -> -1: the icon itself shrank (14 -> 11px) since this was
         // tuned, so the same raw offset overshot -- asked for.
-        { pattern: /heroic/i, label: "Heroic", image: "../assets/heroic.svg", yOffset: -1 },
-        { pattern: /discord/i, label: "Discord", icon: "" },
-        { pattern: /vesktop/i, label: "Vesktop", icon: "" }
+        { pattern: /heroic/i, label: "Heroic", image: "../assets/heroic.svg", yOffset: -1, process: "heroic", desktop: "com.heroicgameslauncher.hgl" },
+        { pattern: /discord/i, label: "Discord", icon: "", process: "Discord", desktop: "discord" },
+        { pattern: /vesktop/i, label: "Vesktop", icon: "", process: "vesktop", desktop: "dev.vencord.Vesktop" }
     ]
+
+    function chipFor(k, address, pid, windowCount) {
+        const a = root.knownApps[k];
+        return {
+            app: k,
+            label: a.label,
+            icon: a.icon || "",
+            image: a.image ? Qt.resolvedUrl(a.image).toString() : "",
+            yOffset: a.yOffset || 0,
+            address: address,
+            pid: pid,
+            windowCount: windowCount,
+            // No window, but the process is still there: the app hid
+            // itself on close (see the background section below).
+            hidden: windowCount === 0
+        };
+    }
 
     // One chip per known app type (not per window -- if an app has
     // several windows, only the first one found is used as the focus
@@ -96,7 +117,7 @@ Singleton {
     // relative string would point at two different places -- one of them
     // nonexistent. Resolved here, against this file, it means the same
     // image everywhere.
-    readonly property var matches: {
+    readonly property var windowed: {
         const tops = Hyprland.toplevels.values;
         const index = {};
         const out = [];
@@ -111,19 +132,119 @@ Singleton {
                     break;
                 }
                 index[k] = out.length;
-                out.push({
-                    label: knownApps[k].label,
-                    icon: knownApps[k].icon || "",
-                    image: knownApps[k].image ? Qt.resolvedUrl(knownApps[k].image).toString() : "",
-                    yOffset: knownApps[k].yOffset || 0,
-                    address: t.address,
-                    pid: ipc.pid || 0,
-                    windowCount: 1
-                });
+                out.push(root.chipFor(k, t.address, ipc.pid || 0, 1));
                 break;
             }
         }
         return out;
+    }
+
+    // What the chips draw: the apps with a window, then the ones running
+    // in the background.
+    readonly property var matches: {
+        const out = root.windowed.slice();
+        const shown = {};
+        for (let i = 0; i < out.length; i++) shown[out[i].app] = true;
+        for (let k = 0; k < root.knownApps.length; k++) {
+            const pid = root.background[k];
+            if (pid && !shown[k]) out.push(root.chipFor(k, "", pid, 0));
+        }
+        return out;
+    }
+
+    // ---------------------------------------------------------------
+    // apps running without a window
+    // ---------------------------------------------------------------
+    //
+    // Asked for: Discord on SUPER+Q leaves the screen but keeps running
+    // (see the header), and its chip used to leave with the window. It
+    // now stays, dimmed, for as long as the process is alive, and a click
+    // brings the window back. Launching the app again is how all five
+    // reopen a hidden window: their single-instance lock hands the launch
+    // to the running process instead of starting a second one.
+    //
+    // `background` maps a knownApps index to the pid last seen behind
+    // its window. Filled when an app's last window goes away, and once
+    // at startup from `pgrep` (an app already hidden when the bar starts
+    // has no window to have been seen through). Kept honest by a /proc
+    // check that runs only while it holds something.
+    property var background: ({})
+    property var _lastWindowed: ({})
+
+    onWindowedChanged: {
+        const now = {};
+        for (let i = 0; i < root.windowed.length; i++)
+            now[root.windowed[i].app] = root.windowed[i].pid;
+        const next = Object.assign({}, root.background);
+        for (const k in root._lastWindowed) {
+            if (now[k] === undefined && root._lastWindowed[k] > 0)
+                next[k] = root._lastWindowed[k];
+        }
+        for (const k in now) delete next[k];
+        root._lastWindowed = now;
+        root.background = next;
+    }
+
+    readonly property bool _hasBackground: Object.keys(root.background).length > 0
+
+    // An app quitting for real drops its window first and its process a
+    // moment later, so its chip can linger dimmed for up to one interval.
+    Timer {
+        interval: 1500
+        repeat: true
+        triggeredOnStart: true
+        running: root._hasBackground
+        onTriggered: {
+            const pids = Object.keys(root.background).map(k => String(root.background[k]));
+            aliveCheck.command = ["sh", "-c", "for p; do [ -d /proc/$p ] && echo $p; done; true", "sh"].concat(pids);
+            aliveCheck.running = true;
+        }
+    }
+
+    Process {
+        id: aliveCheck
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const alive = this.text.split("\n");
+                const next = {};
+                for (const k in root.background) {
+                    if (alive.indexOf(String(root.background[k])) !== -1)
+                        next[k] = root.background[k];
+                }
+                if (Object.keys(next).length !== Object.keys(root.background).length)
+                    root.background = next;
+            }
+        }
+    }
+
+    Process {
+        running: true
+        command: ["sh", "-c", "for n; do p=$(pgrep -o -x \"$n\") && echo \"$n $p\"; done; true", "sh"]
+            .concat(root.knownApps.map(a => a.process))
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const next = Object.assign({}, root.background);
+                const lines = this.text.split("\n");
+                for (let i = 0; i < lines.length; i++) {
+                    const parts = lines[i].split(" ");
+                    if (parts.length !== 2) continue;
+                    const k = root.knownApps.findIndex(a => a.process === parts[0]);
+                    if (k !== -1 && root._lastWindowed[k] === undefined)
+                        next[k] = Number(parts[1]);
+                }
+                root.background = next;
+            }
+        }
+    }
+
+    // Same launch the app menu would do, so a Flatpak install reopens
+    // through its own wrapper.
+    function resume(label) {
+        const a = root.knownApps.find(x => x.label === label);
+        if (!a) return;
+        const entry = DesktopEntries.heuristicLookup(a.desktop);
+        if (entry) entry.execute();
+        else Quickshell.execDetached([a.process.toLowerCase()]);
     }
 
     // ---------------------------------------------------------------
@@ -145,6 +266,7 @@ Singleton {
     property string address: ""
     property int pid: 0
     property int windowCount: 0
+    property bool hidden: false
 
     // Set once SIGTERM has been sent, cleared on close. Drives the
     // "Force quit" row: an app that took the signal disappears from
@@ -156,7 +278,7 @@ Singleton {
     readonly property int escalation: 4000
 
     function toggleFor(screen, app) {
-        if (root.panelOpen && root.address === app.address
+        if (root.panelOpen && root.label === app.label
             && root.activeScreen === screen) {
             root.close();
             return;
@@ -192,6 +314,7 @@ Singleton {
         root.address = app.address;
         root.pid = app.pid;
         root.windowCount = app.windowCount;
+        root.hidden = app.hidden;
         root.quitSent = false;
         root.forceOffered = false;
         forceTimer.stop();
@@ -273,7 +396,7 @@ Singleton {
         if (root.otherDrawerOpen()) return;
         // Already open: retarget now, no delay (see SWEEPING PAST above).
         if (root.panelOpen) {
-            if (root.address === app.address && root.activeScreen === screen)
+            if (root.label === app.label && root.activeScreen === screen)
                 return;
             root.openFor(screen, app);
             return;
@@ -337,6 +460,11 @@ Singleton {
         root.close();
     }
 
+    function resumeWindow() {
+        root.resume(root.label);
+        root.close();
+    }
+
     function closeWindow() {
         if (root.address === "") return;
         Quickshell.execDetached(["hyprctl", "dispatch",
@@ -378,23 +506,25 @@ Singleton {
     // the drawer is actually open and costs nothing the rest of the time
     // -- the same "pay for it while it is on screen" rule PowerState's
     // GetHistory timer follows.
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            if (!root.panelOpen) return;
-            root.syncTarget();
-        }
-    }
+    //
+    // Followed through `matches` rather than the raw toplevels since the
+    // background state: an app whose window closes stays on the list,
+    // hidden, and the panel follows it there (Focus becomes Open), then
+    // back when its window returns.
+    onMatchesChanged: { if (root.panelOpen) root.syncTarget(); }
 
     function syncTarget() {
-        if (root.address === "") return;
-        const tops = Hyprland.toplevels.values;
-        for (let i = 0; i < tops.length; i++) {
-            if (tops[i].address === root.address) return;
+        const m = root.matches.find(x => x.label === root.label);
+        if (!m) {
+            // Gone. If this is the quit landing, the panel closing IS the
+            // confirmation; if the user quit by other means, there is
+            // nothing left for the panel to act on either way.
+            root.close();
+            return;
         }
-        // Gone. If this is the quit landing, the panel closing IS the
-        // confirmation; if the user closed the window by other means,
-        // there is nothing left for the panel to act on either way.
-        root.close();
+        root.address = m.address;
+        root.pid = m.pid;
+        root.windowCount = m.windowCount;
+        root.hidden = m.hidden;
     }
 }

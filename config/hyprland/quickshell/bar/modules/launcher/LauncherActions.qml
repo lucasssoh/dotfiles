@@ -268,6 +268,7 @@ Item {
                 text: {
                     if (LauncherActionsState.quitSent)
                         return LauncherActionsState.forceOffered ? "no answer" : "quitting…";
+                    if (LauncherActionsState.hidden) return "in background";
                     const n = LauncherActionsState.windowCount;
                     return n > 1 ? n + " windows" : "";
                 }
@@ -277,13 +278,24 @@ Item {
             }
         }
 
+        // No window to focus or close while the app runs in the
+        // background: Open brings one back in their place.
         ActionRow {
+            visible: LauncherActionsState.hidden
+            glyph: "\uE916"   // mgc aiming_2 (focus)
+            label: "Open window"
+            onActivated: LauncherActionsState.resumeWindow()
+        }
+
+        ActionRow {
+            visible: !LauncherActionsState.hidden
             glyph: "\uE916"   // mgc aiming_2 (focus)
             label: "Focus window"
             onActivated: LauncherActionsState.focusWindow()
         }
 
         ActionRow {
+            visible: !LauncherActionsState.hidden
             glyph: "\uEBC8"   // mgc close_square
             label: "Close window"
             onActivated: LauncherActionsState.closeWindow()

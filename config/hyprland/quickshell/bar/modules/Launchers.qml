@@ -95,12 +95,14 @@ Item {
                 required property var modelData
 
                 // Which app's actions drawer is currently open, if any.
-                // Compared on the ADDRESS rather than the index: the
+                // Compared on the app rather than the index: the
                 // matches list is rebuilt on every refresh and an app
                 // closing a window reshuffles it, which would move the
-                // highlight onto the neighbouring chip.
+                // highlight onto the neighbouring chip. Not on the
+                // address any more either: an app running in the
+                // background has none.
                 readonly property bool menuOpen: LauncherActionsState.panelOpen
-                    && LauncherActionsState.address === chip.modelData.address
+                    && LauncherActionsState.label === chip.modelData.label
                     && LauncherActionsState.activeScreen === root.screen
 
                 // See root.anchorX. `row.x` is in there because the Row is
@@ -153,6 +155,12 @@ Item {
                 // becoming an object sitting on the bar.
                 color: chip.menuOpen ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
                 Behavior on color { ColorAnimation { duration: 120 } }
+
+                // Running with no window (see LauncherActionsState's
+                // background section): still there, dimmed, and a click
+                // brings the window back.
+                opacity: chip.modelData.hidden ? 0.45 : 1
+                Behavior on opacity { NumberAnimation { duration: 160 } }
 
                 Text {
                     renderType: Text.NativeRendering
@@ -244,6 +252,10 @@ Item {
                         // keybindsDismissEvents (it also fires on plain
                         // focus-follows-mouse -- see there).
                         LauncherActionsState.close();
+                        if (chip.modelData.hidden) {
+                            LauncherActionsState.resume(chip.modelData.label);
+                            return;
+                        }
                         Quickshell.execDetached(["hyprctl", "dispatch",
                             "hl.dsp.focus({ window = 'address:" + chip.modelData.address + "' })"]);
                     }
