@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.5.0 (October 10 2026)
 
 ### Added
 - **Boussole, I have time:** pick a subject before the duration, and its next task starts now, in the plan's order.
@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Boussole, subjects:** say how fast a subject's sheets go (quick, as estimated, long), and mark a course subject whose sheets are only read, its exercises left to the exercise files, tutorials and exam subjects.
 
 ### Fixed
+- **Workspaces:** compacting the workspaces leaves Boussole's study workspaces where they are.
 - **Firefox, address bar:** moving through the suggestions with Tab or the arrows highlights the one you are on again; it was invisible.
 - **Liseuse:** maths, lists and bold inside a hidden solution (a `<details>` block, "Corrigé") are rendered instead of shown as typed, and so is display maths written between two lines holding a single `$`. Notes already opened are rendered again the next time.
 
