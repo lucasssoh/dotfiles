@@ -1,7 +1,7 @@
 name     = "bar"
 layer    = "core"
 summary  = "The Quickshell bar: drawers, notifications, Veille, calendar; screenshot and clipboard tools; fontview"
-requires = ["hyprland", "fonts", "audio", "balise", "manette", "fuzzel"]
+requires = ["hyprland", "fonts", "audio", "balise", "manette", "sesame", "fuzzel"]
 
 [packages]
 dnf = [

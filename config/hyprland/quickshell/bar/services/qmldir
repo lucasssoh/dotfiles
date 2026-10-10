@@ -16,3 +16,4 @@ singleton HyprGaps 1.0 HyprGaps.qml
 singleton KeybindsState 1.0 KeybindsState.qml
 singleton ControllerState 1.0 ControllerState.qml
 singleton BoussoleState 1.0 BoussoleState.qml
+singleton SesameState 1.0 SesameState.qml

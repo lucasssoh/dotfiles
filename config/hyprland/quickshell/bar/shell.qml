@@ -13,6 +13,7 @@ import "modules/launcher"
 import "modules/calendar"
 import "modules/controller"
 import "modules/boussole"
+import "modules/sesame"
 import "services"
 import "theme"
 
@@ -301,6 +302,16 @@ ShellRoot {
         //   qs -c bar ipc call bar controllerNav y
         function controllerNav(button: string): void {
             if (ControllerState.open) ControllerState.nav(button);
+        }
+        // The password card with a made-up ask, to look at it: ssh, polkit,
+        // gpg, retry or confirm. Answering it sends nothing anywhere.
+        //   qs -c bar ipc call bar sesameDemo polkit
+        function sesameDemo(kind: string): void {
+            SesameState.demo(kind);
+        }
+        // Cancels the card on screen, as Escape would.
+        function sesameCancel(): void {
+            SesameState.cancel();
         }
         function pokeBrightness(): void {
             OsdState.pokeBrightness();
@@ -2395,6 +2406,31 @@ ShellRoot {
             }
 
             ControllerPopup { id: controllerPopup }
+        }
+    }
+
+    // Password card -- see services/SesameState.qml. Over everything,
+    // fullscreen windows included, on the monitor that had focus when the
+    // ask came; it takes the keyboard and every click while it is up.
+    // Closed, neither the window nor anything in it exists.
+    LazyLoader {
+        active: SesameState.shown
+
+        PanelWindow {
+            screen: Quickshell.screens.find(s => s.name === SesameState.screenName) || Quickshell.screens[0]
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "sesame"
+            WlrLayershell.keyboardFocus: SesameState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            // Fading out, clicks already go through to what is behind.
+            mask: Region {
+                width: SesameState.open ? 100000 : 0
+                height: SesameState.open ? 100000 : 0
+            }
+
+            SesameCard { anchors.fill: parent }
         }
     }
 
