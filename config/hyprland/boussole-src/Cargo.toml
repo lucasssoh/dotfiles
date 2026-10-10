@@ -1,6 +1,6 @@
 [package]
 name = "boussole"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "Study planner behind coucou-shell's Boussole drawer"
 license-file = "../../../LICENSE.md"
