@@ -163,6 +163,31 @@ ShellRoot {
         shell.keybindsShift = false;
     }
 
+    // The bar climbs to the Overlay layer while the keybinds sheet is up,
+    // and only then. Boussole's and the notifications' sheets are their
+    // own windows on the same Top layer, mapped after the bar, so they
+    // stacked over the sheet hanging from the central island; z inside
+    // the bar's window cannot reach them, the layer can (layer-shell's
+    // set_layer, no remap). Not Overlay for good: that layer sits above
+    // fullscreen windows too, and the bar must not cover a video.
+    //
+    // Held a little past the release, so the sheet finishes closing on
+    // top instead of dropping under the side sheets mid-fade.
+    property bool barRaised: false
+    onKeybindsVisibleChanged: {
+        if (shell.keybindsVisible) {
+            barLowerTimer.stop();
+            shell.barRaised = true;
+        } else {
+            barLowerTimer.restart();
+        }
+    }
+    Timer {
+        id: barLowerTimer
+        interval: 400
+        onTriggered: shell.barRaised = false
+    }
+
     // Hyprland events that mean "a shortcut just DID something", used to
     // dismiss the sheet when its release bind never arrives.
     //
@@ -709,7 +734,11 @@ ShellRoot {
             // experiment used, before it got reverted for a different
             // reason: the pixel math itself was fine).
             exclusiveZone: 24
-            aboveWindows: true
+            // The layer spelled out rather than `aboveWindows: true`, which
+            // pins it to Top: see `barRaised`, the bar climbs above
+            // Boussole's and the notifications' sheets while the keybinds
+            // sheet is showing.
+            WlrLayershell.layer: shell.barRaised ? WlrLayer.Overlay : WlrLayer.Top
             color: "transparent"
 
             anchors { top: true; left: true; right: true }
@@ -1098,6 +1127,13 @@ ShellRoot {
             // asked for.
             Modules.DrawerIsland {
                 id: centerIsland
+                // Above every other island and its drawer: siblings stack
+                // in declaration order and this one is declared first, so
+                // a neighbouring drawer used to slide over the central
+                // island and over what it extends below (Veille, the
+                // keybinds sheet). Asked for: the central island on top
+                // of everything.
+                z: 10
                 // A little taller than DrawerIsland's own 31, and the
                 // reference the band sizes itself against -- see
                 // `barBand` above for the alignment this serves.

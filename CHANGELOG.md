@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Fixed
 - **System dialogs:** an action that needs administrator rights, outside a terminal, asks for your password again; it used to fail without asking.
 - **Boussole:** hovering a button no longer flashes grey.
+- **Bar, keybinds sheet:** holding SUPER shows the sheet above Boussole and the notifications when they are open, instead of under them.
 
 ## 1.5.0 (October 10 2026)
 
