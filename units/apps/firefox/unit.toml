@@ -9,3 +9,11 @@ dnf = ["firefox"]
 # The one setting the shell shares with Firefox: HDR follows the bar's HDR switch.
 [files]
 "config/firefox/policies.json" = "/etc/firefox/policies/policies.json"  # review: M0 decision: keep only gfx.wayland.hdr, as a default
+
+[[hooks]]
+name   = "profile-theme"
+run_as = "user"
+does   = "link config/firefox/chrome/userChrome.css and userContent.css into the default profile's chrome/"
+from   = "config/firefox/install.sh"
+run    = "units/apps/firefox/hooks/profile-theme.sh"
+watch  = ["config/firefox/chrome"]
