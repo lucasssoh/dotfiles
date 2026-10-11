@@ -2,13 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.6.0 (October 11 2026)
 
 ### Added
 - **Password card:** passwords asked for outside a terminal, by the system, ssh, git or gpg, are typed on one card in the middle of the screen, which shows the command that asks, for example `claude › git push origin master`. No key is kept in memory: every push waits for you.
 
 ### Changed
 - **Bar, drawers:** the drawers are frosted glass. What is behind them shows through, blurred, so a drawer takes on the colour of your wallpaper or window: darkened and vivid in dark mode, milky cream in light mode. Their tiles and text stay readable over a white page as over a black terminal.
+- **Bar, launchers:** an app that keeps running when you close it, such as Discord or Steam, keeps its chip, dimmed, until it really quits. A click brings its window back, and its actions offer Open window.
+- **Balise:** a detail page makes the drawer grow to show it whole, up to 640 px, then scrolls. The lists keep the home's height.
 
 ### Fixed
 - **System dialogs:** an action that needs administrator rights, outside a terminal, asks for your password again; it used to fail without asking.
