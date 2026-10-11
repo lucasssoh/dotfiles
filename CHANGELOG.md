@@ -7,6 +7,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Password card:** passwords asked for outside a terminal, by the system, ssh, git or gpg, are typed on one card in the middle of the screen, which shows the command that asks, for example `claude › git push origin master`. No key is kept in memory: every push waits for you.
 
+### Changed
+- **Bar, drawers:** the drawers are frosted glass. What is behind them shows through, blurred, so a drawer takes on the colour of your wallpaper or window: darkened and vivid in dark mode, milky cream in light mode. Their tiles and text stay readable over a white page as over a black terminal.
+
 ### Fixed
 - **System dialogs:** an action that needs administrator rights, outside a terminal, asks for your password again; it used to fail without asking.
 - **Boussole:** hovering a button no longer flashes grey.

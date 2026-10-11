@@ -347,13 +347,38 @@ hl.config({
         -- gamescope and the Rockstar Games Launcher already carry an
         -- explicit no_blur in windowrules.lua, set well before this was
         -- ever turned on, for exactly this kind of situation.
+        -- On since the drawers turned to glass (dark mode): the bar asks
+        -- for blur behind exactly its open drawer panes, through
+        -- ext-background-effect (quickshell/bar/shell.qml's
+        -- BackgroundEffect), never behind the band. Nothing is blurred
+        -- while the drawers are shut, and a static background is blurred
+        -- once and cached: measured on this machine, +0.16 W at worst,
+        -- with a 60 fps video behind a drawer left open.
+        --
+        -- These are the dark mode's settings, the ones the session starts
+        -- with; the bar pushes the light mode's ("Lait": lifted, greyer)
+        -- whenever the desktop flips, see DrawerTheme's glass block and
+        -- shell.qml's GLASS TONE. Blur settings are global, so Roue and
+        -- the slightly translucent Nemo and Pavucontrol follow them too.
+        --
+        -- The dark look is "Vibrant": what shows through is darkened hard
+        -- (brightness) so the drawers' white tiles and grey labels stay
+        -- legible over a blurred white page, and its colours pushed
+        -- (vibrancy) so the glass still takes the colour of what is
+        -- behind it. Tuned live over a white page, a colour gradient and
+        -- the wallpaper; at 0.55 the calendar's weekdays and Power's
+        -- history axis vanished over white.
         blur = {
-            enabled           = false,
+            enabled           = true,
             size              = 6,
             passes            = 3,
             new_optimizations = true,
             xray              = false,
             ignore_opacity    = false,
+            brightness        = 0.38,
+            contrast          = 0.9,
+            vibrancy          = 0.6,
+            vibrancy_darkness = 0.2,
         },
         shadow = {
             enabled       = true,

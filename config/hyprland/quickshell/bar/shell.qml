@@ -603,6 +603,27 @@ ShellRoot {
     // `veille` -- `shell`'s own `veille` alias (above) points at this;
     // see its comment for why the Variants delegate below reads it
     // through that instead of this id directly.
+    // ── GLASS TONE ────────────────────────────────────────────────
+    // Hyprland's blur settings are global, and the drawers' glass needs a
+    // different pair in each mode (DrawerTheme's glass block): darkened
+    // hard behind light ink, lifted behind dark ink. hyprland.lua starts
+    // on the dark pair; this pushes whichever the current mode wants, at
+    // startup and on every flip. Nothing else in the session is blurred
+    // through these settings but Roue and the slightly translucent Nemo
+    // and Pavucontrol.
+    readonly property string glassToneLua: "hl.config({ decoration = { blur = { "
+        + "brightness = " + DrawerTheme.glassBrightness
+        + ", contrast = " + DrawerTheme.glassContrast
+        + ", vibrancy = " + DrawerTheme.glassVibrancy
+        + ", vibrancy_darkness = " + DrawerTheme.glassVibrancyDarkness
+        + " } } })"
+    Process {
+        id: glassTone
+        command: ["hyprctl", "eval", shell.glassToneLua]
+    }
+    onGlassToneLuaChanged: { glassTone.running = false; glassTone.running = true; }
+    Component.onCompleted: glassTone.running = true
+
     Veille {
         id: veilleInstance
         zenMode: shell.zenMode
@@ -783,6 +804,48 @@ ShellRoot {
             // ITS live height (toolsIsland.height already tracks its
             // drawer's own open/close animation, no separate state to
             // keep in sync).
+            // ── GLASS ─────────────────────────────────────────────────
+            // The split drawers' panes are glass (see DrawerTheme's
+            // glass block): the bar asks Hyprland to blur behind
+            // exactly those panes, through ext-background-effect, and
+            // nowhere else -- not the band, whose 45% veil has to stay
+            // the plain strip it is. Asking by region rather than a
+            // layer rule with ignore_alpha is the only way to tell the
+            // two apart: the pane (5%) is MORE transparent than the band.
+            //
+            // A closed drawer gives a zero-width rect, so nothing is
+            // blurred, and nothing is computed, while the bar is idle.
+            BackgroundEffect.blurRegion: Region {
+                Region {
+                    x: clockIsland.x + clockIsland.paneX
+                    y: clockIsland.y + clockIsland.paneY
+                    width: DrawerTheme.glass && clockIsland.paneShown ? clockIsland.paneWidth : 0
+                    height: clockIsland.paneHeight
+                    radius: clockIsland.drawerRadius
+                }
+                Region {
+                    x: boussoleIsland.x + boussoleIsland.paneX
+                    y: boussoleIsland.y + boussoleIsland.paneY
+                    width: DrawerTheme.glass && boussoleIsland.paneShown ? boussoleIsland.paneWidth : 0
+                    height: boussoleIsland.paneHeight
+                    radius: boussoleIsland.drawerRadius
+                }
+                Region {
+                    x: launchers.x + launchers.paneX
+                    y: launchers.y + launchers.paneY
+                    width: DrawerTheme.glass && launchers.paneShown ? launchers.paneWidth : 0
+                    height: launchers.paneHeight
+                    radius: launchers.drawerRadius
+                }
+                Region {
+                    x: toolsIsland.x + toolsIsland.paneX
+                    y: toolsIsland.y + toolsIsland.paneY
+                    width: DrawerTheme.glass && toolsIsland.paneShown ? toolsIsland.paneWidth : 0
+                    height: toolsIsland.paneHeight
+                    radius: toolsIsland.drawerRadius
+                }
+            }
+
             mask: Region {
                 Region {
                     x: 0
@@ -1146,8 +1209,8 @@ ShellRoot {
                 // DrawerTheme, the drawers' own palette. The convex lens
                 // on the pane came back after a flat trial ("c'est trop
                 // plat"): DrawerIsland's default `drawerLens: true`.
-                drawerFillTop: DrawerTheme.panelTop
-                drawerFillBottom: DrawerTheme.panelBottom
+                drawerFillTop: DrawerTheme.paneTop
+                drawerFillBottom: DrawerTheme.paneBottom
                 drawerRadius: 28
                 drawerGap: 0
                 drawerTop: bar.bandHeight
@@ -1206,8 +1269,8 @@ ShellRoot {
                 fixedDrawerWidth: 440
                 widenOnOpen: false
                 splitDrawer: true
-                drawerFillTop: DrawerTheme.panelTop
-                drawerFillBottom: DrawerTheme.panelBottom
+                drawerFillTop: DrawerTheme.paneTop
+                drawerFillBottom: DrawerTheme.paneBottom
                 drawerRadius: 28
                 drawerGap: 0
                 drawerTop: bar.bandHeight
@@ -1421,8 +1484,8 @@ ShellRoot {
                 // the panel reads as the same material as the others,
                 // just without the modelling. See LauncherActions.qml's
                 // header for the rest of the pass this belongs to.
-                drawerFillTop: DrawerTheme.panelTop
-                drawerFillBottom: DrawerTheme.panelBottom
+                drawerFillTop: DrawerTheme.paneTop
+                drawerFillBottom: DrawerTheme.paneBottom
                 // ...and flat all the way: no GlassLens edge either
                 // (asked for -- "il faut juste un bg plat"). The lens is a
                 // light source, and a fill that is one constant colour
@@ -1673,8 +1736,8 @@ ShellRoot {
                 // DrawerTheme, the drawers' own palette. The convex lens
                 // on the pane came back after a flat trial ("c'est trop
                 // plat"): DrawerIsland's default `drawerLens: true`.
-                drawerFillTop: DrawerTheme.panelTop
-                drawerFillBottom: DrawerTheme.panelBottom
+                drawerFillTop: DrawerTheme.paneTop
+                drawerFillBottom: DrawerTheme.paneBottom
                 drawerRadius: 28
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.
@@ -2471,6 +2534,26 @@ ShellRoot {
             margins.top: 31
             implicitWidth: 440
 
+            // Glass like the bar's drawers (see GLASS there): Hyprland
+            // blurs behind the sheet, following it as it slides.
+            //
+            // Only over the first 80% of the slide. The region reaches the
+            // compositor a frame or two behind the sheet, so near the end
+            // of a close it left a dark blurred strip where the sheet had
+            // just been. Cutting it short drops the blur under a sheet
+            // that is nearly gone, where nobody can see it go.
+            // Its own namespace, for hypr/windowrules.lua's no_anim: the
+            // sheet slides itself, and Hyprland's layer animation on top
+            // replayed the glass after the window had gone.
+            WlrLayershell.namespace: "quickshell-sheet"
+            BackgroundEffect.blurRegion: Region {
+                x: boussoleSheet.x
+                width: DrawerTheme.glass && -boussoleSheet.x < boussoleSheet.width * 0.8 ? boussoleSheet.width : 0
+                height: boussoleSheet.height
+                topRightRadius: boussoleSheet.topRightRadius
+                bottomRightRadius: boussoleSheet.bottomRightRadius
+            }
+
             Rectangle {
                 id: boussoleSheet
                 property bool entered: false
@@ -2479,7 +2562,7 @@ ShellRoot {
                 x: entered && BoussoleState.panelOpen ? 0 : -width
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => boussoleSheet.entered = true)
-                color: DrawerTheme.panelTop
+                color: DrawerTheme.paneTop
                 // Flush on the left and the bottom, rounded where it meets
                 // the desktop.
                 topRightRadius: 28
@@ -2561,6 +2644,20 @@ ShellRoot {
             margins.top: 31
             implicitWidth: 440
 
+            // Glass, like Boussole's sheet above (and cut short the same
+            // way, see there).
+            // Its own namespace, for hypr/windowrules.lua's no_anim: the
+            // sheet slides itself, and Hyprland's layer animation on top
+            // replayed the glass after the window had gone.
+            WlrLayershell.namespace: "quickshell-sheet"
+            BackgroundEffect.blurRegion: Region {
+                x: notificationsSheet.x
+                width: DrawerTheme.glass && notificationsSheet.x < notificationsSheet.width * 0.8 ? notificationsSheet.width : 0
+                height: notificationsSheet.height
+                topLeftRadius: notificationsSheet.topLeftRadius
+                bottomLeftRadius: notificationsSheet.bottomLeftRadius
+            }
+
             Rectangle {
                 id: notificationsSheet
                 property bool entered: false
@@ -2569,7 +2666,7 @@ ShellRoot {
                 x: entered && NotificationState.centerOpen ? 0 : width
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => notificationsSheet.entered = true)
-                color: DrawerTheme.panelTop
+                color: DrawerTheme.paneTop
                 topLeftRadius: 28
                 bottomLeftRadius: 28
 

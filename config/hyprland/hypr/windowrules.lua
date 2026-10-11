@@ -424,3 +424,12 @@ hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xra
 -- the wallpaper rises out of the black misc:background_color instead of
 -- popping or sliding in. Speed and curve stay those of the `layers` leaf.
 hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fade" })
+
+-- ============================================================
+-- LAYER NO-ANIM — the bar's side sheets (Boussole, notifications)
+-- ============================================================
+-- They slide in and out on their own (quickshell/bar/shell.qml), so the
+-- `layers` animation only doubled the motion, and on close it replayed
+-- the sheet with its glass blur for a few frames after the window had
+-- gone: a dark rectangle flashing where the sheet had been.
+hl.layer_rule({ match = { namespace = "^quickshell-sheet$" },   no_anim = true })

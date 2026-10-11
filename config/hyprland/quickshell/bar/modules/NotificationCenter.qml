@@ -594,7 +594,9 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Clear all"
-            color: NotificationState.trackedNotifications.values.length > 0 ? DrawerTheme.accent : DrawerTheme.faint
+            // Muted, not faint, when there is nothing to clear: on the
+            // glass sheet faint vanished entirely.
+            color: NotificationState.trackedNotifications.values.length > 0 ? DrawerTheme.accent : DrawerTheme.muted
             font.family: Fonts.ui
             font.pixelSize: 13
         }

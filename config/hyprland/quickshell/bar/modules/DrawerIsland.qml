@@ -439,6 +439,17 @@ Item {
     // un bg plat"), and it also takes an FBO the size of the pane out of
     // a panel that opens and closes on hover.
     property bool drawerLens: true
+
+    // Where the drawer pane sits, in this island's coordinates, for the
+    // bar's blur region (shell.qml's BackgroundEffect): Hyprland blurs
+    // exactly this rect behind the glass pane. Separate reals rather than
+    // a rect, the same trap as the input mask: a Region reading its
+    // geometry through a rect-typed property never follows it.
+    readonly property bool paneShown: root.splitDrawer && root.opaqueProgress > 0.01
+    readonly property real paneX: drawerFill.x
+    readonly property real paneY: drawerFill.y
+    readonly property real paneWidth: drawerFill.width
+    readonly property real paneHeight: drawerFill.height
     // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
     // this 6px auto-spacing entirely, no manual spacers between its
     // children. TOOLS' own content instead uses spacing:0 plus hand-tuned

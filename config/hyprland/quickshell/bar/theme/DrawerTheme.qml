@@ -32,10 +32,14 @@ QtObject {
     readonly property bool dark: !AppearanceState.ready || AppearanceState.dark
 
     // ---- foreground (Ink's names) -------------------------------------
+    // The three grey tiers sit one step further from the glass than from
+    // the opaque panel: in dark, over a blurred white page the glass is a
+    // mid grey, and #636366 on it
+    // vanished (the calendar's weekdays, Power's history axis).
     readonly property color primary: root.dark ? "#f2f2f7" : "#1c1c1e"
-    readonly property color secondary: root.dark ? "#8e8e93" : "#56565b"
-    readonly property color muted: root.dark ? "#636366" : "#86868b"
-    readonly property color faint: root.dark ? "#48484a" : "#c4c3be"
+    readonly property color secondary: root.dark ? (root.glass ? "#a1a1a6" : "#8e8e93") : (root.glass ? "#46464b" : "#56565b")
+    readonly property color muted: root.dark ? (root.glass ? "#7c7c80" : "#636366") : (root.glass ? "#68686e" : "#86868b")
+    readonly property color faint: root.dark ? (root.glass ? "#5a5a5e" : "#48484a") : (root.glass ? "#9a9aa0" : "#c4c3be")
     readonly property color danger: root.dark ? "#ff6e6e" : "#b3261e"
     readonly property color accent: root.primary
     readonly property color positive: root.dark ? "#a3d9a5" : "#24692a"
@@ -99,5 +103,29 @@ QtObject {
     readonly property color stackBack: root.dark ? "#0d0d10" : "#dddbd4"
     readonly property color destructive: root.danger
     readonly property color destructiveSoft: root.dark ? "#2b1f22" : "#f5dedd"
+    // ---- glass ---------------------------------------------------------
+    // The split drawers' panes are glass: Hyprland blurs what is behind
+    // them (the bar asks for it through ext-background-effect, see
+    // shell.qml) and the pane itself is only a veil over it. Everything ON
+    // the pane keeps its opaque card, which is what keeps it legible over
+    // a white page as over a photo.
+    //
+    // Dark is "Vibrant": a 5% black veil, and the blur darkens what shows
+    // through and pushes its colours, so the glass takes the colour of
+    // what is behind. Light is "Lait": the blur cannot lighten a black
+    // terminal (brightness multiplies, contrast only pulls toward grey),
+    // so the cream veil carries the light and has to be thicker for the
+    // dark ink to read over black.
+    //
+    // The blur's settings are global to Hyprland, so the bar pushes the
+    // pair for the current mode whenever it flips (shell.qml, GLASS TONE).
+    readonly property bool glass: true
+    readonly property color glassPane: root.dark ? Qt.rgba(0, 0, 0, 0.05) : Qt.rgba(0.961, 0.953, 0.933, 0.5)
+    readonly property real glassBrightness: root.dark ? 0.38 : 1.1
+    readonly property real glassContrast: root.dark ? 0.9 : 0.6
+    readonly property real glassVibrancy: root.dark ? 0.6 : 0.3
+    readonly property real glassVibrancyDarkness: root.dark ? 0.2 : 0.0
+    readonly property color paneTop: root.glass ? root.glassPane : root.panelTop
+    readonly property color paneBottom: root.glass ? root.glassPane : root.panelBottom
     readonly property color destructiveSoftHover: root.dark ? "#3e262c" : "#eecdcc"
 }
