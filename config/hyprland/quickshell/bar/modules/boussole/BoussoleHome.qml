@@ -88,7 +88,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: height / 2
-                        color: !seg.selected && segHit.containsMouse ? DrawerTheme.cardHover : "transparent"
+                        color: !seg.selected && segHit.containsMouse ? DrawerTheme.cardHover : Qt.rgba(DrawerTheme.cardHover.r, DrawerTheme.cardHover.g, DrawerTheme.cardHover.b, 0)
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
                     BoussoleText {
