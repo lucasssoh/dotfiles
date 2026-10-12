@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Added
 - **Boussole, focus mode:** Close also closes the windows left in the study workspaces, so a browser or an app forgotten there no longer holds its memory. An app with unsaved work asks first, on your own workspace. Turn it off with Tidy on Close, in More › Rhythm.
+- **Bar, scroll bar:** Boussole's drawer and the library have a thin scroll bar: drag it, or click its track to jump there.
 
 ### Fixed
 - **Boussole, I have time:** picking a subject and a duration starts the session and, in focus mode, takes you to the study workspaces; it only planned it.

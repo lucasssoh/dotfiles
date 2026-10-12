@@ -142,6 +142,15 @@ Item {
         }
     }
 
+    // In the right margin, beside the page.
+    ThinScrollBar {
+        target: flick
+        anchors.left: flick.right
+        anchors.leftMargin: 4
+        anchors.top: flick.top
+        anchors.bottom: flick.bottom
+    }
+
     Component { id: today; BoussoleToday {} }
     Component { id: week; BoussoleWeek {} }
     Component { id: closing; BoussoleClose {} }
