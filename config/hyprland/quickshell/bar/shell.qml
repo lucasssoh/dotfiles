@@ -14,6 +14,7 @@ import "modules/calendar"
 import "modules/controller"
 import "modules/boussole"
 import "modules/sesame"
+import "modules/library"
 import "services"
 import "theme"
 
@@ -485,6 +486,17 @@ ShellRoot {
         }
         function toggleCalendar(): void {
             CalendarState.togglePanel(Quickshell.screens[0]);
+        }
+        // The library's picker (services/LibraryState.qml): Liseuse's
+        // Super+F asks for it here and falls back to fuzzel without the bar.
+        function openLibrary(): void {
+            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0], "open", null);
+        }
+        function searchLibrary(query: string): void {
+            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0], "open", null, query);
+        }
+        function closeLibrary(): void {
+            LibraryState.hide();
         }
         function toggleBoussole(): void {
             BoussoleState.togglePanel(Quickshell.screens[0]);
@@ -2530,6 +2542,28 @@ ShellRoot {
             }
 
             SesameCard { anchors.fill: parent }
+        }
+    }
+
+    // The library's picker -- see services/LibraryState.qml. Over
+    // everything on the monitor in use, taking the keyboard while open.
+    LazyLoader {
+        active: LibraryState.shown
+
+        PanelWindow {
+            screen: Quickshell.screens.find(s => s.name === LibraryState.screenName) || Quickshell.screens[0]
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "library"
+            WlrLayershell.keyboardFocus: LibraryState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            mask: Region {
+                width: LibraryState.open ? 100000 : 0
+                height: LibraryState.open ? 100000 : 0
+            }
+
+            LibraryCard { anchors.fill: parent }
         }
     }
 
