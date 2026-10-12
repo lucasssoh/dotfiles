@@ -18,6 +18,8 @@ boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional
 boussole start|skip|done [ID]  the next session, or the one given: one task each
 boussole unskip ID             bring back a session said not tonight
 boussole free MINUTES [SUBJECT] I have time: a session right away (that subject's next task)
+boussole free MINUTES --file F  the same on one course file (path under the course folder)
+boussole library                every course file by subject and chapter, as JSON
 boussole later [ID] HH:MM      later today, at a precise time
 boussole draft [ID]            what Liseuse saw, pre-filling the close
 boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
@@ -135,6 +137,8 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["start" | "skip" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
         ["unskip", id] => req(json!({ "cmd": "unskip", "session": id })),
         ["free", m] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")? })),
+        ["free", m, "--file", item] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "item": item })),
+        ["library"] => request(paths, json!({ "cmd": "library" })).map(|mut v| serde_json::to_string_pretty(&v["data"].take()).unwrap_or_default()),
         ["free", m, subject] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "subject": subject })),
         ["draft", ..] => req(json!({ "cmd": "draft", "session": sess(1) })),
         ["close", rest @ ..] => {

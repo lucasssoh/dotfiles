@@ -49,6 +49,8 @@ pub(crate) enum Job {
     Quiet,
     /// `busctl monitor` on zathura, resident: read line by line.
     Bus,
+    /// `mutool show FILE outline` for the library, one file at a time.
+    Outline { item: String, mtime: i64 },
 }
 
 pub(crate) struct Running {
@@ -100,6 +102,8 @@ pub struct Service {
     pub(crate) alert: Option<Value>,
     /// Focus mode's workspace and parked windows.
     pub(crate) focus: crate::focus::FocusState,
+    /// The course PDFs' outlines, for the library.
+    pub(crate) outlines: crate::bibliotheque::Outlines,
 }
 
 fn clock(id: libc::clockid_t) -> i64 {
@@ -174,8 +178,10 @@ pub fn run(paths: Paths) -> io::Result<()> {
         suivi: crate::suivi::Suivi::default(),
         alert: None,
         focus: crate::focus::FocusState::default(),
+        outlines: Default::default(),
     };
     s.focus_load();
+    s.outlines_load();
     s.rescan();
     s.suivi_start();
     s.focus_arrange();
@@ -354,6 +360,7 @@ impl Service {
     fn rescan(&mut self) {
         let Some(root) = self.store.settings.courses.clone() else { return };
         self.catalogue = Catalogue::scan(&root, &self.store.settings.ignore);
+        self.outlines_refresh();
         // Watch every folder, new ones included (adding a watch twice is harmless).
         let mut dirs = vec![root.clone()];
         while let Some(d) = dirs.pop() {
@@ -622,6 +629,7 @@ impl Service {
                     self.on_action(&s, action);
                 }
             }
+            Job::Outline { item, mtime } => self.outline_done(item, mtime, ok.then_some(text)),
             Job::Quiet | Job::Bus => {}
         }
     }
@@ -1138,9 +1146,10 @@ impl Service {
             "free" => {
                 let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(60) as i32;
                 let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
-                let (text, id) = match s("subject").filter(|d| !d.is_empty()) {
-                    Some(d) => self.free_time_for(minutes, place, &d)?,
-                    None => self.free_time(minutes, place).map_err(io)?,
+                let (text, id) = match (s("item").filter(|i| !i.is_empty()), s("subject").filter(|d| !d.is_empty())) {
+                    (Some(i), _) => self.free_item(minutes, place, &i)?,
+                    (None, Some(d)) => self.free_time_for(minutes, place, &d)?,
+                    (None, None) => self.free_time(minutes, place).map_err(io)?,
                 };
                 // Right away: started, into the study dimension.
                 if let Some(id) = &id {
@@ -1206,6 +1215,7 @@ impl Service {
             }
             "files-view" => (String::new(), self.files_view()),
             "suggestions" => (String::new(), self.suggestions()),
+            "library" => (String::new(), self.library()),
             "plan-structured" => {
                 let n = self.plan_structured().map_err(io)?;
                 (n.to_string(), json!(n))

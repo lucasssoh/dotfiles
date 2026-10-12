@@ -8,6 +8,7 @@
 pub mod ade;
 pub mod ajout;
 pub mod alertes;
+pub mod bibliotheque;
 pub mod catalogue;
 pub mod cli;
 pub mod daemon;

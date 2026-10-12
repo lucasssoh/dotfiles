@@ -56,6 +56,10 @@ pub struct Item {
     pub starred: bool,
     /// What the map says next to the ★.
     pub star_note: Option<String>,
+    /// Every heading under the title, (level, text), for the library's
+    /// search: "1.1 Le tableau associé à une base", "Exercice 1 — Un pivot".
+    #[serde(default)]
+    pub headings: Vec<(usize, String)>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -137,6 +141,87 @@ fn heading(line: &str) -> Option<(usize, &str)> {
     (level > 0 && line[level..].starts_with(' ')).then(|| (level, line[level..].trim()))
 }
 
+/// A heading as read, its maths in plain letters: "rapport $2 - \\frac{1}{m}$"
+/// → "rapport 2 - 1/m", "$\\rho$" → "ρ". Code and emphasis marks dropped.
+pub fn plain(title: &str) -> String {
+    let t: String = title.chars().filter(|c| !matches!(c, '$' | '`' | '*')).collect();
+    let mut out = String::new();
+    let mut it = t.chars().peekable();
+    // One argument of a command: {…} or a single character.
+    fn arg(it: &mut std::iter::Peekable<std::str::Chars>) -> String {
+        while it.peek() == Some(&' ') {
+            it.next();
+        }
+        match it.next() {
+            Some('{') => {
+                let mut depth = 1;
+                let mut a = String::new();
+                for c in it.by_ref() {
+                    match c {
+                        '{' => depth += 1,
+                        '}' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                    a.push(c);
+                }
+                plain(&a)
+            }
+            Some(c) => c.to_string(),
+            None => String::new(),
+        }
+    }
+    while let Some(c) = it.next() {
+        match c {
+            '\\' => {
+                let mut name = String::new();
+                while let Some(&n) = it.peek().filter(|n| n.is_ascii_alphabetic()) {
+                    name.push(n);
+                    it.next();
+                }
+                if name.is_empty() {
+                    // "\{", "\}", "\,": the character itself, or a space.
+                    match it.next() {
+                        Some(',' | ';' | ' ') | None => out.push(' '),
+                        Some(c) => out.push(c),
+                    }
+                    continue;
+                }
+                let sym = match name.as_str() {
+                    "frac" | "dfrac" | "tfrac" => {
+                        let (a, b) = (arg(&mut it), arg(&mut it));
+                        out.push_str(&format!("{a}/{b}"));
+                        continue;
+                    }
+                    "mathcal" | "mathrm" | "mathbf" | "mathbb" | "text" | "bar" | "dot" | "hat" | "overline" | "mathbin" | "operatorname" => {
+                        let a = arg(&mut it);
+                        out.push_str(&a);
+                        continue;
+                    }
+                    "alpha" => "α", "beta" => "β", "gamma" => "γ", "delta" => "δ", "varepsilon" | "epsilon" => "ε",
+                    "lambda" => "λ", "mu" => "μ", "pi" => "π", "rho" => "ρ", "sigma" => "σ", "theta" => "θ", "omega" => "ω",
+                    "Theta" => "Θ", "Pi" => "Π", "Sigma" => "Σ", "Omega" => "Ω", "Delta" => "Δ",
+                    "le" | "leq" => "≤", "ge" | "geq" => "≥", "neq" | "ne" => "≠", "in" => "∈", "notin" => "∉",
+                    "to" | "rightarrow" => "→", "Rightarrow" => "⇒", "iff" | "Leftrightarrow" => "⇔", "vdash" => "⊢",
+                    "mid" | "lvert" | "rvert" => "|", "cdot" => "·", "times" => "×", "infty" => "∞", "sum" => "Σ", "prod" => "Π",
+                    "lfloor" => "⌊", "rfloor" => "⌋", "lceil" => "⌈", "rceil" => "⌉", "subset" => "⊂", "subseteq" => "⊆",
+                    "cup" => "∪", "cap" => "∩", "forall" => "∀", "exists" => "∃", "ldots" | "dots" | "cdots" => "…",
+                    "left" | "right" | "big" | "Big" | "quad" => "",
+                    other => other,
+                };
+                out.push_str(sym);
+            }
+            '{' | '}' | '_' | '^' => {}
+            c => out.push(c),
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 fn is_exercise(title: &str) -> bool {
     let t = title.to_lowercase();
     t.starts_with("exercice") || t.starts_with("exercise")
@@ -158,7 +243,7 @@ fn read_markdown(item: &mut Item, text: &str) {
         let Some((level, title)) = heading(line) else { continue };
         if level == 1 {
             if first {
-                item.title = title.to_string();
+                item.title = plain(title);
             } else if title.to_lowercase().starts_with("sujet") {
                 subjects += 1;
             }
@@ -166,6 +251,9 @@ fn read_markdown(item: &mut Item, text: &str) {
             continue;
         }
         first = false;
+        if level <= 3 {
+            item.headings.push((level, plain(title)));
+        }
         match item.kind {
             ItemKind::Sheet if level == 2 => {
                 let num = leading_number(title);
@@ -307,6 +395,7 @@ impl Walker<'_> {
                 subjects: 0,
                 starred: starred.is_some(),
                 star_note: starred.filter(|n| !n.is_empty()).cloned(),
+                headings: Vec::new(),
             };
             if !pdf {
                 if let Ok(text) = std::fs::read_to_string(self.root.join(&child)) {

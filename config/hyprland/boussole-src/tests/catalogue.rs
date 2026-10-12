@@ -111,3 +111,15 @@ fn real_course_folder() {
     assert!(c.items.iter().all(|i| !i.id.contains("/References/") && !i.id.contains("/_outils/")));
     assert_eq!(c.get("RESEAUX/TD/30_IPv4_CIDR_plan_adressage/Exo_16_CIDR_reseau_broadcast_plage.md").unwrap().kind, ItemKind::TdExercise);
 }
+
+#[test]
+fn headings_read_their_maths_in_plain_letters() {
+    use boussole::catalogue::plain;
+    assert_eq!(plain(r"Le rapport d'approximation $\rho$"), "Le rapport d'approximation ρ");
+    assert_eq!(plain(r"Analyse de LS : rapport $2 - \frac{1}{m}$"), "Analyse de LS : rapport 2 - 1/m");
+    assert_eq!(plain(r"Analyse fine : $\frac43 - \frac{1}{3m}$"), "Analyse fine : 4/3 - 1/3m");
+    assert_eq!(plain(r"Notation $\alpha \mid \beta \mid \gamma$"), "Notation α | β | γ");
+    assert_eq!(plain(r"Le problème $P||C_{\max}$"), "Le problème P||Cmax");
+    assert_eq!(plain(r"Base $I \to I' = I + \{s\}$"), "Base I → I' = I + {s}");
+    assert_eq!(plain("Lecture de `simplexe.py`"), "Lecture de simplexe.py");
+}

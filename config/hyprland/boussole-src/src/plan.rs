@@ -92,6 +92,22 @@ pub enum Work {
     Recall { item: Option<String> },
 }
 
+impl Work {
+    /// The course file it is about, if any.
+    pub fn item(&self) -> Option<&str> {
+        match self {
+            Work::Study { item, .. }
+            | Work::Read { item }
+            | Work::Review { item, .. }
+            | Work::Redo { item, .. }
+            | Work::Question { item }
+            | Work::ExamSubject { item, .. } => Some(item),
+            Work::Recall { item } => item.as_deref(),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Part {
     /// The task this belongs to, stable from one plan to the next.

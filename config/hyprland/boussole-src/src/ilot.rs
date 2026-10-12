@@ -20,7 +20,7 @@ use crate::store::Outcome;
 use crate::time::{Hm, Local};
 
 impl Service {
-    fn t(&self, en: &str, fr: &str) -> String {
+    pub(crate) fn t(&self, en: &str, fr: &str) -> String {
         if self.lang() == Lang::Fr { fr } else { en }.to_string()
     }
 
@@ -646,8 +646,6 @@ impl Service {
     /// the drawer is opened. Never shown on its own ("c'est moi qui décide
     /// d'ouvrir boussole"); a session planned keeps its own alerts.
     pub(crate) fn now_free(&self) -> Value {
-        use crate::model::Level;
-        let fr = self.lang() == Lang::Fr;
         let lang = self.lang();
         let now = self.now();
         let st = &self.store.state;
@@ -683,7 +681,7 @@ impl Service {
         if span < r.min_session {
             return Value::Null;
         }
-        // What is ahead in the plan, in its order.
+        let recs = self.picks(span);
         let ahead: Vec<&crate::plan::Part> = self
             .plan
             .sessions
@@ -691,62 +689,7 @@ impl Service {
             .filter(|x| Local::new(x.date, x.end) > now && open(&x.id))
             .flat_map(|x| x.parts.iter())
             .collect();
-        let name = |d: &str| if d == "RESEAUX" { self.t("Networks", "Réseaux") } else { d.to_string() };
-        let mut recs: Vec<Value> = Vec::new();
-        let mut taken: Vec<String> = Vec::new();
-        let mut push = |p: &crate::plan::Part, title: String, why: String, hot: bool, recs: &mut Vec<Value>| {
-            if taken.contains(&p.task) || recs.len() >= 3 {
-                return;
-            }
-            taken.push(p.task.clone());
-            let minutes = p.minutes.min(span);
-            recs.push(json!({
-                "task": p.task,
-                "domain": p.domain,
-                "title": title,
-                "detail": format!("{minutes} min"),
-                "why": why,
-                "hot": hot,
-                "minutes": minutes,
-            }));
-        };
-        // 1. The nearest tutorial to prepare, today's first.
-        let mut prep: Vec<(&crate::plan::Part, Local)> = ahead
-            .iter()
-            .filter_map(|p| match &p.work {
-                Work::Prepare { at, .. } if at.date.0 - now.date.0 <= 3 && *at > now => Some((*p, *at)),
-                _ => None,
-            })
-            .collect();
-        prep.sort_by_key(|(_, at)| *at);
-        for (p, at) in prep.iter().take(2) {
-            let d = name(p.domain.as_deref().unwrap_or(""));
-            let today = at.date == now.date;
-            let when = if today { at.time.to_string() } else { i18n::date(at.date, lang) };
-            let title = if fr { format!("{d} · préparer le TD {}{when}", if today { "de " } else { "du " }) } else { format!("{d} · prepare the tutorial {}{when}", if today { "at " } else { "on " }) };
-            let weekday = i18n::date(at.date, lang).split(' ').next().unwrap_or("").trim_end_matches('.').to_string();
-            let why = if today {
-                self.t(&format!("tutorial at {}", at.time), &format!("TD à {}", at.time))
-            } else {
-                let full = |w: &str| match w { "lun" => "lundi", "mar" => "mardi", "mer" => "mercredi", "jeu" => "jeudi", "ven" => "vendredi", "sam" => "samedi", "dim" => "dimanche", x => x }.to_string();
-                if fr { format!("TD {}", full(&weekday)) } else { format!("tutorial {weekday}") }
-            };
-            push(p, title, why, false, &mut recs);
-        }
-        // 2. The subject furthest behind its exam.
-        if let Some(m) = self.plan.margins.iter().filter(|m| m.sessions < 0 && m.date >= now.date).min_by_key(|m| m.sessions) {
-            if let Some(p) = ahead.iter().find(|p| p.domain == m.domain && !matches!(p.work, Work::Prepare { .. })) {
-                let d = name(p.domain.as_deref().unwrap_or(""));
-                let why = if fr { format!("−{} séances", -m.sessions) } else { format!("−{} sessions", -m.sessions) };
-                push(p, format!("{d} · {}", i18n::work(&p.work, lang)), why, true, &mut recs);
-            }
-        }
-        // 3. A subject said to be behind.
-        for dom in self.store.settings.domains.iter().filter(|d| d.level == Level::Behind && !d.archived) {
-            if let Some(p) = ahead.iter().find(|p| p.domain.as_deref() == Some(&dom.id) && !matches!(p.work, Work::Prepare { .. })) {
-                push(p, format!("{} · {}", name(&dom.id), i18n::work(&p.work, lang)), self.t("behind", "en retard"), false, &mut recs);
-            }
-        }
+        let name = |d: &str| self.subject_name(d);
         // Each subject's next task, to pick one by hand.
         let subjects: Vec<Value> = self
             .store
