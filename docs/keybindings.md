@@ -17,7 +17,7 @@ You don't have to remember any of this: hold `Super` and the bar shows every bin
 | `Super + E` | File manager (Nemo by default) |
 | `Super + B` | Web browser (Firefox by default) |
 | `Super + W` | Prisme, the wallpaper picker |
-| `Super + F` | Liseuse: picks up the book you were reading, or lets you choose one. Press `F1` inside a book for its manual |
+| `Super + F` | Liseuse: picks up the book you were reading, or opens the library to search one. Press `F1` inside a book for its manual |
 | `Super + V` | Clipboard history (cliphist, through fuzzel) |
 | `Super + A` | Agenda: add or delete an event (khal, through fuzzel) |
 | `Super + D` | Boussole's drawer, with the [`boussole`](modules.md#boussole) unit |
