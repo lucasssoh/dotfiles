@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Boussole, I have time:** choose any course file, not only the next task. Each subject shows its next three steps with their reason, then all its files by chapter with what you have read, and Any course file… searches them all. The drawer says how your choice fits the plan, and the next step stays for the next session. The free-time card offers the same.
 - **Boussole, focus mode:** Close also closes the windows left in the study workspaces, so a browser or an app forgotten there no longer holds its memory. An app with unsaved work asks first, on your own workspace. Turn it off with Tidy on Close, in More › Rhythm.
 - **Bar, scroll bar:** Boussole's drawer and the library have a thin scroll bar: drag it, or click its track to jump there.
 

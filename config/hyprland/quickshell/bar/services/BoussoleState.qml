@@ -403,7 +403,6 @@ Singleton {
     function unskip(session) { root._send({ cmd: "unskip", session: session }); }
     // "I have time": a session right away; `cb` gets the reply.
     // `subject`: "" for the most useful work, else that subject's next task.
-    function freeTime(minutes, cb, subject) { root.request({ cmd: "free", minutes: minutes, subject: subject || "" }, cb); }
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
     // Today's free time (nothing planned now): what would help most. Shown
     // only in the drawer, never on its own.
