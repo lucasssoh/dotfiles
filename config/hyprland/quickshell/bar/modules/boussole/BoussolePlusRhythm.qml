@@ -75,10 +75,19 @@ Column {
             onClicked: root.b.setSettings({ focus: { enabled: false } })
         }
     }
+    Row {
+        visible: root.fm.enabled === true
+        spacing: 6
+        BoussoleChip {
+            text: root.b.tr("Tidy on Close", "Ranger à la clôture")
+            on: root.fm.tidy !== false
+            onClicked: root.b.setSettings({ focus: { tidy: root.fm.tidy === false } })
+        }
+    }
     BoussoleText {
         width: parent.width
-        text: root.b.tr("Starting a session takes you to the study workspaces, a dimension of their own, with its file in Liseuse and the session's panel on the right: the time, the objective, the evening's files and Next. Your own workspaces stay as they are; Pause and Close bring you back. Whatever you open there counts for the session.",
-                        "Démarrer une séance t'emmène sur les bureaux d'étude, une dimension à part, avec son fichier dans Liseuse et le panneau de séance à droite : le temps, l'objectif, les fichiers de la soirée et Suivant. Tes bureaux restent comme ils sont ; Pause et Clore t'y ramènent. Tout ce que tu ouvres là-bas compte pour la séance.")
+        text: root.b.tr("Starting a session takes you to the study workspaces, a dimension of their own, with its file in Liseuse and the session's panel on the right: the time, the objective, the evening's files and Next. Your own workspaces stay as they are; Pause and Close bring you back. Whatever you open there counts for the session. Tidy on Close closes what is left there; an app with unsaved work asks first, on your own workspace.",
+                        "Démarrer une séance t'emmène sur les bureaux d'étude, une dimension à part, avec son fichier dans Liseuse et le panneau de séance à droite : le temps, l'objectif, les fichiers de la soirée et Suivant. Tes bureaux restent comme ils sont ; Pause et Clore t'y ramènent. Tout ce que tu ouvres là-bas compte pour la séance. Ranger à la clôture ferme ce qui y reste ; une appli avec du travail non enregistré te le demande d'abord, sur ton bureau.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

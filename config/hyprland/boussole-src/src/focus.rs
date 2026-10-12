@@ -5,6 +5,9 @@
 //!              otherwise) and opens its file in Liseuse; your own
 //!              workspaces are left as they are. Pause and Close bring you
 //!              back where you came from; Resume takes you there again.
+//!   tidy       Close also closes what is left in the dimension (a polite
+//!              close request: an app with unsaved work asks first, and
+//!              comes back with you to ask it); Pause and Next keep it.
 //!   panel      the bar shows the session's panel on every study workspace,
 //!              a fixed panel down the left edge that keeps its room:
 //!              Liseuse and whatever else tiles beside it.
@@ -114,6 +117,10 @@ fn focus_window(address: &str) {
 
 fn close_window(address: &str) {
     dispatch(&format!("hl.dsp.window.close({{ window = {} }})", lua(&format!("address:{address}"))));
+}
+
+fn move_window(address: &str, workspace: &str) {
+    dispatch(&format!("hl.dsp.window.move({{ workspace = {}, window = {} }})", lua(workspace), lua(&format!("address:{address}"))));
 }
 
 fn clients() -> Vec<Value> {
@@ -306,8 +313,8 @@ impl Service {
         self.push_status();
     }
 
-    /// The session over: back where you came from. What is open in the
-    /// dimension stays there.
+    /// The session over: back where you came from, and what is left open
+    /// in the dimension closed, unless `tidy` is off.
     pub(crate) fn focus_end(&mut self) {
         if !self.focus.active || self.focus.chaining {
             return;
@@ -317,6 +324,28 @@ impl Service {
             self.focus.last = Some(id as i32);
             if let Some(o) = self.focus.origin.clone() {
                 go_to(&o);
+            }
+        }
+        if self.store.settings.focus.tidy {
+            let left: Vec<String> =
+                clients().iter().filter(|c| is_study(ws_id(c))).filter_map(|c| c["address"].as_str()).filter(|a| !a.is_empty()).map(String::from).collect();
+            for a in &left {
+                close_window(a);
+            }
+            // What asked first (unsaved work) would be stranded where the
+            // guard keeps you out: it comes back to you, its question open.
+            // To where you are by then (a move takes the focus along).
+            if let (false, Some(o)) = (left.is_empty(), self.focus.origin.clone()) {
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    let (id, name) = current();
+                    let here = if is_study(id) || name.is_empty() { o } else { name };
+                    for c in clients().iter().filter(|c| is_study(ws_id(c))) {
+                        if let Some(a) = c["address"].as_str().filter(|a| left.iter().any(|l| l == a)) {
+                            move_window(a, &here);
+                        }
+                    }
+                });
             }
         }
         self.focus.active = false;

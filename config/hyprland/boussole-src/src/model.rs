@@ -211,10 +211,19 @@ pub struct Settings {
 
 /// Focus mode: a session happens in the study dimension (workspaces of
 /// its own), its file open in Liseuse beside the session's panel.
-#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Focus {
     pub enabled: bool,
+    /// Close: the windows left in the dimension are closed (a browser or
+    /// an app forgotten there holds its memory until the next session).
+    pub tidy: bool,
+}
+
+impl Default for Focus {
+    fn default() -> Focus {
+        Focus { enabled: false, tidy: true }
+    }
 }
 
 impl Default for Settings {
