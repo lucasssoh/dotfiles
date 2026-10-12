@@ -631,8 +631,11 @@ focus_leave() {
 # ============================================================
 # Opening
 # ============================================================
+# open_book FILE [PAGE] [SECTION]: at a page, or at the first heading of
+# the outline whose title holds SECTION (a sheet's "§3 Règle de Dantzig",
+# found on the rendered PDF). Neither: where zathura left it.
 open_book() {
-    local path="$1" target
+    local path="$1" page="${2-}" section="${3-}" target
     [ -f "$path" ] || { notify "Not found" "$(basename -- "$path")"; return 1; }
 
     # Markdown is rendered to a PDF first (md2pdf.py), because mupdf has
@@ -680,10 +683,15 @@ open_book() {
     # EXIT alone isn't enough: `set -e` plus a signal from the session
     # ending (logout, a killed terminal) would skip the restore and leave
     # the bar hidden with no window on screen to explain why.
+    if [ -z "$page" ] && [ -n "$section" ]; then
+        page="$(mutool show "$target" outline 2>/dev/null \
+            | awk -F'\t' -v s="$section" 'index($0, s) { if (match($0, /#page=[0-9]+/)) { print substr($0, RSTART + 6, RLENGTH - 6); exit } }')"
+    fi
+
     trap focus_leave EXIT INT TERM HUP
     local cfg
     cfg="$(zathura_config_dir "$target")" || cfg=""
-    zathura ${cfg:+--config-dir "$cfg"} -- "$target" || true
+    zathura ${cfg:+--config-dir "$cfg"} ${page:+--page="$page"} -- "$target" || true
     focus_leave
     trap - EXIT INT TERM HUP
 }
@@ -985,6 +993,16 @@ convert() {
 # ============================================================
 # Picker
 # ============================================================
+# The picker: the bar's (Quickshell), searching sections and grouping the
+# course files by subject and chapter, when the bar is running; fuzzel's
+# list otherwise. `qs ipc` exits non-zero when no bar answers.
+pick_any() {
+    if command -v qs >/dev/null 2>&1 && qs -c bar ipc call bar openLibrary >/dev/null 2>&1; then
+        return 0
+    fi
+    pick
+}
+
 pick() {
     local -a paths=() labels=() hays=()
     local key path page render hay label idx i
@@ -1121,8 +1139,12 @@ liseuse — reading library (zathura)
   liseuse              SUPER+F. Back to the book open on THIS workspace,
                        or the picker. A book on another workspace is left
                        where it is and does not answer for the keypress.
-  liseuse pick         Force the picker even with a book already open.
-  liseuse open FILE    Open that file as a reading session.
+  liseuse pick         Force the picker even with a book already open:
+                       the bar's when it runs, fuzzel's otherwise.
+  liseuse fuzzel       fuzzel's picker, always.
+  liseuse open FILE [--page N | --section TITLE]
+                       Open that file as a reading session, at a page or
+                       at the first heading holding TITLE.
   liseuse list         Print the ranked library on stdout.
   liseuse keys         The manual: what to do once a book is open.
                        From inside the book itself, that is F1.
@@ -1138,6 +1160,9 @@ EOF
         touches_afficher
         ;;
     pick)
+        pick_any
+        ;;
+    fuzzel)
         pick
         ;;
     convert)
@@ -1146,7 +1171,16 @@ EOF
         ;;
     open)
         [ -n "${2-}" ] || { echo "liseuse open: missing file" >&2; exit 2; }
-        open_book "$2"
+        file="$2"; page=""; section=""
+        shift 2
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --page) page="${2-}"; shift 2 ;;
+                --section) section="${2-}"; shift 2 ;;
+                *) echo "liseuse open: unknown option $1" >&2; exit 2 ;;
+            esac
+        done
+        open_book "$file" "$page" "$section"
         ;;
     list)
         while IFS=$'\t' read -r _ path page render _hay label; do
@@ -1163,7 +1197,7 @@ EOF
         if [ -n "$addr" ] && ! zathura_focused; then
             focus_window "$addr"
         else
-            pick
+            pick_any
         fi
         ;;
     *)
