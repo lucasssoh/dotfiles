@@ -1111,6 +1111,11 @@ impl Service {
                     Some(d) => self.free_time_for(minutes, place, &d)?,
                     None => self.free_time(minutes, place).map_err(io)?,
                 };
+                // Right away: started, into the study dimension.
+                if let Some(id) = &id {
+                    self.start(id).map_err(io)?;
+                    self.replan();
+                }
                 (text, json!({ "session": id }))
             }
             "pause-session" => {
@@ -1254,6 +1259,10 @@ impl Service {
                         return Ok((u.sentence, json!({ "understood": true })));
                     }
                     let (text, id) = self.free_time(minutes, place).map_err(io)?;
+                    if let Some(id) = &id {
+                        self.start(id).map_err(io)?;
+                        self.replan();
+                    }
                     return Ok((format!("{}\n{text}", u.sentence), json!({ "session": id })));
                 }
                 let ev = match u.action {

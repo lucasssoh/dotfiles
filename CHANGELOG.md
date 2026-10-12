@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **Boussole, I have time:** picking a subject and a duration starts the session and, in focus mode, takes you to the study workspaces; it only planned it.
+
 ## 1.6.1
 
 ### Fixed
