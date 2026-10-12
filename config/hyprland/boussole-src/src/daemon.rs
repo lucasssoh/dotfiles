@@ -64,6 +64,9 @@ pub(crate) struct Client {
     inbox: Vec<u8>,
     /// The bar said hello: alerts go to the island rather than notifications.
     pub(crate) bar: bool,
+    /// What the socket would not take yet (a library is a few hundred kB):
+    /// sent as it drains, never dropped half-way.
+    outbox: Vec<u8>,
 }
 
 pub struct Service {
@@ -206,7 +209,11 @@ impl Service {
             fds.push(pfd(self.timer));
             fds.push(pfd(self.inotify));
             fds.push(pfd(self.listener.as_raw_fd()));
-            fds.extend(self.clients.iter().map(|c| pfd(c.stream.as_raw_fd())));
+            fds.extend(self.clients.iter().map(|c| libc::pollfd {
+                fd: c.stream.as_raw_fd(),
+                events: libc::POLLIN | if c.outbox.is_empty() { 0 } else { libc::POLLOUT },
+                revents: 0,
+            }));
             fds.extend(self.children.iter().map(|c| pfd(c.child.stdout.as_ref().map_or(-1, |o| o.as_raw_fd()))));
             let hypr_at = fds.len();
             fds.push(pfd(self.suivi.hypr.as_ref().map_or(-1, |h| h.as_raw_fd())));
@@ -229,8 +236,10 @@ impl Service {
 
             let client_base = 3;
             let child_base = client_base + self.clients.len();
+            let writable: Vec<u64> =
+                (0..self.clients.len()).filter(|&i| fds[client_base + i].revents & libc::POLLOUT != 0).map(|i| self.clients[i].id).collect();
             let ready_clients: Vec<u64> =
-                (0..self.clients.len()).filter(|&i| fds[client_base + i].revents != 0).map(|i| self.clients[i].id).collect();
+                (0..self.clients.len()).filter(|&i| fds[client_base + i].revents & !libc::POLLOUT != 0).map(|i| self.clients[i].id).collect();
             let ready_children: Vec<u32> =
                 (0..self.children.len()).filter(|&i| fds[child_base + i].revents != 0).map(|i| self.children[i].child.id()).collect();
 
@@ -240,6 +249,9 @@ impl Service {
             }
             if hypr_ready {
                 self.read_hypr();
+            }
+            for id in writable {
+                self.flush(id);
             }
             for id in ready_clients {
                 if let Some(i) = self.clients.iter().position(|c| c.id == id) {
@@ -978,10 +990,29 @@ impl Service {
     fn send_to(&mut self, id: u64, msg: &Value) {
         let mut line = msg.to_string();
         line.push('\n');
-        if let Some(i) = self.clients.iter().position(|c| c.id == id) {
-            if self.clients[i].stream.write_all(line.as_bytes()).is_err() {
-                self.clients.remove(i);
+        if let Some(c) = self.clients.iter_mut().find(|c| c.id == id) {
+            c.outbox.extend_from_slice(line.as_bytes());
+            self.flush(id);
+        }
+    }
+
+    /// As much of a client's outbox as the socket takes now; the rest when
+    /// poll says it can. A client that reads nothing for 8 MB is let go.
+    fn flush(&mut self, id: u64) {
+        let Some(i) = self.clients.iter().position(|c| c.id == id) else { return };
+        let c = &mut self.clients[i];
+        let mut dead = c.outbox.len() > 8 << 20;
+        while !dead && !c.outbox.is_empty() {
+            match c.stream.write(&c.outbox) {
+                Ok(0) => dead = true,
+                Ok(n) => drop(c.outbox.drain(..n)),
+                Err(e) if e.kind() == ErrorKind::WouldBlock => break,
+                Err(e) if e.kind() == ErrorKind::Interrupted => {}
+                Err(_) => dead = true,
             }
+        }
+        if dead {
+            self.clients.remove(i);
         }
     }
 
@@ -992,7 +1023,7 @@ impl Service {
             }
             let id = self.next_client;
             self.next_client += 1;
-            self.clients.push(Client { id, stream, inbox: Vec::new(), bar: false });
+            self.clients.push(Client { id, stream, inbox: Vec::new(), bar: false, outbox: Vec::new() });
             let msg = self.status();
             self.send_to(id, &msg);
         }
