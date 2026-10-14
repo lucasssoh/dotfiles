@@ -37,8 +37,8 @@ QtObject {
     // mid grey, and #636366 on it
     // vanished (the calendar's weekdays, Power's history axis).
     readonly property color primary: root.dark ? "#f2f2f7" : "#1c1c1e"
-    readonly property color secondary: root.dark ? (root.glass ? "#a1a1a6" : "#8e8e93") : (root.glass ? "#46464b" : "#56565b")
-    readonly property color muted: root.dark ? (root.glass ? "#7c7c80" : "#636366") : (root.glass ? "#68686e" : "#86868b")
+    readonly property color secondary: root.dark ? (root.glass ? "#a1a1a6" : "#8e8e93") : (root.glass ? "#3f3f44" : "#56565b")
+    readonly property color muted: root.dark ? (root.glass ? "#7c7c80" : "#636366") : (root.glass ? "#5e5e64" : "#86868b")
     readonly property color faint: root.dark ? (root.glass ? "#5a5a5e" : "#48484a") : (root.glass ? "#9a9aa0" : "#c4c3be")
     readonly property color danger: root.dark ? "#ff6e6e" : "#b3261e"
     readonly property color accent: root.primary
@@ -97,7 +97,7 @@ QtObject {
     // ---- surfaces (Surfaces' names) -----------------------------------
     readonly property color panelTop: root.dark ? "#000000" : "#f5f3ee"
     readonly property color panelBottom: root.panelTop
-    readonly property color card: root.dark ? "#17171a" : "#ebe9e3"
+    readonly property color card: root.dark ? "#17171a" : "#e9e7e1"
     readonly property color cardHover: root.dark ? "#1f1f23" : "#e3e1da"
     readonly property color cardRaised: root.dark ? "#2a2a2f" : "#dbd9d2"
     readonly property color cardDeep: root.dark ? "#0b0b0d" : "#efede8"
@@ -120,18 +120,19 @@ QtObject {
     //
     // Dark is "Vibrant": a 5% black veil, and the blur darkens what shows
     // through and pushes its colours, so the glass takes the colour of
-    // what is behind. Light is "Lait": the blur cannot lighten a black
-    // terminal (brightness multiplies, contrast only pulls toward grey),
-    // so the cream veil carries the light and has to be thicker for the
-    // dark ink to read over black.
+    // what is behind. Light is "Brume": a warm grey veil over a blur that
+    // no longer lightens. The cream "Lait" before it (50% veil, blur at
+    // brightness 1.1) vanished over a white page and went flat milky grey
+    // over a terminal; a veil darker than the page reads as a surface
+    // everywhere, and the opaque cards on it stand out lighter than it.
     //
     // The blur's settings are global to Hyprland, so the bar pushes the
     // pair for the current mode whenever it flips (shell.qml, GLASS TONE).
     readonly property bool glass: true
-    readonly property color glassPane: root.dark ? Qt.rgba(0, 0, 0, 0.05) : Qt.rgba(0.961, 0.953, 0.933, 0.5)
-    readonly property real glassBrightness: root.dark ? 0.38 : 1.1
-    readonly property real glassContrast: root.dark ? 0.9 : 0.6
-    readonly property real glassVibrancy: root.dark ? 0.6 : 0.3
+    readonly property color glassPane: root.dark ? Qt.rgba(0, 0, 0, 0.05) : Qt.rgba(0.839, 0.827, 0.800, 0.42)
+    readonly property real glassBrightness: root.dark ? 0.38 : 0.92
+    readonly property real glassContrast: root.dark ? 0.9 : 0.82
+    readonly property real glassVibrancy: root.dark ? 0.6 : 0.4
     readonly property real glassVibrancyDarkness: root.dark ? 0.2 : 0.0
     readonly property color paneTop: root.glass ? root.glassPane : root.panelTop
     readonly property color paneBottom: root.glass ? root.glassPane : root.panelBottom

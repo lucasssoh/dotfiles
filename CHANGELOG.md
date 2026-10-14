@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Bar, popups:** the volume and brightness dial, the battery alert, the library, the password card and the controller popup and banner are now the same blurred glass as the drawers, with their curved edge.
+- **Bar, light mode:** the glass of the drawers and popups is a warm grey instead of a milky white, so it no longer disappears over a white page or turns flat grey over a dark window.
 
 ## 1.8.0 (October 14 2026)
 
