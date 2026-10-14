@@ -25,7 +25,8 @@ import "../services"
 // (after a Dribbble reference, "K2") came first and was swapped for this
 // flatter one:
 //
-//   - a black disc, the drawers' panel colour, so it reads over anything;
+//   - a disc of the drawers' glass (GlassPane), blurred behind by the
+//     window (shell.qml), so it reads over anything;
 //   - a THICK arc, open at the bottom like a potentiometer (270deg from
 //     7:30 to 4:30), on a visible grey track;
 //   - a white dot riding the arc's end -- the "cursor" -- ringed in the
@@ -74,15 +75,20 @@ Item {
     }
 
     // ---- disc ----------------------------------------------------------
-    Rectangle {
+    GlassPane {
+        id: disc
         anchors.centerIn: parent
         width: 144
         height: 144
         radius: width / 2
-        color: DrawerTheme.panelTop
-        border.width: 1
-        border.color: DrawerTheme.ink(0.08)
     }
+
+    // Where the disc shows, in the window's coordinates, for its blur
+    // region: the card scales about its centre as it opens.
+    readonly property bool blurShown: OsdState.osdVisible
+    readonly property real blurX: card.width / 2 - disc.width / 2 * card.scale
+    readonly property real blurY: card.height / 2 - disc.height / 2 * card.scale
+    readonly property real blurSize: disc.width * card.scale
 
     // ---- arc: track, level, cursor ------------------------------------
     readonly property real arcRadius: 59

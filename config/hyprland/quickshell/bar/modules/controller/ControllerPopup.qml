@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Widgets
 import "../../theme"
 import "../../services"
+import ".."
 
 // The controller popup: what a Guide press opens. Built each time it opens
 // and destroyed once it has faded (shell.qml's Loader), so nothing here
@@ -241,19 +242,26 @@ Item {
 
     // ---- card -----------------------------------------------------------
 
-    Rectangle {
+    // Where the card shows, in the window's coordinates, for its blur
+    // region (shell.qml): it scales about its centre as it opens.
+    readonly property bool blurShown: ControllerState.open
+    readonly property real blurX: card.x + card.width * (1 - card.scale) / 2
+    readonly property real blurY: card.y + card.height * (1 - card.scale) / 2
+    readonly property real blurWidth: card.width * card.scale
+    readonly property real blurHeight: card.height * card.scale
+    readonly property real blurRadius: 34 * card.scale
+
+    Item {
         id: card
         width: 940
         height: column.height + 26 * 2
-        radius: 34
-        color: DrawerTheme.panelTop
-        border.width: 1
-        border.color: DrawerTheme.ink(0.08)
 
         opacity: ControllerState.open ? 1 : 0
         scale: ControllerState.open ? 1 : 0.96
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+
+        GlassPane { anchors.fill: parent; radius: 34 }
 
         Column {
             id: column

@@ -2287,6 +2287,21 @@ ShellRoot {
             // fade+scale is untouched.
             mask: Region { width: 0; height: 0 }
 
+            // Glass like the drawers (modules/GlassPane.qml): Hyprland blurs
+            // behind the pane alone, following its scale as it opens, and
+            // drops the blur as soon as it starts to close. Its namespace
+            // is for hypr/windowrules.lua's no_anim: the popup fades
+            // itself, and Hyprland's layer animation on top replayed the
+            // blur after the window had gone.
+            WlrLayershell.namespace: "quickshell-popup"
+            BackgroundEffect.blurRegion: Region {
+                x: osd.blurX
+                y: osd.blurY
+                width: DrawerTheme.glass && osd.blurShown ? osd.blurSize : 0
+                height: osd.blurSize
+                radius: osd.blurSize / 2
+            }
+
             Modules.Osd { id: osd; monitor: Hyprland.monitorFor(osdWindow.screen) }
         }
     }
@@ -2350,6 +2365,16 @@ ShellRoot {
             mask: Region {
                 width: BatteryAlertState.alertVisible ? batteryAlert.width : 0
                 height: BatteryAlertState.alertVisible ? batteryAlert.height : 0
+            }
+
+            // Glass, like the OSD above.
+            WlrLayershell.namespace: "quickshell-popup"
+            BackgroundEffect.blurRegion: Region {
+                x: batteryAlert.blurX
+                y: batteryAlert.blurY
+                width: DrawerTheme.glass && batteryAlert.blurShown ? batteryAlert.blurWidth : 0
+                height: batteryAlert.blurHeight
+                radius: batteryAlert.blurRadius
             }
 
             Modules.BatteryAlert { id: batteryAlert }
@@ -2516,6 +2541,16 @@ ShellRoot {
                 height: ControllerState.open ? controllerPopup.implicitHeight : 0
             }
 
+            // Glass, like the OSD above.
+            WlrLayershell.namespace: "quickshell-popup"
+            BackgroundEffect.blurRegion: Region {
+                x: controllerPopup.blurX
+                y: controllerPopup.blurY
+                width: DrawerTheme.glass && controllerPopup.blurShown ? controllerPopup.blurWidth : 0
+                height: controllerPopup.blurHeight
+                radius: controllerPopup.blurRadius
+            }
+
             ControllerPopup { id: controllerPopup }
         }
     }
@@ -2541,7 +2576,17 @@ ShellRoot {
                 height: SesameState.open ? 100000 : 0
             }
 
-            SesameCard { anchors.fill: parent }
+            // Glass, like the OSD above (the namespace is in windowrules.lua's
+            // no_anim rule).
+            BackgroundEffect.blurRegion: Region {
+                x: sesameCard.blurX
+                y: sesameCard.blurY
+                width: DrawerTheme.glass && sesameCard.blurShown ? sesameCard.blurWidth : 0
+                height: sesameCard.blurHeight
+                radius: sesameCard.blurRadius
+            }
+
+            SesameCard { id: sesameCard; anchors.fill: parent }
         }
     }
 
@@ -2563,7 +2608,17 @@ ShellRoot {
                 height: LibraryState.open ? 100000 : 0
             }
 
-            LibraryCard { anchors.fill: parent }
+            // Glass, like the OSD above (the namespace is in windowrules.lua's
+            // no_anim rule).
+            BackgroundEffect.blurRegion: Region {
+                x: libraryCard.blurX
+                y: libraryCard.blurY
+                width: DrawerTheme.glass && libraryCard.blurShown ? libraryCard.blurWidth : 0
+                height: libraryCard.blurHeight
+                radius: libraryCard.blurRadius
+            }
+
+            LibraryCard { id: libraryCard; anchors.fill: parent }
         }
     }
 
@@ -2771,6 +2826,16 @@ ShellRoot {
             implicitWidth: controllerBanner.implicitWidth
             implicitHeight: controllerBanner.implicitHeight
             mask: Region { width: 0; height: 0 }
+
+            // Glass, like the OSD above.
+            WlrLayershell.namespace: "quickshell-popup"
+            BackgroundEffect.blurRegion: Region {
+                x: controllerBanner.blurX
+                y: controllerBanner.blurY
+                width: DrawerTheme.glass && controllerBanner.blurShown ? controllerBanner.blurWidth : 0
+                height: controllerBanner.blurHeight
+                radius: controllerBanner.blurRadius
+            }
 
             ControllerBanner { id: controllerBanner }
         }

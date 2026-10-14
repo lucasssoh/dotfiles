@@ -433,3 +433,8 @@ hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fad
 -- the sheet with its glass blur for a few frames after the window had
 -- gone: a dark rectangle flashing where the sheet had been.
 hl.layer_rule({ match = { namespace = "^quickshell-sheet$" },   no_anim = true })
+
+-- The same for the bar's glass popups (OSD, battery alert, controller,
+-- Sesame, Liseuse's picker): they fade themselves, and the layer
+-- animation left their blur behind for a few frames once they had gone.
+hl.layer_rule({ match = { namespace = "^(quickshell-popup|sesame|library)$" }, no_anim = true })

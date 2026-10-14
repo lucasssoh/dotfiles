@@ -162,19 +162,25 @@ Item {
         onClicked: LibraryState.hide()
     }
 
-    Rectangle {
+    // Where the card shows, in the window's coordinates, for its blur
+    // region (shell.qml): it scales about its centre as it opens.
+    readonly property bool blurShown: root.open
+    readonly property real blurX: card.x + card.width * (1 - card.scale) / 2
+    readonly property real blurY: card.y + card.height * (1 - card.scale) / 2
+    readonly property real blurWidth: card.width * card.scale
+    readonly property real blurHeight: card.height * card.scale
+    readonly property real blurRadius: 30 * card.scale
+
+    Item {
         id: card
         anchors.centerIn: parent
         width: Math.min(parent.width - 48, 900)
         height: Math.min(parent.height - 96, 640)
-        radius: 30
-        color: DrawerTheme.panelTop
-        border.width: 1
-        border.color: DrawerTheme.ink(0.08)
         opacity: root.open ? 1 : 0
         scale: root.open ? 1 : 0.97
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        GlassPane { anchors.fill: parent; radius: 30 }
         MouseArea { anchors.fill: parent; onClicked: field.forceActiveFocus() }
 
         Column {

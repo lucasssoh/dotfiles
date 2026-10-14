@@ -38,13 +38,6 @@ import "../services"
 // file only renders whatever state it currently holds and reports back
 // which button was pressed.
 //
-// Glass: back to the same recipe Osd.qml uses (a two-stop opaque
-// Gradient body, lighter top/darker bottom, plus GlassRim's diagonal
-// edge highlight) -- dropped in the first pass at this layout (the
-// mockup's own card has no rim highlight) and asked back in. Osd.qml's
-// own header has the fuller history of why this recipe is "glass" in
-// look without being a real compositor blur.
-//
 // Battery glyph: gone, along with the tile it sat in -- replaced by
 // BatteryRing.qml, a thick ring whose own stroke is the gauge, with the
 // percentage and a status icon (plug / lightning) scrolling inside it.
@@ -72,8 +65,9 @@ import "../services"
 //   - two capsule buttons on one row: the action in the inverted white of
 //     every "on" control in the drawers, the dismissal in plain grey.
 // Colour now marks the STATE only (the gauge, the number), never the
-// buttons. The card keeps the drawers' convex rim.
-Rectangle {
+// buttons. The card is the drawers' glass (GlassPane), the lens on the
+// pane alone so the number and the buttons stay crisp.
+Item {
     id: card
 
     readonly property int percent: BatteryAlertState.percent
@@ -107,16 +101,26 @@ Rectangle {
 
     width: 300
     height: content.implicitHeight + 40
-    radius: 26
-    color: DrawerTheme.panelTop
-
-    layer.enabled: true
-    layer.effect: GlassLens { radius: card.radius }
+    readonly property real radius: 26
 
     opacity: BatteryAlertState.alertVisible ? 1 : 0
     scale: BatteryAlertState.alertVisible ? 1 : 0.9
     Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
+    GlassPane {
+        anchors.fill: parent
+        radius: card.radius
+    }
+
+    // Where the pane shows, in the window's coordinates, for its blur
+    // region: the card scales about its centre as it opens.
+    readonly property bool blurShown: BatteryAlertState.alertVisible
+    readonly property real blurX: card.width * (1 - card.scale) / 2
+    readonly property real blurY: card.height * (1 - card.scale) / 2
+    readonly property real blurWidth: card.width * card.scale
+    readonly property real blurHeight: card.height * card.scale
+    readonly property real blurRadius: card.radius * card.scale
 
     Column {
         id: content

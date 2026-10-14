@@ -1,6 +1,7 @@
 import QtQuick
 import "../../theme"
 import "../../services"
+import ".."
 
 // A pill at the bottom of the screen when a controller arrives: its name,
 // how it is connected, and the hint that Guide opens the popup. Shown for
@@ -16,19 +17,26 @@ Item {
     implicitHeight: pill.height
     readonly property real pillOpacity: pill.opacity
 
-    Rectangle {
+    // Where the pill shows, in the window's coordinates, for its blur
+    // region (shell.qml): it scales about its centre as it opens.
+    readonly property bool blurShown: !!root.pad
+    readonly property real blurX: pill.x + pill.width * (1 - pill.scale) / 2
+    readonly property real blurY: pill.y + pill.height * (1 - pill.scale) / 2
+    readonly property real blurWidth: pill.width * pill.scale
+    readonly property real blurHeight: pill.height * pill.scale
+    readonly property real blurRadius: 24 * pill.scale
+
+    Item {
         id: pill
         width: row.width + 20 + 18
         height: 48
-        radius: height / 2
-        color: DrawerTheme.panelTop
-        border.width: 1
-        border.color: DrawerTheme.ink(0.08)
 
         opacity: root.pad ? 1 : 0
         scale: root.pad ? 1 : 0.92
         Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+
+        GlassPane { anchors.fill: parent; radius: height / 2; band: 7 }
 
         Row {
             id: row

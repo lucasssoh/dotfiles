@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Bar, popups:** the volume and brightness dial, the battery alert, the library, the password card and the controller popup and banner are now the same blurred glass as the drawers, with their curved edge.
+
 ## 1.8.0 (October 14 2026)
 
 ### Added
