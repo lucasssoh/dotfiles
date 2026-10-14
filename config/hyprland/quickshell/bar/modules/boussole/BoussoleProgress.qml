@@ -141,7 +141,7 @@ Column {
                             else if (d.exam && d.exam.margin < 5)
                                 t += root.b.tr(": it all fits, with nothing to spare.", " : tout passe, sans marge pour un imprévu.");
                             else if (!d.exam && d.level === "behind")
-                                t += root.b.tr(". Behind and without a date, it goes before subjects that have one.", ". En retard et sans date, elle passe devant celles qui en ont une.");
+                                t += root.b.tr(". Behind and without a date, it goes before modules that have one.", ". En retard et sans date, il passe devant ceux qui en ont un.");
                             else if (!d.exam && d.level !== "td-only")
                                 t += root.b.tr(". Without a date, it only gets what is left.", ". Sans date, elle ne reçoit que les restes.");
                             else
@@ -302,7 +302,7 @@ Column {
         (s.domains || []).forEach((d, i) => {
             if (d.level === "behind" && !d.archived && dated.indexOf(d.id) < 0)
                 out.push({ id: "lvl" + i, group: "spread", title: root.name(d.id) + root.b.tr(" rated “unsure” instead of “behind”", " notée « moyen » au lieu de « en retard »"),
-                           cost: root.b.tr("It no longer goes before the subjects that have an exam.", "Elle ne passe plus devant les matières qui ont un examen."),
+                           cost: root.b.tr("It no longer goes before the modules that have an exam.", "Il ne passe plus devant les modules qui ont un examen."),
                            apply: (p) => { const ds = (p.domains || s.domains).map(x => Object.assign({}, x)); ds[i].level = "shaky"; p.domains = ds; } });
         });
         return out;

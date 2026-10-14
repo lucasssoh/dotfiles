@@ -2,19 +2,16 @@ import QtQuick
 import "../../theme"
 import "../../services"
 
-// "Close": pre-filled by what Liseuse saw, confirmed by the user. For each
-// sheet, the section really understood (dashed: seen, not confirmed) and
-// each exercise, touched to cycle through not done / solved alone / with
-// the solution / failed; how it went; a note. Anything else is done or
-// not. Only this ends a session.
+// "Close": where you stopped, pre-filled by what Liseuse saw, and how each
+// exercise went. Anything else is done or not. Only this ends a session.
 Column {
     id: root
 
-    spacing: 14
+    spacing: 22
     readonly property var b: BoussoleState
     readonly property var c: b.closing
 
-    // What the user says, per part: { read_upto, exercises, assessment, done }.
+    // What the user says, per part: { read_upto, exercises, done }.
     property var answers: []
     property var media: null
     onCChanged: {
@@ -22,11 +19,10 @@ Column {
         for (const p of (root.c ? root.c.parts : [])) {
             const ex = {};
             for (const k in (p.already || {})) ex[k] = p.already[k];
-            out.push({ read_upto: p.read_upto || 0, exercises: ex, assessment: "", done: p.kind === "other" ? p.done : false });
+            out.push({ read_upto: p.read_upto || 0, exercises: ex, done: p.kind === "other" ? p.done : false });
         }
         root.answers = out;
         root.media = null;
-        note.text = "";
     }
     function setAnswer(i, key, value) {
         const a = root.answers.slice();
@@ -34,13 +30,11 @@ Column {
         a[i][key] = value;
         root.answers = a;
     }
-    readonly property var cycle: ["", "solo", "with-solution", "failed"]
-    function nextStatus(s) {
-        return root.cycle[(root.cycle.indexOf(s || "") + 1) % root.cycle.length];
-    }
-    function mark(s) {
-        return s === "solo" ? " ✓" : s === "with-solution" ? " ◐" : s === "failed" ? " ✗" : "";
-    }
+    readonly property var outcomes: [
+        { id: "solo", en: "Solved", fr: "Réussi" },
+        { id: "with-solution", en: "With help", fr: "Avec aide" },
+        { id: "failed", en: "Stuck", fr: "Bloqué" }
+    ]
 
     function submit() {
         const parts = [];
@@ -56,235 +50,157 @@ Column {
                     task: p.task, minutes: 0, planned: p.planned,
                     done: all && allRead,
                     read_upto: a.read_upto, exercises: ex,
-                    assessment: a.assessment || null,
-                    note: null
+                    assessment: null, note: null
                 });
             } else {
                 parts.push({ task: p.task, minutes: 0, planned: p.planned, done: a.done, note: null });
             }
         }
-        // The note belongs to the session: it goes with its first task.
-        if (parts.length > 0 && note.text !== "") parts[0].note = note.text;
         root.b.submitClose(parts, root.media);
     }
 
-    component Section: BoussoleText {
+    component Label: BoussoleText {
         color: DrawerTheme.secondary
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        font.letterSpacing: 1
-        font.capitalization: Font.AllUppercase
+        font.pixelSize: 13
+        font.weight: Font.Medium
     }
 
     // ---- header -----------------------------------------------------------
-    Column {
+    Item {
         width: parent.width
-        spacing: 4
+        height: titleText.implicitHeight
         BoussoleText {
-            text: root.b.tr("Close the session", "Clore la séance")
-            font.pixelSize: 20
-            font.weight: Font.Bold
+            id: titleText
+            text: root.b.tr("Close", "Clore")
+            font.pixelSize: 24
+            font.weight: Font.DemiBold
         }
         BoussoleText {
-            width: parent.width
-            text: root.c ? root.c.title + " · " + root.c.start + " → " + root.c.end : ""
+            anchors.right: parent.right
+            anchors.baseline: titleText.baseline
+            text: root.c ? root.c.title + " · " + root.c.effective_text : ""
             color: DrawerTheme.secondary
+            font.pixelSize: 14
         }
     }
 
-    // ---- what was seen, and the time --------------------------------------
-    Rectangle {
-        width: parent.width
-        height: seenCol.implicitHeight + 28
-        radius: 18
-        color: DrawerTheme.card
-        Column {
-            id: seenCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 6
-            Section { text: root.b.tr("What Liseuse saw", "Ce que Liseuse a vu") }
-            Repeater {
-                model: root.c && root.c.seen.length ? root.c.seen : [root.b.tr("Nothing in Liseuse: work on paper.", "Rien dans Liseuse : travail sur papier.")]
-                delegate: BoussoleText {
-                    required property var modelData
-                    width: seenCol.width
-                    text: modelData
-                }
-            }
-            Item { width: 1; height: 4 }
-            Section { text: root.b.tr("Effective time", "Temps effectif") }
-            BoussoleText {
-                width: parent.width
-                text: root.c ? root.c.effective_text + (root.c.game_minutes > 0 ? root.b.tr(", a game's ", ", ") + root.c.game_minutes + root.b.tr(" min taken out", " min de jeu retirées") : "") : ""
-            }
-            BoussoleText {
-                visible: root.c !== null && root.c.media_minutes > 0
-                width: parent.width
-                text: root.c ? root.b.tr("A video played ", "Une vidéo a joué ") + root.c.media_minutes + root.b.tr(" min: for the course?", " min : pour le cours ?") : ""
-            }
-            Row {
-                visible: root.c !== null && root.c.media_minutes > 0
-                spacing: 8
-                BoussoleChip { text: root.b.tr("Yes", "Oui"); on: root.media === true; onClicked: root.media = true }
-                BoussoleChip { text: root.b.tr("No", "Non"); on: root.media === false; onClicked: root.media = false }
-            }
-        }
-    }
-
-    // ---- per task -------------------------------------------------------------
+    // ---- per task -----------------------------------------------------------
     Repeater {
         model: root.c ? root.c.parts : []
-        delegate: Rectangle {
-            id: partCard
+        delegate: Column {
+            id: partCol
             required property var modelData
             required property int index
             readonly property var p: modelData
             readonly property var a: root.answers[index] || ({ exercises: {} })
             width: root.width
-            height: partCol.implicitHeight + 28
-            radius: 18
-            color: "transparent"
-            border.width: 1
-            border.color: DrawerTheme.faint
+            spacing: 10
 
-            Column {
-                id: partCol
-                x: 16
-                y: 14
-                width: parent.width - 32
-                spacing: 10
+            // Anything but a sheet: done or not.
+            Label { visible: partCol.p.kind === "other"; text: partCol.p.label }
+            Row {
+                visible: partCol.p.kind === "other"
+                spacing: 8
+                BoussoleChip { text: root.b.tr("Done", "Fait"); on: partCol.a.done === true; onClicked: root.setAnswer(partCol.index, "done", true) }
+                BoussoleChip { text: root.b.tr("Not done", "Pas fait"); on: partCol.a.done === false; onClicked: root.setAnswer(partCol.index, "done", false) }
+            }
 
-                BoussoleText {
-                    width: parent.width
-                    text: partCard.p.label
-                    font.weight: Font.Bold
-                }
-
-                // Anything but a sheet: done or not.
-                Row {
-                    visible: partCard.p.kind === "other"
-                    spacing: 8
-                    BoussoleChip { text: root.b.tr("Done", "Fait"); on: partCard.a.done === true; onClicked: root.setAnswer(partCard.index, "done", true) }
-                    BoussoleChip { text: root.b.tr("Not done", "Pas fait"); on: partCard.a.done === false; onClicked: root.setAnswer(partCard.index, "done", false) }
-                }
-
-                Section {
-                    visible: partCard.p.kind === "study" && partCard.p.sections.length > 0
-                    text: root.b.tr("Understood up to", "Compris jusqu'au")
-                }
-                Flow {
-                    visible: partCard.p.kind === "study"
-                    width: parent.width
-                    spacing: 6
-                    Repeater {
-                        model: partCard.p.kind === "study" ? partCard.p.sections : []
-                        delegate: BoussoleChip {
-                            required property var modelData
-                            text: "§" + modelData.num
-                            on: modelData.num <= partCard.a.read_upto
-                            hinted: partCard.p.seen_upto !== null && modelData.num <= partCard.p.seen_upto
-                            // Touching the § already reached steps back one.
-                            onClicked: root.setAnswer(partCard.index, "read_upto",
-                                                      partCard.a.read_upto === modelData.num ? modelData.num - 1 : modelData.num)
-                        }
+            // A sheet: the section reached (outlined: what Liseuse saw).
+            Label {
+                visible: partCol.p.kind === "study"
+                text: root.b.tr("Stopped at · ", "Arrêté à · ") + partCol.p.label
+                width: parent.width
+                elide: Text.ElideRight
+            }
+            Flow {
+                visible: partCol.p.kind === "study" && partCol.p.sections.length > 0
+                width: parent.width
+                spacing: 6
+                Repeater {
+                    model: partCol.p.kind === "study" ? partCol.p.sections : []
+                    delegate: BoussoleChip {
+                        required property var modelData
+                        text: "§" + modelData.num
+                        on: modelData.num <= partCol.a.read_upto
+                        hinted: partCol.p.seen_upto !== null && modelData.num <= partCol.p.seen_upto
+                        // Touching the § already reached steps back one.
+                        onClicked: root.setAnswer(partCol.index, "read_upto",
+                                                  partCol.a.read_upto === modelData.num ? modelData.num - 1 : modelData.num)
                     }
                 }
+            }
 
-                Section {
-                    visible: partCard.p.kind === "study" && partCard.p.exercises > 0
-                    text: root.b.tr("Exercises · touch to change", "Exercices · touche pour changer")
-                }
-                Flow {
-                    visible: partCard.p.kind === "study" && partCard.p.exercises > 0
-                    width: parent.width
+            Item { visible: partCol.p.kind === "study" && partCol.p.exercises > 0; width: 1; height: 4 }
+            Label {
+                visible: partCol.p.kind === "study" && partCol.p.exercises > 0
+                text: root.b.tr("Exercises", "Exercices")
+            }
+            Repeater {
+                model: partCol.p.kind === "study" ? partCol.p.exercises : 0
+                delegate: Column {
+                    id: exRow
+                    required property int index
+                    readonly property string st: partCol.a.exercises[index + 1] || ""
+                    width: partCol.width
                     spacing: 6
-                    Repeater {
-                        model: partCard.p.kind === "study" ? partCard.p.exercises : 0
-                        delegate: BoussoleChip {
-                            required property int index
-                            readonly property string st: partCard.a.exercises[index + 1] || ""
-                            text: "Ex " + (index + 1) + root.mark(st)
-                            on: st !== ""
-                            onClicked: {
-                                const ex = Object.assign({}, partCard.a.exercises);
-                                ex[index + 1] = root.nextStatus(st);
-                                root.setAnswer(partCard.index, "exercises", ex);
+                    BoussoleText {
+                        text: root.b.tr("Exercise ", "Exercice ") + (exRow.index + 1)
+                        font.pixelSize: 14
+                    }
+                    Row {
+                        width: parent.width
+                        spacing: 6
+                        Repeater {
+                            model: root.outcomes
+                            delegate: BoussoleChip {
+                                required property var modelData
+                                width: (exRow.width - 12) / 3
+                                text: root.b.tr(modelData.en, modelData.fr)
+                                on: exRow.st === modelData.id
+                                // Touched again: not rated.
+                                onClicked: {
+                                    const ex = Object.assign({}, partCol.a.exercises);
+                                    ex[exRow.index + 1] = exRow.st === modelData.id ? "" : modelData.id;
+                                    root.setAnswer(partCol.index, "exercises", ex);
+                                }
                             }
                         }
                     }
-                }
-                BoussoleText {
-                    visible: partCard.p.kind === "study" && partCard.p.exercises > 0
-                    width: parent.width
-                    text: root.b.tr("✓ alone · ◐ with the solution · ✗ failed (comes back in 3 days, without the solution)",
-                                    "✓ seul · ◐ avec le corrigé · ✗ raté (revient dans 3 jours, sans corrigé)")
-                    color: DrawerTheme.secondary
-                    font.pixelSize: 12
-                }
-
-                Row {
-                    visible: partCard.p.kind === "study"
-                    spacing: 6
-                    BoussoleChip { text: root.b.tr("Understood", "Compris"); on: partCard.a.assessment === "understood"; onClicked: root.setAnswer(partCard.index, "assessment", "understood") }
-                    BoussoleChip { text: root.b.tr("To review", "À revoir"); on: partCard.a.assessment === "review"; onClicked: root.setAnswer(partCard.index, "assessment", "review") }
-                    BoussoleChip { text: root.b.tr("Stuck", "Bloqué"); on: partCard.a.assessment === "blocked"; onClicked: root.setAnswer(partCard.index, "assessment", "blocked") }
                 }
             }
         }
     }
 
-    // ---- a note -----------------------------------------------------------
-    Rectangle {
+    // ---- a video played: for the course? -----------------------------------
+    Column {
+        visible: root.c !== null && root.c.media_minutes > 0
         width: parent.width
-        height: 44
-        radius: 14
-        color: DrawerTheme.card
-        TextInput {
-            id: note
-            anchors.fill: parent
-            anchors.leftMargin: 14
-            anchors.rightMargin: 14
-            verticalAlignment: TextInput.AlignVCenter
-            color: DrawerTheme.primary
-            font.family: Fonts.ui
-            font.pixelSize: 14
-            clip: true
-            selectByMouse: true
-        }
-        BoussoleText {
-            anchors.verticalCenter: parent.verticalCenter
-            x: 14
-            visible: note.text === "" && !note.activeFocus
-            text: root.b.tr("A line for yourself (optional)", "Une ligne pour toi (facultatif)")
-            color: DrawerTheme.muted
-        }
-        MouseArea {
-            anchors.fill: parent
-            visible: !note.activeFocus
-            cursorShape: Qt.IBeamCursor
-            onClicked: note.forceActiveFocus()
+        spacing: 8
+        Label { text: root.c ? root.b.tr("A video, ", "Une vidéo, ") + root.c.media_minutes + root.b.tr(" min: for the course?", " min : pour le cours ?") : "" }
+        Row {
+            spacing: 8
+            BoussoleChip { text: root.b.tr("Yes", "Oui"); on: root.media === true; onClicked: root.media = true }
+            BoussoleChip { text: root.b.tr("No", "Non"); on: root.media === false; onClicked: root.media = false }
         }
     }
 
-    Flow {
+    Row {
         width: parent.width
         spacing: 8
         BoussolePill {
-            primary: true
-            text: root.b.thenStart !== ""
-                  ? root.b.tr("Close and open the next file", "Clore et ouvrir le fichier suivant")
-                  : root.b.tr("Close and replan", "Clore et replanifier")
-            onClicked: root.submit()
-        }
-        BoussolePill {
-            text: root.b.tr("Cancel", "Annuler")
+            width: (parent.width - 8) / 2
+            text: root.b.tr("Back", "Retour")
             onClicked: {
                 root.b.closing = null;
                 root.b.thenStart = "";
                 root.b.page = "today";
             }
+        }
+        BoussolePill {
+            width: (parent.width - 8) / 2
+            primary: true
+            text: root.b.thenStart !== "" ? root.b.tr("Close, next file", "Clore, fichier suivant") : root.b.tr("Close session", "Clore la séance")
+            onClicked: root.submit()
         }
     }
 }

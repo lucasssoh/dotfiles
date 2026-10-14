@@ -85,90 +85,48 @@ Column {
         width: parent.width
         spacing: 10
 
-        Section { text: root.b.tr("What sets the priorities", "Ce qui fixe les priorités") }
         Entry {
             target: "deadlines"
             icon: "\ue234"
             title: root.b.tr("Exams and hand-ins", "Examens et rendus")
-            detail: root.upcoming.length + root.b.tr(" ahead", " à venir")
-                    + (root.upcoming.length ? root.b.tr(" · next: ", " · prochain : ") + root.upcoming[0].title : "")
+            detail: root.upcoming.length ? root.b.tr("next: ", "prochain : ") + root.upcoming[0].title : root.b.tr("none", "aucun")
         }
         Entry {
-            target: "projects"
-            icon: "\ue4c6"
-            title: root.b.tr("Projects", "Projets")
-            detail: root.b.projects.length === 0 ? root.b.tr("none", "aucun") : root.b.projects.map(p => p.name).join(" · ")
-        }
-        Entry {
-            target: "campaign"
-            icon: "\ue062"
-            title: root.b.tr("Campaigns", "Campagnes")
-            detail: root.b.campaigns.length === 0 ? root.b.tr("none", "aucune")
-                    : root.b.campaigns.map(c => c.name + (c.closed ? root.b.tr(" (closed)", " (close)") : " · " + c.rows.length)).join(" · ")
-        }
-        Section { text: root.b.tr("What describes your life", "Ce qui décrit ta vie") }
-        Entry {
-            target: "subjects"
-            icon: "\ue05f"
-            title: root.b.tr("Subjects", "Matières")
-            detail: (root.b.settings.domains || []).filter(d => !d.archived).map(d => d.id).join(" · ")
+            target: "rhythm"
+            icon: "\ue304"
+            title: root.b.tr("Rhythm", "Rythme")
+            detail: root.b.tr("week · holidays · focus mode", "semaine · vacances · mode focus")
         }
         Entry {
             target: "calendars"
             icon: "\ue2b9"
             title: root.b.tr("Calendars", "Calendriers")
-            detail: root.b.settings.calendar_url ? root.b.tr("timetable set · personal agenda", "emploi du temps relié · agenda perso")
-                                                 : root.b.tr("no timetable yet", "pas encore d'emploi du temps")
+            detail: root.b.settings.calendar_url ? root.b.tr("timetable · personal", "emploi du temps · perso")
+                                                 : root.b.tr("no timetable yet", "pas d'emploi du temps")
         }
         Entry {
-            target: "rhythm"
-            icon: "\ue304"
-            title: root.b.tr("Rhythm and periods", "Rythme et périodes")
-            detail: root.b.tr("typical week · holidays · status", "semaine type · vacances · statut")
-        }
-        Section { text: root.b.tr("The app", "L'appli") }
-        Rectangle {
-            width: root.width
-            height: 56
-            radius: 14
-            color: rerunHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
-            Behavior on color { ColorAnimation { duration: 120 } }
-            border.width: 1
-            border.color: DrawerTheme.faint
-            Rectangle {
-                x: 12
-                anchors.verticalCenter: parent.verticalCenter
-                width: 34
-                height: 34
-                radius: 10
-                color: DrawerTheme.cardRaised
-                Text {
-                    anchors.centerIn: parent
-                    text: "\ue0d1"
-                    color: DrawerTheme.primary
-                    font.family: Fonts.iconLucide
-                    font.pixelSize: 17
-                }
-            }
-            Column {
-                x: 58
-                anchors.verticalCenter: parent.verticalCenter
-                BoussoleText { text: root.b.tr("Run the first launch again", "Refaire le premier lancement"); font.weight: Font.Bold }
-                BoussoleText { text: root.b.tr("nothing is erased, every step is pre-filled", "rien n'est effacé, chaque étape est préremplie"); color: DrawerTheme.secondary; font.pixelSize: 13 }
-            }
-            MouseArea {
-                id: rerunHit
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.b.openSetup()
-            }
+            visible: (root.b.status.undecided || 0) > 0
+            target: "files"
+            icon: "\ue0cf"
+            title: root.b.tr("New files", "Nouveaux fichiers")
+            detail: (root.b.status.undecided || 0) + root.b.tr(" to sort", " à trier")
         }
         Entry {
             target: "settings"
             icon: "\ue154"
             title: root.b.tr("Settings", "Réglages")
-            detail: root.b.tr("language, objective, game lock, course folder", "langue, objectif, verrouillage, dossier de cours")
+            detail: root.b.tr("language · game lock · course folder", "langue · verrouillage · dossier de cours")
+        }
+        BoussoleText {
+            topPadding: 8
+            text: root.b.tr("First launch again", "Refaire le premier lancement")
+            color: DrawerTheme.secondary
+            font.pixelSize: 14
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.b.openSetup()
+            }
         }
     }
 
@@ -190,16 +148,14 @@ Column {
         Loader {
             width: parent.width
             sourceComponent: ({
-                deadlines: deadlines, projects: projects, campaign: campaign, subjects: subjects,
+                deadlines: deadlines, files: files,
                 calendars: calendars, rhythm: rhythm, settings: settings
             })[root.b.plusPage] || null
         }
     }
 
     Component { id: deadlines; BoussolePlusDeadlines {} }
-    Component { id: projects; BoussolePlusProjects {} }
-    Component { id: campaign; BoussolePlusCampaign {} }
-    Component { id: subjects; BoussolePlusSubjects {} }
+    Component { id: files; BoussoleFiles {} }
     Component { id: calendars; BoussolePlusCalendars {} }
     Component { id: rhythm; BoussolePlusRhythm {} }
     Component { id: settings; BoussolePlusSettings {} }

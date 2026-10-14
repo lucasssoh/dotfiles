@@ -315,7 +315,7 @@ Column {
     BoussoleText {
         visible: root.subjectData === null && root.lib !== null
         width: parent.width
-        text: root.b.tr("Pick a subject to browse its files.", "Choisis une matière pour parcourir ses fichiers.")
+        text: root.b.tr("Pick a module to browse its files.", "Choisis un module pour parcourir ses fichiers.")
         color: DrawerTheme.secondary
         font.pixelSize: 13
     }

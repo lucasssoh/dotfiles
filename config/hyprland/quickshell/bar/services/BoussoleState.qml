@@ -33,7 +33,6 @@ Singleton {
     readonly property var next: root.status.next || null
     readonly property var tracking: (root.status.suivi && root.status.suivi.tracking) || null
     readonly property var today: root.status.today || []
-    readonly property var declare: root.status.declare || []
     readonly property var gap: root.status.gap || null
     readonly property var alert: root.status.alert || null
     readonly property bool paused: root.status.paused === true
@@ -123,6 +122,7 @@ Singleton {
         root.plusPage = sub;
         root.page = "plus";
         root.loadPlus();
+        if (sub === "files") root.refreshFiles();
     }
     function loadPlus() {
         root.request({ cmd: "settings" }, (r) => root.settings = r.data || ({}));
@@ -403,6 +403,24 @@ Singleton {
     // is a choice's id (30, 60, tomorrow, a date) or what was typed.
     function later(until) { root._send({ cmd: "later", until: until }); }
     function back() { root._send({ cmd: "back" }); }
+    // Stopped without Close, the latest first: to take up again.
+    readonly property var saved: root.status.saved || []
+    function resume(session) { root._send({ cmd: "resume-session", session: session }); }
+
+    // ---- the room: the session's files, the one put forward -------------
+    property var room: null
+    readonly property string roomFor: root.focus && root.focus.session ? root.focus.session : ""
+    function loadRoom() {
+        if (root.roomFor === "") { root.room = null; return; }
+        root.request({ cmd: "room", session: root.roomFor }, (r) => root.room = r.data || null);
+    }
+    onRoomForChanged: root.loadRoom()
+    // What is read moves on as you read: the room follows the page.
+    readonly property string roomDoc: root.tracking && root.tracking.doc ? root.tracking.doc.item + "#" + root.tracking.doc.section : ""
+    onRoomDocChanged: roomTimer.restart()
+    Timer { id: roomTimer; interval: 1500; onTriggered: root.loadRoom() }
+    function setLevel(domain, level) { root.request({ cmd: "level", domain: domain, level: level }, () => root.loadRoom()); }
+
     // "until 21:30" while Later holds, else "".
     readonly property string away: root.status.away || ""
     readonly property var laterChoices: root.status.later || []

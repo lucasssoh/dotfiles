@@ -58,7 +58,6 @@ Item {
             { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
             { id: "week", label: root.b.tr("Week", "Semaine") },
             { id: "progress", label: root.b.tr("Progress", "Progrès") },
-            { id: "files", label: root.b.tr("Files", "Fichiers") },
             { id: "plus", label: root.b.tr("More", "Plus") }
         ]
         readonly property int current: Math.max(0, tabs.pages.findIndex(p => p.id === root.b.page))
@@ -134,7 +133,6 @@ Item {
             width: flick.width
             sourceComponent: root.b.page === "week" ? week
                            : root.b.page === "progress" ? progress
-                           : root.b.page === "files" ? files
                            : root.b.page === "plus" ? plus
                            : root.b.page === "setup" ? setup
                            : (root.b.page === "close" && root.b.closing) ? closing : today
@@ -155,7 +153,6 @@ Item {
     Component { id: week; BoussoleWeek {} }
     Component { id: closing; BoussoleClose {} }
     Component { id: progress; BoussoleProgress {} }
-    Component { id: files; BoussoleFiles {} }
     Component { id: plus; BoussolePlus {} }
     Component { id: setup; BoussoleSetup {} }
 }

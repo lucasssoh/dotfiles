@@ -16,7 +16,7 @@ Column {
     readonly property var titles: [
         root.b.tr("Your courses", "Tes cours"),
         root.b.tr("Your timetable", "Ton emploi du temps"),
-        root.b.tr("Courses and subjects", "Relier cours et matières"),
+        root.b.tr("Courses and modules", "Relier cours et modules"),
         root.b.tr("Your rhythm", "Ton rythme"),
         root.b.tr("Ready", "Prêt")
     ]
@@ -62,7 +62,7 @@ Column {
         BoussoleText {
             width: parent.width
             text: root.b.tr("The folder holding one folder per subject. Boussole only reads it; new files will wait for you to plan them.",
-                            "Le dossier qui contient un dossier par matière. Boussole ne fait que le lire ; les nouveaux fichiers attendront que tu les planifies.")
+                            "Le dossier qui contient un dossier par module. Boussole ne fait que le lire ; les nouveaux fichiers attendront que tu les planifies.")
             color: DrawerTheme.secondary
             font.pixelSize: 13
         }
@@ -112,7 +112,7 @@ Column {
                 BoussoleText { text: sug.modelData; font.weight: Font.Bold }
                 BoussoleText {
                     visible: sug.names.length === 0
-                    text: root.b.tr("No course found for it: name it later in More › Subjects.", "Aucun cours trouvé : à nommer plus tard dans Plus › Matières.")
+                    text: root.b.tr("No course found for it: rerun the first launch to name it.", "Aucun cours trouvé : refais le premier lancement pour le nommer.")
                     color: DrawerTheme.secondary
                     font.pixelSize: 12
                 }

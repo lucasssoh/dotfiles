@@ -47,7 +47,6 @@ Item {
             if (root.t.flags.paused) return "paused";
             return root.b.onBreak ? "break" : "session";
         }
-        if (root.b.declare.length > 0) return "declare";
         if (root.b.gap) return "gap";
         // Due and not started: said as such, not as a time gone by.
         if (root.b.next && root.minutesToNext <= 0 && root.nextToday) return "now";
@@ -64,13 +63,12 @@ Item {
         const b = root.b;
         switch (root.mode) {
         case "game": return b.tr("Session paused · game open", "Séance en pause · jeu ouvert");
-        case "paused": return b.tr("Session paused", "Séance en pause");
+        case "paused": return b.tr("Saved", "Sauvegardée") + (b.status.active_label ? " · " + b.status.active_label : "");
         case "break": return b.tr("Break · ", "Pause · ") + b.clock(b.phaseLeft);
         case "session": {
             const doc = root.t.doc;
             return b.clock(b.phaseLeft) + (doc ? "" : b.tr(" · on paper", " · sur papier"));
         }
-        case "declare": return b.declare.length + b.tr(" to declare", " à déclarer");
         case "gap": return b.tr("Free ", "Creux ") + b.gap.start + "-" + b.gap.end + (b.gap.parts.length ? " · " + root.domainOf(b.gap) + " ?" : "");
         case "now": return root.nextLabel + b.tr(" · now", " · maintenant");
         case "soon": return root.nextLabel + b.tr(" in ", " dans ") + b.clock(root.secondsToNext);
@@ -155,16 +153,6 @@ Item {
             font.weight: Font.Medium
             // Tabular digits: the seconds tick without the pill shifting.
             font.features: { "tnum": 1 }
-        }
-
-        // Waiting to be declared: a red dot.
-        Rectangle {
-            visible: root.mode === "declare"
-            anchors.verticalCenter: parent.verticalCenter
-            width: 7
-            height: 7
-            radius: 3.5
-            color: DrawerTheme.danger
         }
     }
 

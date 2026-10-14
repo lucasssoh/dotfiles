@@ -2,33 +2,45 @@ import QtQuick
 import "../../theme"
 import "../../services"
 
-// Today: sessions left open first, then the session under way or the next
-// one with what to do now, then the day as the timetable and the plan make
-// it -- courses filled, sessions outlined, free periods dashed.
+// Today: the session under way, those saved to take up again, the next
+// one, a session started now, and what comes after. Nothing is suggested
+// unless asked for ("c'est moi qui décide d'ouvrir boussole").
 Column {
     id: root
 
-    spacing: 14
+    spacing: 26
 
     readonly property var b: BoussoleState
     readonly property var t: b.tracking
     // Under way: started or paused, whether or not it is being measured.
     readonly property var active: {
-        for (const r of root.b.today) if (r.state === "started" || r.state === "paused") return r;
+        for (const r of root.b.today) if (r.state === "started") return r;
         return null;
     }
-    readonly property var upcoming: {
-        for (const r of root.b.today)
-            if (r.type === "session" && !r.past && r.state === "planned") return r;
-        return null;
-    }
-    readonly property var current: root.active || root.upcoming
+    readonly property var saved: root.b.saved.filter(s => !root.active || s.id !== root.active.id)
+    readonly property var next: root.b.status.then || null
     // "Later" opened on the next session: until when.
     property bool choosing: false
+    property bool starting: false
     onChoosingChanged: root.b.laterTyping = root.choosing
     Connections {
         target: root.b
-        function onPanelOpenChanged() { if (!root.b.panelOpen) root.choosing = false; }
+        function onPanelOpenChanged() { if (!root.b.panelOpen) { root.choosing = false; root.starting = false; } }
+    }
+
+    function hm(m) {
+        return m >= 60 ? Math.floor(m / 60) + " h" + (m % 60 ? " " + ("0" + (m % 60)).slice(-2) : "") : m + " min";
+    }
+    function minutes(a, z) {
+        const p = (a || "0:0").split(":"), q = (z || "0:0").split(":");
+        return (+q[0] * 60 + +q[1]) - (+p[0] * 60 + +p[1]);
+    }
+    readonly property string todayIso: Qt.formatDate(new Date(root.b.nowMs), "yyyy-MM-dd")
+
+    component Label: BoussoleText {
+        color: DrawerTheme.secondary
+        font.pixelSize: 13
+        font.weight: Font.Medium
     }
 
     BoussoleText {
@@ -42,514 +54,415 @@ Column {
     Rectangle {
         visible: root.b.daemonConnected && root.b.setupNeeded
         width: parent.width
-        height: setupCol.implicitHeight + 28
-        radius: 18
+        height: setupCol.implicitHeight + 36
+        radius: 20
         color: DrawerTheme.card
         Column {
             id: setupCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 8
-            BoussoleText { width: parent.width; text: root.b.tr("Let's set Boussole up", "On règle Boussole"); font.pixelSize: 17; font.weight: Font.Bold }
-            BoussoleText {
-                width: parent.width
-                text: root.b.tr("Five short steps: your courses, your timetable, how they go together, your rhythm. Everything can be changed later in More.",
-                                "Cinq étapes courtes : tes cours, ton emploi du temps, le lien entre les deux, ton rythme. Tout se change ensuite dans Plus.")
-                color: DrawerTheme.secondary
-                font.pixelSize: 13
-            }
+            x: 18
+            y: 18
+            width: parent.width - 36
+            spacing: 12
+            BoussoleText { width: parent.width; text: root.b.tr("Set Boussole up", "Régler Boussole"); font.pixelSize: 17; font.weight: Font.DemiBold }
             BoussolePill { primary: true; text: root.b.tr("Start", "Commencer"); onClicked: root.b.openSetup() }
         }
     }
 
-    // ---- Later holds: nothing planned, rung or offered until then ---------
+    // ---- Later holds -----------------------------------------------------
     Rectangle {
         visible: root.b.daemonConnected && root.b.away !== "" && !root.active
         width: parent.width
-        height: awayRow.implicitHeight + 28
-        radius: 18
+        height: 64
+        radius: 20
         color: DrawerTheme.clear(DrawerTheme.card)
         border.width: 1
         border.color: DrawerTheme.faint
-        Item {
-            id: awayRow
-            x: 16
-            y: 14
-            width: parent.width - 32
-            implicitHeight: Math.max(awayText.implicitHeight, backPill.height)
-            BoussoleText {
-                id: awayText
-                anchors.left: parent.left
-                anchors.right: backPill.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: root.b.tr("Nothing ", "Rien ") + root.b.away
-                font.pixelSize: 15
-                font.weight: Font.DemiBold
-            }
-            BoussolePill {
-                id: backPill
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: root.b.tr("Back now", "De retour")
-                onClicked: root.b.back()
-            }
+        BoussoleText {
+            x: 18
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 36 - backPill.width
+            text: root.b.tr("Nothing ", "Rien ") + root.b.away
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+        }
+        BoussolePill {
+            id: backPill
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.b.tr("Back now", "De retour")
+            onClicked: root.b.back()
         }
     }
 
-    // ---- nothing planned now: what would help most ------------------------
-    // Only here, when the drawer is opened: never on its own ("c'est moi qui
-    // décide d'ouvrir boussole"). In a free period at school it runs to the
-    // period's end; an evening with nothing on, each suggestion its own length.
-    Rectangle {
-        id: freeCard
-        readonly property var f: root.b.nowFree
-        visible: root.b.daemonConnected && freeCard.f !== null && !root.active
+    // ---- under way ---------------------------------------------------------
+    Column {
+        visible: root.active !== null
         width: parent.width
-        height: freeCol.implicitHeight + 32
-        radius: 20
-        color: DrawerTheme.cardDeep
-        border.width: 1
-        border.color: freeCard.f && freeCard.f.school ? DrawerTheme.faint : DrawerTheme.accentStrong
-
-        function hm(m) {
-            return m >= 60 ? Math.floor(m / 60) + " h " + ("0" + (m % 60)).slice(-2) : m + " min";
-        }
-
-        Column {
-            id: freeCol
-            x: 16
-            y: 16
-            width: parent.width - 32
-            spacing: 10
-
+        spacing: 10
+        Label { text: root.b.tr("Under way", "En cours") }
+        Rectangle {
+            width: parent.width
+            height: activeCol.implicitHeight + 36
+            radius: 20
+            color: DrawerTheme.card
             Column {
-                width: parent.width
-                spacing: 2
-                BoussoleText {
-                    text: freeCard.f ? freeCard.f.label : ""
-                    color: DrawerTheme.secondary
-                    font.pixelSize: 11
-                    font.weight: Font.Bold
-                    font.letterSpacing: 1
-                    font.capitalization: Font.AllUppercase
-                }
-                BoussoleText {
-                    text: freeCard.f ? (freeCard.f.school
-                                        ? freeCard.hm(freeCard.f.minutes) + root.b.tr(" ahead", " devant toi")
-                                        : root.b.tr("Nothing planned", "Rien de prévu"))
-                                     : ""
-                    font.pixelSize: 20
-                    font.weight: Font.Bold
-                    font.features: { "tnum": 1 }
-                }
-                BoussoleText {
+                id: activeCol
+                x: 18
+                y: 18
+                width: parent.width - 36
+                spacing: 14
+                Item {
                     width: parent.width
-                    text: freeCard.f ? freeCard.f.note : ""
-                    color: DrawerTheme.secondary
-                    font.pixelSize: 13
+                    height: activeTitle.implicitHeight
+                    BoussoleText {
+                        id: activeTitle
+                        text: root.active ? root.active.title : ""
+                        font.pixelSize: 24
+                        font.weight: Font.DemiBold
+                    }
+                    BoussoleText {
+                        anchors.right: parent.right
+                        anchors.baseline: activeTitle.baseline
+                        text: root.t ? Math.floor(root.b.effectiveSecs / 60) + root.b.tr(" min", " min") : ""
+                        color: DrawerTheme.secondary
+                        font.pixelSize: 14
+                    }
                 }
-            }
-
-            BoussoleFree {
-                width: parent.width
-                span: freeCard.f ? freeCard.f.minutes : 0
-                school: freeCard.f ? freeCard.f.school : false
-                until: freeCard.f ? freeCard.f.until : ""
-            }
-        }
-    }
-
-    // ---- the programme slipping: one line, the most pressing ---------------
-    Rectangle {
-        id: slip
-        readonly property var short: (root.b.programme || {}).short || null
-        visible: root.b.daemonConnected && slip.short !== null
-        width: parent.width
-        height: slipCol.implicitHeight + 28
-        radius: 18
-        color: DrawerTheme.card
-        border.width: 1
-        border.color: "#ff9f5a"
-        Column {
-            id: slipCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 8
-            BoussoleText {
-                width: parent.width
-                text: slip.short
-                      ? (slip.short.domain === "RESEAUX" ? root.b.tr("Networks", "Réseaux") : slip.short.domain)
-                        + root.b.tr(" does not fit before ", " ne tient pas avant le ") + slip.short.date
-                      : ""
-                font.weight: Font.Bold
-            }
-            BoussoleText {
-                width: parent.width
-                text: {
-                    if (!slip.short) return "";
-                    const undated = ((root.b.programme || {}).undated || []).map(d => d === "RESEAUX" ? root.b.tr("Networks", "Réseaux") : d);
-                    let t = root.b.tr((-slip.short.margin) + " sessions short.", "Il manque " + (-slip.short.margin) + " séances.");
-                    if (undated.length) t += " " + undated.join(root.b.tr(" and ", " et ")) + root.b.tr(" have no exam date.", (undated.length > 1 ? " n'ont pas" : " n'a pas") + " de date d'examen.");
-                    return t;
-                }
-                color: DrawerTheme.secondary
-                font.pixelSize: 13
-            }
-            Row {
-                spacing: 8
-                BoussolePill {
-                    primary: true
-                    text: root.b.tr("See the levers", "Voir les leviers")
-                    onClicked: root.b.openProgramme("whatif")
-                }
-                BoussolePill {
-                    text: root.b.tr("The programme", "Le programme")
-                    onClicked: root.b.openProgramme("")
+                Row {
+                    spacing: 8
+                    BoussolePill {
+                        text: root.b.tr("Save & leave", "Sauver, partir")
+                        onClicked: root.b.pauseSession()
+                    }
+                    BoussolePill {
+                        text: root.b.tr("Close", "Clore")
+                        onClicked: root.b.openClose(root.active.id)
+                    }
                 }
             }
         }
     }
 
-    // ---- just closed: a way back ------------------------------------------
+    // ---- just closed: a way back -------------------------------------------
     Rectangle {
         visible: root.b.justClosed !== ""
         width: parent.width
-        height: 52
-        radius: 16
+        height: 56
+        radius: 20
         color: DrawerTheme.card
         BoussoleText {
             anchors.verticalCenter: parent.verticalCenter
-            x: 16
-            text: root.b.tr("Session closed", "Séance close")
-            font.weight: Font.Bold
+            x: 18
+            text: root.b.tr("Closed", "Close")
+            font.weight: Font.DemiBold
         }
         BoussolePill {
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
-            anchors.rightMargin: 6
+            anchors.rightMargin: 8
             text: root.b.tr("Undo", "Annuler")
             onClicked: root.b.undoClose()
         }
     }
 
-    // ---- left open --------------------------------------------------------
-    Rectangle {
-        visible: root.b.declare.length > 0
+    // ---- saved: take it up again ------------------------------------------
+    Column {
+        visible: root.saved.length > 0
         width: parent.width
-        height: declareCol.implicitHeight + 28
-        radius: 18
-        color: DrawerTheme.card
-
-        Column {
-            id: declareCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 8
-
-            Row {
-                spacing: 8
-                Rectangle { width: 8; height: 8; radius: 4; color: DrawerTheme.danger; anchors.verticalCenter: parent.verticalCenter }
-                BoussoleText {
-                    text: root.b.declare.length === 1
-                        ? root.b.tr("A session was left open", "Une séance est restée ouverte")
-                        : root.b.declare.length + root.b.tr(" sessions were left open", " séances sont restées ouvertes")
-                    font.pixelSize: 15
-                    font.weight: Font.Bold
-                }
-            }
-            BoussoleText {
-                width: parent.width
-                text: root.b.tr("Say how far you went: what is not done comes back first, nothing is lost.",
-                                "Dis jusqu'où tu es allé : ce qui n'est pas fait repart en tête, rien n'est perdu.")
-                color: DrawerTheme.secondary
-                font.pixelSize: 13
-            }
-            Flow {
-                width: parent.width
-                spacing: 8
-                Repeater {
-                    model: root.b.declare
-                    delegate: BoussolePill {
-                        required property var modelData
-                        text: root.b.tr("Declare ", "Déclarer ") + modelData.slice(5, 10).split("-").reverse().join("/")
-                        onClicked: root.b.openClose(modelData)
+        spacing: 10
+        Label { text: root.b.tr("Continue", "Continuer") }
+        Repeater {
+            model: root.saved
+            delegate: Rectangle {
+                id: card
+                required property var modelData
+                width: root.width
+                height: savedCol.implicitHeight + 36
+                radius: 20
+                color: DrawerTheme.card
+                Column {
+                    id: savedCol
+                    x: 18
+                    y: 18
+                    width: parent.width - 36
+                    spacing: 14
+                    Item {
+                        width: parent.width
+                        height: savedTitle.implicitHeight
+                        BoussoleText {
+                            id: savedTitle
+                            text: card.modelData.title
+                            font.pixelSize: 24
+                            font.weight: Font.DemiBold
+                        }
+                        BoussoleText {
+                            anchors.right: parent.right
+                            anchors.baseline: savedTitle.baseline
+                            text: card.modelData.left + root.b.tr(" min left", " min restantes")
+                            color: DrawerTheme.secondary
+                            font.pixelSize: 14
+                        }
+                    }
+                    Column {
+                        width: parent.width
+                        spacing: 3
+                        BoussoleText {
+                            visible: !!card.modelData.file
+                            width: parent.width
+                            text: (card.modelData.file || "") + (card.modelData.page ? " · p. " + card.modelData.page : "")
+                            font.pixelSize: 15
+                            elide: Text.ElideRight
+                        }
+                        BoussoleText {
+                            text: root.b.tr("saved ", "sauvegardée ") + card.modelData.since
+                            color: DrawerTheme.secondary
+                            font.pixelSize: 13
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        BoussolePill {
+                            primary: true
+                            text: root.b.tr("Continue", "Continuer")
+                            onClicked: root.b.resume(card.modelData.id)
+                        }
+                        BoussolePill {
+                            text: root.b.tr("Close", "Clore")
+                            onClicked: root.b.openClose(card.modelData.id)
+                        }
                     }
                 }
             }
         }
     }
 
-    // ---- now --------------------------------------------------------------
+    // ---- the programme slipping: one line ---------------------------------
     Rectangle {
-        visible: root.current !== null
+        id: slip
+        readonly property var short: (root.b.programme || {}).short || null
+        visible: root.b.daemonConnected && slip.short !== null && !root.active
         width: parent.width
-        height: nowCol.implicitHeight + 28
-        radius: 18
-        color: DrawerTheme.card
-        border.width: root.active ? 1 : 0
-        border.color: DrawerTheme.faint
+        height: 56
+        radius: 20
+        color: DrawerTheme.clear(DrawerTheme.card)
+        border.width: 1
+        border.color: "#ff9f5a"
+        BoussoleText {
+            x: 18
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 36 - leversPill.width
+            text: slip.short ? slip.short.domain + " · " + slip.short.margin + root.b.tr(" sessions before ", " séances avant le ") + slip.short.date : ""
+            font.pixelSize: 14
+            elide: Text.ElideRight
+        }
+        BoussolePill {
+            id: leversPill
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.b.tr("Levers", "Leviers")
+            onClicked: root.b.openProgramme("whatif")
+        }
+    }
 
-        Column {
-            id: nowCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 6
-
-            BoussoleText {
-                text: root.active && root.t
-                    ? (root.t.counting ? root.b.tr("Under way · ", "En cours · ") : root.b.tr("Paused · ", "En pause · "))
-                      + Math.floor(root.b.effectiveSecs / 60) + root.b.tr(" min effective", " min effectives")
-                    : (root.current ? root.current.start + " – " + root.current.end : "")
-                color: DrawerTheme.secondary
-                font.pixelSize: 12
-                font.weight: Font.Bold
-                font.capitalization: Font.AllUppercase
-                font.letterSpacing: 0.8
-            }
-            BoussoleText {
-                width: parent.width
-                text: root.current ? root.current.title : ""
-                font.pixelSize: 17
-                font.weight: Font.Bold
-            }
-            Repeater {
-                model: root.current ? root.current.parts : []
-                delegate: BoussoleText {
-                    required property var modelData
-                    width: nowCol.width
-                    text: (modelData.domain ? modelData.domain + " · " : "") + modelData.what + " · " + modelData.minutes + " min"
-                    color: DrawerTheme.secondary
-                    font.pixelSize: 14
-                }
-            }
-            // A project with a folder: all its files, in any order. The
-            // first one not read yet comes forward; a click opens any.
-            Repeater {
-                model: root.current ? root.current.parts.filter(p => p.files && p.files.length > 0) : []
-                delegate: Column {
-                    id: proj
-                    required property var modelData
-                    readonly property int read: proj.modelData.files.filter(f => f.state === "read").length
-                    width: nowCol.width
-                    spacing: 2
-                    topPadding: 6
-                    BoussoleText {
-                        text: root.b.tr("Its files · ", "Ses fichiers · ") + proj.read + " / " + proj.modelData.files.length
-                            + root.b.tr(" read", " lus")
-                        color: DrawerTheme.secondary
-                        font.pixelSize: 11
-                        font.weight: Font.Bold
-                        font.letterSpacing: 1
-                        font.capitalization: Font.AllUppercase
-                    }
-                    Repeater {
-                        model: proj.modelData.files
-                        delegate: Rectangle {
-                            id: fileRow
-                            required property var modelData
-                            readonly property bool isNext: fileRow.modelData.state === "next"
-                            width: proj.width
-                            height: fileName.implicitHeight + 12
-                            radius: 10
-                            color: fileHit.containsMouse ? DrawerTheme.cardHover : "transparent"
-                            border.width: fileRow.isNext ? 1 : 0
-                            border.color: DrawerTheme.faint
-                            BoussoleText {
-                                id: mark
-                                x: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: fileRow.modelData.state === "read" ? "✓" : fileRow.isNext ? "→" : "·"
-                                color: fileRow.modelData.state === "read" ? DrawerTheme.secondary : DrawerTheme.primary
-                                font.pixelSize: 13
-                            }
-                            BoussoleText {
-                                id: fileName
-                                anchors.left: mark.right
-                                anchors.leftMargin: 8
-                                anchors.right: fileDetail.left
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                wrapMode: Text.NoWrap
-                                elide: Text.ElideRight
-                                text: (fileRow.modelData.num ? fileRow.modelData.num + "  " : "")
-                                    + String(fileRow.modelData.title).replace(/^Séance( TP\d)? — /, "")
-                                color: fileRow.modelData.state === "read" ? DrawerTheme.secondary : DrawerTheme.primary
-                                font.pixelSize: 13
-                                font.weight: fileRow.isNext ? Font.DemiBold : Font.Normal
-                            }
-                            BoussoleText {
-                                id: fileDetail
-                                anchors.right: parent.right
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                wrapMode: Text.NoWrap
-                                text: fileRow.modelData.detail || ""
-                                color: DrawerTheme.secondary
-                                font.pixelSize: 11
-                            }
-                            MouseArea {
-                                id: fileHit
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.b.openItem(fileRow.modelData.id)
-                            }
+    // ---- next, and a session now ------------------------------------------
+    Column {
+        visible: root.b.daemonConnected && !root.b.setupNeeded && !root.active
+        width: parent.width
+        spacing: 10
+        Label { visible: root.next !== null; text: root.b.tr("Next", "Ensuite") }
+        Rectangle {
+            visible: root.next !== null
+            width: parent.width
+            height: nextCol.implicitHeight + 32
+            radius: 20
+            color: DrawerTheme.clear(DrawerTheme.card)
+            border.width: 1
+            border.color: DrawerTheme.faint
+            Column {
+                id: nextCol
+                x: 18
+                y: 16
+                width: parent.width - 36
+                spacing: 16
+                Item {
+                    width: parent.width
+                    height: Math.max(nextText.implicitHeight, nextPills.height)
+                    Column {
+                        id: nextText
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 3
+                        BoussoleText {
+                            text: root.next ? root.next.title : ""
+                            font.pixelSize: 17
+                            font.weight: Font.DemiBold
+                        }
+                        BoussoleText {
+                            text: root.next ? (root.next.date !== root.todayIso ? Qt.formatDate(new Date(root.next.date + "T12:00"), "ddd ") : "")
+                                              + root.next.start + " · " + root.hm(root.minutes(root.next.start, root.next.end)) : ""
+                            color: DrawerTheme.secondary
+                            font.pixelSize: 13
                         }
                     }
+                    Row {
+                        id: nextPills
+                        visible: !root.choosing
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+                        BoussolePill { text: root.b.tr("Later", "Plus tard"); onClicked: root.choosing = true }
+                        BoussolePill { text: root.b.tr("Start", "Commencer"); onClicked: root.b.start(root.next.id) }
+                    }
                 }
-            }
-            Item { width: 1; height: 4 }
-            Flow {
-                width: parent.width
-                spacing: 8
-                BoussolePill {
-                    visible: !root.active
-                    primary: true
-                    text: root.b.tr("Start", "Commencer")
-                    onClicked: root.b.start(root.current.id)
-                }
-                BoussolePill {
-                    visible: !root.active && !root.choosing
-                    text: root.b.tr("Later", "Plus tard")
-                    onClicked: root.choosing = true
-                }
-                // Paused (by hand, or by a game launched anyway): it goes on
-                // from here, in front of its file in focus mode.
-                BoussolePill {
-                    visible: root.active !== null && root.active.state === "paused"
-                    primary: true
-                    text: root.b.tr("Resume", "Reprendre")
-                    onClicked: root.b.resumeSession()
-                }
-                BoussolePill {
-                    visible: root.active !== null && root.active.state === "started"
-                    text: root.b.tr("Pause", "Pause")
-                    onClicked: root.b.pauseSession()
-                }
-                BoussolePill {
-                    visible: root.active !== null
-                    primary: root.active !== null && root.active.state !== "paused"
-                    text: root.b.tr("Close…", "Clore…")
-                    onClicked: root.b.openClose(root.active.id)
-                }
-            }
-            // Later, until: the nearest choices, or a time or a day typed.
-            Column {
-                visible: root.choosing && !root.active
-                width: parent.width
-                spacing: 8
-                BoussoleText {
-                    text: root.b.tr("Later, until", "Plus tard, jusqu'à")
-                    color: DrawerTheme.secondary
-                    font.pixelSize: 13
-                }
-                Grid {
-                    id: choices
+
+                // Later, until: the nearest choices, or a time or a day typed.
+                Column {
+                    visible: root.choosing
                     width: parent.width
-                    columns: 2
                     spacing: 8
-                    Repeater {
-                        model: root.b.laterChoices
-                        delegate: Rectangle {
-                            id: choice
-                            required property var modelData
-                            width: (choices.width - choices.spacing) / 2
-                            height: 44
-                            radius: 14
-                            color: choiceHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
-                            Behavior on color { ColorAnimation { duration: 120 } }
-                            border.width: 1
-                            border.color: DrawerTheme.faint
-                            BoussoleText {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 14
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: choice.modelData.label
-                                font.pixelSize: 14
-                            }
-                            BoussoleText {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 14
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: String(choice.modelData.until).replace(/^(until|jusqu'à) /, "")
-                                color: DrawerTheme.muted
-                                font.pixelSize: 12
-                            }
-                            MouseArea {
-                                id: choiceHit
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.b.later(choice.modelData.id);
-                                    root.choosing = false;
+                    Label { text: root.b.tr("Later, until", "Plus tard, jusqu'à") }
+                    Grid {
+                        id: choices
+                        width: parent.width
+                        columns: 2
+                        spacing: 8
+                        Repeater {
+                            model: root.b.laterChoices
+                            delegate: Rectangle {
+                                id: choice
+                                required property var modelData
+                                width: (choices.width - choices.spacing) / 2
+                                height: 44
+                                radius: 14
+                                color: choiceHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                                border.width: 1
+                                border.color: DrawerTheme.faint
+                                BoussoleText {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: choice.modelData.label
+                                    font.pixelSize: 14
+                                }
+                                BoussoleText {
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: String(choice.modelData.until).replace(/^(until|jusqu'à) /, "")
+                                    color: DrawerTheme.muted
+                                    font.pixelSize: 12
+                                }
+                                MouseArea {
+                                    id: choiceHit
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.b.later(choice.modelData.id);
+                                        root.choosing = false;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                BoussoleField {
-                    id: typed
-                    width: parent.width
-                    placeholder: root.b.tr("A time or a day: 21:30, sun…", "Une heure ou un jour : 21:30, dim…")
-                    onAccepted: {
-                        if (typed.text.trim() === "") return;
-                        root.b.later(typed.text.trim());
-                        typed.text = "";
-                        root.choosing = false;
+                    BoussoleField {
+                        id: typed
+                        width: parent.width
+                        placeholder: root.b.tr("A time or a day: 21:30, sun", "Une heure ou un jour : 21:30, dim")
+                        onAccepted: {
+                            if (typed.text.trim() === "") return;
+                            root.b.later(typed.text.trim());
+                            typed.text = "";
+                            root.choosing = false;
+                        }
+                    }
+                    BoussolePill {
+                        text: root.b.tr("Cancel", "Annuler")
+                        onClicked: root.choosing = false
                     }
                 }
-                BoussolePill {
-                    text: root.b.tr("Cancel", "Annuler")
-                    onClicked: root.choosing = false
+            }
+        }
+
+        // A session now, on what you choose: the most useful work first.
+        Rectangle {
+            width: parent.width
+            height: 52
+            radius: 20
+            color: startHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
+            Behavior on color { ColorAnimation { duration: 120 } }
+            border.width: 1
+            border.color: DrawerTheme.faint
+            BoussoleText {
+                x: 18
+                anchors.verticalCenter: parent.verticalCenter
+                text: (root.starting ? "− " : "+ ") + root.b.tr("Start a session", "Lancer une séance")
+                font.pixelSize: 15
+                font.weight: Font.Medium
+            }
+            MouseArea {
+                id: startHit
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.starting = !root.starting
+            }
+        }
+        BoussoleFree {
+            visible: root.starting
+            width: parent.width
+            span: root.b.nowFree ? root.b.nowFree.minutes : 0
+            school: root.b.nowFree ? root.b.nowFree.school : false
+            until: root.b.nowFree ? root.b.nowFree.until : ""
+        }
+    }
+
+    // ---- coming up -----------------------------------------------------------
+    Column {
+        visible: (root.b.status.upcoming || []).length > 0 && !root.starting
+        width: parent.width
+        spacing: 2
+        Label { text: root.b.tr("Coming up", "À venir"); bottomPadding: 6 }
+        Repeater {
+            model: root.b.status.upcoming || []
+            delegate: Row {
+                required property var modelData
+                width: root.width
+                height: 36
+                spacing: 14
+                BoussoleText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 92
+                    text: modelData.when
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 13
+                }
+                BoussoleText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - 92 - 70 - 28
+                    text: modelData.title
+                    font.pixelSize: 15
+                    elide: Text.ElideRight
+                }
+                BoussoleText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 70
+                    horizontalAlignment: Text.AlignRight
+                    text: modelData.len
+                    color: DrawerTheme.muted
+                    font.pixelSize: 13
                 }
             }
         }
     }
 
-    // ---- I have time ------------------------------------------------------
-    // Not while the free-time card above offers the same, better aimed.
-    Column {
-        visible: root.b.daemonConnected && !root.b.setupNeeded && !root.active && !freeCard.visible
-        width: parent.width
-        spacing: 8
-        BoussoleText {
-            text: root.b.tr("I have time", "J'ai du temps")
-            color: DrawerTheme.secondary
-            font.pixelSize: 11
-            font.weight: Font.Bold
-            font.letterSpacing: 1
-            font.capitalization: Font.AllUppercase
-        }
-        BoussoleFree { width: parent.width }
-    }
-
-    // ---- the day ----------------------------------------------------------
     BoussoleText {
-        visible: root.b.today.length > 0
-        text: root.b.tr("The day", "La journée")
-        color: DrawerTheme.secondary
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        font.letterSpacing: 1
-        font.capitalization: Font.AllUppercase
-    }
-
-    BoussoleDay {
+        visible: root.b.daemonConnected && !root.b.setupNeeded && root.next === null && !root.active && root.saved.length === 0
         width: parent.width
-        rows: root.b.today
-    }
-
-    BoussoleText {
-        visible: root.b.daemonConnected && root.b.today.length === 0
-        width: parent.width
-        text: root.b.paused ? root.b.tr("Paused: no sessions for now.", "En pause : pas de séance pour l'instant.")
-                            : root.b.tr("Nothing planned today.", "Rien de prévu aujourd'hui.")
+        text: root.b.paused ? root.b.tr("Paused.", "En pause.") : root.b.tr("Nothing planned.", "Rien de prévu.")
         color: DrawerTheme.secondary
     }
 }
