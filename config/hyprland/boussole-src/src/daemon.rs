@@ -1200,6 +1200,10 @@ impl Service {
                 self.focus_reopen();
                 (String::new(), Value::Null)
             }
+            "open-item" => {
+                self.focus_open_item(&s("item").ok_or("item")?);
+                (String::new(), Value::Null)
+            }
             "still" => {
                 self.still_working(cmd.get("yes").and_then(Value::as_bool).unwrap_or(true));
                 (String::new(), Value::Null)
@@ -1431,7 +1435,8 @@ impl Service {
                     .iter()
                     .map(|p| {
                         let left: f32 = p.steps.iter().filter(|s| !s.done).map(|s| s.hours).sum();
-                        format!("{}  {}  {}  {left} h", p.id, i18n::local(p.due, lang), p.steps.len())
+                        let dir = p.dir.as_deref().map(|d| format!("  {d}/")).unwrap_or_default();
+                        format!("{}  {}  {}  {left} h{dir}", p.id, i18n::local(p.due, lang), p.steps.len())
                     })
                     .collect();
                 (lines.join("\n"), serde_json::to_value(&self.store.state.projects).unwrap())
@@ -1706,6 +1711,26 @@ impl Service {
         let now = self.now();
         let draft = self.draft(session);
         let mut parts = parts.or_else(|| draft.as_ref().map(|d| d.parts.clone())).unwrap_or_default();
+        // A project's files read in its session count as read, like a
+        // sheet studied in a course session.
+        if let (Some(d), Some(s)) = (draft.as_ref(), self.session_any(session)) {
+            for f in &d.files {
+                let held = s.parts.iter().any(|p| match &p.work {
+                    Work::Project { project, .. } => self.store.state.projects.iter().any(|x| &x.id == project && x.holds(&f.item)),
+                    _ => false,
+                });
+                if !held || f.read.is_empty() || parts.iter().any(|p| p.task.ends_with(&format!(":{}", f.item))) {
+                    continue;
+                }
+                let last = self.catalogue.get(&f.item).and_then(|i| i.sections.last().map(|x| x.num));
+                let done = match (last, f.read_upto) {
+                    (Some(l), Some(u)) => u >= l,
+                    (None, _) => true,
+                    _ => false,
+                };
+                parts.push(PartReport { task: format!("study:{}", f.item), read_upto: f.read_upto, done, ..PartReport::default() });
+            }
+        }
         let effective = draft.as_ref().map_or(0, |d| d.effective_minutes - if media_for_course == Some(false) { d.media_minutes } else { 0 });
         let reported: i32 = parts.iter().map(|p| p.minutes).sum();
         if reported == 0 && effective > 0 {

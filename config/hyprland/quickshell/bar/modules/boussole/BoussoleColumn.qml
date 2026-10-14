@@ -18,6 +18,7 @@ Rectangle {
     readonly property var doc: root.t && root.t.doc ? root.t.doc : null
     readonly property bool paused: root.t !== null && root.t.flags && root.t.flags.paused === true
     readonly property var queue: root.f.queue || []
+    readonly property var files: root.f.files || []
     readonly property var current: root.queue.find(q => q.state === "current") || null
     readonly property var nextItem: root.queue.find(q => q.session === root.f.next) || null
 
@@ -288,6 +289,69 @@ Rectangle {
                                 font.pixelSize: 13
                                 font.weight: Font.DemiBold
                             }
+                        }
+                    }
+                }
+            }
+
+            // A project session: all its files, in any order. The one on
+            // screen is outlined, the first not read yet marked; a click
+            // opens any of them here.
+            BoussoleText {
+                visible: root.files.length > 0
+                text: root.b.tr("ITS FILES · ", "SES FICHIERS · ") + root.files.filter(x => x.state === "read").length
+                    + " / " + root.files.length + root.b.tr(" READ", " LUS")
+                color: DrawerTheme.secondary
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: 1
+            }
+            Column {
+                visible: root.files.length > 0
+                width: parent.width
+                spacing: 2
+                Repeater {
+                    model: root.files
+                    delegate: Rectangle {
+                        id: fileRow
+                        required property var modelData
+                        readonly property bool open: root.doc !== null && root.doc.item === fileRow.modelData.id
+                        readonly property bool read: fileRow.modelData.state === "read"
+                        width: parent.width
+                        height: fileName.implicitHeight + 14
+                        radius: 10
+                        color: fileRow.open ? DrawerTheme.card : (fileHit.containsMouse ? DrawerTheme.cardHover : "transparent")
+                        border.width: fileRow.open ? 1 : 0
+                        border.color: DrawerTheme.faint
+                        BoussoleText {
+                            id: mark
+                            x: 8
+                            width: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: fileRow.read ? "✓" : fileRow.modelData.state === "next" ? "→" : "·"
+                            color: fileRow.read ? DrawerTheme.muted : DrawerTheme.primary
+                            font.pixelSize: 12
+                        }
+                        BoussoleText {
+                            id: fileName
+                            anchors.left: mark.right
+                            anchors.leftMargin: 6
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: (fileRow.modelData.num ? fileRow.modelData.num + "  " : "")
+                                + String(fileRow.modelData.title).replace(/^Séance( TP\d)? — /, "")
+                            color: fileRow.read && !fileRow.open ? DrawerTheme.muted : DrawerTheme.primary
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                            font.weight: fileRow.open ? Font.DemiBold : Font.Normal
+                        }
+                        MouseArea {
+                            id: fileHit
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.b.openItem(fileRow.modelData.id)
                         }
                     }
                 }

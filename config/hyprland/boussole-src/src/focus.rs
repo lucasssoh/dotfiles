@@ -184,6 +184,13 @@ impl Service {
             }
             // A task can name the file it is about.
             Work::Chore { chore, .. } => self.store.state.chores.iter().find(|c| &c.id == chore)?.file.as_ref().map(|f| root.join(f)),
+            // A project with a folder: its first file not read yet.
+            Work::Project { project, .. } => {
+                let files = self.project_files(project)?;
+                let files = files.as_array()?;
+                let f = files.iter().find(|f| f["state"] == "next").or_else(|| files.first())?;
+                f["id"].as_str().map(|i| root.join(i))
+            }
             _ => None,
         })
     }
@@ -277,6 +284,19 @@ impl Service {
             self.enter_dimension();
         }
         self.open_in_liseuse(&p);
+    }
+
+    /// One of the course files, picked during a session (a project's, in any
+    /// order): in the dimension while in focus mode, beside the session's.
+    pub(crate) fn focus_open_item(&mut self, item: &str) {
+        let Some(root) = self.store.settings.courses.clone() else { return };
+        if self.catalogue.get(item).is_none() {
+            return;
+        }
+        if self.focus.active && crate::suivi::hypr_dir().is_some() {
+            self.enter_dimension();
+        }
+        self.open_in_liseuse(&root.join(item));
     }
 
     /// Pause goes back where you came from; Resume into the dimension again,
@@ -681,9 +701,19 @@ impl Service {
             let w = i18n::work(&p.work, self.lang());
             w.split_once(" · ").map(|(_, o)| o.to_string())
         });
+        // A project session: all its files, to be opened in any order.
+        let files = active
+            .and_then(|s| {
+                s.parts.iter().find_map(|p| match &p.work {
+                    Work::Project { project, .. } => self.project_files(project),
+                    _ => None,
+                })
+            })
+            .unwrap_or(Value::Array(Vec::new()));
         json!({
             "enabled": self.store.settings.focus.enabled,
             "active": self.focus.active,
+            "files": files,
             "file": active.is_some_and(|s| self.session_has_file(&s.id)),
             "study": [STUDY_FIRST, STUDY_LAST],
             "queue": queue,

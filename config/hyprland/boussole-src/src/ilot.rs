@@ -15,7 +15,7 @@ use crate::daemon::Service;
 use crate::i18n;
 use crate::journee::{self, SlotKind};
 use crate::model::Lang;
-use crate::plan::{Session, Work};
+use crate::plan::{Part, Session, Work};
 use crate::store::Outcome;
 use crate::time::{Hm, Local};
 
@@ -311,6 +311,18 @@ impl Service {
         )
     }
 
+    /// A task of a session, for the day's list; a project with a folder
+    /// brings its files, to be opened in any order.
+    fn part_row(&self, p: &Part, lang: Lang) -> Value {
+        let mut v = json!({ "domain": p.domain, "what": i18n::work(&p.work, lang), "minutes": p.minutes });
+        if let Work::Project { project, .. } = &p.work {
+            if let Some(files) = self.project_files(project) {
+                v["files"] = files;
+            }
+        }
+        v
+    }
+
     fn day_rows(&self, date: crate::time::Date) -> Value {
         let lang = self.lang();
         let now = self.now();
@@ -332,11 +344,7 @@ impl Service {
                 Some(Outcome::Postponed { .. }) => "postponed",
                 None => "planned",
             };
-            let parts: Vec<Value> = s
-                .parts
-                .iter()
-                .map(|p| json!({ "domain": p.domain, "what": i18n::work(&p.work, lang), "minutes": p.minutes }))
-                .collect();
+            let parts: Vec<Value> = s.parts.iter().map(|p| self.part_row(p, lang)).collect();
             let why: Vec<String> = s.reasons.iter().map(|r| i18n::reason(r, lang)).collect();
             rows.push((
                 s.start,
@@ -362,11 +370,7 @@ impl Service {
                 continue;
             }
             let Some(s) = planned else { continue };
-            let parts: Vec<Value> = s
-                .parts
-                .iter()
-                .map(|p| json!({ "domain": p.domain, "what": i18n::work(&p.work, lang), "minutes": p.minutes }))
-                .collect();
+            let parts: Vec<Value> = s.parts.iter().map(|p| self.part_row(p, lang)).collect();
             rows.push((
                 s.start,
                 json!({

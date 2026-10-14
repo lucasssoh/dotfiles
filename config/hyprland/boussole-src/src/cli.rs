@@ -35,6 +35,7 @@ boussole files [plan|ignore ID…|plan-all]   files waiting for a decision
 boussole deadlines | deadline rm ID
 boussole project add NAME DUE [SUBJECT] STEP=HOURS… | project list | project rm ID
 boussole project step ID STEP done
+boussole project dir ID FOLDER|-   its files (FOLDER under the course folder): in its sessions, in any order
 boussole campaign add NAME FROM TO [PER-WEEK] | campaign list
 boussole campaign status NAME COMPANY to-send|sent|follow-up|interview|refused|offer [DATE [HH:MM]]
 boussole campaign close NAME
@@ -211,6 +212,13 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             }
             let project = json!({ "id": name.to_lowercase(), "name": name, "domain": domain, "due": due, "steps": steps });
             req(json!({ "cmd": "project", "project": project }))
+        }
+        ["project", "dir", id, dir] => {
+            let v = request(paths, json!({ "cmd": "projects" }))?;
+            let mut p = v["data"].as_array().and_then(|ps| ps.iter().find(|p| p["id"] == *id)).cloned().ok_or(format!("{id}?"))?;
+            let dir = dir.trim_end_matches('/');
+            p["dir"] = if dir == "-" || dir.is_empty() { Value::Null } else { json!(dir) };
+            req(json!({ "cmd": "project", "project": p }))
         }
         ["project", "step", id, step, "done"] => {
             let v = request(paths, json!({ "cmd": "projects" }))?;

@@ -422,12 +422,26 @@ pub struct Project {
     pub steps: Vec<Step>,
     #[serde(default)]
     pub archived: bool,
+    /// The folder of its files, relative to the courses root: they are the
+    /// project's, worked on in its sessions in any order, never planned as
+    /// course work.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dir: Option<String>,
 }
 
 impl Project {
     /// Finished 3 days before the hand-in, never squeezed.
     pub fn work_due(&self) -> Date {
         self.due.date.add(-3)
+    }
+
+    /// The course file is one of the project's.
+    pub fn holds(&self, item: &str) -> bool {
+        !self.archived
+            && self.dir.as_deref().is_some_and(|d| {
+                let d = d.trim_end_matches('/');
+                !d.is_empty() && item.strip_prefix(d).is_some_and(|rest| rest.starts_with('/'))
+            })
     }
 }
 

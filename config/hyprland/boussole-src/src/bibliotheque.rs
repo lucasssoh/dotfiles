@@ -273,6 +273,24 @@ impl Service {
         .clamp(10, 90)
     }
 
+    /// A project's files, in their folder's order, for its sessions: the
+    /// first one not read yet comes forward, any can be opened.
+    pub(crate) fn project_files(&self, project: &str) -> Option<Value> {
+        let st = &self.store.state;
+        let p = st.projects.iter().find(|p| p.id == project)?;
+        p.dir.as_ref()?;
+        let mut items: Vec<&Item> = self
+            .catalogue
+            .items
+            .iter()
+            .filter(|i| p.holds(&i.id) && st.progress.files.get(&i.id) == Some(&Inclusion::Planned))
+            .collect();
+        items.sort_by(|a, b| a.id.cmp(&b.id));
+        let read = |i: &Item| st.progress.items.get(&i.id).is_some_and(|p| p.done || p.studied_on.is_some());
+        let next = items.iter().find(|i| !read(i)).map(|i| i.id.clone());
+        Some(Value::Array(items.iter().map(|i| self.item_json(i, None, next.as_deref() == Some(i.id.as_str()))).collect()))
+    }
+
     fn item_json(&self, i: &Item, task: Option<&Part>, next: bool) -> Value {
         let lang = self.lang();
         let fr = lang == Lang::Fr;

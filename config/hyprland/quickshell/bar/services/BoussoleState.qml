@@ -414,6 +414,8 @@ Singleton {
 
     // The session's sheet closed: open it again, or go on on paper.
     function reopen() { root._send({ cmd: "reopen" }); }
+    // A project's file, picked from its session: in the dimension in focus mode.
+    function openItem(item) { root._send({ cmd: "open-item", item: item }); }
     function onPaper() { root._send({ cmd: "paper" }); }
     function pauseSession() { if (root.tracking) root._send({ cmd: "pause-session", session: root.tracking.session }); }
     function resumeSession() { if (root.tracking) root._send({ cmd: "resume-session", session: root.tracking.session }); }

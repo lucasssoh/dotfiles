@@ -287,6 +287,82 @@ Column {
                     font.pixelSize: 14
                 }
             }
+            // A project with a folder: all its files, in any order. The
+            // first one not read yet comes forward; a click opens any.
+            Repeater {
+                model: root.current ? root.current.parts.filter(p => p.files && p.files.length > 0) : []
+                delegate: Column {
+                    id: proj
+                    required property var modelData
+                    readonly property int read: proj.modelData.files.filter(f => f.state === "read").length
+                    width: nowCol.width
+                    spacing: 2
+                    topPadding: 6
+                    BoussoleText {
+                        text: root.b.tr("Its files · ", "Ses fichiers · ") + proj.read + " / " + proj.modelData.files.length
+                            + root.b.tr(" read", " lus")
+                        color: DrawerTheme.secondary
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                        font.letterSpacing: 1
+                        font.capitalization: Font.AllUppercase
+                    }
+                    Repeater {
+                        model: proj.modelData.files
+                        delegate: Rectangle {
+                            id: fileRow
+                            required property var modelData
+                            readonly property bool isNext: fileRow.modelData.state === "next"
+                            width: proj.width
+                            height: fileName.implicitHeight + 12
+                            radius: 10
+                            color: fileHit.containsMouse ? DrawerTheme.cardHover : "transparent"
+                            border.width: fileRow.isNext ? 1 : 0
+                            border.color: DrawerTheme.faint
+                            BoussoleText {
+                                id: mark
+                                x: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: fileRow.modelData.state === "read" ? "✓" : fileRow.isNext ? "→" : "·"
+                                color: fileRow.modelData.state === "read" ? DrawerTheme.secondary : DrawerTheme.primary
+                                font.pixelSize: 13
+                            }
+                            BoussoleText {
+                                id: fileName
+                                anchors.left: mark.right
+                                anchors.leftMargin: 8
+                                anchors.right: fileDetail.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                wrapMode: Text.NoWrap
+                                elide: Text.ElideRight
+                                text: (fileRow.modelData.num ? fileRow.modelData.num + "  " : "")
+                                    + String(fileRow.modelData.title).replace(/^Séance( TP\d)? — /, "")
+                                color: fileRow.modelData.state === "read" ? DrawerTheme.secondary : DrawerTheme.primary
+                                font.pixelSize: 13
+                                font.weight: fileRow.isNext ? Font.DemiBold : Font.Normal
+                            }
+                            BoussoleText {
+                                id: fileDetail
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                wrapMode: Text.NoWrap
+                                text: fileRow.modelData.detail || ""
+                                color: DrawerTheme.secondary
+                                font.pixelSize: 11
+                            }
+                            MouseArea {
+                                id: fileHit
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.b.openItem(fileRow.modelData.id)
+                            }
+                        }
+                    }
+                }
+            }
             Item { width: 1; height: 4 }
             Flow {
                 width: parent.width

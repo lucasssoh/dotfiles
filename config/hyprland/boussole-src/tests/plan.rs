@@ -28,6 +28,7 @@ fn project(id: &str, due: Date, hours: &[f32]) -> Project {
             .map(|(i, h)| Step { name: format!("step {}", i + 1), hours: *h, ..Step::default() })
             .collect(),
         archived: false,
+        dir: None,
     }
 }
 
@@ -551,4 +552,24 @@ fn time_found_on_the_spot_is_a_session() {
     let found: Vec<_> = p.sessions.iter().filter(|s| s.date == MON && s.kind == SlotKind::Extra).collect();
     assert!(!found.is_empty() && found[0].start == hm("17:00"), "{found:?}");
     assert!(found.iter().all(|s| s.end <= hm("18:00") && s.counted));
+}
+
+#[test]
+fn a_project_with_a_folder_takes_its_files_out_of_the_course() {
+    let mut fx = Fx::new("project-dir");
+    let b = fx.id("12_B.md");
+    let dir = b.rsplit_once('/').unwrap().0.to_string();
+    let before = fx.plan(at(MON, "06:00"));
+    assert!(parts(&before).iter().any(|(_, _, x)| x.task == format!("study:{b}")), "a course sheet at first");
+
+    let mut p = project("PENDU", MON.add(21), &[6.0]);
+    p.dir = Some(dir.clone());
+    fx.projects.push(p);
+    let after = fx.plan(at(MON, "06:00"));
+    assert!(
+        parts(&after).iter().all(|(_, _, x)| x.work.item().is_none_or(|i| !i.starts_with(&format!("{dir}/")))),
+        "none of the folder's files is course work any more"
+    );
+    assert!(parts(&after).iter().any(|(_, _, x)| matches!(&x.work, Work::Project { project, .. } if project == "PENDU")));
+    assert!(fx.projects[0].holds(&b) && !fx.projects[0].holds(&format!("{dir}x/1.md")));
 }

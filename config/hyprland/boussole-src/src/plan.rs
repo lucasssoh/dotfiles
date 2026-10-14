@@ -374,6 +374,10 @@ fn tasks(input: &Input, today: Date) -> Vec<Task> {
             if input.progress.files.get(&item.id) != Some(&Inclusion::Planned) {
                 continue;
             }
+            // A project's files are worked on in its own sessions.
+            if input.projects.iter().any(|pr| pr.holds(&item.id)) {
+                continue;
+            }
             let p = input.progress.items.get(&item.id).unwrap_or(&empty);
             let studied = p.done || p.studied_on.is_some();
             match item.kind {

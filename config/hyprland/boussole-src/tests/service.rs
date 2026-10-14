@@ -89,7 +89,7 @@ fn every_kind_of_part_moves_progress() {
         entries.push(store::Entry { seq, at: at(MON, "22:00"), event: ev });
     };
     push(Event::Chore { chore: Chore { id: "c1".into(), title: "x".into(), domain: None, file: None, minutes: 30, due: None, done: false } });
-    push(Event::Project { project: Project { id: "argos".into(), name: "ARGOS".into(), domain: None, due: at(MON.add(20), "18:00"), steps: vec![Step { name: "spec".into(), hours: 4.0, ..Step::default() }], archived: false } });
+    push(Event::Project { project: Project { id: "argos".into(), name: "ARGOS".into(), domain: None, due: at(MON.add(20), "18:00"), steps: vec![Step { name: "spec".into(), hours: 4.0, ..Step::default() }], archived: false, dir: None } });
     let part = |task: &str, done: bool| PartReport { task: task.into(), minutes: 30, done, ..PartReport::default() };
     push(Event::Closed {
         session: "2026-10-05-evening1".into(),
