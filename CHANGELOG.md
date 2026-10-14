@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 1.7.0 (October 14 2026)
 
 ### Added
 - **Liseuse, library:** `Super + F` opens a library you can search: where you left off, what Boussole plans next, and every course file by subject and chapter. Type to search titles and the sections inside each file, a teacher's slides by their titles, filter by kind or subject, and open a file right at the section found. Opening a file never starts a session. Without the bar, the list comes up in fuzzel as before.
@@ -22,6 +22,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Boussole, Later:** Later asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type. Until then nothing is planned, rung or suggested, and what was planned meanwhile is placed again after it; you can still start a session yourself. Back now frees the rest. Not tonight is gone: Later until tomorrow does it for the whole evening.
 
 ### Fixed
+- **Bar, drawers:** in light mode, a hovered button no longer flashes grey, and a tight margin in Progress reads as a pale amber.
 - **Boussole, plan:** solution folders (`Corriges`, `Solutions`) are no longer planned as course work.
 - **Bar, Boussole:** no more "to declare" badge: a session left open is saved, to continue.
 - **Boussole, Today:** a session of a later day that you started now shows under Today, with Pause and Close; it was missing from the drawer.
