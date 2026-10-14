@@ -420,6 +420,52 @@ Column {
         }
     }
 
+    // ---- the timetable at a glance: today's courses left, else the next day's
+    Column {
+        readonly property var c: root.b.status.courses || null
+        visible: c !== null && c.rows.length > 0 && !root.starting
+        width: parent.width
+        spacing: 2
+        Label { text: parent.c ? root.b.tr("Courses · ", "Cours · ") + parent.c.label : ""; bottomPadding: 6 }
+        Repeater {
+            model: parent.c ? parent.c.rows : []
+            delegate: Item {
+                required property var modelData
+                width: root.width
+                height: 36
+                BoussoleText {
+                    id: courseTime
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 92
+                    text: modelData.start + "–" + modelData.end
+                    color: modelData.now ? DrawerTheme.primary : DrawerTheme.secondary
+                    font.pixelSize: 13
+                    font.features: { "tnum": 1 }
+                }
+                BoussoleText {
+                    anchors.left: courseTime.right
+                    anchors.leftMargin: 14
+                    anchors.right: courseRoom.left
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData.title
+                    font.pixelSize: 15
+                    font.weight: modelData.now ? Font.DemiBold : Font.Normal
+                    wrapMode: Text.NoWrap
+                    elide: Text.ElideRight
+                }
+                BoussoleText {
+                    id: courseRoom
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData.room
+                    color: DrawerTheme.muted
+                    font.pixelSize: 13
+                }
+            }
+        }
+    }
+
     // ---- coming up -----------------------------------------------------------
     Column {
         visible: (root.b.status.upcoming || []).length > 0 && !root.starting

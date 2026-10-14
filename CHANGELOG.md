@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Added
+- **Boussole, Today:** the timetable at a glance: today's courses still ahead, else those of the next day that has some, with their time and room.
+
 ## 1.7.0 (October 14 2026)
 
 ### Added
