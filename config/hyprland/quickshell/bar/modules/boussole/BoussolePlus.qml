@@ -131,7 +131,7 @@ Column {
             width: root.width
             height: 56
             radius: 14
-            color: rerunHit.containsMouse ? DrawerTheme.cardHover : Qt.rgba(DrawerTheme.cardHover.r, DrawerTheme.cardHover.g, DrawerTheme.cardHover.b, 0)
+            color: rerunHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
             Behavior on color { ColorAnimation { duration: 120 } }
             border.width: 1
             border.color: DrawerTheme.faint

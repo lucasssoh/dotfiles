@@ -272,7 +272,7 @@ Rectangle {
                     height: 28
                     radius: 14
                     width: actionLabel.implicitWidth + 20
-                    color: actionArea.containsMouse ? DrawerTheme.cardHover : "transparent"
+                    color: actionArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     // Border and glass SWAP rather than stack: at rest

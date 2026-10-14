@@ -14,7 +14,7 @@ Rectangle {
     height: 32
     width: Math.max(32, label.implicitWidth + 22)
     radius: height / 2
-    color: chip.on ? DrawerTheme.on : (hit.containsMouse ? DrawerTheme.cardHover : Qt.rgba(DrawerTheme.cardHover.r, DrawerTheme.cardHover.g, DrawerTheme.cardHover.b, 0))
+    color: chip.on ? DrawerTheme.on : (hit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover))
     border.width: chip.on || chip.hinted ? 0 : 1
     border.color: DrawerTheme.faint
     // Like Balise's controls: the state change eases, the press gives.

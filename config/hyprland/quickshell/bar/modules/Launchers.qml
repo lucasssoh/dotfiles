@@ -150,10 +150,13 @@ Item {
                 // translucent band it painted a solid plate where every
                 // neighbouring chip shows the wallpaper through, and it now
                 // fires on a plain hover rather than on a deliberate right
-                // click. 10% white is the same wash BatteryRing's track and
-                // the OSD's own surfaces use -- it marks the chip without
-                // becoming an object sitting on the bar.
-                color: chip.menuOpen ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+                // click. 10% of the band's ink (white on a dark band) is
+                // the same wash BatteryRing's track and the OSD's own
+                // surfaces use -- it marks the chip without becoming an
+                // object sitting on the bar. At rest it is that ink at
+                // zero alpha, not "transparent": easing from transparent
+                // black ran through grey.
+                color: Qt.rgba(root.ink.primary.r, root.ink.primary.g, root.ink.primary.b, chip.menuOpen ? 0.10 : 0)
                 Behavior on color { ColorAnimation { duration: 120 } }
 
                 // Running with no window (see LauncherActionsState's

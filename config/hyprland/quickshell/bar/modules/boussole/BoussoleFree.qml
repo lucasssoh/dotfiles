@@ -131,7 +131,7 @@ Column {
             radius: 16
             color: rec.on ? DrawerTheme.cardHover : DrawerTheme.card
             border.width: 1
-            border.color: rec.on ? DrawerTheme.primary : "transparent"
+            border.color: rec.on ? DrawerTheme.primary : DrawerTheme.clear(DrawerTheme.primary)
             Behavior on border.color { ColorAnimation { duration: 120 } }
             scale: recHit.pressed ? 0.98 : 1
             Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }

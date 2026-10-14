@@ -99,7 +99,7 @@ Item {
                     // The active workspace with nothing in it is the same
                     // long bar, hollow: you are here, and here is empty.
                     readonly property bool hollow: pill.modelData.active && !pill.hasWindows
-                    color: mark.hollow ? "transparent"
+                    color: mark.hollow ? DrawerTheme.clear(DrawerTheme.cream)
                         : (pill.modelData.active ? DrawerTheme.cream
                         : (pill.occupied ? DrawerTheme.cream2 : Ink.faint))
                     border.width: mark.hollow ? 1.2 : 0

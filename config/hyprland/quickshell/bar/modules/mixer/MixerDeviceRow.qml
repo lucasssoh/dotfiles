@@ -34,7 +34,7 @@ Rectangle {
     // wrong: in a list whose whole job is "click one of these", a
     // highlighted row reads as the recommended action rather than as the
     // one already in effect.
-    color: hit.containsMouse ? DrawerTheme.cardHover : "transparent"
+    color: hit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
     Behavior on color { ColorAnimation { duration: 120 } }
 
     MouseArea {

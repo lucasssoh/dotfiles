@@ -102,12 +102,14 @@ Item {
         property bool destructive: false
         signal activated()
 
+        readonly property color hoverFill: arow.destructive ? DrawerTheme.destructiveSoft : DrawerTheme.cardHover
+
         width: parent ? parent.width : 0
         height: 30
         radius: 8
         color: rowArea.containsMouse
-            ? (arow.destructive ? DrawerTheme.destructiveSoft : DrawerTheme.cardHover)
-            : "transparent"
+            ? arow.hoverFill
+            : DrawerTheme.clear(arow.hoverFill)
         Behavior on color { ColorAnimation { duration: 100 } }
 
         readonly property color fg: arow.destructive ? DrawerTheme.danger : DrawerTheme.primary

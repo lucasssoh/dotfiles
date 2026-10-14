@@ -255,7 +255,7 @@ Rectangle {
                         width: parent.width
                         height: Math.max(44, row.implicitHeight + 16)
                         radius: 12
-                        color: cur ? DrawerTheme.card : "transparent"
+                        color: cur ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card)
                         Behavior on color { ColorAnimation { duration: 160 } }
                         border.width: cur ? 1 : 0
                         border.color: DrawerTheme.faint

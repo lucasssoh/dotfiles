@@ -57,6 +57,14 @@ QtObject {
         return Qt.rgba(root.primary.r, root.primary.g, root.primary.b, alpha);
     }
 
+    // `c` at zero alpha: the idle end of a fill or edge that eases in on
+    // hover. Never "transparent" there -- that is transparent BLACK, and a
+    // ColorAnimation from it runs through grey (a dark flash on the light
+    // cream, a dull one on black).
+    function clear(c) {
+        return Qt.rgba(c.r, c.g, c.b, 0);
+    }
+
     // ---- cream (the central island's, fixed) --------------------------------------------------------
     // A slightly warm off-white for the two drawers that hang under the
     // central island at night, Veille and the keybinds sheet ("un léger

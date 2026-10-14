@@ -120,7 +120,7 @@ Column {
                 width: parent.width
                 height: 40
                 radius: 12
-                color: domHit.containsMouse ? DrawerTheme.cardHover : Qt.rgba(DrawerTheme.cardHover.r, DrawerTheme.cardHover.g, DrawerTheme.cardHover.b, 0)
+                color: domHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
                 border.width: 1
                 border.color: DrawerTheme.faint
                 BoussoleText {
