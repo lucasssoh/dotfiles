@@ -43,14 +43,16 @@ Column {
         height: 24
         width: label.implicitWidth + 20
         radius: 12
-        color: pill.short ? "#ff9f5a" : pill.tight ? "#3a2e14" : "transparent"
+        // A tight margin is amber: a dark plate in dark, a pale one in light
+        // (the dark brown read as a hole in the cream).
+        color: pill.short ? "#ff9f5a" : pill.tight ? (DrawerTheme.dark ? "#3a2e14" : "#f3e3b8") : "transparent"
         border.width: pill.short || pill.tight ? 0 : 1
         border.color: DrawerTheme.faint
         BoussoleText {
             id: label
             anchors.centerIn: parent
             text: pill.none ? root.b.tr("no date", "sans date") : root.marginText(pill.margin)
-            color: pill.short ? "#1a0d02" : pill.tight ? "#f3c969" : (pill.none ? DrawerTheme.secondary : DrawerTheme.primary)
+            color: pill.short ? "#1a0d02" : pill.tight ? (DrawerTheme.dark ? "#f3c969" : "#6b4a00") : (pill.none ? DrawerTheme.secondary : DrawerTheme.primary)
             font.pixelSize: 12
             font.weight: Font.Bold
             font.features: { "tnum": 1 }
