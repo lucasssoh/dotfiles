@@ -12,9 +12,18 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar, scroll bar:** Boussole's drawer and the library have a thin scroll bar: drag it, or click its track to jump there.
 
 ### Changed
+- **Boussole, sessions:** a session is one module. Its alert and its card name the module only (`Tonight · A&C`), and what to open is put forward in the room.
+- **Boussole, the room:** in focus mode, the panel of the study workspaces is the module's room: its level and folder (touch to change the level), the time left, the file put forward with its reason, and every file of the module by chapter, read or not, to open any. A project's room lists its own files, a campaign's opens its folder (`boussole campaign dir NAME FOLDER`). Starting a session no longer opens a file by itself.
+- **Boussole, Save & leave:** Pause becomes Save & leave. A session left without Close, even by shutting the computer down, is saved too. Today puts it first with Continue, the time left and the page you were on; Continue takes you back to the room, Liseuse at that page.
+- **Boussole, Close:** only where you stopped and how each exercise went: Solved, With help or Stuck. How it went and the note are gone.
+- **Boussole, Today:** the session under way, the ones to continue, the next one with Start and Later, Start a session (which holds the suggestions and I have time), and what comes after. The day's timeline stays in Week.
+- **Boussole, More:** exams and hand-ins, rhythm, calendars, new files to sort and settings. The Files tab, Projects, Campaigns and Subjects pages are gone: a module's level is set in its room, the rest from a terminal.
+- **Boussole, names:** subjects are called modules.
 - **Boussole, Later:** Later asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type. Until then nothing is planned, rung or suggested, and what was planned meanwhile is placed again after it; you can still start a session yourself. Back now frees the rest. Not tonight is gone: Later until tomorrow does it for the whole evening.
 
 ### Fixed
+- **Boussole, plan:** solution folders (`Corriges`, `Solutions`) are no longer planned as course work.
+- **Bar, Boussole:** no more "to declare" badge: a session left open is saved, to continue.
 - **Boussole, Today:** a session of a later day that you started now shows under Today, with Pause and Close; it was missing from the drawer.
 - **Boussole, Close:** a project session no longer pre-ticks the whole step as done after one session; the step is done when its hours are.
 - **Boussole, I have time:** picking a subject and a duration starts the session and, in focus mode, takes you to the study workspaces; it only planned it.
