@@ -144,7 +144,7 @@ fn periods_pause_and_work_study() {
         free_day_minutes: 120,
         weekly_target: 8,
         rows: Vec::new(),
-        closed: false,
+        closed: false, dir: None
     });
     // Week 1: no study, a two-hour morning for applications.
     assert_eq!(slots(&fx, w1), [(SlotKind::Campaign, "08:30".into(), "10:30".into(), true)]);

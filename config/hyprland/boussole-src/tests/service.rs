@@ -174,7 +174,7 @@ fn quick_add_understands_or_says_what_is_missing() {
         free_day_minutes: 120,
         weekly_target: 8,
         rows: Vec::new(),
-        closed: false,
+        closed: false, dir: None
     }];
     let c = cx(&domains, &campaigns, &projects, Lang::Fr);
     let p = |l: &str| ajout::parse(l, &c);

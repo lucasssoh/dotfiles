@@ -109,11 +109,26 @@ impl Service {
             .state
             .outcomes
             .iter()
-            .find(|(id, o)| matches!(o, Outcome::Started { .. } | Outcome::Paused { .. }) && id.starts_with(&self.now().date.to_string()))
-            .map(|(id, _)| id.clone());
-        if let Some(id) = active {
-            let saved: Option<Tracker> = store::read_json(&self.store.paths.data.join("seance.json"));
-            self.suivi.tracker = Some(saved.filter(|t| t.session.as_ref() == Some(&id)).unwrap_or_else(|| Tracker::start(Some(id), now_secs())));
+            .filter(|(_, o)| matches!(o, Outcome::Started { .. } | Outcome::Paused { .. }))
+            .map(|(id, o)| (id.clone(), matches!(o, Outcome::Started { .. })))
+            .collect::<Vec<_>>();
+        // The one tracked when the service stopped, else the latest.
+        let saved: Option<Tracker> = store::read_json(&self.store.paths.data.join("seance.json"));
+        let pick = active
+            .iter()
+            .find(|(id, _)| saved.as_ref().is_some_and(|t| t.session.as_ref() == Some(id)))
+            .or_else(|| active.iter().max_by(|a, b| a.0.cmp(&b.0)))
+            .cloned();
+        if let Some((id, running)) = pick {
+            let mut t = saved.filter(|t| t.session.as_ref() == Some(&id)).unwrap_or_else(|| Tracker::start(Some(id.clone()), now_secs()));
+            // Left without Close (the computer shut down): kept as saved, to
+            // be taken up again, rather than counting on.
+            if running {
+                let at = self.tz.to_local(t.last.max(t.since));
+                let _ = self.store.record(Event::Paused { session: id.clone(), at }, self.now());
+                t.set(now_secs(), |f| f.paused = true);
+            }
+            self.suivi.tracker = Some(t);
         }
         self.spawn_bus();
         for v in busctl_json(&["list"]) {

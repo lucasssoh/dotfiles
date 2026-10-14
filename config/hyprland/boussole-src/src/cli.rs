@@ -38,6 +38,7 @@ boussole project step ID STEP done
 boussole project dir ID FOLDER|-   its files (FOLDER under the course folder): in its sessions, in any order
 boussole campaign add NAME FROM TO [PER-WEEK] | campaign list
 boussole campaign status NAME COMPANY to-send|sent|follow-up|interview|refused|offer [DATE [HH:MM]]
+boussole campaign dir NAME FOLDER|-   its folder, opened in the room of its sessions
 boussole campaign close NAME
 boussole courses DIR           the course folder (read only)
 boussole calendar URL          the timetable's iCal link
@@ -252,6 +253,16 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
                 ("interview", [d]) => row["interview"] = json!(parse_local(d, "09:00")?),
                 _ => {}
             }
+            req(json!({ "cmd": "campaign", "campaign": c }))
+        }
+        ["campaign", "dir", name, dir] => {
+            let v = request(paths, json!({ "cmd": "campaigns" }))?;
+            let mut c = find_campaign(&v, name)?;
+            c["dir"] = if *dir == "-" {
+                Value::Null
+            } else {
+                json!(std::fs::canonicalize(dir).map_err(|e| format!("{dir}: {e}"))?)
+            };
             req(json!({ "cmd": "campaign", "campaign": c }))
         }
         ["campaign", "close", name] => {

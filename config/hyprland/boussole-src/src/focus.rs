@@ -196,16 +196,24 @@ impl Service {
     }
 
     fn open_in_liseuse(&mut self, path: &Path) {
+        self.open_in_liseuse_at(path, None);
+    }
+
+    /// At a page: a session taken up again where it was left.
+    fn open_in_liseuse_at(&mut self, path: &Path, page: Option<u32>) {
         let opener = which("liseuse").unwrap_or_else(|| PathBuf::from("xdg-open"));
         // Liseuse's own helpers live beside it, out of the service's PATH.
-        let mut cmd = Command::new(opener);
+        let mut cmd = Command::new(&opener);
         if let (Some(home), Some(path_var)) = (std::env::var_os("HOME"), std::env::var_os("PATH")) {
             let dirs = std::iter::once(PathBuf::from(home).join(".local/bin")).chain(std::env::split_paths(&path_var));
             if let Ok(joined) = std::env::join_paths(dirs) {
                 cmd.env("PATH", joined);
             }
         }
-        self.spawn(cmd.arg(path), Job::Quiet);
+        match (page, opener.ends_with("liseuse")) {
+            (Some(n), true) => self.spawn(cmd.arg("open").arg(path).arg("--page").arg(n.to_string()), Job::Quiet),
+            _ => self.spawn(cmd.arg(path), Job::Quiet),
+        }
     }
 
     /// Into the dimension, on the study workspace last used.
@@ -236,6 +244,10 @@ impl Service {
             return;
         }
         let chained = self.focus.active;
+        let folder = self.session_folder(session);
+        // The room opens on its panel, the file put forward there: only
+        // "Next file" opens one on its own.
+        let path = if chained { path } else { None };
         let w = self.enter_dimension();
         self.focus.active = true;
         let all = clients();
@@ -259,10 +271,27 @@ impl Service {
                 }
                 self.open_in_liseuse(&p);
             }
-            (None, None) => {}
+            (None, None) => {
+                // A campaign's folder, opened in the room.
+                if let (Some(f), false) = (folder, chained) {
+                    let mut cmd = Command::new("xdg-open");
+                    self.spawn(cmd.arg(f), Job::Quiet);
+                }
+            }
         }
         self.focus_save();
         self.push_status();
+    }
+
+    /// A campaign session's folder.
+    fn session_folder(&self, session: &str) -> Option<PathBuf> {
+        let s = self.session_any(session)?;
+        s.parts.iter().find_map(|p| match &p.work {
+            Work::Campaign { campaign } | Work::Interview { campaign, .. } => {
+                self.store.state.campaigns.iter().find(|c| &c.id == campaign)?.dir.as_ref().map(PathBuf::from)
+            }
+            _ => None,
+        })
     }
 
     /// Whether a session has a file to open.
@@ -324,8 +353,16 @@ impl Service {
             // reopened only if it is gone.
             let sheet = clients().iter().any(|c| is_study(ws_id(c)) && c["class"] == ZATHURA_CLASS);
             if !sheet {
-                if let Some(p) = self.session_path(&s) {
-                    self.open_in_liseuse(&p);
+                // The last page seen, else the session's file.
+                let last = self.suivi.tracker.as_ref().and_then(|t| t.visits.last().cloned());
+                let root = self.store.settings.courses.clone();
+                match (last, root) {
+                    (Some((_, item, page)), Some(root)) if self.catalogue.get(&item).is_some() => self.open_in_liseuse_at(&root.join(item), Some(page)),
+                    _ => {
+                        if let Some(p) = self.session_path(&s) {
+                            self.open_in_liseuse(&p);
+                        }
+                    }
                 }
             }
         }
@@ -664,12 +701,13 @@ impl Service {
         let st = &self.store.state;
         // Under way today, from the plan or as it was when started (a
         // "Next file" the plan has moved since).
+        // The one tracked first: a session of another day taken up again.
         let today = self.now().date.to_string();
-        let active: Option<Session> = st
-            .outcomes
-            .iter()
-            .find(|(id, o)| matches!(o, Outcome::Started { .. } | Outcome::Paused { .. }) && id.starts_with(&today))
-            .and_then(|(id, _)| self.session_any(id));
+        let open = |id: &str| matches!(st.outcomes.get(id), Some(Outcome::Started { .. } | Outcome::Paused { .. }));
+        let tracked = self.suivi.tracker.as_ref().and_then(|t| t.session.clone()).filter(|id| open(id));
+        let active: Option<Session> = tracked
+            .or_else(|| st.outcomes.iter().find(|(id, _)| open(id) && id.starts_with(&today)).map(|(id, _)| id.clone()))
+            .and_then(|id| self.session_any(&id));
         let active = active.as_ref();
         let queue: Vec<Value> = active
             .map(|a| {
@@ -720,6 +758,7 @@ impl Service {
             "next": next,
             "objective": objective,
             "title": active.map(|s| self.headline(s)),
+            "session": active.map(|s| s.id.clone()),
             "end": active.map(|s| s.end),
             "elsewhere": self.suivi.tracker.as_ref().and_then(|t| t.elsewhere.as_ref()).map(|e| json!({ "label": e.context.label, "since": e.since })),
         })

@@ -482,6 +482,9 @@ pub struct Campaign {
     pub rows: Vec<Row>,
     #[serde(default)]
     pub closed: bool,
+    /// Its folder, anywhere: opened in the room of its sessions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dir: Option<String>,
 }
 
 /// A task typed by hand, with or without a file.

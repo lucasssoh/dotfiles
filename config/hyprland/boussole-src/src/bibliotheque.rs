@@ -391,6 +391,96 @@ impl Service {
         json!({ "root": self.catalogue.root, "best": best, "subjects": subjects })
     }
 
+    /// A session's room: every file of its module (or of its project), by
+    /// chapter, with what is read, and the one put forward with its reason.
+    pub(crate) fn room(&self, session: &str) -> Option<Value> {
+        let s = self.session_any(session)?;
+        let st = &self.store.state;
+        let lean = |mut v: Value| {
+            if let Some(o) = v.as_object_mut() {
+                o.remove("sections");
+                o.remove("path");
+            }
+            v
+        };
+        let project = s.parts.iter().find_map(|p| match &p.work {
+            Work::Project { project, .. } => st.projects.iter().find(|x| &x.id == project && x.dir.is_some()),
+            _ => None,
+        });
+        let campaign = s.parts.iter().find_map(|p| match &p.work {
+            Work::Campaign { campaign } | Work::Interview { campaign, .. } => st.campaigns.iter().find(|c| &c.id == campaign),
+            _ => None,
+        });
+        let (head, chapters): (Value, Vec<Value>) = if let Some(c) = campaign {
+            (json!({ "kind": "campaign", "id": c.id, "title": c.name, "line": c.dir.clone().unwrap_or_default() }), Vec::new())
+        } else if let Some(pr) = project {
+            let dir = pr.dir.clone().unwrap_or_default();
+            let mut chapters: Vec<(String, Vec<Value>)> = Vec::new();
+            for f in self.project_files(&pr.id)?.as_array()?.iter().cloned() {
+                let id = f["id"].as_str().unwrap_or("").to_string();
+                let rest = id.strip_prefix(&format!("{dir}/")).unwrap_or(&id);
+                let key = rest.rsplit_once('/').map_or(String::new(), |(d, _)| d.to_string());
+                match chapters.iter_mut().find(|c| c.0 == key) {
+                    Some(c) => c.1.push(lean(f)),
+                    None => chapters.push((key, vec![lean(f)])),
+                }
+            }
+            let chapters = chapters
+                .into_iter()
+                .map(|(key, items)| {
+                    let read = items.iter().filter(|v| v["state"] == "read").count();
+                    json!({ "name": if key.is_empty() { String::new() } else { chapter_name(&key) }, "count": format!("{read}/{}", items.len()), "items": items })
+                })
+                .collect();
+            let due = if self.fr() { format!("à rendre le {}", i18n::date(pr.due.date, self.lang())) } else { format!("due {}", i18n::date(pr.due.date, self.lang())) };
+            let line = match &pr.domain {
+                Some(d) => format!("{} · {due}", self.subject_name(d)),
+                None => due,
+            };
+            (json!({ "kind": "project", "id": pr.id, "title": pr.name, "line": line, "dir": dir }), chapters)
+        } else {
+            let d = s.parts.iter().find_map(|p| p.domain.clone())?;
+            let lib = self.library();
+            let subject = lib["subjects"].as_array()?.iter().find(|x| x["id"] == d.as_str())?.clone();
+            let chapters = subject["chapters"]
+                .as_array()?
+                .iter()
+                .map(|c| {
+                    let items: Vec<Value> = c["items"].as_array().into_iter().flatten().cloned().map(lean).collect();
+                    let read = items.iter().filter(|v| v["state"] == "read").count();
+                    json!({ "name": c["name"], "count": format!("{read}/{}", items.len()), "items": items })
+                })
+                .collect();
+            let level = self.store.settings.domains.iter().find(|x| x.id == d).map(|x| x.level).unwrap_or_default();
+            (json!({ "kind": "module", "id": d, "title": self.subject_name(&d), "level": level, "dir": format!("{d}/") }), chapters)
+        };
+        // Put forward: the plan's file for this session, else the first not read.
+        let all: Vec<&Value> = chapters.iter().flat_map(|c| c["items"].as_array().into_iter().flatten()).collect();
+        let planned = s.parts.iter().find_map(|p| p.work.item().map(|i| (i.to_string(), p)));
+        let forward = planned
+            .as_ref()
+            .and_then(|(i, _)| all.iter().find(|v| v["id"] == i.as_str()))
+            .or_else(|| all.iter().find(|v| v["state"] == "next" || v["state"] == "progress"))
+            .or_else(|| all.iter().find(|v| v["state"] != "read"))
+            .map(|v| {
+                let id = v["id"].as_str().unwrap_or("");
+                let upto = st.progress.items.get(id).map_or(0, |p| p.read_upto);
+                let why = if upto > 0 {
+                    self.t(&format!("where you stopped · §{upto}"), &format!("là où tu t'es arrêté · §{upto}"))
+                } else if let Some(r) = s.reasons.iter().find(|r| !matches!(r, crate::plan::Reason::Pinned)).filter(|_| planned.is_some()) {
+                    i18n::reason(r, self.lang())
+                } else {
+                    self.t("next in the plan", "la suite du programme")
+                };
+                json!({ "id": id, "title": v["title"], "num": v["num"], "why": why })
+            });
+        let mut v = head;
+        v["session"] = json!(session);
+        v["forward"] = forward.unwrap_or(Value::Null);
+        v["chapters"] = Value::Array(chapters);
+        Some(v)
+    }
+
     /// "I have time" on one file: the plan's task for it when it has one,
     /// in its order; else time found now to read it, the plan around it
     /// left as it was.

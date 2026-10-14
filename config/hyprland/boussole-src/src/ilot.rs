@@ -25,19 +25,9 @@ impl Service {
     }
 
     /// "A&C · 32 Analyse 2 − 1/m ★": the session's main work, in a line.
+    /// What a session is about: its module, a project's or a campaign's name.
     pub(crate) fn headline(&self, s: &Session) -> String {
-        let Some(p) = s.parts.first() else { return String::new() };
-        let what = match &p.work {
-            Work::Study { item, .. } | Work::Read { item } | Work::Review { item, .. } | Work::Redo { item, .. } | Work::ExamSubject { item, .. } => {
-                let star = self.catalogue.get(item).is_some_and(|i| i.starred);
-                format!("{}{}", i18n::item_name(item), if star { " ★" } else { "" })
-            }
-            w => i18n::work(w, self.lang()),
-        };
-        match &p.domain {
-            Some(d) => format!("{d} · {what}"),
-            None => what,
-        }
+        self.short_label(s)
     }
 
     /// A few words for the bar: the subject, else what it is about
@@ -66,47 +56,21 @@ impl Service {
     }
 
     /// The start of a session (`reminder`: 15 minutes on, nothing begun).
+    /// It names the module only: what to open is put forward in the room.
     pub(crate) fn session_alert(&mut self, s: &Session, at: Local, reminder: bool) {
-        let lang = self.lang();
-        let (title, body) = if reminder {
-            (
-                self.t("The sheet is waiting", "La fiche t'attend"),
-                self.t(
-                    "Open it and read only the header table. That is all that is asked for now.",
-                    "Ouvre-la et lis seulement le tableau d'en-tête. C'est tout ce qu'on te demande pour l'instant.",
-                ),
-            )
+        let what = self.headline(s);
+        let from = at.time.max(s.start);
+        let len = s.end.0 - from.0;
+        let len = if len >= 60 { format!("{} h {:02}", len / 60, len % 60).replace(" h 00", " h") } else { format!("{len} min") };
+        let title = if reminder {
+            self.t(&format!("{what} is waiting"), &format!("{what} t'attend"))
+        } else if s.kind == SlotKind::Evening {
+            self.t(&format!("Tonight · {what}"), &format!("Ce soir · {what}"))
         } else {
-            let when = match s.kind {
-                SlotKind::Evening => self.t("Tonight: ", "Ce soir : "),
-                _ => String::new(),
-            };
-            // The title already names the first task: its objective, then
-            // the others with their subject.
-            let lines: Vec<String> = s
-                .parts
-                .iter()
-                .enumerate()
-                .filter_map(|(i, p)| {
-                    let w = i18n::work(&p.work, lang);
-                    if i == 0 {
-                        return w.split_once(" · ").map(|(_, objective)| objective.to_string());
-                    }
-                    Some(match &p.domain {
-                        Some(d) => format!("{d} · {w}"),
-                        None => w,
-                    })
-                })
-                .collect();
-            (format!("{when}{}", self.headline(s)), lines.join(" · "))
+            what
         };
-        // Where Liseuse will open.
-        let hint = s.parts.iter().find_map(|p| match &p.work {
-            Work::Study { sections: Some((a, _)), .. } => {
-                Some(self.t(&format!("Opens in Liseuse, at §{a}."), &format!("S'ouvre dans Liseuse, au début du §{a}.")))
-            }
-            _ => None,
-        });
+        let body = format!("{from} – {} · {len}", s.end);
+        let hint: Option<String> = None;
         let alert = json!({
             "key": format!("{}:{}@{}", if reminder { "remind" } else { "start" }, s.id, at.time),
             "kind": if reminder { "reminder" } else { "start" },

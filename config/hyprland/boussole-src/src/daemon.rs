@@ -975,6 +975,10 @@ impl Service {
             "suivi": self.suivi_status(),
             "focus": self.focus_status(),
             "programme": self.programme_alert(),
+            "saved": self.saved(),
+            "upcoming": self.upcoming(),
+            // The next one not begun: Today's "Next", with its Start and Later.
+            "then": self.then().map(|s| json!({ "id": s.id, "date": s.date, "start": s.start, "end": s.end, "title": self.headline(s) })),
             "now_free": if self.away().is_some() { Value::Null } else { self.now_free() },
             "away": self.away().map(|u| self.until_label(u)),
             "later": journee::away_choices(now)
@@ -1159,7 +1163,19 @@ impl Service {
             }
             "resume-session" => {
                 let x = session_arg(self)?;
+                // Another one under way, or tracked: it is saved first.
+                let tracked = self.suivi.tracker.as_ref().and_then(|t| t.session.clone());
+                if let Some(other) = tracked.filter(|o| *o != x.id) {
+                    if matches!(self.store.state.outcomes.get(&other), Some(Outcome::Started { .. })) {
+                        self.store.record(Event::Paused { session: other.clone(), at: now }, now).map_err(io)?;
+                    }
+                    self.session_paused(true);
+                    self.suivi.tracker = None;
+                }
                 self.store.record(Event::Resumed { session: x.id.clone(), at: now }, now).map_err(io)?;
+                if self.suivi.tracker.is_none() {
+                    self.session_started(&x.id);
+                }
                 self.session_paused(false);
                 self.focus_pause(false);
                 self.replan();
@@ -1451,6 +1467,20 @@ impl Service {
                     .collect();
                 (lines.join("\n"), serde_json::to_value(&self.store.state.campaigns).unwrap())
             }
+            "room" => {
+                let id = s("session").ok_or("session")?;
+                (String::new(), self.room(&id).unwrap_or(Value::Null))
+            }
+            // A module's level, from its room.
+            "level" => {
+                let d = s("domain").ok_or("domain")?;
+                let level: Level = serde_json::from_value(json!(s("level").ok_or("level")?)).map_err(|e| e.to_string())?;
+                let dom = self.store.settings.domains.iter_mut().find(|x| x.id == d).ok_or(format!("{d}?"))?;
+                dom.level = level;
+                self.store.save_settings().map_err(io)?;
+                self.replan();
+                (String::new(), Value::Null)
+            }
             "settings" => (String::new(), serde_json::to_value(&self.store.settings).unwrap()),
             "set" => {
                 // A JSON merge patch over the settings, checked before it is kept.
@@ -1586,6 +1616,73 @@ impl Service {
     }
 
     /// "I have time": the most useful work that fits, from what is planned next.
+    fn ahead_unbegun(&self) -> impl Iterator<Item = &Session> {
+        let now = self.now();
+        let st = &self.store.state;
+        self.plan
+            .sessions
+            .iter()
+            .filter(move |s| s.counted && !s.parts.is_empty() && Local::new(s.date, s.end) > now && !st.outcomes.contains_key(&s.id))
+    }
+
+    pub(crate) fn then(&self) -> Option<&Session> {
+        self.ahead_unbegun().next()
+    }
+
+    /// The sessions after the next one, for Today's "Coming up".
+    pub(crate) fn upcoming(&self) -> Value {
+        let now = self.now();
+        let lang = self.lang();
+        let rows: Vec<Value> = self
+            .ahead_unbegun()
+            .skip(1)
+            .take(5)
+            .map(|s| {
+                let day = i18n::date(s.date, lang);
+                let day = day.split(' ').next().unwrap_or("").trim_end_matches('.');
+                let when = if s.date == now.date { s.start.to_string() } else { format!("{day} {}", s.start) };
+                let m = s.end.0 - s.start.0;
+                let len = if m >= 60 { format!("{} h{}", m / 60, if m % 60 > 0 { format!(" {:02}", m % 60) } else { String::new() }) } else { format!("{m} min") };
+                json!({ "id": s.id, "when": when, "title": self.headline(s), "len": len })
+            })
+            .collect();
+        Value::Array(rows)
+    }
+
+    /// Sessions stopped without Close, to take up again: the time left,
+    /// the file and the page they were left at.
+    pub(crate) fn saved(&self) -> Value {
+        let st = &self.store.state;
+        let t = self.suivi.tracker.as_ref();
+        let counting = t.filter(|t| !t.flags.paused).and_then(|t| t.session.clone());
+        let mut out: Vec<(String, Value)> = Vec::new();
+        for (id, o) in &st.outcomes {
+            let at = match o {
+                Outcome::Paused { at } => *at,
+                Outcome::Started { at } if counting.as_deref() != Some(id.as_str()) => *at,
+                _ => continue,
+            };
+            let Some(s) = self.session_any(id) else { continue };
+            let mine = t.filter(|t| t.session.as_deref() == Some(id.as_str()));
+            let spent = mine.map_or(0, |t| (t.effective / 60) as i32);
+            let left = (s.end.0 - s.start.0 - spent).max(0);
+            let last = mine.and_then(|t| t.visits.last());
+            out.push((
+                at.to_string(),
+                json!({
+                    "id": id,
+                    "title": self.headline(&s),
+                    "left": left,
+                    "file": last.map(|(_, i, _)| i18n::item_name(i)),
+                    "page": last.map(|(_, _, p)| p),
+                    "since": if at.date == self.now().date { at.time.to_string() } else { i18n::local(at, self.lang()) },
+                }),
+            ));
+        }
+        out.sort_by(|a, b| b.0.cmp(&a.0));
+        Value::Array(out.into_iter().map(|x| x.1).collect())
+    }
+
     /// "Later, until…": nothing planned, rung or offered before then; what
     /// was planned meanwhile is placed again after it.
     pub(crate) fn go_away(&mut self, spec: &str) -> Result<Local, String> {

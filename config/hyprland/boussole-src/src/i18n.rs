@@ -166,10 +166,10 @@ fn reason_raw(r: &Reason, lang: Lang) -> String {
         },
         Reason::Continues => (if fr { "Commencée la dernière fois : elle passe en tête." } else { "Started last time, so first in line." }).into(),
         Reason::Rotation { domain, last } => match (fr, last) {
-            (true, Some(d)) => format!("Pas de {domain} depuis {} : les matières alternent.", date(*d, lang)),
-            (true, None) => format!("Au tour de {domain} : les matières alternent."),
-            (false, Some(d)) => format!("No {domain} since {}: subjects take turns.", date(*d, lang)),
-            (false, None) => format!("{domain}'s turn: subjects take turns."),
+            (true, Some(d)) => format!("Pas de {domain} depuis {} : les modules alternent.", date(*d, lang)),
+            (true, None) => format!("Au tour de {domain} : les modules alternent."),
+            (false, Some(d)) => format!("No {domain} since {}: modules take turns.", date(*d, lang)),
+            (false, None) => format!("{domain}'s turn: modules take turns."),
         },
         Reason::Behind { domain } => {
             if fr {

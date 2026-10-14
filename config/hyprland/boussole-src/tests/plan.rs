@@ -314,6 +314,7 @@ fn the_campaign_gets_its_time() {
         weekly_target: 8,
         rows: vec![Row { name: "Company F".into(), status: RowStatus::Interview, sent: Some(MON.add(-8)), interview: Some(at(MON.add(9), "10:00")) }],
         closed: false,
+        dir: None,
     });
     let p = fx.plan(at(MON, "06:00"));
     // Friday evening is free, and that Friday has no gap.
@@ -516,7 +517,7 @@ fn the_campaign_takes_daytime_before_the_evening() {
         free_day_minutes: 120,
         weekly_target: 8,
         rows: Vec::new(),
-        closed: false,
+        closed: false, dir: None
     });
     let p = fx.plan(at(MON, "06:00"));
     let kind = |day: Date| {
