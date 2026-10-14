@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar, scroll bar:** Boussole's drawer and the library have a thin scroll bar: drag it, or click its track to jump there.
 
 ### Fixed
+- **Boussole, Today:** a session of a later day that you started now shows under Today, with Pause and Close; it was missing from the drawer.
 - **Boussole, I have time:** picking a subject and a duration starts the session and, in focus mode, takes you to the study workspaces; it only planned it.
 
 ## 1.6.1

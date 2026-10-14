@@ -363,6 +363,39 @@ impl Service {
                 }),
             ));
         }
+        // Started ahead of its day (a session of the week begun now): shown
+        // today, where it is under way.
+        if date == now.date {
+            for (id, s) in &self.store.state.started {
+                if s.date == date || s.parts.is_empty() || rows.iter().any(|r| r.1["id"] == id.as_str()) {
+                    continue;
+                }
+                let state = match self.store.state.outcomes.get(id) {
+                    Some(Outcome::Started { .. }) => "started",
+                    Some(Outcome::Paused { .. }) => "paused",
+                    _ => continue,
+                };
+                let start = now.time;
+                let end = Hm((start.0 + s.end.0 - s.start.0).min(24 * 60 - 1));
+                let parts: Vec<Value> = s.parts.iter().map(|p| self.part_row(p, lang)).collect();
+                rows.push((
+                    start,
+                    json!({
+                        "type": "session",
+                        "id": id,
+                        "kind": s.kind,
+                        "start": start.to_string(),
+                        "end": end.to_string(),
+                        "title": self.headline(s),
+                        "parts": parts,
+                        "why": [],
+                        "state": state,
+                        "shortened": false,
+                        "past": false,
+                    }),
+                ));
+            }
+        }
         // Said "not tonight": no longer in the plan, still shown, to be
         // brought back.
         for (id, (day, _, planned)) in &self.store.state.skipped {
