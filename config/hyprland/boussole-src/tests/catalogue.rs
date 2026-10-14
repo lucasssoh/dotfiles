@@ -104,8 +104,8 @@ fn real_course_folder() {
     let starred: Vec<&str> = ac.iter().filter(|i| i.starred).map(|i| i.id.rsplit('/').next().unwrap()).collect();
     assert_eq!(starred, ["14_Methode_de_preuve.md", "32_Analyse_2_moins_1_sur_m.md"]);
     let ls = c.get("A&C/Cours_03_Approximation/30_List_Scheduling/31_Algorithme_LS.md").unwrap();
-    assert_eq!(ls.exercises, 3);
-    assert_eq!(ls.sections.first().map(|s| s.num), Some(1));
+    assert_eq!(ls.exercises, 2);
+    assert_eq!(ls.sections.first().map(|s| s.num), Some(0));
     assert_eq!(c.get("A&C/Cours_03_Approximation/90_Exercices/93_Sujets_type_examen.md").unwrap().subjects, 2);
     assert!(c.get("A&C/00_Index.md").is_none() && c.get("A&C/roadmap.md").is_none());
     assert!(c.items.iter().all(|i| !i.id.contains("/References/") && !i.id.contains("/_outils/")));

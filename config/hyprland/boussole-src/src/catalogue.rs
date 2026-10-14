@@ -303,7 +303,11 @@ struct Walker<'a> {
 
 impl Walker<'_> {
     fn skipped_dir(&self, name: &str) -> bool {
-        name.starts_with('.') || self.ignore.dirs.iter().any(|d| d.eq_ignore_ascii_case(name))
+        // Solutions are opened by hand, never planned.
+        const SOLUTIONS: [&str; 3] = ["Corriges", "Corrigés", "Solutions"];
+        name.starts_with('.')
+            || SOLUTIONS.iter().any(|d| d.eq_ignore_ascii_case(name))
+            || self.ignore.dirs.iter().any(|d| d.eq_ignore_ascii_case(name))
     }
 
     fn skipped_file(&self, name: &str) -> bool {
