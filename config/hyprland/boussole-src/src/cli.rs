@@ -15,12 +15,12 @@ use crate::store::Paths;
 pub const HELP: &str = "\
 boussole                       what comes next
 boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional)
-boussole start|skip|done [ID]  the next session, or the one given: one task each
-boussole unskip ID             bring back a session said not tonight
+boussole start|done [ID]       the next session, or the one given: one task each
+boussole later WHEN            nothing planned until then: 30m, 1h, 21:30, tomorrow, sun, 2026-10-18
+boussole back                  back before then
 boussole free MINUTES [SUBJECT] I have time: a session right away (that subject's next task)
 boussole free MINUTES --file F  the same on one course file (path under the course folder)
 boussole library                every course file by subject and chapter, as JSON
-boussole later [ID] HH:MM      later today, at a precise time
 boussole draft [ID]            what Liseuse saw, pre-filling the close
 boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
 boussole continue [ID]         back to a session paused for a game
@@ -135,8 +135,7 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["today"] => req(json!({ "cmd": "plan", "days": 1 })),
         ["week"] => req(json!({ "cmd": "plan", "days": 7 })),
         ["week", n] => req(json!({ "cmd": "plan", "days": n.parse::<i64>().map_err(|_| "DAYS")? })),
-        ["start" | "skip" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
-        ["unskip", id] => req(json!({ "cmd": "unskip", "session": id })),
+        ["start" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
         ["free", m] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")? })),
         ["free", m, "--file", item] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "item": item })),
         ["library"] => request(paths, json!({ "cmd": "library" })).map(|mut v| serde_json::to_string_pretty(&v["data"].take()).unwrap_or_default()),
@@ -148,8 +147,8 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             req(json!({ "cmd": "close", "session": id, "media_for_course": video }))
         }
         ["continue", ..] => req(json!({ "cmd": "resume-session", "session": sess(1) })),
-        ["later", at] => req(json!({ "cmd": "later", "at": at })),
-        ["later", id, at] => req(json!({ "cmd": "later", "session": id, "at": at })),
+        ["later", when @ ..] if !when.is_empty() => req(json!({ "cmd": "later", "until": when.join(" ") })),
+        ["back"] => req(json!({ "cmd": "back" })),
         ["add", "--fuzzel"] => add_fuzzel(paths),
         ["add", rest @ ..] if !rest.is_empty() => {
             let line = rest.join(" ");

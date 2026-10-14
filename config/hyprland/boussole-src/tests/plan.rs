@@ -573,3 +573,20 @@ fn a_project_with_a_folder_takes_its_files_out_of_the_course() {
     assert!(parts(&after).iter().any(|(_, _, x)| matches!(&x.work, Work::Project { project, .. } if project == "PENDU")));
     assert!(fx.projects[0].holds(&b) && !fx.projects[0].holds(&format!("{dir}x/1.md")));
 }
+
+#[test]
+fn later_until_moves_the_evening_past_it_or_off_tonight() {
+    let mut fx = Fx::new("away");
+    let now = at(MON, "20:00");
+    let before = fx.plan(now);
+    let tonight = |p: &Plan| p.sessions.iter().filter(|s| s.date == MON && s.counted && !s.parts.is_empty() && s.start >= hm("18:00")).map(|s| s.start).collect::<Vec<_>>();
+    assert!(!tonight(&before).is_empty(), "an evening session at first");
+
+    fx.busy.push(Busy { start: now, end: at(MON, "21:00"), title: String::new() });
+    let later = fx.plan(now);
+    assert!(tonight(&later).iter().all(|t| *t >= hm("21:00")), "{:?}", tonight(&later));
+
+    fx.busy[0].end = at(MON.add(1), "00:00");
+    let off = fx.plan(now);
+    assert!(tonight(&off).is_empty(), "nothing tonight: {:?}", tonight(&off));
+}

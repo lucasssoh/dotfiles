@@ -4,7 +4,7 @@ use common::*;
 
 use boussole::journee::{self, Mode, Place, Slot, SlotKind};
 use boussole::model::*;
-use boussole::time::Date;
+use boussole::time::{Date, Local};
 
 fn evening(fx: &Fx, date: Date) -> Slot {
     let day = journee::day(&fx.input(at(MON, "06:00"), None), date);
@@ -96,13 +96,19 @@ fn friday_offers_a_short_evening_near_an_exam() {
 }
 
 #[test]
-fn later_is_always_a_precise_time() {
-    let fx = Fx::new("later");
-    let e = evening(&fx, MON);
-    let opts = journee::later_options(&e, hm("20:35"), 75, 20);
-    let shown: Vec<(String, String)> = opts.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
-    assert_eq!(shown, [("21:00".into(), "22:15".into()), ("21:30".into(), "22:15".into())]);
-    assert!(journee::later_options(&e, hm("21:50"), 75, 20).is_empty(), "too late: the session counts as missed");
+fn later_until_a_time_a_day_or_a_while() {
+    let now = Local::new(MON, hm("20:35"));
+    let at = |spec: &str| journee::away_until(spec, now).map(|l| l.to_string());
+    assert_eq!(at("30"), Some(Local::new(MON, hm("21:05")).to_string()));
+    assert_eq!(at("1h"), Some(Local::new(MON, hm("21:35")).to_string()));
+    assert_eq!(at("22:00"), Some(Local::new(MON, hm("22:00")).to_string()));
+    assert_eq!(at("tomorrow"), Some(Local::new(MON.add(1), hm("00:00")).to_string()));
+    assert_eq!(at("dimanche"), Some(Local::new(MON.add(6), hm("00:00")).to_string()));
+    assert_eq!(at("mon"), Some(Local::new(MON.add(7), hm("00:00")).to_string()), "today's weekday is next week's");
+    assert_eq!(at("20:00"), None, "never in the past");
+    assert_eq!(at("soon"), None);
+    let ids: Vec<String> = journee::away_choices(now).into_iter().map(|(id, _)| id).collect();
+    assert_eq!(ids, ["30", "60", "tomorrow", &MON.add(2).to_string()]);
 }
 
 #[test]

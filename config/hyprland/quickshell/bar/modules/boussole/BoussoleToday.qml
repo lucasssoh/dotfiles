@@ -19,12 +19,17 @@ Column {
     }
     readonly property var upcoming: {
         for (const r of root.b.today)
-            if (r.type === "session" && !r.past && (r.state === "planned" || r.state === "postponed")) return r;
+            if (r.type === "session" && !r.past && r.state === "planned") return r;
         return null;
     }
     readonly property var current: root.active || root.upcoming
-    // Said "not tonight" today and not over yet: they can come back.
-    readonly property var skipped: root.b.today.filter(r => r.state === "skipped" && !r.past)
+    // "Later" opened on the next session: until when.
+    property bool choosing: false
+    onChoosingChanged: root.b.laterTyping = root.choosing
+    Connections {
+        target: root.b
+        function onPanelOpenChanged() { if (!root.b.panelOpen) root.choosing = false; }
+    }
 
     BoussoleText {
         visible: !root.b.daemonConnected
@@ -55,6 +60,41 @@ Column {
                 font.pixelSize: 13
             }
             BoussolePill { primary: true; text: root.b.tr("Start", "Commencer"); onClicked: root.b.openSetup() }
+        }
+    }
+
+    // ---- Later holds: nothing planned, rung or offered until then ---------
+    Rectangle {
+        visible: root.b.daemonConnected && root.b.away !== "" && !root.active
+        width: parent.width
+        height: awayRow.implicitHeight + 28
+        radius: 18
+        color: DrawerTheme.clear(DrawerTheme.card)
+        border.width: 1
+        border.color: DrawerTheme.faint
+        Item {
+            id: awayRow
+            x: 16
+            y: 14
+            width: parent.width - 32
+            implicitHeight: Math.max(awayText.implicitHeight, backPill.height)
+            BoussoleText {
+                id: awayText
+                anchors.left: parent.left
+                anchors.right: backPill.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.b.tr("Nothing ", "Rien ") + root.b.away
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+            }
+            BoussolePill {
+                id: backPill
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.b.tr("Back now", "De retour")
+                onClicked: root.b.back()
+            }
         }
     }
 
@@ -374,9 +414,9 @@ Column {
                     onClicked: root.b.start(root.current.id)
                 }
                 BoussolePill {
-                    visible: !root.active
-                    text: root.b.tr("Not tonight", "Pas ce soir")
-                    onClicked: root.b.skip(root.current.id)
+                    visible: !root.active && !root.choosing
+                    text: root.b.tr("Later", "Plus tard")
+                    onClicked: root.choosing = true
                 }
                 // Paused (by hand, or by a game launched anyway): it goes on
                 // from here, in front of its file in focus mode.
@@ -398,55 +438,75 @@ Column {
                     onClicked: root.b.openClose(root.active.id)
                 }
             }
-        }
-    }
-
-    // ---- said "not tonight", by mistake maybe -----------------------------
-    Rectangle {
-        visible: root.skipped.length > 0
-        width: parent.width
-        height: skippedCol.implicitHeight + 28
-        radius: 18
-        color: "transparent"
-        border.width: 1
-        border.color: DrawerTheme.faint
-        Column {
-            id: skippedCol
-            x: 16
-            y: 14
-            width: parent.width - 32
-            spacing: 8
-            BoussoleText {
-                text: root.b.tr("Not tonight", "Pas ce soir")
-                color: DrawerTheme.secondary
-                font.pixelSize: 11
-                font.weight: Font.Bold
-                font.letterSpacing: 1
-                font.capitalization: Font.AllUppercase
-            }
-            Repeater {
-                model: root.skipped
-                delegate: Item {
-                    required property var modelData
-                    width: skippedCol.width
-                    height: Math.max(skippedTitle.implicitHeight, back.height)
-                    BoussoleText {
-                        id: skippedTitle
-                        anchors.left: parent.left
-                        anchors.right: back.left
-                        anchors.rightMargin: 8
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.start + "  " + modelData.title
-                        elide: Text.ElideRight
-                        font.pixelSize: 14
+            // Later, until: the nearest choices, or a time or a day typed.
+            Column {
+                visible: root.choosing && !root.active
+                width: parent.width
+                spacing: 8
+                BoussoleText {
+                    text: root.b.tr("Later, until", "Plus tard, jusqu'à")
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 13
+                }
+                Grid {
+                    id: choices
+                    width: parent.width
+                    columns: 2
+                    spacing: 8
+                    Repeater {
+                        model: root.b.laterChoices
+                        delegate: Rectangle {
+                            id: choice
+                            required property var modelData
+                            width: (choices.width - choices.spacing) / 2
+                            height: 44
+                            radius: 14
+                            color: choiceHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
+                            Behavior on color { ColorAnimation { duration: 120 } }
+                            border.width: 1
+                            border.color: DrawerTheme.faint
+                            BoussoleText {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: choice.modelData.label
+                                font.pixelSize: 14
+                            }
+                            BoussoleText {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: String(choice.modelData.until).replace(/^(until|jusqu'à) /, "")
+                                color: DrawerTheme.muted
+                                font.pixelSize: 12
+                            }
+                            MouseArea {
+                                id: choiceHit
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.b.later(choice.modelData.id);
+                                    root.choosing = false;
+                                }
+                            }
+                        }
                     }
-                    BoussolePill {
-                        id: back
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.b.tr("Bring back", "Reprendre")
-                        onClicked: root.b.unskip(modelData.id)
+                }
+                BoussoleField {
+                    id: typed
+                    width: parent.width
+                    placeholder: root.b.tr("A time or a day: 21:30, sun…", "Une heure ou un jour : 21:30, dim…")
+                    onAccepted: {
+                        if (typed.text.trim() === "") return;
+                        root.b.later(typed.text.trim());
+                        typed.text = "";
+                        root.choosing = false;
                     }
+                }
+                BoussolePill {
+                    text: root.b.tr("Cancel", "Annuler")
+                    onClicked: root.choosing = false
                 }
             }
         }

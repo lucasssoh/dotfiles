@@ -125,6 +125,11 @@ pub enum Event {
         #[serde(default)]
         planned: Option<Box<crate::plan::Session>>,
     },
+    /// "Later, until…": nothing planned, rung or offered from now until
+    /// then. Its time is taken out of the plan like a busy one.
+    Away { until: Local },
+    /// Back before the time said: what is left of it is free again.
+    Back { at: Local },
     /// Time found on the spot ("I have time"): a session from `start`.
     Extra { extra: crate::journee::Extra },
     /// Its time went by without a start.
@@ -232,6 +237,8 @@ pub struct State {
     pub closed: BTreeMap<String, (Date, Vec<String>)>,
     /// Time found on the spot.
     pub extra: Vec<crate::journee::Extra>,
+    /// "Later, until…": from when it was said to when it ends.
+    pub away: Vec<Busy>,
     /// The slot of the last miss counted, so that several tasks of one
     /// evening count as one session missed.
     pub last_missed_slot: String,
@@ -419,6 +426,17 @@ pub fn reduce(entries: &[Entry]) -> State {
                 missed(&mut st, session);
             }
             Event::Extra { extra } => st.extra.push(extra.clone()),
+            Event::Away { until } => {
+                if *until > e.at {
+                    st.away.push(Busy { start: e.at, end: *until, title: String::new() });
+                }
+            }
+            Event::Back { at } => {
+                st.away.retain(|a| a.start < *at);
+                for a in st.away.iter_mut().filter(|a| a.end > *at) {
+                    a.end = *at;
+                }
+            }
             Event::Paused { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Paused { at: *at });
             }

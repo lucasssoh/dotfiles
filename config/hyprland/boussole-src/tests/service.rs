@@ -351,3 +351,20 @@ fn not_tonight_can_be_taken_back() {
     let st = store::reduce(&entries);
     assert!(st.skipped.is_empty() && st.outcomes.is_empty() && st.missed_streak == 0, "as if never said");
 }
+
+#[test]
+fn later_until_holds_its_time_and_back_frees_the_rest() {
+    let mut entries = Vec::new();
+    let push = |entries: &mut Vec<store::Entry>, logged: Local, event: Event| {
+        let seq = entries.len() as u64 + 1;
+        entries.push(store::Entry { seq, at: logged, event });
+    };
+    push(&mut entries, at(MON, "20:00"), Event::Away { until: at(MON.add(1), "00:00") });
+    let st = store::reduce(&entries);
+    assert_eq!(st.away.len(), 1);
+    assert_eq!((st.away[0].start, st.away[0].end), (at(MON, "20:00"), at(MON.add(1), "00:00")));
+    assert!(st.outcomes.is_empty() && st.missed_streak == 0, "said, not missed");
+    push(&mut entries, at(MON, "21:10"), Event::Back { at: at(MON, "21:10") });
+    let st = store::reduce(&entries);
+    assert_eq!(st.away[0].end, at(MON, "21:10"), "the time before stays taken");
+}

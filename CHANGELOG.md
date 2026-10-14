@@ -11,6 +11,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Boussole, projects:** a project can own a folder of your course (`boussole project dir ID FOLDER`). Its files leave the course's order: its sessions list them all under Today and in the focus panel, with what you have read, and a click opens any of them, in the study workspaces in focus mode. The files you read in a project session count as read when you close it.
 - **Bar, scroll bar:** Boussole's drawer and the library have a thin scroll bar: drag it, or click its track to jump there.
 
+### Changed
+- **Boussole, Later:** Later asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type. Until then nothing is planned, rung or suggested, and what was planned meanwhile is placed again after it; you can still start a session yourself. Back now frees the rest. Not tonight is gone: Later until tomorrow does it for the whole evening.
+
 ### Fixed
 - **Boussole, Today:** a session of a later day that you started now shows under Today, with Pause and Close; it was missing from the drawer.
 - **Boussole, Close:** a project session no longer pre-ticks the whole step as done after one session; the step is done when its hours are.

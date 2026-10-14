@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 
 use crate::daemon::Service;
 use crate::i18n;
-use crate::journee::{self, SlotKind};
+use crate::journee::SlotKind;
 use crate::model::Lang;
 use crate::plan::{Part, Session, Work};
 use crate::store::Outcome;
@@ -57,23 +57,11 @@ impl Service {
         }
     }
 
-    fn actions(&self, s: &Session, from: Hm, start: bool) -> Vec<Value> {
-        let r = &self.store.settings.rhythm;
-        let slot = journee::Slot {
-            date: s.date,
-            start: s.start,
-            end: s.end,
-            kind: s.kind,
-            counted: true,
-            place: s.place,
-            shortened: s.shortened,
-            limit: if s.kind == SlotKind::Block { r.block_range.1 } else { r.latest_end },
-        };
+    /// Start, or "Later, until…": the nearest choices, the others in the drawer.
+    fn actions(&self) -> Vec<Value> {
         let mut a = vec![json!({ "id": "start", "label": self.t("Start", "Commencer"), "primary": true })];
-        for (t, _) in journee::later_options(&slot, from, s.end.0 - s.start.0, r.min_session).into_iter().take(if start { 2 } else { 1 }) {
-            a.push(json!({ "id": format!("later:{t}"), "label": self.t(&format!("At {t}"), &format!("À {t}")) }));
-        }
-        a.push(json!({ "id": "skip", "label": self.t("Not tonight", "Pas ce soir") }));
+        a.push(json!({ "id": "away:30", "label": self.t("In 30 min", "Dans 30 min") }));
+        a.push(json!({ "id": "away:tomorrow", "label": self.t("Tomorrow", "Demain") }));
         a
     }
 
@@ -129,7 +117,7 @@ impl Service {
             "title": title,
             "body": body,
             "hint": hint,
-            "actions": self.actions(s, self.now().time, !reminder),
+            "actions": self.actions(),
             "chime": true,
         });
         self.raise(alert);
@@ -239,16 +227,9 @@ impl Service {
         let fr = self.lang() == Lang::Fr;
         let text = if action == "start" {
             self.t("Off you go.", "C'est parti.")
-        } else if let Some(t) = action.strip_prefix("later:") {
-            self.t(&format!("Noted, at {t}."), &format!("C'est noté, à {t}."))
-        } else if action == "skip" {
-            // What moved, the nearest first.
-            let moved = i18n::changes(&self.plan.changes, self.now().date, self.lang());
-            match moved.lines().next() {
-                Some(l) if fr => format!("Pas ce soir. {l}"),
-                Some(l) => format!("Not tonight. {l}"),
-                None => self.t("Not tonight. The session is placed again.", "Pas ce soir. La séance est replacée."),
-            }
+        } else if action.starts_with("away:") {
+            let label = self.away().map(|u| self.until_label(u)).unwrap_or_default();
+            if fr { format!("Rien {label}.") } else { format!("Nothing {label}.") }
         } else if action == "still:yes" {
             self.t("Noted, on paper: the time counts.", "Noté, sur papier : le temps compte.")
         } else if action == "reopen" {
@@ -395,31 +376,6 @@ impl Service {
                     }),
                 ));
             }
-        }
-        // Said "not tonight": no longer in the plan, still shown, to be
-        // brought back.
-        for (id, (day, _, planned)) in &self.store.state.skipped {
-            if *day != date || self.plan.sessions.iter().any(|s| &s.id == id) {
-                continue;
-            }
-            let Some(s) = planned else { continue };
-            let parts: Vec<Value> = s.parts.iter().map(|p| self.part_row(p, lang)).collect();
-            rows.push((
-                s.start,
-                json!({
-                    "type": "session",
-                    "id": id,
-                    "kind": s.kind,
-                    "start": s.start.to_string(),
-                    "end": s.end.to_string(),
-                    "title": self.headline(s),
-                    "parts": parts,
-                    "why": [],
-                    "state": "skipped",
-                    "shortened": false,
-                    "past": Local::new(s.date, s.end) <= now,
-                }),
-            ));
         }
         rows.sort_by_key(|r| r.0);
         Value::Array(rows.into_iter().map(|r| r.1).collect())

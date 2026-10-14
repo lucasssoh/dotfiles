@@ -435,18 +435,6 @@ fn planned_day(input: &Input, date: Date) -> Day {
     out
 }
 
-/// "Later" is always a precise time: the half hours from now on where the
-/// session still fits a useful length before the slot's limit.
-pub fn later_options(slot: &Slot, now: Hm, len: i32, min: i32) -> Vec<(Hm, Hm)> {
-    let mut v = Vec::new();
-    let mut t = now.plus(10).ceil(30).max(slot.start.plus(1).ceil(30));
-    while t.0 + min <= slot.limit.0 && v.len() < 3 {
-        v.push((t, Hm((t.0 + len).min(slot.limit.0))));
-        t = t.plus(30);
-    }
-    v
-}
-
 /// The start time to expect on a weekday, from the real starts in the
 /// journal: the median of the last four, rounded to 5 minutes.
 pub fn learn_start(starts: &[(Date, Hm)], weekday: u32) -> Option<Hm> {
@@ -460,4 +448,41 @@ pub fn learn_start(starts: &[(Date, Hm)], weekday: u32) -> Option<Hm> {
     let n = times.len();
     let median = if n % 2 == 1 { times[n / 2] } else { (times[n / 2 - 1] + times[n / 2]) / 2 };
     Some(Hm(median).ceil(5))
+}
+
+/// "Later, until…": when a choice ends. `30`, `30m`, `1h` from now; `21:30`
+/// today; `tomorrow` (`demain`), a weekday (`sun`, `dimanche`) or a date
+/// (`2026-10-18`) from that day's midnight. Never in the past.
+pub fn away_until(spec: &str, now: crate::time::Local) -> Option<crate::time::Local> {
+    use crate::time::Local;
+    let s = spec.trim().to_lowercase();
+    let day = |d: Date| Local::new(d, Hm(0));
+    let until = if let Some(t) = s.contains(':').then(|| Hm::parse(&s)).flatten() {
+        Local::new(now.date, t)
+    } else if let Some(h) = s.strip_suffix('h').and_then(|n| n.trim().parse::<i64>().ok()) {
+        now.plus(h * 60)
+    } else if let Some(m) = s.strip_suffix("min").or_else(|| s.strip_suffix('m')).unwrap_or(&s).trim().parse::<i64>().ok() {
+        now.plus(m)
+    } else if s == "tomorrow" || s == "demain" {
+        day(now.date.add(1))
+    } else if let Some(d) = Date::parse(&s) {
+        day(d)
+    } else {
+        const EN: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+        const FR: [&str; 7] = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
+        let wd = (0..7).find(|&i| s.starts_with(EN[i]) || s.starts_with(FR[i]))? as i32;
+        let ahead = (wd - now.date.weekday() as i32).rem_euclid(7);
+        day(now.date.add(if ahead == 0 { 7 } else { ahead }))
+    };
+    (until > now).then_some(until)
+}
+
+/// What "Later" offers: in half an hour, in an hour, tomorrow, the day after.
+pub fn away_choices(now: crate::time::Local) -> Vec<(String, crate::time::Local)> {
+    ["30", "60", "tomorrow"]
+        .into_iter()
+        .map(String::from)
+        .chain(std::iter::once(now.date.add(2).to_string()))
+        .filter_map(|id| away_until(&id, now).map(|u| (id, u)))
+        .collect()
 }

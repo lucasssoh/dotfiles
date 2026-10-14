@@ -268,7 +268,9 @@ A study planner in the bar, optional (`init` asks). It reads your course folder 
 | **Files** | New files, waiting for you to plan or ignore them, then every file by subject |
 | **More** | Exams and hand-ins, projects, campaigns, subjects, calendars, rhythm and periods, settings, and the first run again |
 
-**One thing at a time.** Each task is a session of its own: an evening of applications then a tutorial to prepare is two sessions, one after the other, each with its own `Start`, `Later`, `Not tonight` and close. `Not tonight` puts off that task alone, until tomorrow, and the rest of the evening stays. Said by mistake, it comes back with **Bring back** under Today (`boussole unskip ID`). While one session is under way, the next ones keep quiet.
+**One thing at a time.** Each task is a session of its own: an evening of applications then a tutorial to prepare is two sessions, one after the other, each with its own `Start` and close. While one session is under way, the next ones keep quiet.
+
+**Later.** `Later` asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type (`21:30`, `sun`). Until then nothing is planned, rung or suggested, and what was planned in that time is placed again after it. You can still start a session yourself. `Back now`, under Today, frees what is left. The island offers the two nearest, `In 30 min` and `Tomorrow`. From a terminal: `boussole later 1h`, `boussole later tomorrow`, `boussole back`.
 
 **Free time.** With nothing planned right now, Today opens on what would help most: in a free period at school, up to its end and on paper; on an evening, each suggestion its own length. The nearest tutorial to prepare comes first, then the subject furthest behind its exam, then a subject you said you are behind in; or pick any file, as under I have time. It only shows when you open the drawer; planned sessions keep their alerts.
 

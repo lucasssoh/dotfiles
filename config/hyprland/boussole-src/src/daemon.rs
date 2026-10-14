@@ -689,6 +689,7 @@ impl Service {
         }
         let mut busy = self.personal.clone();
         busy.extend(st.busy.iter().cloned());
+        busy.extend(st.away.iter().cloned());
         let mut pins = self.pins(now.date);
         pins.retain(|p| !removed.contains(&p.task) && !extra_pins.iter().any(|e| e.task == p.task));
         pins.extend(extra_pins.iter().cloned());
@@ -880,8 +881,10 @@ impl Service {
         let now = self.now();
         let result = if action == "start" {
             self.start(session)
-        } else if action == "skip" {
-            self.skip(session).map(|_| ())
+        } else if let Some(spec) = action.strip_prefix("away:") {
+            self.go_away(spec).map(|_| ()).map_err(io::Error::other)
+        } else if action == "back" {
+            self.come_back()
         } else if action == "still:yes" || action == "still:no" {
             self.still_working(action == "still:yes");
             Ok(())
@@ -897,8 +900,6 @@ impl Service {
             })
         } else if action.starts_with("detour:") {
             Ok(())
-        } else if let Some(t) = action.strip_prefix("later:").and_then(Hm::parse) {
-            self.store.record(Event::Postponed { session: session.into(), to: Local::new(now.date, t) }, now).map(|_| ())
         } else {
             Ok(())
         };
@@ -974,7 +975,12 @@ impl Service {
             "suivi": self.suivi_status(),
             "focus": self.focus_status(),
             "programme": self.programme_alert(),
-            "now_free": self.now_free(),
+            "now_free": if self.away().is_some() { Value::Null } else { self.now_free() },
+            "away": self.away().map(|u| self.until_label(u)),
+            "later": journee::away_choices(now)
+                .into_iter()
+                .map(|(id, u)| json!({ "id": id, "label": self.choice_label(&id, u), "until": self.until_label(u) }))
+                .collect::<Vec<_>>(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
             "gate": self.store.settings.gate,
@@ -1106,30 +1112,15 @@ impl Service {
                 (if fr { format!("Séance {} commencée.", x.id) } else { format!("Session {} started.", x.id) }, Value::Null)
             }
             "later" => {
-                let x = session_arg(self)?;
-                let t = s("at").and_then(|t| Hm::parse(&t)).ok_or("HH:MM")?;
-                let r = &self.store.settings.rhythm;
-                if t.plus(r.min_session) > r.latest_end || t < now.time {
-                    return Err(if fr { format!("{t} : plus de place avant {}.", r.latest_end) } else { format!("{t}: no room before {}.", r.latest_end) });
-                }
-                self.store.record(Event::Postponed { session: x.id.clone(), to: Local::new(now.date, t) }, now).map_err(io)?;
+                let until = self.go_away(&s("until").ok_or("until")?)?;
                 self.replan();
-                (if fr { format!("Reportée à {t}.") } else { format!("Moved to {t}.") }, Value::Null)
+                let label = self.until_label(until);
+                (if fr { format!("Rien {label}.") } else { format!("Nothing {label}.") }, Value::Null)
             }
-            "skip" => {
-                let x = session_arg(self)?;
-                self.skip(&x.id).map_err(io)?;
+            "back" => {
+                self.come_back().map_err(io)?;
                 self.replan();
-                (self.changes_text(), Value::Null)
-            }
-            "unskip" => {
-                let id = s("session").ok_or("session")?;
-                let back = self.store.undo_where(now, |e| matches!(e, Event::Skipped { session, .. } if *session == id)).map_err(io)?;
-                self.replan();
-                match back {
-                    Some(_) => ((if fr { "Remise au planning." } else { "Back in the plan." }).into(), Value::Null),
-                    None => ((if fr { "Rien à reprendre." } else { "Nothing to bring back." }).into(), Value::Null),
-                }
+                ((if fr { "De retour." } else { "Back." }).into(), Value::Null)
             }
             "start-now" => {
                 // A suggestion of Today's free time: that task, now, for the time there is.
@@ -1595,14 +1586,57 @@ impl Service {
     }
 
     /// "I have time": the most useful work that fits, from what is planned next.
-    /// "Not tonight" for one session: its task waits for another day, the
-    /// rest of the evening stays.
-    pub(crate) fn skip(&mut self, session: &str) -> io::Result<()> {
+    /// "Later, until…": nothing planned, rung or offered before then; what
+    /// was planned meanwhile is placed again after it.
+    pub(crate) fn go_away(&mut self, spec: &str) -> Result<Local, String> {
         let now = self.now();
-        let planned = self.session_any(session);
-        let tasks = planned.as_ref().map(|s| s.parts.iter().map(|p| p.task.clone()).collect()).unwrap_or_default();
-        self.store.record(Event::Skipped { session: session.into(), tasks, planned: planned.map(Box::new) }, now)?;
+        let until = journee::away_until(spec, now).ok_or_else(|| format!("{spec}?"))?;
+        self.store.record(Event::Away { until }, now).map_err(|e| e.to_string())?;
+        Ok(until)
+    }
+
+    /// Back before the time said.
+    pub(crate) fn come_back(&mut self) -> io::Result<()> {
+        let now = self.now();
+        if self.away().is_some() {
+            self.store.record(Event::Back { at: now }, now)?;
+        }
         Ok(())
+    }
+
+    /// Until when nothing is planned, if "Later" was said.
+    pub(crate) fn away(&self) -> Option<Local> {
+        let now = self.now();
+        self.store.state.away.iter().filter(|a| a.start <= now && a.end > now).map(|a| a.end).max()
+    }
+
+    /// "until 21:30", "until tomorrow", "until Sat Oct 17".
+    pub(crate) fn until_label(&self, u: Local) -> String {
+        let now = self.now();
+        let fr = self.lang() == Lang::Fr;
+        if u.date == now.date {
+            return if fr { format!("jusqu'à {}", u.time) } else { format!("until {}", u.time) };
+        }
+        if u.time == Hm(0) && u.date == now.date.add(1) {
+            return (if fr { "jusqu'à demain" } else { "until tomorrow" }).into();
+        }
+        let day = if u.time == Hm(0) { i18n::date(u.date, self.lang()) } else { i18n::local(u, self.lang()) };
+        if fr { format!("jusqu'à {day}") } else { format!("until {day}") }
+    }
+
+    /// A choice of "Later": "30 min", "1 h", "Tomorrow", "Saturday".
+    fn choice_label(&self, id: &str, u: Local) -> String {
+        let fr = self.lang() == Lang::Fr;
+        match id {
+            "30" => "30 min".into(),
+            "60" => "1 h".into(),
+            "tomorrow" => (if fr { "Demain" } else { "Tomorrow" }).into(),
+            _ => {
+                const EN: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                const FR: [&str; 7] = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+                (if fr { FR } else { EN })[u.date.weekday() as usize].into()
+            }
+        }
     }
 
     /// "I have time": a session right away. When one is already due now, that
@@ -1804,6 +1838,8 @@ fn event_label(e: &Event) -> String {
     match e {
         Event::Started { session, .. } => format!("start {session}"),
         Event::Postponed { session, to } => format!("later {session} → {}", to.time),
+        Event::Away { until } => format!("away until {until}"),
+        Event::Back { at } => format!("back {at}"),
         Event::Skipped { session, .. } => format!("skip {session}"),
         Event::Extra { extra } => format!("time found {} {} ({} min)", extra.date, extra.start, extra.minutes),
         Event::Missed { session } => format!("missed {session}"),

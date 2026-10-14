@@ -60,7 +60,9 @@ Singleton {
     property var week: []
     // The page takes the keyboard (the note of a close): the bar's window
     // turns focusable for it, like Balise's password field.
-    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus" || root.page === "setup")
+    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus" || root.page === "setup" || root.laterTyping)
+    // "Later", a time typed rather than picked.
+    property bool laterTyping: false
     readonly property bool setupNeeded: root.status.setup_needed === true
     // The first run: 1 courses, 2 timetable, 3 subjects, 4 rhythm, 5 ready.
     property int setupStep: 1
@@ -397,10 +399,13 @@ Singleton {
 
     // ---- commands -----------------------------------------------------
     function start(session) { root._send({ cmd: "start", session: session }); }
-    function later(session, at) { root._send({ cmd: "later", session: session, at: at }); }
-    function skip(session) { root._send({ cmd: "skip", session: session }); }
-    // A "not tonight" said by mistake: the session comes back.
-    function unskip(session) { root._send({ cmd: "unskip", session: session }); }
+    // "Later, until…": nothing planned, rung or offered before then. `until`
+    // is a choice's id (30, 60, tomorrow, a date) or what was typed.
+    function later(until) { root._send({ cmd: "later", until: until }); }
+    function back() { root._send({ cmd: "back" }); }
+    // "until 21:30" while Later holds, else "".
+    readonly property string away: root.status.away || ""
+    readonly property var laterChoices: root.status.later || []
     // "I have time": a session right away; `cb` gets the reply.
     // `subject`: "" for the most useful work, else that subject's next task.
     function closeSession(session) { root._send({ cmd: "close", session: session }); }
