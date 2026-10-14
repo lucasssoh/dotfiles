@@ -535,7 +535,18 @@ impl Service {
         let catalogue = &self.catalogue;
         // Reading sections only: the exercises section is declared, not read.
         let cap = |item: &str| catalogue.get(item).and_then(|i| i.sections.last().map(|s| s.num));
-        Some(seance::draft(&t, &session, &maps, &self.store.state.free_reading, cap))
+        let mut d = seance::draft(&t, &session, &maps, &self.store.state.free_reading, cap);
+        // A project's step is done when its hours are, not after one
+        // session spent on it.
+        for (p, r) in session.parts.iter().zip(d.parts.iter_mut()) {
+            if let Work::Project { project, step } = &p.work {
+                let s = self.store.state.projects.iter().find(|x| &x.id == project).and_then(|x| x.steps.iter().find(|s| &s.name == step));
+                if let Some(s) = s {
+                    r.done = s.spent_minutes + r.minutes >= (s.hours * 60.0) as i32;
+                }
+            }
+        }
+        Some(d)
     }
 
     pub(crate) fn set_activity(&mut self, idle: Option<bool>, media: Option<bool>, title: Option<String>) {
