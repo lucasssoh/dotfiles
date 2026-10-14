@@ -82,6 +82,7 @@ pub fn course(date: Date, from: &str, to: &str, kind: CourseKind, domain: &str) 
         kind,
         domain: Some(domain.into()),
         title: format!("{kind:?} {domain}"),
+        room: String::new(),
     }
 }
 

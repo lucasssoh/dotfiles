@@ -276,7 +276,7 @@ impl Service {
         for c in courses.iter().filter(|c| c.start.date == date) {
             rows.push((
                 c.start.time,
-                json!({ "type": "course", "start": c.start.time.to_string(), "end": c.end.time.to_string(), "title": c.title, "past": c.end <= now }),
+                json!({ "type": "course", "start": c.start.time.to_string(), "end": c.end.time.to_string(), "title": c.title, "room": c.room, "past": c.end <= now }),
             ));
         }
         for s in self.plan.sessions.iter().chain(&self.plan.offers).filter(|s| s.date == date && !s.parts.is_empty()) {

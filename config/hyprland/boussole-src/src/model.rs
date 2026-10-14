@@ -521,6 +521,9 @@ pub struct Course {
     pub kind: CourseKind,
     pub domain: Option<String>,
     pub title: String,
+    /// Its room, as the timetable says it.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub room: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]

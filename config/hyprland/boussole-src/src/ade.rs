@@ -312,6 +312,7 @@ pub fn timetable(events: &[Event], selection: &Selection, domains: &[Domain], tz
             kind: title.kind,
             domain: domain.clone(),
             title: e.summary.clone(),
+            room: e.location.clone(),
         };
         if title.kind == CourseKind::Exam {
             let key = (domain.clone().unwrap_or_default(), course.start.date);

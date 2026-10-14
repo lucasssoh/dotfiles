@@ -977,6 +977,7 @@ impl Service {
             "programme": self.programme_alert(),
             "saved": self.saved(),
             "upcoming": self.upcoming(),
+            "courses": self.courses_ahead(),
             // The next one not begun: Today's "Next", with its Start and Later.
             "then": self.then().map(|s| json!({ "id": s.id, "date": s.date, "start": s.start, "end": s.end, "title": self.headline(s) })),
             "now_free": if self.away().is_some() { Value::Null } else { self.now_free() },
@@ -1627,6 +1628,41 @@ impl Service {
 
     pub(crate) fn then(&self) -> Option<&Session> {
         self.ahead_unbegun().next()
+    }
+
+    /// The timetable at a glance: today's courses not over yet, else those
+    /// of the next day that has some.
+    pub(crate) fn courses_ahead(&self) -> Value {
+        let now = self.now();
+        let (courses, _) = self.timetable();
+        let mut left: Vec<&Course> = courses.iter().filter(|c| c.start.date == now.date && c.end > now).collect();
+        let day = if left.is_empty() {
+            let Some(d) = courses.iter().filter(|c| c.start.date > now.date).map(|c| c.start.date).min() else { return Value::Null };
+            left = courses.iter().filter(|c| c.start.date == d).collect();
+            d
+        } else {
+            now.date
+        };
+        left.sort_by_key(|c| c.start);
+        let fr = self.lang() == Lang::Fr;
+        let label = if day == now.date {
+            (if fr { "Aujourd'hui" } else { "Today" }).to_string()
+        } else if day == now.date.add(1) {
+            (if fr { "Demain" } else { "Tomorrow" }).to_string()
+        } else {
+            i18n::date(day, self.lang())
+        };
+        let rows: Vec<Value> = left
+            .iter()
+            .map(|c| {
+                // "Technopole_BN3-011 (50pl)" → "BN3-011".
+                let room = c.room.split(['\\', ',']).next().unwrap_or("").trim();
+                let room = room.rsplit_once('_').map_or(room, |(_, r)| r);
+                let room = room.split(" (").next().unwrap_or(room).trim();
+                json!({ "start": c.start.time, "end": c.end.time, "title": c.title, "room": room, "now": c.start <= now && now < c.end })
+            })
+            .collect();
+        json!({ "label": label, "rows": rows })
     }
 
     /// The sessions after the next one, for Today's "Coming up".
