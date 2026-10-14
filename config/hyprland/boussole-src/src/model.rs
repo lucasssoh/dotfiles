@@ -526,6 +526,15 @@ pub struct Course {
     pub room: String,
 }
 
+impl Course {
+    /// The room as said aloud: "Technopole_BN3-011 (50pl)" → "BN3-011".
+    pub fn short_room(&self) -> &str {
+        let room = self.room.split(['\\', ',']).next().unwrap_or("").trim();
+        let room = room.rsplit_once('_').map_or(room, |(_, r)| r);
+        room.split(" (").next().unwrap_or(room).trim()
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CourseKind {

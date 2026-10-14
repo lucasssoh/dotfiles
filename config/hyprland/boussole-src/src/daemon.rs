@@ -1655,11 +1655,7 @@ impl Service {
         let rows: Vec<Value> = left
             .iter()
             .map(|c| {
-                // "Technopole_BN3-011 (50pl)" → "BN3-011".
-                let room = c.room.split(['\\', ',']).next().unwrap_or("").trim();
-                let room = room.rsplit_once('_').map_or(room, |(_, r)| r);
-                let room = room.split(" (").next().unwrap_or(room).trim();
-                json!({ "start": c.start.time, "end": c.end.time, "title": c.title, "room": room, "now": c.start <= now && now < c.end })
+                json!({ "start": c.start.time, "end": c.end.time, "title": c.title, "room": c.short_room(), "now": c.start <= now && now < c.end })
             })
             .collect();
         json!({ "label": label, "rows": rows })

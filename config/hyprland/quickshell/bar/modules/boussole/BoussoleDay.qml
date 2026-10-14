@@ -70,6 +70,7 @@ Column {
                     BoussoleText {
                         width: parent.width
                         text: line.r.start + " – " + line.r.end
+                              + (line.r.room ? " · " + line.r.room : "")
                               + (line.r.parts && line.r.parts.length ? " · " + line.r.parts.map(p => (p.domain ? p.domain + " " : "") + p.what).join(" + ") : "")
                               + (line.r.type === "offer" ? BoussoleState.tr(" · optional", " · facultatif") : "")
                         color: DrawerTheme.secondary

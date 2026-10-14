@@ -263,7 +263,7 @@ A study planner in the bar, optional (`init` asks). It reads your course folder 
 | Tab | What it holds |
 |---|---|
 | **Today** | The session under way, the ones saved to take up again (`Continue`), the next one with `Start` and `Later`, `Start a session`, the courses of the day still ahead (else the next day's) with their room, and what comes after |
-| **Week** | The seven days ahead |
+| **Week** | The seven days ahead: courses with their room, and sessions |
 | **Progress** | Per module: sheets studied, exercises solved alone, reviews waiting, the next exam and the sessions to spare before it |
 | **More** | Exams and hand-ins, rhythm, calendars, new files to sort when there are some, settings, and the first run again |
 

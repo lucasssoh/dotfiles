@@ -2,8 +2,8 @@ import QtQuick
 import "../../theme"
 import "../../services"
 
-// The week ahead, day by day, in the same rows as Today. Days without a
-// session say so in a line rather than taking a card.
+// The week ahead, day by day: courses with their room, sessions and
+// offers. Days with nothing say so in a line rather than taking a card.
 Column {
     id: root
 
@@ -23,7 +23,6 @@ Column {
             required property var modelData
             width: root.width
             spacing: 8
-            readonly property var sessions: modelData.rows.filter(r => r.type !== "course")
 
             BoussoleText {
                 text: day.modelData.label
@@ -31,15 +30,14 @@ Column {
                 font.weight: Font.Bold
             }
             BoussoleText {
-                visible: day.sessions.length === 0
+                visible: day.modelData.rows.length === 0
                 text: root.b.tr("Nothing planned.", "Rien de prévu.")
                 color: DrawerTheme.secondary
                 font.pixelSize: 13
             }
             BoussoleDay {
                 width: parent.width
-                // Courses would crowd a week: sessions and offers only.
-                rows: day.sessions
+                rows: day.modelData.rows
             }
         }
     }

@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Added
 - **Boussole, Today:** the timetable at a glance: today's courses still ahead, else those of the next day that has some, with their time and room.
+- **Boussole, Week:** each day shows its courses again, with their room, beside the sessions.
 
 ## 1.7.0 (October 14 2026)
 
