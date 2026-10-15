@@ -388,7 +388,22 @@ impl Service {
             }
             b
         };
-        json!({ "root": self.catalogue.root, "best": best, "subjects": subjects })
+        // Projects with a folder: a session on the whole of it, its room
+        // holding every file.
+        let projects: Vec<Value> = self
+            .store
+            .state
+            .projects
+            .iter()
+            .filter(|p| !p.archived && p.dir.is_some())
+            .map(|p| {
+                let files = self.project_files(&p.id).and_then(|v| v.as_array().cloned()).unwrap_or_default();
+                let read = files.iter().filter(|f| f["state"] == "read").count();
+                let due = if self.fr() { format!("à rendre le {}", i18n::date(p.due.date, self.lang())) } else { format!("due {}", i18n::date(p.due.date, self.lang())) };
+                json!({ "id": p.id, "label": p.name, "domain": p.domain, "files": files.len(), "read": read, "due": due })
+            })
+            .collect();
+        json!({ "root": self.catalogue.root, "best": best, "subjects": subjects, "projects": projects })
     }
 
     /// A session's room: every file of its module (or of its project), by
@@ -479,6 +494,40 @@ impl Service {
         v["forward"] = forward.unwrap_or(Value::Null);
         v["chapters"] = Value::Array(chapters);
         Some(v)
+    }
+
+    /// A session on a whole project, now: its planned step when it has one,
+    /// else time found for it, its room holding every file of its folder.
+    pub(crate) fn free_project(&mut self, minutes: i32, place: Place, project: &str) -> Result<(String, Option<String>), String> {
+        let planned = self
+            .ahead()
+            .into_iter()
+            .find(|(_, p)| matches!(&p.work, Work::Project { project: x, .. } if x == project))
+            .map(|(_, p)| p.task.clone());
+        if let Some(task) = planned {
+            return self.free_task(minutes, place, &task);
+        }
+        let now = self.now();
+        let pr = self.store.state.projects.iter().find(|p| p.id == project).cloned().ok_or_else(|| format!("{project}?"))?;
+        let step = pr.steps.iter().find(|s| !s.done).or(pr.steps.last()).map(|s| s.name.clone()).unwrap_or_default();
+        let task = format!("project:{}:{step}", pr.id);
+        let extra = Extra { date: now.date, start: now.time.ceil(5), minutes: minutes.max(10), place };
+        let pin = Pin {
+            task: task.clone(),
+            date: now.date,
+            start: extra.start,
+            minutes: minutes.max(10),
+            work: Some(Work::Project { project: pr.id.clone(), step }),
+            domain: pr.domain.clone(),
+        };
+        self.store.record(Event::Extra { extra }, now).map_err(|e| e.to_string())?;
+        self.store.record(Event::Pin { pin }, now).map_err(|e| e.to_string())?;
+        self.replan();
+        let s = self.plan.sessions.iter().find(|s| s.date == now.date && s.parts.iter().any(|p| p.task == task) && s.end > now.time);
+        Ok(match s {
+            Some(s) => (if self.fr() { format!("{}, maintenant.", pr.name) } else { format!("{}, now.", pr.name) }, Some(s.id.clone())),
+            None => (self.t("No room for it now.", "Pas de place pour ça maintenant."), None),
+        })
     }
 
     /// "I have time" on one file: the plan's task for it when it has one,

@@ -8,6 +8,11 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar, popups:** the volume and brightness dial, the battery alert, the library, the password card and the controller popup and banner are now the same blurred glass as the drawers, with their curved edge.
 - **Bar, light mode:** the glass of the drawers and popups is a warm grey instead of a milky white, so it no longer disappears over a white page or turns flat grey over a dark window.
 
+## Unreleased
+
+### Added
+- **Boussole, Start a session:** projects with a folder are offered beside the modules. The whole project starts a session on it, its room holding every file of the folder, even once its planned hours are spent (`boussole free 45 --project pendu-tp`).
+
 ## 1.8.0 (October 14 2026)
 
 ### Added

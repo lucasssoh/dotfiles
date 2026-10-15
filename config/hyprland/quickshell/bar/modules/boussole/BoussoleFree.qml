@@ -36,12 +36,24 @@ Column {
     }
 
     readonly property var subjectData: root.lib ? (root.lib.subjects || []).find(s => s.id === root.subject) || null : null
+    // A project chosen ("project:ID"): the whole of its folder, in its room.
+    readonly property var projectData: root.lib && root.subject.startsWith("project:")
+        ? (root.lib.projects || []).find(p => "project:" + p.id === root.subject) || null : null
     // A row of the library by item id: title, chapter, state.
     function rowOf(item) {
         return item ? LibraryState.rowsById[item] || null : null;
     }
     readonly property var recs: {
         if (!root.lib) return [];
+        if (root.projectData) {
+            const p = root.projectData;
+            return [{
+                item: "", task: root.subject, project: p.id, minutes: 60,
+                title: root.b.tr("The whole project", "Tout le projet"),
+                where: p.read + " / " + p.files + root.b.tr(" files read", " fichiers lus"),
+                why: p.due, state: "", subject: p.label
+            }];
+        }
         const list = root.subjectData ? root.subjectData.next : (root.lib.best || []);
         return list.map(p => {
             const r = root.rowOf(p.item);
@@ -73,6 +85,7 @@ Column {
         const at = root.recs.findIndex(r => r.task === c.task && r.item === c.item);
         const there = root.b.focus && root.b.focus.enabled
             ? root.b.tr(" It opens in the study workspaces.", " Elle s'ouvre dans la dimension étude.") : "";
+        if (c.project) return root.b.tr("Its room holds every file of the project.", "Sa salle contient tous les fichiers du projet.");
         if (at === 0) return root.b.tr("Recommended: next in the plan.", "Recommandé : la suite du programme.") + there;
         if (at > 0) return root.b.tr("In the plan, a little further. ", "Dans la suite, un peu plus loin. ") + name(n.title)
                            + root.b.tr(" is still to do; Boussole will offer it again.", " reste à faire ; Boussole te la reproposera.");
@@ -87,7 +100,9 @@ Column {
         if (!c) return;
         const m = root.school ? root.span : root.minutes;
         const done = r => root.note = r.ok ? "" : (r.text || "");
-        if (c.item !== "")
+        if (c.project)
+            root.b.request({ cmd: "free", minutes: m, project: c.project, place: root.school ? "school" : "home" }, done);
+        else if (c.item !== "")
             root.b.request({ cmd: "free", minutes: m, item: c.item, place: root.school ? "school" : "home" }, done);
         else
             root.b.startNow(c.task, m, root.school, done);
@@ -100,6 +115,7 @@ Column {
         Repeater {
             model: [{ id: "", label: root.b.tr("Most useful", "Au plus utile") }]
                    .concat(root.lib ? (root.lib.subjects || []).map(s => ({ id: s.id, label: s.label })) : [])
+                   .concat(root.lib ? (root.lib.projects || []).map(p => ({ id: "project:" + p.id, label: p.label })) : [])
             delegate: BoussoleChip {
                 required property var modelData
                 text: modelData.label

@@ -1143,6 +1143,7 @@ impl Service {
                 let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(60) as i32;
                 let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
                 let (text, id) = match (s("item").filter(|i| !i.is_empty()), s("subject").filter(|d| !d.is_empty())) {
+                    _ if s("project").is_some_and(|p| !p.is_empty()) => self.free_project(minutes, place, &s("project").unwrap_or_default())?,
                     (Some(i), _) => self.free_item(minutes, place, &i)?,
                     (None, Some(d)) => self.free_time_for(minutes, place, &d)?,
                     (None, None) => self.free_time(minutes, place).map_err(io)?,
