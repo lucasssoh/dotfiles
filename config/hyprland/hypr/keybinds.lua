@@ -212,7 +212,12 @@ bind(mod .. "+ P",           hl.dsp.window.pseudo(), { description = "Pseudo" })
 -- is picked from aspect ratio + preserve_split (see hyprland.lua): this is
 -- the manual escape hatch for the rare case the ratio picks the wrong one.
 bind(mod .. "+ T",           hl.dsp.layout("togglesplit"), { description = "Split" })
-bind(mod .. "+ SHIFT+ Space", hl.dsp.window.float({ action = "toggle" }), { description = "Float" })
+-- Hyprland has no event for a change of floating mode: the toggle tells
+-- floatplace.lua itself, so a window floated by hand joins a row.
+bind(mod .. "+ SHIFT+ Space", function()
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+    require("floatplace").float_toggled()
+end, { description = "Float" })
 
 -- Move focus between windows (hjkl)
 bind(mod .. "+ H",  hl.dsp.focus({ direction = "left" }), { description = "Focus ←" })

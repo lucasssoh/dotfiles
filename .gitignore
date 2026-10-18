@@ -15,8 +15,8 @@ crates/*/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml
 
-# Bytecode Python des daemons de hypr/scripts (float-smart-place,
-# border-tint, bar-tint). Regenere a chaque import, et importe depuis
+# Bytecode Python des daemons de hypr/scripts (border-tint,
+# bar-tint). Regenere a chaque import, et importe depuis
 # ~/.config/hypr qui est un symlink vers ce dossier -- donc il reapparait
 # ici tout seul des qu'un script y touche.
 __pycache__/
