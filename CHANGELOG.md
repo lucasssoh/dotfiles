@@ -2,13 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## 1.9.0 (October 14 2026)
-
-### Changed
-- **Bar, popups:** the volume and brightness dial, the battery alert, the library, the password card and the controller popup and banner are now the same blurred glass as the drawers, with their curved edge.
-- **Bar, light mode:** the glass of the drawers and popups is a warm grey instead of a milky white, so it no longer disappears over a white page or turns flat grey over a dark window.
-
-## Unreleased
+## 1.10.0 (October 18 2026)
 
 ### Added
 - **Screenshots:** `q` closes satty, like `Esc`.
@@ -21,6 +15,12 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Fixed
 - **Screenshots:** closing satty no longer flashes the wallpaper before the windows behind it come back.
 - **Screenshots:** an image copied in satty stays in the clipboard after you close satty with `Esc`, so you can paste it anywhere.
+
+## 1.9.0 (October 14 2026)
+
+### Changed
+- **Bar, popups:** the volume and brightness dial, the battery alert, the library, the password card and the controller popup and banner are now the same blurred glass as the drawers, with their curved edge.
+- **Bar, light mode:** the glass of the drawers and popups is a warm grey instead of a milky white, so it no longer disappears over a white page or turns flat grey over a dark window.
 
 ## 1.8.0 (October 14 2026)
 
