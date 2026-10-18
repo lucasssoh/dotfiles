@@ -108,6 +108,44 @@ hl.window_rule({
     no_anim = true,
 })
 
+-- satty opens fullscreen, and Hyprland takes the other windows of the
+-- workspace to opacity 0 behind it. no_anim makes satty itself vanish at
+-- once on close, but those windows came back through the 200 ms window
+-- fade, showing the wallpaper in between: a flash. So the window fades
+-- are off while satty is up, and back a moment after it has gone, once
+-- the windows behind are already showing again. Restored with the values
+-- of `fade` in hyprland.lua, which fadeIn and fadeOut inherit.
+local SATTY = "com.gabm.satty"
+local satty_open = 0
+local satty_restore
+
+local function window_fades(on)
+    for _, leaf in ipairs({ "fadeIn", "fadeOut" }) do
+        if on then
+            hl.animation({ leaf = leaf, enabled = true, speed = 2, bezier = "smooth" })
+        else
+            hl.animation({ leaf = leaf, enabled = false })
+        end
+    end
+end
+
+hl.on("window.open", function(w)
+    if not w or w.class ~= SATTY then return end
+    satty_open = satty_open + 1
+    if satty_restore then satty_restore:set_enabled(false) end
+    window_fades(false)
+end)
+
+hl.on("window.close", function(w)
+    if not w or w.class ~= SATTY then return end
+    satty_open = math.max(0, satty_open - 1)
+    if satty_open > 0 then return end
+    -- Held in satty_restore so the collector cannot take it before it fires.
+    satty_restore = hl.timer(function()
+        if satty_open == 0 then window_fades(true) end
+    end, { timeout = 300, type = "oneshot" })
+end)
+
 -- -- ============================================================
 -- -- MPV — floating video player
 -- -- ============================================================
