@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Screenshots:** `q` closes satty, like `Esc`.
 - **Screen:** the four corners of the screen are rounded, in the same curve as the windows. A fullscreen video or game still fills the whole screen.
 - **Boussole, Start a session:** projects with a folder are offered beside the modules. The whole project starts a session on it, its room holding every file of the folder, even once its planned hours are spent (`boussole free 45 --project pendu-tp`).
 

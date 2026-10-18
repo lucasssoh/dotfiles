@@ -31,6 +31,7 @@ The terminal, file manager and browser are whatever the machine's defaults are. 
 |---|---|
 | `Super + S` | Whole screen, annotated in `satty`. `Ctrl + C` or `Enter` copies it, and the copy stays after satty closes |
 | `Super + Shift + S` | Pick a region with `slurp`, annotate it in `satty`, same keys |
+| `q` / `Esc` in satty | Close it |
 
 ## Roue, the radial wheels
 

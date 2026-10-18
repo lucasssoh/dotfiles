@@ -92,6 +92,18 @@ bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu --with-
 -- an Esc without saving sent it an empty stdin as satty quit.
 bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen"), { description = "Region" })
 bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen"), { description = "Capture" })
+-- q quits satty, like Esc. satty has no setting for its quit key (its
+-- [keybinds] only names its tools), and a submap would switch off every
+-- Super bind while satty has focus. So q is bound everywhere but
+-- non_consuming: it still reaches whatever window has focus, and only
+-- closes it when that window is satty. Note that this includes typing a q
+-- with satty's text tool.
+bind("q", function()
+    local w = hl.get_active_window()
+    if w and w.class == "com.gabm.satty" then
+        hl.dispatch(hl.dsp.window.close())
+    end
+end, { non_consuming = true })
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
 bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { description = "Wallpaper" })
