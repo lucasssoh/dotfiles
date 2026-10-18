@@ -10,8 +10,8 @@ use std::process::{Command, Stdio};
 
 /// Same file, same path as WALL_DIR/CACHE_DIR + PLAYLIST_FILE in
 /// scripts/set_wallpaper.sh -- Prisme is a replacement UI for that script,
-/// not a new backend: restore_wallpaper.sh, wallpaper-slideshow.service
-/// and slideshow-fullscreen-guard.sh keep reading this same file
+/// not a new backend: restore_wallpaper.sh and wallpaper-slideshow.service
+/// keep reading this same file
 /// unmodified (except for the `source` field, see below).
 fn playlist_path() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME not set");

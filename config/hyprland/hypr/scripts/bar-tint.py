@@ -44,7 +44,7 @@ the file read is not: a screencopy forces the compositor to composite and
 copy a frame, which on a laptop can pull the GPU out of a low-power
 state, and this machine deliberately wraps games with
 no-direct-scanout-wrap.sh. So the fallback skips any monitor with a
-fullscreen window, same rule border-tint.py's SKIP_FULLSCREEN applies.
+fullscreen window.
 
 Cost, measured on this machine rather than assumed:
   - numpy+PIL import ................ 110 ms

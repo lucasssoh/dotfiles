@@ -217,9 +217,9 @@ Item {
                     onExited: LauncherActionsState.hoverExit()
                     // hl.dsp.focus, not the plain `focuswindow`. The
                     // comment that used to sit here reasoned that
-                    // pip-daemon.sh "already proves" address-targeted
-                    // dispatchers work as vanilla hyprctl dispatch on
-                    // this system -- but pip-daemon.sh's own dispatches
+                    // pip-daemon.sh (since removed) "already proves"
+                    // address-targeted dispatchers work as vanilla
+                    // hyprctl dispatch on this system -- but its dispatches
                     // were broken the whole time, so it proved nothing,
                     // and this chip never focused anything either.
                     // hyprland.lua configures this compositor in Lua, so

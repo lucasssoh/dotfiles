@@ -86,9 +86,9 @@ INVOKE_PATTERNS = [
 ]
 COMMENT = re.compile(r'\s*(#|--|//|\*)')
 # Les docstrings Python et les blocs /* */ ne sont pas des lignes de
-# commentaire ligne-a-ligne, donc COMMENT ne les attrape pas -- et la
-# docstring de border-tint.py contient "specular highlight", ou `highlight`
-# est un vrai binaire. On les efface avant toute analyse.
+# commentaire ligne-a-ligne, donc COMMENT ne les attrape pas -- et une
+# docstring qui dit "specular highlight" ferait passer `highlight` (un vrai
+# binaire) pour une dependance. On les efface avant toute analyse.
 DOCSTRING = re.compile(r'(""".*?"""|\'\'\'.*?\'\'\'|/\*.*?\*/)', re.S)
 
 

@@ -1,1 +1,0 @@
-../../scripts/slideshow-fullscreen-guard.sh

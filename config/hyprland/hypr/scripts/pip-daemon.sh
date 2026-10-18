@@ -1,1 +1,0 @@
-../../scripts/pip-daemon.sh

@@ -5,8 +5,7 @@
 # set_wallpaper.sh/Prisme, shuffles the order on every full cycle, and
 # applies each image via awww. Launched as a systemd --user service (see
 # systemd/wallpaper-slideshow.service), started/stopped by
-# restore_wallpaper.sh and slideshow-fullscreen-guard.sh depending on mode
-# and fullscreen state.
+# restore_wallpaper.sh and Prisme depending on mode.
 # =========================================================
 
 # Source folder configurable via ~/.config/prisme/wallpapers.conf -- only
