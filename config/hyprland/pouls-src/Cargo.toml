@@ -1,0 +1,19 @@
+[package]
+name = "pouls"
+version = "1.0.0"
+edition = "2021"
+description = "The system figures behind coucou-shell's bar"
+license-file = "../../../LICENSE.md"
+
+# Same shape as Manette: no async runtime, one thread blocked in poll(2) on
+# the kernel's uevents and the socket. libc for netlink and prctl, serde_json
+# for the JSON-lines protocol the bar already speaks with Balise and Manette.
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"

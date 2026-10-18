@@ -1,0 +1,16 @@
+# Pouls: the system figures behind the bar. Talks to it over
+# $XDG_RUNTIME_DIR/pouls.sock. Samples every 3 s only while the bar shows
+# the figures and the screen is on; otherwise it sleeps in poll(2) and only
+# a charger or battery uevent wakes it.
+[Unit]
+Description=Pouls — system figures behind the bar
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/pouls
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

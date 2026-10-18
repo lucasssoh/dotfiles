@@ -10,6 +10,7 @@ config/hyprland/prisme-src/target/
 config/hyprland/roue-src/target/
 config/hyprland/balise-src/target/
 config/hyprland/boussole-src/target/
+config/hyprland/pouls-src/target/
 crates/*/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml

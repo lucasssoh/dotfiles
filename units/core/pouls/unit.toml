@@ -1,0 +1,20 @@
+name     = "pouls"
+layer    = "core"
+summary  = "The bar's system figures: CPU, memory, temperature, download rate, charger and charge policy"
+requires = ["hyprland"]
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/pouls-src with the build deps.
+[binaries]
+rpm    = "pouls"
+source = "config/hyprland/pouls-src"
+bins   = ["pouls"]
+
+[packages]
+build = ["rust", "cargo"]
+
+[links]
+"config/hyprland/systemd/pouls.service" = "~/.config/systemd/user/pouls.service"
+
+[services]
+user = ["pouls"]

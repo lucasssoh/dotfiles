@@ -67,6 +67,13 @@ Summary:        Gamepad daemon for coucou-shell
 The daemon behind the controller popup of coucou-shell's bar: it notices
 gamepads as they arrive and opens the popup on the Guide button.
 
+%package -n pouls
+Summary:        System figures for coucou-shell
+
+%description -n pouls
+The daemon behind the system figures of coucou-shell's bar: CPU, memory,
+temperature, download rate, the charger and the battery's charge policy.
+
 %package -n boussole
 Summary:        Study planner for coucou-shell
 Requires:       mupdf
@@ -90,7 +97,7 @@ with the command that asks.
 %autosetup
 
 %build
-for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/boussole-src config/hyprland/sesame-src; do
+for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/pouls-src config/hyprland/boussole-src config/hyprland/sesame-src; do
     cargo build --release --locked --manifest-path "$crate/Cargo.toml" --target-dir target
 done
 
@@ -101,6 +108,7 @@ install -Dm755 target/release/prisme           %{buildroot}%{_bindir}/prisme
 install -Dm755 target/release/wallpaper-filter %{buildroot}%{_bindir}/wallpaper-filter
 install -Dm755 target/release/balise           %{buildroot}%{_bindir}/balise
 install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
+install -Dm755 target/release/pouls            %{buildroot}%{_bindir}/pouls
 install -Dm755 target/release/boussole         %{buildroot}%{_bindir}/boussole
 install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 
@@ -124,6 +132,10 @@ install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 %files -n manette
 %license LICENSE.md
 %{_bindir}/manette
+
+%files -n pouls
+%license LICENSE.md
+%{_bindir}/pouls
 
 %files -n boussole
 %license LICENSE.md

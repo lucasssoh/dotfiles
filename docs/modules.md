@@ -250,6 +250,16 @@ No key is kept in memory, so every push asks again. That way nothing pushes with
 
 The service behind it runs as `systemd --user` (`sesame.service`). It's built from [`sesame-src`](../config/hyprland/sesame-src/) on edge and installed as a package on stable, like Manette.
 
+### `pouls`
+
+The figures on the left of the bar come from Pouls: CPU load and frequency, memory, the CPU temperature, the fan when the machine reports one, and the download rate. It also tells the bar when the charger comes or goes, notices a charger that has quietly stopped charging, and switches the battery's conservation mode and fast charge on Lenovo IdeaPads.
+
+The figures are read every 3 seconds, only while you can see them. With the screen off or the bar hidden in zen mode, nothing is read; the charger and the battery still reach the bar as soon as they change.
+
+There's nothing to set up.
+
+The service behind it runs as `systemd --user` (`pouls.service`). It's built from [`pouls-src`](../config/hyprland/pouls-src/) on edge and installed as a package on stable, like Manette.
+
 ### `boussole`
 
 A study planner in the bar, optional (`init` asks). It reads your course folder and your timetable, plans study sessions around your courses and your evenings, rings them, and follows them through [Liseuse](#liseuse). It never writes in the course folder.

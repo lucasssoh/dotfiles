@@ -72,6 +72,9 @@ hl.on("hyprland.start", function()
     -- password card for ssh, git and gpg too (systemd/sesame.service).
     -- Started here for the same graphical-session.target reason as Balise.
     hl.exec_cmd("systemctl --user start sesame.service")
+    -- Pouls, the system figures behind the bar (systemd/pouls.service),
+    -- before the bar so its first connect finds the socket.
+    hl.exec_cmd("systemctl --user start pouls.service")
     -- The bar (see quickshell/bar/). Notifications (history, DND, mpris controls) are native to
     -- quickshell now (see quickshell/bar/services/NotificationState.qml)
     -- -- no separate daemon to start here any more. Used to be swaync,
