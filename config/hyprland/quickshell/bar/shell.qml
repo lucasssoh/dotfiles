@@ -1923,7 +1923,16 @@ ShellRoot {
                     Modules.ScriptModule {
                         ink: toolsInk
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
-                        interval: 5000
+                        // No polling: it used to run every 5 s, about 13
+                        // processes each time (bash, hyprctl, jq x4, sed...),
+                        // the bulk of what the machine started while idle.
+                        // Its answer only moves when a screen comes or goes
+                        // or when the wheel rewrites the layout files, so it
+                        // runs on exactly those.
+                        interval: 0
+                        hyprEvents: ["monitoradded", "monitoraddedv2", "monitorremoved", "monitorremovedv2", "configreloaded"]
+                        watchFiles: [Quickshell.env("HOME") + "/.config/hypr/display-layout.json",
+                                     Quickshell.env("HOME") + "/.config/hypr/monitor-layout.json"]
                         // minWidth was the real culprit: implicitWidth is
                         // Math.max(label.implicitWidth + padding, minWidth) --
                         // with a short status text/icon, minWidth (50) was

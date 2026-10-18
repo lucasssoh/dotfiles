@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import "../theme"
 
 // ============================================================
@@ -32,6 +33,13 @@ Item {
 
     property var command: []            // e.g. ["bash", "-c", "...status"]
     property int interval: 5000         // ms, 0 = run once, no polling
+    // Event-driven refresh, for a module whose output only changes when
+    // something announces it: re-run on these Hyprland event names
+    // (socket2's, e.g. "monitoradded"), and when one of these files is
+    // written (inotify, so regular files only -- sysfs never notifies, see
+    // OsdState.qml). With interval: 0, nothing runs between events.
+    property var hyprEvents: []
+    property var watchFiles: []
     property bool json: true            // parse stdout as {text,class,tooltip} vs raw text
     property var clickCommand: []       // left-click, fire-and-forget
     property var rightClickCommand: []  // right-click, fire-and-forget
@@ -103,13 +111,50 @@ Item {
     implicitWidth: badge.width + 5
     implicitHeight: 24
 
+    // A change that lands while the command is still running would be
+    // read by a run that started before it: remember it and run once more.
+    property bool _again: false
+
     function poll() {
-        if (!proc.running) proc.running = true;
+        if (proc.running) { root._again = true; return; }
+        proc.running = true;
+    }
+
+    // Events come in bursts (a screen plugged in sends monitoradded and
+    // monitoraddedv2, a JSON rewrite can wake inotify twice): one run per
+    // burst.
+    Timer {
+        id: settle
+        interval: 150
+        onTriggered: root.poll()
+    }
+
+    Connections {
+        target: Hyprland
+        enabled: root.hyprEvents.length > 0
+        function onRawEvent(event) {
+            if (root.hyprEvents.indexOf(event.name) !== -1) settle.restart();
+        }
+    }
+
+    Instantiator {
+        model: root.watchFiles
+        delegate: FileView {
+            required property string modelData
+            path: modelData
+            watchChanges: true
+            onFileChanged: settle.restart()
+        }
     }
 
     Process {
         id: proc
         command: root.command
+        onExited: {
+            if (!root._again) return;
+            root._again = false;
+            proc.running = true;
+        }
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = this.text.trim();
