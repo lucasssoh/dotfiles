@@ -16,6 +16,7 @@ copr = ["errornointernet/quickshell", "mineiro/satty"]
 [links]
 "config/hyprland/quickshell" = "~/.config/quickshell"
 "config/hyprland/khal"       = "~/.config/khal"
+"config/satty/config.toml"   = "~/.config/satty/config.toml"
 "config/hyprland/quickshell/fontview/fontview" = "~/.local/bin/fontview"
 
 [[hooks]]

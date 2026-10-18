@@ -17,6 +17,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Changed
 - **Bar, figures:** CPU, memory, temperature and download rate now come from Pouls, a small new service, and are no longer read while the screen is off or the bar is hidden in zen mode, which saves battery.
 
+### Fixed
+- **Screenshots:** an image copied in satty stays in the clipboard after you close satty with `Esc`, so you can paste it anywhere.
+
 ## 1.8.0 (October 14 2026)
 
 ### Added

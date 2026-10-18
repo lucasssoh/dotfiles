@@ -1,0 +1,8 @@
+# satty, the screenshot editor (Super + S, Super + Shift + S, and `e` in
+# swayimg). Linked to ~/.config/satty/config.toml by the bar unit.
+
+[general]
+# Copying hands the image to wl-copy, which stays in the background and keeps
+# serving it once satty has quit. Without it satty copies through GTK, whose
+# clipboard belongs to satty itself: Esc, and the image was gone.
+copy-command = "wl-copy"

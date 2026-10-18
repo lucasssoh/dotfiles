@@ -87,8 +87,11 @@ bind(mod .. "+ Space",   hl.dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"), 
 -- Clipboard history: fuzzel shows the text column, returns the whole
 -- "id<TAB>text" line that cliphist decode expects.
 bind(mod .. "+ V",       hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu --with-nth=2 --only-match --prompt='Clipboard  ' | cliphist decode | wl-copy"), { description = "Clipboard" })
-bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Region" })
-bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen --output-filename - | wl-copy"), { description = "Capture" })
+-- Copying in satty (Ctrl+C, Enter) goes through ~/.config/satty/config.toml's
+-- copy-command, wl-copy, so the image outlives satty. No `| wl-copy` here:
+-- an Esc without saving sent it an empty stdin as satty quit.
+bind(mod .. "+SHIFT+ S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename - --fullscreen"), { description = "Region" })
+bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscreen"), { description = "Capture" })
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
 bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { description = "Wallpaper" })

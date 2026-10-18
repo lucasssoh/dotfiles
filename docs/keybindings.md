@@ -29,8 +29,8 @@ The terminal, file manager and browser are whatever the machine's defaults are. 
 
 | Binding | Action |
 |---|---|
-| `Super + S` | Whole screen, annotated in `satty`, then copied to the clipboard |
-| `Super + Shift + S` | Pick a region with `slurp`, annotate it, then copy it to the clipboard |
+| `Super + S` | Whole screen, annotated in `satty`. `Ctrl + C` or `Enter` copies it, and the copy stays after satty closes |
+| `Super + Shift + S` | Pick a region with `slurp`, annotate it in `satty`, same keys |
 
 ## Roue, the radial wheels
 
