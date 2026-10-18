@@ -2851,4 +2851,21 @@ ShellRoot {
             ControllerBanner { id: controllerBanner }
         }
     }
+
+    // The screen's four rounded corners, over everything but a fullscreen
+    // window: see modules/ScreenCorner.qml. Created after the bar, so on
+    // the same layer they sit above its band and round its two ends too.
+    Variants {
+        model: Quickshell.screens
+
+        Scope {
+            id: corners
+            required property var modelData
+
+            Modules.ScreenCorner { screen: corners.modelData; corner: "topLeft" }
+            Modules.ScreenCorner { screen: corners.modelData; corner: "topRight" }
+            Modules.ScreenCorner { screen: corners.modelData; corner: "bottomLeft" }
+            Modules.ScreenCorner { screen: corners.modelData; corner: "bottomRight" }
+        }
+    }
 }

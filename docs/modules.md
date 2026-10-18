@@ -111,6 +111,8 @@ The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../conf
 | Launchers | Your open apps. Right-click one to focus, close or quit it |
 | Right | HDR, audio output and input, network rate, Balise, power profile, battery, notifications |
 
+The bar also rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them, and they show in screenshots.
+
 #### Drawers
 
 | Drawer | Opens from | What's in it |
