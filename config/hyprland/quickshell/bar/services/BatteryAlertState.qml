@@ -105,7 +105,7 @@ Singleton {
     // Third mode of the same card. The charger is still plugged in and
     // still negotiated, but it has latched off in overcurrent protection
     // and the machine is silently running down the battery -- see
-    // SystemStats' own `adapterDropped` note for the measurements and for
+    // pouls-src/src/power.rs for how Pouls tells it from an unplug and for
     // why `power_role` cannot be used to detect it.
     //
     // Unlike "charging", this one is NOT gated on an alert already being

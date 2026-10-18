@@ -64,7 +64,7 @@ Item {
     // any other machine the tile is not drawn rather than drawn dead.
     readonly property bool conservationAvailable: BatteryPreviewState.active
         ? BatteryPreviewState.conservationAvailable
-        : SystemStats.conservationPath !== ""
+        : SystemStats.hasConservation
     readonly property bool conservationOn: BatteryPreviewState.active
         ? BatteryPreviewState.conservation
         : SystemStats.conservationMode

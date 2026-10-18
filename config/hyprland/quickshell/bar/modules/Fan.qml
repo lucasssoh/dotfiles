@@ -26,7 +26,7 @@ Item {
     // pair to give room to, just readings separated by that 12px.
     implicitWidth: row.implicitWidth + 12
     implicitHeight: 24
-    visible: SystemStats.fanPath !== ""
+    visible: SystemStats.hasFan
 
     Row {
         id: row

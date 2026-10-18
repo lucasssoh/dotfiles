@@ -13,6 +13,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Boussole, Start a session:** projects with a folder are offered beside the modules. The whole project starts a session on it, its room holding every file of the folder, even once its planned hours are spent (`boussole free 45 --project pendu-tp`).
 
+### Changed
+- **Bar, figures:** CPU, memory, temperature and download rate now come from Pouls, a small new service, and are no longer read while the screen is off or the bar is hidden in zen mode, which saves battery.
+
 ## 1.8.0 (October 14 2026)
 
 ### Added

@@ -94,6 +94,14 @@ wake_submap() {
     hyprctl eval "hl.dispatch(hl.dsp.submap(\"$1\"))" >/dev/null 2>&1
 }
 
+# Pouls samples the bar's figures only while someone can see them. No
+# compositor event says the panel went dark, so the one place that turns it
+# off and on says so. `pouls screen` exits 0 when the daemon is not running.
+pouls_screen() {
+    [ -x "$HOME/.local/bin/pouls" ] && "$HOME/.local/bin/pouls" screen "$1"
+    return 0
+}
+
 verdict() {
     [ "$dry_run" = 1 ] && echo "$action: $1"
     return 0
@@ -279,6 +287,7 @@ case "$action" in
             hyprctl eval 'hl.dispatch(hl.dsp.dpms({ state = "off" }))' >/dev/null 2>&1
         fi
         wake_submap wake
+        pouls_screen off
         ;;
     # resume is after_sleep_cmd: panel on, but the submap stays armed.
     # That hook runs as the machine wakes, and the key that woke it may
@@ -291,6 +300,7 @@ case "$action" in
         else
             hyprctl eval 'hl.dispatch(hl.dsp.dpms({ state = "on" }))' >/dev/null 2>&1
         fi
+        pouls_screen on
         # Only when this is a wake from the dpms-off rung (hypridle's
         # on-resume): if a KEY did the waking, the submap already swallowed
         # it and left; if the mouse did, leaving here is what hands the

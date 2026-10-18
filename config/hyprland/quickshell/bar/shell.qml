@@ -104,6 +104,8 @@ ShellRoot {
     property bool zenMode: false
     // Boussole's alert waits out zen mode, like everything else in the bar.
     Binding { target: BoussoleState; property: "zen"; value: shell.zenMode }
+    // No figure is drawn in zen mode, so none is sampled either.
+    Binding { target: SystemStats; property: "watching"; value: !shell.zenMode }
 
     // Keybinds cheatsheet, shown while SUPER is HELD (see
     // hypr/keybinds.lua's "Super_L" bind, press/release calling

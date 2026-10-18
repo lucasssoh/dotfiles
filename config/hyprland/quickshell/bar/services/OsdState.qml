@@ -202,8 +202,7 @@ Singleton {
     property string backlightPath: ""
     property int maxBrightness: 1
 
-    // hwmon-style glob discovery, same one-time-at-startup shape
-    // SystemStats.qml's fanDiscover uses -- the backlight device name
+    // Glob discovery, once at startup -- the backlight device name
     // (e.g. "intel_backlight", "amdgpu_bl0") isn't stable across
     // machines either.
     Process {
