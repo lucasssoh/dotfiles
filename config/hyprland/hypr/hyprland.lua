@@ -178,6 +178,9 @@ end)
 -- role (internal/external) without needing a hyprctl reload.
 hl.on("monitor.added", function()
     hl.exec_cmd("bash ~/.config/hypr/scripts/workspace-manager.sh")
+    -- The new screen's size gets its fitted wallpapers. The watcher used to
+    -- listen to the event socket for this itself, through socat.
+    hl.exec_cmd("bash ~/.config/hypr/scripts/wallpaper-cache-watcher.sh --once")
 end)
 
 hl.on("monitor.removed", function()

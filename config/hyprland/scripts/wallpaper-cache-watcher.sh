@@ -7,9 +7,10 @@
 # (hyprland.lua), runs continuously; a pass also runs when a screen is
 # plugged in.
 #
-#   wallpaper-cache-watcher.sh --once   one pass, then exit (the install hook:
-#                                       no session yet, so wallpaper-filter
-#                                       reads the screens from the kernel)
+#   wallpaper-cache-watcher.sh --once   one pass, then exit: the install hook
+#                                       (no session yet, so wallpaper-filter
+#                                       reads the screens from the kernel),
+#                                       and hyprland.lua on monitor.added
 #
 # Also owns keeping WALL_DIR itself in sync: it's a generated symlink farm
 # merging the dotfiles repo's wallpapers/ (the GNOME default designs) with
@@ -143,16 +144,8 @@ run_pass() {
 run_pass
 [[ "$ONCE" == 1 ]] && exit 0
 
-# A screen plugged in (or a new mode) needs its own size: listen to
-# Hyprland's event socket and run a pass on every monitor added.
-if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v socat >/dev/null; then
-    (
-        socat -U - "UNIX-CONNECT:${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock" |
-            while IFS= read -r event; do
-                [[ "$event" == monitoradded* ]] && run_pass
-            done
-    ) &
-fi
+# A screen plugged in needs its own size: hyprland.lua's monitor.added
+# runs `--once` for it, the lock above keeping it from racing a pass here.
 
 # Continuous watching: watches the two SOURCE folders (not WALL_DIR --
 # nothing should be dropped there directly, it's fully generated) for
