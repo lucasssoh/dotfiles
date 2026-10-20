@@ -82,6 +82,11 @@ impl Backdrop {
         backdrop
     }
 
+    /// Nothing shown yet.
+    pub fn is_empty(&self) -> bool {
+        self.imp().current.borrow().is_none()
+    }
+
     /// Shows `texture`, fading in over whatever was there. The same texture
     /// twice is a no-op, so main.rs can re-show freely.
     pub fn show(&self, texture: gdk::Texture) {

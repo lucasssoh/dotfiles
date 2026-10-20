@@ -390,7 +390,7 @@ hl.config({
         },
         inactive_opacity = 1,
         active_opacity   = 1,
-        dim_inactive     = true,
+        dim_inactive     = false,
         dim_strength     = 0.35,
     },
 })

@@ -37,38 +37,29 @@ window,
     margin-top: 4px;
 }
 
-/* The light/dark toggle of a pair: the key, then the two halves in a pill,
-   the one in the preview filled. */
-.prisme-key {
-    font-size: 12px;
-    color: rgba(242, 242, 247, 0.72);
-    border: 1px solid rgba(242, 242, 247, 0.30);
-    border-radius: 5px;
-    padding: 0 6px;
-    margin-right: 10px;
-}
-
-.prisme-pill {
-    border: 1px solid rgba(242, 242, 247, 0.22);
-    border-radius: 999px;
-    padding: 2px;
+/* The light/dark toggle of a pair: two quiet words, the half on screen
+   lit. Clickable, like C. */
+.prisme-halves {
+    margin-top: 6px;
 }
 
 .prisme-half,
 .prisme-half-on {
-    font-size: 13px;
-    padding: 3px 12px;
-    border-radius: 999px;
-    transition: background-color 200ms ease, color 200ms ease;
+    font-size: 14px;
+    padding: 2px 0 2px 14px;
+    transition: color 200ms ease;
 }
 
 .prisme-half {
+    color: rgba(242, 242, 247, 0.4);
+}
+
+.prisme-half:hover {
     color: rgba(242, 242, 247, 0.72);
 }
 
 .prisme-half-on {
-    color: #0c0c0e;
-    background-color: #f2f2f7;
+    color: #f2f2f7;
 }
 
 .prisme-bar {

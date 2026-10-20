@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Windows:** windows you are not using are no longer darkened. The border around the focused window is the only sign of focus.
+
 ## 1.11.0 (October 20 2026)
 
 ### Added

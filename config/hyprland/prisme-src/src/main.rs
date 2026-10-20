@@ -43,13 +43,17 @@ const DURATION_STEP: u32 = 10;
 const THUMB_WINDOW_RADIUS: i64 = 24;
 
 /// How long the focus has to rest on a card before its sharp preview is
-/// decoded: the thumbnail stands in meanwhile, so holding an arrow key
-/// decodes nothing but the card it stops on.
+/// decoded: holding an arrow key decodes nothing but the card it stops on.
 const PREVIEW_DELAY_MS: u64 = 90;
 
-/// Sharp previews kept: the one shown, the one it faded from, and the
-/// neighbour preloaded in the direction of travel.
-const PREVIEW_CACHE: usize = 3;
+/// Sharp previews kept: the one shown, the one it faded from, the other
+/// half of a pair and the neighbour preloaded in the direction of travel.
+const PREVIEW_CACHE: usize = 4;
+/// How long the preview waits for the sharp picture before showing the
+/// thumbnail instead. The thumbnail is cropped from the original, not from
+/// the screen-fit cache (which may keep the subject whole over a blurred
+/// background), so showing it first and swapping made the picture jump.
+const THUMB_FALLBACK_MS: u64 = 300;
 
 /// How long a hint stays before fading out.
 const HINT_MS: u64 = 3000;
@@ -174,6 +178,21 @@ impl Ui {
         }
     }
 
+    /// Shows one half of the focused pair: the preview, the card's cut and
+    /// the Light | Dark toggle follow.
+    fn show_half(self: &Rc<Self>, dark: bool) {
+        let i = self.focus.get();
+        if self.walls.get(i).is_none_or(|w| w.dark.is_none()) || self.shown_dark(i) == dark {
+            return;
+        }
+        self.peek.set(dark != self.scheme_dark.get());
+        if let Some(card) = self.card(i) {
+            card.set_shown_dark(dark, true);
+        }
+        self.refresh_caption();
+        self.show_preview(false);
+    }
+
     /// Sizes the preview to the monitor Prisme opened on.
     fn fit_preview(&self) {
         let display = WidgetExt::display(&self.window);
@@ -276,8 +295,25 @@ impl Ui {
             return;
         }
         self.showing_sharp.set(false);
-        if let Some(thumb) = self.card(i).and_then(|c| c.texture(key.1)) {
-            self.backdrop.show(thumb);
+        // Nothing on screen yet (at launch): the thumbnail at once.
+        // Otherwise the current picture stays until the sharp one comes,
+        // and the thumbnail only stands in if that takes too long.
+        if self.backdrop.is_empty() {
+            if let Some(thumb) = self.card(i).and_then(|c| c.texture(key.1)) {
+                self.backdrop.show(thumb);
+            }
+        } else {
+            let ui = Rc::downgrade(self);
+            glib::timeout_add_local_once(Duration::from_millis(THUMB_FALLBACK_MS), move || {
+                let Some(ui) = ui.upgrade() else {
+                    return;
+                };
+                if ui.preview.generation() == generation && !ui.showing_sharp.get() {
+                    if let Some(thumb) = ui.card(i).and_then(|c| c.texture(key.1)) {
+                        ui.backdrop.show(thumb);
+                    }
+                }
+            });
         }
         let Some(path) = self.path(key) else {
             return;
@@ -296,19 +332,26 @@ impl Ui {
         });
     }
 
-    /// Decodes the next card in the direction of travel ahead of time.
+    /// Decodes ahead of time, one picture at a time (the loader keeps only
+    /// the latest request): the other half of a focused pair, so C swaps
+    /// at once, then the next card in the direction of travel.
     fn preload(&self, generation: u64) {
+        let i = self.focus.get();
+        let mut wanted = Vec::new();
+        if self.walls.get(i).is_some_and(|w| w.dark.is_some()) {
+            let (_, dark) = self.key(i);
+            wanted.push((i, !dark));
+        }
         let len = self.walls.len() as i64;
-        if len < 2 {
-            return;
+        if len >= 2 {
+            let next = (i as i64 + self.direction.get()).rem_euclid(len) as usize;
+            wanted.push(self.key(next));
         }
-        let next = (self.focus.get() as i64 + self.direction.get()).rem_euclid(len) as usize;
-        let key = self.key(next);
-        if self.sharp.borrow().iter().any(|(k, _)| *k == key) {
-            return;
-        }
-        if let Some(path) = self.path(key) {
-            self.preview.request(generation, key, path, self.screen_size());
+        let missing = wanted.into_iter().find(|key| !self.sharp.borrow().iter().any(|(k, _)| k == key));
+        if let Some(key) = missing {
+            if let Some(path) = self.path(key) {
+                self.preview.request(generation, key, path, self.screen_size());
+            }
         }
     }
 
@@ -327,8 +370,8 @@ impl Ui {
         if result.key == self.key(self.focus.get()) {
             self.showing_sharp.set(true);
             self.backdrop.show(result.texture);
-            self.preload(result.generation);
         }
+        self.preload(result.generation);
     }
 
     /// A thumbnail landed: the focused card's fills in for the preview
@@ -338,7 +381,7 @@ impl Ui {
             return;
         }
         self.refresh_caption();
-        if !self.showing_sharp.get() {
+        if self.backdrop.is_empty() {
             if let Some(thumb) = self.card(i).and_then(|c| c.texture(self.shown_dark(i))) {
                 self.backdrop.show(thumb);
             }
@@ -398,6 +441,8 @@ fn build_ui(app: &Application) {
     }
 
     let overlay = gtk4::Overlay::new();
+    // An empty base: everything is laid over it, the window gives the size.
+    overlay.set_child(Some(&gtk4::Box::new(gtk4::Orientation::Vertical, 0)));
 
     // ── The panel, centred above the cards: the preview, then its caption
     // and, for a pair, the light/dark toggle.
@@ -407,7 +452,6 @@ fn build_ui(app: &Application) {
         .halign(gtk4::Align::Center)
         .valign(gtk4::Align::Center)
         .margin_bottom(PANEL_CLEARANCE_PX)
-        .can_target(false)
         .build();
     let backdrop = backdrop::Backdrop::new();
     let legend = gtk4::Box::builder().orientation(gtk4::Orientation::Horizontal).css_classes(["prisme-legend"]).build();
@@ -423,29 +467,30 @@ fn build_ui(app: &Application) {
         .max_width_chars(36)
         .build();
     let details = gtk4::Label::builder().css_classes(["prisme-details"]).xalign(0.0).use_markup(true).build();
-    // The pair toggle: the key, then the two halves in a pill.
+    // The pair toggle: two quiet words, the half on screen lit. A click
+    // picks a half, like C.
     let halves = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Horizontal)
         .css_classes(["prisme-halves"])
         .halign(gtk4::Align::End)
-        .valign(gtk4::Align::Center)
+        .valign(gtk4::Align::Start)
+        .tooltip_text("C")
         .visible(false)
         .build();
-    let key_cap = gtk4::Label::builder().label("C").css_classes(["prisme-key"]).build();
-    let pill = gtk4::Box::builder().orientation(gtk4::Orientation::Horizontal).css_classes(["prisme-pill"]).build();
     let light = gtk4::Label::builder().label("Light").css_classes(["prisme-half"]).build();
     let dark = gtk4::Label::builder().label("Dark").css_classes(["prisme-half"]).build();
-    pill.append(&light);
-    pill.append(&dark);
-    halves.append(&key_cap);
-    halves.append(&pill);
+    for word in [&light, &dark] {
+        word.set_cursor_from_name(Some("pointer"));
+    }
+    halves.append(&light);
+    halves.append(&dark);
     caption.append(&name);
     caption.append(&details);
     legend.append(&caption);
     legend.append(&halves);
     panel.append(&backdrop);
     panel.append(&legend);
-    overlay.set_child(Some(&panel));
+
 
     // ── Bottom line: position, hint, and the slideshow summary.
     let bar = gtk4::CenterBox::builder().css_classes(["prisme-bar"]).valign(gtk4::Align::End).build();
@@ -462,6 +507,9 @@ fn build_ui(app: &Application) {
     let carousel = carousel::Carousel::new(cards);
 
     overlay.add_overlay(&carousel);
+    // Above the carousel, which takes the wheel over the whole window: the
+    // Light | Dark words need the clicks over the panel.
+    overlay.add_overlay(&panel);
     overlay.add_overlay(&bar);
     window.set_child(Some(&overlay));
 
@@ -746,13 +794,7 @@ fn build_ui(app: &Application) {
                 Action::Select if dynamic => set_picked(true),
                 Action::Deselect if dynamic => set_picked(false),
                 Action::ToggleHalf if ui.walls.get(ui.focus.get()).is_some_and(|w| w.dark.is_some()) => {
-                    ui.peek.set(!ui.peek.get());
-                    let i = ui.focus.get();
-                    if let Some(card) = ui.card(i) {
-                        card.set_shown_dark(ui.shown_dark(i), true);
-                    }
-                    ui.refresh_caption();
-                    ui.show_preview(false);
+                    ui.show_half(!ui.shown_dark(ui.focus.get()));
                 }
                 Action::Select | Action::Deselect | Action::ToggleHalf => return glib::Propagation::Proceed,
             }
@@ -770,6 +812,16 @@ fn build_ui(app: &Application) {
         });
     }
 
+    for (word, dark) in [(&ui.light, false), (&ui.dark, true)] {
+        let ui = Rc::downgrade(&ui);
+        let click = gtk4::GestureClick::new();
+        click.connect_released(move |_, _, _, _| {
+            if let Some(ui) = ui.upgrade() {
+                ui.show_half(dark);
+            }
+        });
+        word.add_controller(click);
+    }
     {
         let ui = Rc::downgrade(&ui);
         window.connect_map(move |_| {

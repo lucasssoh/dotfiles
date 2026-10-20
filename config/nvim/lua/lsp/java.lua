@@ -27,7 +27,20 @@ function M.find_root(source)
     if vim.startswith(source, M.leetcode_root .. "/") then
         return M.leetcode_root
     end
-    return require("jdtls.setup").find_root(M.root_markers, source)
+    local root = require("jdtls.setup").find_root(M.root_markers, source)
+    -- Maven multi-module projects: the nearest pom.xml is only a module's,
+    -- and jdtls rooted there sees neither the parent nor the sibling
+    -- modules (a module depending on another then shows unresolved
+    -- packages, unless that one was `mvn install`ed). Climb to the
+    -- outermost pom.xml so the whole reactor is one jdtls project.
+    while root do
+        local parent = vim.fs.dirname(root)
+        if parent == root or not vim.uv.fs_stat(parent .. "/pom.xml") then
+            break
+        end
+        root = parent
+    end
+    return root
 end
 
 --- Finds a usable lombok.jar, or nil.
