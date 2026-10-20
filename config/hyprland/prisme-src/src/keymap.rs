@@ -17,6 +17,8 @@ pub enum Action {
     ToggleMode,
     Select,
     Deselect,
+    /// Shows the other half of a light/dark pair in the preview.
+    ToggleHalf,
 }
 
 /// Default config, hardcoded here rather than `include_str!`-ed from the
@@ -29,13 +31,14 @@ pub enum Action {
 /// install.sh, in the same folder as style.css): this constant is only a
 /// safety net for when that file is absent or unreadable.
 const FALLBACK: &str = "\
-close = Escape
+close = Escape, q, Q
 move_left = Left, h, H
 move_right = Right, l, L
 activate = Return, KP_Enter, space
 toggle_mode = Tab
 select = Down, j, J
 deselect = Up, k, K
+toggle_half = c, C
 ";
 
 /// Resolved GDK key -> action table, ready to query from the keyboard
@@ -113,6 +116,7 @@ fn parse_action(name: &str) -> Option<Action> {
         "toggle_mode" => Action::ToggleMode,
         "select" => Action::Select,
         "deselect" => Action::Deselect,
+        "toggle_half" => Action::ToggleHalf,
         _ => return None,
     })
 }

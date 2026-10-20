@@ -142,6 +142,23 @@ fn is_jxl(path: &Path) -> bool {
     path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("jxl"))
 }
 
+/// Decodes any supported file by its content rather than its name: the
+/// screen-fit cache keeps the original's filename, extension included, but
+/// wallpaper-filter writes JPEG there, so a "NAME.jxl" in it is usually a
+/// JPEG. Shared with preview.rs.
+pub(crate) fn decode_any(path: &Path) -> Option<DynamicImage> {
+    // Bare JXL codestream (FF 0A) or the ISO container's first box.
+    let mut head = [0u8; 12];
+    let is_jxl_data = std::fs::File::open(path)
+        .and_then(|mut f| std::io::Read::read_exact(&mut f, &mut head))
+        .is_ok_and(|_| head.starts_with(&[0xFF, 0x0A]) || head == *b"\0\0\0\x0cJXL \r\n\x87\n");
+    if is_jxl_data {
+        decode_jxl(path)
+    } else {
+        image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.decode().ok()
+    }
+}
+
 /// Decodes a JPEG XL file -- the `image` crate has no JXL support, so
 /// GNOME's default wallpapers (shipped as .jxl) need jxl-oxide instead.
 /// Same approach as wallpaper-filter.rs's decode_jxl (duplicated rather
@@ -167,7 +184,7 @@ fn decode_jxl(path: &Path) -> Option<DynamicImage> {
 /// container/header but doesn't render a frame, and `ImageReader` reads
 /// just enough of jpg/png/webp to report dimensions. Cheap even on an 8K
 /// source, unlike decoding it fully just to read `.width()`/`.height()`.
-fn read_dimensions(path: &Path) -> Option<(u32, u32)> {
+pub(crate) fn read_dimensions(path: &Path) -> Option<(u32, u32)> {
     if is_jxl(path) {
         let image = jxl_oxide::JxlImage::builder().open(path).ok()?;
         Some((image.width(), image.height()))
@@ -179,7 +196,7 @@ fn read_dimensions(path: &Path) -> Option<(u32, u32)> {
 /// Cache already up to date (file present, mtime >= the source's) -- same
 /// check as wallpaper-filter.rs's cache_is_fresh (duplicated, see
 /// decode_jxl above for why).
-fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
+pub(crate) fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
     let (Ok(src_meta), Ok(cached_meta)) = (std::fs::metadata(src), std::fs::metadata(cached))
     else {
         return false;

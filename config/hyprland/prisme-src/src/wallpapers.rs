@@ -64,6 +64,18 @@ impl Wallpaper {
         self.dark.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned())
     }
 
+    /// Readable name for the caption: extension stripped, dashes and
+    /// underscores as spaces, first letter capitalised. E.g.
+    /// "coucou-aube-plis.jxl" -> "Coucou aube plis".
+    pub fn display_name(&self) -> String {
+        let spaced = stem(&self.name).replace(['-', '_'], " ");
+        let mut chars = spaced.chars();
+        match chars.next() {
+            Some(first) => first.to_uppercase().chain(chars).collect(),
+            None => spaced,
+        }
+    }
+
     /// True if `name` is either file of this wallpaper -- a playlist written
     /// before pairs existed may name the dark one.
     pub fn answers_to(&self, name: &str) -> bool {

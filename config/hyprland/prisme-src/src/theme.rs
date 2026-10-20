@@ -1,7 +1,7 @@
 //! Loads Prisme's CSS theme: fallback built into the binary, overridden by
 //! the user file if present.
 
-/// Fallback palette, identical to waybar/style.css and balise/style.css --
+/// Fallback theme, the same rules as config/hyprland/prisme/style.css --
 /// used if ~/.config/prisme/style.css doesn't exist yet (before
 /// install.sh, or running the binary directly from prisme-src/ during
 /// development). Copied here as a hardcoded string rather than
@@ -15,7 +15,7 @@
 /// correct safety net, not the source of truth.
 const FALLBACK_CSS: &str = r#"
 * {
-    font-family: "Inter";
+    font-family: "MiSans Latin";
 }
 
 *:focus,
@@ -25,58 +25,78 @@ const FALLBACK_CSS: &str = r#"
 
 window,
 .background {
-    background-color: rgba(20, 20, 20, 0.72);
+    background-color: rgba(18, 18, 22, 0.42);
 }
 
-.prisme-header,
-.prisme-footer {
+/* The preview and its caption, bare on the blurred desktop, centred above
+   the cards. */
+
+.prisme-legend {
+    margin-top: 18px;
     color: #f2f2f7;
 }
 
-.prisme-header {
-    border-bottom: 1px solid #505050;
-    padding: 14px 24px;
-}
-
-.prisme-footer {
-    border-top: 1px solid #505050;
-    padding: 10px 24px;
-    color: #8e8e93;
-    font-size: 0.9em;
-}
-
-.prisme-title {
-    font-weight: bold;
-    font-size: 1.1em;
+.prisme-name {
+    font-size: 30px;
+    font-weight: 500;
     color: #f2f2f7;
+}
+
+.prisme-details {
+    font-size: 15px;
+    color: rgba(242, 242, 247, 0.6);
+    margin-top: 4px;
+}
+
+/* The light/dark toggle of a pair: the key, then the two halves in a pill,
+   the one in the preview filled. */
+.prisme-key {
+    font-size: 12px;
+    color: rgba(242, 242, 247, 0.72);
+    border: 1px solid rgba(242, 242, 247, 0.30);
+    border-radius: 5px;
+    padding: 0 6px;
+    margin-right: 10px;
+}
+
+.prisme-pill {
+    border: 1px solid rgba(242, 242, 247, 0.22);
+    border-radius: 999px;
+    padding: 2px;
+}
+
+.prisme-half,
+.prisme-half-on {
+    font-size: 13px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    transition: background-color 200ms ease, color 200ms ease;
+}
+
+.prisme-half {
+    color: rgba(242, 242, 247, 0.72);
+}
+
+.prisme-half-on {
+    color: #0c0c0e;
+    background-color: #f2f2f7;
+}
+
+.prisme-bar {
+    padding: 0 40px 22px 40px;
+    color: #a1a1a6;
+    font-size: 14px;
+    font-feature-settings: "tnum";
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
 }
 
 .prisme-hint {
-    color: #8e8e93;
-    font-size: 0.9em;
+    color: #d1d1d6;
+    transition: opacity 600ms ease-out;
 }
 
-.prisme-mode-toggle {
-    background-color: transparent;
-    background-image: none;
-    color: #8e8e93;
-    border: 1px solid #505050;
-    border-radius: 6px;
-    box-shadow: none;
-    padding: 4px 14px;
-}
-
-.prisme-mode-toggle:checked {
-    background-color: #2c2c2e;
-    color: #4fefff;
-    border-color: #4fefff;
-}
-
-.prisme-duration-chip {
-    color: #8e8e93;
-    border: 1px solid #505050;
-    border-radius: 6px;
-    padding: 4px 10px;
+.prisme-hint.faded {
+    opacity: 0;
 }
 "#;
 

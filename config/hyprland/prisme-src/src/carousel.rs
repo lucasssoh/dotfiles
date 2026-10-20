@@ -27,9 +27,13 @@ const CASCADE_DURATION_MS: f64 = 320.0;
 
 /// Margin (px) between the bottom of the row (tallest possible card, focus
 /// + selection) and the bottom of the allocated area -- the row is
-/// bottom-centered (not screen-centered) to leave most of the screen
-/// visible behind the overlay while navigating.
-const BOTTOM_MARGIN_PX: f64 = 24.0;
+/// bottom-centered (not screen-centered) to leave the full-screen preview
+/// visible above it, and clears the position/hint line main.rs lays along
+/// the very bottom.
+const BOTTOM_MARGIN_PX: f64 = 64.0;
+
+/// Air (px) between two neighbouring cards.
+const CARD_GAP_PX: f64 = 12.0;
 
 /// Extra height (px) for a selected card (Dynamic mode) -- added on top of
 /// the focus interpolation, so chosen cards visibly "stick out" of the row
@@ -124,35 +128,17 @@ mod imp {
             let height = height as f64;
             let len_f = len as f64;
             let offset = self.offset.get();
-            // Two parallelograms of the same width AND same height,
-            // offset by exactly (width - skew), have their slanted edges
-            // coincide exactly (verified geometrically on the 4 corners)
-            // -- resting value (non-focused, non-selected cards) taken as
-            // the reference for spacing.
-            let step = card::WIDTH_UNFOCUSED
-                - card::skew_for(card::WIDTH_UNFOCUSED, card::HEIGHT_UNFOCUSED);
-            // Extra gap to push onto the neighbors when the focused card
-            // grows -- NOT just half the width gain: since the slope is
-            // proportional to height (card::SKEW_RATIO), a card that also
-            // grows in height "eats into" part of that gap with its more
-            // slanted edge. Proof: two neighboring edges have exactly the
-            // same slope (skew_i/h_i = SKEW_RATIO for every card i), so the
-            // gap between them is CONSTANT over their whole shared height
-            // (the two lines are parallel) and equals
-            // (w_i+w_j)/2 - SKEW_RATIO·(h_i+h_j)/2 -- hence this term in
-            // BOTH width and height, not width alone as a v1 of this
-            // calculation did (it left a thin visible gap near the focus,
-            // where the card is also noticeably taller).
-            let extra_reach = (card::WIDTH_FOCUSED - card::WIDTH_UNFOCUSED) / 2.0
-                - card::SKEW_RATIO * (card::HEIGHT_FOCUSED - card::HEIGHT_UNFOCUSED) / 2.0;
+            // Centre-to-centre distance between two resting cards; the
+            // focused card pushes its neighbours out by half its extra
+            // width, so the gap stays CARD_GAP_PX on both sides of it too.
+            let step = card::WIDTH_UNFOCUSED + CARD_GAP_PX;
+            let extra_reach = (card::WIDTH_FOCUSED - card::WIDTH_UNFOCUSED) / 2.0;
             let cx = width / 2.0;
             // Shared vertical center of the row, chosen so that even the
             // tallest possible card (focus + selection combined) never
             // exceeds BOTTOM_MARGIN_PX from the bottom -- each card then
-            // grows equally up AND down from this line (rather than a
-            // bottom anchor that would make everything climb from one
-            // side only, breaking the coincidence of slanted edges with
-            // neighbors of different height).
+            // grows equally up AND down from this line, so a picked card
+            // sticks out on both sides rather than climbing alone.
             let max_h = card::HEIGHT_FOCUSED + SELECTED_HEIGHT_BOOST;
             let row_center_y = height - BOTTOM_MARGIN_PX - max_h / 2.0;
             let visible_margin = card::WIDTH_FOCUSED + 40.0;

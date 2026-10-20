@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Added
+- **Prisme:** `q` closes Prisme without changing anything, like `Esc`.
+
+### Changed
+- **Prisme:** the wallpaper you land on is previewed live in the middle of the screen, over your blurred desktop, with its name and size below and a strip of straight cards underneath. Prisme fades in and out instead of sliding in.
+- **Prisme, light and dark wallpapers:** a small Light | Dark toggle under the preview shows which version you are looking at, and on the card the version on screen takes three quarters of it. `C` switches between the two.
+
 ## 1.10.0 (October 18 2026)
 
 ### Added
