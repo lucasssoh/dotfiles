@@ -463,6 +463,13 @@ hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xra
 -- popping or sliding in. Speed and curve stay those of the `layers` leaf.
 hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fade" })
 
+-- Prisme the same way: it covers the whole screen, so it fades in over the
+-- windows and back out to them (or to the new wallpaper it just set),
+-- instead of sliding in from an edge. Its veil is translucent and blurs
+-- the desktop behind its preview panel, like the drawers' glass; open for
+-- seconds at a time, and a still desktop is blurred once and cached.
+hl.layer_rule({ match = { namespace = "^prisme$" },             animation = "fade", blur = true })
+
 -- ============================================================
 -- LAYER NO-ANIM — the bar's side sheets (Boussole, notifications)
 -- ============================================================
