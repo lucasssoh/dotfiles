@@ -1,19 +1,17 @@
 //! `boussole`: the service (`boussole daemon`), its command line, and
-//! `preview`, which plans from a course folder and an iCal file without
+//! `preview`, which plans from subject names and an iCal file without
 //! touching anything.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use boussole::store::Paths;
 use boussole::{ade, cli, daemon};
-use boussole::catalogue::{Catalogue, Ignore, Inclusion, ItemKind};
 use boussole::i18n;
 use boussole::model::{Domain, Lang, Progress, Settings};
 use boussole::plan::{self, Input};
 use boussole::time::{Local, Tz};
 
-const USAGE: &str = "usage: boussole preview --courses DIR [--ics FILE] [--groups TD=1,TP=1,GROUPE=B]
+const USAGE: &str = "usage: boussole preview --subjects A&C,OC,… [--ics FILE] [--groups TD=1,TP=1,GROUPE=B]
                         [--now YYYY-MM-DDTHH:MM] [--days N] [--lang en|fr] [--why]";
 
 fn main() {
@@ -23,10 +21,6 @@ fn main() {
         Some("--version" | "-V") => Ok(format!("boussole {}", env!("CARGO_PKG_VERSION"))),
         Some("preview") => preview(&args[1..]).map(|_| String::new()),
         Some("daemon") => daemon::run(paths).map(|_| String::new()).map_err(|e| e.to_string()),
-        Some("gate") => {
-            let rest: Vec<String> = args[1..].iter().skip_while(|a| *a == "--").cloned().collect();
-            Err(cli::gate(&paths, &rest).to_string())
-        }
         _ => cli::main(&paths, &args),
     };
     match result {
@@ -52,7 +46,7 @@ fn preview(args: &[String]) -> Result<(), String> {
         let value = args.get(i + 1).ok_or(format!("--{key} needs a value\n{USAGE}"))?;
         opts.insert(
             match key {
-                "courses" => "courses",
+                "subjects" => "subjects",
                 "ics" => "ics",
                 "groups" => "groups",
                 "now" => "now",
@@ -75,9 +69,7 @@ fn preview(args: &[String]) -> Result<(), String> {
     let lang = if opts.get("lang").map(String::as_str) == Some("fr") { Lang::Fr } else { Lang::En };
     let days: i32 = opts.get("days").and_then(|d| d.parse().ok()).unwrap_or(7);
 
-    let root = PathBuf::from(opts.get("courses").ok_or(USAGE)?);
-    let catalogue = Catalogue::scan(&root, &Ignore::default());
-    let ids = catalogue.domains();
+    let ids: Vec<&str> = opts.get("subjects").ok_or(USAGE)?.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
 
     let mut events = Vec::new();
     if let Some(path) = opts.get("ics") {
@@ -87,7 +79,7 @@ fn preview(args: &[String]) -> Result<(), String> {
     // Calendar names suggested from the feed, as the first run would.
     let mut domains: Vec<Domain> = ids
         .iter()
-        .map(|id| Domain { id: id.to_string(), spaced: true, ..Domain::default() })
+        .map(|id| Domain { id: id.to_string(), ..Domain::default() })
         .collect();
     for e in &events {
         let name = ade::read_title(&e.summary).name;
@@ -105,19 +97,13 @@ fn preview(args: &[String]) -> Result<(), String> {
     }
     let (courses, deadlines) = ade::timetable(&events, &selection, &domains, &tz);
 
-    // Structured material planned, the rest left to decide.
-    let mut progress = Progress::default();
-    for item in &catalogue.items {
-        if !matches!(item.kind, ItemKind::Pdf | ItemKind::Notes) {
-            progress.files.insert(item.id.clone(), Inclusion::Planned);
-        }
-    }
+    let progress = Progress::default();
+    let done = BTreeMap::new();
     let settings = Settings { lang, ..Settings::default() };
     let input = Input {
         now,
         settings: &settings,
         domains: &domains,
-        catalogue: &catalogue,
         progress: &progress,
         courses: &courses,
         calendar: !events.is_empty(),
@@ -130,13 +116,13 @@ fn preview(args: &[String]) -> Result<(), String> {
         away_today: &[],
         extra: &[],
         learned: [None; 7],
-        missed_streak: 0,
         spent: &[],
+        done: &done,
         previous: None,
     };
     let p = plan::plan(&input);
 
-    println!("{} files, {} domains, {} courses, {} exams", catalogue.items.len(), domains.len(), courses.len(), deadlines.len());
+    println!("{} subjects, {} courses, {} exams", domains.len(), courses.len(), deadlines.len());
     for d in &domains {
         println!("  {:8} ← {}", d.id, d.calendar_names.join(" | "));
     }
@@ -172,12 +158,6 @@ fn preview(args: &[String]) -> Result<(), String> {
         println!("\n{}", i18n::date(day, lang));
         for (_, l) in lines {
             println!("  {l}");
-        }
-    }
-    if !p.margins.is_empty() {
-        println!();
-        for m in &p.margins {
-            println!("margin before {} ({}): {}", m.title, i18n::date(m.date, lang), m.sessions);
         }
     }
     for c in &p.changes {

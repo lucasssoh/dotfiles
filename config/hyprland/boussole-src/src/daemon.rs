@@ -7,11 +7,12 @@
 //!     the clock is set): the next alert, the next timetable download or
 //!     midnight, whichever comes first. A time that passed during sleep
 //!     fires on waking;
-//!   - inotify on the course folder and on the personal calendars;
+//!   - inotify on the personal calendars;
 //!   - the pipes of its children: curl (timetable), khal (personal events),
-//!     notify-send (an alert waiting for its button).
-//! poll only gets a timeout while a rescan waits for a burst of file events
-//! to settle.
+//!     notify-send (an alert waiting for its button);
+//!   - during a session only, Hyprland's event socket (seance).
+//! poll only gets a timeout while khal waits for a burst of file events to
+//! settle.
 //!
 //!   pushed:   {"event":"status",…}  on connect and on every change
 //!             {"event":"plan"}      the plan changed: ask for it
@@ -31,12 +32,11 @@ use serde_json::{json, Value};
 use crate::ade::{self, Snapshot};
 use crate::ajout::{self, Action};
 use crate::alertes::{self, Kind};
-use crate::catalogue::{Catalogue, Inclusion};
 use crate::i18n;
 use crate::journee::{self, Place};
 use crate::khal;
 use crate::model::*;
-use crate::plan::{self, Input, Pin, Plan, Session, Work};
+use crate::plan::{self, Input, Pin, Plan, Session};
 use crate::store::{self, Event, Outcome, PartReport, Paths, Store};
 use crate::time::{Date, Hm, Local, Tz};
 
@@ -45,12 +45,8 @@ pub(crate) enum Job {
     Khal,
     /// An alert with buttons, waiting for one.
     Notify { session: Option<String> },
-    /// Fire and forget (poking the bar, opening a file).
+    /// Fire and forget (poking the bar, a session's command).
     Quiet,
-    /// `busctl monitor` on zathura, resident: read line by line.
-    Bus,
-    /// `mutool show FILE outline` for the library, one file at a time.
-    Outline { item: String, mtime: i64 },
 }
 
 pub(crate) struct Running {
@@ -66,15 +62,14 @@ pub(crate) struct Client {
     inbox: Vec<u8>,
     /// The bar said hello: alerts go to the island rather than notifications.
     pub(crate) bar: bool,
-    /// What the socket would not take yet (a library is a few hundred kB):
-    /// sent as it drains, never dropped half-way.
+    /// What the socket would not take yet: sent as it drains, never
+    /// dropped half-way.
     outbox: Vec<u8>,
 }
 
 pub struct Service {
     pub(crate) store: Store,
     pub(crate) tz: Tz,
-    pub(crate) catalogue: Catalogue,
     pub(crate) ade: Option<Snapshot>,
     pub(crate) ade_error: Option<String>,
     pub(crate) personal: Vec<Busy>,
@@ -88,22 +83,18 @@ pub struct Service {
     pub(crate) next_client: u64,
     pub(crate) timer: RawFd,
     pub(crate) inotify: RawFd,
-    /// inotify watch → (folder, is the personal calendar).
-    pub(crate) watches: HashMap<i32, (PathBuf, bool)>,
+    /// inotify watch → the personal calendar's folder.
+    pub(crate) watches: HashMap<i32, PathBuf>,
     pub(crate) children: Vec<Running>,
-    pub(crate) rescan_at: Option<Instant>,
     pub(crate) khal_at: Option<Instant>,
     /// Instant of the next timetable download.
     pub(crate) next_fetch: Option<i64>,
     /// BOOTTIME − MONOTONIC: grows across a suspend.
     pub(crate) slept: i64,
-    pub(crate) suivi: crate::suivi::Suivi,
+    /// The session under way, and the window that counts for it.
+    pub(crate) watcher: crate::seance::Watcher,
     /// The alert the central island shows, until answered.
     pub(crate) alert: Option<Value>,
-    /// Focus mode's workspace and parked windows.
-    pub(crate) focus: crate::focus::FocusState,
-    /// The course PDFs' outlines, for the library.
-    pub(crate) outlines: crate::bibliotheque::Outlines,
 }
 
 fn clock(id: libc::clockid_t) -> i64 {
@@ -126,7 +117,7 @@ pub(crate) fn set_nonblocking(fd: RawFd) {
 }
 
 /// A command's path. ~/.local/bin is looked in too: a user service starts
-/// with systemd's PATH, which leaves it out, and Liseuse lives there.
+/// with systemd's PATH, which leaves it out, and Boussole lives there.
 pub(crate) fn which(cmd: &str) -> Option<PathBuf> {
     let local = std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/bin"));
     let path = std::env::var_os("PATH").unwrap_or_default();
@@ -157,7 +148,6 @@ pub fn run(paths: Paths) -> io::Result<()> {
     let mut s = Service {
         store,
         tz: Tz::local(),
-        catalogue: Catalogue::default(),
         ade,
         ade_error: None,
         personal: Vec::new(),
@@ -171,20 +161,13 @@ pub fn run(paths: Paths) -> io::Result<()> {
         inotify,
         watches: HashMap::new(),
         children: Vec::new(),
-        rescan_at: None,
         khal_at: None,
         next_fetch: None,
         slept: clock(libc::CLOCK_BOOTTIME) - clock(libc::CLOCK_MONOTONIC),
-        suivi: crate::suivi::Suivi::default(),
+        watcher: Default::default(),
         alert: None,
-        focus: crate::focus::FocusState::default(),
-        outlines: Default::default(),
     };
-    s.focus_load();
-    s.outlines_load();
-    s.rescan();
-    s.suivi_start();
-    s.focus_arrange();
+    s.watch_load();
     s.watch_khal();
     s.spawn_khal();
     s.fetch_if_stale(0);
@@ -222,13 +205,11 @@ impl Service {
             }));
             fds.extend(self.children.iter().map(|c| pfd(c.child.stdout.as_ref().map_or(-1, |o| o.as_raw_fd()))));
             let hypr_at = fds.len();
-            fds.push(pfd(self.suivi.hypr.as_ref().map_or(-1, |h| h.as_raw_fd())));
+            fds.push(pfd(self.watcher.hypr.as_ref().map_or(-1, |h| h.as_raw_fd())));
 
             let now = Instant::now();
-            let timeout = [self.rescan_at, self.khal_at]
-                .into_iter()
-                .flatten()
-                .min()
+            let timeout = self
+                .khal_at
                 .map_or(-1, |t| t.saturating_duration_since(now).as_millis().min(i32::MAX as u128) as i32 + 1);
             // SAFETY: fds is a live, correctly sized array of pollfd.
             let n = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, timeout) };
@@ -273,11 +254,6 @@ impl Service {
                 self.read_inotify();
             }
             let now = Instant::now();
-            if self.rescan_at.is_some_and(|t| t <= now) {
-                self.rescan_at = None;
-                self.rescan();
-                self.replan();
-            }
             if self.khal_at.is_some_and(|t| t <= now) {
                 self.khal_at = None;
                 self.spawn_khal();
@@ -305,7 +281,7 @@ impl Service {
         if self.next_fetch.is_some_and(|t| t <= now_secs()) {
             self.fetch();
         }
-        self.suivi_tick();
+        self.watch_tick();
         self.replan();
     }
 
@@ -318,9 +294,6 @@ impl Service {
         let mut t = next.into_iter().map(|l| self.tz.to_utc(l)).min().unwrap();
         if let Some(f) = self.next_fetch {
             t = t.min(f);
-        }
-        if let Some(q) = self.suivi_deadline() {
-            t = t.min(q);
         }
         // Whenever what the bar shows changes on its own: 15 minutes
         // before a session, its start, its end, 15 minutes after (left
@@ -355,33 +328,6 @@ impl Service {
         };
     }
 
-    // ─── Course folder ───────────────────────────────────────────────────
-
-    fn rescan(&mut self) {
-        let Some(root) = self.store.settings.courses.clone() else { return };
-        self.catalogue = Catalogue::scan(&root, &self.store.settings.ignore);
-        self.outlines_refresh();
-        // Watch every folder, new ones included (adding a watch twice is harmless).
-        let mut dirs = vec![root.clone()];
-        while let Some(d) = dirs.pop() {
-            let Ok(c) = std::ffi::CString::new(d.as_os_str().as_encoded_bytes()) else { continue };
-            let mask = libc::IN_CREATE | libc::IN_DELETE | libc::IN_MOVED_FROM | libc::IN_MOVED_TO | libc::IN_CLOSE_WRITE;
-            // SAFETY: a valid C string and our inotify descriptor.
-            let wd = unsafe { libc::inotify_add_watch(self.inotify, c.as_ptr(), mask) };
-            if wd >= 0 {
-                self.watches.insert(wd, (d.clone(), false));
-            }
-            if let Ok(rd) = std::fs::read_dir(&d) {
-                for e in rd.flatten() {
-                    let name = e.file_name();
-                    if e.file_type().is_ok_and(|t| t.is_dir()) && !name.to_string_lossy().starts_with('.') {
-                        dirs.push(e.path());
-                    }
-                }
-            }
-        }
-    }
-
     fn read_inotify(&mut self) {
         let mut buf = [0u8; 8192];
         loop {
@@ -397,13 +343,10 @@ impl Service {
                 let ev = unsafe { std::ptr::read_unaligned(buf.as_ptr().add(off) as *const libc::inotify_event) };
                 let raw = &buf[off + header..off + header + ev.len as usize];
                 let name = String::from_utf8_lossy(&raw[..raw.iter().position(|&b| b == 0).unwrap_or(raw.len())]).into_owned();
-                let personal = self.watches.get(&ev.wd).is_some_and(|w| w.1);
                 // Editors' swap and temporary files are noise.
                 let noise = name.starts_with('.') || name.ends_with('~') || name.ends_with(".swp") || name.ends_with(".tmp");
-                if personal {
+                if self.watches.contains_key(&ev.wd) && !noise {
                     self.khal_at = Some(Instant::now() + Duration::from_millis(500));
-                } else if !noise {
-                    self.rescan_at = Some(Instant::now() + Duration::from_millis(800));
                 }
                 off += header + ev.len as usize;
             }
@@ -437,7 +380,7 @@ impl Service {
             // SAFETY: a valid C string and our inotify descriptor.
             let wd = unsafe { libc::inotify_add_watch(self.inotify, c.as_ptr(), mask) };
             if wd >= 0 {
-                self.watches.insert(wd, (d, true));
+                self.watches.insert(wd, d);
             }
         }
     }
@@ -587,23 +530,6 @@ impl Service {
         } else {
             eof = true;
         }
-        if matches!(self.children[i].job, Job::Bus) {
-            let mut lines = Vec::new();
-            while let Some(nl) = self.children[i].out.iter().position(|&b| b == b'\n') {
-                let line: Vec<u8> = self.children[i].out.drain(..=nl).collect();
-                lines.push(String::from_utf8_lossy(&line).into_owned());
-            }
-            for l in lines {
-                self.bus_line(&l);
-            }
-            if eof {
-                let mut r = self.children.remove(i);
-                let _ = r.child.wait();
-                // Restarted at the next wake.
-                self.suivi.bus_alive = false;
-            }
-            return;
-        }
         if !eof {
             return;
         }
@@ -629,8 +555,7 @@ impl Service {
                     self.on_action(&s, action);
                 }
             }
-            Job::Outline { item, mtime } => self.outline_done(item, mtime, ok.then_some(text)),
-            Job::Quiet | Job::Bus => {}
+            Job::Quiet => {}
         }
     }
 
@@ -707,18 +632,11 @@ impl Service {
             .flat_map(|(_, t, _)| t.iter().cloned())
             .chain(st.closed.values().filter(|(d, _)| *d == now.date).flat_map(|(_, t)| t.iter().cloned()))
             .collect();
-        // The measured pace, per subject, unless set by hand.
-        let mut settings = self.store.settings.clone();
-        for d in &settings.domains {
-            if let (false, Some(f)) = (settings.pace.domain_factor.contains_key(&d.id), st.factor(&d.id)) {
-                settings.pace.domain_factor.insert(d.id.clone(), f);
-            }
-        }
+        let settings = self.store.settings.clone();
         let input = Input {
             now,
             settings: &settings,
             domains: &self.store.settings.domains,
-            catalogue: &self.catalogue,
             progress: &st.progress,
             courses: &courses,
             calendar: self.ade.is_some(),
@@ -731,8 +649,8 @@ impl Service {
             away_today: &away_today,
             extra: &st.extra,
             learned,
-            missed_streak: st.missed_streak,
             spent: &spent,
+            done: &st.course_days,
             previous,
         };
         plan::plan(&input)
@@ -752,7 +670,6 @@ impl Service {
         for session in missed {
             let _ = self.store.record(Event::Missed { session }, now);
         }
-        self.suivi_resume();
         let previous = self.plan.clone();
         let fresh = self.compute(&self.store.state, &[], &[], (previous.made.is_some()).then_some(&previous));
         let changed = fresh.sessions != previous.sessions || fresh.offers != previous.offers;
@@ -761,6 +678,7 @@ impl Service {
         let (courses, _) = self.timetable();
         self.sync_khal(&courses);
         self.send_alerts();
+        self.closing_check();
         self.expire_alert();
         if self.next_fetch.is_none() {
             self.schedule_fetch();
@@ -878,28 +796,17 @@ impl Service {
     }
 
     pub(crate) fn on_action(&mut self, session: &str, action: &str) {
-        let now = self.now();
         let result = if action == "start" {
             self.start(session)
         } else if let Some(spec) = action.strip_prefix("away:") {
             self.go_away(spec).map(|_| ()).map_err(io::Error::other)
         } else if action == "back" {
             self.come_back()
-        } else if action == "still:yes" || action == "still:no" {
-            self.still_working(action == "still:yes");
+        } else if action == "launch" {
+            self.launch(session);
             Ok(())
         } else if action == "close" {
-            self.close(session, None, None).map(|_| ())
-        } else if action == "reopen" {
-            self.focus_reopen();
-            Ok(())
-        } else if action == "pause" {
-            self.store.record(Event::Paused { session: session.into(), at: now }, now).map(|_| {
-                self.session_paused(true);
-                self.focus_pause(true);
-            })
-        } else if action.starts_with("detour:") {
-            Ok(())
+            self.close(session, None).map(|_| ())
         } else {
             Ok(())
         };
@@ -908,21 +815,13 @@ impl Service {
         }
     }
 
-    /// Starts a session and opens its file in Liseuse (in focus mode, on
-    /// the session's own workspace).
+    /// Starts a session, and runs its subject's command if it has one.
     pub(crate) fn start(&mut self, session: &str) -> io::Result<()> {
-        self.start_as(session, None)
-    }
-
-    /// `as_planned`: the session as it was when chosen, should the plan
-    /// have moved it meanwhile ("Next file", chosen before the close
-    /// replans the evening).
-    pub(crate) fn start_as(&mut self, session: &str, as_planned: Option<Session>) -> io::Result<()> {
         let now = self.now();
-        let planned = self.plan.sessions.iter().find(|s| s.id == session).cloned().or(as_planned).map(Box::new);
+        let planned = self.plan.sessions.iter().find(|s| s.id == session).cloned().map(Box::new);
         self.store.record(Event::Started { session: session.into(), at: now, planned }, now)?;
-        self.session_started(session);
-        self.focus_open(session);
+        self.watch_start(session);
+        self.launch(session);
         Ok(())
     }
 
@@ -934,7 +833,13 @@ impl Service {
         let open = |s: &&Session| {
             !matches!(st.outcomes.get(&s.id), Some(Outcome::Closed { .. } | Outcome::Skipped | Outcome::Missed))
         };
-        let active = self.plan.sessions.iter().find(|s| matches!(st.outcomes.get(&s.id), Some(Outcome::Started { .. } | Outcome::Paused { .. })));
+        let active = self
+            .watcher
+            .watch
+            .as_ref()
+            .and_then(|w| self.session_any(&w.session))
+            .or_else(|| self.plan.sessions.iter().find(|s| matches!(st.outcomes.get(&s.id), Some(Outcome::Started { .. }))).cloned());
+        let active = active.as_ref();
         let next = self
             .plan
             .sessions
@@ -971,16 +876,11 @@ impl Service {
             },
             // The subjects "I have time" can be given.
             "subjects": self.store.settings.domains.iter().filter(|d| !d.archived).map(|d| d.id.clone()).collect::<Vec<_>>(),
-            "undecided": self.catalogue.pending(&st.progress.files, &self.store.settings.domains).len(),
-            "suivi": self.suivi_status(),
-            "focus": self.focus_status(),
-            "programme": self.programme_alert(),
-            "saved": self.saved(),
+            "tracking": self.watch_status(),
             "upcoming": self.upcoming(),
             "courses": self.courses_ahead(),
             // The next one not begun: Today's "Next", with its Start and Later.
             "then": self.then().map(|s| json!({ "id": s.id, "date": s.date, "start": s.start, "end": s.end, "title": self.headline(s) })),
-            "now_free": if self.away().is_some() { Value::Null } else { self.now_free() },
             "away": self.away().map(|u| self.until_label(u)),
             "later": journee::away_choices(now)
                 .into_iter()
@@ -988,9 +888,8 @@ impl Service {
                 .collect::<Vec<_>>(),
             "alert": self.alert,
             "bedtime": self.store.settings.rhythm.bedtime,
-            "gate": self.store.settings.gate,
             // Nothing set up yet: the bar offers the first run.
-            "setup_needed": self.store.settings.courses.is_none() || self.store.settings.domains.is_empty(),
+            "setup_needed": self.store.settings.domains.is_empty(),
             "today": self.today(),
         })
     }
@@ -1093,8 +992,11 @@ impl Service {
         let apply = cmd.get("apply").and_then(Value::as_bool).unwrap_or(false);
         let io = |e: io::Error| e.to_string();
         let session_arg = |me: &Self| -> Result<Session, String> {
+            let under_way = me.watcher.watch.as_ref().and_then(|w| me.session_any(&w.session));
             match s("session") {
                 Some(id) => me.session_any(&id).ok_or_else(|| format!("{id}?")),
+                // The session under way first, else the next one.
+                None if under_way.is_some() => Ok(under_way.unwrap()),
                 None => me
                     .plan
                     .sessions
@@ -1116,6 +1018,18 @@ impl Service {
                 self.replan();
                 (if fr { format!("Séance {} commencée.", x.id) } else { format!("Session {} started.", x.id) }, Value::Null)
             }
+            "launch" => {
+                // The session's command again (or the first time: it starts).
+                let x = session_arg(self)?;
+                let started = matches!(self.store.state.outcomes.get(&x.id), Some(Outcome::Started { .. }));
+                if !started {
+                    self.start(&x.id).map_err(io)?;
+                    self.replan();
+                } else if !self.launch(&x.id) {
+                    return Err(if fr { format!("{} n'a pas de commande.", self.headline(&x)) } else { format!("{} has no command.", self.headline(&x)) });
+                }
+                (String::new(), Value::Null)
+            }
             "later" => {
                 let until = self.go_away(&s("until").ok_or("until")?)?;
                 self.replan();
@@ -1127,61 +1041,19 @@ impl Service {
                 self.replan();
                 ((if fr { "De retour." } else { "Back." }).into(), Value::Null)
             }
-            "start-now" => {
-                // A suggestion of Today's free time: that task, now, for the time there is.
-                let task = s("task").ok_or("task")?;
-                let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(45) as i32;
-                let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
-                let (text, id) = self.free_task(minutes, place, &task)?;
-                if let Some(id) = &id {
-                    self.start(id).map_err(io)?;
-                    self.replan();
-                }
-                (text, json!({ "session": id }))
-            }
             "free" => {
                 let minutes = cmd.get("minutes").and_then(Value::as_i64).unwrap_or(60) as i32;
                 let place = if s("place").as_deref() == Some("school") { Place::School } else { Place::Home };
-                let (text, id) = match (s("item").filter(|i| !i.is_empty()), s("subject").filter(|d| !d.is_empty())) {
-                    _ if s("project").is_some_and(|p| !p.is_empty()) => self.free_project(minutes, place, &s("project").unwrap_or_default())?,
-                    (Some(i), _) => self.free_item(minutes, place, &i)?,
-                    (None, Some(d)) => self.free_time_for(minutes, place, &d)?,
-                    (None, None) => self.free_time(minutes, place).map_err(io)?,
+                let (text, id) = match s("subject").filter(|d| !d.is_empty()) {
+                    Some(d) => self.free_time_for(minutes, place, &d)?,
+                    None => self.free_time(minutes, place).map_err(io)?,
                 };
-                // Right away: started, into the study dimension.
+                // Right away: started, its command run.
                 if let Some(id) = &id {
                     self.start(id).map_err(io)?;
                     self.replan();
                 }
                 (text, json!({ "session": id }))
-            }
-            "pause-session" => {
-                let x = session_arg(self)?;
-                self.store.record(Event::Paused { session: x.id.clone(), at: now }, now).map_err(io)?;
-                self.session_paused(true);
-                self.focus_pause(true);
-                self.replan();
-                (String::new(), Value::Null)
-            }
-            "resume-session" => {
-                let x = session_arg(self)?;
-                // Another one under way, or tracked: it is saved first.
-                let tracked = self.suivi.tracker.as_ref().and_then(|t| t.session.clone());
-                if let Some(other) = tracked.filter(|o| *o != x.id) {
-                    if matches!(self.store.state.outcomes.get(&other), Some(Outcome::Started { .. })) {
-                        self.store.record(Event::Paused { session: other.clone(), at: now }, now).map_err(io)?;
-                    }
-                    self.session_paused(true);
-                    self.suivi.tracker = None;
-                }
-                self.store.record(Event::Resumed { session: x.id.clone(), at: now }, now).map_err(io)?;
-                if self.suivi.tracker.is_none() {
-                    self.session_started(&x.id);
-                }
-                self.session_paused(false);
-                self.focus_pause(false);
-                self.replan();
-                (String::new(), Value::Null)
             }
             "hello" => (String::new(), Value::Null),
             "answer" => {
@@ -1190,115 +1062,19 @@ impl Service {
                 let done = self.answer(&key, &action)?;
                 (done, Value::Null)
             }
-            "activity" => {
-                self.set_activity(cmd.get("idle").and_then(Value::as_bool), cmd.get("media").and_then(Value::as_bool), s("title"));
-                (String::new(), Value::Null)
-            }
-            "editor" => {
-                let file = s("file").map(PathBuf::from);
-                let focused = cmd.get("focus").and_then(Value::as_bool).unwrap_or(false);
-                let written = cmd.get("written").and_then(Value::as_i64).unwrap_or(0);
-                self.editor(file, focused, written);
-                (String::new(), Value::Null)
-            }
-            "paper" => {
-                self.still_working(true);
-                (String::new(), Value::Null)
-            }
-            "reopen" => {
-                self.focus_reopen();
-                (String::new(), Value::Null)
-            }
-            "open-item" => {
-                self.focus_open_item(&s("item").ok_or("item")?);
-                (String::new(), Value::Null)
-            }
-            "still" => {
-                self.still_working(cmd.get("yes").and_then(Value::as_bool).unwrap_or(true));
-                (String::new(), Value::Null)
-            }
-            "draft" => {
-                let x = session_arg(self)?;
-                let d = self.draft(&x.id).ok_or("draft")?;
-                (draft_text(&d, &x, lang), serde_json::to_value(&d).unwrap())
-            }
             "week" => {
                 let days = cmd.get("days").and_then(Value::as_i64).unwrap_or(7) as i32;
                 (String::new(), self.week(now.date, days))
             }
-            "files-view" => (String::new(), self.files_view()),
             "suggestions" => (String::new(), self.suggestions()),
-            "library" => (String::new(), self.library()),
-            "plan-structured" => {
-                let n = self.plan_structured().map_err(io)?;
-                (n.to_string(), json!(n))
-            }
-            "progress-view" => (String::new(), self.progress_view()),
-            "weeks-view" => (String::new(), self.weeks_view()),
-            "what-if" => {
-                // The margins with these settings, nothing kept.
-                let patch = cmd.get("patch").cloned().ok_or("patch")?;
-                let mut v = serde_json::to_value(&self.store.settings).unwrap();
-                merge(&mut v, &patch);
-                let trial: Settings = serde_json::from_value(v).map_err(|e| e.to_string())?;
-                let kept = std::mem::replace(&mut self.store.settings, trial);
-                let plan = self.compute(&self.store.state, &[], &[], Some(&self.plan));
-                self.store.settings = kept;
-                let margins: Vec<Value> = plan
-                    .margins
-                    .iter()
-                    .map(|m| json!({ "domain": m.domain, "title": m.title, "date": i18n::date(m.date, lang), "sessions": m.sessions }))
-                    .collect();
-                (String::new(), json!(margins))
-            }
-            "closing" => {
-                let x = session_arg(self)?;
-                let v = self.closing(&x.id).ok_or("closing")?;
-                (String::new(), v)
-            }
-            "close" => {
+            "folders" => (String::new(), json!(self.course_folders())),
+            "close" | "done" => {
                 let x = session_arg(self)?;
                 let parts = match cmd.get("parts") {
                     Some(p) => Some(serde_json::from_value(p.clone()).map_err(|e| e.to_string())?),
                     None => None,
                 };
-                let media = cmd.get("media_for_course").and_then(Value::as_bool);
-                // "Next file": the next session of the evening starts in place.
-                let then = s("then").and_then(|t| self.plan.session(&t).cloned());
-                self.focus.chaining = then.is_some() && self.focus_active();
-                let closed = self.close(&x.id, parts, media);
-                self.focus.chaining = false;
-                closed.map_err(io)?;
-                if let Some(next) = then {
-                    self.start_as(&next.id.clone(), Some(next)).map_err(io)?;
-                    self.replan();
-                }
-                (self.changes_text(), Value::Null)
-            }
-            "done" => {
-                let x = session_arg(self)?;
-                let parts: Vec<PartReport> = match cmd.get("parts") {
-                    Some(p) => serde_json::from_value(p.clone()).map_err(|e| e.to_string())?,
-                    // Everything as planned.
-                    None => x
-                        .parts
-                        .iter()
-                        .map(|p| PartReport {
-                            task: p.task.clone(),
-                            minutes: p.minutes,
-                            planned: p.minutes,
-                            done: true,
-                            read_upto: study_upto(&p.work),
-                            exercises: study_exercises(&p.work),
-                            assessment: Some(Assessment::Understood),
-                            note: None,
-                        })
-                        .collect(),
-                };
-                let minutes = parts.iter().map(|p| p.minutes).sum();
-                let tracking = self.session_closed(None);
-                self.store.record(Event::Closed { session: x.id.clone(), at: now, minutes, parts, tracking }, now).map_err(io)?;
-                self.replan();
+                self.close(&x.id, parts).map_err(io)?;
                 (self.changes_text(), Value::Null)
             }
             "add" => {
@@ -1389,24 +1165,6 @@ impl Service {
                 self.replan();
                 (self.changes_text(), Value::Null)
             }
-            "files" => {
-                if let (Some(items), Some(inc)) = (cmd.get("items"), s("inclusion")) {
-                    let items: Vec<String> = serde_json::from_value(items.clone()).map_err(|e| e.to_string())?;
-                    if let Some(bad) = items.iter().find(|i| self.catalogue.get(i).is_none()) {
-                        return Err(if fr { format!("« {bad} » n'est pas dans le dossier de cours.") } else { format!("“{bad}” is not in the course folder.") });
-                    }
-                    let inclusion = if inc == "planned" { Inclusion::Planned } else { Inclusion::Ignored };
-                    self.store.record(Event::Files { items, inclusion }, now).map_err(io)?;
-                    self.replan();
-                }
-                let new: Vec<String> = self
-                    .catalogue
-                    .pending(&self.store.state.progress.files, &self.store.settings.domains)
-                    .iter()
-                    .map(|i| i.id.clone())
-                    .collect();
-                (new.join("\n"), json!(new))
-            }
             "deadlines" => {
                 let (_, cal) = self.timetable();
                 let all = self.deadlines(cal);
@@ -1469,11 +1227,6 @@ impl Service {
                     .collect();
                 (lines.join("\n"), serde_json::to_value(&self.store.state.campaigns).unwrap())
             }
-            "room" => {
-                let id = s("session").ok_or("session")?;
-                (String::new(), self.room(&id).unwrap_or(Value::Null))
-            }
-            // A module's level, from its room.
             "level" => {
                 let d = s("domain").ok_or("domain")?;
                 let level: Level = serde_json::from_value(json!(s("level").ok_or("level")?)).map_err(|e| e.to_string())?;
@@ -1491,12 +1244,8 @@ impl Service {
                 merge(&mut v, &patch);
                 let settings: Settings = serde_json::from_value(v).map_err(|e| e.to_string())?;
                 let url_changed = settings.calendar_url != self.store.settings.calendar_url;
-                let courses_changed = settings.courses != self.store.settings.courses || settings.ignore != self.store.settings.ignore;
                 self.store.settings = settings;
                 self.store.save_settings().map_err(io)?;
-                if courses_changed {
-                    self.rescan();
-                }
                 if url_changed {
                     self.ade = None;
                     self.fetch();
@@ -1523,24 +1272,8 @@ impl Service {
             "refresh" => {
                 self.fetch();
                 self.spawn_khal();
-                self.rescan();
                 self.replan();
                 (String::new(), Value::Null)
-            }
-            "gate" => {
-                let active = self.plan.sessions.iter().find(|x| {
-                    matches!(self.store.state.outcomes.get(&x.id), Some(Outcome::Started { .. }))
-                        && x.date == now.date
-                        && x.end > now.time
-                });
-                match (self.store.settings.gate, active) {
-                    (true, Some(x)) => {
-                        let what = x.parts.first().map(|p| format!("{}{}", p.domain.as_deref().map(|d| format!("{d} ")).unwrap_or_default(), i18n::work(&p.work, lang))).unwrap_or_default();
-                        let text = if fr { format!("Séance {what} jusqu'à {}", x.end) } else { format!("Session {what} until {}", x.end) };
-                        (text, json!({ "locked": true, "session": x.id, "match": self.store.settings.gate_match }))
-                    }
-                    _ => (String::new(), json!({ "locked": false })),
-                }
             }
             _ => return Err(format!("{name}?")),
         };
@@ -1569,10 +1302,17 @@ impl Service {
         if let Some(e) = v["calendar"]["error"].as_str() {
             lines.push(if fr { format!("Dernière récupération ADE en échec ({e}) : l'emploi du temps gardé est le précédent.") } else { format!("Last ADE download failed ({e}): the previous timetable is kept.") });
         }
-        lines.extend(crate::suivi::status_lines(&v["suivi"], fr));
-        let n = v["undecided"].as_u64().unwrap_or(0);
-        if n > 0 {
-            lines.push(if fr { format!("{n} fichiers à planifier (boussole files).") } else { format!("{n} files to plan (boussole files).") });
+        let t = &v["tracking"];
+        if let (Some(id), Some(secs)) = (t["session"].as_str(), t["effective_secs"].as_i64()) {
+            let state = match (t["watched"] == true, t["counting"] == true, fr) {
+                (true, true, true) => "devant le cours",
+                (true, true, false) => "on the course",
+                (true, false, true) => "ailleurs",
+                (true, false, false) => "elsewhere",
+                _ => "",
+            };
+            let m = format!("{} min", secs / 60);
+            lines.push(if fr { format!("En cours : {id}, {m} effectives. {state}") } else { format!("Under way: {id}, {m} effective. {state}") }.trim().to_string());
         }
         lines.join("\n")
     }
@@ -1603,16 +1343,6 @@ impl Service {
             lines.sort_by_key(|l| l.0);
             out.push(i18n::date(day, lang));
             out.extend(lines.into_iter().map(|l| l.1));
-        }
-        if !self.plan.margins.is_empty() {
-            out.push(String::new());
-            for m in &self.plan.margins {
-                out.push(if self.fr() {
-                    format!("Marge avant {} ({}) : {} séances", m.title, i18n::date(m.date, lang), m.sessions)
-                } else {
-                    format!("Margin before {} ({}): {} sessions", m.title, i18n::date(m.date, lang), m.sessions)
-                });
-            }
         }
         out.join("\n")
     }
@@ -1682,40 +1412,6 @@ impl Service {
         Value::Array(rows)
     }
 
-    /// Sessions stopped without Close, to take up again: the time left,
-    /// the file and the page they were left at.
-    pub(crate) fn saved(&self) -> Value {
-        let st = &self.store.state;
-        let t = self.suivi.tracker.as_ref();
-        let counting = t.filter(|t| !t.flags.paused).and_then(|t| t.session.clone());
-        let mut out: Vec<(String, Value)> = Vec::new();
-        for (id, o) in &st.outcomes {
-            let at = match o {
-                Outcome::Paused { at } => *at,
-                Outcome::Started { at } if counting.as_deref() != Some(id.as_str()) => *at,
-                _ => continue,
-            };
-            let Some(s) = self.session_any(id) else { continue };
-            let mine = t.filter(|t| t.session.as_deref() == Some(id.as_str()));
-            let spent = mine.map_or(0, |t| (t.effective / 60) as i32);
-            let left = (s.end.0 - s.start.0 - spent).max(0);
-            let last = mine.and_then(|t| t.visits.last());
-            out.push((
-                at.to_string(),
-                json!({
-                    "id": id,
-                    "title": self.headline(&s),
-                    "left": left,
-                    "file": last.map(|(_, i, _)| i18n::item_name(i)),
-                    "page": last.map(|(_, _, p)| p),
-                    "since": if at.date == self.now().date { at.time.to_string() } else { i18n::local(at, self.lang()) },
-                }),
-            ));
-        }
-        out.sort_by(|a, b| b.0.cmp(&a.0));
-        Value::Array(out.into_iter().map(|x| x.1).collect())
-    }
-
     /// "Later, until…": nothing planned, rung or offered before then; what
     /// was planned meanwhile is placed again after it.
     pub(crate) fn go_away(&mut self, spec: &str) -> Result<Local, String> {
@@ -1769,37 +1465,22 @@ impl Service {
         }
     }
 
-    /// "I have time": a session right away. When one is already due now, that
-    /// one; else time found on the spot, filled like any slot.
-    /// "I have time" for one subject: its next planned task, now, in its
-    /// order (the plan's), pinned into the time found.
+    /// "I have time" for one subject: a session of it, now, pinned into
+    /// the time found.
     fn free_time_for(&mut self, minutes: i32, place: Place, subject: &str) -> Result<(String, Option<String>), String> {
         let fr = self.fr();
-        let missing = if fr { format!("Rien de prévu en {subject} pour l'instant.") } else { format!("Nothing planned in {subject} for now.") };
-        self.free_time_with(minutes, place, |p| p.domain.as_deref() == Some(subject), missing)
+        let missing = if fr { format!("{subject} n'a pas de séances.") } else { format!("{subject} has no sessions.") };
+        if !self.store.settings.domains.iter().any(|d| d.id == subject && !d.archived && d.level.studies()) {
+            return Err(missing);
+        }
+        let part = crate::plan::Part { task: crate::plan::course_task(subject), domain: Some(subject.to_string()), minutes, work: crate::plan::Work::Course };
+        self.free_time_with(minutes, place, part)
     }
 
-    /// One task of the plan, now, in the time found ("Start" on a
-    /// suggestion of Today's free time).
-    pub(crate) fn free_task(&mut self, minutes: i32, place: Place, task: &str) -> Result<(String, Option<String>), String> {
-        let missing = (if self.fr() { "Cette tâche n'est plus au planning." } else { "That task is no longer planned." }).to_string();
-        self.free_time_with(minutes, place, |p| p.task == task, missing)
-    }
-
-    fn free_time_with(&mut self, minutes: i32, place: Place, pick: impl Fn(&crate::plan::Part) -> bool, missing: String) -> Result<(String, Option<String>), String> {
+    fn free_time_with(&mut self, minutes: i32, place: Place, part: crate::plan::Part) -> Result<(String, Option<String>), String> {
         let fr = self.fr();
         let lang = self.lang();
         let now = self.now();
-        let st = &self.store.state;
-        let part = self
-            .plan
-            .sessions
-            .iter()
-            .filter(|s| Local::new(s.date, s.end) > now && !st.outcomes.contains_key(&s.id))
-            .flat_map(|s| s.parts.iter())
-            .find(|p| pick(p))
-            .cloned()
-            .ok_or(missing)?;
         let subject = part.domain.clone().unwrap_or_default();
         let extra = crate::journee::Extra { date: now.date, start: now.time.ceil(5), minutes: minutes.max(10), place };
         let pin = Pin {
@@ -1817,11 +1498,7 @@ impl Service {
         Ok(match s {
             Some(s) => {
                 let what = format!("{subject} {}", i18n::work(&s.parts[0].work, lang));
-                let text = if fr {
-                    format!("{what} ({} min), maintenant, dans l'ordre du programme.", s.parts[0].minutes)
-                } else {
-                    format!("{what} ({} min), now, in the plan's order.", s.parts[0].minutes)
-                };
+                let text = if fr { format!("{what} ({} min), maintenant.", s.parts[0].minutes) } else { format!("{what} ({} min), now.", s.parts[0].minutes) };
                 (text, Some(s.id.clone()))
             }
             None => ((if fr { "Pas de place pour ça maintenant." } else { "No room for it now." }).into(), None),
@@ -1856,11 +1533,7 @@ impl Service {
         Ok(match first {
             Some(s) => {
                 let what = format!("{}{}", s.parts[0].domain.as_deref().map(|d| format!("{d} ")).unwrap_or_default(), i18n::work(&s.parts[0].work, lang));
-                let text = if fr {
-                    format!("{what} ({} min), maintenant. Ce que tu fais là avance le programme.", s.parts[0].minutes)
-                } else {
-                    format!("{what} ({} min), now. What you do here moves the plan forward.", s.parts[0].minutes)
-                };
+                let text = if fr { format!("{what} ({} min), maintenant.", s.parts[0].minutes) } else { format!("{what} ({} min), now.", s.parts[0].minutes) };
                 (text, Some(s.id.clone()))
             }
             None => ((if fr { "Rien de prévu ne tient dans ce temps." } else { "Nothing planned fits in that time." }).into(), None),
@@ -1869,88 +1542,48 @@ impl Service {
 }
 
 impl Service {
-    /// "Close": the user's report, or else the pre-filled one, with what
-    /// the tracking measured. Media time counts only if it was for the course.
-    pub(crate) fn close(&mut self, session: &str, parts: Option<Vec<PartReport>>, media_for_course: Option<bool>) -> io::Result<()> {
+    /// "Done": every part done as planned unless said otherwise, the time
+    /// in front of the course spread over them.
+    pub(crate) fn close(&mut self, session: &str, parts: Option<Vec<PartReport>>) -> io::Result<()> {
         let now = self.now();
-        let draft = self.draft(session);
-        let mut parts = parts.or_else(|| draft.as_ref().map(|d| d.parts.clone())).unwrap_or_default();
-        // A project's files read in its session count as read, like a
-        // sheet studied in a course session.
-        if let (Some(d), Some(s)) = (draft.as_ref(), self.session_any(session)) {
-            for f in &d.files {
-                let held = s.parts.iter().any(|p| match &p.work {
-                    Work::Project { project, .. } => self.store.state.projects.iter().any(|x| &x.id == project && x.holds(&f.item)),
-                    _ => false,
-                });
-                if !held || f.read.is_empty() || parts.iter().any(|p| p.task.ends_with(&format!(":{}", f.item))) {
-                    continue;
-                }
-                let last = self.catalogue.get(&f.item).and_then(|i| i.sections.last().map(|x| x.num));
-                let done = match (last, f.read_upto) {
-                    (Some(l), Some(u)) => u >= l,
-                    (None, _) => true,
-                    _ => false,
-                };
-                parts.push(PartReport { task: format!("study:{}", f.item), read_upto: f.read_upto, done, ..PartReport::default() });
-            }
-        }
-        let effective = draft.as_ref().map_or(0, |d| d.effective_minutes - if media_for_course == Some(false) { d.media_minutes } else { 0 });
-        let reported: i32 = parts.iter().map(|p| p.minutes).sum();
-        if reported == 0 && effective > 0 {
+        let effective = self.watch_stop(session);
+        let s = self.session_any(session);
+        let mut parts = parts.unwrap_or_else(|| {
+            s.iter()
+                .flat_map(|s| s.parts.iter())
+                .map(|p| PartReport { task: p.task.clone(), minutes: p.minutes, planned: p.minutes, done: true, note: None })
+                .collect()
+        });
+        if let Some(effective) = effective {
             let planned: i32 = parts.iter().map(|p| p.planned).sum::<i32>().max(1);
             for p in &mut parts {
                 p.minutes = effective * p.planned / planned;
             }
         }
         let minutes = parts.iter().map(|p| p.minutes).sum();
-        let tracking = self.session_closed(media_for_course);
-        self.store.record(Event::Closed { session: session.into(), at: now, minutes, parts, tracking }, now)?;
+        self.store.record(Event::Closed { session: session.into(), at: now, minutes, parts }, now)?;
         self.replan();
-        self.focus_end();
         Ok(())
     }
-}
 
-fn draft_text(d: &crate::seance::Draft, s: &Session, lang: Lang) -> String {
-    let fr = lang == Lang::Fr;
-    let mut out = vec![if fr {
-        format!("{} · {} min effectives", s.id, d.effective_minutes)
-    } else {
-        format!("{} · {} effective min", s.id, d.effective_minutes)
-    }];
-    for (p, r) in s.parts.iter().zip(&d.parts) {
-        let upto = r.read_upto.map(|u| format!(" · lu jusqu'au §{u}")).unwrap_or_default();
-        out.push(format!("  {} ({} min){upto}", i18n::work(&p.work, lang), r.minutes));
+    /// A session from today's plan, or one started another day.
+    pub(crate) fn session_any(&self, id: &str) -> Option<Session> {
+        self.plan.session(id).cloned().or_else(|| self.store.state.started.get(id).cloned())
     }
-    for f in &d.files {
-        let name = i18n::item_name(&f.item);
-        out.push(if fr {
-            format!("  {name} : {} pages lues, {} survolées", f.read.len(), f.skimmed.len())
-        } else {
-            format!("  {name}: {} pages read, {} skimmed", f.read.len(), f.skimmed.len())
-        });
-        if let Some((day, upto)) = f.before {
-            out.push(if fr { format!("    déjà lu jusqu'au §{upto} le {}, à confirmer", i18n::date(day, lang)) } else { format!("    read up to §{upto} on {}, to confirm", i18n::date(day, lang)) });
-        }
-    }
-    if d.media_minutes > 0 {
-        out.push(if fr { format!("Une vidéo a joué {} min : pour le cours ?", d.media_minutes) } else { format!("A video played for {} min: for the course?", d.media_minutes) });
-    }
-    out.join("\n")
-}
 
-fn study_upto(w: &Work) -> Option<u32> {
-    match w {
-        Work::Study { sections: Some((_, b)), .. } => Some(*b),
-        _ => None,
-    }
-}
-
-fn study_exercises(w: &Work) -> BTreeMap<u32, Exercise> {
-    match w {
-        Work::Study { exercises: Some((a, b)), .. } => (*a..=*b).map(|n| (n, Exercise::Solo)).collect(),
-        _ => BTreeMap::new(),
+    /// The course folder's subjects: its folders, `_` and `.` ones aside.
+    pub(crate) fn course_folders(&self) -> Vec<String> {
+        let Some(root) = &self.store.settings.courses else { return Vec::new() };
+        let mut out: Vec<String> = std::fs::read_dir(root)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| !n.starts_with('.') && !n.starts_with('_'))
+            .collect();
+        out.sort();
+        out
     }
 }
 
@@ -1974,8 +1607,7 @@ fn event_label(e: &Event) -> String {
         Event::Extra { extra } => format!("time found {} {} ({} min)", extra.date, extra.start, extra.minutes),
         Event::Missed { session } => format!("missed {session}"),
         Event::Paused { session, .. } => format!("pause {session}"),
-        Event::Closed { session, .. } => format!("close {session}"),
-        Event::Files { items, inclusion } => format!("{} file(s) {inclusion:?}", items.len()),
+        Event::Closed { session, .. } => format!("done {session}"),
         Event::Deadline { deadline } => deadline.title.clone(),
         Event::DeadlineRemoved { id } => format!("− {id}"),
         Event::Project { project } => project.name.clone(),
@@ -1988,8 +1620,7 @@ fn event_label(e: &Event) -> String {
         Event::Unpin { task } => format!("unpin {task}"),
         Event::Undo { of } => format!("undo #{of}"),
         Event::Resumed { session, .. } => format!("resume {session}"),
-        Event::FreeReading { item, upto, .. } => format!("{} §{upto}", i18n::item_name(item)),
-        Event::Context { label, verdict, .. } => format!("{label}: {verdict:?}"),
+        Event::Legacy { ev } => ev.clone(),
     }
 }
 

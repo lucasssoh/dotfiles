@@ -1,10 +1,9 @@
-//! A small course tree, a school week and a builder for the planner's input.
+//! A school week, three subjects and a builder for the planner's input.
 
 #![allow(dead_code)]
 
-use std::path::{Path, PathBuf};
+use std::collections::BTreeMap;
 
-use boussole::catalogue::{Catalogue, Ignore, Inclusion};
 use boussole::model::*;
 use boussole::plan::{self, Input, Pin, Plan};
 use boussole::time::{Date, Hm, Local};
@@ -18,60 +17,6 @@ pub fn at(date: Date, hm: &str) -> Local {
 
 pub fn hm(s: &str) -> Hm {
     Hm::parse(s).unwrap()
-}
-
-fn sheet(sections: u32, exercises: u32) -> String {
-    let mut s = String::from("# A sheet\n\n| | |\n|---|---|\n\n");
-    for n in 1..=sections {
-        s += &format!("## {n}. Section {n}\n\ntext\n\n");
-    }
-    s += &format!("## {}. Exercices\n\n", sections + 1);
-    for n in 1..=exercises {
-        s += &format!("### Exercice {n} — something\n\n<details>solution</details>\n\n");
-    }
-    s
-}
-
-/// A course tree in a fresh temporary folder.
-pub fn tree(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!("boussole-test-{}-{name}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    let files: Vec<(&str, String)> = vec![
-        (
-            "ALGO/Ch1/00_Carte_du_cours.md",
-            "# Map\n\n```\nCh1/\n├── 10_Bloc/\n│   ├── 11_A.md     intro\n│   └── 12_B.md     ★ the proof to know\n└── 20_Bloc/\n    └── 21_C.md\n```\n".into(),
-        ),
-        ("ALGO/Ch1/10_Bloc/11_A.md", sheet(4, 3)),
-        ("ALGO/Ch1/10_Bloc/12_B.md", sheet(4, 3)),
-        ("ALGO/Ch1/20_Bloc/21_C.md", sheet(4, 2)),
-        ("ALGO/Ch1/90_Exercices/91_Synthese.md", "# Synth\n\n## Exercice 1 — a\n\n## Exercice 2 — b\n".into()),
-        ("ALGO/Ch1/90_Exercices/93_Sujets_type_examen.md", "# Sujets type examen\n\n# Sujet A — x\n\n### Partie 1\n\n# Sujet B — y\n".into()),
-        ("ALGO/00_Index.md", "# index".into()),
-        ("ALGO/roadmap.md", "# notes for agents".into()),
-        ("ALGO/References/book.pdf", "%PDF".into()),
-        ("ALGO/.hidden/x.md", "# hidden".into()),
-        ("LOGIC/Lambda/00_Carte_du_cours.md", "# Map\n".into()),
-        ("LOGIC/Lambda/10_Syntaxe/11_Termes.md", sheet(4, 3)),
-        ("LOGIC/Lambda/10_Syntaxe/12_Substitution.md", sheet(4, 3)),
-        ("LOGIC/Lambda/90_Exercices/93_Sujet_type_examen.md", "# Sujet type examen — λ (1 h 30)\n\n### Partie 1\n".into()),
-        ("NET/cours-intro.pdf", "%PDF".into()),
-        ("NET/notes-cm1.md", "# Notes du CM 1\n".into()),
-        ("NET/TD/00_Sommaire.md", "# TD\n".into()),
-        ("NET/TD/10_Perf/Exo_02_Second.md", "# Exercice 2 — b\n".into()),
-        ("NET/TD/10_Perf/Exo_01_First.md", "# Exercice 1 — a\n".into()),
-    ];
-    for (path, body) in files {
-        let p = root.join(path);
-        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-        std::fs::write(p, body).unwrap();
-    }
-    root
-}
-
-pub fn write(root: &Path, path: &str, body: &str) {
-    let p = root.join(path);
-    std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-    std::fs::write(p, body).unwrap();
 }
 
 pub fn course(date: Date, from: &str, to: &str, kind: CourseKind, domain: &str) -> Course {
@@ -110,10 +55,8 @@ pub fn weeks(monday: Date, n: i32) -> Vec<Course> {
 }
 
 pub struct Fx {
-    pub root: PathBuf,
     pub settings: Settings,
     pub domains: Vec<Domain>,
-    pub catalogue: Catalogue,
     pub progress: Progress,
     pub courses: Vec<Course>,
     pub calendar: bool,
@@ -126,31 +69,18 @@ pub struct Fx {
     pub away_today: Vec<String>,
     pub extra: Vec<boussole::journee::Extra>,
     pub learned: [Option<Hm>; 7],
-    pub missed_streak: u32,
     pub spent: Vec<String>,
+    pub done: BTreeMap<String, Vec<(Date, i32)>>,
 }
 
 impl Fx {
-    /// The tree, every structured file planned, ten school weeks.
-    pub fn new(name: &str) -> Fx {
-        let root = tree(name);
-        let catalogue = Catalogue::scan(&root, &Ignore::default());
-        let mut progress = Progress::default();
-        for i in &catalogue.items {
-            use boussole::catalogue::ItemKind::*;
-            let plan = !matches!(i.kind, Pdf | Notes);
-            progress.files.insert(i.id.clone(), if plan { Inclusion::Planned } else { Inclusion::Ignored });
-        }
-        let domains = ["ALGO", "LOGIC", "NET"]
-            .iter()
-            .map(|id| Domain { id: id.to_string(), spaced: true, ..Domain::default() })
-            .collect();
+    /// Three subjects, ten school weeks.
+    pub fn new(_name: &str) -> Fx {
+        let domains = ["ALGO", "LOGIC", "NET"].iter().map(|id| Domain { id: id.to_string(), ..Domain::default() }).collect();
         Fx {
-            root,
             settings: Settings::default(),
             domains,
-            catalogue,
-            progress,
+            progress: Progress::default(),
             courses: weeks(MON, 10),
             calendar: true,
             busy: Vec::new(),
@@ -162,13 +92,9 @@ impl Fx {
             away_today: Vec::new(),
             extra: Vec::new(),
             learned: [None; 7],
-            missed_streak: 0,
             spent: Vec::new(),
+            done: BTreeMap::new(),
         }
-    }
-
-    pub fn rescan(&mut self) {
-        self.catalogue = Catalogue::scan(&self.root, &Ignore::default());
     }
 
     pub fn input<'a>(&'a self, now: Local, previous: Option<&'a Plan>) -> Input<'a> {
@@ -176,7 +102,6 @@ impl Fx {
             now,
             settings: &self.settings,
             domains: &self.domains,
-            catalogue: &self.catalogue,
             progress: &self.progress,
             courses: &self.courses,
             calendar: self.calendar,
@@ -189,8 +114,8 @@ impl Fx {
             away_today: &self.away_today,
             extra: &self.extra,
             learned: self.learned,
-            missed_streak: self.missed_streak,
             spent: &self.spent,
+            done: &self.done,
             previous,
         }
     }
@@ -214,16 +139,6 @@ impl Fx {
             hours: None,
             spent_minutes: 0,
         });
-    }
-
-    pub fn id(&self, suffix: &str) -> String {
-        self.catalogue.items.iter().find(|i| i.id.ends_with(suffix)).unwrap_or_else(|| panic!("no {suffix}")).id.clone()
-    }
-}
-
-impl Drop for Fx {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.root);
     }
 }
 

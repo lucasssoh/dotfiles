@@ -1,5 +1,5 @@
 //! What the planner is told: settings, domains, deadlines, projects,
-//! campaigns, progress. Generic on purpose: a domain is a subject while
+//! campaigns, what was done. Generic on purpose: a domain is a subject while
 //! studying, a deadline an exam; the words "subject" and "exam" only exist in
 //! the interface's study mode.
 
@@ -29,15 +29,6 @@ pub enum Objective {
 }
 
 impl Objective {
-    /// Weeks before an exam that timed exam-type subjects start.
-    pub fn exam_practice_weeks(self) -> i32 {
-        match self {
-            Objective::Pass => 2,
-            Objective::Ranked => 3,
-            Objective::Podium => 4,
-        }
-    }
-
     /// Counted sessions kept free just before each exam.
     pub fn margin_sessions(self) -> usize {
         match self {
@@ -45,11 +36,6 @@ impl Objective {
             Objective::Ranked => 1,
             Objective::Podium => 2,
         }
-    }
-
-    /// An exercise done with the solution open counts as acquired.
-    pub fn solution_counts(self) -> bool {
-        self != Objective::Podium
     }
 }
 
@@ -189,9 +175,8 @@ pub struct Settings {
     pub pace: Pace,
     /// Measured estimate bias on projects: 1.4 = takes 40 % longer than guessed.
     pub project_bias: f32,
-    /// The course folder, read only.
+    /// The course folder, one folder per subject; never written.
     pub courses: Option<PathBuf>,
-    pub ignore: crate::catalogue::Ignore,
     pub domains: Vec<Domain>,
     /// The timetable's iCal address (never in the repository).
     pub calendar_url: Option<String>,
@@ -199,31 +184,6 @@ pub struct Settings {
     pub groups: BTreeMap<String, Vec<String>>,
     /// When the evening recap falls if no session ends the day.
     pub recap: Hm,
-    /// Ask before a game starts during a session.
-    pub gate: bool,
-    /// Commands the gate asks about (a word of the command line).
-    pub gate_match: Vec<String>,
-    /// Process names that mean a game is running (Steam's reaper, …).
-    pub game_processes: Vec<String>,
-    /// Starting a session puts you in front of its file.
-    pub focus: Focus,
-}
-
-/// Focus mode: a session happens in the study dimension (workspaces of
-/// its own), its file open in Liseuse beside the session's panel.
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-#[serde(default)]
-pub struct Focus {
-    pub enabled: bool,
-    /// Close: the windows left in the dimension are closed (a browser or
-    /// an app forgotten there holds its memory until the next session).
-    pub tidy: bool,
-}
-
-impl Default for Focus {
-    fn default() -> Focus {
-        Focus { enabled: false, tidy: true }
-    }
 }
 
 impl Default for Settings {
@@ -240,62 +200,25 @@ impl Default for Settings {
             pace: Pace::default(),
             project_bias: 1.0,
             courses: None,
-            ignore: crate::catalogue::Ignore::default(),
             domains: Vec::new(),
             calendar_url: None,
             groups: BTreeMap::new(),
             recap: Hm::new(21, 30),
-            gate: true,
-            gate_match: ["steam", "lutris", "heroic", "gamescope", "umu-run", "wine"].map(String::from).to_vec(),
-            game_processes: ["reaper", "gamescope", "gamescope-wl", "lutris-wrapper", "umu-run", "wine64-preloader", "wine-preloader"]
-                .map(String::from)
-                .to_vec(),
-            focus: Focus::default(),
         }
     }
 }
 
-/// Minutes per piece of work, measured from the journal once there is one.
+/// Minutes for the work that is not a course session.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Pace {
-    /// Opening, header table, closing.
-    pub overhead: i32,
-    /// Reading all of a sheet's sections (split evenly between them).
-    pub reading: i32,
-    pub recall: i32,
-    pub exercise: i32,
-    pub map: i32,
-    pub pdf: i32,
-    pub notes: i32,
-    pub review: i32,
-    pub redo: i32,
-    pub question: i32,
     pub td_prep: i32,
-    pub exam_subject: i32,
     pub interview_prep: i32,
-    /// Per-domain multiplier, from the measured pace.
-    pub domain_factor: BTreeMap<String, f32>,
 }
 
 impl Default for Pace {
     fn default() -> Pace {
-        Pace {
-            overhead: 10,
-            reading: 20,
-            recall: 10,
-            exercise: 12,
-            map: 20,
-            pdf: 60,
-            notes: 30,
-            review: 15,
-            redo: 15,
-            question: 10,
-            td_prep: 30,
-            exam_subject: 90,
-            interview_prep: 45,
-            domain_factor: BTreeMap::new(),
-        }
+        Pace { td_prep: 30, interview_prep: 45 }
     }
 }
 
@@ -306,46 +229,73 @@ pub struct Domain {
     pub id: String,
     /// Names of its courses in the calendar feed, matched loosely.
     pub calendar_names: Vec<String>,
-    /// Spaced reviews after each studied item.
-    pub spaced: bool,
     pub archived: bool,
-    /// Work order set by hand, item ids; the rest follows file order.
-    pub order: Vec<String>,
-    /// Stars set or removed by hand, over the course map's.
-    pub stars: BTreeMap<String, bool>,
     /// How the user rates themself in it.
     pub level: Level,
-    /// A course subject: its sheets are lessons, read and recalled, their
-    /// exercises left to the exercise files, tutorials and exam subjects
-    /// ("ce sont du cours, seuls les exercices prennent autant de temps").
-    pub lessons: bool,
+    /// What starting one of its sessions runs, `{folder}` standing for its
+    /// folder (`boussole open {folder} --resume`); none: nothing is opened.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub launch: Option<String>,
+}
+
+/// What `subject launch ID on` sets: the subject in Boussole, where it
+/// was left.
+pub const BOUSSOLE_LAUNCH: &str = "boussole open {folder} --resume";
+
+impl Domain {
+    /// Its command line, `{folder}` filled in and split as a shell would
+    /// for the simple cases: words, and quotes around one with spaces.
+    pub fn launch_args(&self, root: Option<&std::path::Path>) -> Option<Vec<String>> {
+        let template = self.launch.as_deref()?.trim();
+        if template.is_empty() {
+            return None;
+        }
+        let folder = root.map(|r| r.join(&self.id)).unwrap_or_else(|| PathBuf::from(&self.id));
+        let mut out = Vec::new();
+        let (mut word, mut quote, mut started) = (String::new(), None::<char>, false);
+        for c in template.chars() {
+            match (quote, c) {
+                (None, '"' | '\'') => {
+                    quote = Some(c);
+                    started = true;
+                }
+                (Some(q), c) if c == q => quote = None,
+                (None, c) if c.is_whitespace() => {
+                    if started {
+                        out.push(std::mem::take(&mut word));
+                        started = false;
+                    }
+                }
+                _ => {
+                    word.push(c);
+                    started = true;
+                }
+            }
+        }
+        if started {
+            out.push(word);
+        }
+        let folder = folder.to_string_lossy();
+        Some(out.into_iter().map(|w| w.replace("{folder}", &folder)).collect())
+    }
 }
 
 /// Where the user stands in a domain, as they say it.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Level {
-    /// Behind: more time per sheet, and first in line.
+    /// Behind: first in line.
     Behind,
     /// Unsure.
     Shaky,
     #[default]
     Fine,
-    /// The tutorials are enough: nothing to read, only tutorial preparation,
-    /// projects and exams.
+    /// The tutorials are enough: no sessions of its own, only tutorial
+    /// preparation, projects and exams.
     TdOnly,
 }
 
 impl Level {
-    /// Estimates are stretched by this until the pace is measured.
-    pub fn pace(self) -> f32 {
-        match self {
-            Level::Behind => 1.3,
-            Level::Shaky => 1.15,
-            Level::Fine | Level::TdOnly => 1.0,
-        }
-    }
-
     /// Weight of the domain's pressure: who goes first.
     pub fn weight(self) -> f32 {
         match self {
@@ -356,7 +306,7 @@ impl Level {
         }
     }
 
-    /// Whether its files are read and studied at all.
+    /// Whether it gets sessions of its own.
     pub fn studies(self) -> bool {
         self != Level::TdOnly
     }
@@ -422,9 +372,7 @@ pub struct Project {
     pub steps: Vec<Step>,
     #[serde(default)]
     pub archived: bool,
-    /// The folder of its files, relative to the courses root: they are the
-    /// project's, worked on in its sessions in any order, never planned as
-    /// course work.
+    /// Its folder, relative to the courses root (kept, not used any more).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dir: Option<String>,
 }
@@ -433,15 +381,6 @@ impl Project {
     /// Finished 3 days before the hand-in, never squeezed.
     pub fn work_due(&self) -> Date {
         self.due.date.add(-3)
-    }
-
-    /// The course file is one of the project's.
-    pub fn holds(&self, item: &str) -> bool {
-        !self.archived
-            && self.dir.as_deref().is_some_and(|d| {
-                let d = d.trim_end_matches('/');
-                !d.is_empty() && item.strip_prefix(d).is_some_and(|rest| rest.starts_with('/'))
-            })
     }
 }
 
@@ -482,12 +421,12 @@ pub struct Campaign {
     pub rows: Vec<Row>,
     #[serde(default)]
     pub closed: bool,
-    /// Its folder, anywhere: opened in the room of its sessions.
+    /// Its folder, anywhere (kept, not used any more).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dir: Option<String>,
 }
 
-/// A task typed by hand, with or without a file.
+/// A task typed by hand.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Chore {
     pub id: String,
@@ -547,53 +486,14 @@ pub enum CourseKind {
 
 // ─── Progress ────────────────────────────────────────────────────────────────
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Exercise {
-    /// Solved without the solution.
-    Solo,
-    WithSolution,
-    Failed,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Assessment {
-    Understood,
-    Review,
-    Blocked,
-}
-
-#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ItemProgress {
-    /// Last section really understood (§ number, 0 = none).
-    pub read_upto: u32,
-    pub exercises: BTreeMap<u32, Exercise>,
-    /// The session that finished the item's first pass.
-    pub studied_on: Option<Date>,
-    /// The latest session on it.
-    pub last_on: Option<Date>,
-    pub assessment: Option<Assessment>,
-    pub reviews_done: Vec<Date>,
-    /// Exam-type subjects done (in time-limited conditions).
-    pub subjects_done: u32,
-    /// "Blocked" turned into a question; cleared once asked.
-    pub question_open: bool,
-    /// Whole item ticked off without detail (a PDF read, notes gone through).
-    pub done: bool,
-}
-
+/// What was done of the work that is not a course session.
 #[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Progress {
-    pub items: BTreeMap<String, ItemProgress>,
     /// Course uids whose preparation is done.
     pub prepared: Vec<String>,
     /// Campaign days already worked (campaign id, date).
     pub campaign_days: Vec<(String, Date)>,
     /// Interviews whose preparation is done (campaign id, row name).
     pub interviews_prepared: Vec<(String, String)>,
-    /// What the user decided about each file; a file missing here is new.
-    pub files: BTreeMap<String, crate::catalogue::Inclusion>,
 }

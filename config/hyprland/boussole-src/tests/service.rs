@@ -6,7 +6,6 @@ use common::*;
 
 use boussole::ajout::{self, Action, Context, Unclear};
 use boussole::alertes::{self, Kind};
-use boussole::catalogue::Inclusion;
 use boussole::khal;
 use boussole::model::*;
 use boussole::plan::Plan;
@@ -27,34 +26,18 @@ fn the_state_is_rebuilt_from_the_journal_and_undo_is_one_more_line() {
     let dir = scratch("journal");
     let mut s = Store::open(Paths::under(&dir)).unwrap();
     let now = at(MON, "21:50");
-    let a = "ALGO/Ch1/10_Bloc/11_A.md";
-    s.record(Event::Files { items: vec![a.into()], inclusion: Inclusion::Planned }, now).unwrap();
     s.record(Event::Started { session: "2026-10-05-evening1".into(), at: at(MON, "20:40"), planned: None }, now).unwrap();
-    let mut ex = BTreeMap::new();
-    ex.insert(1, Exercise::Solo);
-    ex.insert(2, Exercise::Failed);
     s.record(
         Event::Closed {
             session: "2026-10-05-evening1".into(),
             at: now,
             minutes: 70,
-            parts: vec![PartReport {
-                task: format!("study:{a}"),
-                minutes: 70,
-                planned: 75,
-                done: false,
-                read_upto: Some(4),
-                exercises: ex,
-                assessment: Some(Assessment::Blocked),
-                note: Some("stuck on the induction".into()),
-            }],
-            tracking: None,
+            parts: vec![PartReport { task: "course:ALGO".into(), minutes: 70, planned: 75, done: true, note: Some("stuck on the induction".into()) }],
         },
         now,
     )
     .unwrap();
-    let p = &s.state.progress.items[a];
-    assert_eq!((p.read_upto, p.exercises.len(), p.last_on, p.question_open), (4, 2, Some(MON), true));
+    assert_eq!(s.state.course_days["ALGO"], [(MON, 70)]);
     assert_eq!(s.state.starts, [(MON, hm("20:40"))]);
     assert!(matches!(s.state.outcomes["2026-10-05-evening1"], Outcome::Closed { .. }));
     assert_eq!(s.state.notes.len(), 1);
@@ -63,10 +46,10 @@ fn the_state_is_rebuilt_from_the_journal_and_undo_is_one_more_line() {
     let again = Store::open(Paths::under(&dir)).unwrap();
     assert_eq!(again.state, s.state);
 
-    // Undo the close: the session is started again, the progress gone.
+    // Undo the close: the session is started again, its time gone.
     let undone = s.undo(now).unwrap().unwrap();
     assert!(matches!(undone.event, Event::Closed { .. }));
-    assert!(!s.state.progress.items.contains_key(a) || s.state.progress.items[a].read_upto == 0);
+    assert!(!s.state.course_days.contains_key("ALGO"));
     assert!(matches!(s.state.outcomes["2026-10-05-evening1"], Outcome::Started { .. }));
     // A second undo goes one further back, never undoing the undo.
     assert!(matches!(s.undo(now).unwrap().unwrap().event, Event::Started { .. }));
@@ -96,63 +79,54 @@ fn every_kind_of_part_moves_progress() {
         at: at(MON, "22:00"),
         minutes: 0,
         parts: vec![
-            part("review1:X/a.md", true),
-            part("exam:X/93.md#2", true),
+            part("course:X", true),
             part("prepare:uid-1", true),
             part("campaign:jobs:2026-10-05", true),
             part("interview:jobs:Company F", true),
             part("chore:c1", true),
             part("project:argos:spec", false),
-            part("read:X/notes.md", true),
-            part("ask:X/b.md", true),
         ],
-        tracking: None,
     });
     push(Event::Missed { session: "2026-10-06-evening1".into() });
     // Two tasks of one evening said "not tonight": one session missed.
     push(Event::Skipped { session: "2026-10-07-evening1~aaaaaa".into(), tasks: vec!["read:X/notes.md".into()], planned: None });
     push(Event::Skipped { session: "2026-10-07-evening1~bbbbbb".into(), tasks: vec!["ask:X/b.md".into()], planned: None });
     let st: State = store::reduce(&entries);
-    assert_eq!(st.progress.items["X/a.md"].reviews_done, [MON]);
-    assert_eq!(st.progress.items["X/93.md"].subjects_done, 2);
+    assert_eq!(st.course_days["X"], [(MON, 30)]);
     assert_eq!(st.progress.prepared, ["uid-1"]);
     assert_eq!(st.progress.campaign_days, [("jobs".to_string(), MON)]);
     assert_eq!(st.progress.interviews_prepared, [("jobs".to_string(), "Company F".to_string())]);
     assert!(st.chores[0].done);
     assert_eq!(st.projects[0].steps[0].spent_minutes, 30);
-    assert!(st.progress.items["X/notes.md"].done);
     assert_eq!(st.missed_streak, 2);
 }
 
 #[test]
-fn the_pace_is_measured_from_closed_sessions() {
-    let mut entries = Vec::new();
-    for (i, (actual, planned)) in [(90, 75), (80, 75), (100, 75)].into_iter().enumerate() {
-        let mut pages = BTreeMap::new();
-        pages.insert(format!("A&C/Ch/1{i}_S.md"), 10u32);
-        entries.push(store::Entry {
-            seq: i as u64 + 1,
-            at: at(MON.add(i as i32), "22:00"),
-            event: Event::Closed {
-                session: format!("{}-evening1", MON.add(i as i32)),
-                at: at(MON.add(i as i32), "22:00"),
-                minutes: actual,
-                parts: vec![PartReport { task: format!("study:A&C/Ch/1{i}_S.md"), minutes: actual, planned, ..PartReport::default() }],
-                tracking: Some(store::Tracking { pages, ..store::Tracking::default() }),
-            },
-        });
-    }
-    let st = store::reduce(&entries);
-    let f = st.factor("A&C").unwrap();
-    assert!((f - 270.0 / 225.0).abs() < 1e-3, "{f}");
-    assert_eq!(st.factor("OC"), None);
-    assert!((st.minutes_per_page("A&C").unwrap() - 9.0).abs() < 1e-3);
-    // Free reading is kept for the next close, never as done.
-    let mut e2 = entries.clone();
-    e2.push(store::Entry { seq: 9, at: at(MON, "18:00"), event: Event::FreeReading { item: "OC/x.md".into(), upto: 2, pages: 3, minutes: 12 } });
-    let st = store::reduce(&e2);
-    assert_eq!(st.free_reading["OC/x.md"], (MON, 2));
-    assert!(st.progress.items.get("OC/x.md").is_none());
+fn the_old_journal_still_reads_and_loses_nothing() {
+    // Lines of Boussole's planner: course files, reading, a game's pause.
+    let dir = scratch("legacy");
+    std::fs::create_dir_all(dir.join("data")).unwrap();
+    let lines = [
+        r#"{"seq":1,"logged":"2026-10-05T12:00","ev":"files","items":["A&C/x.md"],"inclusion":"planned"}"#,
+        r#"{"seq":2,"logged":"2026-10-05T20:30","ev":"started","session":"2026-10-05-evening1~aaaaaa","at":"2026-10-05T20:30","planned":{"id":"2026-10-05-evening1~aaaaaa","date":"2026-10-05","start":"20:30","end":"21:45","kind":"evening","counted":true,"place":"home","shortened":false,"pinned":false,"parts":[{"task":"study:A&C/x.md","domain":"A&C","minutes":75,"work":"study","item":"A&C/x.md","sections":[1,4],"exercises":null,"timed":false}],"reasons":[]}}"#,
+        r#"{"seq":3,"logged":"2026-10-05T20:50","ev":"free-reading","item":"OC/y.md","upto":2,"pages":3,"minutes":12}"#,
+        r#"{"seq":4,"logged":"2026-10-05T21:50","ev":"closed","session":"2026-10-05-evening1~aaaaaa","at":"2026-10-05T21:50","minutes":70,"parts":[{"task":"study:A&C/x.md","minutes":70,"planned":75,"done":true,"read_upto":4,"exercises":{"1":"solo"},"assessment":"understood","note":null}],"tracking":{"idle_minutes":0,"game_minutes":0,"media_minutes":0,"media_for_course":null,"pages":{}}}"#,
+        r#"{"seq":5,"logged":"2026-10-06T09:00","ev":"pin","pin":{"task":"read:A&C/z.md","date":"2026-10-12","start":"09:05","minutes":26,"work":{"work":"read","item":"A&C/z.md"},"domain":"A&C"}}"#,
+    ];
+    std::fs::write(dir.join("data/journal.jsonl"), lines.join("\n") + "\n").unwrap();
+    let mut s = Store::open(Paths::under(&dir)).unwrap();
+    assert_eq!(s.entries.len(), 5, "every line kept");
+    assert_eq!(s.state.seq, 5);
+    assert!(matches!(s.entries[0].event, Event::Legacy { .. }));
+    assert!(matches!(s.state.outcomes["2026-10-05-evening1~aaaaaa"], Outcome::Closed { .. }));
+    assert_eq!(s.state.course_days["A&C"], [(MON, 70)], "a session on a course file counts for its subject");
+    assert_eq!(s.state.pins.len(), 1);
+    assert!(s.state.pins[0].work.is_none(), "a work of the old planner, let go");
+    // The next line follows on, and an undo never picks a line it cannot read.
+    let seq = s.record(Event::Missed { session: "2026-10-06-evening1".into() }, at(MON.add(1), "22:00")).unwrap();
+    assert_eq!(seq, 6);
+    assert!(matches!(s.undo(at(MON.add(1), "22:00")).unwrap().unwrap().event, Event::Pin { .. }));
+    let _ = std::fs::remove_dir_all(dir);
 }
 
 // ─── Quick add ───────────────────────────────────────────────────────────────
@@ -367,4 +341,32 @@ fn later_until_holds_its_time_and_back_frees_the_rest() {
     push(&mut entries, at(MON, "21:10"), Event::Back { at: at(MON, "21:10") });
     let st = store::reduce(&entries);
     assert_eq!(st.away[0].end, at(MON, "21:10"), "the time before stays taken");
+}
+
+// ─── A session's command and window ──────────────────────────────────────────
+
+#[test]
+fn a_subject_runs_its_command_on_its_folder() {
+    let mut d = Domain { id: "A&C".into(), ..Domain::default() };
+    assert_eq!(d.launch_args(Some(std::path::Path::new("/c"))), None, "no command, nothing opened");
+    d.launch = Some(BOUSSOLE_LAUNCH.into());
+    assert_eq!(d.launch_args(Some(std::path::Path::new("/home/me/courses"))).unwrap(), ["boussole", "open", "/home/me/courses/A&C", "--resume"]);
+    d.launch = Some(r#"liseuse "{folder}/00 Index.md""#.into());
+    assert_eq!(d.launch_args(Some(std::path::Path::new("/c"))).unwrap(), ["liseuse", "/c/A&C/00 Index.md"]);
+    d.launch = Some("  ".into());
+    assert_eq!(d.launch_args(None), None);
+}
+
+#[test]
+fn only_boussole_in_firefox_counts() {
+    use boussole::seance::{is_course_window, Watch};
+    assert!(is_course_window("org.mozilla.firefox", "Boussole — Mozilla Firefox"));
+    assert!(!is_course_window("org.mozilla.firefox", "YouTube — Mozilla Firefox"));
+    assert!(!is_course_window("brave-browser", "Boussole"));
+    let mut w = Watch { session: "s".into(), watched: true, ..Watch::default() };
+    w.set_counting(true, 1000);
+    w.set_counting(false, 1600);
+    w.set_counting(false, 1700);
+    w.set_counting(true, 2000);
+    assert_eq!(w.effective(2300), 900, "ten minutes, then five");
 }

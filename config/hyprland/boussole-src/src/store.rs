@@ -18,7 +18,6 @@ use std::path::{Path, PathBuf};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::catalogue::Inclusion;
 use crate::model::*;
 use crate::plan::Pin;
 use crate::time::{Date, Hm, Local};
@@ -65,42 +64,24 @@ impl Paths {
     }
 }
 
-/// How a part of a session went, from "Close" or a check-in.
+/// How a part of a session went, from "Done".
 #[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartReport {
     pub task: String,
     pub minutes: i32,
-    /// What the plan gave it: actual against planned is the measured pace.
+    /// What the plan gave it.
     pub planned: i32,
-    /// Finished (a sheet's first pass, a review, a step…).
+    /// Finished (a preparation, a step, a task…).
     pub done: bool,
-    pub read_upto: Option<u32>,
-    #[serde(with = "number_keys")]
-    pub exercises: BTreeMap<u32, Exercise>,
-    pub assessment: Option<Assessment>,
     pub note: Option<String>,
 }
 
-/// Exercise numbers as JSON keys. Inside a tagged enum serde buffers the
-/// map and no longer turns "2" back into 2 on its own.
-mod number_keys {
-    use std::collections::BTreeMap;
-
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use crate::model::Exercise;
-
-    pub fn serialize<S: Serializer>(m: &BTreeMap<u32, Exercise>, s: S) -> Result<S::Ok, S::Error> {
-        m.iter().map(|(k, v)| (k.to_string(), *v)).collect::<BTreeMap<String, Exercise>>().serialize(s)
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<BTreeMap<u32, Exercise>, D::Error> {
-        let m = BTreeMap::<String, Exercise>::deserialize(d)?;
-        m.into_iter()
-            .map(|(k, v)| k.parse().map(|k| (k, v)).map_err(serde::de::Error::custom))
-            .collect()
-    }
+/// A value that may not read any more (written by an older planner): None
+/// rather than the whole line lost.
+pub fn lenient<'de, D: serde::Deserializer<'de>, T: DeserializeOwned>(d: D) -> Result<Option<T>, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(serde_json::from_value(v).ok())
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -110,7 +91,7 @@ pub enum Event {
         session: String,
         at: Local,
         /// The session as planned when it started, to close it on another day.
-        #[serde(default)]
+        #[serde(default, deserialize_with = "lenient")]
         planned: Option<Box<crate::plan::Session>>,
     },
     /// "Later": always to a precise time.
@@ -122,7 +103,7 @@ pub enum Event {
         #[serde(default)]
         tasks: Vec<String>,
         /// The session as it was, to show it and bring it back.
-        #[serde(default)]
+        #[serde(default, deserialize_with = "lenient")]
         planned: Option<Box<crate::plan::Session>>,
     },
     /// "Later, until…": nothing planned, rung or offered from now until
@@ -134,23 +115,18 @@ pub enum Event {
     Extra { extra: crate::journee::Extra },
     /// Its time went by without a start.
     Missed { session: String },
-    /// A game launched anyway: the session waits.
+    /// Stopped before the end, to take up again (Boussole's planner paused
+    /// a session for a game; read as it was).
     Paused { session: String, at: Local },
     Resumed { session: String, at: Local },
     Closed {
         session: String,
         at: Local,
+        /// The time in front of the course (the window of its command),
+        /// else the time the session lasted.
         minutes: i32,
         parts: Vec<PartReport>,
-        #[serde(default)]
-        tracking: Option<Tracking>,
     },
-    /// What something away from the sheet is, as answered once: a folder
-    /// edited, a page, a window. Asked no more after that.
-    Context { key: String, label: String, verdict: Verdict },
-    /// Liseuse open on a sheet outside any session.
-    FreeReading { item: String, upto: u32, pages: u32, minutes: i32 },
-    Files { items: Vec<String>, inclusion: Inclusion },
     Deadline { deadline: Deadline },
     DeadlineRemoved { id: String },
     Project { project: Project },
@@ -162,6 +138,11 @@ pub enum Event {
     Pin { pin: Pin },
     Unpin { task: String },
     Undo { of: u64 },
+    /// A line of the journal this version no longer reads (Boussole's
+    /// course files, reading and contexts): kept in the file, its number
+    /// counted, nothing else.
+    #[serde(skip)]
+    Legacy { ev: String },
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -174,27 +155,21 @@ pub struct Entry {
     pub event: Event,
 }
 
-/// What a context away from the sheet is.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Verdict {
-    /// Work for a course or a project: it counts.
-    Course,
-    /// Personal: noted without asking, and a reminder rather than a question.
-    Personal,
-}
-
-/// What the session's tracking measured, kept with its close.
-#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
-#[serde(default)]
-pub struct Tracking {
-    pub idle_minutes: i32,
-    pub game_minutes: i32,
-    pub media_minutes: i32,
-    /// The user's answer about the media: counted as work or not.
-    pub media_for_course: Option<bool>,
-    /// Pages read per file.
-    pub pages: BTreeMap<String, u32>,
+impl Entry {
+    /// A journal line: as written, else as a line kept for its number.
+    pub fn read(line: &str) -> Option<Entry> {
+        if let Ok(e) = serde_json::from_str::<Entry>(line) {
+            return Some(e);
+        }
+        #[derive(Deserialize)]
+        struct Raw {
+            seq: u64,
+            logged: Local,
+            ev: String,
+        }
+        let r: Raw = serde_json::from_str(line).ok()?;
+        Some(Entry { seq: r.seq, at: r.logged, event: Event::Legacy { ev: r.ev } })
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -225,16 +200,16 @@ pub struct State {
     /// Real evening start times, to learn from.
     pub starts: Vec<(Date, Hm)>,
     pub missed_streak: u32,
-    /// Notes left at "Close", per task.
+    /// Notes left at "Done", per task.
     pub notes: Vec<(String, Date, String)>,
     /// Sessions as they were when started (until closed).
     pub started: BTreeMap<String, crate::plan::Session>,
-    /// Free reading per file: (day, § reached), the latest.
-    pub free_reading: BTreeMap<String, (Date, u32)>,
     /// Sessions said "not tonight": their day, their tasks, how they were.
     pub skipped: BTreeMap<String, (Date, Vec<String>, Option<crate::plan::Session>)>,
     /// Sessions closed: their day and their tasks.
     pub closed: BTreeMap<String, (Date, Vec<String>)>,
+    /// Per subject, its sessions closed: (day, minutes), oldest first.
+    pub course_days: BTreeMap<String, Vec<(Date, i32)>>,
     /// Time found on the spot.
     pub extra: Vec<crate::journee::Extra>,
     /// "Later, until…": from when it was said to when it ends.
@@ -242,35 +217,6 @@ pub struct State {
     /// The slot of the last miss counted, so that several tasks of one
     /// evening count as one session missed.
     pub last_missed_slot: String,
-    /// Per domain, (actual, planned) minutes of closed parts, oldest first.
-    pub pace: BTreeMap<String, Vec<(i32, i32)>>,
-    /// Per domain, (minutes, pages read), oldest first.
-    pub page_pace: BTreeMap<String, Vec<(i32, u32)>>,
-    /// Contexts away from the sheet, answered once: key → (label, verdict).
-    pub contexts: BTreeMap<String, (String, Verdict)>,
-}
-
-impl State {
-    /// Measured over planned, from the last ten parts of a domain.
-    pub fn factor(&self, domain: &str) -> Option<f32> {
-        let v = self.pace.get(domain)?;
-        let last = &v[v.len().saturating_sub(10)..];
-        let (a, p) = last.iter().fold((0, 0), |(a, p), (x, y)| (a + x, p + y));
-        (last.len() >= 3 && p > 0).then(|| (a as f32 / p as f32).clamp(0.5, 2.0))
-    }
-
-    /// Minutes per page in a domain, from the last ten sessions that read.
-    pub fn minutes_per_page(&self, domain: &str) -> Option<f32> {
-        let v = self.page_pace.get(domain)?;
-        let last = &v[v.len().saturating_sub(10)..];
-        let (m, p) = last.iter().fold((0, 0), |(m, p), (x, y)| (m + x, p + y));
-        (p > 0).then(|| m as f32 / p as f32)
-    }
-}
-
-fn domain_of(task: &str) -> Option<&str> {
-    let (_, rest) = task.split_once(':')?;
-    rest.split('/').next().filter(|d| !d.is_empty())
 }
 
 /// A miss counts once per slot, however many tasks it held.
@@ -288,49 +234,8 @@ fn session_date(id: &str) -> Option<Date> {
 
 fn apply_part(st: &mut State, date: Date, r: &PartReport) {
     let (kind, rest) = r.task.split_once(':').unwrap_or((r.task.as_str(), ""));
-    fn item<'a>(st: &'a mut State, id: &str) -> &'a mut ItemProgress {
-        st.progress.items.entry(id.to_string()).or_default()
-    }
     match kind {
-        "study" | "read" | "redo" => {
-            let p = item(st, rest);
-            if let Some(n) = r.read_upto {
-                p.read_upto = p.read_upto.max(n);
-            }
-            p.exercises.extend(r.exercises.iter().map(|(k, v)| (*k, *v)));
-            p.last_on = Some(date);
-            if let Some(a) = r.assessment {
-                p.assessment = Some(a);
-                if a == Assessment::Blocked {
-                    p.question_open = true;
-                }
-            }
-            if r.done && kind != "redo" {
-                p.studied_on.get_or_insert(date);
-                if kind == "read" {
-                    p.done = true;
-                }
-            }
-        }
-        k if k.starts_with("review") => {
-            let p = item(st, rest);
-            p.exercises.extend(r.exercises.iter().map(|(k, v)| (*k, *v)));
-            p.last_on = Some(date);
-            if let Some(a) = r.assessment {
-                p.assessment = Some(a);
-                p.question_open |= a == Assessment::Blocked;
-            }
-            if r.done {
-                p.reviews_done.push(date);
-            }
-        }
-        "ask" if r.done => item(st, rest).question_open = false,
-        "exam" if r.done => {
-            let (id, n) = rest.rsplit_once('#').unwrap_or((rest, "1"));
-            let p = item(st, id);
-            p.subjects_done = p.subjects_done.max(n.parse().unwrap_or(1));
-            p.last_on = Some(date);
-        }
+        "course" if r.minutes > 0 => st.course_days.entry(rest.to_string()).or_default().push((date, r.minutes)),
         "prepare" if r.done => st.progress.prepared.push(rest.to_string()),
         "campaign" if r.done => {
             let id = rest.rsplit_once(':').map_or(rest, |(c, _)| c);
@@ -358,6 +263,12 @@ fn apply_part(st: &mut State, date: Date, r: &PartReport) {
                 if r.done {
                     d.hours = Some(0.0);
                 }
+            }
+        }
+        // Boussole's course files: a session on one counts for its subject.
+        "study" | "read" | "redo" | "ask" | "exam" if r.minutes > 0 => {
+            if let Some(d) = rest.split('/').next().filter(|d| !d.is_empty()) {
+                st.course_days.entry(d.to_string()).or_default().push((date, r.minutes));
             }
         }
         _ => {}
@@ -406,12 +317,6 @@ pub fn reduce(entries: &[Entry]) -> State {
             Event::Resumed { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Started { at: *at });
             }
-            Event::FreeReading { item, upto, .. } => {
-                st.free_reading.insert(item.clone(), (e.at.date, *upto));
-            }
-            Event::Context { key, label, verdict } => {
-                st.contexts.insert(key.clone(), (label.clone(), *verdict));
-            }
             Event::Postponed { session, to } => {
                 st.outcomes.insert(session.clone(), Outcome::Postponed { to: *to });
             }
@@ -440,7 +345,7 @@ pub fn reduce(entries: &[Entry]) -> State {
             Event::Paused { session, at } => {
                 st.outcomes.insert(session.clone(), Outcome::Paused { at: *at });
             }
-            Event::Closed { session, at, parts, tracking, .. } => {
+            Event::Closed { session, at, parts, .. } => {
                 let date = session_date(session).unwrap_or(at.date);
                 // A session started late at night still belongs to its day.
                 st.outcomes.insert(session.clone(), Outcome::Closed { at: *at });
@@ -448,25 +353,9 @@ pub fn reduce(entries: &[Entry]) -> State {
                 st.closed.insert(session.clone(), (date, parts.iter().map(|p| p.task.clone()).collect()));
                 for p in parts {
                     apply_part(&mut st, date, p);
-                    if let (Some(d), true) = (domain_of(&p.task), p.planned > 0 && p.minutes > 0) {
-                        if p.task.starts_with("study:") || p.task.starts_with("read:") {
-                            st.pace.entry(d.to_string()).or_default().push((p.minutes, p.planned));
-                        }
-                    }
-                }
-                for (item, pages) in tracking.iter().flat_map(|t| &t.pages) {
-                    let minutes: i32 = parts.iter().filter(|p| p.task.ends_with(item.as_str())).map(|p| p.minutes).sum();
-                    if let (Some(d), true) = (item.split('/').next(), *pages > 0 && minutes > 0) {
-                        st.page_pace.entry(d.to_string()).or_default().push((minutes, *pages));
-                    }
                 }
                 st.missed_streak = 0;
                 st.last_missed_slot.clear();
-            }
-            Event::Files { items, inclusion } => {
-                for i in items {
-                    st.progress.files.insert(i.clone(), *inclusion);
-                }
             }
             Event::Deadline { deadline } => upsert(&mut st.deadlines, deadline.clone(), |a, b| a.id == b.id),
             Event::DeadlineRemoved { id } => st.deadlines.retain(|d| d.id != *id),
@@ -478,7 +367,7 @@ pub fn reduce(entries: &[Entry]) -> State {
             Event::BusyRemoved { start } => st.busy.retain(|b| b.start != *start),
             Event::Pin { pin } => upsert(&mut st.pins, pin.clone(), |a, b| a.task == b.task),
             Event::Unpin { task } => st.pins.retain(|p| p.task != *task),
-            Event::Undo { .. } => {}
+            Event::Undo { .. } | Event::Legacy { .. } => {}
         }
     }
     st
@@ -517,7 +406,7 @@ impl Store {
         if let Ok(f) = std::fs::File::open(paths.data.join("journal.jsonl")) {
             for line in io::BufReader::new(f).lines().map_while(Result::ok) {
                 // A line cut by a crash is skipped, never fatal.
-                if let Ok(e) = serde_json::from_str::<Entry>(&line) {
+                if let Some(e) = Entry::read(&line) {
                     entries.push(e);
                 }
             }
@@ -569,7 +458,7 @@ impl Store {
             .entries
             .iter()
             .rev()
-            .find(|e| !matches!(e.event, Event::Undo { .. } | Event::Missed { .. }) && !undone.contains(&e.seq))
+            .find(|e| !matches!(e.event, Event::Undo { .. } | Event::Missed { .. } | Event::Legacy { .. }) && !undone.contains(&e.seq))
             .cloned();
         if let Some(t) = &target {
             self.record(Event::Undo { of: t.seq }, now)?;
@@ -579,7 +468,7 @@ impl Store {
 
     /// The last changes, newest first (for the history list).
     pub fn history(&self, n: usize) -> Vec<&Entry> {
-        self.entries.iter().rev().filter(|e| !matches!(e.event, Event::Missed { .. })).take(n).collect()
+        self.entries.iter().rev().filter(|e| !matches!(e.event, Event::Missed { .. } | Event::Legacy { .. })).take(n).collect()
     }
 
     pub fn save_settings(&self) -> io::Result<()> {

@@ -4,7 +4,6 @@
 
 use std::io::{self, BufRead, BufReader, IsTerminal, Write};
 use std::os::unix::net::UnixStream;
-use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
@@ -15,16 +14,12 @@ use crate::store::Paths;
 pub const HELP: &str = "\
 boussole                       what comes next
 boussole today | week [DAYS]   the plan, with courses (● counted, ○ optional)
-boussole start|done [ID]       the next session, or the one given: one task each
+boussole start [ID]            the next session, or the one given: its subject's command runs
+boussole launch [ID]           the session's command again (starts it if need be)
+boussole done [ID]             the session under way is over
 boussole later WHEN            nothing planned until then: 30m, 1h, 21:30, tomorrow, sun, 2026-10-18
 boussole back                  back before then
-boussole free MINUTES [SUBJECT] I have time: a session right away (that subject's next task)
-boussole free MINUTES --file F  the same on one course file (path under the course folder)
-boussole free MINUTES --project ID  the same on a whole project, its room holding all its files
-boussole library                every course file by subject and chapter, as JSON
-boussole draft [ID]            what Liseuse saw, pre-filling the close
-boussole close [ID] [--video yes|no]   close as pre-filled (the drawer lets you correct it)
-boussole continue [ID]         back to a session paused for a game
+boussole free MINUTES [SUBJECT] I have time: a session right away
 boussole add LINE…             quick add, shown before it is kept (-y keeps it)
     examen L&MC 18/12 · cc OC 12/11 14h · rendu ARGOS 12/11 30h
     indispo sam 14h-18h · tâche relire TD3 A&C 45m · candidature Entreprise F · libre 1h
@@ -32,27 +27,23 @@ boussole add --fuzzel          the same in a fuzzel line (Super+Shift+D)
 boussole move ID DATE HH:MM    shows what it changes, then asks (-y keeps it)
 boussole pin ID | unpin TASK   keep a session where it is
 boussole undo | history        the last changes
-boussole files [plan|ignore ID…|plan-all]   files waiting for a decision
 boussole deadlines | deadline rm ID
 boussole project add NAME DUE [SUBJECT] STEP=HOURS… | project list | project rm ID
 boussole project step ID STEP done
-boussole project dir ID FOLDER|-   its files (FOLDER under the course folder): in its sessions, in any order
 boussole campaign add NAME FROM TO [PER-WEEK] | campaign list
 boussole campaign status NAME COMPANY to-send|sent|follow-up|interview|refused|offer [DATE [HH:MM]]
-boussole campaign dir NAME FOLDER|-   its folder, opened in the room of its sessions
 boussole campaign close NAME
-boussole courses DIR           the course folder (read only)
+boussole courses DIR           the course folder, one folder per subject (read only)
 boussole calendar URL          the timetable's iCal link
 boussole calendar groups [FAMILY=VALUE,…]   groups found in it, ticked with []
-boussole subject list | subject set ID NAME|NAME… | subject spaced ID on|off | subject archive ID
-boussole subject level ID behind|shaky|fine|td-only   where you stand: behind goes first
-boussole subject lessons ID on|off   a course subject: sheets read and recalled, exercises in exercise files and tutorials
+boussole subject list | subject set ID NAME|NAME… | subject archive ID
+boussole subject level ID behind|shaky|fine|td-only   where you stand: behind gets more time
+boussole subject launch ID on|off|COMMAND…   what its sessions run; on: boussole open {folder} --resume
 boussole rhythm | rhythm KEY VALUE        evening_target 21:00, evening_minutes 90…
 boussole period list | period add NAME FROM TO normal|free|morning-block|study|bonus-only|pause | period rm NAME
-boussole objective pass|ranked|podium · lang en|fr · gate on|off
+boussole objective pass|ranked|podium · lang en|fr
 boussole pause [UNTIL] | resume
-boussole refresh               download the timetable and rescan now
-boussole gate -- COMMAND…      ask before a game starts during a session
+boussole refresh               download the timetable now
 boussole daemon                the service (boussole.service)";
 
 fn connect(paths: &Paths) -> io::Result<UnixStream> {
@@ -137,19 +128,9 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["today"] => req(json!({ "cmd": "plan", "days": 1 })),
         ["week"] => req(json!({ "cmd": "plan", "days": 7 })),
         ["week", n] => req(json!({ "cmd": "plan", "days": n.parse::<i64>().map_err(|_| "DAYS")? })),
-        ["start" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
+        ["start" | "launch" | "done", ..] => req(json!({ "cmd": a[0], "session": sess(1) })),
         ["free", m] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")? })),
-        ["free", m, "--project", id] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "project": id })),
-        ["free", m, "--file", item] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "item": item })),
-        ["library"] => request(paths, json!({ "cmd": "library" })).map(|mut v| serde_json::to_string_pretty(&v["data"].take()).unwrap_or_default()),
         ["free", m, subject] => req(json!({ "cmd": "free", "minutes": m.parse::<i64>().map_err(|_| "MINUTES")?, "subject": subject })),
-        ["draft", ..] => req(json!({ "cmd": "draft", "session": sess(1) })),
-        ["close", rest @ ..] => {
-            let video = rest.iter().position(|a| *a == "--video").and_then(|i| rest.get(i + 1)).map(|v| *v == "yes");
-            let id = rest.first().filter(|a| !a.starts_with("--")).map(|s| json!(s)).unwrap_or(Value::Null);
-            req(json!({ "cmd": "close", "session": id, "media_for_course": video }))
-        }
-        ["continue", ..] => req(json!({ "cmd": "resume-session", "session": sess(1) })),
         ["later", when @ ..] if !when.is_empty() => req(json!({ "cmd": "later", "until": when.join(" ") })),
         ["back"] => req(json!({ "cmd": "back" })),
         ["add", "--fuzzel"] => add_fuzzel(paths),
@@ -182,15 +163,6 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["unpin", task] => req(json!({ "cmd": "unpin", "task": task })),
         ["undo"] => req(json!({ "cmd": "undo" })),
         ["history"] => req(json!({ "cmd": "history" })),
-        ["files"] => req(json!({ "cmd": "files" })),
-        ["files", "plan-all"] => {
-            let v = request(paths, json!({ "cmd": "files" }))?;
-            req(json!({ "cmd": "files", "items": v["data"], "inclusion": "planned" }))
-        }
-        ["files", how @ ("plan" | "ignore"), ids @ ..] if !ids.is_empty() => {
-            let inclusion = if *how == "plan" { "planned" } else { "ignored" };
-            req(json!({ "cmd": "files", "items": ids, "inclusion": inclusion }))
-        }
         ["deadlines"] => req(json!({ "cmd": "deadlines" })),
         ["deadline", "rm", id] => req(json!({ "cmd": "deadline-remove", "id": id })),
         ["project", "list"] | ["projects"] => req(json!({ "cmd": "projects" })),
@@ -214,13 +186,6 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             }
             let project = json!({ "id": name.to_lowercase(), "name": name, "domain": domain, "due": due, "steps": steps });
             req(json!({ "cmd": "project", "project": project }))
-        }
-        ["project", "dir", id, dir] => {
-            let v = request(paths, json!({ "cmd": "projects" }))?;
-            let mut p = v["data"].as_array().and_then(|ps| ps.iter().find(|p| p["id"] == *id)).cloned().ok_or(format!("{id}?"))?;
-            let dir = dir.trim_end_matches('/');
-            p["dir"] = if dir == "-" || dir.is_empty() { Value::Null } else { json!(dir) };
-            req(json!({ "cmd": "project", "project": p }))
         }
         ["project", "step", id, step, "done"] => {
             let v = request(paths, json!({ "cmd": "projects" }))?;
@@ -257,16 +222,6 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             }
             req(json!({ "cmd": "campaign", "campaign": c }))
         }
-        ["campaign", "dir", name, dir] => {
-            let v = request(paths, json!({ "cmd": "campaigns" }))?;
-            let mut c = find_campaign(&v, name)?;
-            c["dir"] = if *dir == "-" {
-                Value::Null
-            } else {
-                json!(std::fs::canonicalize(dir).map_err(|e| format!("{dir}: {e}"))?)
-            };
-            req(json!({ "cmd": "campaign", "campaign": c }))
-        }
         ["campaign", "close", name] => {
             let v = request(paths, json!({ "cmd": "campaigns" }))?;
             let mut c = find_campaign(&v, name)?;
@@ -301,8 +256,8 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
                     let flags = format!(
                         " {}{}{}",
                         d["level"].as_str().unwrap_or("fine"),
-                        if d["spaced"] == true { " spaced" } else { "" },
-                        if d["archived"] == true { " archived" } else { "" }
+                        if d["archived"] == true { " archived" } else { "" },
+                        d["launch"].as_str().map(|l| format!(" ▶ {l}")).unwrap_or_default()
                     );
                     format!("{}{flags} ← {}", d["id"].as_str().unwrap_or(""), names.join(" | "))
                 })
@@ -313,13 +268,14 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
             let mut s = settings(paths)?;
             let domains = s["domains"].as_array_mut().ok_or("domains")?;
             if !domains.iter().any(|d| d["id"] == *id) {
-                domains.push(json!({ "id": id, "spaced": true }));
+                domains.push(json!({ "id": id }));
             }
             let d = domains.iter_mut().find(|d| d["id"] == *id).unwrap();
             match (*verb, rest) {
                 ("set", names) => d["calendar_names"] = json!(names.join(" ").split('|').map(str::trim).filter(|n| !n.is_empty()).collect::<Vec<_>>()),
-                ("spaced", [on]) => d["spaced"] = json!(*on == "on"),
-                ("lessons", [on]) => d["lessons"] = json!(*on == "on"),
+                ("launch", ["on"]) => d["launch"] = json!(crate::model::BOUSSOLE_LAUNCH),
+                ("launch", ["off"]) => d["launch"] = Value::Null,
+                ("launch", cmd) if !cmd.is_empty() => d["launch"] = json!(cmd.join(" ")),
                 ("level", [l @ ("behind" | "shaky" | "fine" | "td-only")]) => d["level"] = json!(l),
                 ("archive", []) => d["archived"] = json!(true),
                 ("restore", []) => d["archived"] = json!(false),
@@ -363,7 +319,6 @@ pub fn main(paths: &Paths, args: &[String]) -> Result<String, String> {
         ["resume"] => set(paths, json!({ "paused_until": null })),
         ["objective", o @ ("pass" | "ranked" | "podium")] => set(paths, json!({ "objective": o })),
         ["lang", l @ ("en" | "fr")] => set(paths, json!({ "lang": l })),
-        ["gate", on @ ("on" | "off")] => set(paths, json!({ "gate": *on == "on" })),
         ["refresh"] => req(json!({ "cmd": "refresh" })),
         _ => Err(HELP.into()),
     }
@@ -431,40 +386,4 @@ fn add_fuzzel(paths: &Paths) -> Result<String, String> {
 
 fn notify(title: &str, body: &str) {
     let _ = Command::new("notify-send").args(["-a", "Boussole", title, body]).stdout(Stdio::null()).status();
-}
-
-/// fuzzel's `launch-prefix=boussole gate --`: everything goes through here;
-/// only games are asked about, and only during a session. If the service is
-/// not there, nothing is ever in the way.
-pub fn gate(paths: &Paths, cmd: &[String]) -> io::Error {
-    let Some((prog, args)) = cmd.split_first() else {
-        return io::Error::new(io::ErrorKind::InvalidInput, "boussole gate -- COMMAND…");
-    };
-    let launch = || Command::new(prog).args(args).exec();
-    let Ok(reply) = request(paths, json!({ "cmd": "gate" })) else { return launch() };
-    let data = &reply["data"];
-    if data["locked"] != true {
-        return launch();
-    }
-    let words: Vec<String> = data["match"].as_array().into_iter().flatten().filter_map(Value::as_str).map(str::to_lowercase).collect();
-    let is_game = cmd.iter().any(|a| {
-        let base = a.rsplit('/').next().unwrap_or(a).to_lowercase();
-        words.iter().any(|w| base.starts_with(w.as_str()) || a.to_lowercase().starts_with(&format!("{w}:")))
-    });
-    if !is_game {
-        return launch();
-    }
-    let fr = fr(paths);
-    let text = reply["text"].as_str().unwrap_or("");
-    let go = if fr { "Lancer quand même" } else { "Launch anyway" };
-    let back = if fr { "Retour à la séance" } else { "Back to the session" };
-    let prompt = if fr { format!("{text}, lancer quand même ? ") } else { format!("{text}, launch anyway? ") };
-    match fuzzel(&prompt, &[back, go]) {
-        Some(c) if c == go => {
-            // No reproach: the session just waits.
-            let _ = request(paths, json!({ "cmd": "pause-session", "session": data["session"] }));
-            launch()
-        }
-        _ => io::Error::new(io::ErrorKind::Interrupted, "not launched"),
-    }
 }
