@@ -134,8 +134,8 @@ Scope {
         || root.dismissed
         || (config.respectZenMode && root.zenMode)
         || (config.muteWhileGaming && root.gaming)
-        // A Boussole session under way, until bedtime.
-        || BoussoleState.holdsVeille
+        // A Programme session under way, until bedtime.
+        || ProgrammeState.holdsVeille
 
     // ---- placement ----------------------------------------------------
     // Which single screen's bar gets to open its drawer -- unaffected by

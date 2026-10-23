@@ -74,15 +74,16 @@ Summary:        System figures for coucou-shell
 The daemon behind the system figures of coucou-shell's bar: CPU, memory,
 temperature, download rate, the charger and the battery's charge policy.
 
-%package -n boussole
-Summary:        Study planner for coucou-shell
-Requires:       mupdf
+%package -n programme
+Summary:        Study agenda for coucou-shell
 Requires:       curl
+# Boussole's planner, renamed when its courses went to Boussole.
+Obsoletes:      boussole < 2.0.0
 
-%description -n boussole
-The service behind the Boussole drawer of coucou-shell's bar: it plans study
-sessions from a course folder and a timetable, rings their alerts and follows
-them through Liseuse.
+%description -n programme
+The service behind the Programme drawer of coucou-shell's bar: it plans study
+sessions from a timetable, rings their alerts and opens each subject's course
+when its session starts.
 
 %package -n sesame
 Summary:        Password prompts for coucou-shell
@@ -97,7 +98,7 @@ with the command that asks.
 %autosetup
 
 %build
-for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/pouls-src config/hyprland/boussole-src config/hyprland/sesame-src; do
+for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/pouls-src config/hyprland/programme-src config/hyprland/sesame-src; do
     cargo build --release --locked --manifest-path "$crate/Cargo.toml" --target-dir target
 done
 
@@ -109,7 +110,7 @@ install -Dm755 target/release/wallpaper-filter %{buildroot}%{_bindir}/wallpaper-
 install -Dm755 target/release/balise           %{buildroot}%{_bindir}/balise
 install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
 install -Dm755 target/release/pouls            %{buildroot}%{_bindir}/pouls
-install -Dm755 target/release/boussole         %{buildroot}%{_bindir}/boussole
+install -Dm755 target/release/programme        %{buildroot}%{_bindir}/programme
 install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 
 %files -n cc-pkg-mng
@@ -137,9 +138,9 @@ install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 %license LICENSE.md
 %{_bindir}/pouls
 
-%files -n boussole
+%files -n programme
 %license LICENSE.md
-%{_bindir}/boussole
+%{_bindir}/programme
 
 %files -n sesame
 %license LICENSE.md

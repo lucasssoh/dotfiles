@@ -12,7 +12,7 @@ import "modules/mixer"
 import "modules/launcher"
 import "modules/calendar"
 import "modules/controller"
-import "modules/boussole"
+import "modules/programme"
 import "modules/sesame"
 import "modules/library"
 import "services"
@@ -102,8 +102,8 @@ ShellRoot {
     // its exclusiveZone reservation, same as waybar hiding did -- tiled
     // windows actually reclaim the space instead of leaving a dead gap.
     property bool zenMode: false
-    // Boussole's alert waits out zen mode, like everything else in the bar.
-    Binding { target: BoussoleState; property: "zen"; value: shell.zenMode }
+    // Programme's alert waits out zen mode, like everything else in the bar.
+    Binding { target: ProgrammeState; property: "zen"; value: shell.zenMode }
     // No figure is drawn in zen mode, so none is sampled either.
     Binding { target: SystemStats; property: "watching"; value: !shell.zenMode }
 
@@ -167,7 +167,7 @@ ShellRoot {
     }
 
     // The bar climbs to the Overlay layer while the keybinds sheet is up,
-    // and only then. Boussole's and the notifications' sheets are their
+    // and only then. Programme's and the notifications' sheets are their
     // own windows on the same Top layer, mapped after the bar, so they
     // stacked over the sheet hanging from the central island; z inside
     // the bar's window cannot reach them, the layer can (layer-shell's
@@ -500,18 +500,18 @@ ShellRoot {
         function closeLibrary(): void {
             LibraryState.hide();
         }
-        function toggleBoussole(): void {
-            BoussoleState.togglePanel(Quickshell.screens[0]);
+        function toggleProgramme(): void {
+            ProgrammeState.togglePanel(Quickshell.screens[0]);
         }
-        // Opens Boussole's drawer on a page: today, week, plus, or
+        // Opens Programme's drawer on a page: today, week, plus, or
         // plus/<page> (deadlines, projects, campaign, subjects, calendars,
         // rhythm, settings).
-        function showBoussole(page: string): void {
-            if (!BoussoleState.panelOpen) BoussoleState.togglePanel(Quickshell.screens[0]);
+        function showProgramme(page: string): void {
+            if (!ProgrammeState.panelOpen) ProgrammeState.togglePanel(Quickshell.screens[0]);
             // "plus/calendars": a page of Plus.
-            if (page === "setup") BoussoleState.openSetup();
-            else if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
-            else BoussoleState.show(page);
+            if (page === "setup") ProgrammeState.openSetup();
+            else if (page.startsWith("plus/")) ProgrammeState.openPlus(page.slice(5));
+            else ProgrammeState.show(page);
         }
         // Poked by hypr/scripts/agenda.py after each add/delete.
         function reloadEvents(): void {
@@ -621,9 +621,9 @@ ShellRoot {
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
                 CalendarState.close();
             }
-            if (BoussoleState.panelOpen
+            if (ProgrammeState.panelOpen
                 && shell.keybindsDismissEvents.indexOf(event.name) !== -1) {
-                BoussoleState.close();
+                ProgrammeState.close();
             }
         }
     }
@@ -749,7 +749,7 @@ ShellRoot {
             exclusiveZone: 24
             // The layer spelled out rather than `aboveWindows: true`, which
             // pins it to Top: see `barRaised`, the bar climbs above
-            // Boussole's and the notifications' sheets while the keybinds
+            // Programme's and the notifications' sheets while the keybinds
             // sheet is showing.
             WlrLayershell.layer: shell.barRaised ? WlrLayer.Overlay : WlrLayer.Top
             color: "transparent"
@@ -866,11 +866,11 @@ ShellRoot {
                     radius: clockIsland.drawerRadius
                 }
                 Region {
-                    x: boussoleIsland.x + boussoleIsland.paneX
-                    y: boussoleIsland.y + boussoleIsland.paneY
-                    width: DrawerTheme.glass && boussoleIsland.paneShown ? boussoleIsland.paneWidth : 0
-                    height: boussoleIsland.paneHeight
-                    radius: boussoleIsland.drawerRadius
+                    x: programmeIsland.x + programmeIsland.paneX
+                    y: programmeIsland.y + programmeIsland.paneY
+                    width: DrawerTheme.glass && programmeIsland.paneShown ? programmeIsland.paneWidth : 0
+                    height: programmeIsland.paneHeight
+                    radius: programmeIsland.drawerRadius
                 }
                 Region {
                     x: launchers.x + launchers.paneX
@@ -999,26 +999,26 @@ ShellRoot {
                     width: launchers.drawerBandWidth
                     height: launchers.height
                 }
-                // Boussole's drawer, the same band-shaped hole as the
+                // Programme's drawer, the same band-shaped hole as the
                 // clock's.
                 Region {
-                    x: boussoleIsland.x + boussoleIsland.drawerBandX
+                    x: programmeIsland.x + programmeIsland.drawerBandX
                     y: 0
-                    width: boussoleIsland.visible ? boussoleIsland.drawerBandWidth : 0
-                    height: boussoleIsland.height
+                    width: programmeIsland.visible ? programmeIsland.drawerBandWidth : 0
+                    height: programmeIsland.height
                 }
-                // Boussole's alert in the central island: unlike Veille's
+                // Programme's alert in the central island: unlike Veille's
                 // pulse, its buttons are the point, so the whole card takes
                 // clicks while it shows. It stacks under Veille's entry,
                 // hence that entry's live height in the offset.
                 Region {
                     x: centerIsland.x + centerIsland.drawerBandX
-                       + centerIsland.margin + boussoleAlert.hitX
+                       + centerIsland.margin + programmeAlert.hitX
                     y: centerIsland.y + centerIsland.rowHeight
                        + centerIsland.drawerGap * centerIsland.opaqueProgress
-                       + veilleDrawer.height + boussoleAlert.hitY
-                    width: boussoleAlert.hitWidth
-                    height: boussoleAlert.hitHeight
+                       + veilleDrawer.height + programmeAlert.hitY
+                    width: programmeAlert.hitWidth
+                    height: programmeAlert.hitHeight
                 }
                 // SEVENTH, the clock island's calendar drawer -- the same
                 // band-shaped hole as TOOLS' and Launchers' own, for the
@@ -1198,11 +1198,11 @@ ShellRoot {
                         veille: shell.veille
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
                     },
-                    // Boussole's alerts, under Veille's pulse when both
+                    // Programme's alerts, under Veille's pulse when both
                     // happen to show (Veille is quiet during a session).
-                    BoussoleAlert {
-                        id: boussoleAlert
-                        drawerOpen: BoussoleState.alertShown && bar.screen === shell.veille.activeScreen
+                    ProgrammeAlert {
+                        id: programmeAlert
+                        drawerOpen: ProgrammeState.alertShown && bar.screen === shell.veille.activeScreen
                     },
                     Modules.KeybindsDrawerContent {
                         drawerOpen: shell.keybindsVisible
@@ -1299,13 +1299,13 @@ ShellRoot {
             // clock's, with a drawer of its own width. Gone when there is
             // nothing to say.
             Modules.DrawerIsland {
-                id: boussoleIsland
+                id: programmeIsland
 
-                visible: boussoleIndicator.visible || BoussoleState.panelOpen
+                visible: programmeIndicator.visible || ProgrammeState.panelOpen
                 rowPane: false
                 rowHeight: 24
                 anchors.top: parent.top
-                anchors.topMargin: Math.round((barBand.height - boussoleIsland.rowHeight) / 2)
+                anchors.topMargin: Math.round((barBand.height - programmeIsland.rowHeight) / 2)
                 anchors.left: clockIsland.right
                 flushTop: false
 
@@ -1328,14 +1328,14 @@ ShellRoot {
                 // ("aligne avec le bord gauche comme notif avec bord
                 // droit"): the anchor that puts the band's outer edge
                 // at the clock island's x.
-                drawerAnchorX: boussoleIsland.margin + boussoleIsland.drawerContentWidth / 2
-                               - (boussoleIsland.x - clockIsland.x)
+                drawerAnchorX: programmeIsland.margin + programmeIsland.drawerContentWidth / 2
+                               - (programmeIsland.x - clockIsland.x)
 
                 // The drawer itself is a panel of its own, down the
                 // screen's left edge (the LazyLoader after the bars).
                 drawerItems: []
 
-                BoussoleIndicator { id: boussoleIndicator; ink: clockInk; screen: bar.screen }
+                ProgrammeIndicator { id: programmeIndicator; ink: clockInk; screen: bar.screen }
             }
 
             Modules.Block {
@@ -1354,7 +1354,7 @@ ShellRoot {
                 // which left the clock alone on a very empty left half
                 // (asked for: "place quand même les metrics à gauche
                 // après l'horloge").
-                anchors.left: boussoleIsland.visible ? boussoleIsland.right : clockIsland.right
+                anchors.left: programmeIsland.visible ? programmeIsland.right : clockIsland.right
                 flushTop: false
                 color: "transparent"
                 // Glass. These three float free of every screen edge, so
@@ -2632,37 +2632,37 @@ ShellRoot {
         }
     }
 
-    // Boussole's drawer: a panel down the whole left edge of the screen,
+    // Programme's drawer: a panel down the whole left edge of the screen,
     // whatever its content, sliding in from the left (asked for: "toute la
     // hauteur de l'écran, l'animation de gauche à droite, collé au bord
     // gauche et bas"), starting under the bar ("il faut l'espace en haut"). A window of its own rather than the bar's: the bar's
     // surface is kept short on purpose (see its implicitHeight), and this
     // one only exists while the drawer is open or sliding out.
-    property bool boussoleMapped: false
+    property bool programmeMapped: false
     Connections {
-        target: BoussoleState
+        target: ProgrammeState
         function onPanelOpenChanged() {
-            if (BoussoleState.panelOpen) {
-                boussoleUnmap.stop();
-                shell.boussoleMapped = true;
+            if (ProgrammeState.panelOpen) {
+                programmeUnmap.stop();
+                shell.programmeMapped = true;
             } else {
-                boussoleUnmap.restart();
+                programmeUnmap.restart();
             }
         }
     }
-    Timer { id: boussoleUnmap; interval: 260; onTriggered: shell.boussoleMapped = false }
+    Timer { id: programmeUnmap; interval: 260; onTriggered: shell.programmeMapped = false }
 
     LazyLoader {
-        active: shell.boussoleMapped
+        active: shell.programmeMapped
 
         PanelWindow {
-            screen: BoussoleState.activeScreen || Quickshell.screens[0]
+            screen: ProgrammeState.activeScreen || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
             // Its forms (close, settings, first run) need the keyboard;
             // on demand, so it is handed over on a click, not seized.
-            WlrLayershell.keyboardFocus: BoussoleState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: ProgrammeState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
             anchors { top: true; left: true; bottom: true }
             // Under the bar, never over it: from the band's bottom line
             // (bar.bandHeight) down to the screen's bottom edge.
@@ -2682,31 +2682,31 @@ ShellRoot {
             // replayed the glass after the window had gone.
             WlrLayershell.namespace: "quickshell-sheet"
             BackgroundEffect.blurRegion: Region {
-                x: boussoleSheet.x
-                width: DrawerTheme.glass && -boussoleSheet.x < boussoleSheet.width * 0.8 ? boussoleSheet.width : 0
-                height: boussoleSheet.height
-                topRightRadius: boussoleSheet.topRightRadius
-                bottomRightRadius: boussoleSheet.bottomRightRadius
+                x: programmeSheet.x
+                width: DrawerTheme.glass && -programmeSheet.x < programmeSheet.width * 0.8 ? programmeSheet.width : 0
+                height: programmeSheet.height
+                topRightRadius: programmeSheet.topRightRadius
+                bottomRightRadius: programmeSheet.bottomRightRadius
             }
 
             Rectangle {
-                id: boussoleSheet
+                id: programmeSheet
                 property bool entered: false
                 width: parent.width
                 height: parent.height
-                x: entered && BoussoleState.panelOpen ? 0 : -width
+                x: entered && ProgrammeState.panelOpen ? 0 : -width
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                Component.onCompleted: Qt.callLater(() => boussoleSheet.entered = true)
+                Component.onCompleted: Qt.callLater(() => programmeSheet.entered = true)
                 color: DrawerTheme.paneTop
                 // Flush on the left and the bottom, rounded where it meets
                 // the desktop.
                 topRightRadius: 28
                 bottomRightRadius: 28
 
-                BoussoleHome {
+                ProgrammeHome {
                     anchors.fill: parent
                     anchors.topMargin: 8
-                    drawerOpen: BoussoleState.panelOpen
+                    drawerOpen: ProgrammeState.panelOpen
                     fill: true
                 }
             }
@@ -2742,7 +2742,7 @@ ShellRoot {
             margins.top: 31
             implicitWidth: 440
 
-            // Glass, like Boussole's sheet above (and cut short the same
+            // Glass, like Programme's sheet above (and cut short the same
             // way, see there).
             // Its own namespace, for hypr/windowrules.lua's no_anim: the
             // sheet slides itself, and Hyprland's layer animation on top

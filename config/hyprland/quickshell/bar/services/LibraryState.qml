@@ -94,7 +94,7 @@ Singleton {
             root.others.forEach((o, n) => {
                 const home = Quickshell.env("HOME");
                 const book = o.path.startsWith(home + "/Livres/");
-                const where = book ? BoussoleState.tr("Books", "Livres") : BoussoleState.tr("Elsewhere", "Ailleurs");
+                const where = book ? ProgrammeState.tr("Books", "Livres") : ProgrammeState.tr("Elsewhere", "Ailleurs");
                 const ext = o.path.slice(o.path.lastIndexOf(".") + 1).toLowerCase();
                 const row = {
                     path: o.path, id: "", course: false,

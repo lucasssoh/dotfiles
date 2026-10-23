@@ -151,7 +151,7 @@ hl.on("hyprland.start", function()
     -- same target problem, so started here too (systemd/manette.service).
     hl.exec_cmd("systemctl --user start manette.service")
 
-    hl.exec_cmd("systemctl --user start boussole.service")
+    hl.exec_cmd("systemctl --user start programme.service")
     -- balise-autoclose.sh is NOT started here any more. It ran `balise
     -- hide` on every activewindow event, and that acts ONLY on the legacy
     -- GTK window, which nothing opens -- so it was a permanent socat +

@@ -9,7 +9,7 @@ config/hyprland/orbit-vendor/target/
 config/hyprland/prisme-src/target/
 config/hyprland/roue-src/target/
 config/hyprland/balise-src/target/
-config/hyprland/boussole-src/target/
+config/hyprland/programme-src/target/
 config/hyprland/pouls-src/target/
 crates/*/target/
 config/hyprland/roue/wheels/display.toml
@@ -41,6 +41,6 @@ site/public/screenshots/
 # RPMs from packaging/build-rpms.sh
 rpms/
 
-# Boussole's tests read a capture of the promotion's ADE feed when it is
+# Programme's tests read a capture of the promotion's ADE feed when it is
 # there; it stays out of the repository until its owner agrees.
-config/hyprland/boussole-src/tests/fixtures/ade-promo.ics
+config/hyprland/programme-src/tests/fixtures/ade-promo.ics

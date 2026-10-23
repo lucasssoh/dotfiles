@@ -112,11 +112,11 @@ bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { descripti
 -- the bar's calendar drawer shows it and rings its reminders.
 bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"), { description = "Agenda" })
 
--- Boussole: the study planner's drawer, under its place in the bar.
-bind(mod .. "+ D",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleBoussole"), { description = "Boussole" })
+-- Programme: the study agenda's drawer, under its place in the bar.
+bind(mod .. "+ D",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleProgramme"), { description = "Programme" })
 -- Quick add: one line in fuzzel ("examen L&MC 18/12"), shown as understood
--- before it is kept. Does nothing without the boussole unit.
-bind(mod .. "+SHIFT+ D", hl.dsp.exec_cmd("[ -x $HOME/.local/bin/boussole ] && $HOME/.local/bin/boussole add --fuzzel"), { description = "Boussole: quick add" })
+-- before it is kept. Does nothing without the programme unit.
+bind(mod .. "+SHIFT+ D", hl.dsp.exec_cmd("[ -x $HOME/.local/bin/programme ] && $HOME/.local/bin/programme add --fuzzel"), { description = "Programme: quick add" })
 
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,

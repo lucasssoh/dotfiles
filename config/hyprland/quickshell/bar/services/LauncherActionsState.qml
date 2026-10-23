@@ -305,7 +305,7 @@ Singleton {
         PowerState.close();
         MixerState.close();
         CalendarState.close();
-        BoussoleState.close();
+        ProgrammeState.close();
 
         root.label = app.label;
         root.icon = app.icon;

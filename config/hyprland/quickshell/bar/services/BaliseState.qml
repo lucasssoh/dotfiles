@@ -100,7 +100,7 @@ Singleton {
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
         CalendarState.close();
-        BoussoleState.close();
+        ProgrammeState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
         // The panel just became visible -- refresh right away rather

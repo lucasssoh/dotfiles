@@ -1,0 +1,21 @@
+[package]
+name = "programme"
+version = "2.0.0"
+edition = "2021"
+description = "Study agenda behind coucou-shell's Programme drawer"
+license-file = "../../../LICENSE.md"
+
+# Built like Manette: no async runtime, no date or iCal crate. Civil dates,
+# the TZif reader and the iCal parser are a few hundred lines each, and the
+# planner is a pure function over plain structs, so serde is all it needs to
+# read and write its state. libc for the service's poll, timerfd and inotify.
+[dependencies]
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"

@@ -1,0 +1,17 @@
+# Programme: the study agenda behind the bar's Programme drawer. Plans from
+# the timetable, rings the session alerts and opens each subject's course
+# when its session starts; talks to the bar over
+# $XDG_RUNTIME_DIR/programme.sock. Idle, it sleeps in poll(2) until the next
+# alert, timetable download or file change.
+[Unit]
+Description=Programme — study agenda behind the bar's Programme drawer
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/programme daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

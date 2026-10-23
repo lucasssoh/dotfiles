@@ -1,0 +1,33 @@
+name     = "programme"
+layer    = "core"
+summary  = "Study agenda: sessions from your timetable, alerts in the bar, each subject's course opened when its session starts"
+requires = ["bar", "fuzzel"]
+optional = true
+ask      = "Install Programme, the study agenda?"
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/programme-src with the build deps.
+[binaries]
+rpm    = "programme"
+source = "config/hyprland/programme-src"
+bins   = ["programme"]
+
+[packages]
+# pipewire-utils: pw-play, the alert's chime.
+dnf   = ["curl", "pipewire-utils"]
+build = ["rust", "cargo"]
+
+[links]
+"config/hyprland/systemd/programme.service" = "~/.config/systemd/user/programme.service"
+
+[services]
+user = ["programme"]
+
+[[hooks]]
+name   = "from-boussole"
+run_as = "user"
+does   = "move Boussole's planner's settings and journal to Programme, stop its service, remove its binary"
+run    = "units/core/programme/hooks/from-boussole.sh"
+
+[verify]
+commands = ["programme --version"]

@@ -471,7 +471,7 @@ hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fad
 hl.layer_rule({ match = { namespace = "^prisme$" },             animation = "fade", blur = true })
 
 -- ============================================================
--- LAYER NO-ANIM — the bar's side sheets (Boussole, notifications)
+-- LAYER NO-ANIM — the bar's side sheets (Programme, notifications)
 -- ============================================================
 -- They slide in and out on their own (quickshell/bar/shell.qml), so the
 -- `layers` animation only doubled the motion, and on close it replayed

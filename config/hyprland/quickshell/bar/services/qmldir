@@ -15,6 +15,6 @@ singleton CalendarState 1.0 CalendarState.qml
 singleton HyprGaps 1.0 HyprGaps.qml
 singleton KeybindsState 1.0 KeybindsState.qml
 singleton ControllerState 1.0 ControllerState.qml
-singleton BoussoleState 1.0 BoussoleState.qml
+singleton ProgrammeState 1.0 ProgrammeState.qml
 singleton SesameState 1.0 SesameState.qml
 singleton LibraryState 1.0 LibraryState.qml

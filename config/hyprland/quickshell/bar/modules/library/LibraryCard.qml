@@ -2,7 +2,7 @@ import QtQuick
 import "../../theme"
 import "../../services"
 import ".."
-import "../boussole"
+import "../programme"
 
 // The library's picker, centred on a veil (services/LibraryState.qml).
 // Empty, it shows where you left off; typed into, the files whose title
@@ -12,7 +12,7 @@ Item {
     id: root
 
     readonly property bool open: LibraryState.open
-    readonly property var b: BoussoleState
+    readonly property var b: ProgrammeState
 
     property string query: ""
     property string filter: "all"
@@ -208,7 +208,7 @@ Item {
                         if (e.key === Qt.Key_PageDown) { root.move(8); e.accepted = true; }
                         else if (e.key === Qt.Key_PageUp) { root.move(-8); e.accepted = true; }
                     }
-                    BoussoleText {
+                    ProgrammeText {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: field.text === ""
                         text: root.b.tr("A title, a file name…", "Un titre, un nom de fichier…")
@@ -216,7 +216,7 @@ Item {
                         font.pixelSize: 17
                     }
                 }
-                BoussoleText {
+                ProgrammeText {
                     id: count
                     anchors.right: parent.right
                     anchors.rightMargin: 18
@@ -234,7 +234,7 @@ Item {
                 spacing: 6
                 Repeater {
                     model: root.filters
-                    delegate: BoussoleChip {
+                    delegate: ProgrammeChip {
                         required property var modelData
                         text: modelData.label
                         on: root.filter === modelData.id
@@ -244,7 +244,7 @@ Item {
                 Item { width: 10; height: 32; visible: root.subjects.length > 0 }
                 Repeater {
                     model: root.subjects
-                    delegate: BoussoleChip {
+                    delegate: ProgrammeChip {
                         required property var modelData
                         text: modelData.label
                         on: root.subject === modelData.id
@@ -274,7 +274,7 @@ Item {
                 width: list.width
                 height: entry.modelData.header ? 34 : 58
 
-                BoussoleText {
+                ProgrammeText {
                     visible: entry.modelData.header
                     x: 12
                     anchors.bottom: parent.bottom
@@ -299,7 +299,7 @@ Item {
                     border.width: entry.on ? 1 : 0
                     border.color: DrawerTheme.muted
 
-                    BoussoleText {
+                    ProgrammeText {
                         id: kind
                         x: 12
                         width: 70
@@ -318,7 +318,7 @@ Item {
                         anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 3
-                        BoussoleText {
+                        ProgrammeText {
                             width: parent.width
                             textFormat: Text.StyledText
                             text: entry.modelData.header ? "" : root.lit((entry.modelData.row.num ? entry.modelData.row.num + "  " : "") + entry.modelData.row.title)
@@ -327,7 +327,7 @@ Item {
                             wrapMode: Text.NoWrap
                             elide: Text.ElideRight
                         }
-                        BoussoleText {
+                        ProgrammeText {
                             width: parent.width
                             textFormat: Text.StyledText
                             text: {
@@ -342,7 +342,7 @@ Item {
                             elide: Text.ElideRight
                         }
                     }
-                    BoussoleText {
+                    ProgrammeText {
                         id: state
                         anchors.right: parent.right
                         anchors.rightMargin: 12
@@ -368,7 +368,7 @@ Item {
                 }
             }
 
-            BoussoleText {
+            ProgrammeText {
                 anchors.centerIn: parent
                 visible: root.entries.length === 0
                 width: parent.width - 40
@@ -415,13 +415,13 @@ Item {
                 Column {
                     width: parent.width
                     spacing: 4
-                    BoussoleText {
+                    ProgrammeText {
                         width: parent.width
                         text: preview.r ? preview.r.group + (preview.r.course ? " · " + preview.r.kindLabel : "") : ""
                         color: DrawerTheme.secondary
                         font.pixelSize: 12
                     }
-                    BoussoleText {
+                    ProgrammeText {
                         width: parent.width
                         text: preview.r ? preview.r.title : ""
                         font.pixelSize: 18
@@ -429,7 +429,7 @@ Item {
                         maximumLineCount: 3
                         elide: Text.ElideRight
                     }
-                    BoussoleText {
+                    ProgrammeText {
                         width: parent.width
                         text: preview.r ? preview.r.file : ""
                         color: DrawerTheme.muted
@@ -439,7 +439,7 @@ Item {
                         elide: Text.ElideRight
                     }
                 }
-                BoussoleText {
+                ProgrammeText {
                     width: parent.width
                     visible: text !== ""
                     text: preview.r ? root.planText(preview.r) + (preview.r.page !== "" ? (root.planText(preview.r) !== "" ? " " : "") + root.b.tr("Left at ", "Laissé à la ") + preview.r.page + "." : "") : ""
@@ -469,7 +469,7 @@ Item {
                     height: 28
                     radius: 8
                     color: sec.lit ? DrawerTheme.cardRaised : (sh.containsMouse ? DrawerTheme.ink(0.04) : "transparent")
-                    BoussoleText {
+                    ProgrammeText {
                         x: 8 + (sec.modelData.sub ? 12 : 0)
                         width: parent.width - x - 8
                         anchors.verticalCenter: parent.verticalCenter
@@ -505,7 +505,7 @@ Item {
                 anchors.bottomMargin: 18
                 width: preview.width - 36
                 spacing: 8
-                BoussolePill {
+                ProgrammePill {
                     width: parent.width
                     primary: true
                     text: {
@@ -517,7 +517,7 @@ Item {
                     }
                     onClicked: root.activate()
                 }
-                BoussolePill {
+                ProgrammePill {
                     width: parent.width
                     visible: preview.r !== null && (preview.r.page !== "" || preview.hitSection >= 0)
                     text: root.b.tr("Open at the start", "Ouvrir au début")
@@ -539,7 +539,7 @@ Item {
                     root.b.tr("Tab  next kind", "Tab  type suivant"),
                     root.b.tr("Esc  back", "Échap  retour")
                 ]
-                delegate: BoussoleText {
+                delegate: ProgrammeText {
                     required property var modelData
                     text: modelData
                     color: DrawerTheme.muted

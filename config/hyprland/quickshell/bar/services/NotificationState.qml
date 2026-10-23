@@ -68,10 +68,10 @@ Singleton {
     // resolvable here) -- this used to shell out to the external GTK
     // app's own `balise hide` CLI, back when Balise wasn't a QML drawer
     // in this same process yet.
-    // During a Boussole session, Boussole in front is kept quiet: no
+    // During a Programme session, Boussole in front is kept quiet: no
     // toasts and no centre there; anywhere else they show as usual.
     // Notifications still land in the history.
-    readonly property bool studyQuiet: BoussoleState.onCourse
+    readonly property bool studyQuiet: ProgrammeState.onCourse
     onStudyQuietChanged: if (root.studyQuiet) root.close()
 
     function toggleNotificationCenter(screen) {
@@ -91,7 +91,7 @@ Singleton {
         // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
         CalendarState.close();
-        BoussoleState.close();
+        ProgrammeState.close();
         root.activeScreen = screen;
         root.centerOpen = true;
         root.hasUnseen = false;
