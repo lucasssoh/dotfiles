@@ -61,11 +61,6 @@ require("buffers")
 require("float")
 
 -- =======================
--- BOUSSOLE (le fichier édité, pendant une séance)
--- =======================
-require("boussole").setup()
-
--- =======================
 -- PLUGINS (LAZY.NVIM)
 -- =======================
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
