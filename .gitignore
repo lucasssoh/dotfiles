@@ -11,6 +11,7 @@ config/hyprland/roue-src/target/
 config/hyprland/balise-src/target/
 config/hyprland/programme-src/target/
 config/hyprland/pouls-src/target/
+config/hyprland/sesame-src/target/
 crates/*/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml

@@ -156,6 +156,9 @@ fn is_shell(pid: u32) -> bool {
     std::fs::read_link(format!("/proc/{pid}/exe"))
         .ok()
         .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        // A bar started before an update of quickshell runs a file that
+        // is gone: the kernel names it "quickshell (deleted)".
+        .map(|n| n.strip_suffix(" (deleted)").map(String::from).unwrap_or(n))
         .is_some_and(|n| n == "quickshell" || n == "qs")
 }
 

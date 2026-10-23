@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **Password card:** after an update of the bar's program, ssh, git and gpg asked for nothing and failed; the card shows again without restarting the bar.
+
 ## 2.0.0 « Partage »
 
 ### Changed
