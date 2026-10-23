@@ -5,16 +5,13 @@ import ".."
 import "../boussole"
 
 // The library's picker, centred on a veil (services/LibraryState.qml).
-// Empty, it shows where you left off and what Boussole does next; typed
-// into, the files whose title, chapter or a section holds every word,
-// grouped by subject and chapter, the one selected previewed on the
-// right with its sections. ↑↓ choose, Enter opens (at the section found),
-// Tab the next kind, Escape steps back then closes.
+// Empty, it shows where you left off; typed into, the files whose title
+// holds every word, the one selected previewed on the right. ↑↓ choose,
+// Enter opens, Escape steps back then closes.
 Item {
     id: root
 
     readonly property bool open: LibraryState.open
-    readonly property bool choosing: LibraryState.mode === "choose"
     readonly property var b: BoussoleState
 
     property string query: ""
@@ -38,9 +35,6 @@ Item {
             const resume = LibraryState.rows.filter(r => r.page !== "" && r.recent < 100000)
                 .sort((a, c) => a.recent - c.recent).slice(0, 4).map(r => ({ row: r, section: -1 }));
             add(root.b.tr("Pick up where you left off", "Reprendre"), resume);
-            const lib = LibraryState.library;
-            const next = lib ? (lib.best || []).map(p => LibraryState.rows.find(r => r.id === p.item)).filter(r => r) : [];
-            add(root.b.tr("Next, says Boussole", "La suite, selon Boussole"), next.map(r => ({ row: r, section: -1 })));
             return out;
         }
         const hits = LibraryState.search(root.query, root.filter, root.subject);
@@ -64,17 +58,9 @@ Item {
     readonly property var selected: root.selectable.length > 0 ? root.entries[root.selectable[Math.min(root.current, root.selectable.length - 1)]] : null
     onEntriesChanged: root.current = 0
 
-    readonly property var filters: [
-        { id: "all", label: root.b.tr("All", "Tout") },
-        { id: "sheet", label: root.b.tr("Sheets", "Fiches") },
-        { id: "ex", label: root.b.tr("Exercises", "Exercices") },
-        { id: "pdf", label: root.b.tr("Teacher's PDFs", "PDF du prof") },
-        { id: "books", label: root.b.tr("Books & other", "Livres et autres") }
-    ].filter(f => !root.choosing || f.id !== "books")
-    readonly property var subjects: {
-        const lib = LibraryState.library;
-        return lib ? (lib.subjects || []).map(s => ({ id: s.id, label: s.label })) : [];
-    }
+    // Every row is Liseuse's now: no kinds nor subjects to pick.
+    readonly property var filters: []
+    readonly property var subjects: []
 
     function move(d) {
         const n = root.selectable.length;
@@ -88,6 +74,7 @@ Item {
         LibraryState.activate(e.row, section === undefined ? e.section : section);
     }
     function nextFilter() {
+        if (root.filters.length === 0) return;
         const i = root.filters.findIndex(f => f.id === root.filter);
         root.filter = root.filters[(i + 1) % root.filters.length].id;
     }
@@ -122,16 +109,9 @@ Item {
         return out + esc(raw.slice(at));
     }
     function stateText(r) {
-        if (r.state === "next") return root.b.tr("next", "la suite");
-        if (r.page !== "") return r.page;
-        return r.detail || "";
+        return r.page !== "" ? r.page : "";
     }
     function planText(r) {
-        if (!r.course) return "";
-        if (r.state === "next") return root.b.tr("Next in the plan.", "La suite du programme.");
-        if (r.state === "read") return root.b.tr("Done: ", "Fait : ") + r.detail + ".";
-        if (r.task) return root.b.tr("In the plan, further on.", "Au programme, un peu plus loin.");
-        if (!r.planned) return root.b.tr("Not in the plan.", "Pas au programme.");
         return "";
     }
 
@@ -231,9 +211,7 @@ Item {
                     BoussoleText {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: field.text === ""
-                        text: root.choosing
-                              ? root.b.tr("A course file for the session…", "Un fichier de cours pour la séance…")
-                              : root.b.tr("A title, a section's words, “oc dual”, “lpt”…", "Un titre, les mots d'une section, « oc dual », « lpt »…")
+                        text: root.b.tr("A title, a file name…", "Un titre, un nom de fichier…")
                         color: DrawerTheme.muted
                         font.pixelSize: 17
                     }
@@ -505,7 +483,7 @@ Item {
                         id: sh
                         anchors.fill: parent
                         hoverEnabled: true
-                        enabled: !root.choosing
+                        enabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.activate(sec.index)
                     }
@@ -533,7 +511,6 @@ Item {
                     text: {
                         const r = preview.r;
                         if (!r) return "";
-                        if (root.choosing) return root.b.tr("Choose", "Choisir");
                         if (preview.hitSection >= 0) return root.b.tr("Open at “", "Ouvrir à « ") + r.sections[preview.hitSection].title.replace(/^\d+\s+/, "") + root.b.tr("”", " »");
                         if (r.page !== "") return root.b.tr("Resume, ", "Reprendre, ") + r.page;
                         return root.b.tr("Open", "Ouvrir");
@@ -542,7 +519,7 @@ Item {
                 }
                 BoussolePill {
                     width: parent.width
-                    visible: !root.choosing && preview.r !== null && (preview.r.page !== "" || preview.hitSection >= 0)
+                    visible: preview.r !== null && (preview.r.page !== "" || preview.hitSection >= 0)
                     text: root.b.tr("Open at the start", "Ouvrir au début")
                     onClicked: LibraryState.openAtStart(preview.r)
                 }

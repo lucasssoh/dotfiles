@@ -22,7 +22,6 @@ Column {
     ]
     // Suggested names chosen, per folder: { "L&MC": ["Logique et …"] }.
     property var chosen: ({})
-    property string planned: ""
 
     function next() {
         if (root.step === 2) root.b.loadSuggestions();
@@ -61,8 +60,8 @@ Column {
         }
         BoussoleText {
             width: parent.width
-            text: root.b.tr("The folder holding one folder per subject. Boussole only reads it; new files will wait for you to plan them.",
-                            "Le dossier qui contient un dossier par module. Boussole ne fait que le lire ; les nouveaux fichiers attendront que tu les planifies.")
+            text: root.b.tr("The folder holding one folder per subject. It is only read: each folder is a subject.",
+                            "Le dossier qui contient un dossier par module. Il est seulement lu : chaque dossier est un module.")
             color: DrawerTheme.secondary
             font.pixelSize: 13
         }
@@ -70,12 +69,12 @@ Column {
             id: folder
             text: root.b.settings.courses || ""
             placeholder: "~/courses/…"
-            onAccepted: root.b.setSettings({ courses: folder.text.trim().replace(/^~/, Quickshell.env("HOME")) }, () => root.b.refreshFiles())
+            onAccepted: root.b.setSettings({ courses: folder.text.trim().replace(/^~/, Quickshell.env("HOME")) }, () => root.b.openSetup())
         }
         BoussoleText {
             width: parent.width
-            visible: root.b.files !== null && root.b.files.domains.length > 0
-            text: root.b.files ? root.b.tr("Found: ", "Trouvé : ") + root.b.files.domains.map(d => d.domain + " (" + d.items.length + ")").join(" · ") : ""
+            visible: root.b.folders.length > 0
+            text: root.b.tr("Found: ", "Trouvé : ") + root.b.folders.join(" · ")
             font.pixelSize: 13
         }
     }
@@ -153,14 +152,9 @@ Column {
         spacing: 10
         BoussoleText {
             width: parent.width
-            text: root.b.tr("Plan the structured material now (maps, sheets, exercises)? PDFs and notes stay in Files, to decide one by one.",
-                            "Planifier dès maintenant le matériel structuré (cartes, fiches, exercices) ? Les PDF et les notes restent dans Fichiers, à décider un par un.")
+            text: root.b.tr("A subject in Boussole opens there when its session starts: turn it on in More › Subjects.",
+                            "Un module qui est dans Boussole s'y ouvre quand sa séance commence : active-le dans Plus › Modules.")
             font.pixelSize: 13
-        }
-        BoussolePill {
-            text: root.planned === "" ? root.b.tr("Plan the structured material", "Planifier le matériel structuré")
-                                      : root.planned + root.b.tr(" files planned", " fichiers planifiés")
-            onClicked: root.b.request({ cmd: "plan-structured" }, (r) => root.planned = r.text || "0")
         }
         BoussoleText {
             width: parent.width
@@ -189,7 +183,7 @@ Column {
                     // Every folder becomes a subject, with the names kept.
                     const old = root.b.settings.domains || [];
                     const list = Object.keys(root.b.suggestions).map(id => {
-                        const was = old.find(d => d.id === id) || { id: id, spaced: true };
+                        const was = old.find(d => d.id === id) || { id: id };
                         const names = root.chosen[id] !== undefined ? root.chosen[id] : (root.b.suggestions[id] || []);
                         return Object.assign({}, was, { calendar_names: names.length ? names : (was.calendar_names || []) });
                     });

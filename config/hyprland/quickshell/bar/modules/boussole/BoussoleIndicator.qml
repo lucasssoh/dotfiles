@@ -42,11 +42,7 @@ Item {
 
     // What to say, most pressing first.
     readonly property string mode: {
-        if (root.t) {
-            if (root.t.flags.game) return "game";
-            if (root.t.flags.paused) return "paused";
-            return root.b.onBreak ? "break" : "session";
-        }
+        if (root.t) return root.b.onBreak ? "break" : "session";
         if (root.b.gap) return "gap";
         // Due and not started: said as such, not as a time gone by.
         if (root.b.next && root.minutesToNext <= 0 && root.nextToday) return "now";
@@ -62,13 +58,9 @@ Item {
     readonly property string label: {
         const b = root.b;
         switch (root.mode) {
-        case "game": return b.tr("Session paused · game open", "Séance en pause · jeu ouvert");
-        case "paused": return b.tr("Saved", "Sauvegardée") + (b.status.active_label ? " · " + b.status.active_label : "");
         case "break": return b.tr("Break · ", "Pause · ") + b.clock(b.phaseLeft);
-        case "session": {
-            const doc = root.t.doc;
-            return b.clock(b.phaseLeft) + (doc ? "" : b.tr(" · on paper", " · sur papier"));
-        }
+        // Boussole not in front: the clock stops, and says so.
+        case "session": return b.clock(b.phaseLeft) + (root.t.watched && !root.t.counting ? b.tr(" · elsewhere", " · ailleurs") : "");
         case "gap": return b.tr("Free ", "Creux ") + b.gap.start + "-" + b.gap.end + (b.gap.parts.length ? " · " + root.domainOf(b.gap) + " ?" : "");
         case "now": return root.nextLabel + b.tr(" · now", " · maintenant");
         case "soon": return root.nextLabel + b.tr(" in ", " dans ") + b.clock(root.secondsToNext);
@@ -133,7 +125,7 @@ Item {
         Text {
             visible: !ring.visible
             anchors.verticalCenter: parent.verticalCenter
-            text: root.mode === "game" ? "" : root.mode === "paused" ? "" : ""
+            text: ""
             color: root.ink.primary
             // The service stopped: still there, dimmed.
             opacity: root.mode === "off" ? 0.45 : 1

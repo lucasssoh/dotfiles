@@ -95,7 +95,13 @@ Column {
             target: "rhythm"
             icon: "\ue304"
             title: root.b.tr("Rhythm", "Rythme")
-            detail: root.b.tr("week · holidays · focus mode", "semaine · vacances · mode focus")
+            detail: root.b.tr("week · holidays", "semaine · vacances")
+        }
+        Entry {
+            target: "subjects"
+            icon: "\ue05f"
+            title: root.b.tr("Subjects", "Modules")
+            detail: root.b.tr("level · what opens", "niveau · ce qui s'ouvre")
         }
         Entry {
             target: "calendars"
@@ -105,17 +111,10 @@ Column {
                                                  : root.b.tr("no timetable yet", "pas d'emploi du temps")
         }
         Entry {
-            visible: (root.b.status.undecided || 0) > 0
-            target: "files"
-            icon: "\ue0cf"
-            title: root.b.tr("New files", "Nouveaux fichiers")
-            detail: (root.b.status.undecided || 0) + root.b.tr(" to sort", " à trier")
-        }
-        Entry {
             target: "settings"
             icon: "\ue154"
             title: root.b.tr("Settings", "Réglages")
-            detail: root.b.tr("language · game lock · course folder", "langue · verrouillage · dossier de cours")
+            detail: root.b.tr("language · objective · course folder", "langue · objectif · dossier de cours")
         }
         BoussoleText {
             topPadding: 8
@@ -148,14 +147,14 @@ Column {
         Loader {
             width: parent.width
             sourceComponent: ({
-                deadlines: deadlines, files: files,
+                deadlines: deadlines, subjects: subjects,
                 calendars: calendars, rhythm: rhythm, settings: settings
             })[root.b.plusPage] || null
         }
     }
 
     Component { id: deadlines; BoussolePlusDeadlines {} }
-    Component { id: files; BoussoleFiles {} }
+    Component { id: subjects; BoussolePlusSubjects {} }
     Component { id: calendars; BoussolePlusCalendars {} }
     Component { id: rhythm; BoussolePlusRhythm {} }
     Component { id: settings; BoussolePlusSettings {} }

@@ -3,7 +3,7 @@ import Quickshell
 import "../../theme"
 import "../../services"
 
-// Settings: language, objective, the game lock, the course folder.
+// Settings: language, objective, the course folder.
 Column {
     id: root
 
@@ -42,20 +42,12 @@ Column {
     BoussoleText {
         width: parent.width
         text: root.s.objective === "pass"
-            ? root.b.tr("Exam-type subjects from 2 weeks before, no margin kept.", "Sujets type examen dès 2 semaines avant, pas de marge gardée.")
+            ? root.b.tr("A subject's work aims at its exam day.", "Le travail d'un module vise le jour de son examen.")
             : root.s.objective === "ranked"
-              ? root.b.tr("Exam-type subjects from 3 weeks before, one session of margin.", "Sujets type examen dès 3 semaines avant, une séance de marge.")
-              : root.b.tr("Same hours, but a sheet is acquired only with its exercises solved alone; exam-type subjects from 4 weeks before; two sessions of margin before each exam.",
-                          "Autant d'heures, mais une fiche n'est acquise qu'avec ses exercices réussis seul ; sujets type examen dès 4 semaines avant ; deux séances de marge avant chaque examen.")
+              ? root.b.tr("A subject's work aims one session before its exam.", "Le travail d'un module vise une séance avant son examen.")
+              : root.b.tr("A subject's work aims two sessions before its exam.", "Le travail d'un module vise deux séances avant son examen.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
-    }
-
-    Section { text: root.b.tr("Games during a session", "Jeux pendant une séance") }
-    Row {
-        spacing: 6
-        BoussoleChip { text: root.b.tr("Ask first", "Demander d'abord"); on: root.s.gate !== false; onClicked: root.b.setSettings({ gate: true }) }
-        BoussoleChip { text: root.b.tr("Never ask", "Ne jamais demander"); on: root.s.gate === false; onClicked: root.b.setSettings({ gate: false }) }
     }
 
     Section { text: root.b.tr("Course folder", "Dossier de cours") }
@@ -67,7 +59,7 @@ Column {
     }
     BoussoleText {
         width: parent.width
-        text: root.b.tr("Read only: Boussole never writes in it.", "En lecture seule : Boussole n'y écrit jamais.")
+        text: root.b.tr("One folder per subject, read only: {folder} in a subject's command.", "Un dossier par module, en lecture seule : {folder} dans la commande d'un module.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

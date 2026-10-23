@@ -492,10 +492,10 @@ ShellRoot {
         // The library's picker (services/LibraryState.qml): Liseuse's
         // Super+F asks for it here and falls back to fuzzel without the bar.
         function openLibrary(): void {
-            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0], "open", null);
+            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0]);
         }
         function searchLibrary(query: string): void {
-            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0], "open", null, query);
+            LibraryState.show(Hyprland.focusedMonitor ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name) : Quickshell.screens[0], query);
         }
         function closeLibrary(): void {
             LibraryState.hide();
@@ -503,15 +503,14 @@ ShellRoot {
         function toggleBoussole(): void {
             BoussoleState.togglePanel(Quickshell.screens[0]);
         }
-        // Opens Boussole's drawer on a page: today, week, progress, files,
-        // plus, or plus/<page> (deadlines, projects, campaign, subjects,
-        // calendars, rhythm, settings).
+        // Opens Boussole's drawer on a page: today, week, plus, or
+        // plus/<page> (deadlines, projects, campaign, subjects, calendars,
+        // rhythm, settings).
         function showBoussole(page: string): void {
             if (!BoussoleState.panelOpen) BoussoleState.togglePanel(Quickshell.screens[0]);
             // "plus/calendars": a page of Plus.
             if (page === "setup") BoussoleState.openSetup();
             else if (page.startsWith("plus/")) BoussoleState.openPlus(page.slice(5));
-            else if (page.startsWith("progress/")) BoussoleState.openProgramme(page.slice(9));
             else BoussoleState.show(page);
         }
         // Poked by hypr/scripts/agenda.py after each add/delete.
@@ -2709,43 +2708,6 @@ ShellRoot {
                     anchors.topMargin: 8
                     drawerOpen: BoussoleState.panelOpen
                     fill: true
-                }
-            }
-        }
-    }
-
-    // Boussole's session panel, in focus mode: fixed down the left edge of
-    // every study workspace (boussole-src/src/focus.rs), keeping its room so
-    // Liseuse and the rest tile beside it. Gone outside the dimension. The
-    // drawer opens over the same edge: the panel steps aside meanwhile
-    // ("il faut pas que lui et boussole s'ouvrent en même temps"), its room
-    // kept so nothing beside it moves.
-    LazyLoader {
-        active: BoussoleState.studyHere
-
-        PanelWindow {
-            screen: Quickshell.screens[0]
-            color: "transparent"
-            anchors { top: true; left: true; bottom: true }
-            // Under the bar's band like the drawer (y 31): a panel that
-            // keeps its room is placed below the bar's own reserved 24 px,
-            // so the margin counts from there.
-            margins.top: 7
-            implicitWidth: 320
-            exclusiveZone: 320
-            WlrLayershell.namespace: "boussole-session"
-
-            Rectangle {
-                anchors.fill: parent
-                color: DrawerTheme.panelTop
-                topRightRadius: 28
-                bottomRightRadius: 28
-                opacity: BoussoleState.panelOpen ? 0 : 1
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 180 } }
-                BoussoleColumn {
-                    anchors.fill: parent
-                    color: "transparent"
                 }
             }
         }

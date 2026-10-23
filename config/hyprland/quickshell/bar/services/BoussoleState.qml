@@ -3,12 +3,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import Quickshell.Wayland
-import Quickshell.Services.Mpris
 import "."
 
 // State + IPC for Boussole, the study planner. The planning, the alarm
-// clock and the session tracking are the `boussole` service's
+// clock and the session under way are the `boussole` service's
 // (config/hyprland/boussole-src); this file connects to its socket
 // ($XDG_RUNTIME_DIR/boussole.sock, JSON lines, like Manette's), keeps the
 // last status it pushed, and sends back what the drawer and the island's
@@ -16,7 +14,7 @@ import "."
 //
 // The service never pushes a second-by-second clock: it sends the session's
 // effective seconds and the instant they were counted at, and the bar
-// counts on from there while `counting` holds.
+// counts on from there while `counting` holds (Boussole in front).
 Singleton {
     id: root
 
@@ -31,35 +29,29 @@ Singleton {
     }
 
     readonly property var next: root.status.next || null
-    readonly property var tracking: (root.status.suivi && root.status.suivi.tracking) || null
+    readonly property var tracking: root.status.tracking || null
     readonly property var today: root.status.today || []
     readonly property var gap: root.status.gap || null
     readonly property var alert: root.status.alert || null
     readonly property bool paused: root.status.paused === true
-    // Focus mode: the study dimension (its own workspaces), the session's
-    // panel on each of them, the evening's files.
-    readonly property var focus: root.status.focus || null
-    readonly property int studyFirst: root.focus && root.focus.study ? root.focus.study[0] : 11
-    readonly property int studyLast: root.focus && root.focus.study ? root.focus.study[1] : 14
-    function isStudy(id) { return id >= root.studyFirst && id <= root.studyLast; }
-    readonly property bool inStudy: Hyprland.focusedWorkspace !== null && root.isStudy(Hyprland.focusedWorkspace.id)
-    // The panel: a session holds the dimension and you are in it.
-    readonly property bool studyHere: root.focus !== null && root.focus.active === true && root.inStudy
-    function goStudy(id) {
-        Quickshell.execDetached(["hyprctl", "eval", "hl.dispatch(hl.dsp.focus({ workspace = \"" + id + "\" }))"]);
+    // The course's window in front during a session: Firefox on Boussole.
+    // Notifications keep quiet there, and show anywhere else.
+    readonly property bool onCourse: {
+        if (!root.tracking || !root.tracking.watched) return false;
+        const t = Hyprland.activeToplevel;
+        const ipc = t ? (t.lastIpcObject || {}) : {};
+        return (ipc.class || "") === "org.mozilla.firefox" && (t.title || "").indexOf("Boussole") !== -1;
     }
 
     // ---- the drawer ---------------------------------------------------
     property bool panelOpen: false
     property var activeScreen: null
-    // "today" | "week" | "close"
+    // "today" | "week" | "plus" | "setup"
     property string page: "today"
-    // The close form being filled, as the service describes it.
-    property var closing: null
     property var week: []
-    // The page takes the keyboard (the note of a close): the bar's window
+    // The page takes the keyboard (a field of Plus): the bar's window
     // turns focusable for it, like Balise's password field.
-    readonly property bool textInput: root.panelOpen && (root.page === "close" || root.page === "plus" || root.page === "setup" || root.laterTyping)
+    readonly property bool textInput: root.panelOpen && (root.page === "plus" || root.page === "setup" || root.laterTyping)
     // "Later", a time typed rather than picked.
     property bool laterTyping: false
     readonly property bool setupNeeded: root.status.setup_needed === true
@@ -70,38 +62,17 @@ Singleton {
         root.setupStep = 1;
         root.page = "setup";
         root.loadPlus();
-        root.refreshFiles();
+        root.request({ cmd: "folders" }, (r) => root.folders = r.data || []);
     }
+    // The course folder's subjects, for the first run.
+    property var folders: []
     function loadSuggestions() {
         root.request({ cmd: "suggestions" }, (r) => root.suggestions = r.data || ({}));
-    }
-
-    property var files: null
-    property var progress: []
-    // The programme, under Progress: "" (the subjects), "weeks", "whatif".
-    property string progressPage: ""
-    property var weeks: []
-    // The margins under a trial of settings ("what if"), nothing kept.
-    property var whatIf: []
-    readonly property var programme: root.status.programme || ({})
-    function openProgramme(sub) {
-        if (root.page !== "progress") root.show("progress");
-        root.progressPage = sub || "";
-        if (sub === "weeks") root.request({ cmd: "weeks-view" }, (r) => root.weeks = r.data || []);
-    }
-    function tryPatch(patch) {
-        root.request({ cmd: "what-if", patch: patch }, (r) => root.whatIf = r.data || []);
     }
 
     function show(page) {
         root.page = page;
         if (page === "week") root.request({ cmd: "week", days: 7 }, (r) => root.week = r.data || []);
-        if (page === "files") root.refreshFiles();
-        if (page === "progress") {
-            root.progressPage = "";
-            root.request({ cmd: "progress-view" }, (r) => root.progress = r.data || []);
-            root.request({ cmd: "settings" }, (r) => root.settings = r.data || ({}));
-        }
         if (page === "plus") {
             root.plusPage = "";
             root.loadPlus();
@@ -122,7 +93,6 @@ Singleton {
         root.plusPage = sub;
         root.page = "plus";
         root.loadPlus();
-        if (sub === "files") root.refreshFiles();
     }
     function loadPlus() {
         root.request({ cmd: "settings" }, (r) => root.settings = r.data || ({}));
@@ -173,42 +143,11 @@ Singleton {
         return iso(d);
     }
 
-    function refreshFiles() {
-        root.request({ cmd: "files-view" }, (r) => root.files = r.data || null);
-    }
-    // "planned" or "ignored", for one file or several.
-    function decide(items, inclusion) {
-        root.request({ cmd: "files", items: items, inclusion: inclusion }, () => root.refreshFiles());
-    }
-
-    // Opens the close of a session (today's, or one left open another day).
-    // `then`: the session to start right after, in place ("Next file").
-    property string thenStart: ""
-    function openClose(session, screen, then) {
-        root.thenStart = then || "";
-        root.request({ cmd: "closing", session: session }, (r) => {
-            if (!r.ok) return;
-            root.closing = r.data;
-            root.page = "close";
-            if (!root.panelOpen) root.togglePanel(screen || Quickshell.screens[0]);
-        });
-    }
-
-    function submitClose(parts, mediaForCourse) {
-        if (!root.closing) return;
-        const msg = { cmd: "close", session: root.closing.session, parts: parts, media_for_course: mediaForCourse };
-        const chained = root.thenStart !== "";
-        if (chained) msg.then = root.thenStart;
-        root._send(msg);
-        root.thenStart = "";
-        // Undo takes back the last thing done: after "Next file" that is
-        // the next session's start, not this close, so none is offered.
-        if (!chained) {
-            root.justClosed = root.closing.session;
-            undoTimer.restart();
-        }
-        root.closing = null;
-        root.page = "today";
+    // "Done": the session under way is over.
+    function done(session) {
+        root._send({ cmd: "done", session: session });
+        root.justClosed = session;
+        undoTimer.restart();
     }
 
     // "Closed · Undo" stays this long under Today.
@@ -218,12 +157,11 @@ Singleton {
         interval: 10000
         onTriggered: root.justClosed = ""
     }
-    // Takes the close back and opens its form again.
+    // Takes "Done" back: the session is under way again.
     function undoClose() {
-        const s = root.justClosed;
         root.justClosed = "";
         undoTimer.stop();
-        root.request({ cmd: "undo" }, () => root.openClose(s));
+        root._send({ cmd: "undo" });
     }
 
     function togglePanel(screen) {
@@ -238,8 +176,7 @@ Singleton {
         LauncherActionsState.close();
         CalendarState.close();
         root.activeScreen = screen;
-        // A new opening starts on today, unless a close is under way.
-        if (root.page !== "close") root.page = "today";
+        root.page = "today";
         root.panelOpen = true;
     }
 
@@ -297,45 +234,7 @@ Singleton {
         return h > 0 ? h + ":" + two(m) + ":" + two(r) : m + ":" + two(r);
     }
 
-    // ---- what the bar sees, during a session ----------------------------
-    // No keyboard or mouse for five minutes: the time is not counted.
-    // Media playing: counted apart, and asked about at the close. Sent only
-    // while a session is followed; nothing at all otherwise.
     readonly property bool sessionActive: root.tracking !== null
-    IdleMonitor {
-        id: idle
-        enabled: root.sessionActive
-        timeout: 300
-        respectInhibitors: true
-        onIsIdleChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
-    }
-    readonly property var playingPlayer: {
-        const ps = Mpris.players.values.filter(p => p.dbusName.indexOf("playerctld") === -1);
-        for (let i = 0; i < ps.length; i++) if (ps[i].isPlaying) return ps[i];
-        return null;
-    }
-    readonly property bool mediaPlaying: root.playingPlayer !== null
-    // What plays, so a video can be asked about by name ("is it for the
-    // session?"): its title, else the player's.
-    readonly property string mediaTitle: root.playingPlayer ? (root.playingPlayer.trackTitle || root.playingPlayer.identity || "") : ""
-    onMediaPlayingChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
-    onMediaTitleChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
-    onSessionActiveChanged: if (root.sessionActive) root.setActivity(idle.isIdle, root.mediaPlaying)
-
-    // Games during a session ask first (the controller popup, fuzzel's
-    // launch prefix), unless the lock is off in the settings.
-    readonly property bool lockGames: root.sessionActive && root.status.gate !== false
-    readonly property string lockText: {
-        if (!root.tracking) return "";
-        for (const r of root.today) {
-            if (r.id === root.tracking.session)
-                return root.tr("Session ", "Séance ") + r.title + root.tr(" until ", " jusqu'à ") + r.end;
-        }
-        return root.tr("A session is under way", "Une séance est en cours");
-    }
-    function pauseForGame() {
-        if (root.tracking) root._send({ cmd: "pause-session", session: root.tracking.session });
-    }
 
     // Veille is quiet during a session, until bedtime.
     readonly property bool holdsVeille: {
@@ -399,55 +298,19 @@ Singleton {
 
     // ---- commands -----------------------------------------------------
     function start(session) { root._send({ cmd: "start", session: session }); }
+    // The session's command again: Boussole on its subject.
+    function launch(session) { root._send({ cmd: "launch", session: session }); }
     // "Later, until…": nothing planned, rung or offered before then. `until`
     // is a choice's id (30, 60, tomorrow, a date) or what was typed.
     function later(until) { root._send({ cmd: "later", until: until }); }
     function back() { root._send({ cmd: "back" }); }
-    // Stopped without Close, the latest first: to take up again.
-    readonly property var saved: root.status.saved || []
-    function resume(session) { root._send({ cmd: "resume-session", session: session }); }
-
-    // ---- the room: the session's files, the one put forward -------------
-    property var room: null
-    readonly property string roomFor: root.focus && root.focus.session ? root.focus.session : ""
-    function loadRoom() {
-        if (root.roomFor === "") { root.room = null; return; }
-        root.request({ cmd: "room", session: root.roomFor }, (r) => root.room = r.data || null);
-    }
-    onRoomForChanged: root.loadRoom()
-    // What is read moves on as you read: the room follows the page.
-    readonly property string roomDoc: root.tracking && root.tracking.doc ? root.tracking.doc.item + "#" + root.tracking.doc.section : ""
-    onRoomDocChanged: roomTimer.restart()
-    Timer { id: roomTimer; interval: 1500; onTriggered: root.loadRoom() }
-    function setLevel(domain, level) { root.request({ cmd: "level", domain: domain, level: level }, () => root.loadRoom()); }
+    // A session now: that subject, for that long.
+    function free(subject, minutes) { root._send({ cmd: "free", subject: subject, minutes: minutes }); }
+    function setLevel(domain, level) { root._send({ cmd: "level", domain: domain, level: level }); }
 
     // "until 21:30" while Later holds, else "".
     readonly property string away: root.status.away || ""
     readonly property var laterChoices: root.status.later || []
-    // "I have time": a session right away; `cb` gets the reply.
-    // `subject`: "" for the most useful work, else that subject's next task.
-    function closeSession(session) { root._send({ cmd: "close", session: session }); }
-    // Today's free time (nothing planned now): what would help most. Shown
-    // only in the drawer, never on its own.
-    readonly property var nowFree: root.status.now_free || null
-    // One of its suggestions, or a subject's next task, now.
-    function startNow(task, minutes, school, cb) {
-        root.request({ cmd: "start-now", task: task, minutes: minutes, place: school ? "school" : "home" }, cb);
-    }
-
-    // The session's sheet closed: open it again, or go on on paper.
-    function reopen() { root._send({ cmd: "reopen" }); }
-    // A project's file, picked from its session: in the dimension in focus mode.
-    function openItem(item) { root._send({ cmd: "open-item", item: item }); }
-    function onPaper() { root._send({ cmd: "paper" }); }
-    function pauseSession() { if (root.tracking) root._send({ cmd: "pause-session", session: root.tracking.session }); }
-    function resumeSession() { if (root.tracking) root._send({ cmd: "resume-session", session: root.tracking.session }); }
-    // "Next file": this session's close first, then the next one in place.
-    function nextFile(screen) {
-        if (!root.tracking || !root.focus || !root.focus.next) return;
-        root.openClose(root.tracking.session, screen, root.focus.next);
-    }
-    function setActivity(idle, media) { root._send({ cmd: "activity", idle: idle, media: media, title: root.mediaTitle }); }
 
     // Commands whose answer is wanted: called back with the reply.
     property var _pending: ({})

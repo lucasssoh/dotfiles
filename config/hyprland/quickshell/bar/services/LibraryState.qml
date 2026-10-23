@@ -4,48 +4,34 @@ import Quickshell
 import Quickshell.Io
 import "."
 
-// The library's picker (Super+F, and "Any file…" in Boussole's drawer):
-// one window over everything, to find a document and open it in Liseuse.
+// The library's picker (Super+F): one window over everything, to find a
+// document and open it in Liseuse.
 //
-// Two sources, merged by path when it opens:
-//   - Boussole's library (`library` on its socket): the course files by
-//     subject and chapter, their sections (a PDF's slide titles), where
-//     you are in them and what the plan does next. Absent without
-//     Boussole: the picker is then a plain list.
-//   - `liseuse list`: everything Liseuse indexes (~/Livres, sources.conf),
-//     most recent first, with the page you left each one at. One run per
-//     opening (~0.3 s), in the background: the course files show at once.
+// Its rows come from `liseuse list`: everything Liseuse indexes (~/Livres,
+// sources.conf), most recent first, with the page you left each one at.
+// One run per opening (~0.3 s), in the background.
 //
-// The search runs here, on each keystroke, over titles, file names,
-// chapters and section titles (~1000 rows: a few milliseconds). Opening
-// a file never starts a session; "choose" mode (the drawer) hands the
-// file back to Boussole instead, which does.
+// The search runs here, on each keystroke, over titles and file names
+// (~1000 rows: a few milliseconds).
 Singleton {
     id: root
 
     property bool shown: false
     property bool open: false
     property string screenName: ""
-    // "open" (Liseuse) | "choose" (a course file for "I have time")
-    property string mode: "open"
-    property var onChoose: null
     // What the field starts with (`searchLibrary` over IPC).
     property string initialQuery: ""
 
-    // Boussole's reply, and Liseuse's rows ({ path, title, page }).
-    property var library: null
+    // Liseuse's rows ({ path, title, page }).
     property var others: []
     property bool loadingOthers: false
-    // The merged rows, rebuilt when a source arrives; course rows by item id.
+    // The rows as the picker searches them, rebuilt when Liseuse answers.
     property var rows: []
-    property var rowsById: ({})
 
     readonly property string liseuse: Quickshell.env("HOME") + "/.local/bin/liseuse"
 
-    function show(screen, mode, onChoose, query) {
+    function show(screen, query) {
         root.initialQuery = query || "";
-        root.mode = mode || "open";
-        root.onChoose = onChoose || null;
         root.screenName = screen ? screen.name : "";
         hideTimer.stop();
         root.shown = true;
@@ -59,30 +45,12 @@ Singleton {
     }
     function toggle(screen) {
         if (root.open) root.hide();
-        else root.show(screen, "open", null);
+        else root.show(screen);
     }
     Timer { id: hideTimer; interval: 180; onTriggered: root.shown = false }
 
-    // Boussole's part alone (the drawer's "I have time").
-    function refreshLibrary() {
-        if (!BoussoleState.daemonConnected) return;
-        BoussoleState.request({ cmd: "library" }, r => {
-            if (!r.ok) return;
-            root.library = r.data;
-            root.merge();
-        });
-    }
-
     function reload() {
-        if (BoussoleState.daemonConnected) {
-            BoussoleState.request({ cmd: "library" }, r => {
-                root.library = r.ok ? r.data : null;
-                root.merge();
-            });
-        } else {
-            root.library = null;
-        }
-        if (root.mode === "open" && !lister.running) {
+        if (!lister.running) {
             root.loadingOthers = true;
             lister.buffer = [];
             lister.running = true;
@@ -115,54 +83,15 @@ Singleton {
         }
     }
 
-    function kindOf(kind) {
-        return ({ map: "sheet", sheet: "sheet", synthesis: "ex", exam: "ex", td: "ex", pdf: "pdf", notes: "notes" })[kind] || "other";
-    }
-    function kindLabel(kind) {
-        return ({
-            map: BoussoleState.tr("Map", "Carte"), sheet: BoussoleState.tr("Sheet", "Fiche"),
-            synthesis: BoussoleState.tr("Exercises", "Exercices"), exam: BoussoleState.tr("Exam", "Sujet"),
-            td: "TD", pdf: "PDF", notes: "Notes"
-        })[kind] || BoussoleState.tr("File", "Fichier");
-    }
     function fold(s) {
         return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[_\-./]+/g, " ");
     }
 
     function merge() {
         const out = [];
-        const byPath = {};
-        const recent = {};
-        root.others.forEach((o, n) => { recent[o.path] = { rank: n, page: o.page }; });
         let order = 0;
-        if (root.library) {
-            for (const s of root.library.subjects || []) {
-                for (const c of s.chapters || []) {
-                    for (const i of c.items || []) {
-                        const r = recent[i.path];
-                        const row = {
-                            path: i.path, id: i.id, course: true,
-                            subject: s.id, subjectLabel: s.label, chapter: c.name,
-                            group: s.label + " · " + c.name,
-                            title: i.title, file: i.file, num: i.num,
-                            kind: i.kind, filter: root.kindOf(i.kind), kindLabel: root.kindLabel(i.kind),
-                            state: i.state, detail: i.detail, planned: i.planned,
-                            page: r ? r.page : "", recent: r ? r.rank : 100000,
-                            sections: i.sections || [], minutes: i.minutes, task: i.task,
-                            order: order++
-                        };
-                        row.own = root.fold(row.title + " " + row.file);
-                        row.hay = row.own + " " + root.fold(row.chapter + " " + row.subjectLabel + " " + row.kindLabel);
-                        row.secHay = row.sections.map(x => root.fold(x.heading || x.title));
-                        out.push(row);
-                        byPath[i.path] = true;
-                    }
-                }
-            }
-        }
-        if (root.mode === "open") {
+        {
             root.others.forEach((o, n) => {
-                if (byPath[o.path]) return;
                 const home = Quickshell.env("HOME");
                 const book = o.path.startsWith(home + "/Livres/");
                 const where = book ? BoussoleState.tr("Books", "Livres") : BoussoleState.tr("Elsewhere", "Ailleurs");
@@ -181,9 +110,6 @@ Singleton {
                 out.push(row);
             });
         }
-        const ids = {};
-        for (const r of out) if (r.id) ids[r.id] = r;
-        root.rowsById = ids;
         root.rows = out;
     }
 
@@ -221,14 +147,8 @@ Singleton {
         return res;
     }
 
-    // Started from the picker: open, or hand back to the drawer.
+    // Started from the picker: opened in Liseuse.
     function activate(row, section) {
-        if (root.mode === "choose") {
-            const cb = root.onChoose;
-            root.hide();
-            if (cb) cb(row);
-            return;
-        }
         const args = [root.liseuse, "open", row.path];
         const s = section >= 0 ? row.sections[section] : null;
         if (s && s.page) args.push("--page", String(s.page));

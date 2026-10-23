@@ -4,8 +4,8 @@ import "../../theme"
 import "../../services"
 
 // Boussole's drawer, a panel down the screen's left edge: tabs over one
-// page at a time (Today, Week; Close while a session is being closed). A
-// page taller than the screen scrolls inside it.
+// page at a time (Today, Week, Plus). A page taller than the screen
+// scrolls inside it.
 //
 // Same entry contract as the calendar's: `drawerOpen` from the caller, the
 // island animates `height` to `implicitHeight`.
@@ -41,7 +41,7 @@ Item {
     // inverted, the highlight sliding from one to the next.
     Rectangle {
         id: tabs
-        visible: root.b.page !== "close" && root.b.page !== "setup"
+        visible: root.b.page !== "setup"
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: 20
@@ -57,7 +57,6 @@ Item {
         readonly property var pages: [
             { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
             { id: "week", label: root.b.tr("Week", "Semaine") },
-            { id: "progress", label: root.b.tr("Progress", "Progrès") },
             { id: "plus", label: root.b.tr("More", "Plus") }
         ]
         readonly property int current: Math.max(0, tabs.pages.findIndex(p => p.id === root.b.page))
@@ -132,10 +131,8 @@ Item {
             id: page
             width: flick.width
             sourceComponent: root.b.page === "week" ? week
-                           : root.b.page === "progress" ? progress
                            : root.b.page === "plus" ? plus
-                           : root.b.page === "setup" ? setup
-                           : (root.b.page === "close" && root.b.closing) ? closing : today
+                           : root.b.page === "setup" ? setup : today
             onLoaded: flick.contentY = 0
         }
     }
@@ -151,8 +148,6 @@ Item {
 
     Component { id: today; BoussoleToday {} }
     Component { id: week; BoussoleWeek {} }
-    Component { id: closing; BoussoleClose {} }
-    Component { id: progress; BoussoleProgress {} }
     Component { id: plus; BoussolePlus {} }
     Component { id: setup; BoussoleSetup {} }
 }
