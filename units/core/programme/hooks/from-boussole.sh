@@ -19,16 +19,21 @@ cfg="$HOME/.config/programme"
 data="$HOME/.local/share/programme"
 keep="$data/from-boussole"
 
-# The planner's service first: nothing writes while its files move.
-if systemctl --user cat boussole.service >/dev/null 2>&1; then
-    systemctl --user disable --now boussole.service >/dev/null 2>&1 || true
+# The planner's service first: nothing writes while its files move. Its
+# link points at a file the rename took away, so systemd may know it only
+# as still running.
+if systemctl --user is-active boussole.service >/dev/null 2>&1 \
+   || systemctl --user is-enabled boussole.service >/dev/null 2>&1; then
+    systemctl --user stop boussole.service >/dev/null 2>&1 || true
+    systemctl --user disable boussole.service >/dev/null 2>&1 || true
     ok "boussole.service stopped and disabled"
 fi
 unit_link="$HOME/.config/systemd/user/boussole.service"
 if [ -L "$unit_link" ] && readlink "$unit_link" | grep "systemd/boussole.service" >/dev/null; then
     rm -f "$unit_link"
-    systemctl --user daemon-reload || true
 fi
+rm -f "$HOME/.config/systemd/user/graphical-session.target.wants/boussole.service"
+systemctl --user daemon-reload || true
 
 moved=0
 mkdir -p "$cfg" "$data" "$keep"
