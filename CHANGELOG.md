@@ -2,6 +2,19 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Programme:** Boussole's study planner is now Programme, in the bar and in the terminal (`programme`), and keeps only the agenda: the timetable, the week, the day, the sessions and their alerts. The courses themselves move to Boussole. Install it with `cc-pkg-mng install programme`: your settings, periods and history come along, and the old `boussole` command and service go.
+- **Programme, sessions:** a session is one subject for the rest of its slot, after the tutorials to prepare and your tasks. Subjects take turns and share the time by the level you give them and how close their exam is.
+- **Programme, starting a session:** `Start` opens the subject's course: Boussole on the subject, or a command you choose, set in More › Subjects. `Launch` opens it again during the session, `Done` ends it.
+- **Programme, the time that counts:** during a session, only the time with Boussole in front counts. Notifications keep quiet there and show anywhere else.
+- **Liseuse, library:** `Super + F` lists Liseuse's books and files, where you left off first.
+
+### Removed
+- **Programme:** the course folder's files, the library of sheets, Progress, the close form, focus mode and its study workspaces, `I have time` on a file or a project, and the question before a game during a session.
+- **Neovim:** no longer tells the planner which file it edits.
+
 ## 1.11.1
 
 ### Changed

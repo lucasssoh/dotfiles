@@ -262,62 +262,51 @@ There's nothing to set up.
 
 The service behind it runs as `systemd --user` (`pouls.service`). It's built from [`pouls-src`](../config/hyprland/pouls-src/) on edge and installed as a package on stable, like Manette.
 
-### `boussole`
+### `programme`
 
-A study planner in the bar, optional (`init` asks). It reads your course folder and your timetable, plans study sessions around your courses and your evenings, rings them, and follows them through [Liseuse](#liseuse). It never writes in the course folder.
+A study agenda in the bar, optional (`init` asks). It reads your timetable, plans study sessions around your courses and your evenings, rings them, and opens each subject's course when its session starts: [Boussole](https://github.com/lucasssoh/Boussole) for a subject that is there, any command you choose otherwise. What a session holds is the course's business; Programme says which subject, when and for how long.
 
-**In the bar.** Right of the clock: the next session and what it is about (`A&C · 20:30`, `Alternance · 20:30`), outlined with a countdown in its last 15 minutes, then `now` while it waits to be started. During a session, a ring that empties over a 25-minute Pomodoro, with its 5-minute break. Click it, or press `Super + D`, for the drawer.
+**In the bar.** Right of the clock: the next session and its subject (`A&C · 20:30`, `Alternance · 20:30`), outlined with a countdown in its last 15 minutes, then `now` while it waits to be started. During a session, a ring that empties over a 25-minute Pomodoro, with its 5-minute break; `elsewhere` while the course is not in front. Click it, or press `Super + D`, for the drawer.
 
-**Alerts.** A session's start opens in the bar's central island, like Veille, with a chime. It names the module only (`Tonight · A&C`, `20:30 – 22:00 · 1 h 30`): what to open is put forward in the room. `Start`, `In 30 min`, `Tomorrow`. It stays until you answer, comes back 15 minutes later if nothing started, and waits out a fullscreen game or zen mode. The evening before, a notification sums up tomorrow; a course cancelled or moved in the timetable, today or tomorrow, gets one too. Nothing after the latest end of the evening.
+**Alerts.** A session's start opens in the bar's central island, like Veille, with a chime: `Tonight · A&C`, `20:30 – 22:00 · 1 h 30`, with `Start`, `In 30 min` and `Tomorrow`. It stays until you answer, comes back 15 minutes later if nothing started, and waits out a fullscreen game or zen mode. At the session's end, `A&C · done?` asks for `Done`. The evening before, a notification sums up tomorrow; a course cancelled or moved in the timetable, today or tomorrow, gets one too. Nothing after the latest end of the evening.
 
 **The drawer.** A panel from under the bar to the bottom of the screen, flush with its left edge, sliding in from the left.
 
 | Tab | What it holds |
 |---|---|
-| **Today** | The session under way, the ones saved to take up again (`Continue`), the next one with `Start` and `Later`, `Start a session`, the courses of the day still ahead (else the next day's) with their room, and what comes after |
+| **Today** | The session under way with `Launch` and `Done`, the next one with `Start` and `Later`, `Start a session`, the courses of the day still ahead (else the next day's) with their room, and what comes after |
 | **Week** | The seven days ahead: courses with their room, and sessions |
-| **Progress** | Per module: sheets studied, exercises solved alone, reviews waiting, the next exam and the sessions to spare before it |
-| **More** | Exams and hand-ins, rhythm, calendars, new files to sort when there are some, settings, and the first run again |
+| **More** | Exams and hand-ins, rhythm, subjects, calendars, settings, and the first run again |
 
-**One thing at a time.** A session is one module (or one project, or a campaign), with its own `Start` and close. While one session is under way, the next ones keep quiet.
+**Sessions.** A counted slot first takes the tutorials to prepare and the tasks you typed, then the rest of it goes to one subject. Subjects take turns, and share the time by how you rate yourself in each and how close its exam is. Projects and hand-ins are spread up to 3 days before they are due, and a campaign gets its daily time. A subject gets no sessions after its last exam and its last course.
 
-**Later.** `Later` asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type (`21:30`, `sun`). Until then nothing is planned, rung or suggested, and what was planned in that time is placed again after it. You can still start a session yourself. `Back now`, under Today, frees what is left. From a terminal: `boussole later 1h`, `boussole later tomorrow`, `boussole back`.
+**Starting a session.** `Start` (in the alert or under Today) runs the subject's command; `Launch` runs it again. While it lasts, its time counts only while the course's window is in front: Firefox on Boussole. Notifications keep quiet there and wait in the history; anywhere else they show as usual. A subject without a command opens nothing and its time is the session's. `Done` ends the session. Under Today, `Start a session` starts one right away: a subject, then 30 minutes to an hour and a half (`programme free 45 A&C`, or `libre 45m` in the quick add).
 
-**Start a session.** Under Today, a session right away: the most useful work first (in a free period at school, up to its end and on paper; the nearest tutorial to prepare, then the module furthest behind its exam, then one you said you are behind in), or one module, or a whole project (its room holds every file of its folder), or any course file. Then 30 minutes to an hour and a half. A file off the plan's path is fine: it counts for its module, and the next step stays in the plan. `boussole free 45` (or `boussole free 45 A&C`, `boussole free 45 --file A&C/Cours_03/31_LS.md`, `boussole free 45 --project pendu-tp`) and `libre 45m` in the quick add do the same.
+**Subjects.** In More › Subjects, each subject has a level, *Behind* (more time), *Shaky*, *Fine* or *Tutorials only* (no sessions of its own, only its tutorials to prepare, its projects and its exams), and what its sessions open: nothing, Boussole on the subject's folder (`boussole open {folder} --resume`), or a command you type, `{folder}` standing for the subject's folder. From a terminal: `programme subject level A&C behind`, `programme subject launch A&C on`, `programme subject launch L&MC liseuse {folder}/00_Index.md`, `programme subject launch L&MC off`.
 
-**The room.** In focus mode (on in More › Rhythm), `Start` takes you to the study workspaces (11 to 14), a dimension of their own that the bar shows instead of yours while you are there. A fixed panel down the left edge of each of them is the room: the module, its level and folder (touch the line to change the level), the time left, the file put forward with its reason (where you stopped, or the plan's next step) and `Open`, then every file of the module by chapter: ✓ read, ● under way, ○ not yet. Click any to open it in Liseuse. A project's room lists its own files; they show in its module's room too. A campaign's room opens its folder (`boussole campaign dir Alternance ~/Alternance`). Solution folders (`Corriges`, `Solutions`) are never planned. Liseuse, a course file in Neovim, and what you said was for the session count there; anything else is asked about as anywhere, and a video playing is asked about after 30 seconds. In it, `Super + 1` to `4` reach the study workspaces, `Super + Shift`, the wheel and the 3-finger swipe stay there too; nothing but Boussole crosses between the two. Notifications keep quiet there and wait in the history. Closing Liseuse ends nothing: the panel offers to open it again or to go on on paper (the time counts).
+**Later.** `Later` asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type (`21:30`, `sun`). Until then nothing is planned or rung, and what was planned in that time is placed again after it. You can still start a session yourself. `Back now`, under Today, frees what is left. From a terminal: `programme later 1h`, `programme later tomorrow`, `programme back`.
 
-**Save & leave.** In the room or under Today, `Save & leave` keeps the session as it is and brings you back to your own workspaces, with the windows of the room left open. Leaving without Close, or shutting the computer down, saves it too. Under Today, `Continue` comes first, with the time left and the page you were on: it takes you back into the room, Liseuse at that page if it was closed. Boussole counts the pages Liseuse shows on screen (not the window in front), leaves out the time without keyboard or mouse for 5 minutes, and pauses while a game runs.
+**The days.** Weekday evenings, two blocks on Sunday, Saturday as a bonus that is never counted, and Friday evening free. A school day whose courses end by the midday break gives its afternoon a 90-minute block (`programme rhythm half_day_minutes 0` turns it off). Holidays, study weeks and pauses are periods, in More › Rhythm.
 
-**Close.** Pre-filled with what Liseuse saw: where you stopped, and each exercise done, *Solved*, *With help* or *Stuck*. A video played is asked about. The plan follows: reviews at about 7 and 21 days, an exercise done with help or stuck back 3 days later without the solution. `Close` also closes what is left in the study workspaces (`Tidy on Close`, in More › Rhythm); an app with unsaved work asks first.
+**First run.** Under Today, five steps: language and course folder (one folder per subject), the timetable's iCal link and your groups (ticked, never typed), which courses go with which folder, your rhythm, ready. Every setting is in **More** afterwards, and `programme help` lists the same from a terminal.
 
-**Away from the sheet.** When something outside the study workspaces has the screen for a while, Boussole asks in the island whether it is for the session: for this session, for another course or project, or personal (back to the sheet, or pause). It asks after 10 minutes when nothing presses, 6 when the module is one you are behind in or the margin is tight, 3 when the exam is close; coming back to the sheet starts the count again. The answer is kept: something personal gets a reminder next time rather than the question, and personal time is taken out of the session. Neovim tells Boussole which file it edits (a file in the course folder always counts for its course); for other windows, the title is enough.
-
-**A project's files.** A project can own a folder of the course: `boussole project dir pendu-tp RESEAUX/Projet_Pendu`. Its files then leave the course's order and are worked on in the project's sessions, in any order. What Liseuse sees you read counts at Close, file by file, and the project's step is pre-ticked as done only once its hours are spent. `boussole project dir pendu-tp -` gives the files back to the course.
-
-**Where you stand.** Each module has a level, set in its room or from a terminal (`boussole subject level A&C behind`: `behind`, `shaky`, `fine`, `td-only`): *Behind* gets more time per sheet and goes first, *Unsure* a little of both, *Fine* nothing special, and *Tutorials only* has nothing to read: only its tutorials to prepare, its projects and its exams. Each module also says how fast its sheets go (quick, as estimated, long), and a module can have its sheets only read, its exercises left to the exercise files and tutorials (`boussole subject lessons RESEAUX on`).
-
-**The days.** Weekday evenings, two blocks on Sunday, Saturday as a bonus that is never counted, and Friday evening free. A school day whose courses end by the midday break gives its afternoon a 90-minute block (`boussole rhythm half_day_minutes 0` turns it off). A campaign's daily time goes to a free period at school, a free afternoon or the morning before the evening, and never to a free evening.
-
-**First run.** Under Today, five steps: language and course folder, the timetable's iCal link and your groups (ticked, never typed), which courses go with which folder, your rhythm, ready. Every setting is in **More** afterwards, and `boussole help` lists the same from a terminal.
-
-**Quick add** (`Super + Shift + D`, or `boussole add` in a terminal) reads one line and shows what it understood before keeping it:
+**Quick add** (`Super + Shift + D`, or `programme add` in a terminal) reads one line and shows what it understood before keeping it:
 
 | Line | Adds |
 |---|---|
 | `examen L&MC 18/12` | an exam |
-| `cc OC 12/11 14h` | a test, prepared 3 days ahead |
+| `cc OC 12/11 14h` | a test |
 | `rendu ARGOS 12/11 30h` | a hand-in with its hours of work |
 | `indispo sam 14h-18h` | a busy slot |
 | `tâche relire TD3 A&C 45m` | a task |
 | `candidature Entreprise F` | a company in the running campaign |
-| `libre 1h` | what fits in an hour you did not expect |
-
-**Games during a session.** Launched from the [controller menu](#manette) or the launcher (`Super + Space`), a game asks first: launching anyway pauses the session. A game started from Steam directly is noticed, not stopped. Turn it off in More › Settings.
+| `libre 1h` | a session now, in an hour you did not expect |
 
 **Calendars.** Sessions go to khal's `etude` calendar and your courses to `cours`, so both show in the calendar drawer; your own events (`Super + A`) count as busy.
 
-Settings live in `~/.config/boussole/settings.json` and your history in `~/.local/share/boussole/`; both are written by the app. The service runs as `systemd --user` (`boussole.service`), built from [`boussole-src`](../config/hyprland/boussole-src/) on edge and installed as a package on stable.
+Settings live in `~/.config/programme/settings.json` and your history in `~/.local/share/programme/`; both are written by the app. The service runs as `systemd --user` (`programme.service`), built from [`programme-src`](../config/hyprland/programme-src/) on edge and installed as a package on stable.
+
+**Coming from Boussole's planner.** Installing the `programme` unit (`cc-pkg-mng install programme`) moves your settings and history over and removes the old service and its `boussole` command. What Programme no longer reads is kept in `~/.local/share/programme/from-boussole/`, with a copy of each file as it was.
 
 ### `fuzzel`
 
@@ -327,7 +316,7 @@ The app launcher (`Super + Space`). It's also the list you pick from for the cli
 
 ### `liseuse`
 
-A reading library on `Super + F`. If a book is already open on the current workspace, it brings it back. Otherwise it opens the library: where you left off and, with Boussole, what comes next; type to search titles, chapters and the sections inside each file (a teacher's slides by their titles), filter by kind or subject, and open a file at the section found. Opening a file never starts a session. Without the bar, the list comes up in fuzzel. Press `F1` inside a book for the reading manual. `liseuse open FILE --page N` (or `--section TITLE`) opens a file at a page or a heading.
+A reading library on `Super + F`. If a book is already open on the current workspace, it brings it back. Otherwise it opens the library: where you left off first; type to search titles and file names, and open one where you left it. Without the bar, the list comes up in fuzzel. Press `F1` inside a book for the reading manual. `liseuse open FILE --page N` (or `--section TITLE`) opens a file at a page or a heading.
 
 | | |
 |---|---|
