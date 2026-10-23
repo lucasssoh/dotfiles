@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.0.0 « Partage »
 
 ### Changed
 - **Programme:** Boussole's study planner is now Programme, in the bar and in the terminal (`programme`), and keeps only the agenda: the timetable, the week, the day, the sessions and their alerts. The courses themselves move to Boussole. Install it with `cc-pkg-mng install programme`: your settings, periods and history come along, and the old `boussole` command and service go.
