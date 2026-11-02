@@ -1,0 +1,62 @@
+# satty, the screenshot editor behind Super + S, rebuilt from upstream's
+# tagged tarball with one patch: frosted glass behind its toolbars in
+# fullscreen (satty-glass.patch). Its look is ~/.config/satty/overrides.css.
+#
+# packaging/build-rpms.sh fetches the tarball, checks it against
+# satty.sha256 and builds this next to coucou-shell's own RPMs. To move to a
+# new satty: bump Version, update satty.sha256, rebase the patch.
+
+%global debug_package %{nil}
+
+Name:           satty
+# Above the mineiro/satty COPR's builds, which machines that had it may
+# still have enabled: dnf keeps this one whatever the COPR publishes.
+Epoch:          1
+Version:        0.22.0
+Release:        1.coucou%{?dist}
+Summary:        Screenshot annotation tool
+# satty itself; the Rust crates bundled into the binary are MIT or Apache-2.0.
+License:        MPL-2.0
+URL:            https://github.com/Satty-org/Satty
+Source0:        https://github.com/Satty-org/Satty/archive/v%{version}/Satty-%{version}.tar.gz
+Patch0:         satty-glass.patch
+ExclusiveArch:  x86_64
+
+BuildRequires:  cargo
+BuildRequires:  rust
+BuildRequires:  gcc
+BuildRequires:  pkgconfig(gtk4)
+BuildRequires:  pkgconfig(libadwaita-1)
+BuildRequires:  pkgconfig(epoxy)
+BuildRequires:  pkgconfig(fontconfig)
+
+%description
+Satty annotates screenshots: crop, arrows, text, blur, highlight. This
+build frosts the image behind its toolbars in fullscreen.
+
+%prep
+%autosetup -n Satty-%{version} -p1
+
+%build
+# ci-release also writes the man page and the shell completions.
+cargo build --release --locked --features ci-release
+
+%install
+install -Dm755 target/release/satty   %{buildroot}%{_bindir}/satty
+install -Dm644 satty.desktop          %{buildroot}%{_datadir}/applications/satty.desktop
+install -Dm644 assets/satty.svg       %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/satty.svg
+install -Dm644 man/satty.1            %{buildroot}%{_mandir}/man1/satty.1
+install -Dm644 completions/satty.bash %{buildroot}%{_datadir}/bash-completion/completions/satty
+install -Dm644 completions/_satty     %{buildroot}%{_datadir}/zsh/site-functions/_satty
+install -Dm644 completions/satty.fish %{buildroot}%{_datadir}/fish/vendor_completions.d/satty.fish
+
+%files
+%license LICENSE
+%doc README.md
+%{_bindir}/satty
+%{_datadir}/applications/satty.desktop
+%{_datadir}/icons/hicolor/scalable/apps/satty.svg
+%{_mandir}/man1/satty.1*
+%{_datadir}/bash-completion/completions/satty
+%{_datadir}/zsh/site-functions/_satty
+%{_datadir}/fish/vendor_completions.d/satty.fish

@@ -20,8 +20,9 @@ jobs:
     steps:
       - name: Build dependencies
         run: >
-          dnf -y install git-core rpm-build rpm-sign gnupg2 gh
+          dnf -y install git-core rpm-build rpm-sign gnupg2 gh curl
           cargo rust gcc 'pkgconfig(gtk4)' 'pkgconfig(gtk4-layer-shell-0)'
+          'pkgconfig(libadwaita-1)' 'pkgconfig(epoxy)' 'pkgconfig(fontconfig)'
 
       - uses: actions/checkout@v7
 

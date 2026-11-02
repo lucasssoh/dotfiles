@@ -1,0 +1,203 @@
+diff -ruN a/src/glass.rs b/src/glass.rs
+--- a/src/glass.rs
++++ b/src/glass.rs
+@@ -0,0 +1,155 @@
++//! Frosted glass behind the toolbars in fullscreen.
++//!
++//! coucou-shell patch, not upstream. In fullscreen the toolbars float over
++//! the image, and GTK has no backdrop-filter: a translucent toolbar shows
++//! the screenshot sharp through it, text included. `Glass` wraps a toolbar
++//! and paints, under it, a blurred and dimmed copy of the sketch board cut
++//! to the toolbar's capsule. The toolbar's own CSS (veil, rim) draws on top.
++//!
++//! The capsule's radius is half the toolbar's height: the stylesheet gives
++//! the toolbars fully round ends, so nothing here has to match a number in
++//! the CSS.
++
++use relm4::gtk::{self, glib, graphene, gsk, prelude::*, subclass::prelude::*};
++
++/// Blur radius of the backdrop, in px.
++const BLUR: f64 = 16.0;
++/// Brightness of the blurred backdrop: below 1 so white ink reads on a
++/// blurred white page.
++const DIM: f32 = 0.72;
++
++mod imp {
++    use super::*;
++    use std::cell::RefCell;
++
++    #[derive(Default)]
++    pub struct Glass {
++        pub child: RefCell<Option<gtk::Widget>>,
++        pub backdrop: RefCell<Option<gtk::WidgetPaintable>>,
++        pub handler: RefCell<Option<glib::SignalHandlerId>>,
++    }
++
++    #[glib::object_subclass]
++    impl ObjectSubclass for Glass {
++        const NAME: &'static str = "SattyGlass";
++        type Type = super::Glass;
++        type ParentType = gtk::Widget;
++
++        fn class_init(klass: &mut Self::Class) {
++            klass.set_layout_manager_type::<gtk::BinLayout>();
++            klass.set_css_name("glass");
++        }
++    }
++
++    impl ObjectImpl for Glass {
++        fn dispose(&self) {
++            if let (Some(p), Some(h)) = (self.backdrop.take(), self.handler.take()) {
++                p.disconnect(h);
++            }
++            if let Some(child) = self.child.take() {
++                child.unparent();
++            }
++        }
++    }
++
++    impl WidgetImpl for Glass {
++        // Never the target itself: the margin around the toolbar belongs to
++        // the image underneath. The toolbar inside is still picked.
++        fn contains(&self, _x: f64, _y: f64) -> bool {
++            false
++        }
++
++        fn snapshot(&self, snapshot: &gtk::Snapshot) {
++            let child = self.child.borrow();
++            let Some(child) = child.as_ref() else { return };
++            if child.is_visible() {
++                self.paint_backdrop(child, snapshot);
++            }
++            self.obj().snapshot_child(child, snapshot);
++        }
++    }
++
++    impl Glass {
++        fn paint_backdrop(&self, child: &gtk::Widget, snapshot: &gtk::Snapshot) {
++            let obj = self.obj();
++            let backdrop = self.backdrop.borrow();
++            let Some(backdrop) = backdrop.as_ref() else { return };
++            let Some(board) = backdrop.widget() else { return };
++            let Some(bounds) = child.compute_bounds(&*obj) else { return };
++            let Some(origin) = obj.compute_point(&board, &graphene::Point::new(0.0, 0.0)) else {
++                return;
++            };
++            if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
++                return;
++            }
++
++            let radius = bounds.height().min(bounds.width()) / 2.0;
++            let pad = (BLUR * 2.0) as f32;
++            let reach = graphene::Rect::new(
++                bounds.x() - pad,
++                bounds.y() - pad,
++                bounds.width() + 2.0 * pad,
++                bounds.height() + 2.0 * pad,
++            );
++
++            snapshot.push_rounded_clip(&gsk::RoundedRect::from_rect(bounds, radius));
++            snapshot.push_color_matrix(
++                &graphene::Matrix::new_scale(DIM, DIM, DIM),
++                &graphene::Vec4::new(0.0, 0.0, 0.0, 0.0),
++            );
++            snapshot.push_blur(BLUR);
++            // Only the toolbar's surroundings are rendered and blurred, not
++            // the whole board.
++            snapshot.push_clip(&reach);
++            snapshot.save();
++            snapshot.translate(&graphene::Point::new(-origin.x(), -origin.y()));
++            backdrop.snapshot(snapshot, board.width() as f64, board.height() as f64);
++            snapshot.restore();
++            snapshot.pop();
++            snapshot.pop();
++            snapshot.pop();
++            snapshot.pop();
++        }
++    }
++}
++
++glib::wrapper! {
++    pub struct Glass(ObjectSubclass<imp::Glass>)
++        @extends gtk::Widget,
++        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
++}
++
++impl Glass {
++    /// Wraps `toolbar`, which must have no parent, over a frosted copy of
++    /// `board`.
++    pub fn wrap(toolbar: &impl IsA<gtk::Widget>, board: &impl IsA<gtk::Widget>) -> Self {
++        let glass: Self = glib::Object::new();
++        let toolbar = toolbar.as_ref();
++        // Sized and placed like the toolbar, so the wrapper does not span
++        // the whole overlay.
++        glass.set_halign(toolbar.halign());
++        glass.set_valign(toolbar.valign());
++        toolbar.set_parent(&glass);
++
++        let backdrop = gtk::WidgetPaintable::new(Some(board.as_ref()));
++        let weak = glass.downgrade();
++        let handler = backdrop.connect_invalidate_contents(move |_| {
++            if let Some(g) = weak.upgrade() {
++                g.queue_draw();
++            }
++        });
++
++        let imp = glass.imp();
++        imp.child.replace(Some(toolbar.clone()));
++        imp.backdrop.replace(Some(backdrop));
++        imp.handler.replace(Some(handler));
++        glass
++    }
++
++    /// Gives the toolbar back, without a parent.
++    pub fn unwrap(&self) -> Option<gtk::Widget> {
++        let child = self.imp().child.take()?;
++        child.unparent();
++        Some(child)
++    }
++}
+diff -ruN a/src/main.rs b/src/main.rs
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -26,6 +26,7 @@
+ 
+ mod configuration;
+ mod femtovg_area;
++mod glass;
+ mod icons;
+ mod ime;
+ mod math;
+@@ -294,14 +295,28 @@
+             AppInput::FullscreenChanged(fullscreen) => {
+                 let tools = self.tools_toolbar.widget();
+                 let style = self.style_toolbar.widget();
++                // coucou-shell: in fullscreen each toolbar sits in a Glass,
++                // which frosts the image under it (see glass.rs).
++                let in_glass = |w: &gtk::Box| {
++                    w.parent().and_then(|p| p.downcast::<glass::Glass>().ok())
++                };
+                 if fullscreen {
++                    if in_glass(tools).is_some() {
++                        return;
++                    }
++                    let board = self.sketch_board.widget();
+                     self.outer_box.remove(tools);
+                     self.outer_box.remove(style);
+-                    self.overlay.add_overlay(tools);
+-                    self.overlay.add_overlay(style);
++                    self.overlay.add_overlay(&glass::Glass::wrap(tools, board));
++                    self.overlay.add_overlay(&glass::Glass::wrap(style, board));
+                 } else {
+-                    self.overlay.remove_overlay(tools);
+-                    self.overlay.remove_overlay(style);
++                    let (Some(gt), Some(gs)) = (in_glass(tools), in_glass(style)) else {
++                        return;
++                    };
++                    gt.unwrap();
++                    gs.unwrap();
++                    self.overlay.remove_overlay(&gt);
++                    self.overlay.remove_overlay(&gs);
+                     self.outer_box.prepend(tools);
+                     self.outer_box.append(style);
+                 }
