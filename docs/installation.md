@@ -1,6 +1,6 @@
 # Installation
 
-coucou-shell runs on **Fedora 44, x86_64**. A netinstall ("Fedora Everything") with nothing selected is plenty. You'll also need a user account that can use `sudo`.
+coucou-shell runs on **Fedora 44 or 45, x86_64**. A netinstall ("Fedora Everything") with nothing selected is plenty. You'll also need a user account that can use `sudo`.
 
 ## Install
 
@@ -66,6 +66,19 @@ hyprctl monitors
 Drivers for your CPU and GPU are installed along with everything else. If something has to be done by hand, you'll see it listed at the end of the run. [hardware.md](hardware.md) has the details.
 
 `cc-pkg-mng status` tells you what's installed and whether it's all in place. For keeping things up to date, see [cc-pkg-mng.md](cc-pkg-mng.md).
+
+## Moving to Fedora 45
+
+coucou-shell's packages exist for both releases, and dnf moves them to Fedora 45 along with the rest. Upgrade coucou-shell first, while still on Fedora 44:
+
+```bash
+cc-pkg-mng upgrade
+sudo dnf upgrade --refresh
+sudo dnf system-upgrade download --releasever=45
+sudo dnf offline reboot
+```
+
+After the reboot, `cc-pkg-mng status` checks that everything is still in place.
 
 ## Coming from an earlier setup
 

@@ -6,7 +6,7 @@ My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own litt
 
 ## Quick start
 
-You need Fedora 44. A minimal netinstall is enough.
+You need Fedora 44 or 45. A minimal netinstall is enough.
 
 ```bash
 sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo
