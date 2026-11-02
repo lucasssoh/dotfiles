@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Programme:** every session of a subject now runs that subject's command, whether it's the course, a class to prepare, a project or a reminder, instead of only starting the counter.
+- **Programme:** what a session opens (your browser, Boussole) stays open when Programme restarts or updates.
 
 ## 2.0.1
 

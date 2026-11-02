@@ -133,7 +133,22 @@ impl Service {
         let Some(args) = self.launch_args(session) else { return false };
         let Some((prog, rest)) = args.split_first() else { return false };
         let Some(path) = which(prog).or_else(|| prog.contains('/').then(|| PathBuf::from(prog))) else { return false };
-        self.spawn(Command::new(path).args(rest), Job::Quiet);
+        // In a scope of its own: what it opens (the browser, Boussole's
+        // server) lives on when the service restarts, instead of going
+        // down with its cgroup.
+        let mut cmd = match which("systemd-run") {
+            Some(run) => {
+                let mut c = Command::new(run);
+                c.args(["--user", "--scope", "--quiet", "--collect"]).arg(&path).args(rest);
+                c
+            }
+            None => {
+                let mut c = Command::new(&path);
+                c.args(rest);
+                c
+            }
+        };
+        self.spawn(&mut cmd, Job::Quiet);
         true
     }
 
