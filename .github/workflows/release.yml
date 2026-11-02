@@ -14,13 +14,18 @@ permissions:
   id-token: write
 
 jobs:
+  # One build per Fedora release the dnf repository serves: each RPM carries
+  # its .fcN, which is how make-repo.sh files it under fedora/N/.
   rpms:
     runs-on: ubuntu-latest
-    container: fedora:44
+    strategy:
+      matrix:
+        fedora: [44, 45]
+    container: fedora:${{ matrix.fedora }}
     steps:
       - name: Build dependencies
         run: >
-          dnf -y install git-core rpm-build rpm-sign gnupg2 gh curl
+          dnf -y install git-core rpm-build rpm-sign gnupg2 curl
           cargo rust gcc 'pkgconfig(gtk4)' 'pkgconfig(gtk4-layer-shell-0)'
           'pkgconfig(libadwaita-1)' 'pkgconfig(epoxy)' 'pkgconfig(fontconfig)'
 
@@ -39,6 +44,24 @@ jobs:
           key="$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')"
           rpmsign --addsign --define "_gpg_name $key" out/*.rpm
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpms-fc${{ matrix.fedora }}
+          path: out/*.rpm
+
+  # Once every build is signed: one release with all of them.
+  release:
+    needs: rpms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rpms-fc*
+          path: out
+          merge-multiple: true
+
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,6 +76,6 @@ jobs:
             --notes-file notes.md
 
   pages:
-    needs: rpms
+    needs: release
     uses: ./.github/workflows/site.yml
     secrets: inherit
