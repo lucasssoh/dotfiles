@@ -358,15 +358,40 @@ fn a_subject_runs_its_command_on_its_folder() {
 }
 
 #[test]
-fn only_boussole_in_firefox_counts() {
+fn only_boussole_in_the_browser_counts() {
     use programme::seance::{is_course_window, Watch};
-    assert!(is_course_window("org.mozilla.firefox", "Boussole — Mozilla Firefox"));
-    assert!(!is_course_window("org.mozilla.firefox", "YouTube — Mozilla Firefox"));
-    assert!(!is_course_window("brave-browser", "Boussole"));
+    let ff = "org.mozilla.firefox";
+    assert!(is_course_window(ff, ff, "Boussole — Mozilla Firefox"));
+    assert!(!is_course_window(ff, ff, "YouTube — Mozilla Firefox"));
+    assert!(!is_course_window(ff, "brave-browser", "Boussole"));
+    assert!(is_course_window("brave-browser", "brave-browser", "Boussole - Brave"));
     let mut w = Watch { session: "s".into(), watched: true, ..Watch::default() };
     w.set_counting(true, 1000);
     w.set_counting(false, 1600);
     w.set_counting(false, 1700);
     w.set_counting(true, 2000);
     assert_eq!(w.effective(2300), 900, "ten minutes, then five");
+}
+
+#[test]
+fn the_browser_is_named_by_its_desktop_entry() {
+    use programme::seance::browser_class;
+    assert_eq!(browser_class("org.mozilla.firefox.desktop\n").as_deref(), Some("org.mozilla.firefox"));
+    assert_eq!(browser_class("google-chrome.desktop").as_deref(), Some("google-chrome"));
+    assert_eq!(browser_class(""), None);
+}
+
+#[test]
+fn the_page_raised_is_the_browser_on_boussole() {
+    use programme::seance::course_window_in;
+    let clients = serde_json::json!([
+        { "address": "0xa", "class": "org.wezfurlong.wezterm", "title": "boussole open ~/c --resume" },
+        { "address": "0xb", "class": "org.mozilla.firefox", "title": "Boussole — Mozilla Firefox" },
+        { "address": "0xc", "class": "org.mozilla.firefox", "title": "Boussole · Analyse — Mozilla Firefox" },
+    ]);
+    let ff = "org.mozilla.firefox";
+    assert_eq!(course_window_in(&clients, ff, None).as_deref(), Some("0xb"));
+    assert_eq!(course_window_in(&clients, ff, Some("c")).as_deref(), Some("0xc"), "the window the event named");
+    assert_eq!(course_window_in(&clients, ff, Some("a")).as_deref(), Some("0xb"), "never the terminal");
+    assert_eq!(course_window_in(&clients, "brave-browser", None), None);
 }

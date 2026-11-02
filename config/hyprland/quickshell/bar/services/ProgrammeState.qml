@@ -34,13 +34,14 @@ Singleton {
     readonly property var gap: root.status.gap || null
     readonly property var alert: root.status.alert || null
     readonly property bool paused: root.status.paused === true
-    // The course's window in front during a session: Firefox on Boussole.
+    // The course's window in front during a session: the browser (the
+    // service names its class) on Boussole.
     // Notifications keep quiet there, and show anywhere else.
     readonly property bool onCourse: {
         if (!root.tracking || !root.tracking.watched) return false;
         const t = Hyprland.activeToplevel;
         const ipc = t ? (t.lastIpcObject || {}) : {};
-        return (ipc.class || "") === "org.mozilla.firefox" && (t.title || "").indexOf("Boussole") !== -1;
+        return (ipc.class || "") === (root.tracking.browser || "org.mozilla.firefox") && (t.title || "").indexOf("Boussole") !== -1;
     }
 
     // ---- the drawer ---------------------------------------------------

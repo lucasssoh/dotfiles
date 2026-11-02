@@ -4,6 +4,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
+### Added
+- **Programme:** starting a session now brings Boussole's page to the front, even when your browser is on another workspace, and a session counts in whichever browser opens your links, not only Firefox.
+
 ### Fixed
 - **Programme:** every session of a subject now runs that subject's command, whether it's the course, a class to prepare, a project or a reminder, instead of only starting the counter.
 - **Programme:** what a session opens (your browser, Boussole) stays open when Programme restarts or updates.

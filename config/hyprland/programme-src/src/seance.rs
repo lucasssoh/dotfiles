@@ -8,6 +8,11 @@
 //! again. A subject without a command has no window to watch: its time is
 //! the session's own.
 //!
+//! Hyprland leaves a window that asks for the focus where it is (a new tab
+//! in a browser on another workspace only turns urgent), so right after
+//! the command runs, the first browser window on Boussole is brought to
+//! the front: the command's page shows up instead of hiding behind.
+//!
 //! The socket is only open during a session; outside one, nothing is
 //! watched at all.
 
@@ -16,6 +21,7 @@ use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -23,13 +29,36 @@ use serde_json::{json, Value};
 use crate::daemon::{now_secs, set_nonblocking, which, Job, Service};
 use crate::store::{self, Outcome};
 
-/// The course's window: Boussole, in Firefox.
-pub const WINDOW_CLASS: &str = "org.mozilla.firefox";
+/// The course's window: Boussole, in the default browser (Firefox when
+/// none is set).
+pub const DEFAULT_BROWSER: &str = "org.mozilla.firefox";
 pub const WINDOW_TITLE: &str = "Boussole";
 
+/// How long after the command its page is brought to the front: `boussole
+/// open` may first start its server.
+const RAISE_FOR: Duration = Duration::from_secs(20);
+
 /// Whether a window is the course's.
-pub fn is_course_window(class: &str, title: &str) -> bool {
-    class == WINDOW_CLASS && title.contains(WINDOW_TITLE)
+pub fn is_course_window(browser: &str, class: &str, title: &str) -> bool {
+    class == browser && title.contains(WINDOW_TITLE)
+}
+
+/// The window class of a browser's desktop entry: its id, as Wayland
+/// browsers name their windows (`org.mozilla.firefox.desktop`,
+/// `google-chrome.desktop`).
+pub fn browser_class(desktop: &str) -> Option<String> {
+    let id = desktop.trim().strip_suffix(".desktop")?;
+    (!id.is_empty()).then(|| id.to_string())
+}
+
+/// The browser that opens links, asked once per session (~20 ms).
+fn default_browser() -> String {
+    Command::new("xdg-mime")
+        .args(["query", "default", "x-scheme-handler/https"])
+        .output()
+        .ok()
+        .and_then(|o| browser_class(&String::from_utf8_lossy(&o.stdout)))
+        .unwrap_or_else(|| DEFAULT_BROWSER.to_string())
 }
 
 /// The session followed, kept in watch.json so that a restart of the
@@ -69,6 +98,10 @@ pub struct Watcher {
     pub watch: Option<Watch>,
     pub hypr: Option<UnixStream>,
     buf: Vec<u8>,
+    /// The browser's window class, once asked.
+    browser: Option<String>,
+    /// The command just ran: its page comes to the front until then.
+    raise_until: Option<Instant>,
 }
 
 pub(crate) fn hypr_dir() -> Option<PathBuf> {
@@ -85,15 +118,36 @@ pub(crate) fn hypr_dir() -> Option<PathBuf> {
         .map(|e| e.path())
 }
 
-/// The focused window's class and title, asked once (~1 ms).
-fn active_window() -> Option<(String, String)> {
+/// One request to Hyprland's command socket (~1 ms).
+fn hypr_request(cmd: &str) -> Option<Vec<u8>> {
     let mut s = UnixStream::connect(hypr_dir()?.join(".socket.sock")).ok()?;
-    let _ = s.set_read_timeout(Some(std::time::Duration::from_millis(500)));
-    s.write_all(b"j/activewindow").ok()?;
+    let _ = s.set_read_timeout(Some(Duration::from_millis(500)));
+    s.write_all(cmd.as_bytes()).ok()?;
     let mut out = Vec::new();
     let _ = s.read_to_end(&mut out);
-    let v: Value = serde_json::from_slice(&out).ok()?;
+    Some(out)
+}
+
+/// The focused window's class and title.
+fn active_window() -> Option<(String, String)> {
+    let v: Value = serde_json::from_slice(&hypr_request("j/activewindow")?).ok()?;
     Some((v["class"].as_str()?.to_string(), v["title"].as_str().unwrap_or("").to_string()))
+}
+
+/// The address of a browser window on Boussole, the one named first when
+/// it is.
+pub fn course_window_in(clients: &Value, browser: &str, prefer: Option<&str>) -> Option<String> {
+    let found: Vec<&str> = clients
+        .as_array()?
+        .iter()
+        .filter(|c| is_course_window(browser, c["class"].as_str().unwrap_or(""), c["title"].as_str().unwrap_or("")))
+        .filter_map(|c| c["address"].as_str())
+        .collect();
+    let same = |a: &str, b: &str| a.trim_start_matches("0x") == b.trim_start_matches("0x");
+    prefer
+        .and_then(|p| found.iter().find(|a| same(a, p)))
+        .or(found.first())
+        .map(|a| a.to_string())
 }
 
 impl Service {
@@ -149,7 +203,37 @@ impl Service {
             }
         };
         self.spawn(&mut cmd, Job::Quiet);
+        self.watcher.raise_until = Some(Instant::now() + RAISE_FOR);
+        self.watch_connect();
         true
+    }
+
+    fn browser(&mut self) -> String {
+        self.watcher.browser.get_or_insert_with(default_browser).clone()
+    }
+
+    /// Brings the command's page to the front, once: false while it is not
+    /// there yet.
+    fn raise_course(&mut self, prefer: Option<&str>) -> bool {
+        let browser = self.browser();
+        let Some(clients) = hypr_request("j/clients").and_then(|o| serde_json::from_slice::<Value>(&o).ok()) else {
+            return false;
+        };
+        let Some(addr) = course_window_in(&clients, &browser, prefer) else { return false };
+        self.watcher.raise_until = None;
+        hypr_request(&format!("dispatch focuswindow address:0x{}", addr.trim_start_matches("0x")));
+        true
+    }
+
+    fn raising(&mut self) -> bool {
+        match self.watcher.raise_until {
+            Some(t) if Instant::now() < t => true,
+            Some(_) => {
+                self.watcher.raise_until = None;
+                false
+            }
+            None => false,
+        }
     }
 
     /// A session starts being followed.
@@ -168,13 +252,15 @@ impl Service {
         let w = self.watcher.watch.take().filter(|w| w.session == session);
         self.watcher.hypr = None;
         self.watcher.buf.clear();
+        self.watcher.browser = None;
+        self.watcher.raise_until = None;
         self.watch_save();
         w.map(|w| ((w.effective(now_secs()) + 30) / 60) as i32)
     }
 
     fn watch_connect(&mut self) {
         let watched = self.watcher.watch.as_ref().is_some_and(|w| w.watched);
-        if !watched || self.watcher.hypr.is_some() {
+        if !(watched || self.watcher.raise_until.is_some()) || self.watcher.hypr.is_some() {
             return;
         }
         let Some(dir) = hypr_dir() else { return };
@@ -182,7 +268,8 @@ impl Service {
             set_nonblocking(s.as_raw_fd());
             self.watcher.hypr = Some(s);
         }
-        let on = active_window().is_some_and(|(c, t)| is_course_window(&c, &t));
+        let browser = self.browser();
+        let on = active_window().is_some_and(|(c, t)| is_course_window(&browser, &c, &t));
         self.watch_focus(on);
     }
 
@@ -197,7 +284,9 @@ impl Service {
         self.push_status();
     }
 
-    /// Hyprland's events: only `activewindow` (class, title) matters.
+    /// Hyprland's events: `activewindow` (class, title) for the count; while
+    /// the command's page is awaited, a window that opens, turns urgent or
+    /// changes its title may be it.
     pub(crate) fn read_hypr(&mut self) {
         let Some(s) = self.watcher.hypr.as_mut() else { return };
         let mut buf = [0u8; 8192];
@@ -221,23 +310,42 @@ impl Service {
             // Hyprland restarted: connected again at the next wake.
             self.watcher.hypr = None;
         }
+        let browser = self.browser();
         let mut focus = None;
+        let mut candidate: Option<Option<String>> = None;
         while let Some(nl) = self.watcher.buf.iter().position(|&b| b == b'\n') {
             let line: Vec<u8> = self.watcher.buf.drain(..=nl).collect();
             let line = String::from_utf8_lossy(&line);
-            if let Some(rest) = line.trim_end().strip_prefix("activewindow>>") {
+            let line = line.trim_end();
+            if let Some(rest) = line.strip_prefix("activewindow>>") {
                 let (class, title) = rest.split_once(',').unwrap_or((rest, ""));
-                focus = Some(is_course_window(class, title));
+                focus = Some(is_course_window(&browser, class, title));
+            } else if let Some(rest) = ["urgent>>", "windowtitlev2>>", "openwindow>>"].iter().find_map(|p| line.strip_prefix(p)) {
+                let addr = rest.split(',').next().unwrap_or("").to_string();
+                candidate = Some(Some(addr).filter(|a| !a.is_empty()));
             }
         }
         if let Some(on) = focus {
             self.watch_focus(on);
+        }
+        if let Some(prefer) = candidate {
+            if self.raising() {
+                self.raise_course(prefer.as_deref());
+            }
+        }
+        if self.watcher.watch.as_ref().is_none_or(|w| !w.watched) && self.watcher.raise_until.is_none() {
+            // Opened for the page alone: nothing else to watch.
+            self.watcher.hypr = None;
+            self.watcher.buf.clear();
         }
     }
 
     /// On every wake: a session closed or undone elsewhere stops being
     /// followed; a lost socket is opened again.
     pub(crate) fn watch_tick(&mut self) {
+        if !self.raising() && self.watcher.watch.as_ref().is_none_or(|w| !w.watched) {
+            self.watcher.hypr = None;
+        }
         let Some(id) = self.watcher.watch.as_ref().map(|w| w.session.clone()) else { return };
         if !matches!(self.store.state.outcomes.get(&id), Some(Outcome::Started { .. })) {
             self.watcher.watch = None;
@@ -262,6 +370,7 @@ impl Service {
                 "effective_secs": w.effective(now),
                 "as_of": now,
                 "launch": self.launch_args(&w.session).is_some(),
+                "browser": self.watcher.browser.as_deref().unwrap_or(DEFAULT_BROWSER),
             }),
             None => Value::Null,
         }
