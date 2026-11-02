@@ -208,7 +208,7 @@ impl Service {
 
     /// Whether a session's subject has a command ("Launch").
     fn launchable(&self, s: &Session) -> bool {
-        s.course().is_some_and(|d| self.store.settings.domains.iter().any(|x| x.id == d && x.launch.as_deref().is_some_and(|l| !l.trim().is_empty())))
+        s.opens().is_some_and(|d| self.store.settings.domains.iter().any(|x| x.id == d && x.launch.as_deref().is_some_and(|l| !l.trim().is_empty())))
     }
 
     fn day_rows(&self, date: crate::time::Date) -> Value {

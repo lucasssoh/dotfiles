@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **Programme:** every session of a subject now runs that subject's command, whether it's the course, a class to prepare, a project or a reminder, instead of only starting the counter.
+
 ## 2.0.1
 
 ### Fixed

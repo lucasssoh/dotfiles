@@ -451,3 +451,34 @@ fn later_until_moves_the_evening_past_it_or_off_tonight() {
     let off = fx.plan(now);
     assert!(tonight(&off).is_empty(), "nothing tonight: {:?}", tonight(&off));
 }
+
+#[test]
+fn every_session_of_a_subject_opens_it() {
+    use programme::plan::Session;
+    let session = |part: serde_json::Value| -> Session {
+        serde_json::from_value(serde_json::json!({
+            "id": "2026-11-02-evening1~a", "date": "2026-11-02", "start": "20:50", "end": "21:20",
+            "kind": "evening", "counted": true, "place": "home", "shortened": false, "pinned": false,
+            "parts": [part], "reasons": []
+        }))
+        .unwrap()
+    };
+    let prep = session(serde_json::json!({
+        "task": "prepare:x", "domain": "A&C", "minutes": 30,
+        "work": "prepare", "course": "x", "title": "Cours", "at": "2026-11-04T13:30"
+    }));
+    assert_eq!(prep.opens(), Some("A&C"));
+    assert_eq!(prep.course(), None, "still not a session of the course");
+    let course = session(serde_json::json!({ "task": "course:A&C", "domain": "A&C", "minutes": 30, "work": "course" }));
+    assert_eq!(course.opens(), Some("A&C"));
+    let project = session(serde_json::json!({
+        "task": "project:p:s", "domain": "OC", "minutes": 30, "work": "project", "project": "p", "step": "s"
+    }));
+    assert_eq!(project.opens(), Some("OC"), "a project of the subject too");
+    let chore = session(serde_json::json!({
+        "task": "chore:r", "domain": "L&MC", "minutes": 30, "work": "chore", "chore": "r", "title": "rappel"
+    }));
+    assert_eq!(chore.opens(), Some("L&MC"), "a reminder of the subject too");
+    let free = session(serde_json::json!({ "task": "chore:x", "minutes": 30, "work": "chore", "chore": "x", "title": "courses" }));
+    assert_eq!(free.opens(), None, "no subject, nothing to open");
+}

@@ -122,7 +122,7 @@ impl Service {
     /// The subject's command, `{folder}` filled in.
     pub(crate) fn launch_args(&self, session: &str) -> Option<Vec<String>> {
         let s = self.session_any(session)?;
-        let domain = s.course()?;
+        let domain = s.opens()?;
         let d = self.store.settings.domains.iter().find(|d| d.id == domain)?;
         d.launch_args(self.store.settings.courses.as_deref())
     }

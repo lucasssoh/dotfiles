@@ -144,6 +144,13 @@ impl Session {
     pub fn course(&self) -> Option<&str> {
         self.parts.iter().find(|p| p.work == Work::Course).and_then(|p| p.domain.as_deref())
     }
+
+    /// The subject whose command it runs: the first of its parts that
+    /// belongs to one, whatever the work (course, a class to prepare, a
+    /// project, a reminder).
+    pub fn opens(&self) -> Option<&str> {
+        self.parts.iter().find_map(|p| p.domain.as_deref())
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
