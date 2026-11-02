@@ -116,9 +116,10 @@ Column {
         }
     }
     ProgrammeText {
+        visible: (root.b.settings.status || {}).kind === "alternance"
         width: parent.width
-        text: root.b.tr("In work-study, a week without courses in the timetable is a week at the company: evenings only.",
-                        "En alternance, une semaine sans cours dans l'emploi du temps est une semaine en entreprise : le soir seulement.")
+        text: root.b.tr("A week with no courses counts as a week at the company: sessions in the evening only.",
+                        "Une semaine sans cours compte comme une semaine en entreprise : séances le soir seulement.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }
@@ -192,8 +193,8 @@ Column {
     }
     ProgrammeText {
         width: parent.width
-        text: root.b.tr("No alerts or sessions meanwhile; your data is kept. After the exams, the pause comes on its own once the timetable holds nothing more.",
-                        "Plus d'alertes ni de séances pendant ce temps ; tes données sont gardées. Après les examens, la pause vient seule dès que l'emploi du temps ne contient plus rien.")
+        text: root.b.tr("No alerts or sessions until then. Nothing is deleted. After the exams, the pause starts by itself once the timetable is empty.",
+                        "Ni alertes ni séances d'ici là. Rien n'est effacé. Après les examens, la pause commence seule quand l'emploi du temps est vide.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

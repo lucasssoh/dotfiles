@@ -34,7 +34,7 @@ Item {
         if (root.home) {
             const resume = LibraryState.rows.filter(r => r.page !== "" && r.recent < 100000)
                 .sort((a, c) => a.recent - c.recent).slice(0, 4).map(r => ({ row: r, section: -1 }));
-            add(root.b.tr("Pick up where you left off", "Reprendre"), resume);
+            add(root.b.tr("Resume", "Reprendre"), resume);
             return out;
         }
         const hits = LibraryState.search(root.query, root.filter, root.subject);

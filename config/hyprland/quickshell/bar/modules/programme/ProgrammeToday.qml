@@ -48,7 +48,7 @@ Column {
     ProgrammeText {
         visible: !root.b.daemonConnected
         width: parent.width
-        text: root.b.tr("The Programme service is not running.", "Le service Programme ne tourne pas.")
+        text: root.b.tr("Programme isn't responding. Restart it with systemctl --user restart programme.", "Programme ne répond pas. Relance-le avec systemctl --user restart programme.")
         color: DrawerTheme.secondary
     }
 
@@ -136,7 +136,7 @@ Column {
                 ProgrammeText {
                     visible: root.t !== null && root.t.watched && !root.t.counting
                     width: parent.width
-                    text: root.b.tr("Not counting: Boussole is not in front.", "Ne compte pas : Boussole n'est pas devant.")
+                    text: root.b.tr("Paused while Boussole isn't in front.", "En pause tant que Boussole n'est pas devant.")
                     color: DrawerTheme.secondary
                     font.pixelSize: 13
                 }

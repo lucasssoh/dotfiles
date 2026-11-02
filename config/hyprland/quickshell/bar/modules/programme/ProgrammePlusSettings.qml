@@ -59,7 +59,7 @@ Column {
     }
     ProgrammeText {
         width: parent.width
-        text: root.b.tr("One folder per subject, read only: {folder} in a subject's command.", "Un dossier par module, en lecture seule : {folder} dans la commande d'un module.")
+        text: root.b.tr("One folder per subject.", "Un dossier par module.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

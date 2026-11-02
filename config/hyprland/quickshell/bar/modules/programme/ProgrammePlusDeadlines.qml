@@ -59,8 +59,8 @@ Column {
     ProgrammeText {
         visible: root.seen === ""
         width: parent.width
-        text: root.b.tr("Enter shows what was understood, and what it moves, before anything is kept.",
-                        "Entrée montre ce qui a été compris, et ce que ça déplace, avant de garder quoi que ce soit.")
+        text: root.b.tr("Press Enter to see what will be added and what it moves.",
+                        "Appuie sur Entrée pour voir ce qui sera ajouté et ce que ça déplace.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

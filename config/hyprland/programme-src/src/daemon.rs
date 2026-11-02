@@ -1300,7 +1300,7 @@ impl Service {
             lines.push(if fr { format!("ADE vu il y a {age} min.") } else { format!("ADE seen {age} min ago.") });
         }
         if let Some(e) = v["calendar"]["error"].as_str() {
-            lines.push(if fr { format!("Dernière récupération ADE en échec ({e}) : l'emploi du temps gardé est le précédent.") } else { format!("Last ADE download failed ({e}): the previous timetable is kept.") });
+            lines.push(if fr { format!("La dernière récupération ADE a échoué ({e}). L'emploi du temps précédent est gardé.") } else { format!("The last ADE download failed ({e}). The previous timetable is kept.") });
         }
         let t = &v["tracking"];
         if let (Some(id), Some(secs)) = (t["session"].as_str(), t["effective_secs"].as_i64()) {

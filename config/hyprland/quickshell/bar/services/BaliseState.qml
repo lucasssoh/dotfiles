@@ -180,7 +180,7 @@ Singleton {
         if (security) msg.security = security;
         if (credentials) msg.credentials = credentials;
         if (!root._send(msg)) {
-            root.connectError = { ssid: ssid, message: "Balise daemon is not running" };
+            root.connectError = { ssid: ssid, message: "Balise isn't running" };
             return;
         }
         root.connectError = null;
@@ -417,7 +417,7 @@ Singleton {
         interval: 20000
         repeat: false
         onTriggered: {
-            root.connectError = { ssid: root.connectingSsid, message: "No response from the daemon" };
+            root.connectError = { ssid: root.connectingSsid, message: "Balise didn't answer. Try again." };
             root.connectingSsid = "";
         }
     }

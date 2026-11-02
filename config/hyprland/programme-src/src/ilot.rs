@@ -151,12 +151,12 @@ impl Service {
         self.on_action(&session, action);
         let fr = self.lang() == Lang::Fr;
         let text = if action == "start" {
-            self.t("Off you go.", "C'est parti.")
+            self.t("Started.", "Commencée.")
         } else if action.starts_with("away:") {
             let label = self.away().map(|u| self.until_label(u)).unwrap_or_default();
             if fr { format!("Rien {label}.") } else { format!("Nothing {label}.") }
         } else if action == "close" {
-            self.t("Session done.", "Séance finie.")
+            self.t("Done.", "Finie.")
         } else {
             String::new()
         };

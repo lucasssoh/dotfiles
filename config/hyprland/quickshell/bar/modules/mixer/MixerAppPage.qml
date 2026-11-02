@@ -139,8 +139,8 @@ Item {
                      && MixerState._slotOf[page.appLabel] === undefined
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
-            text: "All " + MixerState.slotCount + " equalizer chains are in use — "
-                  + "turn one off on another application"
+            text: "All " + MixerState.slotCount + " equalizers are in use. "
+                  + "Turn one off in another app."
             color: DrawerTheme.danger
             font.family: Fonts.ui
             font.pixelSize: 12

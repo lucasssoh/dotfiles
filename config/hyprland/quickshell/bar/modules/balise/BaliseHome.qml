@@ -844,7 +844,6 @@ Item {
                 : (BaliseState.wifiScanning ? "Searching…" : "No networks found")
             showMaster: true
             masterTitle: "WiFi"
-            masterSubtitle: "Search for networks automatically"
             masterChecked: BaliseState.wifiEnabled
             onMasterToggled: BaliseState.toggleWifi()
             onBackRequested: root.goHome()
@@ -864,7 +863,6 @@ Item {
                 : (BaliseState.bluetoothScanning ? "Searching…" : "No devices found")
             showMaster: true
             masterTitle: "Bluetooth"
-            masterSubtitle: "Discoverable and ready to connect"
             masterChecked: BaliseState.bluetoothEnabled
             onMasterToggled: BaliseState.toggleBluetooth()
             onBackRequested: root.goHome()

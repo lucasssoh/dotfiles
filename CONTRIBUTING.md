@@ -86,6 +86,7 @@ Versions follow `MAJOR.MINOR.PATCH`.
 ## Project conventions
 
 - **Interface text** is in English. Veille is the exception, in French.
+- **Interface text is as short as it can be.** Say each thing once, from what the person sees or does: no explaining how it works, no selling, no help line that repeats its label, no "successfully". A condition or a way out goes where it's needed, usually in the error.
 - **Colours** come from [`DrawerTheme.qml`](config/hyprland/quickshell/bar/theme/DrawerTheme.qml). Prefer outlines to large white areas.
 - **A new application** is a replaceable unit in `units/apps/<name>/`, with a hook that makes it the default for its file types. Anything downloaded from outside a package is pinned to a version and checked by sha256.
 - **Documentation** lives in [`docs/`](docs/). It describes the components and how to configure them, not their design or the inner workings of scripts. The website is generated from `docs/`: never edit `site/src/content/docs/docs/`.

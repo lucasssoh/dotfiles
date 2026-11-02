@@ -60,8 +60,8 @@ Column {
         }
         ProgrammeText {
             width: parent.width
-            text: root.b.tr("The folder holding one folder per subject. It is only read: each folder is a subject.",
-                            "Le dossier qui contient un dossier par module. Il est seulement lu : chaque dossier est un module.")
+            text: root.b.tr("One folder per subject. Programme only reads it.",
+                            "Un dossier par module. Programme ne fait que le lire.")
             color: DrawerTheme.secondary
             font.pixelSize: 13
         }
@@ -94,8 +94,8 @@ Column {
         spacing: 10
         ProgrammeText {
             width: parent.width
-            text: root.b.tr("Which timetable courses belong to which folder. Suggestions are ticked; untick what is wrong.",
-                            "Quels cours de l'emploi du temps vont avec quel dossier. Les propositions sont cochées ; décoche ce qui est faux.")
+            text: root.b.tr("Tick each subject's courses in the timetable. The likely ones are already ticked.",
+                            "Coche les cours de chaque module dans l'emploi du temps. Les plus probables sont déjà cochés.")
             color: DrawerTheme.secondary
             font.pixelSize: 13
         }
@@ -111,7 +111,7 @@ Column {
                 ProgrammeText { text: sug.modelData; font.weight: Font.Bold }
                 ProgrammeText {
                     visible: sug.names.length === 0
-                    text: root.b.tr("No course found for it: rerun the first launch to name it.", "Aucun cours trouvé : refais le premier lancement pour le nommer.")
+                    text: root.b.tr("No course found for this subject. Run the first launch again to name it.", "Aucun cours trouvé pour ce module. Refais le premier lancement pour le nommer.")
                     color: DrawerTheme.secondary
                     font.pixelSize: 12
                 }
@@ -152,14 +152,21 @@ Column {
         spacing: 10
         ProgrammeText {
             width: parent.width
-            text: root.b.tr("A subject in Boussole opens there when its session starts: turn it on in More › Subjects.",
-                            "Un module qui est dans Boussole s'y ouvre quand sa séance commence : active-le dans Plus › Modules.")
+            text: root.b.tr("A subject can open in Boussole when its session starts.",
+                            "Un module peut s'ouvrir dans Boussole quand sa séance commence.")
             font.pixelSize: 13
+        }
+        ProgrammePill {
+            text: root.b.tr("Subjects", "Modules")
+            onClicked: {
+                root.b.show("plus");
+                root.b.plusPage = "subjects";
+            }
         }
         ProgrammeText {
             width: parent.width
-            text: root.b.tr("Exams not in the timetable, projects and the work-study search are added in More, or with Super + Shift + D.",
-                            "Les examens absents de l'emploi du temps, les projets et la recherche d'alternance s'ajoutent dans Plus, ou avec Super + Maj + D.")
+            text: root.b.tr("Exams missing from the timetable, projects and your work-study search go in More, or Super + Shift + D.",
+                            "Les examens absents de l'emploi du temps, les projets et ta recherche d'alternance vont dans Plus, ou Super + Maj + D.")
             color: DrawerTheme.secondary
             font.pixelSize: 13
         }

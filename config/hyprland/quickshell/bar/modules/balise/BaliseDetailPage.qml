@@ -285,9 +285,7 @@ Item {
         return false;
     }
     readonly property string optionsLabel: root.kind === "bluetooth" ? "Trusted device" : "Connect automatically"
-    readonly property string optionsSubtitle: root.kind === "bluetooth"
-        ? "Allow connecting without confirmation"
-        : "Reconnect whenever it is in range"
+    readonly property string optionsSubtitle: root.kind === "bluetooth" ? "Connects without asking" : ""
     readonly property bool optionsValue: {
         if (root.kind === "wifi") return !!(root.details && root.details.autoconnect);
         if (root.kind === "bluetooth") return !!(root.device && root.device.is_trusted);
@@ -853,6 +851,7 @@ Item {
                     }
                     Text {
                         width: parent.width
+                        visible: text !== ""
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsSubtitle

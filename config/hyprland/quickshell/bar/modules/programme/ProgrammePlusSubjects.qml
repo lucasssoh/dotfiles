@@ -88,14 +88,21 @@ Column {
                     placeholder: "liseuse {folder}/00_Index.md"
                     onAccepted: root.patch(card.modelData.id, { launch: command.text.trim() === "" ? null : command.text.trim() })
                 }
+                ProgrammeText {
+                    visible: command.visible
+                    width: parent.width
+                    text: root.b.tr("{folder} is the subject's folder.", "{folder} est le dossier du module.")
+                    color: DrawerTheme.secondary
+                    font.pixelSize: 12
+                }
             }
         }
     }
 
     ProgrammeText {
         width: parent.width
-        text: root.b.tr("A session with something to open counts its time while Boussole is in front; notifications keep quiet there and show anywhere else.",
-                        "Une séance qui ouvre quelque chose compte son temps tant que Boussole est devant ; les notifications s'y taisent et s'affichent partout ailleurs.")
+        text: root.b.tr("Time counts while Boussole is in front. Notifications wait until you leave it.",
+                        "Le temps compte tant que Boussole est devant. Les notifications attendent que tu en sortes.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }

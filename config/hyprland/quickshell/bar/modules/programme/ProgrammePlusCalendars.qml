@@ -33,12 +33,12 @@ Column {
     ProgrammeText {
         width: parent.width
         text: root.cal.error
-            ? root.b.tr("Last download failed (", "Dernière récupération en échec (") + root.cal.error
-              + root.b.tr("): the previous timetable is kept. A link that asks to log in will not work: take the export link from ADE's « Export » menu.",
-                          ") : l'emploi du temps précédent est gardé. Un lien qui demande une connexion ne marche pas : prends le lien d'export du menu « Exporter » d'ADE.")
+            ? root.b.tr("Download failed (", "Échec du téléchargement (") + root.cal.error
+              + root.b.tr("). The previous timetable stays. If the link asks you to log in, use the one from ADE's Export menu.",
+                          "). L'emploi du temps précédent reste. Si le lien demande de te connecter, prends celui du menu Exporter d'ADE.")
             : root.cal.age_minutes !== undefined && root.cal.age_minutes !== null
-              ? root.b.tr("Seen ", "Vu il y a ") + root.cal.age_minutes + root.b.tr(" min ago, refreshed every hour from 6:00 to 20:00.", " min, relu toutes les heures de 6:00 à 20:00.")
-              : root.b.tr("Enter saves the link and downloads it.", "Entrée enregistre le lien et le télécharge.")
+              ? root.b.tr("Updated ", "Mis à jour il y a ") + root.cal.age_minutes + root.b.tr(" min ago.", " min.")
+              : root.b.tr("Press Enter to download it.", "Appuie sur Entrée pour le télécharger.")
         color: root.cal.error ? DrawerTheme.danger : DrawerTheme.secondary
         font.pixelSize: 12
     }
@@ -46,8 +46,8 @@ Column {
     ProgrammeText {
         visible: root.b.families.length > 0
         width: parent.width
-        text: root.b.tr("Your groups: tick yours in each family. A family left untouched keeps everything.",
-                        "Tes groupes : coche le tien dans chaque famille. Une famille laissée telle quelle garde tout.")
+        text: root.b.tr("Tick your group in each family. If you tick none, you keep all its courses.",
+                        "Coche ton groupe dans chaque famille. Si tu n'en coches aucun, tu gardes tous ses cours.")
         font.weight: Font.Bold
     }
     Repeater {
@@ -91,8 +91,8 @@ Column {
 
     ProgrammeText {
         width: parent.width
-        text: root.b.tr("Your personal agenda (Super + A) counts as busy. Sessions go to khal's « etude » calendar, your courses to « cours »: both show in the calendar drawer.",
-                        "Ton agenda perso (Super + A) compte comme occupé. Les séances vont dans le calendrier khal « etude », tes cours dans « cours » : les deux apparaissent dans le tiroir calendrier.")
+        text: root.b.tr("Nothing is planned during the events of your agenda (Super + A). Sessions and courses show in the calendar drawer.",
+                        "Rien n'est prévu pendant les évènements de ton agenda (Super + A). Séances et cours apparaissent dans le tiroir calendrier.")
         color: DrawerTheme.secondary
         font.pixelSize: 12
     }
