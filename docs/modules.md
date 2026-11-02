@@ -477,6 +477,7 @@ My Neovim setup: `init.lua`, `lua/`, `ftplugin/`, `colors/` and `bin/`, linked i
 | Feature | How to use it |
 |---|---|
 | Live Markdown preview | `Alt + P` opens a GTK 4 window that updates block by block, maths included |
+| Python | Pyright completion and diagnostics, plus Ruff linting. The game's `.py` scripts use the same setup |
 | PlantUML | Highlighting, linting, completion, and a live preview window. `:PumlFromJava` draws a class diagram from Java sources, and `:PumlExport` exports it |
 
 The optional tools are just that: without `plantuml-lsp` you lose PlantUML completion, and without MathJax the preview shows maths as raw TeX. Everything else keeps working.

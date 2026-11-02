@@ -1,6 +1,6 @@
 name     = "config-nvim"
 layer    = "configs"
-summary  = "Lucas's Neovim: LSP, plugins, Markdown and PlantUML live previews"
+summary  = "Lucas's Neovim: LSP, Python linting, plugins, Markdown and PlantUML live previews"
 requires = ["neovim", "liseuse"]
 
 [packages]

@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Neovim, Python:** Ruff linting is installed alongside Pyright, so you can edit and check The Farmer Was Replaced scripts in Neovim.
 - **Programme:** starting a session now brings Boussole's page to the front, even when your browser is on another workspace, and a session counts in whichever browser opens your links, not only Firefox.
 
 ### Changed

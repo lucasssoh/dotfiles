@@ -35,7 +35,7 @@ return {
             -- already true on this machine. No custom handler needed, same
             -- as ts_ls/pyright/clangd: default_setup covers it, unlike
             -- jdtls which needs its own workspace/lombok wiring below.
-            ensure_installed = {"jdtls", "ts_ls", "pyright", "lua_ls", "clangd", "omnisharp"},
+            ensure_installed = {"jdtls", "ts_ls", "pyright", "ruff", "lua_ls", "clangd", "omnisharp"},
             handlers = { lsp_zero.default_setup, jdtls = lsp_zero.noop },
             -- mason-lspconfig v2 ignores `handlers` and vim.lsp.enable()s
             -- every installed server itself, so the noop above no longer
