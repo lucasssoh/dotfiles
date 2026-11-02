@@ -89,12 +89,14 @@ if [ "$DISTRO" = "fedora" ]; then
     # Quickshell -- the bar (see quickshell/bar/).
     pkg_installed quickshell || sudo_maybe dnf copr enable -y errornointernet/quickshell ||
         warn "COPR errornointernet/quickshell could not be enabled — quickshell may fail to install."
-    # satty is NOT in any Fedora repo and never has been, so listing it in
-    # PKGS below only ever got it skipped by --skip-unavailable -- silently,
-    # module still exit=0. It backs Super+S / Super+SHIFT+S (hypr/keybinds.lua
-    # pipes grim into it); without it the pipe breaks and a screenshot produces nothing.
-    pkg_installed satty || sudo_maybe dnf copr enable -y mineiro/satty ||
-        warn "COPR mineiro/satty could not be enabled — Super+S screenshots will be broken."
+    # satty is NOT in any Fedora repo, so listing it in PKGS below alone
+    # only ever got it skipped by --skip-unavailable -- silently, module
+    # still exit=0. It backs Super+S / Super+SHIFT+S (hypr/keybinds.lua pipes
+    # grim into it); without it a screenshot produces nothing. Our build
+    # (packaging/satty/) comes from the coucou-shell repo.
+    pkg_installed satty || sudo_maybe dnf config-manager addrepo --overwrite \
+        --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo ||
+        warn "The coucou-shell repo could not be added — Super+S screenshots will be broken."
 
     PKGS=(
         # Hyprland ecosystem.
@@ -165,7 +167,7 @@ if [ "$DISTRO" = "fedora" ]; then
         # no copr -- verified wlopm-1.0.0-4.fc44. Absent, the script silently
         # falls back to the dispatcher that may do nothing.
         wlopm
-        # Screenshots (satty comes from the mineiro/satty copr enabled above,
+        # Screenshots (satty comes from the coucou-shell repo added above,
         # not from Fedora proper)
         satty grim slurp grimblast
         # Tools

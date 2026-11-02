@@ -6,3 +6,18 @@
 # serving it once satty has quit. Without it satty copies through GTK, whose
 # clipboard belongs to satty itself: Esc, and the image was gone.
 copy-command = "wl-copy"
+
+[font]
+family = "MiSans Latin"
+style = "Semibold"
+
+# The swatches of the bottom toolbar. overrides.css paints them as dots in
+# this order: change one, change the other.
+[color-palette]
+palette = [
+    "#ff453aff",
+    "#ffb454ff",
+    "#8ecae6ff",
+    "#1c1c1eff",
+    "#f2f2f7ff",
+]

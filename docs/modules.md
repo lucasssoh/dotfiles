@@ -100,7 +100,7 @@ While a zathura window is visible, the screen won't dim, lock or turn off. A boo
 
 ### `bar`
 
-The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history. It also brings **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`; `←` `→` step through the fonts in the folder, `+` `−` change the size, `q` quits.
+The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history. satty is coucou-shell's own build, from the coucou-shell repository; its settings are in [`config/satty/config.toml`](../config/satty/config.toml) and its look in [`config/satty/overrides.css`](../config/satty/overrides.css). It also brings **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`; `←` `→` step through the fonts in the folder, `+` `−` change the size, `q` quits.
 
 ![The bar](screenshots/v1.0.0/bar.webp)
 

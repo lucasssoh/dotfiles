@@ -11,12 +11,15 @@ dnf = [
   "grim", "slurp", "grimblast", "satty",
   "v4l-utils",  # review: which part of the bar uses it?
 ]
-copr = ["errornointernet/quickshell", "mineiro/satty"]
+copr = ["errornointernet/quickshell"]
+# satty: our build, with the frosted toolbars (packaging/satty/).
+repos = ["https://lucasssoh.github.io/dotfiles/coucou-shell.repo"]
 
 [links]
 "config/hyprland/quickshell" = "~/.config/quickshell"
 "config/hyprland/khal"       = "~/.config/khal"
 "config/satty/config.toml"   = "~/.config/satty/config.toml"
+"config/satty/overrides.css" = "~/.config/satty/overrides.css"
 "config/hyprland/quickshell/fontview/fontview" = "~/.local/bin/fontview"
 
 [[hooks]]
@@ -31,3 +34,9 @@ run_as = "user"
 does   = "create the folders of khal's calendars, so khal never meets a missing one"
 run    = "units/core/bar/hooks/khal-calendars.sh"
 watch  = ["config/hyprland/khal"]
+
+[[hooks]]
+name   = "satty-from-coucou"
+run_as = "root"
+does   = "replace the mineiro/satty COPR's satty with coucou-shell's build: remove the COPR, add the coucou-shell repo, install satty from it"
+run    = "units/core/bar/hooks/satty-from-coucou.sh"

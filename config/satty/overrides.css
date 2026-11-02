@@ -1,0 +1,109 @@
+/* ============================================================
+   ~/.config/satty/overrides.css -- satty in coucou-shell's glass.
+
+   One look whatever the light/dark setting: neutral smoked glass with
+   white ink. In fullscreen, coucou-shell's satty build frosts the image
+   behind each toolbar (packaging/satty/satty-glass.patch); this sheet
+   draws the veil and the rounded edge on top of it.
+
+   The toolbars are capsules (radius 99px): the patch cuts its blur to
+   half the toolbar's height, so the two shapes always match.
+   ============================================================ */
+
+.outer_box, .inner_box { background-color: #000000; }
+
+.toolbar {
+    font-family: "MiSans Latin", "MiSans", sans-serif;
+    font-weight: 600;
+    color: #f2f2f7;
+    padding: 6px;
+    border: none;
+    border-radius: 99px;
+    background-color: rgba(28, 28, 30, 0.38);
+    /* The convex edge, in shadows: a lit top arete, a weaker bounce
+       underneath, a trough under the rim, a pane denser toward its edge,
+       and a warm/cool fringe outside. */
+    box-shadow:
+        inset 0 1.5px 0 rgba(229, 229, 234, 0.55),
+        inset 0 -1px 0 rgba(229, 229, 234, 0.22),
+        inset 0 4px 5px -3px rgba(0, 0, 0, 0.45),
+        inset 0 0 12px rgba(28, 28, 30, 0.45),
+        0 -1px 0 rgba(255, 90, 60, 0.22),
+        0 1px 0 rgba(70, 130, 255, 0.18),
+        0 8px 24px rgba(0, 0, 0, 0.30);
+}
+.overlay .toolbar-top    { margin-top: 14px; }
+.overlay .toolbar-bottom { margin-bottom: 14px; }
+
+.toolbar button {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 99px;
+    background: none;
+    box-shadow: none;
+    color: rgba(242, 242, 247, 0.72);
+    transition: background-color 120ms, color 120ms;
+}
+.toolbar button image { -gtk-icon-size: 18px; }
+.toolbar button:hover { color: #f2f2f7; background-color: rgba(242, 242, 247, 0.12); }
+/* "On" by inversion, like the bar's active workspace. */
+.toolbar button:checked,
+.toolbar button:checked:hover { color: #0c0c0e; background-color: #f2f2f7; }
+button.editing { color: #f2f2f7; }
+
+.toolbar separator {
+    min-width: 1px;
+    margin: 9px 6px;
+    background-color: rgba(242, 242, 247, 0.16);
+}
+.toolbar > label { color: rgba(242, 242, 247, 0.62); }
+.toolbar spinbutton,
+.toolbar entry {
+    min-height: 34px;
+    border: none;
+    border-radius: 99px;
+    box-shadow: none;
+    outline: none;
+    background-color: rgba(242, 242, 247, 0.10);
+    color: #f2f2f7;
+}
+
+/* Colour swatches: dots. GTK cannot round the swatch's image, so the
+   palette's dots are painted here and the image hidden.
+   KEEP IN STEP with [color-palette] in config.toml: same colours, same
+   order. The custom colour (the swatch after them) stays a square. */
+.toolbar-bottom > button.toggle:not(.text-button) {
+    min-width: 18px;
+    min-height: 18px;
+    margin: 8px;
+    padding: 0;
+    box-shadow: inset 0 0 0 1px alpha(currentColor, 0.30);
+}
+.toolbar-bottom > button.toggle:not(.text-button):checked {
+    box-shadow: 0 0 0 2px rgba(28, 28, 30, 0.9), 0 0 0 4px #f2f2f7;
+}
+.toolbar-bottom > button.toggle:nth-child(-n+5) image { opacity: 0; }
+.toolbar-bottom > button.toggle:nth-child(1),
+.toolbar-bottom > button.toggle:nth-child(1):hover,
+.toolbar-bottom > button.toggle:nth-child(1):checked { background-color: #ff453a; }
+.toolbar-bottom > button.toggle:nth-child(2),
+.toolbar-bottom > button.toggle:nth-child(2):hover,
+.toolbar-bottom > button.toggle:nth-child(2):checked { background-color: #ffb454; }
+.toolbar-bottom > button.toggle:nth-child(3),
+.toolbar-bottom > button.toggle:nth-child(3):hover,
+.toolbar-bottom > button.toggle:nth-child(3):checked { background-color: #8ecae6; }
+.toolbar-bottom > button.toggle:nth-child(4),
+.toolbar-bottom > button.toggle:nth-child(4):hover,
+.toolbar-bottom > button.toggle:nth-child(4):checked { background-color: #1c1c1e; }
+.toolbar-bottom > button.toggle:nth-child(5),
+.toolbar-bottom > button.toggle:nth-child(5):hover,
+.toolbar-bottom > button.toggle:nth-child(5):checked { background-color: #f2f2f7; }
+
+.toast {
+    font-family: "MiSans Latin", "MiSans", sans-serif;
+    color: #f2f2f7;
+    background-color: rgba(28, 28, 30, 0.85);
+    border-radius: 14px;
+    padding: 8px 14px;
+}

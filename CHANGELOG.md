@@ -10,6 +10,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Bar:** the texts of Programme, Balise, the mixer and the library are shorter and say what to do.
+- **Screenshots:** satty's toolbars are frosted glass in the shell's style, round colour swatches and MiSans, in light and dark alike. Its palette becomes red, amber, blue, black and white.
+- **Screenshots:** satty now comes from the coucou-shell repository, in version 0.22.0, and no longer from a COPR.
 
 ### Fixed
 - **Programme:** every session of a subject now runs that subject's command, whether it's the course, a class to prepare, a project or a reminder, instead of only starting the counter.
