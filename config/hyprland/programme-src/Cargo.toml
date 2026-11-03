@@ -1,6 +1,6 @@
 [package]
 name = "programme"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 description = "Study agenda behind coucou-shell's Programme drawer"
 license-file = "../../../LICENSE.md"
