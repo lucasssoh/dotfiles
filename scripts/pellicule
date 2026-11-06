@@ -5,6 +5,7 @@
     scripts/pellicule balise mixer     only these scenes
     scripts/pellicule --mode dark      only one mode
     scripts/pellicule --out DIR        write elsewhere than docs/screenshots
+    scripts/pellicule --video hero     records a [[video]] instead (WebM + animated WebP)
     scripts/pellicule check            check the scenes against the running shell
     scripts/pellicule list             the scenes, with their docs
 
@@ -16,6 +17,7 @@ wallpaper, the workspace, demo mode, the windows a scene opened.
 
 Steps, one string each:
     ipc TARGET FUNCTION [ARGS...]   qs -c bar ipc call TARGET FUNCTION ARGS
+                                    ({library}: the made-up games, see [[settings.game]])
     wait SECONDS
     run COMMAND...                  started in the background, killed at the end of the scene
     close CLASS                     closes the windows of that class on the workspace
@@ -117,6 +119,33 @@ def workspace_go(ws):
 
 
 WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
+CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "pellicule"
+STEAM_ART = "https://cdn.cloudflare.steamstatic.com/steam/apps/{id}/{file}"
+
+
+def library(settings):
+    """The made-up game library's JSON file, for `ipc controller library
+    {library}`: the [[game]] list of scenes.toml, with Steam's public
+    artwork downloaded once into the cache (never into the repository)."""
+    import json
+    import urllib.request
+    games, now = [], int(time.time())
+    for i, g in enumerate(settings.get("game", [])):
+        art = CACHE / "steam" / str(g["steam"])
+        art.mkdir(parents=True, exist_ok=True)
+        files = {}
+        for key, name in (("cover", "library_600x900.jpg"), ("hero", "library_hero.jpg")):
+            path = art / name
+            if not path.exists():
+                urllib.request.urlretrieve(STEAM_ART.format(id=g["steam"], file=name), path)
+            files[key] = str(path)
+        # Played an hour, then a day, then more ago: the first one is
+        # the menu's "Continue".
+        games.append({"title": g["title"], "source": "Steam",
+                      "last": now - 3600 * (1 + 20 * i), **files})
+    path = CACHE / "library.json"
+    path.write_text(json.dumps(games))
+    return path
 
 
 def wallpaper_get():
@@ -149,7 +178,8 @@ def load(path):
         data = tomllib.load(f)
     settings = data.get("settings", {})
     scenes = data.get("scene", [])
-    return settings, scenes
+    videos = data.get("video", [])
+    return settings, scenes, videos
 
 
 def check(settings, scenes, surface=None):
@@ -239,6 +269,8 @@ class Take:
         self.saved_scheme = scheme_get()
         self.saved_ws = workspace_get()
         self.saved_demo = ipc("demo", "status") == "on"
+        self.settings = settings
+        self._library = None
         self.wallpaper = settings.get("wallpaper")
         self.saved_wallpaper = wallpaper_get() if self.wallpaper else None
         self.procs = []
@@ -260,6 +292,9 @@ class Take:
         words = shlex.split(step)
         verb, args = words[0], words[1:]
         if verb == "ipc":
+            if "{library}" in args:
+                self._library = self._library or library(self.settings)
+                args = [str(self._library) if a == "{library}" else a for a in args]
             ipc(*args)
         elif verb == "wait":
             time.sleep(float(args[0]))
@@ -300,6 +335,8 @@ class Take:
         try:
             self.end_scene()
         finally:
+            if self._library:
+                ipc("controller", "reset")
             if not self.saved_demo:
                 ipc("demo", "off")
             scheme_set(*self.saved_scheme)
@@ -332,27 +369,91 @@ def shoot(scene, mode, take, out, settings):
     return path
 
 
+def record(video, take, out, settings):
+    """Runs the video's steps while wf-recorder films the screen, then
+    makes NAME.webm (the site) and NAME.webp, animated (the README: GitHub
+    shows an animated image from the repository, not a video)."""
+    raw = Path(tempfile.mkdtemp(prefix="pellicule-")) / "raw.mkv"
+    rec = subprocess.Popen(["wf-recorder", "-y", "-f", str(raw), "-c", "libx264",
+                            "-p", "preset=ultrafast", "-p", "crf=10"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    try:
+        for step in video.get("steps", []):
+            take.step(step)
+    finally:
+        rec.send_signal(signal.SIGINT)
+        rec.wait(timeout=30)
+    take.end_scene()
+    width = video.get("width", 1280)
+    fps = video.get("fps", 30)
+    # The recorder's first second, before the steps start, is cut.
+    trim = ["-ss", "0.8"]
+    scale = f"fps={fps},scale={width}:-2:flags=lanczos"
+    webm = out / f"{video['name']}.webm"
+    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", scale,
+       "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-row-mt", "1", "-an", str(webm))
+    webp = out / f"{video['name']}.webp"
+    wscale = f"fps={video.get('webp_fps', 20)},scale={video.get('webp_width', 960)}:-2:flags=lanczos"
+    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", wscale,
+       "-c:v", "libwebp_anim", "-lossless", "0", "-quality", "70", "-compression_level", "6",
+       "-loop", "0", "-an", str(webp))
+    raw.unlink()
+    return webm, webp
+
+
 def main():
     ap = argparse.ArgumentParser(prog="pellicule", description="Retakes the documentation's screenshots.")
     ap.add_argument("scenes", nargs="*", help="scene names, or check / list")
     ap.add_argument("--mode", choices=list(SCHEMES), help="only this mode")
     ap.add_argument("--out", type=Path, help="where to write (default: next to scenes.toml)")
+    ap.add_argument("--video", metavar="NAME", help="record this [[video]] instead of screenshots")
     ap.add_argument("--scenes-file", type=Path, default=SCENES)
     a = ap.parse_args()
 
-    settings, scenes = load(a.scenes_file)
+    settings, scenes, videos = load(a.scenes_file)
 
     if a.scenes[:1] == ["list"]:
         for s in scenes:
-            say(f"{s['name']:<16} {', '.join(s.get('modes', ['light', 'dark'])):<12} {s.get('doc', '')}")
+            say(f"{s['name']:<28} {', '.join(s.get('modes', ['light', 'dark'])):<12} {s.get('doc', '')}")
+        for v in videos:
+            say(f"{v['name']:<28} {'video, ' + v.get('mode', 'dark'):<12} {v.get('doc', '')}")
         return
     if a.scenes[:1] == ["check"]:
-        problems = check(settings, scenes)
+        problems = check(settings, scenes + videos)
         for p in problems:
             print(p, file=sys.stderr)
         if problems:
             sys.exit(1)
         say(f"{len(scenes)} scenes, all in step with the shell")
+        return
+
+    if a.video:
+        found = [v for v in videos if v["name"] == a.video]
+        if not found:
+            fail(f"no video called {a.video} (scripts/pellicule list)")
+        if subprocess.run(["sh", "-c", "command -v wf-recorder"], capture_output=True).returncode:
+            fail("wf-recorder is not installed: sudo dnf install wf-recorder")
+        video = found[0]
+        problems = check(settings, [video])
+        if problems:
+            for p in problems:
+                print(p, file=sys.stderr)
+            fail("the video is out of step with the shell; nothing recorded")
+        out = a.out or a.scenes_file.parent
+        out.mkdir(parents=True, exist_ok=True)
+        take = Take(settings)
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+        try:
+            take.start()
+            scheme_set(*SCHEMES[video.get("mode", "dark")])
+            time.sleep(settings.get("scheme_wait", 3))
+            for path in record(video, take, out, settings):
+                say(f"{path} ({path.stat().st_size // 1024} KiB)")
+        except KeyboardInterrupt:
+            say("interrupted, putting everything back")
+        finally:
+            take.restore()
         return
 
     if a.scenes:

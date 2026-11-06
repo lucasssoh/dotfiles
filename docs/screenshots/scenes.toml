@@ -37,6 +37,9 @@ steps = ["wait 0.5"]
 name = "work"
 doc = "README.md"
 crop = "full"
+# Neovim and fastfetch keep dark colours on the see-through terminal: in
+# light mode their text can't be read.
+modes = ["dark"]
 steps = [
     "run wezterm start --class pellicule-editor --cwd {repo} -- nvim CHANGELOG.md",
     "wait 2.5",
@@ -143,3 +146,132 @@ name = "prisme"
 doc = "docs/modules.md"
 crop = "full"
 steps = ["run ~/.local/bin/prisme", "wait 4"]
+
+# ---- the controller ---------------------------------------------------------
+# Manette ignores uinput pads, so the pad is made up in the bar (`ipc
+# controller pad FAMILY BATTERY CHARGING`), with these games as its library.
+# Their artwork is Steam's public one, downloaded into ~/.cache/pellicule.
+
+[[settings.game]]
+title = "The Witcher 3: Wild Hunt"
+steam = 292030
+
+[[settings.game]]
+title = "Cyberpunk 2077"
+steam = 1091500
+
+[[settings.game]]
+title = "ELDEN RING"
+steam = 1245620
+
+[[settings.game]]
+title = "Red Dead Redemption 2"
+steam = 1174180
+
+[[settings.game]]
+title = "Baldur's Gate 3"
+steam = 1086940
+
+[[settings.game]]
+title = "Forza Horizon 5"
+steam = 1551360
+
+[[settings.game]]
+title = "Hades II"
+steam = 1145350
+
+[[settings.game]]
+title = "Assetto Corsa Competizione"
+steam = 805550
+
+[[scene]]
+name = "controller-pill"
+doc = "docs/modules.md"
+crop = [640, 800, 640, 400]
+steps = ["ipc controller pad xbox 80 false", "wait 1"]
+after = ["ipc controller reset", "wait 0.5"]
+
+[[scene]]
+name = "controller-menu"
+doc = "docs/modules.md"
+crop = [320, 200, 1280, 800]
+steps = [
+    "ipc controller pad xbox 80 false",
+    "ipc controller library {library}",
+    "wait 3.5",
+    "ipc bar controllerMenu",
+    "wait 1.8",
+]
+after = ["ipc bar controllerMenu", "wait 0.5", "ipc controller reset", "wait 0.5"]
+
+[[scene]]
+name = "controller-menu-playstation"
+doc = "docs/modules.md"
+crop = [320, 200, 1280, 800]
+steps = [
+    "ipc controller pad playstation 64 false",
+    "ipc controller library {library}",
+    "wait 3.5",
+    "ipc bar controllerMenu",
+    "wait 1.8",
+]
+after = ["ipc bar controllerMenu", "wait 0.5", "ipc controller reset", "wait 0.5"]
+
+[[scene]]
+name = "controller-apps"
+doc = "docs/modules.md"
+crop = [320, 200, 1280, 800]
+steps = [
+    "ipc controller pad xbox 80 false",
+    "ipc controller library {library}",
+    "wait 3.5",
+    "ipc bar controllerMenu",
+    "wait 1.5",
+    "ipc bar controllerNav y",
+    "wait 1.2",
+]
+after = ["ipc bar controllerMenu", "wait 0.5", "ipc controller reset", "wait 0.5"]
+
+[[scene]]
+name = "bar-controller"
+doc = "docs/modules.md"
+crop = [1440, 0, 480, 300]
+# Once the arrival banner has gone.
+steps = ["ipc controller pad xbox 80 false", "wait 3.5"]
+after = ["ipc controller reset", "wait 0.5"]
+
+[[scene]]
+name = "bar-controller-charging"
+doc = "docs/modules.md"
+crop = [1440, 0, 480, 300]
+steps = ["ipc controller pad playstation 64 true", "wait 3.5"]
+after = ["ipc controller reset", "wait 0.5"]
+
+# ---- videos -----------------------------------------------------------------
+# scripts/pellicule --video NAME films the steps with wf-recorder, then
+# writes NAME.webm (the site) and NAME.webp, animated (the README).
+
+[[video]]
+name = "hero"
+doc = "README.md"
+mode = "dark"
+width = 1600
+steps = [
+    "wait 1.5",
+    "ipc bar toggleBalise", "wait 2.2",
+    "ipc bar toggleBalise", "wait 0.9",
+    "ipc bar toggleCalendar", "wait 2",
+    "ipc bar toggleCalendar", "wait 0.9",
+    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200", "wait 2.8",
+    "ipc bar keybindsPress", "wait 2.4",
+    "ipc bar keybindsRelease", "wait 1",
+    "ipc controller library {library}",
+    "ipc controller pad xbox 80 false", "wait 2.2",
+    "ipc bar controllerMenu", "wait 1.4",
+    "ipc bar controllerNav down", "wait 0.6",
+    "ipc bar controllerNav right", "wait 0.6",
+    "ipc bar controllerNav right", "wait 1.2",
+    "ipc bar controllerMenu", "wait 0.6",
+    "ipc controller reset", "wait 0.8",
+    "run ~/.local/bin/prisme", "wait 4",
+]
