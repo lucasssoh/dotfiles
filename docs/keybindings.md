@@ -4,9 +4,9 @@ These are for an AZERTY keyboard. The bindings themselves are defined in [`confi
 
 You don't have to remember any of this: hold `Super` and the bar shows every binding on a keyboard. Add `Shift` to see the `Shift` layer. Let go and it disappears.
 
-![Key bindings, held on Super](screenshots/v1.0.0/keybinds.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/keybinds-dark.webp"><img src="screenshots/keybinds.webp" alt="Key bindings, held on Super"></picture>
 
-![The Shift layer](screenshots/v1.0.0/keybinds-shift.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/keybinds-shift-dark.webp"><img src="screenshots/keybinds-shift.webp" alt="The Shift layer"></picture>
 
 ## Launching
 

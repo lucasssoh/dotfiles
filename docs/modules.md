@@ -102,7 +102,7 @@ While a zathura window is visible, the screen won't dim, lock or turn off. A boo
 
 The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../config/hyprland/quickshell/bar/), and reloads itself whenever a QML file changes. This unit also brings the screenshot tools (grim, slurp, satty) and the clipboard history. satty is coucou-shell's own build, from the coucou-shell repository; its settings are in [`config/satty/config.toml`](../config/satty/config.toml) and its look in [`config/satty/overrides.css`](../config/satty/overrides.css). It also brings **fontview**, a font viewer as simple as imv: open a font file from Nemo or run `fontview FILE`; `←` `→` step through the fonts in the folder, `+` `−` change the size, `q` quits.
 
-![The bar](screenshots/v1.0.0/bar.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/bar-dark.webp"><img src="screenshots/bar.webp" alt="The bar"></picture>
 
 | Area | What's there |
 |---|---|
@@ -127,8 +127,8 @@ To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-u
 
 | | | |
 |:---:|:---:|:---:|
-| ![Balise](screenshots/v1.0.0/balise.webp)<br>Balise | ![Power](screenshots/v1.0.0/power.webp)<br>Power | ![Mixer](screenshots/v1.0.0/mixer.webp)<br>Mixer |
-| ![Notification centre](screenshots/v1.0.0/notifications.webp)<br>Notification centre | ![Calendar](screenshots/v1.0.0/calendar.webp)<br>Calendar | |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/balise-dark.webp"><img src="screenshots/balise.webp" alt="Balise"></picture><br>Balise | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/power-dark.webp"><img src="screenshots/power.webp" alt="Power"></picture><br>Power | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/mixer-dark.webp"><img src="screenshots/mixer.webp" alt="Mixer"></picture><br>Mixer |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/notifications-dark.webp"><img src="screenshots/notifications.webp" alt="Notification centre"></picture><br>Notification centre | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/calendar-dark.webp"><img src="screenshots/calendar.webp" alt="Calendar"></picture><br>Calendar | |
 
 The notification centre is a panel from under the bar to the bottom of the screen, flush with its right edge, sliding in from the right. Only one of the drawers on the right can be open at a time.
 
@@ -138,7 +138,7 @@ Hold `Super` and the centre island turns into a keyboard showing every key bindi
 
 | | |
 |:---:|:---:|
-| ![Brightness indicator](screenshots/v1.0.0/osd.webp) | ![Battery alert](screenshots/v1.0.0/battery-alert.webp) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/osd-dark.webp"><img src="screenshots/osd.webp" alt="Brightness indicator"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/battery-alert-dark.webp"><img src="screenshots/battery-alert.webp" alt="Battery alert"></picture> |
 | When you change the volume, the microphone level or the brightness, a dial shows up at the bottom of the screen | The battery alert shows up at 20 %, 10 % and 5 % while on battery. You can switch to the power saver profile, or dismiss it |
 
 #### Mixer and equalizer
@@ -152,7 +152,7 @@ Hold `Super` and the centre island turns into a keyboard showing every key bindi
 
 A big clock that appears when you're up late, with the occasional message.
 
-![Veille at 2 a.m.](screenshots/v1.0.0/veille.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/veille-dark.webp"><img src="screenshots/veille.webp" alt="Veille at 2 a.m."></picture>
 
 Its settings are in [`quickshell/bar/veille.json`](../config/hyprland/quickshell/bar/veille.json), and changes apply as soon as you save:
 
@@ -181,15 +181,15 @@ The three apps written for coucou-shell. On the stable channel they're installed
 | **Prisme** | The wallpaper picker (`Super + W`). The wallpaper you land on shows as a live preview, in the middle of the blurred desktop: `Enter` or `Space` sets it, `Esc` or `q` keeps the current one, `Tab` switches to a slideshow. Each wallpaper is fitted to the resolution of every connected screen and stored in `~/.cache/filtered_wallpapers/<W>x<H>/`. This happens at install, and again when you plug in a new screen. Until then, that screen shows the original. A wallpaper that comes in light and dark, `<name>.jpg` next to `<name>-dark.jpg` (the extensions can differ), is one card: it shows the version for the current mode, `C` previews the other one, and the desktop switches version when you switch between light and dark mode. Name your own wallpapers the same way to pair them | [`config/hyprland/prisme/`](../config/hyprland/prisme/): `wallpapers.conf` (which folder to use), `wallpapers-extra.conf` (extra folders to include) and `keymap.conf` (the keys) |
 | **Balise** | The network and Bluetooth service behind the bar's Balise drawer, running as a `systemd --user` service. `balise wifi-share <ssid>` prints a QR code for a saved network | [`config/hyprland/balise/`](../config/hyprland/balise/) |
 
-![Roue, the power wheel](screenshots/v1.0.0/roue.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/roue-dark.webp"><img src="screenshots/roue.webp" alt="Roue, the power wheel"></picture>
 
-![Prisme](screenshots/v1.0.0/prisme.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/prisme-dark.webp"><img src="screenshots/prisme.webp" alt="Prisme"></picture>
 
 ### `manette`
 
 Game controllers in the shell. Plug one in or pair it over Bluetooth, and a pill at the bottom of the screen says it's connected. Xbox, PlayStation, Switch and Steam controllers all work, and so does any other pad Linux recognises as one. Over USB, Xbox controllers need the `xpad` driver, which this unit installs (`kernel-modules-extra`): restart once after installing it.
 
-![A controller arriving](screenshots/v1.3.0/controller-pill.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/controller-pill-dark.webp"><img src="screenshots/controller-pill.webp" alt="A controller arriving"></picture>
 
 Press the **Guide button** (the Xbox, PS or Home logo) to open the controller menu:
 
@@ -202,18 +202,18 @@ Press the **Guide button** (the Xbox, PS or Home logo) to open the controller me
 
 | | |
 |:---:|:---:|
-| ![The controller menu with an Xbox controller](screenshots/v1.3.0/controller-menu.webp) | ![The same menu with a PlayStation controller](screenshots/v1.3.0/controller-menu-playstation.webp) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/controller-menu-dark.webp"><img src="screenshots/controller-menu.webp" alt="The controller menu with an Xbox controller"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/controller-menu-playstation-dark.webp"><img src="screenshots/controller-menu-playstation.webp" alt="The same menu with a PlayStation controller"></picture> |
 | With an Xbox controller | With a PlayStation controller, charging |
 
 Games start straight from the menu, without opening Lutris's window. Steam starts quietly in the background, since it must be running for its games. `Y` opens every app and game in a grid, with a tab for each source: `LT` `RT` switch tabs, `X` jumps to the next letter. Steam and Lutris come with the [`games`](#games) unit.
 
-![Every app and game, in a grid](screenshots/v1.3.0/controller-apps.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/controller-apps-dark.webp"><img src="screenshots/controller-apps.webp" alt="Every app and game, in a grid"></picture>
 
 While a controller is connected, its silhouette sits at the start of the bar's right-hand group, next to `hdr`, and fills up like a battery gauge: green while charging, red under 15 %. A wired controller with no battery to report is drawn as an outline.
 
 | | |
 |:---:|:---:|
-| ![The controller in the bar](screenshots/v1.3.0/bar-controller.webp) | ![A controller charging](screenshots/v1.3.0/bar-controller-charging.webp) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/bar-controller-dark.webp"><img src="screenshots/bar-controller.webp" alt="The controller in the bar"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/bar-controller-charging-dark.webp"><img src="screenshots/bar-controller-charging.webp" alt="A controller charging"></picture> |
 | On battery | Charging |
 
 The menu shows your controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, and dots marking the position on a pad it doesn't know.
@@ -233,7 +233,7 @@ While the menu is open, the game behind it receives nothing from the controller.
 
 Over Steam or a fullscreen game, a short press on Guide is left to the game: **hold Guide** to open the menu there. A controller without a Guide button opens it with `Select` + `Start` held together. If Steam also reacts to Guide outside a game, turn off *Guide button focuses Steam* in Steam's controller settings.
 
-`qs -c bar ipc call bar controllerMenu` opens or closes the menu without a controller, so you can bind it to a key.
+`qs -c bar ipc call bar controllerMenu` opens or closes the menu without a controller, so you can bind it to a key. To see it with a controller you don't have, `qs -c bar ipc call controller pad xbox 80 false` makes one up (`playstation` for a DualSense, then its battery and whether it charges); `controller reset` removes it.
 
 The service behind it runs as `systemd --user` (`manette.service`). It's built from [`manette-src`](../config/hyprland/manette-src/) on edge and installed as a package on stable, like Roue, Prisme and Balise.
 
@@ -316,7 +316,7 @@ Settings live in `~/.config/programme/settings.json` and your history in `~/.loc
 
 The app launcher (`Super + Space`). It's also the list you pick from for the clipboard history (`Super + V`) and the agenda, and Liseuse's when the bar is not running. Its settings are in [`fuzzel.ini`](../config/fuzzel/fuzzel.ini).
 
-![The launcher](screenshots/v1.0.0/launcher.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/launcher-dark.webp"><img src="screenshots/launcher.webp" alt="The launcher"></picture>
 
 ### `liseuse`
 

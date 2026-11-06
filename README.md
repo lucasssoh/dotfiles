@@ -2,7 +2,7 @@
 
 My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own little package manager to install it and keep it up to date. Most of it is configuration for existing tools, but it also comes with four apps I wrote in Rust, three of them with GTK4: **[Roue](config/hyprland/roue-src)**, a radial wheel, **[Prisme](config/hyprland/prisme-src)**, a wallpaper picker, **[Balise](config/hyprland/balise-src)**, which handles Wi-Fi, Bluetooth and Ethernet from a panel in the bar, and **[Manette](config/hyprland/manette-src)**, a small daemon behind the game controller menu.
 
-![The coucou-shell desktop](docs/screenshots/v1.0.0/desktop.webp)
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/desktop-dark.webp"><img src="docs/screenshots/desktop.webp" alt="The coucou-shell desktop"></picture>
 
 ## Quick start
 
@@ -25,7 +25,7 @@ The documentation is also on the web: https://lucasssoh.github.io/dotfiles/
 
 ## At work
 
-![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/v1.0.0/work.webp)
+![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/work-dark.webp)
 
 The bar's drawers, Veille, Roue, Prisme and the boot splash each have their own screenshots in the [units](docs/modules.md) documentation.
 

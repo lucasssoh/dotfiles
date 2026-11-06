@@ -62,7 +62,11 @@ function rewriteLink(target) {
 }
 
 let current = '';
-const withLinks = (body) => body.replace(/\]\(([^)\s]+)\)/g, (_, t) => `](${rewriteLink(t)})`);
+// Markdown links and images, then the <picture> tags that pair a
+// screenshot with its dark version (src="screenshots/…", srcset="…").
+const withLinks = (body) => body
+  .replace(/\]\(([^)\s]+)\)/g, (_, t) => `](${rewriteLink(t)})`)
+  .replace(/\b(src|srcset)="(screenshots\/[^"]+)"/g, (_, attr, t) => `${attr}="${rewriteLink(t)}"`);
 
 function page(file, title, body, extra = '') {
   const fm = `---\ntitle: ${JSON.stringify(title)}\n${extra}---\n\n`;
