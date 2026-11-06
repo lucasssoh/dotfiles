@@ -508,18 +508,15 @@ hl.config({
 -- what used to be render:cm_fs_passthrough (removed upstream, folded into
 -- direct_scanout — see hyprwm/Hyprland PR #13860).
 --
--- debug:invalidate_fp16 = disable: works around the PR #13860 FP16 workbuffer
--- invalidation glitch (dim screen / blur artifacts / oversaturated cursor
--- under HDR). NOT the same knob as render:use_fp16, which controls whether
--- the FP16 buffer is used at all — disabling that instead would remove the
--- precision headroom HDR needs, making banding worse, not better.
+-- No more debug:invalidate_fp16 = disable: it worked around the FP16
+-- workbuffer invalidation glitch of PR #13860 (dim screen, blur artifacts,
+-- oversaturated cursor under HDR), fixed in 0.57 (#15791), where the option
+-- stopped doing anything. Should the glitch come back, its successor is
+-- debug:invalidate_buffers = 0, which turns off every invalidation.
 hl.config({
     render = {
         cm_auto_hdr    = 2, -- hdredid
         direct_scanout = 2, -- auto
-    },
-    debug = {
-        invalidate_fp16 = 0, -- disable
     },
 })
 
