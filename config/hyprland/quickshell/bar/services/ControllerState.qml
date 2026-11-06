@@ -172,6 +172,62 @@ Singleton {
         }
     }
 
+    // ---- a made-up pad, for screenshots and videos --------------------
+    // The daemon ignores uinput pads on purpose (a pad Steam Input re-exposes
+    // would count twice), so a fake pad is made up here instead: the same
+    // messages the daemon sends, while its own are set aside.
+    //
+    //   qs -c bar ipc call controller pad xbox 80 false        connects one
+    //   qs -c bar ipc call controller pad playstation 35 true  charging
+    //   qs -c bar ipc call controller library /path/games.json  its games
+    //   qs -c bar ipc call controller reset                     back to the real pads
+    property bool simulated: false
+
+    IpcHandler {
+        target: "controller"
+
+        function pad(family: string, battery: int, charging: bool): void {
+            const names = { xbox: "Xbox Wireless Controller", playstation: "DualSense Wireless Controller" };
+            const p = {
+                id: "simulated", name: names[family] || "Wireless Controller", family: family,
+                bus: "bluetooth", address: "", guide: true, battery: battery, charging: charging,
+            };
+            root.simulated = true;
+            root._handleLine(JSON.stringify({ event: "pads", pads: [p] }));
+            root._handleLine(JSON.stringify({ event: "connected", pad: p }));
+        }
+
+        // A JSON file of [{ title, source, last, cover, hero }] -- what the
+        // daemon reads from Steam and Lutris. The games launch nothing.
+        function library(path: string): void {
+            libraryFile.path = "";
+            libraryFile.path = path;
+        }
+
+        function reset(): void {
+            root.simulated = false;
+            root.close();
+            root.banner = null;
+            root.pads = [];
+            root.games = [];
+            root._send({ cmd: "refresh" });
+        }
+    }
+
+    FileView {
+        id: libraryFile
+        blockLoading: true
+        onLoaded: {
+            let games;
+            try { games = JSON.parse(libraryFile.text()); } catch (e) { return; }
+            root.simulated = true;
+            root._handleLine(JSON.stringify({
+                event: "library",
+                games: games.map((g, i) => Object.assign({ id: "simulated:" + i, launch: ["true"] }, g)),
+            }));
+        }
+    }
+
     // Outlives the close by the fade, so the popup is not cut mid-animation.
     Timer {
         id: lingerTimer
@@ -211,7 +267,7 @@ Singleton {
                 connected: true
                 parser: SplitParser {
                     splitMarker: "\n"
-                    onRead: (line) => root._handleLine(line)
+                    onRead: (line) => { if (!root.simulated) root._handleLine(line); }
                 }
             }
         }
