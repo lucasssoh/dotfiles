@@ -180,6 +180,7 @@ Singleton {
         const stamps = Object.assign({}, root.receivedAt);
         stamps[n.id] = Date.now();
         root.receivedAt = stamps;
+        DemoState.track(n);   // closed when demo mode ends
         n.closed.connect(() => root._removeToast(n.id));
 
         if (root.dnd || root.studyQuiet) return;   // still tracked/in history, just no popup

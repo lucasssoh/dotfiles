@@ -42,6 +42,7 @@ Item {
 
     // What to say, most pressing first.
     readonly property string mode: {
+        if (DemoState.active) return "next";
         if (root.t) return root.b.onBreak ? "break" : "session";
         if (root.b.gap) return "gap";
         // Due and not started: said as such, not as a time gone by.
@@ -56,6 +57,7 @@ Item {
     }
 
     readonly property string label: {
+        if (DemoState.active) return DemoState.event;
         const b = root.b;
         switch (root.mode) {
         case "break": return b.tr("Break · ", "Pause · ") + b.clock(b.phaseLeft);

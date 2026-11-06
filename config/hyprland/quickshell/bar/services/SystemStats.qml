@@ -103,6 +103,8 @@ Singleton {
         let m;
         try { m = JSON.parse(line); } catch (e) { return; }
         if (m.event === "stats") {
+            // Demo mode (DemoState.qml) holds its own figures meanwhile.
+            if (DemoState.active) return;
             root.cpuUsage = m.cpu;
             root.cpuMaxGhz = m.ghz;
             root.memUsedGB = m.memGB;

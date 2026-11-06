@@ -306,6 +306,11 @@ Item {
     // file's header) ------------------------------------------------------
     // The WiFi network currently connected, straight off the same list
     // the WiFi section renders -- null until a scan has populated it.
+    // The connected network's name, or demo mode's (DemoState.qml).
+    function shownSsid(ap) {
+        return DemoState.active ? DemoState.wifi : ap.ssid;
+    }
+
     readonly property var connectedWifiAp: {
         const nets = BaliseState.wifiNetworks;
         for (let i = 0; i < nets.length; i++) if (nets[i].is_connected) return nets[i];
@@ -325,7 +330,7 @@ Item {
     // connected").
     readonly property string heroName: {
         if (root.activeWiredProfile) return root.activeWiredProfile.name || root.activeWiredProfile.device_name;
-        if (root.connectedWifiAp) return root.connectedWifiAp.ssid;
+        if (root.connectedWifiAp) return root.shownSsid(root.connectedWifiAp);
         return "Not connected";
     }
     readonly property string heroStatus: {
@@ -364,7 +369,7 @@ Item {
     // C7C628" / "2 appareils" / "Connecté · 1 Gb/s" / "Désactivé").
     readonly property string wifiTileStatus: {
         if (!BaliseState.wifiEnabled) return "Off";
-        return root.connectedWifiAp ? root.connectedWifiAp.ssid : "On";
+        return root.connectedWifiAp ? root.shownSsid(root.connectedWifiAp) : "On";
     }
     readonly property string bluetoothTileStatus: {
         if (!BaliseState.bluetoothEnabled) return "Off";
@@ -683,7 +688,7 @@ Item {
                     Tile {
                         width: connLeft.width
                         height: 92
-                        title: root.connectedWifiAp ? root.connectedWifiAp.ssid : "WiFi"
+                        title: root.connectedWifiAp ? root.shownSsid(root.connectedWifiAp) : "WiFi"
                         revealIndex: 1
                         status: root.connectedWifiAp
                             ? "Wi-Fi · " + root.signalWord(root.connectedWifiAp.signal) + " · " + root.connectedWifiAp.signal + "%"
