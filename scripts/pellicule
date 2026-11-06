@@ -1,0 +1,401 @@
+#!/usr/bin/env python3
+"""Pellicule: retakes the documentation's screenshots, in light and dark.
+
+    scripts/pellicule                  every scene in docs/screenshots/scenes.toml
+    scripts/pellicule balise mixer     only these scenes
+    scripts/pellicule --mode dark      only one mode
+    scripts/pellicule --out DIR        write elsewhere than docs/screenshots
+    scripts/pellicule check            check the scenes against the running shell
+    scripts/pellicule list             the scenes, with their docs
+
+A scene is a list of steps run on an empty workspace, then a screenshot,
+cropped and saved as NAME.webp (light) and NAME-dark.webp. The shell runs
+in demo mode the whole time (made-up time, battery, figures), and
+everything is put back at the end, Ctrl+C included: the colour scheme, the
+wallpaper, the workspace, demo mode, the windows a scene opened.
+
+Steps, one string each:
+    ipc TARGET FUNCTION [ARGS...]   qs -c bar ipc call TARGET FUNCTION ARGS
+    wait SECONDS
+    run COMMAND...                  started in the background, killed at the end of the scene
+    close CLASS                     closes the windows of that class on the workspace
+    notify APP | SUMMARY | BODY     a notification (closed when demo mode ends)
+
+The calls this file makes to the shell, Hyprland and gsettings are the
+ones its users can break. `check` compares every `ipc` step with what the
+shell exposes and every `run` with the commands installed; run it after
+changing an IpcHandler or a command a scene uses (AGENTS.md says so).
+"""
+
+import argparse
+import os
+import shlex
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+SCENES = REPO / "docs" / "screenshots" / "scenes.toml"
+
+# The colour scheme as the bar's own toggle sets it (AppearanceState.qml).
+SCHEMES = {
+    "light": ("prefer-light", "Adwaita"),
+    "dark": ("prefer-dark", "Adwaita-dark"),
+}
+
+
+def say(msg):
+    print(msg, flush=True)
+
+
+def fail(msg):
+    print(f"pellicule: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def sh(*args, check=True, capture=True):
+    r = subprocess.run(args, text=True, capture_output=capture)
+    if check and r.returncode != 0:
+        raise RuntimeError(f"{' '.join(args)}: {(r.stderr or r.stdout).strip()}")
+    return r.stdout.strip() if capture else ""
+
+
+# ---- the shell, Hyprland, gsettings ----------------------------------------
+
+def ipc(target, function, *args):
+    return sh("qs", "-c", "bar", "ipc", "call", target, function, *args)
+
+
+def ipc_surface():
+    """{target: {function: number of arguments}} from the running shell.
+    Waits up to 10 s for it: while the bar reloads after an edit, its
+    targets come back one by one."""
+    for _ in range(10):
+        surface = _ipc_surface()
+        if "bar" in surface:
+            return surface
+        time.sleep(1)
+    return surface
+
+
+def _ipc_surface():
+    out = sh("qs", "-c", "bar", "ipc", "show")
+    surface, target = {}, None
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("target "):
+            target = line.split()[1]
+            surface[target] = {}
+        elif line.startswith("function ") and target:
+            name, _, rest = line[len("function "):].partition("(")
+            params = rest.split(")")[0].strip()
+            surface[target][name] = 0 if not params else params.count(",") + 1
+    return surface
+
+
+def scheme_get():
+    return (sh("gsettings", "get", "org.gnome.desktop.interface", "color-scheme").strip("'"),
+            sh("gsettings", "get", "org.gnome.desktop.interface", "gtk-theme").strip("'"))
+
+
+def scheme_set(scheme, theme):
+    sh("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", scheme)
+    sh("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", theme)
+
+
+def workspace_get():
+    import json
+    return str(json.loads(sh("hyprctl", "-j", "activeworkspace"))["id"])
+
+
+def workspace_go(ws):
+    sh("hyprctl", "eval", f'hl.dispatch(hl.dsp.focus({{ workspace = "{ws}" }}))')
+
+
+WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
+
+
+def wallpaper_get():
+    """The name of the wallpaper on screen (awww shows a fitted copy of it)."""
+    for line in sh("awww", "query").splitlines():
+        if "image: " in line:
+            return Path(line.split("image: ", 1)[1]).name
+    return None
+
+
+def wallpaper_set(name):
+    sh(str(WALLPAPER_SET), "--instant", name)
+
+
+def clients():
+    import json
+    return json.loads(sh("hyprctl", "-j", "clients"))
+
+
+def monitor_size():
+    import json
+    m = json.loads(sh("hyprctl", "-j", "monitors"))[0]
+    return m["width"], m["height"]
+
+
+# ---- scenes -----------------------------------------------------------------
+
+def load(path):
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    settings = data.get("settings", {})
+    scenes = data.get("scene", [])
+    return settings, scenes
+
+
+def check(settings, scenes, surface=None):
+    """Problems, as "scene: what" lines. Empty when everything holds."""
+    problems = []
+    seen = set()
+    if surface is None:
+        try:
+            surface = ipc_surface()
+        except Exception as e:
+            return [f"the shell does not answer ({e}); is the bar running?"]
+    w, h = settings.get("size", [1920, 1200])
+    wp = settings.get("wallpaper")
+    if wp and subprocess.run([str(WALLPAPER_SET), "--resolve", wp], capture_output=True).returncode != 0:
+        problems.append(f"settings: wallpaper {wp!r} is not in the wallpaper folder")
+    for s in scenes:
+        name = s.get("name", "?")
+        where = f"{name}"
+        if name in seen:
+            problems.append(f"{where}: two scenes have this name")
+        seen.add(name)
+        crop = s.get("crop", "full")
+        if crop != "full":
+            if len(crop) != 4:
+                problems.append(f"{where}: crop is [x, y, width, height] or \"full\"")
+            else:
+                x, y, cw, ch = crop
+                if x < 0 or y < 0 or x + cw > w or y + ch > h:
+                    problems.append(f"{where}: crop {crop} leaves the {w}x{h} screen")
+        for mode in s.get("modes", ["light", "dark"]):
+            if mode not in SCHEMES:
+                problems.append(f"{where}: unknown mode {mode!r}")
+        doc = s.get("doc")
+        if doc and not (REPO / doc).exists():
+            problems.append(f"{where}: {doc} does not exist")
+        for step in s.get("steps", []) + s.get("after", []):
+            problems += [f"{where}: {p}" for p in check_step(step, surface)]
+    return problems
+
+
+def check_step(step, surface):
+    try:
+        words = shlex.split(step)
+    except ValueError as e:
+        return [f"{step!r}: {e}"]
+    if not words:
+        return ["an empty step"]
+    verb, args = words[0], words[1:]
+    if verb == "ipc":
+        if len(args) < 2:
+            return [f"{step!r}: ipc TARGET FUNCTION [ARGS...]"]
+        target, function, rest = args[0], args[1], args[2:]
+        if target not in surface:
+            return [f"{step!r}: the shell has no ipc target {target!r}"]
+        if function not in surface[target]:
+            return [f"{step!r}: {target} has no function {function!r}"]
+        want = surface[target][function]
+        if len(rest) != want:
+            return [f"{step!r}: {target} {function} takes {want} argument(s), not {len(rest)}"]
+        return []
+    if verb == "wait":
+        try:
+            float(args[0])
+            return []
+        except (IndexError, ValueError):
+            return [f"{step!r}: wait SECONDS"]
+    if verb == "run":
+        if not args:
+            return [f"{step!r}: run COMMAND..."]
+        cmd = os.path.expanduser(args[0])
+        found = os.access(cmd, os.X_OK) if "/" in cmd else subprocess.run(
+            ["sh", "-c", f"command -v {shlex.quote(cmd)}"], capture_output=True).returncode == 0
+        return [] if found else [f"{step!r}: {args[0]} is not installed"]
+    if verb == "close":
+        return [] if len(args) == 1 else [f"{step!r}: close CLASS"]
+    if verb == "notify":
+        parts = " ".join(args).split("|")
+        return [] if len(parts) == 3 else [f"{step!r}: notify APP | SUMMARY | BODY"]
+    return [f"{step!r}: unknown step {verb!r}"]
+
+
+class Take:
+    """One run: what to put back, and the windows to close."""
+
+    def __init__(self, settings):
+        self.ws = str(settings.get("workspace", "9"))
+        self.saved_scheme = scheme_get()
+        self.saved_ws = workspace_get()
+        self.saved_demo = ipc("demo", "status") == "on"
+        self.wallpaper = settings.get("wallpaper")
+        self.saved_wallpaper = wallpaper_get() if self.wallpaper else None
+        self.procs = []
+
+    def start(self):
+        busy = [c for c in clients() if str(c["workspace"]["id"]) == self.ws]
+        if busy:
+            fail(f"workspace {self.ws} is not empty ({busy[0]['class']}); "
+                 "close its windows or set another one in scenes.toml")
+        ipc("demo", "on")
+        if self.wallpaper:
+            # One file of a light/dark pair stands for both: the scheme
+            # changes below bring the other half.
+            wallpaper_set(self.wallpaper)
+        workspace_go(self.ws)
+        time.sleep(0.8)
+
+    def step(self, step):
+        words = shlex.split(step)
+        verb, args = words[0], words[1:]
+        if verb == "ipc":
+            ipc(*args)
+        elif verb == "wait":
+            time.sleep(float(args[0]))
+        elif verb == "run":
+            cmd = [os.path.expanduser(a.replace("{repo}", str(REPO))) for a in args]
+            self.procs.append(subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
+                                               stderr=subprocess.DEVNULL, start_new_session=True))
+        elif verb == "close":
+            self.close(args[0])
+        elif verb == "notify":
+            app, summary, body = (p.strip() for p in " ".join(args).split("|"))
+            sh("notify-send", "-a", app, summary, body)
+
+    def close(self, cls):
+        for c in clients():
+            if c["class"] == cls and str(c["workspace"]["id"]) == self.ws:
+                try:
+                    os.kill(c["pid"], signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+
+    def end_scene(self):
+        for p in self.procs:
+            if p.poll() is None:
+                try:
+                    os.killpg(p.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+        self.procs = []
+        for c in clients():
+            if str(c["workspace"]["id"]) == self.ws:
+                try:
+                    os.kill(c["pid"], signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+
+    def restore(self):
+        try:
+            self.end_scene()
+        finally:
+            if not self.saved_demo:
+                ipc("demo", "off")
+            scheme_set(*self.saved_scheme)
+            if self.saved_wallpaper:
+                time.sleep(1)   # after the scheme's own swap, not raced by it
+                wallpaper_set(self.saved_wallpaper)
+            workspace_go(self.saved_ws)
+
+
+def shoot(scene, mode, take, out, settings):
+    from PIL import Image
+    for step in scene.get("steps", []):
+        take.step(step)
+    with tempfile.NamedTemporaryFile(suffix=".png") as raw:
+        sh("grim", raw.name)
+        img = Image.open(raw.name).convert("RGB")
+    for step in scene.get("after", []):
+        take.step(step)
+    take.end_scene()
+    crop = scene.get("crop", "full")
+    if crop != "full":
+        x, y, w, h = crop
+        img = img.crop((x, y, x + w, y + h))
+    width = scene.get("width", settings.get("width"))
+    if width and img.width > width:
+        img = img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
+    name = scene["name"] + ("" if mode == "light" else "-dark")
+    path = out / f"{name}.webp"
+    img.save(path, quality=settings.get("quality", 85), method=6)
+    return path
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="pellicule", description="Retakes the documentation's screenshots.")
+    ap.add_argument("scenes", nargs="*", help="scene names, or check / list")
+    ap.add_argument("--mode", choices=list(SCHEMES), help="only this mode")
+    ap.add_argument("--out", type=Path, help="where to write (default: next to scenes.toml)")
+    ap.add_argument("--scenes-file", type=Path, default=SCENES)
+    a = ap.parse_args()
+
+    settings, scenes = load(a.scenes_file)
+
+    if a.scenes[:1] == ["list"]:
+        for s in scenes:
+            say(f"{s['name']:<16} {', '.join(s.get('modes', ['light', 'dark'])):<12} {s.get('doc', '')}")
+        return
+    if a.scenes[:1] == ["check"]:
+        problems = check(settings, scenes)
+        for p in problems:
+            print(p, file=sys.stderr)
+        if problems:
+            sys.exit(1)
+        say(f"{len(scenes)} scenes, all in step with the shell")
+        return
+
+    if a.scenes:
+        names = {s["name"] for s in scenes}
+        unknown = [n for n in a.scenes if n not in names]
+        if unknown:
+            fail(f"no scene called {', '.join(unknown)} (scripts/pellicule list)")
+        scenes = [s for s in scenes if s["name"] in a.scenes]
+
+    problems = check(settings, scenes)
+    if problems:
+        for p in problems:
+            print(p, file=sys.stderr)
+        fail("scenes.toml is out of step with the shell; nothing taken")
+    size = tuple(settings.get("size", [1920, 1200]))
+    if monitor_size() != size:
+        fail(f"the screen is {monitor_size()}, the scenes are framed for {size}")
+
+    out = a.out or a.scenes_file.parent
+    out.mkdir(parents=True, exist_ok=True)
+    modes = [a.mode] if a.mode else list(SCHEMES)
+
+    take = Take(settings)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+    taken = 0
+    try:
+        take.start()
+        for mode in modes:
+            todo = [s for s in scenes if mode in s.get("modes", ["light", "dark"])]
+            if not todo:
+                continue
+            scheme_set(*SCHEMES[mode])
+            time.sleep(settings.get("scheme_wait", 3))
+            for s in todo:
+                path = shoot(s, mode, take, out, settings)
+                taken += 1
+                say(f"{mode:<5} {s['name']:<16} {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
+    except KeyboardInterrupt:
+        say("interrupted, putting everything back")
+    finally:
+        take.restore()
+    say(f"{taken} screenshot(s)")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,145 @@
+# The documentation's screenshots, retaken by scripts/pellicule.
+#
+# Each scene runs its steps on an empty workspace, in demo mode, then takes
+# the screen, crops it to `crop` ([x, y, width, height] on the 1920x1200
+# screen, or "full") and saves NAME.webp (light) and NAME-dark.webp here.
+# `after` steps run once the screenshot is taken. The windows and programs
+# a scene opens are closed before the next one.
+#
+# Steps: ipc TARGET FUNCTION [ARGS...] · wait SECONDS · run COMMAND... ·
+#        close CLASS · notify APP | SUMMARY | BODY
+#
+# After changing an IpcHandler, or a command a scene runs:
+#     scripts/pellicule check
+
+[settings]
+workspace = 9
+size = [1920, 1200]
+# A light/dark pair: either name stands for both.
+wallpaper = "coucou-aube-plis.jxl"
+quality = 85
+# Seconds for the wallpaper and the apps to follow a colour scheme change.
+scheme_wait = 3
+
+[[scene]]
+name = "desktop"
+doc = "README.md"
+crop = "full"
+steps = ["wait 0.5"]
+
+[[scene]]
+name = "bar"
+doc = "docs/modules.md"
+crop = "full"
+steps = ["wait 0.5"]
+
+[[scene]]
+name = "work"
+doc = "README.md"
+crop = "full"
+steps = [
+    "run wezterm start --class pellicule-editor --cwd {repo} -- nvim CHANGELOG.md",
+    "wait 2.5",
+    "run nemo {repo}/wallpapers",
+    "wait 2.5",
+    "run wezterm start --class pellicule-fetch --cwd {repo} -- sh -c 'fastfetch; exec sleep 600'",
+    "wait 3",
+]
+
+[[scene]]
+name = "balise"
+doc = "docs/modules.md"
+crop = [1120, 0, 800, 500]
+steps = ["ipc bar toggleBalise", "wait 1.4"]
+after = ["ipc bar toggleBalise", "wait 0.8"]
+
+[[scene]]
+name = "mixer"
+doc = "docs/modules.md"
+crop = [960, 0, 960, 600]
+steps = ["ipc bar toggleMixer", "wait 1.4"]
+after = ["ipc bar toggleMixer", "wait 0.8"]
+
+[[scene]]
+name = "power"
+doc = "docs/modules.md"
+crop = [880, 0, 1040, 650]
+steps = ["ipc bar togglePower", "wait 1.4"]
+after = ["ipc bar togglePower", "wait 0.8"]
+
+[[scene]]
+name = "calendar"
+doc = "docs/modules.md"
+crop = [0, 0, 800, 500]
+steps = ["ipc bar toggleCalendar", "wait 1.4"]
+after = ["ipc bar toggleCalendar", "wait 0.8"]
+
+[[scene]]
+name = "notifications"
+doc = "docs/modules.md"
+crop = [960, 0, 960, 600]
+steps = [
+    "notify Liseuse | Resuming | Plus courts chemins, page 12 of 48",
+    "wait 0.3",
+    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200",
+    "wait 0.3",
+    "notify cc-pkg-mng | Up to date | coucou-shell 2.2.0 on the stable channel",
+    # The toasts leave before the centre opens.
+    "wait 7",
+    "ipc bar toggleNotificationCenter",
+    "wait 1.4",
+]
+after = ["ipc bar closeNotificationCenter", "wait 0.8"]
+
+[[scene]]
+name = "battery-alert"
+doc = "docs/modules.md"
+crop = [640, 400, 640, 400]
+steps = ["ipc bar simulateBattery 8", "wait 1.5"]
+after = ["ipc bar dismissBattery", "wait 0.8"]
+
+[[scene]]
+name = "osd"
+doc = "docs/modules.md"
+crop = [640, 800, 640, 400]
+steps = ["ipc bar pokeBrightness", "wait 0.35"]
+after = ["wait 2"]
+
+[[scene]]
+name = "veille"
+doc = "docs/modules.md"
+crop = [480, 0, 960, 600]
+# On the hour, Veille shows itself; frozen, it stays.
+steps = ["ipc clock freeze 02:00:00", "wait 2.5"]
+after = ["ipc clock freeze 10:42:00", "wait 1.5"]
+
+[[scene]]
+name = "keybinds"
+doc = "docs/keybindings.md"
+crop = "full"
+steps = ["ipc bar keybindsPress", "wait 1.5"]
+
+[[scene]]
+name = "keybinds-shift"
+doc = "docs/keybindings.md"
+crop = "full"
+steps = ["ipc bar keybindsShift true", "wait 0.8"]
+after = ["ipc bar keybindsShift false", "ipc bar keybindsRelease", "wait 1"]
+
+[[scene]]
+name = "launcher"
+doc = "docs/modules.md"
+crop = [640, 400, 640, 400]
+steps = ["run fuzzel", "wait 1.2"]
+
+[[scene]]
+name = "roue"
+doc = "docs/modules.md"
+crop = [480, 300, 960, 600]
+steps = ["run ~/.local/bin/roue power", "wait 1.5"]
+
+[[scene]]
+name = "prisme"
+doc = "docs/modules.md"
+crop = "full"
+steps = ["run ~/.local/bin/prisme", "wait 4"]
