@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=OPL IDE (CPLEX Studio)
+Comment=IBM ILOG CPLEX Optimization Studio
+Exec=/opt/ibm/ILOG/CPLEX_Studio222/opl/oplide/oplide
+TryExec=/opt/ibm/ILOG/CPLEX_Studio222/opl/oplide/oplide
+Icon=/opt/ibm/ILOG/CPLEX_Studio222/opl/oplide/icon.xpm
+Terminal=false
+Categories=Development;
