@@ -43,6 +43,14 @@ Singleton {
     }
     readonly property alias trackedNotifications: server.trackedNotifications
 
+    // What the centre and the bell show: every tracked notification, or,
+    // in demo mode (DemoState.qml), only those received since it started,
+    // so a screenshot never shows your own.
+    readonly property var shown: {
+        const all = server.trackedNotifications.values;
+        return DemoState.active ? DemoState._notifications.filter((n) => all.indexOf(n) >= 0) : all;
+    }
+
     // ---- do-not-disturb ----
     // Notifications still land in trackedNotifications/the bell badge
     // while dnd is on -- only the toast popup is suppressed. Same
@@ -319,9 +327,9 @@ Singleton {
     property var _clearBatch: []
 
     function clearAll(units) {
-        if (server.trackedNotifications.values.length === 0) return;
+        if (root.shown.length === 0) return;
         root._clearBatch = units ? units.slice()
-            : server.trackedNotifications.values.map((n) => [n]);
+            : root.shown.map((n) => [n]);
         root._clearStep();       // first card leaves immediately, no lead-in delay
         clearTimer.restart();
     }

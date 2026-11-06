@@ -596,14 +596,14 @@ Item {
             text: "Clear all"
             // Muted, not faint, when there is nothing to clear: on the
             // glass sheet faint vanished entirely.
-            color: NotificationState.trackedNotifications.values.length > 0 ? DrawerTheme.accent : DrawerTheme.muted
+            color: NotificationState.shown.length > 0 ? DrawerTheme.accent : DrawerTheme.muted
             font.family: Fonts.ui
             font.pixelSize: 13
         }
         MouseArea {
             anchors.fill: clearAllLabel
             anchors.margins: -6
-            enabled: NotificationState.trackedNotifications.values.length > 0
+            enabled: NotificationState.shown.length > 0
             cursorShape: Qt.PointingHandCursor
             onClicked: NotificationState.clearAll(root.clearUnits())
         }
@@ -644,7 +644,7 @@ Item {
     }
 
     readonly property var sections: {
-        const all = NotificationState.trackedNotifications.values;
+        const all = NotificationState.shown;
         const stamps = NotificationState.receivedAt;
         const midnight = root.midnight;
 
@@ -783,7 +783,7 @@ Item {
         Text {
             x: (list.width - width) / 2
             y: (list.height - height) / 2
-            visible: NotificationState.trackedNotifications.values.length === 0
+            visible: NotificationState.shown.length === 0
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "No notifications"

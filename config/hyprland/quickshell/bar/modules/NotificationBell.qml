@@ -48,7 +48,7 @@ Item {
     // outside of a view's synthetic one (ListView.count etc.), so
     // `.count` here resolved to undefined. `.values.length` is the real,
     // always-defined property.
-    readonly property int count: NotificationState.trackedNotifications.values.length
+    readonly property int count: NotificationState.shown.length
     readonly property bool hasUnseen: NotificationState.hasUnseen
     readonly property bool dnd: NotificationState.dnd
 

@@ -82,6 +82,7 @@ Item {
     // next public holiday.
     readonly property string footerText: {
         if (root.hoveredText !== "") return root.hoveredText;
+        if (DemoState.active) return "Next: Today  ·  " + DemoState.event;
         const e = CalendarState.nextEvent;
         if (e !== null) {
             const s = new Date(e.start);
