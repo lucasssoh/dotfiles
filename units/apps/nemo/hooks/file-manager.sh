@@ -20,5 +20,18 @@ if have gsettings; then
         && gsettings set org.nemo.window-state sidebar-width 210
     [ "$(gsettings get org.nemo.preferences thumbnail-limit)" = "uint64 1048576" ] \
         && gsettings set org.nemo.preferences thumbnail-limit 33554432
+    # "Open in Terminal" runs this command. Fedora 45's Cinnamon schema
+    # defaults it to velocitty, which nothing installs: a terminal that
+    # isn't there is replaced by xdg-terminal-exec, which follows the
+    # terminal you chose, or by WezTerm where that tool isn't installed.
+    term_key="org.cinnamon.desktop.default-applications.terminal"
+    term="$(gsettings get "$term_key" exec 2>/dev/null | tr -d "'")"
+    if [ -n "$term" ] && ! have "$term"; then
+        if have xdg-terminal-exec; then
+            gsettings set "$term_key" exec xdg-terminal-exec
+        elif have wezterm; then
+            gsettings set "$term_key" exec wezterm
+        fi
+    fi
 fi
 ok "Nemo is the file manager"

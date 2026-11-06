@@ -9,6 +9,6 @@ dnf = ["nemo", "nemo-fileroller"]
 [[hooks]]
 name   = "file-manager"
 run_as = "user"
-does   = "Nemo as the inode/directory handler, org.freedesktop.FileManager1 D-Bus redirect, thumbnail limit 32 MiB, sidebar width"
+does   = "Nemo as the inode/directory handler, org.freedesktop.FileManager1 D-Bus redirect, thumbnail limit 32 MiB, sidebar width, a terminal that exists for Open in Terminal"
 from   = "config/nemo/install.sh"
 run    = "units/apps/nemo/hooks/file-manager.sh"
