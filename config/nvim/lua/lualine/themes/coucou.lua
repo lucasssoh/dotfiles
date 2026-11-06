@@ -5,8 +5,22 @@
 -- ============================================================
 local p = require("coucou.palette")
 
+-- `--bg=transparent` removes the surfaces after the fact, but lualine
+-- rebuilds its separators from the theme colours cached here. Handing it
+-- NONE directly keeps the whole statusline see-through and stops the
+-- transition glyphs from repainting an opaque block on every refresh.
+local transparent = vim.g.theme_bg == "transparent"
+
+local function bg(color)
+    return transparent and "NONE" or color
+end
+
 local function mode(accent)
-    return { a = { fg = p.bg, bg = accent, gui = "bold" }, b = { fg = p.text, bg = p.overlay }, c = { fg = p.subtle, bg = p.surface } }
+    return {
+        a = { fg = p.bg, bg = accent, gui = "bold" },
+        b = { fg = p.text, bg = bg(p.overlay) },
+        c = { fg = p.subtle, bg = bg(p.surface) },
+    }
 end
 
 return {
@@ -16,8 +30,8 @@ return {
     replace  = mode(p.red_soft),
     command  = mode(p.yellow),
     inactive = {
-        a = { fg = p.muted, bg = p.bg },
-        b = { fg = p.muted, bg = p.bg },
-        c = { fg = p.muted, bg = p.bg },
+        a = { fg = p.muted, bg = bg(p.bg) },
+        b = { fg = p.muted, bg = bg(p.bg) },
+        c = { fg = p.muted, bg = bg(p.bg) },
     },
 }

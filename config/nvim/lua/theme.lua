@@ -25,12 +25,103 @@ local function load_saved_theme()
     return "melange", "default"
 end
 
+local active_bg = "default"
+
+-- Relative luminance of a highlight colour. nvim_get_hl hands colours back
+-- as 0xRRGGBB integers; strings are accepted too so the helper stays usable
+-- from the palette-style call sites.
+local function luminance(color)
+    if type(color) == "string" then
+        color = tonumber((color:gsub("^#", "")), 16)
+    end
+    if type(color) ~= "number" then
+        return nil
+    end
+
+    local function channel(c)
+        c = c / 255
+        return c <= 0.04045 and c / 12.92 or ((c + 0.055) / 1.055) ^ 2.4
+    end
+
+    local r = math.floor(color / 0x10000) % 0x100
+    local g = math.floor(color / 0x100) % 0x100
+    local b = color % 0x100
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+end
+
+-- Selection is a highlight, not a surface: without its background there is
+-- no way left to tell what is selected. Everything else is fair game.
+local keep_bg = {
+    Visual = true,
+    VisualNOS = true,
+}
+
+-- Remove every panel/surface background instead of patching a fixed list of
+-- groups, so the whole UI lets the terminal's own translucency through --
+-- nvim-tree, statusline, tabline, floats, popups, lualine, plugins.
+--
+-- Surfaces are recognised by luminance rather than by name: the editor's
+-- backgrounds are dark in a dark colourscheme and light in a light one,
+-- while accent blocks (search, popup selection, mode indicators, cursor)
+-- sit at the opposite end. That keeps working for any installed theme
+-- without listing every group each one defines.
+local function clear_backgrounds()
+    if active_bg ~= "transparent" then
+        return
+    end
+
+    local dark = vim.o.background ~= "light"
+
+    local function is_surface(color)
+        local l = luminance(color)
+        if not l then
+            return false
+        end
+        return dark and l < 0.2 or (not dark and l > 0.6)
+    end
+
+    for name, attrs in pairs(vim.api.nvim_get_hl(0, {})) do
+        -- Linked groups follow their target, which is handled on its own.
+        if not attrs.link and not attrs.reverse and not keep_bg[name] and is_surface(attrs.bg) then
+            local hl = vim.deepcopy(attrs)
+            hl.bg = nil
+            hl.ctermbg = nil
+            -- Copying the definition would keep `default = true` (bufferline
+            -- sets it on every group), and nvim_set_hl would then refuse to
+            -- override the very group we are trying to change.
+            hl.default = nil
+            -- A dark-on-dark group (separator, group label) would become
+            -- invisible once its background goes away: use Normal's
+            -- foreground instead of keeping a colour nothing can read.
+            if is_surface(attrs.fg) then
+                hl.fg = nil
+                hl.ctermfg = nil
+            end
+            pcall(vim.api.nvim_set_hl, 0, name, hl)
+        end
+    end
+end
+
+-- Some plugin groups only come into existence when the screen is first
+-- drawn (lualine's section transitions, bufferline's icon highlights), so a
+-- single synchronous pass leaves them opaque. Run once now and again shortly
+-- after the first redraw; by then those groups are cached and the second pass
+-- is what sticks.
+local function apply_transparency()
+    clear_backgrounds()
+    vim.schedule(clear_backgrounds)
+    vim.defer_fn(clear_backgrounds, 250)
+end
+
 local function apply_bg(bg)
+    if bg == "transparent" then
+        apply_transparency()
+        return
+    end
+
     local color = nil
     if bg == "black" then
         color = "#000000"
-    elseif bg == "transparent" then
-        color = "NONE"
     else
         return
     end
@@ -55,6 +146,11 @@ local function apply_bg(bg)
 end
 
 local function apply_theme(name, bg)
+    active_bg = bg or "default"
+    -- Read by lualine's coucou theme so its b/c segments are born
+    -- transparent instead of being painted and then cleared.
+    vim.g.theme_bg = active_bg
+
     -- Set before colorscheme() so a theme's colors/*.lua can branch on
     -- vim.o.background (used by coucou's dark/light palette switch).
     vim.o.background = (bg == "light") and "light" or "dark"
@@ -64,8 +160,10 @@ local function apply_theme(name, bg)
         print("Error applying theme: " .. err)
         return
     end
-    apply_bg(bg or "default")
+    -- Fire the plugins' own ColorScheme handlers first, then clear: several
+    -- of them (bufferline, coucou) rebuild their groups from that event.
     vim.cmd("doautocmd ColorScheme")
+    apply_bg(bg or "default")
 end
 
 local function save_theme(name, bg)
@@ -132,6 +230,8 @@ end, {
 
 -- Startup: load the saved theme + bg
 local saved_name, saved_bg = load_saved_theme()
+active_bg = saved_bg
+vim.g.theme_bg = active_bg
 
 -- Set before the active theme's colorscheme() runs below (lazy.nvim's
 -- config() for the priority=1000 spec fires synchronously inside
@@ -139,10 +239,31 @@ local saved_name, saved_bg = load_saved_theme()
 -- so this assignment lands in time for colors/*.lua to see it).
 vim.o.background = (saved_bg == "light") and "light" or "dark"
 
+-- A bare :colorscheme (or one that reloads itself) repaints backgrounds
+-- from scratch; reapply transparency after it when that is the active mode.
+vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("ThemeTransparency", { clear = true }),
+    callback = function()
+        if active_bg == "transparent" then
+            apply_transparency()
+        end
+    end,
+})
+
 vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
     callback = function()
         apply_bg(saved_bg)
+    end,
+})
+
+-- Cover plugins that finish loading after startup (VeryLazy and later).
+vim.api.nvim_create_autocmd("User", {
+    pattern = { "LazyDone", "VeryLazy" },
+    callback = function()
+        if active_bg == "transparent" then
+            vim.schedule(clear_backgrounds)
+        end
     end,
 })
 
