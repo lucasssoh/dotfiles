@@ -293,7 +293,7 @@ Item {
                     horizontalAlignment: Text.AlignRight
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: Qt.formatDateTime(clock.date, "HH:mm")
+                    text: Qt.formatDateTime(ShellClock.at(clock.date), "HH:mm")
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 34
@@ -305,7 +305,7 @@ Item {
                     horizontalAlignment: Text.AlignRight
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
+                    text: ShellClock.at(clock.date).toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
                     color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 13

@@ -41,13 +41,9 @@ Scope {
         precision: config.showSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
-    // Debug time override (see the IpcHandler below) -- a fixed offset
-    // applied to the real clock rather than a frozen fake Date, so
-    // seconds/phases keep advancing naturally from wherever `setNow`
-    // pointed them, instead of a still image. Only reachable when
-    // veille.json has "debug": true.
-    property real debugOffsetMs: 0
-    readonly property date now: new Date(sysClock.date.getTime() + root.debugOffsetMs)
+    // The time the whole shell shows (services/ShellClock.qml): a time
+    // set or frozen there moves Veille together with the bar's clock.
+    readonly property date now: ShellClock.at(sysClock.date)
 
     VeillePhase {
         id: phase
@@ -153,34 +149,24 @@ Scope {
     readonly property var activeScreen: root.pickScreen()
 
     // ---- debug / development hooks -------------------------------------
-    // Everything here is a no-op unless veille.json has "debug": true --
+    // sample and probe are no-ops unless veille.json has "debug": true --
     // asked for explicitly (the plan's own verification section): there
-    // is no input-injection tool in this environment, so exercising the
-    // five phases / midnight event / cooldown without waiting for the
-    // real clock needs a way to fast-forward it, and filling in
+    // is no input-injection tool in this environment, and filling in
     // appFamilies/tokenPatterns needs a way to see the REAL class/title
-    // of whatever's focused, rather than guessing.
+    // of whatever's focused, rather than guessing. Moving the time needs
+    // no flag: it goes through ShellClock, shared by the whole shell.
     IpcHandler {
         target: "veille"
 
-        // `qs -c bar ipc call veille setNow "01:12"` -- jumps the
-        // effective clock to that time today, then lets it keep ticking
-        // forward normally from there (see root.debugOffsetMs above).
+        // `qs -c bar ipc call veille setNow "01:12"` -- the same as
+        // `clock set "01:12"`: from that time today, then ticking.
         function setNow(hhmm: string): void {
-            if (!config.debug) {
-                console.warn("[veille] setNow ignored -- set \"debug\": true in veille.json first");
-                return;
-            }
-            const parts = hhmm.split(":");
-            const h = parseInt(parts[0], 10) || 0;
-            const m = parseInt(parts[1], 10) || 0;
-            const target = new Date(root.now.getFullYear(), root.now.getMonth(), root.now.getDate(), h, m, 0);
-            root.debugOffsetMs = target.getTime() - sysClock.date.getTime();
+            ShellClock.setTime(hhmm);
         }
 
-        // Clears the debug offset, back to the real clock.
+        // Back to the real time, for the whole shell.
         function resetNow(): void {
-            root.debugOffsetMs = 0;
+            ShellClock.reset();
         }
 
         // `qs -c bar ipc call veille sample` -- draws a message right now,

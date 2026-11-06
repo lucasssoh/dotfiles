@@ -57,7 +57,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             anchors.baseline: dateText.baseline
-            text: Qt.formatDateTime(clock.date, "HH:mm")
+            text: Qt.formatDateTime(ShellClock.at(clock.date), "HH:mm")
             color: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13
@@ -73,7 +73,7 @@ Item {
             // follow this session's fr_FR one and render "ven. 18 sept."
             // -- same reasoning, and the same "Fri Sep 18" shape, as
             // NotificationCenter.qml's own header clock.
-            text: clock.date.toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
+            text: ShellClock.at(clock.date).toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
             color: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 13

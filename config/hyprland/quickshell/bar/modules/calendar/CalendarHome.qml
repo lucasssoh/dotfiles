@@ -85,7 +85,7 @@ Item {
         const e = CalendarState.nextEvent;
         if (e !== null) {
             const s = new Date(e.start);
-            const now = new Date();
+            const now = ShellClock.now();
             let day;
             if (s <= now) day = "Now";
             else if (s.toDateString() === now.toDateString()) day = "Today";

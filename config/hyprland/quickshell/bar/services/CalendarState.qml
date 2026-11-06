@@ -59,9 +59,12 @@ Singleton {
         precision: SystemClock.Hours
     }
 
-    readonly property int todayYear: clock.date.getFullYear()
-    readonly property int todayMonth: clock.date.getMonth()
-    readonly property int todayDay: clock.date.getDate()
+    // "Today" as the shell shows it (ShellClock: a simulated time moves
+    // it too). The hourly refresh below stays on the real clock.
+    readonly property date shownNow: ShellClock.at(clock.date)
+    readonly property int todayYear: root.shownNow.getFullYear()
+    readonly property int todayMonth: root.shownNow.getMonth()
+    readonly property int todayDay: root.shownNow.getDate()
 
     // Hourly refresh rides the same tick.
     onTodayHourChanged: root.reloadEvents()

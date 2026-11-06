@@ -18,3 +18,4 @@ singleton ControllerState 1.0 ControllerState.qml
 singleton ProgrammeState 1.0 ProgrammeState.qml
 singleton SesameState 1.0 SesameState.qml
 singleton LibraryState 1.0 LibraryState.qml
+singleton ShellClock 1.0 ShellClock.qml
