@@ -4,7 +4,9 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStartPre=/bin/sleep 3
+# "-": restore_wallpaper.sh stops the slideshow at login when the wallpaper
+# is a still one, often during this pause; the stop is not a failure.
+ExecStartPre=-/bin/sleep 3
 ExecStart=%h/.config/hypr/scripts/wallpaper-slideshow.sh
 Restart=always
 RestartSec=5
