@@ -63,9 +63,23 @@ config.inactive_pane_hsb = {
 -- =========================
 -- COLORS
 -- =========================
+-- The tab bar is painted with its own colours, not with the window's
+-- background and its opacity. Its tones are therefore derived from those two
+-- values: the bar is exactly as see-through as the terminal, so the
+-- compositor's blur shows through it too, and it follows any change to
+-- window_background_opacity. The active tab is a darker veil of the same
+-- colour: a white one turns opaque cream, as WezTerm does not blend it.
+local background = "#000000"
+local function veil(extra)
+  local r, g, b = background:match("#(%x%x)(%x%x)(%x%x)")
+  local alpha = math.min(1, config.window_background_opacity + extra)
+  return string.format("rgba(%d, %d, %d, %.2f)",
+    tonumber(r, 16), tonumber(g, 16), tonumber(b, 16), alpha)
+end
+
 config.colors = {
   foreground = "#f8f8f2",
-  background = "#000000",
+  background = background,
   cursor_bg = "#ffffff",
   selection_fg = "#f8f8f2",
   selection_bg = "#484e54",
@@ -80,25 +94,25 @@ config.colors = {
     "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
   },
   tab_bar = {
-    background = "rgba(0, 3, 4, 0.87)",
+    background = veil(0),
     active_tab = {
-      bg_color = "rgba(17, 16, 17, 0.92)",
+      bg_color = veil(0.18),
       fg_color = "#f8f8f2",
     },
     inactive_tab = {
-      bg_color = "rgba(10, 10, 10, 0.55)",
-      fg_color = "#777777",
+      bg_color = veil(0),
+      fg_color = "#8a8a8a",
     },
     inactive_tab_hover = {
-      bg_color = "rgba(30, 30, 30, 0.75)",
+      bg_color = veil(0.08),
       fg_color = "#dddddd",
     },
     new_tab = {
-      bg_color = "rgba(10, 10, 10, 0.85)",
-      fg_color = "#666666",
+      bg_color = veil(0),
+      fg_color = "#8a8a8a",
     },
     new_tab_hover = {
-      bg_color = "rgba(30, 30, 30, 0.75)",
+      bg_color = veil(0.08),
       fg_color = "#ffffff",
     },
   },
