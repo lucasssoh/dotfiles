@@ -344,6 +344,9 @@ hl.config({
             contrast          = 0.92,
             vibrancy          = 0.6,
             vibrancy_darkness = 0.2,
+            -- The blur follows the surface's opacity: it fades in and out
+            -- with Prisme or a drawer instead of popping in at full strength.
+            proportional      = true,
         },
         shadow = {
             enabled       = true,
