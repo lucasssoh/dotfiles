@@ -100,7 +100,7 @@ bind(mod .. "+ S",       hl.dsp.exec_cmd("grim - | satty --filename - --fullscre
 -- with satty's text tool.
 bind("q", function()
     local w = hl.get_active_window()
-    if w and w.class == "com.gabm.satty" then
+    if w and w.class == "io.github.lucasssoh.Screenshot" then
         hl.dispatch(hl.dsp.window.close())
     end
 end, { non_consuming = true })

@@ -28,13 +28,13 @@ rpmbuild -bb \
     "$repo/packaging/coucou-shell.spec"
 
 # satty: upstream's tarball, checked against its pinned sha256, plus our
-# patch. Its version is its own, not the release's.
+# patches, desktop entry and icon. Its version is its own, not the release's.
 satty="$repo/packaging/satty"
 satty_version="$(rpmspec -q --srpm --qf '%{version}\n' "$satty/satty.spec")"
 curl -fsSL -o "$top/SOURCES/Satty-$satty_version.tar.gz" \
     "https://github.com/Satty-org/Satty/archive/v$satty_version/Satty-$satty_version.tar.gz"
 (cd "$top/SOURCES" && sha256sum --check --quiet "$satty/satty.sha256")
-cp "$satty/satty-glass.patch" "$top/SOURCES/"
+cp "$satty"/*.patch "$satty"/*.desktop "$satty"/*.svg "$top/SOURCES/"
 rpmbuild -bb --define "_topdir $top" "$satty/satty.spec"
 
 cp "$top"/RPMS/*/*.rpm "$out/"

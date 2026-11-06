@@ -1,0 +1,50 @@
+diff -ruN a/src/main.rs b/src/main.rs
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -230,7 +230,7 @@ impl Component for App {
+             add_css_class: "root",
+             set_title: match APP_CONFIG.read().title() {
+                 Some(s) => Some(s.as_ref()),
+-                None => None
++                None => Some("Screenshot")
+             },
+ 
+             #[local_ref]
+@@ -530,9 +530,11 @@ fn run_satty() -> Result<()> {
+             if let Some(app_id) = o {
+                 eprintln!("Invalid app id: {}, using fallback", app_id);
+             }
+-            Some("com.gabm.satty")
++            // coucou-shell: satty is "Screenshot" to the rest of the system.
++            Some("io.github.lucasssoh.Screenshot")
+         }
+     };
++    relm4::gtk::glib::set_application_name("Screenshot");
+     app.set_application_id(app_id);
+     // set flag to allow to run multiple instances
+     app.set_flags(ApplicationFlags::NON_UNIQUE);
+diff -ruN a/src/notification.rs b/src/notification.rs
+--- a/src/notification.rs
++++ b/src/notification.rs
+@@ -87,7 +87,7 @@ pub fn log_result_with_pixbuf(msg: &str, pixbuf: Pixbuf) {
+ 
+ fn show_notification(msg: &str, icon: Option<Icon>) {
+     // construct
+-    let notification = Notification::new("Satty");
++    let notification = Notification::new("Screenshot");
+     notification.set_body(Some(msg));
+ 
+     if let Some(i) = icon {
+@@ -95,10 +95,10 @@ fn show_notification(msg: &str, icon: Option<Icon>) {
+     } else {
+         // lookup sattys icon
+         let theme = IconTheme::default();
+-        if theme.has_icon("satty")
++        if theme.has_icon("io.github.lucasssoh.Screenshot")
+             && let Some(icon_file) = theme
+                 .lookup_icon(
+-                    "satty",
++                    "io.github.lucasssoh.Screenshot",
+                     &[],
+                     96,
+                     1,

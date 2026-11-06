@@ -6,6 +6,11 @@
 # serving it once satty has quit. Without it satty copies through GTK, whose
 # clipboard belongs to satty itself: Esc, and the image was gone.
 copy-command = "wl-copy"
+# Screenshot to the rest of the system: Hyprland's window rules and the q
+# bind match this id. coucou-shell's satty build has it built in; set here
+# too so any satty gets it.
+app-id = "io.github.lucasssoh.Screenshot"
+title = "Screenshot"
 
 [font]
 family = "MiSans Latin"

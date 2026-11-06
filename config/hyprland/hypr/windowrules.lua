@@ -101,7 +101,7 @@ hl.window_rule({
 -- focus when it opens; the portal dialog rule's no_follow_mouse is what
 -- keeps it there while the cursor wanders.
 hl.window_rule({
-    match   = { class = "com.gabm.satty" },
+    match   = { class = "io.github.lucasssoh.Screenshot" },
     float   = true,
     size    = "1200 780",
     center  = true,
@@ -115,7 +115,7 @@ hl.window_rule({
 -- are off while satty is up, and back a moment after it has gone, once
 -- the windows behind are already showing again. Restored with the values
 -- of `fade` in hyprland.lua, which fadeIn and fadeOut inherit.
-local SATTY = "com.gabm.satty"
+local SATTY = "io.github.lucasssoh.Screenshot"
 local satty_open = 0
 local satty_restore
 

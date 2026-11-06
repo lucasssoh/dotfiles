@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Screenshot (satty in coucou-shell): a viewfinder on a smoked-glass
+       tile, the material of its frosted toolbars. -->
+  <defs>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3a40"/>
+      <stop offset="1" stop-color="#121215"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e5e5ea" stop-opacity="0.75"/>
+      <stop offset="0.5" stop-color="#e5e5ea" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#e5e5ea" stop-opacity="0.30"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="17" fill="url(#fill)"/>
+  <rect x="3.75" y="3.75" width="56.5" height="56.5" rx="16.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <g fill="none" stroke="#f2f2f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 26v-4a5 5 0 0 1 5-5h4"/>
+    <path d="M38 17h4a5 5 0 0 1 5 5v4"/>
+    <path d="M47 38v4a5 5 0 0 1-5 5h-4"/>
+    <path d="M26 47h-4a5 5 0 0 1-5-5v-4"/>
+  </g>
+  <circle cx="32" cy="32" r="4.5" fill="#f2f2f7"/>
+</svg>

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot
+Comment=Annotate a screenshot
+TryExec=satty
+Exec=satty -f %f
+Icon=io.github.lucasssoh.Screenshot
+Categories=Graphics;
+Keywords=screenshot;annotation;crop;
+MimeType=image/png;image/jpeg;
+NoDisplay=true
+Terminal=false
+StartupNotify=true
+StartupWMClass=io.github.lucasssoh.Screenshot
