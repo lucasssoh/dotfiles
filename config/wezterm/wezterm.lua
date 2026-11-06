@@ -7,8 +7,8 @@ local act = wezterm.action
 -- =========================
 config.font = wezterm.font_with_fallback({
   {
---[[     family = 'GoogleSansCode Nerd Font Mono', ]]
-    family = 'JetBrains Mono',
+    family = 'GoogleSansCode Nerd Font Mono', 
+--[[     family = 'JetBrains Mono', ]]
     weight = 'Regular',
   },
 })
@@ -27,7 +27,7 @@ config.automatically_reload_config = true
 -- =========================
 -- APPEARANCE
 -- =========================
-config.window_background_opacity = 1
+config.window_background_opacity = 0.4
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }

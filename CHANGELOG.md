@@ -8,6 +8,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Screenshots:** the screenshot editor is called Screenshot in notifications and window titles, with its own icon.
 - **Bar, drawers:** a drawer zooms out of its corner, and its cards burst before it closes. Opening a drawer while another is open swaps them in place.
 - **Glass panels:** the glass is lighter and the cards see-through. A button that is on keeps its card, with an outline and its icon inverted, instead of turning white. Buttons are larger, closer together and rounder.
+- **Neovim:** with the transparent background, the status line and the tabs are see-through too.
+- **Terminal:** WezTerm is translucent and uses Google Sans Code.
 
 ## 2.1.0 (November 3 2026)
 
