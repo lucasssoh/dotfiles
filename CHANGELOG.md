@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Files:** on Fedora 45, Open in Terminal opens your terminal again.
+- **Prisme:** on Fedora 45, the desktop behind it is blurred again.
 
 ### Changed
 - **Glass panels:** the blur behind Prisme and the panels fades in and out with them instead of appearing all at once.

@@ -26,6 +26,10 @@ const FALLBACK_CSS: &str = r#"
 window,
 .background {
     background-color: rgba(18, 18, 22, 0.42);
+    /* GTK 4.24 hands this to the compositor as the surface's blur region
+       (ext-background-effect). Without it, GTK still declares an empty
+       region, and Hyprland then skips the layer rule's blur. */
+    backdrop-filter: blur(20px);
 }
 
 /* The preview and its caption, bare on the blurred desktop, centred above
