@@ -232,14 +232,14 @@ Item {
     // `maxPageHeight` as its ceiling, past which it scrolls as before.
     // The change rides the same `Behavior on height` as the drawer.
     property int homeContentHeight: 0
-    readonly property int basePageHeight: Math.max(360, root.homeContentHeight + 40)
+    readonly property int basePageHeight: Math.max(360, root.homeContentHeight + 24)
     readonly property int maxPageHeight: 640
     readonly property Item _frontItem: (root._frontIsA ? loaderA : loaderB).item
     readonly property int pageHeight: {
         if (!root._shownPage.endsWith("-detail") || !root._frontItem)
             return root.basePageHeight;
         // + pageArea's 20px top and bottom margins.
-        const wanted = root._frontItem.implicitHeight + 40;
+        const wanted = root._frontItem.implicitHeight + 24;
         return Math.min(root.maxPageHeight, Math.max(root.basePageHeight, wanted));
     }
     // + the handle's band: pageHeight measures the PAGE, the handle sits
@@ -250,7 +250,12 @@ Item {
     // reveal for Balise itself, the notification center's own entry
     // being the other one on the same island.
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment there.
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
+    Behavior on height {
+        enabled: !root.dropSnap
+        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+    }
 
     // ---- Lenovo conservation mode ----
     // Gone from this drawer: the ~60% charge cap is a BATTERY control,
@@ -429,8 +434,8 @@ Item {
         property bool checked: false
         signal toggled(bool value)
 
-        height: trow.subtitle !== "" ? 54 : 46
-        radius: 12
+        height: trow.subtitle !== "" ? 58 : 50
+        radius: 20
 
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
@@ -459,9 +464,11 @@ Item {
         // is on or under the pointer comes forward.
         // Inverted when on, flat and rimless -- same rule as DrawerTile.
         color: trow.checked
-            ? (mouseArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+            ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
             : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
         Behavior on color { ColorAnimation { duration: 120 } }
+        border.width: trow.checked ? 1 : 0
+        border.color: DrawerTheme.activeEdge
 
         // The same badge the connectivity tiles above carry -- asked
         // for, so that SYSTEM reads as the same kind of control as the
@@ -495,7 +502,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: trow.checked ? DrawerTheme.onInk : DrawerTheme.primary
+                color: trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 // 13, matching DrawerTile's own title, not the 14 these
                 // rows used before they had icons. Two reasons and they
@@ -505,7 +512,7 @@ Item {
                 // "same style as the connectivity tiles" is about the
                 // type as much as the badge.
                 font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 elide: Text.ElideRight
             }
             Text {
@@ -514,7 +521,7 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: trow.checked ? DrawerTheme.onInk2 : DrawerTheme.secondary
+                color: trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 12
                 elide: Text.ElideRight
@@ -540,8 +547,8 @@ Item {
         property string glyph: ""
         signal activated()
 
-        height: 46
-        radius: 12
+        height: 50
+        radius: 20
 
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
@@ -578,7 +585,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13   // matches ToggleRow and DrawerTile
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
         }
 
         MouseArea {
@@ -643,7 +650,7 @@ Item {
             Column {
                 id: homeColumn
                 width: homeFlick.width
-                spacing: 12
+                spacing: 8
 
             // ---- hero: whatever is actually carrying traffic right now
             // (the mockup's own "RÉSEAU ACTUEL" card). Ethernet wins over
@@ -668,8 +675,8 @@ Item {
 
                 Column {
                     id: connLeft
-                    width: connGrid.withTile ? parent.width - brightTile.width - 16 : parent.width
-                    spacing: 12
+                    width: connGrid.withTile ? parent.width - brightTile.width - 8 : parent.width
+                    spacing: 8
 
                     // Wi-Fi alone on the first row, full width: the tile the
                     // "CURRENT NETWORK" card used to duplicate.
@@ -689,9 +696,9 @@ Item {
                     }
                     Row {
                         width: connLeft.width
-                        spacing: 16
+                        spacing: 8
                         Tile {
-                            width: (parent.width - 16) / 2
+                            width: (parent.width - 8) / 2
                             height: 92
                             title: "Bluetooth"
                             revealIndex: 2
@@ -702,7 +709,7 @@ Item {
                             onActivatedSecondary: root.goTo("bluetooth")
                         }
                         Tile {
-                            width: (parent.width - 16) / 2
+                            width: (parent.width - 8) / 2
                             height: 92
                             title: "Ethernet"
                             revealIndex: 3
@@ -730,7 +737,6 @@ Item {
             // named nothing in particular. The extra 4px on top of the
             // column's 12 is what still sets the toggles apart from the
             // tiles above.
-            Item { width: 1; height: 4 }
 
             // The screen's controls. On a panel the OS can dim (the
             // laptop's own, through /sys/class/backlight), one line:
@@ -751,7 +757,7 @@ Item {
             Row {
                 visible: !(root.screenAdjustable && root.brightnessLayout === "row")
                 width: parent.width
-                spacing: 16
+                spacing: 8
 
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
@@ -934,10 +940,10 @@ Item {
         anchors.right: parent.right
         anchors.top: handle.bottom
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
-        anchors.topMargin: 20
-        anchors.bottomMargin: 20
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        anchors.topMargin: 14
+        anchors.bottomMargin: 10
         clip: true
 
         // No `Behavior on x` on either Loader any more -- the sideways

@@ -29,7 +29,7 @@ Rectangle {
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
-    radius: 14
+    radius: 20
 
     // Same glass edge every other block in this bar now carries --
     // see GlassCard.qml. Only the block itself goes through the lens;
@@ -39,12 +39,15 @@ Rectangle {
     // state cue, not decoration, so a zone nobody is touching and
     // nothing has switched on carries no edge at all. It also means
     // the layer is allocated only for the one element in play.
-    // HyperOS pass: the connected row is INVERTED (primary-ink fill,
-    // inverse-ink text), flat, no rim -- same rule as the home tiles.
+    // The connected row takes the "active" veil rather than the old
+    // inverted block -- same rule as the home tiles (DrawerTheme V3).
     color: row.connected
-        ? (rowArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+        ? (rowArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
         : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
+    // Connected: a stronger veil and a fine edge, only the disc inverts (V3).
+    border.width: row.connected ? 1 : 0
+    border.color: DrawerTheme.activeEdge
 
     MouseArea {
         id: rowArea
@@ -62,7 +65,7 @@ Rectangle {
         width: 32
         height: 32
         radius: width / 2
-        color: row.connected ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10) : DrawerTheme.cardRaised
+        color: row.connected ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
 
         Text {
             anchors.centerIn: parent
@@ -73,7 +76,7 @@ Rectangle {
             // mgc bluetooth either way: "connected" is the accent ink and
             // the tinted badge behind it, MingCute has no separate glyph.
             text: "\uEA40"
-            color: row.connected ? DrawerTheme.onInk : DrawerTheme.primary
+            color: row.connected ? DrawerTheme.activeDiscInk : DrawerTheme.primary
             font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
@@ -92,10 +95,10 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || ""
-            color: row.connected ? DrawerTheme.onInk : DrawerTheme.primary
+            color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
             elide: Text.ElideRight
         }
         Text {
@@ -109,7 +112,7 @@ Rectangle {
                 }
                 return row.paired ? "Paired" : "Not paired";
             }
-            color: row.connected ? DrawerTheme.onInk2 : DrawerTheme.secondary
+            color: row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight
@@ -125,7 +128,7 @@ Rectangle {
         font.hintingPreference: Font.PreferNoHinting
         text: "›"
         color: row.connected
-            ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, rowArea.containsMouse ? 0.6 : 0.3)
+            ? Qt.rgba(DrawerTheme.activeInk.r, DrawerTheme.activeInk.g, DrawerTheme.activeInk.b, rowArea.containsMouse ? 0.6 : 0.3)
             : DrawerTheme.ink(rowArea.containsMouse ? 0.6 : 0.3)
         font.family: Fonts.ui
         font.pixelSize: 17

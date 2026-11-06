@@ -65,7 +65,7 @@ Column {
             y: 18
             width: parent.width - 36
             spacing: 12
-            ProgrammeText { width: parent.width; text: root.b.tr("Set Programme up", "Régler Programme"); font.pixelSize: 17; font.weight: Font.DemiBold }
+            ProgrammeText { width: parent.width; text: root.b.tr("Set Programme up", "Régler Programme"); font.pixelSize: 17; font.weight: Font.Medium }
             ProgrammePill { primary: true; text: root.b.tr("Start", "Commencer"); onClicked: root.b.openSetup() }
         }
     }
@@ -85,7 +85,7 @@ Column {
             width: parent.width - 36 - backPill.width
             text: root.b.tr("Nothing ", "Rien ") + root.b.away
             font.pixelSize: 15
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
             elide: Text.ElideRight
         }
         ProgrammePill {
@@ -122,7 +122,7 @@ Column {
                         id: activeTitle
                         text: root.active ? root.active.title : ""
                         font.pixelSize: 24
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                     }
                     ProgrammeText {
                         anchors.right: parent.right
@@ -168,7 +168,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             x: 18
             text: root.b.tr("Done", "Finie")
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
         }
         ProgrammePill {
             anchors.verticalCenter: parent.verticalCenter
@@ -209,7 +209,7 @@ Column {
                         ProgrammeText {
                             text: root.next ? root.next.title : ""
                             font.pixelSize: 17
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Medium
                         }
                         ProgrammeText {
                             text: root.next ? (root.next.date !== root.todayIso ? Qt.formatDate(new Date(root.next.date + "T12:00"), "ddd ") : "")
@@ -382,7 +382,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.title
                     font.pixelSize: 15
-                    font.weight: modelData.now ? Font.DemiBold : Font.Normal
+                    font.weight: modelData.now ? Font.Medium : Font.Normal
                     wrapMode: Text.NoWrap
                     elide: Text.ElideRight
                 }

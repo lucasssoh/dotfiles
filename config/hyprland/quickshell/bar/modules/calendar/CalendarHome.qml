@@ -22,7 +22,12 @@ Item {
     property bool drawerOpen: false
 
     implicitHeight: handle.implicitHeight + 20 + content.implicitHeight + 20
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
+    Behavior on height {
+        enabled: !root.dropSnap
+        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+    }
 
     onDrawerOpenChanged: {
         if (root.drawerOpen) BaliseReveal.replay();
@@ -107,8 +112,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: handle.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
         anchors.topMargin: 12
         spacing: 12
 
@@ -257,7 +262,7 @@ Item {
                             opacity: modelData.inMonth ? 1 : 0.3
                             font.family: Fonts.ui
                             font.pixelSize: 14
-                            font.weight: modelData.today ? Font.DemiBold : Font.Normal
+                            font.weight: modelData.today ? Font.Medium : Font.Normal
                         }
 
                         // Event dot, tucked under the number (inside the

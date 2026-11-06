@@ -44,7 +44,7 @@ Rectangle {
     readonly property bool hasBody: card.notification && card.notification.body !== ""
 
     width: 340
-    radius: 16
+    radius: 20
     height: layout.height + 28
 
     // No `gradient` at all now, which is also the only way to actually
@@ -213,7 +213,7 @@ Rectangle {
                                 color: DrawerTheme.primary
                                 font.family: Fonts.ui
                                 font.pixelSize: 11
-                                font.weight: Font.DemiBold
+                                font.weight: Font.Medium
                                 font.features: { "tnum": 1 }
                             }
                         }
@@ -240,7 +240,7 @@ Rectangle {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 14
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                     elide: Text.ElideRight
                 }
                 Text {

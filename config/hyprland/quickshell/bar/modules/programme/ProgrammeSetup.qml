@@ -45,7 +45,7 @@ Column {
     ProgrammeText {
         text: root.step + " · " + root.titles[root.step - 1]
         font.pixelSize: 20
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
 
     // ---- 1 · the course folder ------------------------------------------------
@@ -108,7 +108,7 @@ Column {
                 readonly property var picked: root.chosen[modelData] !== undefined ? root.chosen[modelData] : names
                 width: root.width
                 spacing: 6
-                ProgrammeText { text: sug.modelData; font.weight: Font.Bold }
+                ProgrammeText { text: sug.modelData; font.weight: Font.DemiBold }
                 ProgrammeText {
                     visible: sug.names.length === 0
                     text: root.b.tr("No course found for this subject. Run the first launch again to name it.", "Aucun cours trouvé pour ce module. Refais le premier lancement pour le nommer.")

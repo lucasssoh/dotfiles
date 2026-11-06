@@ -94,21 +94,44 @@ QtObject {
     readonly property color onInk: root.onLight
     readonly property color onInk2: root.dark ? "#3a3a3e" : "#c9c7c0"
 
+    // ---- active, without the large white block (V3) --------------------
+    // A large control that is on (a tile, a Balise row, a connected
+    // network) no longer turns into a slab of `on`: it takes a stronger
+    // veil and a fine edge, keeps the normal inks, and only the disc of
+    // its icon inverts. Small things that are on (a segmented pill, a
+    // chip, today in the calendar, a slider's fill) keep the full `on`.
+    readonly property color activeFill: root.dark ? root.ink(0.15) : Qt.rgba(1, 1, 1, 0.85)
+    readonly property color activeFillHover: root.dark ? root.ink(0.20) : Qt.rgba(1, 1, 1, 0.95)
+    readonly property color activeEdge: root.dark ? root.ink(0.22) : Qt.rgba(0.11, 0.11, 0.12, 0.10)
+    readonly property color activeInk: root.primary
+    readonly property color activeInk2: root.secondary
+    readonly property color activeDisc: root.on
+    readonly property color activeDiscInk: root.onInk
+
     // ---- surfaces (Surfaces' names) -----------------------------------
     readonly property color panelTop: root.dark ? "#000000" : "#f5f3ee"
     readonly property color panelBottom: root.panelTop
-    readonly property color card: root.dark ? "#17171a" : "#e9e7e1"
-    readonly property color cardHover: root.dark ? "#1f1f23" : "#e3e1da"
-    readonly property color cardRaised: root.dark ? "#2a2a2f" : "#dbd9d2"
-    readonly property color cardDeep: root.dark ? "#0b0b0d" : "#efede8"
+    // Glass cards (V3, "Aérien sans tasser"): a veil of the ink over the
+    // glass rather than an opaque grey, so a card stands out by light and
+    // the pane keeps the colour of what is behind it. Every surface that
+    // reads these is itself glass (the drawers, OSD, alerts, Sesame, the
+    // library, the side sheets), so a veil always has glass under it.
+    // In light the veil is white: lighter than the warm grey glass, where
+    // the opaque cards were lighter too.
+    readonly property color card: root.dark ? root.ink(0.08) : Qt.rgba(1, 1, 1, 0.46)
+    readonly property color cardHover: root.dark ? root.ink(0.12) : Qt.rgba(1, 1, 1, 0.62)
+    // On a card (an icon's disc, a track): a further step of the ink in
+    // dark, a shade of black in light, as the opaque greys stepped.
+    readonly property color cardRaised: root.dark ? root.ink(0.10) : Qt.rgba(0, 0, 0, 0.06)
+    readonly property color cardDeep: root.dark ? Qt.rgba(0, 0, 0, 0.18) : Qt.rgba(1, 1, 1, 0.30)
     readonly property color accentSoft: root.dark ? "#1c1c20" : "#e8e6e0"
     readonly property color accentMedium: root.dark ? "#222226" : "#e1dfd8"
     readonly property color accentStrong: root.dark ? "#2a2a2f" : "#d9d7d0"
-    readonly property color accentStrongest: root.dark ? "#323237" : "#cfcdc6"
+    readonly property color accentStrongest: root.dark ? root.ink(0.16) : Qt.rgba(0, 0, 0, 0.12)
     // The two cards peeking under a collapsed notification stack, each a
     // step further from the front card.
-    readonly property color stackMid: root.dark ? "#121215" : "#e4e2dc"
-    readonly property color stackBack: root.dark ? "#0d0d10" : "#dddbd4"
+    readonly property color stackMid: root.dark ? root.ink(0.06) : Qt.rgba(1, 1, 1, 0.36)
+    readonly property color stackBack: root.dark ? root.ink(0.04) : Qt.rgba(1, 1, 1, 0.26)
     readonly property color destructive: root.danger
     readonly property color destructiveSoft: root.dark ? "#2b1f22" : "#f5dedd"
     // ---- glass ---------------------------------------------------------
@@ -129,11 +152,23 @@ QtObject {
     // The blur's settings are global to Hyprland, so the bar pushes the
     // pair for the current mode whenever it flips (shell.qml, GLASS TONE).
     readonly property bool glass: true
-    readonly property color glassPane: root.dark ? Qt.rgba(0, 0, 0, 0.05) : Qt.rgba(0.839, 0.827, 0.800, 0.42)
-    readonly property real glassBrightness: root.dark ? 0.38 : 0.92
-    readonly property real glassContrast: root.dark ? 0.9 : 0.82
+    // Dark lifted in the V3 pass: at 0.38 the blur turned whatever was
+    // behind into a near-black slab. 0.62 kept the colour but lost the
+    // secondary inks over a white page (Power's axis, a tile's status);
+    // 0.50 under a thicker veil (26%) keeps both, measured over a white
+    // page and the wallpaper. Light stays "Brume": the lighter cream it replaced is
+    // exactly what vanished over a white page.
+    readonly property color glassPane: root.dark ? Qt.rgba(0.078, 0.078, 0.094, 0.26) : Qt.rgba(0.839, 0.827, 0.800, 0.42)
+    readonly property real glassBrightness: root.dark ? 0.50 : 0.92
+    readonly property real glassContrast: root.dark ? 0.92 : 0.82
     readonly property real glassVibrancy: root.dark ? 0.6 : 0.4
     readonly property real glassVibrancyDarkness: root.dark ? 0.2 : 0.0
+    // The pane's edge (PaneEdge.qml) and the bar drawers' shadow, in
+    // place of the convex lens: a hairline rim, a brighter line inside
+    // the top, a soft shadow under.
+    readonly property color paneRim: root.dark ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.65)
+    readonly property color paneHighlight: root.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.80)
+    readonly property color paneShadow: root.dark ? Qt.rgba(0, 0, 0, 0.30) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color paneTop: root.glass ? root.glassPane : root.panelTop
     readonly property color paneBottom: root.glass ? root.glassPane : root.panelBottom
     readonly property color destructiveSoftHover: root.dark ? "#3e262c" : "#eecdcc"

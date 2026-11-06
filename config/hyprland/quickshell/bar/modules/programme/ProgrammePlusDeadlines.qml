@@ -18,7 +18,7 @@ Column {
     ProgrammeText {
         text: root.b.tr("Exams and hand-ins", "Examens et rendus")
         font.pixelSize: 18
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
 
     ProgrammeField {
@@ -82,7 +82,7 @@ Column {
                 x: 14
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 120
-                ProgrammeText { width: parent.width; text: dl.d.title; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                ProgrammeText { width: parent.width; text: dl.d.title; font.weight: Font.DemiBold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
                 ProgrammeText {
                     width: parent.width
                     text: new Date(dl.d.at).toLocaleString(Qt.locale(root.b.fr ? "fr_FR" : "en_US"), root.b.fr ? "ddd d MMM · HH:mm" : "ddd MMM d · HH:mm")
@@ -99,7 +99,7 @@ Column {
                 text: "ADE"
                 color: DrawerTheme.secondary
                 font.pixelSize: 12
-                font.weight: Font.Bold
+                font.weight: Font.DemiBold
             }
             ProgrammeChip {
                 visible: dl.d.source !== "calendar"

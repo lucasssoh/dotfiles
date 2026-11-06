@@ -16,7 +16,7 @@ Column {
     ProgrammeText {
         text: root.b.tr("Calendars", "Calendriers")
         font.pixelSize: 18
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
 
     ProgrammeText {
@@ -48,7 +48,7 @@ Column {
         width: parent.width
         text: root.b.tr("Tick your group in each family. If you tick none, you keep all its courses.",
                         "Coche ton groupe dans chaque famille. Si tu n'en coches aucun, tu gardes tous ses cours.")
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
     Repeater {
         model: root.b.families
@@ -58,7 +58,7 @@ Column {
             width: root.width
             spacing: 6
             readonly property var chosen: root.groups[modelData.name] || []
-            ProgrammeText { text: fam.modelData.name; color: DrawerTheme.secondary; font.pixelSize: 12; font.weight: Font.Bold }
+            ProgrammeText { text: fam.modelData.name; color: DrawerTheme.secondary; font.pixelSize: 12; font.weight: Font.DemiBold }
             Flow {
                 width: parent.width
                 spacing: 6

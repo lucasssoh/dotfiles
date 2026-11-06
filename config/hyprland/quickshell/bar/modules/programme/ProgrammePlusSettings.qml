@@ -14,7 +14,7 @@ Column {
     component Section: ProgrammeText {
         color: DrawerTheme.secondary
         font.pixelSize: 11
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
         font.letterSpacing: 1
         font.capitalization: Font.AllUppercase
     }
@@ -22,7 +22,7 @@ Column {
     ProgrammeText {
         text: root.b.tr("Settings", "Réglages")
         font.pixelSize: 18
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
 
     Section { text: root.b.tr("Language", "Langue") }

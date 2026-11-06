@@ -109,7 +109,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 15
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 elide: Text.ElideRight
             }
 

@@ -38,7 +38,7 @@ Rectangle {
     // place, or leaves this unconnected.
     signal activatedSecondary()
 
-    radius: 20
+    radius: 24
 
     // Same glass edge every other block in this bar now carries -- see
     // GlassCard.qml. Only while this is HOVERED or ON: the glass is a
@@ -55,12 +55,15 @@ Rectangle {
     // the way the bar's active workspace already reads. Hover is a small
     // step in the same direction on either side.
     color: tile.active
-        ? (mouseArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
+        ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
         : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
+    // On: a stronger veil and a fine edge, not a block of `on` (V3).
+    border.width: tile.active ? 1 : 0
+    border.color: DrawerTheme.activeEdge
 
 
-    readonly property color fg: tile.active ? DrawerTheme.onInk : DrawerTheme.primary
+    readonly property color fg: tile.active ? DrawerTheme.activeInk : DrawerTheme.primary
 
     // Vertically centered rather than top-anchored with a fixed margin:
     // tiles differ in whether they carry a status line, and centering
@@ -104,7 +107,7 @@ Rectangle {
                 color: tile.fg
                 font.family: Fonts.ui
                 font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 elide: Text.ElideRight
             }
             Row {
@@ -133,7 +136,7 @@ Rectangle {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: tile.status
-            color: tile.active ? DrawerTheme.onInk2 : DrawerTheme.secondary
+            color: tile.active ? DrawerTheme.activeInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

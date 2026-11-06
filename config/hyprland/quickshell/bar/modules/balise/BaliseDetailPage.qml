@@ -418,7 +418,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
             }
             MouseArea {
                 id: backArea
@@ -440,7 +440,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
             elide: Text.ElideRight
         }
     }
@@ -492,7 +492,9 @@ Item {
             height: 44
             radius: 12
 
-            color: root.statusConnected ? DrawerTheme.on : DrawerTheme.card
+            color: root.statusConnected ? DrawerTheme.activeFill : DrawerTheme.card
+            border.width: root.statusConnected ? 1 : 0
+            border.color: DrawerTheme.activeEdge
 
             Text {
                 anchors.left: parent.left
@@ -503,10 +505,10 @@ Item {
                 renderType: Text.NativeRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.statusText
-                color: root.statusConnected ? DrawerTheme.onInk : DrawerTheme.primary
+                color: root.statusConnected ? DrawerTheme.activeInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 elide: Text.ElideRight
             }
         }
@@ -535,7 +537,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -597,7 +599,7 @@ Item {
                             color: advancedArea.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 12
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Medium
                             Behavior on color { ColorAnimation { duration: 120 } }
                         }
                         MouseArea {
@@ -711,7 +713,7 @@ Item {
                             color: root.canSubmit ? DrawerTheme.onInk : DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 14
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Medium
                         }
                         MouseArea {
                             id: submitArea
@@ -739,7 +741,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -810,7 +812,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -846,7 +848,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
                     Text {
@@ -909,7 +911,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -1015,7 +1017,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -1056,7 +1058,7 @@ Item {
                         color: actionBtn.tint
                         font.family: Fonts.ui
                         font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                     }
                     MouseArea {
                         id: actionArea

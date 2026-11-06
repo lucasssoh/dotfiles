@@ -71,9 +71,14 @@ Item {
     }
     function goHome() { root.currentPage = "home"; }
 
-    implicitHeight: handle.implicitHeight + 20
-                    + (pageLoader.item ? pageLoader.item.implicitHeight : 0) + 20
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    implicitHeight: handle.implicitHeight + 14
+                    + (pageLoader.item ? pageLoader.item.implicitHeight : 0) + 10
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
+    Behavior on height {
+        enabled: !root.dropSnap
+        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+    }
 
     // Every open starts at the top level, the same rule Balise was given
     // explicitly ("si je me trouve dans un contexte ou sous-contexte [...]
@@ -129,9 +134,9 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: handle.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
-        anchors.topMargin: 20
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        anchors.topMargin: 14
         sourceComponent: root.currentPage === "app" ? appPage : homePage
     }
 
@@ -151,7 +156,7 @@ Item {
 
         Column {
         id: content
-        spacing: 16
+        spacing: 10
 
         // ---- OUTPUT --------------------------------------------------
         Column {

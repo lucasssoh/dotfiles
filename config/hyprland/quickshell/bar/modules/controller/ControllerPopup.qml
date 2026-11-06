@@ -293,7 +293,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
                     Row {
@@ -349,7 +349,7 @@ Item {
                                     color: parent.on ? DrawerTheme.primary : DrawerTheme.secondary
                                     font.family: Fonts.ui
                                     font.pixelSize: 12
-                                    font.weight: Font.DemiBold
+                                    font.weight: Font.Medium
                                 }
                                 MouseArea {
                                     anchors.fill: parent
@@ -382,7 +382,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 13
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                         font.features: { "tnum": 1 }
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -428,7 +428,7 @@ Item {
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
-                        font.weight: Font.Bold
+                        font.weight: Font.DemiBold
                         font.letterSpacing: 0.8
                     }
                     Text {
@@ -438,7 +438,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 26
-                        font.weight: Font.Bold
+                        font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     Row {
@@ -470,7 +470,7 @@ Item {
                             color: DrawerTheme.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
-                            font.weight: Font.Bold
+                            font.weight: Font.DemiBold
                         }
                     }
                 }
@@ -544,7 +544,7 @@ Item {
                                 color: coverCard.on ? DrawerTheme.primary : DrawerTheme.secondary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
-                                font.weight: Font.DemiBold
+                                font.weight: Font.Medium
                                 elide: Text.ElideRight
                             }
                             MouseArea {
@@ -600,7 +600,7 @@ Item {
                                         color: DrawerTheme.primary
                                         font.family: Fonts.ui
                                         font.pixelSize: 13
-                                        font.weight: Font.Bold
+                                        font.weight: Font.DemiBold
                                     }
                                     Text {
                                         renderType: Text.NativeRendering
@@ -661,7 +661,7 @@ Item {
                                         color: sysCard.on ? DrawerTheme.primary : DrawerTheme.secondary
                                         font.family: Fonts.ui
                                         font.pixelSize: 13
-                                        font.weight: Font.Bold
+                                        font.weight: Font.DemiBold
                                     }
                                 }
                                 MouseArea {
@@ -743,7 +743,7 @@ Item {
                                 color: cell.on ? DrawerTheme.primary : DrawerTheme.secondary
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
-                                font.weight: Font.DemiBold
+                                font.weight: Font.Medium
                                 elide: Text.ElideRight
                             }
                             Text {
@@ -756,7 +756,7 @@ Item {
                                 color: DrawerTheme.muted
                                 font.family: Fonts.ui
                                 font.pixelSize: 10
-                                font.weight: Font.DemiBold
+                                font.weight: Font.Medium
                             }
                         }
                         MouseArea {
@@ -812,7 +812,7 @@ Item {
         color: DrawerTheme.ink(0.75)
         font.family: Fonts.ui
         font.pixelSize: 13
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
     }
 
     component SourceChip: Rectangle {
@@ -830,7 +830,7 @@ Item {
             color: DrawerTheme.ink(0.75)
             font.family: Fonts.ui
             font.pixelSize: 10
-            font.weight: Font.Bold
+            font.weight: Font.DemiBold
         }
     }
 

@@ -146,7 +146,7 @@ Item {
                     color: card.charging ? DrawerTheme.primary : card.accent
                     font.family: Fonts.ui
                     font.pixelSize: 48
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                     font.features: { "tnum": 1 }
                 }
                 Text {
@@ -212,7 +212,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
             }
             Text {
                 renderType: Text.NativeRendering
@@ -283,7 +283,7 @@ Item {
                 color: btn.primary ? DrawerTheme.onInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
             }
         }
 

@@ -93,6 +93,12 @@ import "theme"
 ShellRoot {
     id: shell
 
+    // How the drawers under the bar open and close: "corner" (Coin, a
+    // diagonal zoom out of the screen corner they hang from), "drop"
+    // (Goutte, born from the chip with a bounce) or "breath" (Souffle, a
+    // small grow and slide). Calendar, Launcher actions, Balise, Power and Mixer.
+    readonly property string drawerStyle: "corner"
+
     // Zen/focus mode (was SUPER+Z -> `pkill -SIGUSR1 waybar`, waybar's
     // built-in "hide all bars" signal). No such signal exists for
     // quickshell, so it's just a shared bool flipped over IPC -- every
@@ -649,18 +655,57 @@ ShellRoot {
     // startup and on every flip. Nothing else in the session is blurred
     // through these settings but Roue and the slightly translucent Nemo
     // and Pavucontrol.
-    readonly property string glassToneLua: "hl.config({ decoration = { blur = { "
-        + "brightness = " + DrawerTheme.glassBrightness
-        + ", contrast = " + DrawerTheme.glassContrast
-        + ", vibrancy = " + DrawerTheme.glassVibrancy
-        + ", vibrancy_darkness = " + DrawerTheme.glassVibrancyDarkness
-        + " } } })"
+    //
+    // It also fades. A drawer's blur region is on or off (the protocol
+    // has no opacity), so a pane fading in over it still landed on a
+    // full blur in one frame, a visible cut at both ends. `glassLevel`
+    // ramps the blur itself instead, 0 = barely there, 1 = the mode's
+    // pair: each bar pushes its fading pane's opacity here (DrawerIsland
+    // `glassFade`). Quantised to sixths, and one push at a time, so a
+    // fade costs a handful of ~9 ms hyprctl calls, not one per frame.
+    // At rest the level is 1, so Roue, Nemo and Pavucontrol keep their
+    // blur; they only see it dip while a drawer is fading.
+    property real glassLevel: 1
+    readonly property real glassStep: Math.round(shell.glassLevel * 6) / 6
+    readonly property string glassToneLua: {
+        const k = shell.glassStep;
+        const mix = (a, b) => (a + (b - a) * k).toFixed(3);
+        return "hl.config({ decoration = { blur = { "
+            + "size = " + Math.max(1, Math.round(6 * k))
+            + ", passes = " + (k < 0.34 ? 1 : k < 0.67 ? 2 : 3)
+            + ", brightness = " + mix(1, DrawerTheme.glassBrightness)
+            + ", contrast = " + mix(1, DrawerTheme.glassContrast)
+            + ", vibrancy = " + mix(0, DrawerTheme.glassVibrancy)
+            + ", vibrancy_darkness = " + mix(0, DrawerTheme.glassVibrancyDarkness)
+            + " } } })";
+    }
+    // One push at a time, and always the latest: the pump sends whatever
+    // the level is now once the previous call is done, and stops when
+    // what Hyprland has is what the level says.
+    property string glassSent: ""
+    // The level Hyprland actually has, once a push has returned. The
+    // drawers' blur regions wait for it on the way in.
+    property real glassSending: 1
+    property real glassApplied: 1
     Process {
         id: glassTone
-        command: ["hyprctl", "eval", shell.glassToneLua]
+        onExited: shell.glassApplied = shell.glassSending
     }
-    onGlassToneLuaChanged: { glassTone.running = false; glassTone.running = true; }
-    Component.onCompleted: glassTone.running = true
+    Timer {
+        id: glassPump
+        interval: 16
+        repeat: true
+        onTriggered: {
+            if (glassTone.running) return;
+            if (shell.glassSent === shell.glassToneLua) { glassPump.stop(); return; }
+            shell.glassSent = shell.glassToneLua;
+            shell.glassSending = shell.glassStep;
+            glassTone.command = ["hyprctl", "eval", shell.glassSent];
+            glassTone.running = true;
+        }
+    }
+    onGlassToneLuaChanged: glassPump.start()
+    Component.onCompleted: glassPump.start()
 
     Veille {
         id: veilleInstance
@@ -857,13 +902,22 @@ ShellRoot {
             //
             // A closed drawer gives a zero-width rect, so nothing is
             // blurred, and nothing is computed, while the bar is idle.
+            // The weakest fading pane on this bar sets the blur, unless a
+            // pane that does not fade (Boussole's, the notification
+            // centre's) is up and needs it whole.
+            readonly property real glassFade: (ProgrammeState.panelOpen || NotificationState.centerOpen) ? 1
+                : Math.min(clockIsland.glassFade, launchers.glassFade, toolsIsland.glassFade)
+            onGlassFadeChanged: shell.glassLevel = bar.glassFade
+
             BackgroundEffect.blurRegion: Region {
                 Region {
                     x: clockIsland.x + clockIsland.paneX
                     y: clockIsland.y + clockIsland.paneY
-                    width: DrawerTheme.glass && clockIsland.paneShown ? clockIsland.paneWidth : 0
+                    width: DrawerTheme.glass && clockIsland.paneShown
+                        && (clockIsland.dropClosing || shell.glassApplied <= clockIsland.glassFade + 0.17)
+                        ? clockIsland.paneWidth : 0
                     height: clockIsland.paneHeight
-                    radius: clockIsland.drawerRadius
+                    radius: clockIsland.paneRadius
                 }
                 Region {
                     x: programmeIsland.x + programmeIsland.paneX
@@ -875,16 +929,20 @@ ShellRoot {
                 Region {
                     x: launchers.x + launchers.paneX
                     y: launchers.y + launchers.paneY
-                    width: DrawerTheme.glass && launchers.paneShown ? launchers.paneWidth : 0
+                    width: DrawerTheme.glass && launchers.paneShown
+                        && (launchers.dropClosing || shell.glassApplied <= launchers.glassFade + 0.17)
+                        ? launchers.paneWidth : 0
                     height: launchers.paneHeight
-                    radius: launchers.drawerRadius
+                    radius: launchers.paneRadius
                 }
                 Region {
                     x: toolsIsland.x + toolsIsland.paneX
                     y: toolsIsland.y + toolsIsland.paneY
-                    width: DrawerTheme.glass && toolsIsland.paneShown ? toolsIsland.paneWidth : 0
+                    width: DrawerTheme.glass && toolsIsland.paneShown
+                        && (toolsIsland.dropClosing || shell.glassApplied <= toolsIsland.glassFade + 0.17)
+                        ? toolsIsland.paneWidth : 0
                     height: toolsIsland.paneHeight
-                    radius: toolsIsland.drawerRadius
+                    radius: toolsIsland.paneRadius
                 }
             }
 
@@ -1260,7 +1318,8 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 28
+                drawerRadius: 32
+                paneEdge: true
                 drawerGap: 0
                 drawerTop: bar.bandHeight
                 // Left-aligned band, the mirror of TOOLS' right-aligned
@@ -1268,6 +1327,12 @@ ShellRoot {
                 // margin lands the band's outer edge exactly on the
                 // island's left edge (see drawerBandTargetX).
                 drawerAnchorX: clockIsland.margin + clockIsland.drawerContentWidth / 2
+                // The calendar drops out of the clock.
+                dropReveal: true
+                dropStyle: shell.drawerStyle
+                dropCorner: "left"
+                dropOriginX: clockIsland.rowContentX + clockChip.x + clockChip.width / 2
+                dropOriginWidth: Math.max(24, clockChip.width)
 
                 drawerItems: [
                     CalendarHome {
@@ -1275,7 +1340,7 @@ ShellRoot {
                     }
                 ]
 
-                Modules.Clock { ink: clockInk; screen: bar.screen }
+                Modules.Clock { id: clockChip; ink: clockInk; screen: bar.screen }
             }
 
             // ── METRICS (right-hand cluster, before Launchers) ─
@@ -1320,7 +1385,8 @@ ShellRoot {
                 splitDrawer: true
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 28
+                drawerRadius: 32
+                paneEdge: true
                 drawerGap: 0
                 drawerTop: bar.bandHeight
                 // Flush with the clock's left edge, so with the screen's,
@@ -1514,7 +1580,8 @@ ShellRoot {
                 splitDrawer: true
                 drawerGap: 0
                 drawerTop: bar.bandHeight
-                drawerRadius: 28
+                drawerRadius: 32
+                paneEdge: true
                 widenOnOpen: false
                 // Pinned, not "whatever the row happens to be": the row
                 // here is 22 to 122px wide depending on how many of the
@@ -1546,20 +1613,16 @@ ShellRoot {
                 // one flat exception; asked for on "chaque tiroir").
                 drawerLens: true
 
-                // No reveal: full height on the frame it opens, one quick
-                // fade, nothing staged (asked for -- "pas d'effet tiroir,
-                // juste un fade rapide"). See `instantDrawer` in
-                // DrawerIsland.qml for why this is not just a shorter
-                // `twoPhase: false`, and LauncherActions.qml for the
-                // entry's own half of it (no height Behavior, no RevealPop
-                // cascade).
-                //
-                // The three durations left are the fade's, and they are
-                // deliberately well under the defaults (260/200/140): this
-                // panel is three verbs opened on a hover, so the fade is
-                // there to stop it snapping into existence, not to be
-                // watched.
-                instantDrawer: true
+                // Drops out of the hovered chip, like every other drawer
+                // under the bar. This replaces the plain fade it had
+                // (`instantDrawer`); the drop's spring does not depend on
+                // revealDuration or the fades below.
+                dropReveal: true
+                dropStyle: shell.drawerStyle
+                dropOriginX: launchers.heldAnchor
+                dropOriginWidth: 24
+                // Three plain rows, no cascade to burst.
+                dropBurst: false
                 panelFadeDuration: 120
                 contentFadeDuration: 120
                 contentFadeOutDuration: 90
@@ -1575,8 +1638,16 @@ ShellRoot {
                 // -1 passes straight through and keeps the old
                 // right-aligned band, which is what the `qs ipc` open --
                 // no pointer, no chip under it -- lands on.
-                drawerAnchorX: launcherChips.anchorX < 0 ? -1
+                //
+                // Held after the panel lets go of its chip: Launchers drops
+                // its anchor on close, and the drop has to run back into
+                // the chip it came from. An open with no chip at all (the
+                // `qs ipc` path) still gets the right-aligned band.
+                readonly property real chipAnchor: launcherChips.anchorX < 0 ? -1
                     : launchers.rowContentX + launcherChips.x + launcherChips.anchorX
+                property real heldAnchor: -1
+                onChipAnchorChanged: if (chipAnchor >= 0 || LauncherActionsState.panelOpen) heldAnchor = chipAnchor
+                drawerAnchorX: launchers.heldAnchor
 
                 drawerItems: [
                     LauncherActions {
@@ -1787,7 +1858,8 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 28
+                drawerRadius: 32
+                paneEdge: true
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.
                 //
@@ -1827,6 +1899,20 @@ ShellRoot {
 
                 // The notification centre is a panel of its own, down the
                 // screen's right edge (the LazyLoader after the bars).
+                // Each drawer drops out of the chip that opened it, held
+                // after close so the pane runs back into the same chip.
+                dropReveal: true
+                dropStyle: shell.drawerStyle
+                dropCorner: "right"
+                readonly property Item dropChipNow: BaliseState.panelOpen ? baliseChip
+                    : PowerState.panelOpen ? batteryChip
+                    : MixerState.panelOpen ? audioChip : null
+                property Item dropChip: null
+                onDropChipNowChanged: if (dropChipNow) dropChip = dropChipNow
+                dropOriginX: toolsIsland.dropChip && toolsIsland.dropChip.visible
+                    ? toolsIsland.rowContentX + toolsIsland.dropChip.x + toolsIsland.dropChip.width / 2 : -1
+                dropOriginWidth: toolsIsland.dropChip ? Math.max(24, toolsIsland.dropChip.width) : 28
+
                 drawerItems: [
                     BaliseHome {
                         drawerOpen: BaliseState.panelOpen && BaliseState.activeScreen === bar.screen
@@ -2100,7 +2186,7 @@ ShellRoot {
                     // `screen` is what tells the mixer drawer which bar was
                     // clicked -- same hand-down Battery/BaliseButton/
                     // NotificationBell already take.
-                    Modules.AudioOutput { leadingPad: 5; trailingPad: 2; ink: toolsInk; screen: bar.screen }
+                    Modules.AudioOutput { id: audioChip; leadingPad: 5; trailingPad: 2; ink: toolsInk; screen: bar.screen }
                     Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: toolsInk; screen: bar.screen }
 
                     // ---- son | reseau ----
@@ -2111,7 +2197,7 @@ ShellRoot {
                     // left-hand metrics to the right). No padding change:
                     // Traffic carries its own 6px a side like the metrics.
                     Modules.Traffic { ink: toolsInk }
-                    Modules.BaliseButton { screen: bar.screen; ink: toolsInk }
+                    Modules.BaliseButton { id: baliseChip; screen: bar.screen; ink: toolsInk }
 
                     // ---- reseau | energie ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -2129,7 +2215,7 @@ ShellRoot {
                     // drawer on THIS bar's monitor -- see Battery.qml's
                     // own MouseArea, and BaliseButton/NotificationBell
                     // for the same contract.
-                    Modules.Battery { ink: toolsInk; screen: bar.screen }
+                    Modules.Battery { id: batteryChip; ink: toolsInk; screen: bar.screen }
 
                     // ---- energie | notifications ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -2700,8 +2786,9 @@ ShellRoot {
                 color: DrawerTheme.paneTop
                 // Flush on the left and the bottom, rounded where it meets
                 // the desktop.
-                topRightRadius: 28
-                bottomRightRadius: 28
+                topRightRadius: 32
+                bottomRightRadius: 32
+                Modules.PaneEdge { radius: 0; topRightRadius: 32; bottomRightRadius: 32 }
 
                 ProgrammeHome {
                     anchors.fill: parent
@@ -2765,8 +2852,9 @@ ShellRoot {
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => notificationsSheet.entered = true)
                 color: DrawerTheme.paneTop
-                topLeftRadius: 28
-                bottomLeftRadius: 28
+                topLeftRadius: 32
+                bottomLeftRadius: 32
+                Modules.PaneEdge { radius: 0; topLeftRadius: 32; bottomLeftRadius: 32 }
 
                 Modules.NotificationCenter {
                     anchors.fill: parent

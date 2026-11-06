@@ -56,7 +56,7 @@ Rectangle {
     width: parent ? parent.width : 0
     implicitHeight: row.pad * 2 + body.implicitHeight
     height: row.implicitHeight
-    radius: 14
+    radius: 20
 
     // Only lit rows and hovered rows pay for the blur -- same gate
     // DrawerTile and BaliseDeviceRow both use.
@@ -147,7 +147,7 @@ Rectangle {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: row.compact ? 12 : 13
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                     elide: Text.ElideRight
                 }
             }
@@ -226,7 +226,7 @@ Rectangle {
                     color: DrawerTheme.onInk
                     font.family: Fonts.ui
                     font.pixelSize: 10
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                     font.letterSpacing: 0.5
                 }
             }

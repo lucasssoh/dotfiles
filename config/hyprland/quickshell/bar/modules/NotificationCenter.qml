@@ -198,10 +198,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: handle.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
         anchors.topMargin: 20
-        spacing: 16
+        spacing: 10
 
         // ---- clock + DND ----
         //
@@ -297,7 +297,7 @@ Item {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 34
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                     font.features: ({ "tnum": 1 })
                 }
                 Text {

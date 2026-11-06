@@ -32,9 +32,9 @@ Rectangle {
     // DrawerTile), so it goes to a faint veil of the inverse ink rather
     // than a fill of its own, and its glyph takes that inverse ink.
     radius: width / 2
-    color: badge.active
-        ? Qt.rgba(DrawerTheme.onInk.r, DrawerTheme.onInk.g, DrawerTheme.onInk.b, 0.10)
-        : DrawerTheme.cardRaised
+    // On, only the disc inverts (V3): the control around it keeps its
+    // veil and its normal inks, see DrawerTheme's "active" block.
+    color: badge.active ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Text {
@@ -42,7 +42,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: badge.glyph
-        color: badge.active ? DrawerTheme.onInk : DrawerTheme.primary
+        color: badge.active ? DrawerTheme.activeDiscInk : DrawerTheme.primary
         font.family: badge.glyphFont
         // A TWO-glyph badge -- PowerHome's double bolt, the only one so
         // far -- does not fit at the single-glyph size. Every Lucide

@@ -99,7 +99,7 @@ Item {
                         color: seg.selected ? DrawerTheme.onInk : DrawerTheme.secondary
                         Behavior on color { ColorAnimation { duration: 160 } }
                         font.pixelSize: 12
-                        font.weight: seg.selected ? Font.Bold : Font.DemiBold
+                        font.weight: seg.selected ? Font.DemiBold : Font.Medium
                     }
                     MouseArea {
                         id: segHit

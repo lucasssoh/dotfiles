@@ -23,6 +23,6 @@ Text {
     color: DrawerTheme.ink(0.4)
     font.family: Fonts.ui
     font.pixelSize: 12
-    font.weight: Font.DemiBold
+    font.weight: Font.Medium
     font.letterSpacing: 1
 }

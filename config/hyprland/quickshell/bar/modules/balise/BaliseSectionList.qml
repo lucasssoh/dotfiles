@@ -99,7 +99,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 17
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
             }
             MouseArea {
                 id: backArea
@@ -122,7 +122,7 @@ Item {
             color: DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 17
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
             elide: Text.ElideRight
         }
 
@@ -194,7 +194,7 @@ Item {
         anchors.top: header.bottom
         anchors.topMargin: 14
         height: root.showMaster ? 54 : 0
-        radius: 12
+        radius: 20
 
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
@@ -223,7 +223,7 @@ Item {
                 color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 14
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 elide: Text.ElideRight
             }
             Text {
@@ -319,7 +319,7 @@ Item {
                 color: DrawerTheme.ink(0.4)
                 font.family: Fonts.ui
                 font.pixelSize: 12
-                font.weight: Font.DemiBold
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 

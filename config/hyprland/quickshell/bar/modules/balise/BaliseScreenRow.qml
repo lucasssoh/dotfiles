@@ -136,7 +136,7 @@ Item {
             color: btn.on ? DrawerTheme.onInk : DrawerTheme.primary
             font.family: btn.glyph !== "" ? Fonts.iconMingcute : Fonts.ui
             font.pixelSize: btn.glyph !== "" ? 17 : 11
-            font.weight: Font.DemiBold
+            font.weight: Font.Medium
         }
 
         MouseArea {

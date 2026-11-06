@@ -1,5 +1,8 @@
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Effects
+import "../theme"
+import "../services"
 
 // Reusable "pill with an optional second row that drops open below it"
 // -- factored out so shell.qml's real central island (ActiveWindow/
@@ -440,16 +443,291 @@ Item {
     // a panel that opens and closes on hover.
     property bool drawerLens: true
 
+    // Flat pane with a hairline edge and a soft shadow under it, instead
+    // of the convex lens (PaneEdge.qml; asked for: "allège aussi l'effet
+    // convexe et border, fait exactement comme dans la maquette").
+    // Overrides `drawerLens`. The surface grows by `paneShadowRoom` so the
+    // shadow under the tallest drawer is not cut off at its bottom edge.
+    property bool paneEdge: false
+    readonly property int paneShadowRoom: root.paneEdge ? 64 : 0
+
+    // ---- drop reveal ----------------------------------------------------
+    //
+    // The pane is born as a small pill under the chip that opened it, then
+    // spreads out like a drop: width first, height a beat later. Each
+    // axis gets there fast and a little past, then takes its time
+    // settling back (see `bounceAt`). Closing runs it
+    // back into the pill. Chosen from a mockup (piste B, "Goutte").
+    //
+    // Opt-in, split look only. centerIsland sets none of this and keeps
+    // its own stretch; the knobs above (revealDuration, the fades) are
+    // simply not read on this path. Entries reach full height on the
+    // frame the drawer opens (their own height Behavior is stood down
+    // through `dropSnap`, see the Instantiator) and the PANE clips them,
+    // so the drop is the only thing moving.
+    property bool dropReveal: false
+    // Centre of the chip the pane grows from, in island coordinates, and
+    // its width. -1 grows from the pane's own centre.
+    property real dropOriginX: -1
+    property real dropOriginWidth: 28
+    // "drop" (piste B, Goutte) or "breath" (piste C, Souffle): the pane
+    // at its full size from the first frame, growing a little and
+    // sliding down from the bar on a critically damped spring, no bounce.
+    // Both share everything else here, the burst on close included.
+    // "corner" (piste E, HyperOS): the pane zooms out of the screen
+    // corner it hangs from, diagonally, on a spring with a hint of
+    // bounce. The pane is a plain scale of itself, so the blur region
+    // scales with it and never pops (no blur ramp needed).
+    property string dropStyle: "drop"
+    readonly property bool breath: root.dropStyle === "breath"
+    readonly property bool corner: root.dropStyle === "corner"
+    // Which corner the pane zooms from: "left" or "right" (the band's
+    // own outer edge), or "" for the chip (`dropOriginX`), for a pane
+    // that does not sit in a corner.
+    property string dropCorner: ""
+    property int dropOpenDuration: root.breath ? 380 : root.corner ? 550 : 720
+    property int dropCloseDuration: root.corner ? 230 : 200
+    // Close only: the drawer's cards burst first (BaliseReveal.burst, the
+    // entrance cascade run backwards), and the pane folds away behind
+    // them once they are gone. Off for a drawer with no cascade in it.
+    property bool dropBurst: true
+
+    // 0..1 clock of whichever leg is running, linear: the curves below are
+    // computed from it rather than eased by Qt, because a spring's bounce
+    // is not one of Qt's easing curves and SpringAnimation cannot be told
+    // which overshoot to land on.
+    property real dropT: 1
+    property bool dropClosing: true
+    // Where the shape was when the current leg started, so a leg that
+    // interrupts the other picks up from there instead of jumping.
+    property real dropFromW: 0
+    property real dropFromH: 0
+    property real breathFrom: 0
+    property real cornerFrom: 0
+
+    // 0 -> 1 in two halves, t in seconds. A quick rise that ends a little
+    // past 1, at rest, then a slow damped wobble back down onto 1: fast
+    // to open, long on the bounce, asked for. One physical spring cannot
+    // do both, its speed and its settling come from the same damping.
+    // The wobble starts with zero velocity, like the rise ends, so the
+    // seam does not show.
+    function bounceAt(t, rise, overshoot) {
+        if (t <= 0) return 0;
+        if (t < rise) {
+            const p = 1 - t / rise;
+            return (1 + overshoot) * (1 - p * p * p);
+        }
+        const u = t - rise, k = 6, w = Math.PI / 0.2;
+        return 1 + overshoot * Math.exp(-k * u) * (Math.cos(w * u) + (k / w) * Math.sin(w * u));
+    }
+    function easeInCubic(t) { const c = Math.max(0, Math.min(1, t)); return c * c * c; }
+
+    // Close timeline in ms: content gone by 70, shape moves 30..200,
+    // height leading and width following.
+    readonly property real dropOpenSec: root.dropT * root.dropOpenDuration / 1000
+    readonly property real dropCloseMs: root.dropT * root.dropCloseDuration
+    readonly property real dropCloseT: Math.max(0, (root.dropCloseMs - 30) / (root.dropCloseDuration - 30))
+
+    // Openness of each axis, 0 = the pill, 1 = the full pane. Overshoots a
+    // little past 1 on the way out: that is the bounce.
+    readonly property real dropW: {
+        if (root.breath || root.corner) return 1;
+        if (root.dropClosing)
+            return root.dropFromW * (1 - root.easeInCubic((root.dropCloseT - 0.35) / 0.65));
+        if (root.dropT >= 1) return 1;
+        return root.dropFromW + (1 - root.dropFromW) * root.bounceAt(root.dropOpenSec, 0.16, 0.04);
+    }
+    readonly property real dropH: {
+        if (root.breath || root.corner) return 1;
+        if (root.dropClosing)
+            return root.dropFromH * (1 - root.easeInCubic(root.dropCloseT / 0.7));
+        if (root.dropT >= 1) return 1;
+        return root.dropFromH + (1 - root.dropFromH) * root.bounceAt(root.dropOpenSec - 0.03, 0.18, 0.035);
+    }
+    // Souffle's one progress, 0 = gone, 1 = in place. Opening is a
+    // critically damped spring (fast, no overshoot), closing a plain
+    // ease-in.
+    readonly property real breathX: {
+        if (root.dropClosing) return root.breathFrom * (1 - root.easeInCubic(root.dropT));
+        if (root.dropT >= 1) return 1;
+        const w = Math.sqrt(300), t = root.dropT * 0.5;
+        return root.breathFrom + (1 - root.breathFrom) * (1 - Math.exp(-w * t) * (1 + w * t));
+    }
+    // Coin's progress: a spring of 0.36 s at 0.85 damping opening (the
+    // mockup's numbers), an ease-in closing once the cards have burst.
+    readonly property real cornerX: {
+        if (root.dropClosing)
+            return root.cornerFrom * (1 - root.easeInCubic((root.dropCloseMs - 30) / (root.dropCloseDuration - 30)));
+        if (root.dropT >= 1) return 1;
+        const w = 2 * Math.PI / 0.36, z = 0.85, t = root.dropOpenSec;
+        const wd = w * Math.sqrt(1 - z * z);
+        const x = 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + (z * w / wd) * Math.sin(wd * t));
+        return root.cornerFrom + (1 - root.cornerFrom) * x;
+    }
+    readonly property real paneScale: root.corner ? 0.15 + 0.85 * root.cornerX
+        : !root.breath ? 1
+        : root.dropClosing ? 0.95 + 0.05 * root.breathX : 0.92 + 0.08 * root.breathX
+    readonly property real paneShift: !root.breath ? 0
+        : (root.dropClosing ? -8 : -10) * (1 - root.breathX)
+    // The point the pane grows from, in island coordinates: under the chip.
+    // Coin: the band's outer edge on the corner side.
+    readonly property real paneOriginX: root.corner && root.dropCorner === "left" ? root.drawerBandX
+        : root.corner && root.dropCorner === "right" ? root.drawerBandX + root.drawerBandWidth
+        : root.dropOriginX >= 0 ? root.dropOriginX
+        : root.drawerBandX + root.drawerBandWidth / 2
+
+    // Souffle's close fades linearly, not on the ease-in its motion
+    // uses: an ease-in holds the pane (and the blur ramped with it) near
+    // full until the very end, which is the cut this replaced.
+    readonly property real dropAlpha: root.corner
+        ? (root.dropClosing
+            ? (root.dropT >= 1 ? 0 : Math.max(0, Math.min(1, (1 - root.dropT) / 0.3)))
+            : Math.min(1, root.dropT * root.dropOpenDuration / 90))
+        : root.breath
+        ? (root.dropClosing ? root.breathFrom * (1 - root.dropT) : root.breathX)
+        : root.dropClosing
+        ? (root.dropT >= 1 ? 0 : Math.max(0, Math.min(1, (root.dropCloseDuration - root.dropCloseMs) / 40)))
+        : Math.min(1, root.dropT * root.dropOpenDuration / 60)
+    // Settled open: entries may animate their own height again (Balise
+    // moving between pages, the stack swapping one drawer for another).
+    readonly property bool dropSettled: !root.dropClosing && root.dropT >= 1
+
+    // The pane's live rect, from the pill to the full band.
+    readonly property real dropFullY: root.drawerTop + root.drawerGap * root.opaqueProgress
+    readonly property real dropPillH: 24
+    readonly property real dropPillX: (root.dropOriginX >= 0 ? root.dropOriginX : root.drawerBandX + root.drawerBandWidth / 2)
+                                      - root.dropOriginWidth / 2
+    readonly property real dropPaneX: root.dropPillX + (root.drawerBandX - root.dropPillX) * root.dropW
+    readonly property real dropPaneW: root.dropOriginWidth + (root.drawerBandWidth - root.dropOriginWidth) * root.dropW
+    readonly property real dropPaneH: Math.max(0, root.dropPillH + (drawerColumn.height - root.dropPillH) * root.dropH)
+    readonly property real dropRadius: Math.min(root.dropPaneW / 2, root.dropPaneH / 2,
+                                                12 + (root.drawerRadius - 12) * Math.min(1, root.dropH))
+
+    NumberAnimation {
+        id: dropOpenAnim
+        target: root; property: "dropT"
+        from: 0; to: 1
+        duration: root.dropOpenDuration
+    }
+    SequentialAnimation {
+        id: dropCloseAnim
+        // The shape holds still while the cards burst (with dropT at 0
+        // the close curves still read the starting shape), and starts
+        // folding as the last one pops.
+        PauseAnimation { duration: root.dropBurst ? BaliseReveal.burstHandoff : 0 }
+        NumberAnimation {
+            target: root; property: "dropT"
+            from: 0; to: 1
+            duration: root.dropCloseDuration
+        }
+        ScriptAction { script: root.expanded = false }
+    }
+    // The content's own fade, timed against the drop: in once the pane is
+    // most of the way out, gone before the shape starts back.
+    SequentialAnimation {
+        id: dropContentIn
+        PauseAnimation { duration: root.breath || root.corner ? 60 : 110 }
+        NumberAnimation {
+            target: root; property: "contentProgress"; to: 1
+            duration: root.breath ? 200 : root.corner ? 160 : 180; easing.type: Easing.OutCubic
+        }
+    }
+    // Whatever is not a burst card (handles, titles) fades with the
+    // last bubble, just before the shape moves.
+    SequentialAnimation {
+        id: dropContentOut
+        PauseAnimation { duration: root.dropBurst ? Math.max(0, BaliseReveal.burstHandoff - 30) : 0 }
+        NumberAnimation {
+            target: root; property: "contentProgress"; to: 0
+            duration: 70; easing.type: Easing.InCubic
+        }
+    }
+
+    property bool dropClosePending: false
+    function dropSettleClose() {
+        if (!root.dropClosePending) return;
+        root.dropClosePending = false;
+        if (!root.anyOpen) root.dropStart(false);
+    }
+    // A swap on an open pane: the pane stays where it is, the old
+    // drawer's cards burst while it folds up, and the new one unfolds in
+    // its place on the entries' own height Behavior -- the pane's height
+    // follows the stack, so it morphs from one size to the other. Only
+    // when the pane had settled open; mid-open or mid-close, the new
+    // drawer simply opens from wherever the pane is.
+    function dropSwap() {
+        if (!root.dropSettled) {
+            root.dropStart(true);
+            return;
+        }
+        if (root.dropBurst) BaliseReveal.burst();
+        // The outgoing drawer goes to the end of the stack, so the new
+        // one unfolds from the top of the pane and pushes it down and
+        // out as it folds, instead of growing underneath it (two handles
+        // in one pane for a moment). Re-parenting appends: that is the
+        // whole reorder.
+        for (let i = 0; i < root.drawerItems.length; i++) {
+            const e = root.drawerItems[i];
+            if (!e.drawerOpen && e.height > 0) {
+                e.parent = null;
+                e.parent = drawerColumn;
+            }
+        }
+    }
+
+    function dropStart(opening) {
+        const w = root.dropW, h = root.dropH, b = root.breathX, c = root.cornerX;
+        dropOpenAnim.stop();
+        dropCloseAnim.stop();
+        dropContentIn.stop();
+        dropContentOut.stop();
+        root.dropFromW = w;
+        root.dropFromH = h;
+        root.breathFrom = b;
+        root.cornerFrom = c;
+        root.dropClosing = !opening;
+        root.dropT = 0;
+        if (opening) {
+            root.expanded = true;
+            dropOpenAnim.start();
+            dropContentIn.start();
+        } else {
+            if (root.dropBurst) BaliseReveal.burst();
+            dropCloseAnim.start();
+            dropContentOut.start();
+        }
+    }
+
     // Where the drawer pane sits, in this island's coordinates, for the
     // bar's blur region (shell.qml's BackgroundEffect): Hyprland blurs
     // exactly this rect behind the glass pane. Separate reals rather than
     // a rect, the same trap as the input mask: a Region reading its
     // geometry through a rect-typed property never follows it.
-    readonly property bool paneShown: root.splitDrawer && root.opaqueProgress > 0.01
-    readonly property real paneX: drawerFill.x
-    readonly property real paneY: drawerFill.y
-    readonly property real paneWidth: drawerFill.width
-    readonly property real paneHeight: drawerFill.height
+    readonly property bool paneShown: root.splitDrawer
+        && (root.dropReveal ? root.dropAlpha > 0.01 : root.opaqueProgress > 0.01)
+    // How strong the compositor blur behind this pane should be, 0..1.
+    // The blur region is on or off, it cannot fade, so shell.qml ramps
+    // the blur itself with the pane instead. 1 whenever nothing is
+    // fading, so an idle bar leaves the blur settings alone.
+    //
+    // Opening, it drops to the pane's 0 from the first frame, before the
+    // pane is even visible, so the weak blur is already in Hyprland when
+    // the region turns on (shell.qml gates the region on that). Closing,
+    // it runs ahead of the pane, so the last steps have landed before
+    // the region goes.
+    //
+    // Souffle only: the other styles grow the pane (and its blur region)
+    // out of a point, so the blur never appears at full size at once.
+    readonly property real glassFade: !root.dropReveal || !root.breath ? 1
+        : !root.dropClosing ? root.dropAlpha
+        : root.paneShown ? Math.max(0, (root.dropAlpha - 0.25) / 0.75) : 1
+    readonly property real paneRadius: drawerFill.radius * root.paneScale
+    // With Souffle's scale and shift applied, so the blur stays under
+    // the glass while it grows.
+    readonly property real paneX: root.paneOriginX + (drawerFill.x - root.paneOriginX) * root.paneScale
+    readonly property real paneY: drawerFill.y + root.paneShift
+    readonly property real paneWidth: drawerFill.width * root.paneScale
+    readonly property real paneHeight: drawerFill.height * root.paneScale
     // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
     // this 6px auto-spacing entirely, no manual spacers between its
     // children. TOOLS' own content instead uses spacing:0 plus hand-tuned
@@ -490,7 +768,10 @@ Item {
         for (let i = 0; i < root.drawerItems.length; i++) {
             tallest = Math.max(tallest, root.drawerItems[i].implicitHeight);
         }
-        return tallest > 0 ? root.drawerTop + root.drawerGap + tallest : root.rowHeight;
+        // The drop's bounce takes the pane a few percent past its full
+        // height for a moment; the slack keeps that inside the surface.
+        const slack = root.dropReveal ? Math.ceil(tallest * 0.05) : 0;
+        return tallest > 0 ? root.drawerTop + root.drawerGap + tallest + slack + root.paneShadowRoom : root.rowHeight;
     }
 
     // The row's width at its OWN theoretical widest -- not a live
@@ -845,6 +1126,23 @@ Item {
     }
 
     onAnyOpenChanged: {
+        if (root.dropReveal) {
+            // One drawer replacing another on this island arrives as a
+            // close and an open in the same call (each state closes the
+            // others, then opens itself). Wait for the end of the call
+            // before closing: if something opened meanwhile, it is a
+            // swap, not a close.
+            if (!root.anyOpen) {
+                root.dropClosePending = true;
+                Qt.callLater(root.dropSettleClose);
+            } else if (root.dropClosePending) {
+                root.dropClosePending = false;
+                root.dropSwap();
+            } else {
+                root.dropStart(true);
+            }
+            return;
+        }
         // Nothing to sequence: `expanded` is simply what `anyOpen` says,
         // on this frame, and openProgress/contentProgress are owned by
         // the two Bindings above.
@@ -1042,15 +1340,45 @@ Item {
     // island's own `fill` above already spans the drawer, in the
     // island's own colour, and a second pane on top of it would be
     // precisely the separate block centerIsland must not have.
+    // The pane's shadow: same rect, same transform, same opacity. A
+    // RectangularShadow is a distance field, not a blurred copy, so it
+    // costs next to nothing while the pane changes size every frame.
+    RectangularShadow {
+        visible: root.paneEdge && root.splitDrawer && root.paneShown
+        x: drawerFill.x
+        y: drawerFill.y
+        width: drawerFill.width
+        height: drawerFill.height
+        radius: drawerFill.radius
+        opacity: drawerFill.opacity
+        offset.y: 18
+        blur: 50
+        color: DrawerTheme.paneShadow
+        transform: [
+            Scale {
+                origin.x: root.paneOriginX - drawerFill.x
+                xScale: root.paneScale; yScale: root.paneScale
+            },
+            Translate { y: root.paneShift }
+        ]
+    }
+
     Rectangle {
         id: drawerFill
         visible: root.splitDrawer
-        x: root.drawerBandX
+        x: root.dropReveal ? root.dropPaneX : root.drawerBandX
         y: root.drawerTop + root.drawerGap * root.opaqueProgress
-        width: root.drawerBandWidth
-        height: drawerColumn.height
-        radius: root.drawerRadius
-        opacity: root.opaqueProgress
+        width: root.dropReveal ? root.dropPaneW : root.drawerBandWidth
+        height: root.dropReveal ? root.dropPaneH : drawerColumn.height
+        radius: root.dropReveal ? root.dropRadius : root.drawerRadius
+        opacity: root.dropReveal ? root.dropAlpha : root.opaqueProgress
+        transform: [
+            Scale {
+                origin.x: root.paneOriginX - drawerFill.x
+                xScale: root.paneScale; yScale: root.paneScale
+            },
+            Translate { y: root.paneShift }
+        ]
         gradient: Gradient {
             GradientStop { position: 0.0; color: root.drawerFillTop }
             GradientStop { position: 1.0; color: root.drawerFillBottom }
@@ -1070,9 +1398,14 @@ Item {
         // Gated rather than left on: an FBO the size of this block is
         // not something to keep allocated for a drawer that is shut most
         // of the time.
-        layer.enabled: root.drawerLens && root.splitDrawer && root.opaqueProgress > 0.01
+        PaneEdge {
+            visible: root.paneEdge
+            radius: drawerFill.radius
+        }
+
+        layer.enabled: root.drawerLens && !root.paneEdge && root.paneShown
         layer.effect: GlassLens {
-            radius: root.drawerRadius
+            radius: drawerFill.radius
             // The greyer, fainter edge this block already had.
             rimStrength: 0.22
             rimColor: "#8e8e93"
@@ -1091,6 +1424,25 @@ Item {
     // of its children's animating heights, and it re-lays-out on every
     // change, so an entry closing above another makes the one below
     // slide up without any offset arithmetic here.
+    // Clips the stack to the drop's live rect. A pass-through everywhere
+    // else: at the island's origin, unclipped, so drawerColumn's own
+    // coordinates below mean what they always meant.
+    Item {
+        id: drawerClip
+        clip: root.dropReveal
+        x: root.dropReveal ? drawerFill.x : 0
+        y: root.dropReveal ? drawerFill.y : 0
+        width: root.dropReveal ? drawerFill.width : root.width
+        height: root.dropReveal ? drawerFill.height : root.height
+        // The pane's own scale and shift, so the cards ride with it.
+        transform: [
+            Scale {
+                origin.x: root.paneOriginX - drawerClip.x
+                xScale: root.paneScale; yScale: root.paneScale
+            },
+            Translate { y: root.paneShift }
+        ]
+
     Column {
         id: drawerColumn
         // `drawerBandX + margin`, NOT a bare `margin`. This is the line
@@ -1101,9 +1453,10 @@ Item {
         // cards hanging off one side of the block they are supposed to be
         // inside -- the pane widens leftward and the column does not
         // follow, so every entry keeps starting where the ROW starts.
-        x: root.drawerBandX + root.margin
-        y: root.drawerTop + root.drawerGap * root.opaqueProgress
+        x: root.drawerBandX + root.margin - drawerClip.x
+        y: root.drawerTop + root.drawerGap * root.opaqueProgress - drawerClip.y
         width: root.drawerContentWidth
+    }
     }
 
     // One set of bindings per entry. An Instantiator rather than a
@@ -1115,7 +1468,23 @@ Item {
     Instantiator {
         model: root.drawerItems
         delegate: QtObject {
+            id: entry
             required property var modelData
+
+            // Drop reveal only: this entry keeps its height while the
+            // pane runs back into its pill, though its own drawerOpen
+            // already went false -- unless another entry took its place,
+            // in which case it collapses as it always did.
+            property bool held: modelData.drawerOpen
+            property Connections holdTracker: Connections {
+                target: root
+                function onOpenCountChanged() {
+                    entry.held = entry.modelData.drawerOpen || (entry.held && !root.anyOpen);
+                }
+                function onExpandedChanged() {
+                    if (!root.expanded) entry.held = entry.modelData.drawerOpen;
+                }
+            }
 
             property Binding widthBinding: Binding {
                 target: modelData
@@ -1130,7 +1499,8 @@ Item {
             property Binding heightBinding: Binding {
                 target: modelData
                 property: "height"
-                value: (modelData.drawerOpen && root.expanded) ? modelData.implicitHeight : 0
+                value: ((root.dropReveal ? entry.held : modelData.drawerOpen) && root.expanded)
+                    ? modelData.implicitHeight : 0
             }
             // The dévoilé (reveal) -- asked for back when Veille was the
             // only thing in here ("il est caché puis affiché
@@ -1170,6 +1540,11 @@ Item {
             }
 
             Component.onCompleted: {
+                // Entries that declare `dropSnap` stand their height
+                // Behavior down while the drop is moving: the pane does
+                // the revealing, and a stretch under it would fight it.
+                if (modelData.dropSnap !== undefined)
+                    modelData.dropSnap = Qt.binding(() => root.dropReveal && !root.dropSettled);
                 modelData.clip = true;
                 modelData.parent = drawerColumn;
             }

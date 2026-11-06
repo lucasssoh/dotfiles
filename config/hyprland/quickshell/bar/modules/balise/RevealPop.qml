@@ -33,9 +33,55 @@ SequentialAnimation {
     // the animation, so they fade and everything else zooms.
     property real fromScale: BaliseReveal.fromScale
 
+    // The drawer this element belongs to, read at the moment it matters:
+    // the nearest ancestor with a `drawerOpen` (the drawer entry itself).
+    // The cascade and the burst are global triggers, and one drawer
+    // pushing another out fires both at once -- this is what keeps each
+    // on the drawer it is for. undefined = not in a drawer, do as told.
+    function hostOpen() {
+        for (let p = anim.item; p; p = p.parent) {
+            if (p.drawerOpen !== undefined) return p.drawerOpen;
+        }
+        return undefined;
+    }
+
+    // Replays only in a drawer that is open: the one being closed keeps
+    // bursting instead of popping back in under its own exit.
     property int gen: BaliseReveal.gen
-    onGenChanged: anim.restart()
-    Component.onCompleted: anim.restart()
+    onGenChanged: {
+        if (anim.hostOpen() === false) return;
+        burstAnim.stop();
+        BaliseReveal.note(anim.index);
+        anim.restart();
+    }
+
+    // The exit: BaliseReveal.burst(), reverse order. A child of the
+    // entrance animation can't run on its own, so it lives as a property.
+    property int burstGen: BaliseReveal.burstGen
+    // Bursts only in a drawer that is closing, never in the one opening.
+    onBurstGenChanged: {
+        if (anim.item.opacity <= 0) return;
+        if (anim.hostOpen() === true) return;
+        anim.stop();
+        burstAnim.restart();
+    }
+    property SequentialAnimation burstAnim: SequentialAnimation {
+        PauseAnimation {
+            duration: Math.max(0, BaliseReveal.burstLast - Math.min(BaliseReveal.burstLast, anim.index))
+                      * BaliseReveal.burstStagger
+        }
+        ParallelAnimation {
+            NumberAnimation {
+                target: anim.item; property: "scale"; to: 1.08
+                duration: BaliseReveal.burstDuration; easing.type: Easing.OutQuad
+            }
+            NumberAnimation {
+                target: anim.item; property: "opacity"; to: 0
+                duration: BaliseReveal.burstDuration; easing.type: Easing.InQuad
+            }
+        }
+    }
+    Component.onCompleted: { BaliseReveal.note(anim.index); anim.restart(); }
 
     PropertyAction { target: anim.item; property: "opacity"; value: 0 }
     PropertyAction { target: anim.item; property: "scale"; value: anim.fromScale }

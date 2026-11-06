@@ -66,7 +66,7 @@ Item {
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
                     font.pixelSize: 13
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                 }
                 Text {
                     renderType: Text.NativeRendering

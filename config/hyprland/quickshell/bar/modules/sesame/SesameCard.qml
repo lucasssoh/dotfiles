@@ -127,7 +127,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
                     Text {
@@ -266,7 +266,7 @@ Item {
                             color: modelData.main ? DrawerTheme.onInk : DrawerTheme.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Medium
                         }
                         MouseArea {
                             id: hover

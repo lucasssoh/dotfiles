@@ -18,7 +18,7 @@ Column {
     component Section: ProgrammeText {
         color: DrawerTheme.secondary
         font.pixelSize: 11
-        font.weight: Font.Bold
+        font.weight: Font.DemiBold
         font.letterSpacing: 1
         font.capitalization: Font.AllUppercase
     }
@@ -59,7 +59,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - 58 - 34
             spacing: 2
-            ProgrammeText { width: parent.width; text: entry.title; font.weight: Font.Bold }
+            ProgrammeText { width: parent.width; text: entry.title; font.weight: Font.DemiBold }
             ProgrammeText { width: parent.width; text: entry.detail; color: DrawerTheme.secondary; font.pixelSize: 13; visible: text !== "" }
         }
         ProgrammeText {

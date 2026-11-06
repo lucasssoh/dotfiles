@@ -164,7 +164,7 @@ Item {
         color: card.hdrLock ? DrawerTheme.secondary : DrawerTheme.primary
         font.family: Fonts.ui
         font.pixelSize: 15
-        font.weight: Font.DemiBold
+        font.weight: Font.Medium
         font.features: { "tnum": 1 }
     }
 }

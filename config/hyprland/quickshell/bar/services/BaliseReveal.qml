@@ -29,7 +29,28 @@ Singleton {
     // early there, nothing is rebuilt, and without this the panel would
     // reopen fully drawn.
     property int gen: 0
-    function replay() { root.gen++; }
+    function replay() { root.topIndex = 0; root.gen++; }
+
+    // The cascade run backwards, when a drawer closes: every element pops
+    // like a bubble (a small swell, then gone), the last ones first, and
+    // the pane folds away behind them once they are all gone.
+    // DrawerIsland calls this and waits out `burstSpan` before closing.
+    property int burstGen: 0
+    function burst() { root.burstGen++; }
+    // The highest index that popped in since the last replay, so the burst
+    // starts with the last card actually shown rather than with a slot
+    // nothing filled. Capped: past `burstDepth`, a long list bursts with
+    // the first wave instead of queuing.
+    property int topIndex: 0
+    function note(index) { if (index > root.topIndex) root.topIndex = index; }
+    readonly property int burstDepth: 8
+    readonly property int burstLast: Math.min(root.topIndex, root.burstDepth)
+    readonly property int burstStagger: 14
+    readonly property int burstDuration: 110
+    readonly property int burstSpan: root.burstLast * root.burstStagger + root.burstDuration
+    // When the pane may start folding: as the last bubble starts to pop,
+    // not once it is gone, so the two motions run into each other.
+    readonly property int burstHandoff: root.burstLast * root.burstStagger + 40
 
     // Between two consecutive items. The whole point is "rapidement":
     // twelve items at 24ms means the last one starts 264ms in, so the

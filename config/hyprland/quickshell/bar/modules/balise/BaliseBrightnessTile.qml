@@ -23,7 +23,7 @@ Rectangle {
 
     readonly property real level: OsdState.brightness
 
-    radius: 20
+    radius: 24
     color: DrawerTheme.cardRaised
 
     Connections {

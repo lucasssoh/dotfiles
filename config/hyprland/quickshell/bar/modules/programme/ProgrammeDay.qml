@@ -27,7 +27,7 @@ Column {
                 text: line.r.start
                 color: DrawerTheme.secondary
                 font.pixelSize: 13
-                font.weight: Font.Bold
+                font.weight: Font.DemiBold
                 font.features: { "tnum": 1 }
             }
 
@@ -64,7 +64,7 @@ Column {
                         width: parent.width
                         text: line.r.title + (line.r.state === "closed" ? "  ✓" : (line.r.state === "skipped" || line.r.state === "missed") ? "  ✗" : "")
                         font.pixelSize: 14
-                        font.weight: Font.Bold
+                        font.weight: Font.DemiBold
                         font.strikeout: line.r.state === "skipped"
                     }
                     ProgrammeText {

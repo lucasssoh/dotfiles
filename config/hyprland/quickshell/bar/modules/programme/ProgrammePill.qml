@@ -31,7 +31,7 @@ Rectangle {
         Behavior on color { ColorAnimation { duration: 120 } }
         font.family: Fonts.ui
         font.pixelSize: 14
-        font.weight: Font.DemiBold
+        font.weight: Font.Medium
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
     }

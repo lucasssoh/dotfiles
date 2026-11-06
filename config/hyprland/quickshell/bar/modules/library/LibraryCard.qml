@@ -282,7 +282,7 @@ Item {
                     text: entry.modelData.header ? entry.modelData.name.toUpperCase() : ""
                     color: DrawerTheme.secondary
                     font.pixelSize: 11
-                    font.weight: Font.Bold
+                    font.weight: Font.DemiBold
                     font.letterSpacing: 1
                     elide: Text.ElideRight
                     width: parent.width - 24
@@ -307,7 +307,7 @@ Item {
                         text: entry.modelData.header ? "" : entry.modelData.row.kindLabel
                         color: DrawerTheme.secondary
                         font.pixelSize: 11
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                         wrapMode: Text.NoWrap
                         elide: Text.ElideRight
                     }
@@ -323,7 +323,7 @@ Item {
                             textFormat: Text.StyledText
                             text: entry.modelData.header ? "" : root.lit((entry.modelData.row.num ? entry.modelData.row.num + "  " : "") + entry.modelData.row.title)
                             font.pixelSize: 15
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Medium
                             wrapMode: Text.NoWrap
                             elide: Text.ElideRight
                         }
@@ -350,7 +350,7 @@ Item {
                         text: entry.modelData.header ? "" : root.stateText(entry.modelData.row)
                         color: !entry.modelData.header && entry.modelData.row.state === "next" ? DrawerTheme.primary : DrawerTheme.muted
                         font.pixelSize: 12
-                        font.weight: !entry.modelData.header && entry.modelData.row.state === "next" ? Font.DemiBold : Font.Normal
+                        font.weight: !entry.modelData.header && entry.modelData.row.state === "next" ? Font.Medium : Font.Normal
                         wrapMode: Text.NoWrap
                     }
                     MouseArea {
@@ -425,7 +425,7 @@ Item {
                         width: parent.width
                         text: preview.r ? preview.r.title : ""
                         font.pixelSize: 18
-                        font.weight: Font.Bold
+                        font.weight: Font.DemiBold
                         maximumLineCount: 3
                         elide: Text.ElideRight
                     }

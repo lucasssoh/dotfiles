@@ -22,12 +22,8 @@ Rectangle {
 
     color: DrawerTheme.paneTop
 
-    layer.enabled: pane.visible
-    layer.effect: GlassLens {
-        radius: pane.radius
-        band: pane.band
-        // The drawers' greyer, fainter edge.
-        rimStrength: 0.22
-        rimColor: "#8e8e93"
-    }
+    // Flat glass with a hairline edge (PaneEdge), no convex lens any
+    // more. No shadow here: these popups' windows are sized to the pane,
+    // and a shadow cut off at the window edge reads worse than none.
+    PaneEdge { radius: pane.radius }
 }

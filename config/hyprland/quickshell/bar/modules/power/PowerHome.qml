@@ -40,11 +40,16 @@ Item {
 
     property bool drawerOpen: false
 
-    implicitHeight: handle.implicitHeight + 20 + content.implicitHeight + 20
+    implicitHeight: handle.implicitHeight + 14 + content.implicitHeight + 10
     // Kept equal to DrawerIsland's `revealDuration` -- see the comment
     // there; the island waits out exactly this long before fading content
     // in.
-    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.InOutCubic } }
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
+    Behavior on height {
+        enabled: !root.dropSnap
+        NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+    }
 
     // The entrance cascade is driven by a global generation counter, and
     // this drawer's content is built ONCE (unlike Balise's pages, which
@@ -179,17 +184,17 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: handle.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
-        // 20, the same as BaliseHome's own page area -- no special case
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        // The same as BaliseHome's own page area -- no special case
         // needed here. The headline used to sit 5px under the handle
         // against Balise's 31, but this margin was never the cause: see
         // bigDuration below, whose Texts were anchored to the Row's own
         // baseline and so drew their ink above the box entirely. With
         // that fixed this measures 36px, five MORE than Balise, which is
         // the right amount of air under a 28px display number.
-        anchors.topMargin: 20
-        spacing: 16
+        anchors.topMargin: 14
+        spacing: 10
 
         // ---- headline: time left, level, live draw ------------------
         Item {
@@ -238,7 +243,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                     }
                     Text {
                         anchors.baseline: hoursDigits.baseline
@@ -261,7 +266,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                     }
                     Text {
                         anchors.baseline: hoursDigits.baseline
@@ -290,7 +295,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 28
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Medium
                     }
                     Text {
                         anchors.baseline: levelDigits.baseline
@@ -371,7 +376,7 @@ Item {
             visible: root.conservationAvailable || root.fastChargeAvailable
             width: parent.width
             height: 92
-            spacing: 16
+            spacing: 8
 
             // A positioner reclaims a hidden child's space, it does not
             // stretch the survivor into it -- so the survivor has to be
