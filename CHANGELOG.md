@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.2.0 (November 6 2026)
 
 ### Changed
 - **Screenshots:** the screenshot editor is called Screenshot in notifications and window titles, with its own icon.
