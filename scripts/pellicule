@@ -404,68 +404,68 @@ def check_showcases(showcases, scenes):
     modes = {s["name"]: s.get("modes", ["light", "dark"]) for s in scenes}
     crops = {s["name"]: s.get("crop", "full") for s in scenes}
     for sc in showcases:
-        for name in sc.get("middle", []):
+        where = f"showcase {sc.get('name')}"
+        mode = sc.get("mode", "light")
+        names = sc.get("back", []) + sc.get("front", []) + ([sc["blank"]] if sc.get("blank") else [])
+        if not sc.get("back") or not sc.get("front"):
+            problems.append(f"{where}: needs a back and a front screen")
+        for name in names:
             if name not in modes:
-                problems.append(f"showcase {sc.get('name')}: no scene called {name}")
-            elif crops[name] == "full":
-                problems.append(f"showcase {sc.get('name')}: {name} has no crop to lay in the middle")
-            else:
-                for side in ("left", "right"):
-                    if sc[side][1] not in modes[name]:
-                        problems.append(f"showcase {sc.get('name')}: {name} is not taken in {sc[side][1]} mode")
-        for side in ("left", "right"):
-            name, mode = sc.get(side, ["?", "?"])
-            if name not in modes:
-                problems.append(f"showcase {sc.get('name')}: no scene called {name}")
+                problems.append(f"{where}: no scene called {name}")
             elif mode not in modes[name]:
-                problems.append(f"showcase {sc.get('name')}: {name} is not taken in {mode} mode")
+                problems.append(f"{where}: {name} is not taken in {mode} mode")
+        for name in sc.get("back", [])[1:] + sc.get("front", [])[1:]:
+            if crops.get(name) == "full":
+                problems.append(f"{where}: {name} has no crop to lay on the screen")
     return problems
 
 
-def compose(sc, out, settings, scenes):
-    """The showcase picture: NAME.webp here, and a PNG in the cache for
-    other uses (a portfolio), at full size."""
+def screen(names, mode, blank, crops):
+    """One screen of a showcase: the first scene's whole screen, with the
+    others' crops laid on it. They all share the same frozen desktop, so
+    there is no seam. With `blank` (the empty desktop's scene), only what
+    each one adds to it is laid, so its crop's margins cover nothing."""
     from PIL import Image, ImageChops
-    (ln, lm), (rn, rm) = sc["left"], sc["right"]
-    crops = {s["name"]: s.get("crop") for s in scenes}
-    needed = [full_path(ln, lm), full_path(rn, rm)]
-    needed += [full_path(m, mode) for m in sc.get("middle", []) for mode in (lm, rm)]
-    if sc.get("blank"):
-        needed += [full_path(sc["blank"], mode) for mode in (lm, rm)]
+    img = Image.open(full_path(names[0], mode)).convert("RGB")
+    for n in names[1:]:
+        x, y, w, h = crops[n]
+        box = (x, y, x + w, y + h)
+        part = Image.open(full_path(n, mode)).convert("RGB")
+        if blank:
+            base = Image.open(full_path(blank, mode)).convert("RGB")
+            bb = ImageChops.difference(part.crop(box), base.crop(box)).convert("L") \
+                .point(lambda v: 255 if v > 18 else 0).getbbox()
+            if bb:
+                pad = 40
+                box = (max(x, x + bb[0] - pad), max(y, y + bb[1] - pad),
+                       min(x + w, x + bb[2] + pad), min(y + h, y + bb[3] + pad))
+        img.paste(part.crop(box), box[:2])
+    return img
+
+
+def compose(sc, out, settings, scenes):
+    """The showcase picture: two screens in cascade, drawn by
+    showcase.html and rendered by Firefox. NAME.webp here, NAME.png at full
+    size in the cache, for other uses (a portfolio)."""
+    from PIL import Image
+    from urllib.parse import urlencode
+    mode = sc.get("mode", "light")
+    blank = sc.get("blank")
+    needed = [full_path(n, mode) for n in sc["back"] + sc["front"] + ([blank] if blank else [])]
     missing = [f.name for f in needed if not f.exists()]
     if missing:
         fail(f"showcase {sc['name']}: take {', '.join(missing)} first")
-    # Each side's screen, with the `middle` scenes' crops laid in at their
-    # place, in that side's mode: the same frozen desktop, so no seam.
-    work = CACHE / "showcase" / "parts"
-    work.mkdir(parents=True, exist_ok=True)
-    sides = []
-    for side, (name, mode) in (("l", (ln, lm)), ("r", (rn, rm))):
-        img = Image.open(full_path(name, mode)).convert("RGB")
-        for m in sc.get("middle", []):
-            x, y, w, h = crops[m]
-            mid = Image.open(full_path(m, mode)).convert("RGB")
-            # Only what the scene adds to the empty desktop (`blank`), so
-            # the crop's margins don't cover the sides' own drawers.
-            box = (x, y, x + w, y + h)
-            if sc.get("blank"):
-                diff = ImageChops.difference(mid.crop(box), Image.open(full_path(sc["blank"], mode)).convert("RGB").crop(box))
-                bb = diff.convert("L").point(lambda v: 255 if v > 18 else 0).getbbox()
-                if bb:
-                    pad = 40
-                    box = (max(x, x + bb[0] - pad), max(y, y + bb[1] - pad),
-                           min(x + w, x + bb[2] + pad), min(y + h, y + bb[3] + pad))
-            img.paste(mid.crop(box), box[:2])
-        part = work / f"{sc['name']}-{side}.png"
-        img.save(part)
-        sides.append(part)
-    lf, rf = sides
+    crops = {s["name"]: s.get("crop") for s in scenes}
+    parts = CACHE / "showcase" / "parts"
+    parts.mkdir(parents=True, exist_ok=True)
+    urls = {}
+    for key in ("back", "front"):
+        path = parts / f"{sc['name']}-{key}.png"
+        screen(sc[key], mode, blank, crops).save(path)
+        urls[key] = path.as_uri()
     w, h = sc.get("size", [2560, 1600])
     png = CACHE / "showcase" / f"{sc['name']}.png"
-    png.parent.mkdir(parents=True, exist_ok=True)
-    from urllib.parse import urlencode
-    url = SHOWCASE.as_uri() + "?" + urlencode({"l": lf.as_uri(), "r": rf.as_uri(), "lm": lm, "rm": rm,
-                                                     **({"fill": 1} if sc.get("fill") else {})})
+    url = SHOWCASE.as_uri() + "?" + urlencode({**urls, "mode": mode})
     with tempfile.TemporaryDirectory(prefix="pellicule-firefox-") as profile:
         sh("firefox", "--headless", "--no-remote", "--profile", profile,
            f"--window-size={w},{h}", "--screenshot", str(png), url)
@@ -640,9 +640,7 @@ def main():
     # The showcases built on what was just taken.
     done = {(s["name"], m) for s in scenes for m in modes}
     for sc in showcases:
-        used = [tuple(sc[side]) for side in ("left", "right")]
-        used += [(m, sc[side][1]) for m in sc.get("middle", []) for side in ("left", "right")]
-        if any(u in done for u in used):
+        if any((n, sc.get("mode", "light")) in done for n in sc["back"] + sc["front"]):
             for path in compose(sc, out, settings, all_scenes):
                 say(f"{'':<5} {sc['name']:<16} {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 

@@ -1,78 +1,39 @@
 <!doctype html>
 <!--
-  The showcase picture, put together by scripts/pellicule from two
-  full-screen captures: a laptop whose screen, and the backdrop behind it,
-  are cut along one slanted line. ?l=FILE&r=FILE are the two halves, ?lm and ?rm
-  their modes (light or dark); the same file on both sides makes one plain
-  screen. ?fill=1 makes the laptop fill more of the picture, for pictures
-  shown at half width. Rendered by Firefox at 2560x1600.
+  The showcase picture, put together by scripts/pellicule: two screens in
+  cascade, ?back=FILE at the top left and ?front=FILE over it at the bottom
+  right, on contour lines in ?mode (light or dark). Rendered by Firefox at
+  2560x1600.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; }
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
   .board { position: absolute; inset: 0; container-type: inline-size; }
-  .half { position: absolute; inset: 0; }
-  .light { background: radial-gradient(120% 90% at 20% 0%, #f7f2ea 0%, #e8dfd1 55%, #d9cdbb 100%); }
-  .dark { background: radial-gradient(120% 90% at 80% 0%, #3a352f 0%, #22201d 55%, #161513 100%); }
-
-  .laptop { position: absolute; left: 14%; top: 7%; width: 72%; }
-  .fill .laptop { left: 10%; top: 6%; width: 80%; }
-  .lid { background: #0d0d0e; border-radius: 1.4cqw 1.4cqw .5cqw .5cqw; padding: 1.1cqw 1.1cqw 1.6cqw;
-         box-shadow: 0 0 0 .12cqw #3a3a3c inset, 0 3cqw 6cqw -1cqw rgba(20,14,8,.5); }
-  .screen { position: relative; aspect-ratio: 16 / 10; border-radius: .25cqw; overflow: hidden; }
-  .screen img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  .base { height: 1.3cqw; margin: 0 -7%; position: relative; border-radius: 0 0 2cqw 2cqw / 0 0 1.1cqw 1.1cqw;
-          background: linear-gradient(#d9d9dc, #a9a9ad 70%, #8c8c90); box-shadow: 0 1.6cqw 2.4cqw -1cqw rgba(20,14,8,.5); }
-  .base::before { content: ""; position: absolute; left: 50%; top: 0; width: 14%; height: 40%; transform: translateX(-50%);
-                  background: #9c9ca0; border-radius: 0 0 .8cqw .8cqw; }
-  .base.dark { background: linear-gradient(#5a5a5e, #3c3c40 70%, #2a2a2d); }
-  .base.dark::before { background: #2f2f33; }
+  .light { background:
+    repeating-radial-gradient(circle at 30% 120%, transparent 0 2.2cqw, rgba(150, 120, 85, .16) 2.2cqw 2.32cqw),
+    radial-gradient(120% 90% at 20% 0%, #f7f2ea 0%, #e8dfd1 55%, #d9cdbb 100%); }
+  .dark { background:
+    repeating-radial-gradient(circle at 30% 120%, transparent 0 2.2cqw, rgba(230, 200, 160, .07) 2.2cqw 2.32cqw),
+    radial-gradient(120% 90% at 80% 0%, #3a352f 0%, #22201d 55%, #161513 100%); }
+  .card { position: absolute; border-radius: 1.4cqw; overflow: hidden; background: #0d0d0e; padding: .5cqw;
+          box-shadow: 0 0 0 .1cqw rgba(255, 255, 255, .1) inset, 0 3cqw 6cqw -1cqw rgba(20, 14, 8, .55); }
+  .card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 1cqw; }
+  .back { left: 4%; top: 5%; width: 60%; }
+  .front { right: 4%; bottom: 5%; width: 52%; }
 </style>
 </head>
 <body>
-<div class="board">
-  <div class="half left" id="bl"></div>
-  <div class="half right" id="br"></div>
-  <div class="laptop">
-    <div class="lid"><div class="screen">
-      <img id="il" class="left" alt="">
-      <img id="ir" class="right" alt="">
-    </div></div>
-    <div class="base" id="base"></div>
-  </div>
+<div class="board" id="board">
+  <div class="card back"><img id="back" alt=""></div>
+  <div class="card front"><img id="front" alt=""></div>
 </div>
 <script>
   const q = new URLSearchParams(location.search);
-  const lm = q.get("lm") || "dark", rm = q.get("rm") || "light";
-  if (q.get("fill")) document.body.classList.add("fill");
-  document.getElementById("bl").classList.add(lm);
-  document.getElementById("br").classList.add(rm);
-  document.getElementById("il").src = q.get("l");
-  document.getElementById("ir").src = q.get("r");
-  // The cut: one line through the screen's centre, leaning by SLANT of
-  // the screen's width from top to bottom, carried on across the backdrop.
-  const SLANT = 0.16;
-  function cut() {
-    const W = innerWidth, H = innerHeight;
-    const r = document.querySelector(".screen").getBoundingClientRect();
-    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    const k = SLANT * r.width / r.height;          // x shift per pixel down
-    const xAt = (y) => cx + k * (cy - y);          // top leans right
-    // Only the right side is cut: the left lies whole underneath, so the
-    // cut's soft edge falls on the left's own pixels instead of leaving a
-    // hairline where two soft edges meet.
-    const poly = (x0, x1, w, h) => `polygon(${x0}px 0, ${w}px 0, ${w}px ${h}px, ${x1}px ${h}px)`;
-    document.getElementById("br").style.clipPath = poly(xAt(0), xAt(H), W, H);
-    // In the screen's own coordinates.
-    const sx0 = xAt(r.top) - r.left, sx1 = xAt(r.bottom) - r.left;
-    document.getElementById("ir").style.clipPath = poly(sx0, sx1, r.width, r.height);
-  }
-  cut();
-
-  // One mode on both sides: the base matches it. Mixed: the aluminium one.
-  if (lm === "dark" && rm === "dark") document.getElementById("base").classList.add("dark");
+  document.getElementById("board").classList.add(q.get("mode") === "dark" ? "dark" : "light");
+  document.getElementById("back").src = q.get("back");
+  document.getElementById("front").src = q.get("front");
 </script>
 </body>
 </html>

@@ -247,43 +247,27 @@ steps = ["ipc controller pad playstation 64 true", "wait 3.5"]
 after = ["ipc controller reset", "wait 0.5"]
 
 # ---- showcases ---------------------------------------------------------------
-# A laptop whose screen and backdrop are cut along a slanted line: the left
-# of one full-screen capture, the right of another, each [scene, mode].
-# `middle` scenes have their crop laid in on both sides, each in that
-# side's mode, so the cut runs through them too; with `blank`, the empty
-# desktop's scene, only what they add to it.
-# Drawn by showcase.html, rendered by Firefox at 2560x1600: NAME.webp here,
-# NAME.png at full size in ~/.cache/pellicule/showcase.
-
-# The README shows two side by side: the controller menu in dark, Balise
-# and the calendar in light. The other mode of each is for a page that
-# has a light and a dark theme.
+# Two screens in cascade on contour lines, drawn by showcase.html and
+# rendered by Firefox at 2560x1600: NAME.webp here, NAME.png at full size in
+# ~/.cache/pellicule/showcase. A screen is the first scene's whole screen
+# with the others' crops laid on it; with `blank`, the empty desktop's
+# scene, only what each adds to it.
 
 [[showcase]]
-name = "showcase-controller-dark"
+name = "showcase"
 doc = "README.md"
-fill = true
-left = ["controller-menu", "dark"]
-right = ["controller-menu", "dark"]
+mode = "light"
+back = ["controller-menu"]
+front = ["calendar", "balise"]
+blank = "bar"
 
 [[showcase]]
-name = "showcase-controller"
-fill = true
-left = ["controller-menu", "light"]
-right = ["controller-menu", "light"]
-
-[[showcase]]
-name = "showcase-drawers"
+name = "showcase-dark"
 doc = "README.md"
-fill = true
-left = ["calendar", "light"]
-right = ["balise", "light"]
-
-[[showcase]]
-name = "showcase-drawers-dark"
-fill = true
-left = ["calendar", "dark"]
-right = ["balise", "dark"]
+mode = "dark"
+back = ["controller-menu"]
+front = ["calendar", "balise"]
+blank = "bar"
 
 # ---- videos -----------------------------------------------------------------
 # scripts/pellicule --video NAME films the steps with wf-recorder, then
