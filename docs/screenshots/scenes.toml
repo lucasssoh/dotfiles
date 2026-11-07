@@ -22,12 +22,6 @@ quality = 85
 scheme_wait = 3
 
 [[scene]]
-name = "desktop"
-doc = "README.md"
-crop = "full"
-steps = ["wait 0.5"]
-
-[[scene]]
 name = "bar"
 doc = "docs/modules.md"
 crop = "full"
