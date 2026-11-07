@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Prisme:** on Fedora 45, the desktop behind it is blurred again.
 
 ### Added
+- **Installation:** the developer setup also installs Rust's linter, formatter and language server, at the same version as the compiler.
 - **Bar:** a demo mode for screenshots, which shows made-up figures instead of your time, battery, system figures, next event and Wi-Fi name.
 
 ### Changed

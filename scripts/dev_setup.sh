@@ -21,6 +21,21 @@ sudo dnf install -y fribidi-devel harfbuzz-devel pango-devel cairo-devel
 # ni binaire publié. config/nvim/install.sh fait ce `go install`.
 sudo dnf install -y golang
 
+# Rust : la toolchain elle-meme (rust, cargo) vient de config/hyprland/install.sh,
+# qui en a besoin pour compiler balise, roue, prisme... Elle reste celle de dnf,
+# pas rustup : une seule toolchain, mise a jour avec le systeme, et la cle de
+# cache de scripts/lib/rust.sh (`cargo --version`) ne voit pas deux compilateurs
+# se relayer selon le PATH du shell qui lance le build.
+#
+# Ici, l'outillage de dev qui l'accompagne. Les paquets Fedora sont publies a la
+# meme version que rustc, ce qui compte pour rust-analyzer : il lit la sysroot
+# de la toolchain, et une version qui diverge donne des faux diagnostics.
+#   clippy        : le linter (et rust-analyzer s'en sert au lieu de `cargo check`)
+#   rustfmt       : le formateur
+#   rust-analyzer : le LSP, active par nvim/lua/lsp/mason.lua depuis le PATH
+#   rust-src      : les sources de std, sans quoi rust-analyzer ne resout rien de std
+sudo dnf install -y rust cargo clippy rustfmt rust-analyzer rust-src
+
 # 2. Python (System wide + venv)
 echo -e "${GREEN}[2/6] Configuration Python...${NC}"
 sudo dnf install -y python3 python3-pip python3-devel
