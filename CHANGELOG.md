@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Bar:** after using an external screen, the central island shows its workspaces again.
+- **Screens:** unplugging the external screen while it was the only one on turns the laptop screen back on, instead of leaving it black.
 - **Controller:** in light mode, the controller icon and the cover labels can be read again, and the first menu after the shell starts shows its launchers.
 - **Files:** on Fedora 45, Open in Terminal opens your terminal again.
 - **Prisme:** on Fedora 45, the desktop behind it is blurred again.

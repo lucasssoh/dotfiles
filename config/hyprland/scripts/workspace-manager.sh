@@ -138,6 +138,27 @@ fi
 # choice.)
 mons_json="$(hyprctl monitors all -j)"
 
+# Only outputs actually plugged in. Unplugging the last enabled screen
+# (external-only mode, cable pulled) makes Hyprland create a headless
+# output named FALLBACK, and `hyprctl monitors all -j` lists it with no
+# filter (Hyprland 0.57.1, src/ipc/s1/Commands.cpp). Taken for the
+# external screen, it kept "external" mode happy and the internal panel
+# disabled: a black screen until reboot. A connector just unplugged can
+# also linger in that list for a moment. Keeping only the connectors DRM
+# reports as connected drops both; with no DRM connectors at all (nested
+# or virtual session) only FALLBACK is dropped.
+connected_json="$(
+    for d in /sys/class/drm/card*-*; do
+        [[ -e "$d/status" ]] || continue
+        [[ "$(cat "$d/status" 2>/dev/null)" == connected ]] || continue
+        basename "$d" | sed -E 's/^card[0-9]+-//'
+    done | jq -R . | jq -s .
+)"
+mons_json="$(jq --argjson c "$connected_json" '
+    [ .[] | select(.name != "FALLBACK")
+          | select(($c | length) == 0 or (.name as $n | $c | index($n))) ]
+' <<<"$mons_json")"
+
 # ---- Role resolution ------------------------------------------------------
 
 # Internal panel connector read from DRM rather than via `hyprctl
