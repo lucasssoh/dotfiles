@@ -12,7 +12,7 @@ Item {
     id: root
 
     // Which Hyprland monitor this specific bar instance is showing --
-    // passed in from shell.qml as Hyprland.monitorFor(bar.screen), so
+    // passed in from shell.qml as shell.hyprMonitorFor(bar.screen), so
     // each bar (one per connected output, see shell.qml's Variants)
     // shows ITS OWN screen's workspaces, not whichever monitor happens
     // to be globally focused. Falls back to focusedMonitor only if
@@ -47,8 +47,12 @@ Item {
             // which is exactly the "2 before 1, 4 before 1/2/3" the
             // laptop screen was showing. Sorting explicitly here doesn't
             // depend on that guarantee holding at all.
+            // Matched by name, not object identity: a workspace and this
+            // bar can briefly hold two different HyprlandMonitor objects
+            // for the same screen while Quickshell rebuilds them after a
+            // monitorremoved/monitoradded pair.
             model: Hyprland.workspaces.values
-                .filter(w => w.monitor === root.monitor)
+                .filter(w => !!w.monitor && !!root.monitor && w.monitor.name === root.monitor.name)
                 .sort((a, b) => a.id - b.id)
 
             // The page-indicator layout (2026-09-29): no digits, like a

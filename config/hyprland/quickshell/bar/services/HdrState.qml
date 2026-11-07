@@ -35,7 +35,7 @@ Singleton {
     // No `active` property, because there is no single answer: HDR is a
     // per-MONITOR format, and a machine can have one screen in HDR and
     // another not. Callers pass the monitor they are speaking for
-    // (`Hyprland.monitorFor(bar.screen)`), the way the badge always did.
+    // (`shell.hyprMonitorFor(bar.screen)`), the way the badge always did.
     //
     // Still a live binding despite being a function call: QML tracks
     // every property read during a binding's evaluation regardless of

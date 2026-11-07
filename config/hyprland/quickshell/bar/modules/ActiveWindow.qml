@@ -22,7 +22,7 @@ Item {
     id: root
 
     // Which Hyprland monitor this specific bar instance is showing --
-    // passed in from shell.qml as Hyprland.monitorFor(bar.screen), same
+    // passed in from shell.qml as shell.hyprMonitorFor(bar.screen), same
     // as Workspaces.qml/Hdr.qml. Needed here for the same reason: on a
     // multi-monitor setup, `Hyprland.focusedWorkspace` tracks the
     // workspace of the compositor's globally ACTIVE WINDOW, not "whatever

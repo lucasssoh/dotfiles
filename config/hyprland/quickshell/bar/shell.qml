@@ -229,6 +229,22 @@ ShellRoot {
     // resolve, sidestepping whatever that scoping boundary actually is.
     property alias veille: veilleInstance
 
+    // The HyprlandMonitor behind a screen, looked up by name in the live
+    // monitor list, never through Hyprland.monitorFor(). monitorFor() is
+    // a one-shot call: a binding on it only re-runs when the screen
+    // changes, which a bar's screen never does. Quickshell destroys the
+    // HyprlandMonitor on every `monitorremoved` (a screen disabled or
+    // unplugged, the FALLBACK output coming and going) and monitorFor()
+    // returns null when the wl_output beats Hyprland's own `monitoradded`
+    // event, so after an external screen session the bar could keep a
+    // null monitor for good: the central island emptied, the HDR label
+    // and the OSD lost their screen. Reading Hyprland.monitors here makes
+    // every binding calling this re-resolve as monitors come and go.
+    function hyprMonitorFor(screen) {
+        const name = screen ? screen.name : "";
+        return Hyprland.monitors.values.find(m => m.name === name) ?? null;
+    }
+
     // The ShellScreen the current toast stack belongs on, resolved from
     // the Hyprland output name NotificationState latched when that stack
     // opened (see `toastScreenName` there for why one screen and why a
@@ -249,7 +265,7 @@ ShellRoot {
     // One bar per currently-connected screen, automatically -- Quickshell
     // creates/destroys instances as monitors plug/unplug, no manual
     // single/dual-output branching needed. Workspaces and HDR are
-    // per-monitor correct too: Hyprland.monitorFor(bar.screen) bridges
+    // per-monitor correct too: shell.hyprMonitorFor(bar.screen) bridges
     // Quickshell's screen object to the matching HyprlandMonitor, passed
     // down so each bar reads its OWN screen instead of whichever monitor
     // happens to be globally focused (see modules/Workspaces.qml,
@@ -1272,9 +1288,9 @@ ShellRoot {
                 // rule (the whole element, not just its text).
                 Modules.ActiveWindow {
                     opacity: 0.9
-                    monitor: Hyprland.monitorFor(bar.screen)
+                    monitor: shell.hyprMonitorFor(bar.screen)
                 }
-                Modules.Workspaces { monitor: Hyprland.monitorFor(bar.screen) }
+                Modules.Workspaces { monitor: shell.hyprMonitorFor(bar.screen) }
                 // Media (mpris) -- no Launchers inside any more (asked
                 // for, a while back: pulled out into its own separate
                 // floating island, see below).
@@ -1919,7 +1935,7 @@ ShellRoot {
                         // For the HDR row -- each bar's Balise reflects
                         // ITS OWN screen, exactly as the Hdr badge did
                         // when it lived in the row above.
-                        monitor: Hyprland.monitorFor(bar.screen)
+                        monitor: shell.hyprMonitorFor(bar.screen)
                     },
                     // Third entry, same contract as the two above. It is
                     // opened by the Battery module in the row rather than
@@ -1989,7 +2005,7 @@ ShellRoot {
                     // HdrLabel.qml. It carries its own trailing gap, so
                     // when HDR is off the whole thing leaves the row
                     // without stranding a spacer behind it.
-                    Modules.HdrLabel { monitor: Hyprland.monitorFor(bar.screen); ink: toolsInk }
+                    Modules.HdrLabel { monitor: shell.hyprMonitorFor(bar.screen); ink: toolsInk }
 
                     // A controller glyph while one is connected, same
                     // indicator contract as "hdr" just above: see
@@ -2398,7 +2414,7 @@ ShellRoot {
                 radius: osd.blurSize / 2
             }
 
-            Modules.Osd { id: osd; monitor: Hyprland.monitorFor(osdWindow.screen) }
+            Modules.Osd { id: osd; monitor: shell.hyprMonitorFor(osdWindow.screen) }
         }
     }
 

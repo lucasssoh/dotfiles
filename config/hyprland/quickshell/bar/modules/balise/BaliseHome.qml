@@ -777,7 +777,7 @@ Item {
                     width: (parent.width - parent.spacing) / 2
                     title: "HDR"
                     // lu-monitor: HDR is a per-DISPLAY capability here (this
-                    // page binds `monitor: Hyprland.monitorFor(...)`), so a
+                    // page binds `monitor: shell.hyprMonitorFor(...)`), so a
                     // screen is the honest picture -- and it collides with
                     // none of the other three glyphs in this group.
                     glyph: "\uF408"   // mgc sun
