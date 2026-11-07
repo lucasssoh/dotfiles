@@ -104,7 +104,19 @@ Item {
         { ids: ["io.itch.itch", "itch"], name: "itch", sub: "itch.io" }
     ]
 
+    // Read when the popup is built, and again when the desktop entries
+    // change: right after the shell starts they are not loaded yet, and
+    // the first popup came up without its launchers.
     Component.onCompleted: {
+        root.readEntries();
+        keys.forceActiveFocus();
+    }
+    Connections {
+        target: DesktopEntries.applications
+        function onValuesChanged() { root.readEntries(); }
+    }
+
+    function readEntries() {
         const all = DesktopEntries.applications.values.filter(e => !e.noDisplay && e.name);
         const launcherIds = [];
         const found = [];
@@ -127,8 +139,6 @@ Item {
         root.apps = all
             .filter(e => !root.isGame(e) || launcherIds.indexOf(e.id) >= 0)
             .map(e => ({ name: e.name, icon: e.icon || "", cover: "", source: "", entry: e }));
-
-        keys.forceActiveFocus();
     }
 
     // A game, as opposed to a tool for games, which also files itself under
@@ -299,6 +309,7 @@ Item {
                         width: 24
                         height: 16
                         level: 100
+                        ink: DrawerTheme
                     }
                 }
                 Column {
@@ -336,6 +347,7 @@ Item {
                             height: 12
                             level: ControllerState.battery
                             charging: ControllerState.pad ? ControllerState.pad.charging : false
+                            ink: DrawerTheme
                         }
                         Text {
                             visible: ControllerState.battery !== null
@@ -849,7 +861,8 @@ Item {
             anchors.centerIn: parent
             renderType: Text.NativeRendering
             text: parent.label
-            color: DrawerTheme.ink(0.75)
+            // On the dark chip over a cover, light text in both modes.
+            color: parent.dark ? Qt.rgba(1, 1, 1, 0.85) : DrawerTheme.ink(0.75)
             font.family: Fonts.ui
             font.pixelSize: 10
             font.weight: Font.DemiBold
