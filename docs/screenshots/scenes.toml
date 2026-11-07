@@ -249,7 +249,7 @@ after = ["ipc controller reset", "wait 0.5"]
 name = "hero"
 doc = "README.md"
 mode = "dark"
-width = 1600
+# Full size; the README image is scaled to 1280 (webp_width).
 steps = [
     "wait 1.5",
     "ipc bar toggleBalise", "wait 2.2",

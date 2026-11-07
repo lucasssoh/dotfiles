@@ -384,13 +384,17 @@ def shoot(scene, mode, take, out, settings):
     return path
 
 
-def record(video, take, out, settings):
-    """Runs the video's steps while wf-recorder films the screen, then
-    makes NAME.webm (the site) and NAME.webp, animated (the README: GitHub
-    shows an animated image from the repository, not a video)."""
-    raw = Path(tempfile.mkdtemp(prefix="pellicule-")) / "raw.mkv"
+def raw_path(video):
+    return CACHE / f"{video['name']}.mkv"
+
+
+def record(video, take):
+    """Runs the video's steps while wf-recorder films the screen, without
+    loss, into the cache: encode() can then be rerun without filming again."""
+    raw = raw_path(video)
+    raw.parent.mkdir(parents=True, exist_ok=True)
     rec = subprocess.Popen(["wf-recorder", "-y", "-f", str(raw), "-c", "libx264",
-                            "-p", "preset=ultrafast", "-p", "crf=10"],
+                            "-x", "yuv444p", "-p", "preset=ultrafast", "-p", "qp=0"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
     try:
@@ -398,22 +402,30 @@ def record(video, take, out, settings):
             take.step(step)
     finally:
         rec.send_signal(signal.SIGINT)
-        rec.wait(timeout=30)
+        rec.wait(timeout=60)
     take.end_scene()
-    width = video.get("width", 1280)
-    fps = video.get("fps", 30)
+
+
+def encode(video, out):
+    """NAME.webm (the site) and NAME.webp, animated (the README: GitHub
+    shows an animated image from the repository, not a video)."""
+    raw = raw_path(video)
+    if not raw.exists():
+        fail(f"no recording of {video['name']} yet: scripts/pellicule --video {video['name']}")
     # The recorder's first second, before the steps start, is cut.
     trim = ["-ss", "0.8"]
-    scale = f"fps={fps},scale={width}:-2:flags=lanczos"
+    fps = video.get("fps", 60)
+    scale = f"fps={fps}" + (f",scale={video['width']}:-2:flags=lanczos" if "width" in video else "")
     webm = out / f"{video['name']}.webm"
-    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", scale,
-       "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-row-mt", "1", "-an", str(webm))
+    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", scale + ",format=yuv420p",
+       "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 20)),
+       "-deadline", "good", "-cpu-used", "1", "-row-mt", "1", "-tile-columns", "2",
+       "-g", str(fps * 5), "-an", str(webm))
     webp = out / f"{video['name']}.webp"
-    wscale = f"fps={video.get('webp_fps', 20)},scale={video.get('webp_width', 960)}:-2:flags=lanczos"
+    wscale = f"fps={video.get('webp_fps', 25)},scale={video.get('webp_width', 1280)}:-2:flags=lanczos"
     sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", wscale,
-       "-c:v", "libwebp_anim", "-lossless", "0", "-quality", "70", "-compression_level", "6",
-       "-loop", "0", "-an", str(webp))
-    raw.unlink()
+       "-c:v", "libwebp_anim", "-lossless", "0", "-quality", str(video.get("webp_quality", 85)),
+       "-compression_level", "6", "-loop", "0", "-an", str(webp))
     return webm, webp
 
 
@@ -423,6 +435,8 @@ def main():
     ap.add_argument("--mode", choices=list(SCHEMES), help="only this mode")
     ap.add_argument("--out", type=Path, help="where to write (default: next to scenes.toml)")
     ap.add_argument("--video", metavar="NAME", help="record this [[video]] instead of screenshots")
+    ap.add_argument("--encode", action="store_true",
+                    help="with --video: encode the last recording again, without filming")
     ap.add_argument("--scenes-file", type=Path, default=SCENES)
     a = ap.parse_args()
 
@@ -450,25 +464,31 @@ def main():
         if subprocess.run(["sh", "-c", "command -v wf-recorder"], capture_output=True).returncode:
             fail("wf-recorder is not installed: sudo dnf install wf-recorder")
         video = found[0]
+        out = a.out or a.scenes_file.parent
+        out.mkdir(parents=True, exist_ok=True)
+        if a.encode:
+            for path in encode(video, out):
+                say(f"{path} ({path.stat().st_size // 1024} KiB)")
+            return
         problems = check(settings, [video])
         if problems:
             for p in problems:
                 print(p, file=sys.stderr)
             fail("the video is out of step with the shell; nothing recorded")
-        out = a.out or a.scenes_file.parent
-        out.mkdir(parents=True, exist_ok=True)
         take = Take(settings)
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
         try:
             take.start()
             scheme_set(*SCHEMES[video.get("mode", "dark")])
             time.sleep(settings.get("scheme_wait", 3))
-            for path in record(video, take, out, settings):
-                say(f"{path} ({path.stat().st_size // 1024} KiB)")
+            record(video, take)
         except KeyboardInterrupt:
             say("interrupted, putting everything back")
+            return
         finally:
             take.restore()
+        for path in encode(video, out):
+            say(f"{path} ({path.stat().st_size // 1024} KiB)")
         return
 
     if a.scenes:
