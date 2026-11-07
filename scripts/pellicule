@@ -30,6 +30,7 @@ changing an IpcHandler or a command a scene uses (AGENTS.md says so).
 """
 
 import argparse
+import json
 import os
 import shlex
 import signal
@@ -119,6 +120,8 @@ def workspace_go(ws):
 
 
 WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
+# Prisme opens on the playlist's `last_static`, your own choice.
+PLAYLIST = Path.home() / ".config/hypr/wallpaper-playlist.json"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "pellicule"
 STEAM_ART = "https://cdn.cloudflare.steamstatic.com/steam/apps/{id}/{file}"
 
@@ -273,6 +276,7 @@ class Take:
         self._library = None
         self.wallpaper = settings.get("wallpaper")
         self.saved_wallpaper = wallpaper_get() if self.wallpaper else None
+        self.saved_playlist = PLAYLIST.read_bytes() if self.wallpaper and PLAYLIST.exists() else None
         self.procs = []
 
     def start(self):
@@ -285,6 +289,13 @@ class Take:
             # One file of a light/dark pair stands for both: the scheme
             # changes below bring the other half.
             wallpaper_set(self.wallpaper)
+            # So Prisme opens on it too.
+            try:
+                playlist = json.loads(self.saved_playlist or b"{}")
+            except ValueError:
+                playlist = {}
+            playlist["last_static"] = self.wallpaper
+            PLAYLIST.write_text(json.dumps(playlist))
         workspace_go(self.ws)
         time.sleep(0.8)
 
@@ -340,6 +351,10 @@ class Take:
             if not self.saved_demo:
                 ipc("demo", "off")
             scheme_set(*self.saved_scheme)
+            if self.saved_playlist is not None:
+                PLAYLIST.write_bytes(self.saved_playlist)
+            elif self.wallpaper:
+                PLAYLIST.unlink(missing_ok=True)
             if self.saved_wallpaper:
                 time.sleep(1)   # after the scheme's own swap, not raced by it
                 wallpaper_set(self.saved_wallpaper)
