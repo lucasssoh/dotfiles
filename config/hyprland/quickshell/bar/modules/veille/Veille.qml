@@ -130,8 +130,9 @@ Scope {
         || root.dismissed
         || (config.respectZenMode && root.zenMode)
         || (config.muteWhileGaming && root.gaming)
-        // A Programme session under way, until bedtime.
-        || ProgrammeState.holdsVeille
+        // A Programme session under way, until bedtime. Not in demo mode,
+        // whose made-up day has no session of yours.
+        || (ProgrammeState.holdsVeille && !DemoState.active)
 
     // ---- placement ----------------------------------------------------
     // Which single screen's bar gets to open its drawer -- unaffected by
