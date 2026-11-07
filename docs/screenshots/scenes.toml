@@ -247,24 +247,33 @@ steps = ["ipc controller pad playstation 64 true", "wait 3.5"]
 after = ["ipc controller reset", "wait 0.5"]
 
 # ---- showcases ---------------------------------------------------------------
-# A laptop whose screen and backdrop are cut down the middle: the left half
-# of one full-screen capture, the right half of another, each [scene, mode].
+# A laptop whose screen and backdrop are cut along a slanted line: the left
+# of one full-screen capture, the right of another, each [scene, mode].
+# `middle` scenes have their crop laid in on both sides, each in that
+# side's mode, so the cut runs through them too; with `blank`, the empty
+# desktop's scene, only what they add to it.
 # Drawn by showcase.html, rendered by Firefox at 2560x1600: NAME.webp here,
 # NAME.png at full size in ~/.cache/pellicule/showcase.
 
 [[showcase]]
 name = "showcase"
+middle = ["controller-menu"]
+blank = "bar"
 left = ["calendar", "dark"]
 right = ["balise", "light"]
 
 # One mode each: for a page that has a light and a dark theme.
 [[showcase]]
 name = "showcase-light"
+middle = ["controller-menu"]
+blank = "bar"
 left = ["calendar", "light"]
 right = ["balise", "light"]
 
 [[showcase]]
 name = "showcase-dark"
+middle = ["controller-menu"]
+blank = "bar"
 left = ["calendar", "dark"]
 right = ["balise", "dark"]
 

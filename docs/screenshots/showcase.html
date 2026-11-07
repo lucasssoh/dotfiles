@@ -2,7 +2,7 @@
 <!--
   The showcase picture, put together by scripts/pellicule from two
   full-screen captures: a laptop whose screen, and the backdrop behind it,
-  are cut down the middle. ?l=FILE&r=FILE are the two halves, ?lm and ?rm
+  are cut along one slanted line. ?l=FILE&r=FILE are the two halves, ?lm and ?rm
   their modes (light or dark). Rendered by Firefox at 2560x1600.
 -->
 <html>
@@ -14,8 +14,6 @@
   .half { position: absolute; inset: 0; }
   .light { background: radial-gradient(120% 90% at 20% 0%, #f7f2ea 0%, #e8dfd1 55%, #d9cdbb 100%); }
   .dark { background: radial-gradient(120% 90% at 80% 0%, #3a352f 0%, #22201d 55%, #161513 100%); }
-  .left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
-  .right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
 
   .laptop { position: absolute; left: 14%; top: 7%; width: 72%; }
   .lid { background: #0d0d0e; border-radius: 1.4cqw 1.4cqw .5cqw .5cqw; padding: 1.1cqw 1.1cqw 1.6cqw;
@@ -49,6 +47,27 @@
   document.getElementById("br").classList.add(rm);
   document.getElementById("il").src = q.get("l");
   document.getElementById("ir").src = q.get("r");
+  // The cut: one line through the screen's centre, leaning by SLANT of
+  // the screen's width from top to bottom, carried on across the backdrop.
+  const SLANT = 0.16;
+  function cut() {
+    const W = innerWidth, H = innerHeight;
+    const r = document.querySelector(".screen").getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const k = SLANT * r.width / r.height;          // x shift per pixel down
+    const xAt = (y) => cx + k * (cy - y);          // top leans right
+    const poly = (x0, x1, w, h, side) => side === "l"
+      ? `polygon(0 0, ${x0}px 0, ${x1}px ${h}px, 0 ${h}px)`
+      : `polygon(${x0}px 0, ${w}px 0, ${w}px ${h}px, ${x1}px ${h}px)`;
+    document.getElementById("bl").style.clipPath = poly(xAt(0), xAt(H), W, H, "l");
+    document.getElementById("br").style.clipPath = poly(xAt(0), xAt(H), W, H, "r");
+    // In the screen's own coordinates.
+    const sx0 = xAt(r.top) - r.left, sx1 = xAt(r.bottom) - r.left;
+    document.getElementById("il").style.clipPath = poly(sx0, sx1, r.width, r.height, "l");
+    document.getElementById("ir").style.clipPath = poly(sx0, sx1, r.width, r.height, "r");
+  }
+  cut();
+
   // One mode on both sides: the base matches it. Mixed: the aluminium one.
   if (lm === "dark" && rm === "dark") document.getElementById("base").classList.add("dark");
 </script>
