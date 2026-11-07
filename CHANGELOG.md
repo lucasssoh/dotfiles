@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** a demo mode for screenshots, which shows made-up figures instead of your time, battery, system figures, next event and Wi-Fi name.
 
 ### Changed
+- **Controller:** the menu grows from its centre as it opens, instead of appearing all at once.
 - **Glass panels:** the blur behind Prisme and the panels fades in and out with them instead of appearing all at once.
 - **Terminal:** WezTerm's tab bar is as see-through as the terminal, blur included, instead of an opaque band.
 - **Veille:** a time you set for it moves the whole shell's clock, so the bar and Veille always agree. It no longer needs debug mode.

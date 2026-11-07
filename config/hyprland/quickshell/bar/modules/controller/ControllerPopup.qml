@@ -235,7 +235,18 @@ Item {
 
     // Where the card shows, in the window's coordinates, for its blur
     // region (shell.qml): it scales about its centre as it opens.
-    readonly property bool blurShown: ControllerState.open
+    readonly property bool blurShown: card.opacity > 0.01
+
+    // The popup is built as it opens (shell.qml's Loader), covers and all,
+    // which takes longer than the opening: `up` waits for its first frame
+    // on screen, so the opening plays instead of having already ended.
+    property bool _built: false
+    readonly property bool up: ControllerState.open && root._built
+    Connections {
+        target: root.Window.window
+        enabled: !root._built
+        function onFrameSwapped() { root._built = true; }
+    }
     readonly property real blurX: card.x + card.width * (1 - card.scale) / 2
     readonly property real blurY: card.y + card.height * (1 - card.scale) / 2
     readonly property real blurWidth: card.width * card.scale
@@ -247,10 +258,21 @@ Item {
         width: 940
         height: column.height + 26 * 2
 
-        opacity: ControllerState.open ? 1 : 0
-        scale: ControllerState.open ? 1 : 0.96
-        Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        // Grows from its centre as it opens, and leaves quicker.
+        opacity: root.up ? 1 : 0
+        scale: root.up ? 1 : 0.85
+        Behavior on opacity {
+            NumberAnimation {
+                duration: root.up ? 180 : 140
+                easing.type: root.up ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+        Behavior on scale {
+            NumberAnimation {
+                duration: root.up ? 260 : 140
+                easing.type: root.up ? Easing.OutQuint : Easing.InCubic
+            }
+        }
 
         GlassPane { anchors.fill: parent; radius: 34 }
 
