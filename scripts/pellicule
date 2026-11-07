@@ -6,11 +6,14 @@
     scripts/pellicule --mode dark      only one mode
     scripts/pellicule --out DIR        write elsewhere than docs/screenshots
     scripts/pellicule --video hero     records a [[video]] instead (WebM + animated WebP)
+    scripts/pellicule --video hero --encode   encodes its last recording again
+    scripts/pellicule showcase         puts the [[showcase]] pictures together again
     scripts/pellicule check            check the scenes against the running shell
     scripts/pellicule list             the scenes, with their docs
 
 A scene is a list of steps run on an empty workspace, then a screenshot,
-cropped and saved as NAME.webp (light) and NAME-dark.webp. The shell runs
+cropped and saved as NAME.webp (light) and NAME-dark.webp; the whole
+screen is kept in the cache for the showcase pictures. The shell runs
 in demo mode the whole time (made-up time, battery, figures), and
 everything is put back at the end, Ctrl+C included: the colour scheme, the
 wallpaper, the workspace, demo mode, the windows a scene opened.
@@ -182,7 +185,8 @@ def load(path):
     settings = data.get("settings", {})
     scenes = data.get("scene", [])
     videos = data.get("video", [])
-    return settings, scenes, videos
+    showcases = data.get("showcase", [])
+    return settings, scenes, videos, showcases
 
 
 def check(settings, scenes, surface=None):
@@ -368,6 +372,10 @@ def shoot(scene, mode, take, out, settings):
     with tempfile.NamedTemporaryFile(suffix=".png") as raw:
         sh("grim", raw.name)
         img = Image.open(raw.name).convert("RGB")
+    # The whole screen too, for the showcase pictures.
+    full = full_path(scene["name"], mode)
+    full.parent.mkdir(parents=True, exist_ok=True)
+    img.save(full)
     for step in scene.get("after", []):
         take.step(step)
     take.end_scene()
@@ -382,6 +390,51 @@ def shoot(scene, mode, take, out, settings):
     path = out / f"{name}.webp"
     img.save(path, quality=settings.get("quality", 85), method=6)
     return path
+
+
+def full_path(name, mode):
+    return CACHE / "full" / (name + ("" if mode == "light" else "-dark") + ".png")
+
+
+SHOWCASE = REPO / "docs" / "screenshots" / "showcase.html"
+
+
+def check_showcases(showcases, scenes):
+    problems = []
+    modes = {s["name"]: s.get("modes", ["light", "dark"]) for s in scenes}
+    for sc in showcases:
+        for side in ("left", "right"):
+            name, mode = sc.get(side, ["?", "?"])
+            if name not in modes:
+                problems.append(f"showcase {sc.get('name')}: no scene called {name}")
+            elif mode not in modes[name]:
+                problems.append(f"showcase {sc.get('name')}: {name} is not taken in {mode} mode")
+    return problems
+
+
+def compose(sc, out, settings):
+    """The showcase picture: NAME.webp here, and a PNG in the cache for
+    other uses (a portfolio), at full size."""
+    (ln, lm), (rn, rm) = sc["left"], sc["right"]
+    lf, rf = full_path(ln, lm), full_path(rn, rm)
+    missing = [f.name for f in (lf, rf) if not f.exists()]
+    if missing:
+        fail(f"showcase {sc['name']}: take {', '.join(missing)} first")
+    w, h = sc.get("size", [2560, 1600])
+    png = CACHE / "showcase" / f"{sc['name']}.png"
+    png.parent.mkdir(parents=True, exist_ok=True)
+    from urllib.parse import urlencode
+    url = SHOWCASE.as_uri() + "?" + urlencode({"l": lf.as_uri(), "r": rf.as_uri(), "lm": lm, "rm": rm})
+    with tempfile.TemporaryDirectory(prefix="pellicule-firefox-") as profile:
+        sh("firefox", "--headless", "--no-remote", "--profile", profile,
+           f"--window-size={w},{h}", "--screenshot", str(png), url)
+    from PIL import Image
+    img = Image.open(png).convert("RGB")
+    width = sc.get("width", 1600)
+    small = img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
+    webp = out / f"{sc['name']}.webp"
+    small.save(webp, quality=settings.get("quality", 85), method=6)
+    return webp, png
 
 
 def raw_path(video):
@@ -440,21 +493,33 @@ def main():
     ap.add_argument("--scenes-file", type=Path, default=SCENES)
     a = ap.parse_args()
 
-    settings, scenes, videos = load(a.scenes_file)
+    settings, scenes, videos, showcases = load(a.scenes_file)
 
     if a.scenes[:1] == ["list"]:
         for s in scenes:
             say(f"{s['name']:<28} {', '.join(s.get('modes', ['light', 'dark'])):<12} {s.get('doc', '')}")
         for v in videos:
             say(f"{v['name']:<28} {'video, ' + v.get('mode', 'dark'):<12} {v.get('doc', '')}")
+        for sc in showcases:
+            say(f"{sc['name']:<28} {'showcase':<12} {sc.get('doc', '')}")
         return
     if a.scenes[:1] == ["check"]:
-        problems = check(settings, scenes + videos)
+        problems = check(settings, scenes + videos) + check_showcases(showcases, scenes)
+        if showcases and subprocess.run(["sh", "-c", "command -v firefox"], capture_output=True).returncode:
+            problems.append("showcase: Firefox renders it, and it is not installed")
         for p in problems:
             print(p, file=sys.stderr)
         if problems:
             sys.exit(1)
         say(f"{len(scenes)} scenes, all in step with the shell")
+        return
+
+    if a.scenes[:1] == ["showcase"]:
+        # Recomposed from the last full-screen captures, without taking any.
+        out = a.out or a.scenes_file.parent
+        for sc in showcases:
+            for path in compose(sc, out, settings):
+                say(f"{sc['name']:<16} {path}")
         return
 
     if a.video:
@@ -531,6 +596,12 @@ def main():
     finally:
         take.restore()
     say(f"{taken} screenshot(s)")
+    # The showcases built on what was just taken.
+    done = {(s["name"], m) for s in scenes for m in modes}
+    for sc in showcases:
+        if any(tuple(sc[side]) in done for side in ("left", "right")):
+            for path in compose(sc, out, settings):
+                say(f"{'':<5} {sc['name']:<16} {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 
 if __name__ == "__main__":

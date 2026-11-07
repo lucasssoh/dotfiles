@@ -1,0 +1,56 @@
+<!doctype html>
+<!--
+  The showcase picture, put together by scripts/pellicule from two
+  full-screen captures: a laptop whose screen, and the backdrop behind it,
+  are cut down the middle. ?l=FILE&r=FILE are the two halves, ?lm and ?rm
+  their modes (light or dark). Rendered by Firefox at 2560x1600.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; }
+  .board { position: absolute; inset: 0; container-type: inline-size; }
+  .half { position: absolute; inset: 0; }
+  .light { background: radial-gradient(120% 90% at 20% 0%, #f7f2ea 0%, #e8dfd1 55%, #d9cdbb 100%); }
+  .dark { background: radial-gradient(120% 90% at 80% 0%, #3a352f 0%, #22201d 55%, #161513 100%); }
+  .left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
+  .right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+
+  .laptop { position: absolute; left: 14%; top: 7%; width: 72%; }
+  .lid { background: #0d0d0e; border-radius: 1.4cqw 1.4cqw .5cqw .5cqw; padding: 1.1cqw 1.1cqw 1.6cqw;
+         box-shadow: 0 0 0 .12cqw #3a3a3c inset, 0 3cqw 6cqw -1cqw rgba(20,14,8,.5); }
+  .screen { position: relative; aspect-ratio: 16 / 10; border-radius: .25cqw; overflow: hidden; }
+  .screen img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .base { height: 1.3cqw; margin: 0 -7%; position: relative; border-radius: 0 0 2cqw 2cqw / 0 0 1.1cqw 1.1cqw;
+          background: linear-gradient(#d9d9dc, #a9a9ad 70%, #8c8c90); box-shadow: 0 1.6cqw 2.4cqw -1cqw rgba(20,14,8,.5); }
+  .base::before { content: ""; position: absolute; left: 50%; top: 0; width: 14%; height: 40%; transform: translateX(-50%);
+                  background: #9c9ca0; border-radius: 0 0 .8cqw .8cqw; }
+  .base.dark { background: linear-gradient(#5a5a5e, #3c3c40 70%, #2a2a2d); }
+  .base.dark::before { background: #2f2f33; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="half left" id="bl"></div>
+  <div class="half right" id="br"></div>
+  <div class="laptop">
+    <div class="lid"><div class="screen">
+      <img id="il" class="left" alt="">
+      <img id="ir" class="right" alt="">
+    </div></div>
+    <div class="base" id="base"></div>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const lm = q.get("lm") || "dark", rm = q.get("rm") || "light";
+  document.getElementById("bl").classList.add(lm);
+  document.getElementById("br").classList.add(rm);
+  document.getElementById("il").src = q.get("l");
+  document.getElementById("ir").src = q.get("r");
+  // One mode on both sides: the base matches it. Mixed: the aluminium one.
+  if (lm === "dark" && rm === "dark") document.getElementById("base").classList.add("dark");
+</script>
+</body>
+</html>

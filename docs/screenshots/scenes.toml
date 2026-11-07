@@ -31,15 +31,20 @@ steps = ["wait 0.5"]
 name = "work"
 doc = "README.md"
 crop = "full"
-# Neovim and fastfetch keep dark colours on the see-through terminal: in
-# light mode their text can't be read.
+# Neovim keeps dark colours on the see-through terminal: in light mode its
+# text can't be read.
 modes = ["dark"]
+# Nemo and Liseuse on the left, Neovim on the right. The key bindings open
+# in zathura as Liseuse shows Markdown (rendered dark, so no recolor), with
+# a data folder of its own: Liseuse itself would log a reading session.
 steps = [
-    "run wezterm start --class pellicule-editor --cwd {repo} -- nvim CHANGELOG.md",
-    "wait 2.5",
     "run nemo {repo}/wallpapers",
+    "wait 2",
+    "run wezterm start --class pellicule-editor --cwd {repo} -- nvim +250 +'normal! zt' config/hyprland/quickshell/bar/modules/controller/ControllerPopup.qml",
     "wait 2.5",
-    "run wezterm start --class pellicule-fetch --cwd {repo} -- sh -c 'fastfetch; exec sleep 600'",
+    "run hyprctl eval 'hl.dispatch(hl.dsp.focus({ direction = \"left\" }))'",
+    "wait 0.3",
+    "run sh -c 'c=~/.cache/pellicule/zathura; mkdir -p $c && { cat {repo}/config/liseuse/zathurarc; echo set recolor false; } > $c/zathurarc && exec zathura --config-dir $c --data-dir $c -P 4 \"$(python3 {repo}/config/liseuse/md2pdf.py {repo}/docs/keybindings.md ~/.cache/pellicule/md)\"'",
     "wait 3",
 ]
 
@@ -240,6 +245,28 @@ doc = "docs/modules.md"
 crop = [1440, 0, 480, 300]
 steps = ["ipc controller pad playstation 64 true", "wait 3.5"]
 after = ["ipc controller reset", "wait 0.5"]
+
+# ---- showcases ---------------------------------------------------------------
+# A laptop whose screen and backdrop are cut down the middle: the left half
+# of one full-screen capture, the right half of another, each [scene, mode].
+# Drawn by showcase.html, rendered by Firefox at 2560x1600: NAME.webp here,
+# NAME.png at full size in ~/.cache/pellicule/showcase.
+
+[[showcase]]
+name = "showcase"
+left = ["calendar", "dark"]
+right = ["balise", "light"]
+
+# One mode each: for a page that has a light and a dark theme.
+[[showcase]]
+name = "showcase-light"
+left = ["calendar", "light"]
+right = ["balise", "light"]
+
+[[showcase]]
+name = "showcase-dark"
+left = ["calendar", "dark"]
+right = ["balise", "dark"]
 
 # ---- videos -----------------------------------------------------------------
 # scripts/pellicule --video NAME films the steps with wf-recorder, then
