@@ -5,6 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Fixed
+- **Neovim:** commenting a line works again in languages without a syntax parser, Rust included.
+- **Neovim:** Tab moves to the next field of an inserted snippet instead of staying stuck in the first one.
 - **Bar:** after using an external screen, the central island shows its workspaces again.
 - **Screens:** unplugging the external screen while it was the only one on turns the laptop screen back on, instead of leaving it black.
 - **Controller:** in light mode, the controller icon and the cover labels can be read again, and the first menu after the shell starts shows its launchers.
@@ -12,6 +14,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Prisme:** on Fedora 45, the desktop behind it is blurred again.
 
 ### Added
+- **Neovim, Rust:** errors, completion and syntax colours in Rust files. Type errors show as you type, borrow-checker errors and lints when you save.
 - **Installation:** the developer setup also installs Rust's linter, formatter and language server, at the same version as the compiler.
 - **Bar:** a demo mode for screenshots, which shows made-up figures instead of your time, battery, system figures, next event and Wi-Fi name.
 

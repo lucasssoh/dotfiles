@@ -6,6 +6,7 @@ local parsers = {
   -- injections.scm : latex_block -> latex). Sans lui, aucun noeud
   -- latex n'existe et render-markdown ne voit pas les formules.
   "latex",
+  "rust", "toml",
 }
 
 return {

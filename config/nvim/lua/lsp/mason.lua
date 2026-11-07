@@ -20,12 +20,37 @@ return {
         end)
 
         local cmp = require("cmp")
+        -- Snippets : les serveurs (rust-analyzer surtout) completent `fn`,
+        -- `match`, `println!`... avec des champs a remplir. Ils s'ouvrent
+        -- avec les snippets natifs de nvim (vim.snippet) ; Tab/S-Tab passent
+        -- au champ suivant/precedent quand le menu est ferme. Avant, Tab ne
+        -- faisait que parcourir le menu : on restait bloque dans le premier
+        -- champ.
         cmp.setup({
+            snippet = {
+                expand = function(args) vim.snippet.expand(args.body) end,
+            },
             mapping = cmp.mapping.preset.insert({
                 ["<C-Space>"] = cmp.mapping.complete(),
                 ["<CR>"]      = cmp.mapping.confirm({ select = true }),
-                ["<Tab>"]     = cmp.mapping.select_next_item(),
-                ["<S-Tab>"]   = cmp.mapping.select_prev_item(),
+                ["<Tab>"]     = cmp.mapping(function(fallback)
+                    if cmp.visible() then
+                        cmp.select_next_item()
+                    elseif vim.snippet.active({ direction = 1 }) then
+                        vim.snippet.jump(1)
+                    else
+                        fallback()
+                    end
+                end, { "i", "s" }),
+                ["<S-Tab>"]   = cmp.mapping(function(fallback)
+                    if cmp.visible() then
+                        cmp.select_prev_item()
+                    elseif vim.snippet.active({ direction = -1 }) then
+                        vim.snippet.jump(-1)
+                    else
+                        fallback()
+                    end
+                end, { "i", "s" }),
             }),
         })
 
@@ -43,6 +68,23 @@ return {
             -- Lombok or a workspace, beside the one from lsp/java.lua.
             automatic_enable = { exclude = { "jdtls" } },
         })
+
+        -- Rust : rust-analyzer vient de dnf (scripts/dev_setup.sh), pas de
+        -- Mason, pour rester a la version exacte de rustc. Mason ne l'active
+        -- donc pas : on le fait ici. Le diagnostic a la sauvegarde passe par
+        -- clippy plutot que `cargo check` -- memes erreurs, plus les lints.
+        vim.lsp.config("rust_analyzer", {
+            capabilities = require("cmp_nvim_lsp").default_capabilities(),
+            settings = { ["rust-analyzer"] = {
+                check = { command = "clippy" },
+                -- Les diagnostics que rust-analyzer calcule lui-meme, sur le
+                -- buffer non sauvegarde (noms inconnus, types incompatibles,
+                -- match incomplets...). Les "experimentaux" en ajoutent
+                -- beaucoup : immediats, avant meme le passage de clippy.
+                diagnostics = { experimental = { enable = true } },
+            } },
+        })
+        vim.lsp.enable("rust_analyzer")
 
         -- =========================================================
         -- JAVA WARMUP
