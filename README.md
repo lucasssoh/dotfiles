@@ -4,6 +4,8 @@ My Fedora desktop, built on [Hyprland](https://hyprland.org/), with its own litt
 
 <img src="docs/screenshots/hero.webp" alt="The coucou-shell desktop: Balise, the calendar, a notification, the keybinding sheet, the controller menu and Prisme">
 
+<p align="center"><img src="docs/screenshots/showcase-controller-dark.webp" width="49%" alt="The controller menu, in dark mode"> <img src="docs/screenshots/showcase-drawers.webp" width="49%" alt="The calendar and Balise, in light mode"></p>
+
 ## Quick start
 
 You need Fedora 44 or 45. A minimal netinstall is enough.

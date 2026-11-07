@@ -464,7 +464,8 @@ def compose(sc, out, settings, scenes):
     png = CACHE / "showcase" / f"{sc['name']}.png"
     png.parent.mkdir(parents=True, exist_ok=True)
     from urllib.parse import urlencode
-    url = SHOWCASE.as_uri() + "?" + urlencode({"l": lf.as_uri(), "r": rf.as_uri(), "lm": lm, "rm": rm})
+    url = SHOWCASE.as_uri() + "?" + urlencode({"l": lf.as_uri(), "r": rf.as_uri(), "lm": lm, "rm": rm,
+                                                     **({"fill": 1} if sc.get("fill") else {})})
     with tempfile.TemporaryDirectory(prefix="pellicule-firefox-") as profile:
         sh("firefox", "--headless", "--no-remote", "--profile", profile,
            f"--window-size={w},{h}", "--screenshot", str(png), url)
