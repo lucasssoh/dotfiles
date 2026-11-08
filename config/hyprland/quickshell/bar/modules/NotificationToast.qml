@@ -39,6 +39,10 @@ ListView {
     spacing: 8
     model: NotificationState.toasts
 
+    // The cards on screen, leaving ones included until their exit is over:
+    // shell.qml asks Hyprland to blur behind each of them, and only them.
+    property var cards: []
+
     delegate: NotificationCard {
         id: toastDelegate
         // `model` rather than named role properties: the roles are dynamic
@@ -50,6 +54,8 @@ ListView {
         notification: toastDelegate.model.notification
         // Pure black, no edge -- see NotificationCard's `toast`.
         toast: true
+        Component.onCompleted: root.cards = root.cards.concat([toastDelegate])
+        Component.onDestruction: root.cards = root.cards.filter((c) => c !== toastDelegate)
 
         onDismissRequested: NotificationState.dismissToast(toastDelegate.model.notifId)
         onActionRequested: (action) => NotificationState.invokeAction(toastDelegate.notification, action)

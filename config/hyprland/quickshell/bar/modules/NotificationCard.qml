@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Services.Notifications
 import "../theme"
 import "../services"
@@ -10,25 +11,10 @@ import "../services"
 // Pure rendering + two request signals; NotificationState.qml decides
 // what dismiss/action actually do (toast-only hide vs. real dismiss()).
 //
-// NOT the glass recipe Osd.qml/BatteryAlert.qml use (2-stop vertical
-// Gradient + two GlassRim children, see Osd.qml's header) -- notification
-// cards are deliberately the one flat, matte surface in this bar. Asked
-// for in two steps: first for the toasts alone ("les popups notifs ne
-// doivent pas avoir d'effet metallique"), then for the center's history
-// too ("il faut aussi le même style non metalic dans les notifcenter").
-// The `glass` opt-out property that briefly existed between those two is
-// gone with the second one -- one consumer's exception is worth a knob,
-// both consumers agreeing is just the look.
-//
-// What made it read as brushed metal was the #3f4450 top stop raking to
-// near-black under two specular rims. Flat #1e2128 instead: the drawer
-// pane's own top stop (DrawerIsland.drawerFillTop), so in the center the
-// card is the same material as the pane it sits on, and it stays opaque
-// over that translucent pane (theme/Surfaces.qml's rule). Height is
-// content-driven (body text length varies notification to notification),
-// unlike Osd/BatteryAlert's fixed literal heights -- `layout` below has
-// no bottom anchor, so its implicit height drives `card.height` with no
-// feedback loop (layout's own height never depends on card's).
+// In the centre the card is a flat veil of the ink over the drawer's
+// glass; in a toast it is a pane of that glass itself (see `toast`).
+// Height is content-driven: `layout` below has no bottom anchor, so its
+// implicit height drives `card.height` with no feedback loop.
 Rectangle {
     id: card
 
@@ -45,21 +31,18 @@ Rectangle {
 
     width: 340
     radius: card.row ? 0 : 20
-    height: layout.height + (card.row ? 20 : 28)
+    height: card.contentHeight + (card.row ? 20 : (card.toast ? 24 : 28))
+    // Summed here rather than read off `layout`: a Column settles its
+    // height a frame late, and the toast list had by then placed the next
+    // card where this one ends up, overlapping it.
+    readonly property real textHeight: summary.implicitHeight + (card.hasBody ? 2 + bodyText.implicitHeight : 0)
+    readonly property real contentHeight: (card.toast ? 20 + 8 : 0)
+        + Math.max(card.showIcon ? 28 : 0, card.textHeight, card.toast ? 0 : 20)
+        + (card.hasActions ? 8 + 28 : 0)
 
-    // No `gradient` at all now, which is also the only way to actually
-    // get rid of one: Rectangle.gradient is a QJSValue that accepts a
-    // Gradient object or a preset, so assigning `null` to switch a
-    // gradient off is silently dropped -- no warning in quickshell's log
-    // -- and the old gradient keeps painting. That cost a debugging pass
-    // when the matte variant was still a runtime opt-out; the fix then
-    // was two gradient stops collapsing to one colour, and now that both
-    // consumers want matte there is simply no gradient to declare.
-    // Toast mode: pure black -- asked for ("un fond noir pure sobre sans
-    // bordure"). A popup that appears unbidden over whatever you are
-    // doing has a different job from a card sitting in a panel you
-    // opened on purpose: it has to be read in one glance and then
-    // forgotten, and every gram of decoration on it works against that.
+    // Toast mode: the drawers' glass (B1), where it used to be pure black.
+    // Same content as in the centre, read in one glance: app, summary,
+    // body, actions.
     property bool toast: false
 
     // A line in the notification centre's app card: no fill of its own
@@ -70,15 +53,29 @@ Rectangle {
     property bool row: false
     property string groupImage: ""
     property string timeText: ""
-    readonly property bool showIcon: !card.row || (card.hasImage && card.notification.image !== card.groupImage)
+    readonly property bool showIcon: card.toast ? card.hasImage
+        : (!card.row || (card.hasImage && card.notification.image !== card.groupImage))
 
-    color: card.row ? "transparent" : (card.toast ? DrawerTheme.panelTop : DrawerTheme.card)
+    // A toast is a pane of the drawers' glass (B1): their veil, with
+    // Hyprland's blur under it (shell.qml asks for it over each toast) and
+    // their edge on top. It names its app on a first line, as the centre's
+    // cards do; its picture, if it has one, stays beside the text.
+    readonly property string appIconPath: {
+        const icon = card.notification ? card.notification.appIcon : "";
+        if (!icon) return "";
+        if (icon.startsWith("/") || icon.includes("://")) return icon;
+        return Quickshell.iconPath(icon, true);
+    }
 
-    // The card itself carries NO glass edge in either mode. It shows
-    // text; it is not a button. The rule the whole bar follows now is
-    // that the glass marks something you can press -- so on this card it
-    // is the action pills and the close button that light up, never the
-    // surface they sit on. `toast` therefore only changes the fill.
+    color: card.row ? "transparent" : (card.toast ? DrawerTheme.paneTop : DrawerTheme.card)
+
+    PaneEdge {
+        visible: card.toast
+        radius: card.radius
+    }
+
+    // In the centre the card carries no edge: it shows text, it is not a
+    // button. The action pills and the close button are what you press.
 
 
     Column {
@@ -87,14 +84,67 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.leftMargin: 14
-        anchors.rightMargin: card.row ? 10 : 14
-        anchors.topMargin: card.row ? 10 : 14
+        anchors.rightMargin: card.row || card.toast ? 10 : 14
+        anchors.topMargin: card.row ? 10 : (card.toast ? 11 : 14)
         spacing: 8
+
+        Item {
+            visible: card.toast
+            width: layout.width
+            height: 20
+
+            Rectangle {
+                id: metaIcon
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16
+                height: 16
+                radius: 5
+                color: DrawerTheme.cardRaised
+                Image {
+                    id: metaImage
+                    anchors.fill: parent
+                    visible: card.appIconPath !== "" && status !== Image.Error
+                    fillMode: Image.PreserveAspectFit
+                    source: card.appIconPath
+                }
+                Text {
+                    visible: !metaImage.visible
+                    anchors.centerIn: parent
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    text: "\uF126"   // mgc notification
+                    color: card.accent
+                    font.family: Fonts.iconMingcute
+                    font.pixelSize: 10
+                }
+            }
+            Text {
+                anchors.left: metaIcon.right
+                anchors.leftMargin: 6
+                anchors.right: metaClose.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: card.notification ? (card.notification.appName || "Notifications") : ""
+                color: DrawerTheme.secondary
+                font.family: Fonts.ui
+                font.pixelSize: 12
+                font.weight: Font.Medium
+                elide: Text.ElideRight
+            }
+            CloseCross {
+                id: metaClose
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
 
         Item {
             id: headerRow
             width: layout.width
-            height: Math.max(card.showIcon ? iconTile.height : 0, textCol.height, closeBtn.height)
+            height: Math.max(card.showIcon ? iconTile.height : 0, textCol.height, card.toast ? 0 : closeBtn.height)
 
             Rectangle {
                 id: iconTile
@@ -128,42 +178,19 @@ Rectangle {
                 }
             }
 
-            Item {
+            CloseCross {
                 id: closeBtn
+                visible: !card.toast
                 anchors.right: parent.right
                 anchors.top: parent.top
-                width: 20
-                height: 20
-
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 12
-                    height: 1.5
-                    radius: 1
-                    color: DrawerTheme.ink(0.5)
-                    rotation: 45
-                }
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 12
-                    height: 1.5
-                    radius: 1
-                    color: DrawerTheme.ink(0.5)
-                    rotation: -45
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: card.dismissRequested()
-                }
             }
 
             Column {
                 id: textCol
                 anchors.left: card.showIcon ? iconTile.right : parent.left
                 anchors.leftMargin: card.showIcon ? 10 : 0
-                anchors.right: closeBtn.left
-                anchors.rightMargin: 8
+                anchors.right: card.toast ? parent.right : closeBtn.left
+                anchors.rightMargin: card.toast ? 4 : 8
                 anchors.top: parent.top
                 spacing: 2
 
@@ -200,6 +227,7 @@ Rectangle {
                     }
                 }
                 Text {
+                    id: bodyText
                     width: parent.width
                     visible: card.hasBody
                     renderType: Text.NativeRendering
@@ -226,9 +254,10 @@ Rectangle {
                     id: actionPill
                     required property var modelData
                     height: 28
-                    radius: 14
-                    width: actionLabel.implicitWidth + 20
-                    color: actionArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
+                    radius: 10
+                    width: actionLabel.implicitWidth + 24
+                    // A card, like the drawers' buttons.
+                    color: actionArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     // Border and glass SWAP rather than stack: at rest
@@ -262,6 +291,34 @@ Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    component CloseCross: Item {
+        width: 20
+        height: 20
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 12
+            height: 1.5
+            radius: 1
+            color: DrawerTheme.ink(0.5)
+            rotation: 45
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 12
+            height: 1.5
+            radius: 1
+            color: DrawerTheme.ink(0.5)
+            rotation: -45
+        }
+        MouseArea {
+            anchors.fill: parent
+            anchors.margins: -4
+            cursorShape: Qt.PointingHandCursor
+            onClicked: card.dismissRequested()
         }
     }
 }

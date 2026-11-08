@@ -26,6 +26,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Terminal:** WezTerm's tab bar is as see-through as the terminal, blur included, instead of an opaque band.
 - **Veille:** a time you set for it moves the whole shell's clock, so the bar and Veille always agree. It no longer needs debug mode.
 - **Screenshots:** the editor's toolbars match the drawers: flat glass with rounded corners, each tool on its own card.
+- **Notifications:** the popups in the top-left corner are frosted glass like the drawers, with the app's name on top, and their buttons are cards.
 - **Notifications:** in the notification centre, each app has one card with a line per notification, its time and its own ×. Notifications from the same app no longer fold into a stack.
 - **Hyprland:** the Support Hyprland window no longer opens after an update.
 

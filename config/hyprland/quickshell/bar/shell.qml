@@ -2613,6 +2613,27 @@ ShellRoot {
                 id: toastStack
                 anchors.fill: parent
             }
+
+            // Glass like the drawers: Hyprland blurs behind each card, and
+            // only there, following it as it slides in and out. The
+            // namespace is for hypr/windowrules.lua's no_anim: the cards
+            // move themselves.
+            WlrLayershell.namespace: "quickshell-popup"
+            property var toastBlurs: []
+            Instantiator {
+                id: toastBlurList
+                model: toastStack.cards
+                delegate: Region {
+                    required property var modelData
+                    item: modelData
+                    width: DrawerTheme.glass && modelData ? modelData.width : 0
+                    height: modelData ? modelData.height : 0
+                    radius: modelData ? modelData.radius : 0
+                }
+                onObjectAdded: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.concat([object])
+                onObjectRemoved: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.filter((r) => r !== object)
+            }
+            BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs }
         }
     }
 
