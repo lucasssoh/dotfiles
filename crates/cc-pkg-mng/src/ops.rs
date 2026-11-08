@@ -30,6 +30,9 @@ pub fn show_plan(ui: &mut Ui, plan: &Plan) {
     if !plan.downgrades.is_empty() {
         ui.line(&format!("  downgrade         {}", plan.downgrades.join(" ")));
     }
+    if !plan.upgrades.is_empty() {
+        ui.line(&format!("  upgrade           {}", plan.upgrades.join(" ")));
+    }
     for u in &plan.units {
         let tag = if u.new {
             ui.green("new")
@@ -132,8 +135,8 @@ pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &
 
     // Everything there is to do, listed up front for the progress board.
     let mut work = Vec::new();
-    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() {
-        let n = plan.packages.len() + plan.downgrades.len();
+    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() || !plan.upgrades.is_empty() {
+        let n = plan.packages.len() + plan.downgrades.len() + plan.upgrades.len();
         work.push(("Packages".to_string(), format!("{n} to install")));
     }
     for u in &plan.units {
@@ -151,7 +154,7 @@ pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &
 
 fn apply_work(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
 
-    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() {
+    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() || !plan.upgrades.is_empty() {
         ui.heading("Packages");
         for copr in &plan.coprs {
             ui.run(&format!("enable COPR {copr}"), &mut sudo(&["dnf", "copr", "enable", "-y", copr]))?;
@@ -175,6 +178,11 @@ fn apply_work(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: 
             let mut args = vec!["dnf", "downgrade", "-y"];
             args.extend(plan.downgrades.iter().map(String::as_str));
             ui.run(&format!("dnf downgrade ({} packages)", plan.downgrades.len()), &mut sudo(&args))?;
+        }
+        if !plan.upgrades.is_empty() {
+            let mut args = vec!["dnf", "upgrade", "-y"];
+            args.extend(plan.upgrades.iter().map(String::as_str));
+            ui.run(&format!("dnf upgrade ({} packages)", plan.upgrades.len()), &mut sudo(&args))?;
         }
     }
 

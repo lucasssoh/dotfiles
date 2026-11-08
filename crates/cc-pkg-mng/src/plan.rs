@@ -95,6 +95,10 @@ pub struct Plan {
     pub packages: Vec<String>,
     /// Rust apps newer than the release checked out (after a rollback).
     pub downgrades: Vec<String>,
+    /// Packages coucou-shell builds itself (packaging/<name>/<name>.spec,
+    /// satty) installed at an older build than the checkout's: `dnf install`
+    /// leaves an installed package as it is.
+    pub upgrades: Vec<String>,
     /// Release RPMs to fetch: coucou-shell's repository is re-read first,
     /// or dnf may not know yet about a release published today.
     pub refresh_repo: bool,
@@ -106,6 +110,7 @@ impl Plan {
             || !self.repos.is_empty()
             || !self.packages.is_empty()
             || !self.downgrades.is_empty()
+            || !self.upgrades.is_empty()
             || self.units.iter().any(|u| {
                 u.files.iter().any(|f| f.copy)
                     || u.system_services.iter().any(|(_, on)| !on)
@@ -202,6 +207,18 @@ pub fn build(
 
         for p in &u.packages.dnf {
             add_pkg(p, &mut packages);
+        }
+        for p in &u.packages.dnf {
+            let spec = repo.join("packaging").join(p).join(format!("{p}.spec"));
+            if missing.contains(p) || plan.upgrades.contains(p) {
+                continue;
+            }
+            if let (Some(have), Some(want)) = (sys::rpm_evr(p), sys::spec_evr(&spec)) {
+                if sys::evr_older(&have, &want) {
+                    plan.upgrades.push(p.clone());
+                    needs_repo = true;
+                }
+            }
         }
         if u.packages.dnf.iter().any(|p| missing.contains(p)) {
             coprs.extend(u.packages.copr.iter().filter(|c| !sys::copr_enabled(c)).cloned());

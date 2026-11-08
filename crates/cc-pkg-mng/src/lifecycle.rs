@@ -445,7 +445,9 @@ pub fn upgrade(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, to: O
             };
             if git::exact_tag(repo).as_deref() == Some(target.as_str()) {
                 ui.ok(&format!("already on {target}"));
-                return Ok(());
+                // Still re-applied: a package rebuilt for this release
+                // (satty) may not be installed yet.
+                return reapply(ui, flags, repo, state);
             }
             if flags.dry_run {
                 ui.line(&format!("  would move {before} → {target}"));
@@ -467,7 +469,7 @@ pub fn upgrade(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, to: O
             git::fast_forward(repo)?;
             if short(repo)? == before {
                 ui.ok("already up to date");
-                return Ok(());
+                return reapply(ui, flags, repo, state);
             }
         }
         other => bail!("unknown channel \"{other}\" in the state"),

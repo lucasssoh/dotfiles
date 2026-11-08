@@ -76,6 +76,43 @@ pub fn rpm_version(name: &str) -> Option<String> {
     out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+/// `EPOCH:VERSION-RELEASE` of an installed package.
+pub fn rpm_evr(name: &str) -> Option<String> {
+    let out = Command::new("rpm")
+        .args(["-q", "--qf", "%{EPOCHNUM}:%{VERSION}-%{RELEASE}", name])
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// `EPOCH:VERSION-RELEASE` a spec file builds, its release without the
+/// `%{?dist}` suffix ("1:0.22.0-3.coucou").
+pub fn spec_evr(spec: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(spec).ok()?;
+    let field = |name: &str| {
+        text.lines()
+            .find_map(|l| l.strip_prefix(name).and_then(|r| r.strip_prefix(':')))
+            .map(|v| v.trim().to_string())
+    };
+    let version = field("Version")?;
+    let release = field("Release")?.replace("%{?dist}", "");
+    let epoch = field("Epoch").unwrap_or_else(|| "0".to_string());
+    Some(format!("{epoch}:{version}-{release}"))
+}
+
+/// Is the installed `have` older than `want`, by rpm's own ordering? A
+/// release without a dist suffix sorts before the same one with it, so an
+/// installed "3.coucou.fc45" is not older than a spec's "3.coucou".
+pub fn evr_older(have: &str, want: &str) -> bool {
+    let lua = format!("%{{lua: print(rpm.vercmp(\"{have}\", \"{want}\"))}}");
+    Command::new("rpm")
+        .args(["-E", &lua])
+        .stderr(Stdio::null())
+        .output()
+        .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).trim() == "-1")
+}
+
 /// Is `a` a later MAJOR.MINOR.PATCH than `b`?
 pub fn newer(a: &str, b: &str) -> bool {
     let parse = |v: &str| v.split('.').map(|n| n.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>();
