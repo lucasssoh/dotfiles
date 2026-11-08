@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.3.0 (November 8 2026)
 
 ### Fixed
 - **Neovim:** commenting a line works again in languages without a syntax parser, Rust included.
@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Controller:** in light mode, the controller icon and the cover labels can be read again, and the first menu after the shell starts shows its launchers.
 - **Files:** on Fedora 45, Open in Terminal opens your terminal again.
 - **Prisme:** on Fedora 45, the desktop behind it is blurred again.
+- **Wallpapers:** a slideshow stopped at login no longer shows as a failed service.
 
 ### Added
 - **Neovim, Rust:** errors, completion and syntax colours in Rust files. Type errors show as you type, borrow-checker errors and lints when you save.
