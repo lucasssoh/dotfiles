@@ -186,7 +186,9 @@ Singleton {
         n.tracked = true;   // mandatory + synchronous, else n is destroyed
         root.hasUnseen = true;
         const stamps = Object.assign({}, root.receivedAt);
-        stamps[n.id] = Date.now();
+        // The shell's time, so the centre's times agree with its clock
+        // when that clock is set or frozen (Veille, demo mode).
+        stamps[n.id] = ShellClock.now().getTime();
         root.receivedAt = stamps;
         DemoState.track(n);   // closed when demo mode ends
         n.closed.connect(() => root._removeToast(n.id));

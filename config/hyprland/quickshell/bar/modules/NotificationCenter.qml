@@ -624,7 +624,7 @@ Item {
 
     // Re-read when midnight passes while the drawer is open.
     readonly property real midnight: {
-        const now = clock.date;
+        const now = ShellClock.at(clock.date);
         return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     }
 
