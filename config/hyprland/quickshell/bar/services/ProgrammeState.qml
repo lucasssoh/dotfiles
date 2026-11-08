@@ -40,7 +40,11 @@ Singleton {
     readonly property bool onCourse: {
         if (!root.tracking || !root.tracking.watched) return false;
         const t = Hyprland.activeToplevel;
-        const ipc = t ? (t.lastIpcObject || {}) : {};
+        // Hyprland keeps the last window active on an empty workspace:
+        // Boussole on 4, then 5, still read as Boussole in front.
+        const ws = Hyprland.focusedWorkspace;
+        if (!t || !t.workspace || !ws || t.workspace.id !== ws.id) return false;
+        const ipc = t.lastIpcObject || {};
         return (ipc.class || "") === (root.tracking.browser || "org.mozilla.firefox") && (t.title || "").indexOf("Boussole") !== -1;
     }
 
@@ -252,7 +256,11 @@ Singleton {
     // alert waits for it to go.
     readonly property bool screenTaken: {
         const t = Hyprland.activeToplevel;
-        const ipc = t ? (t.lastIpcObject || {}) : {};
+        // Hyprland keeps the last window active on an empty workspace:
+        // Boussole on 4, then 5, still read as Boussole in front.
+        const ws = Hyprland.focusedWorkspace;
+        if (!t || !t.workspace || !ws || t.workspace.id !== ws.id) return false;
+        const ipc = t.lastIpcObject || {};
         const cls = (ipc.class || ipc.initialClass || "").toLowerCase();
         return (ipc.fullscreen || 0) > 0 || /^steam_app_|gamescope/.test(cls);
     }
