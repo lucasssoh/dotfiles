@@ -282,6 +282,7 @@ class Take:
         self.saved_wallpaper = wallpaper_get() if self.wallpaper else None
         self.saved_playlist = PLAYLIST.read_bytes() if self.wallpaper and PLAYLIST.exists() else None
         self.procs = []
+        self.notes = []
 
     def start(self):
         busy = [c for c in clients() if str(c["workspace"]["id"]) == self.ws]
@@ -321,7 +322,9 @@ class Take:
             self.close(args[0])
         elif verb == "notify":
             app, summary, body = (p.strip() for p in " ".join(args).split("|"))
-            sh("notify-send", "-a", app, summary, body)
+            nid = subprocess.run(["notify-send", "-p", "-a", app, summary, body],
+                                 capture_output=True, text=True, check=True).stdout.strip()
+            self.notes.append(nid)
 
     def close(self, cls):
         for c in clients():
@@ -339,6 +342,14 @@ class Take:
                 except ProcessLookupError:
                     pass
         self.procs = []
+        # The scene's notifications go with it, or the next mode's take of
+        # the centre shows them twice.
+        for nid in self.notes:
+            subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                            "--object-path", "/org/freedesktop/Notifications",
+                            "--method", "org.freedesktop.Notifications.CloseNotification", nid],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.notes = []
         for c in clients():
             if str(c["workspace"]["id"]) == self.ws:
                 try:
