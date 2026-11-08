@@ -1,0 +1,297 @@
+diff -ruN a/src/main.rs b/src/main.rs
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -33,6 +33,7 @@
+ mod notification;
+ mod sketch_board;
+ mod style;
++mod toast;
+ mod tools;
+ mod ui;
+ 
+@@ -293,6 +294,7 @@
+                     .emit(SketchBoardInput::ScaleFactorChanged);
+             }
+             AppInput::FullscreenChanged(fullscreen) => {
++                toast::set_fullscreen(fullscreen);
+                 let tools = self.tools_toolbar.widget();
+                 let style = self.style_toolbar.widget();
+                 // coucou-shell: in fullscreen each toolbar sits in a Glass,
+@@ -389,6 +391,8 @@
+         let outer_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+         let outer_box_clone = outer_box.clone();
+         let overlay = gtk::Overlay::new();
++        // coucou-shell: what an action did, over the image (see toast.rs).
++        overlay.add_overlay(&toast::widget());
+         let overlay_clone = overlay.clone();
+ 
+         // Model
+diff -ruN a/src/sketch_board.rs b/src/sketch_board.rs
+--- a/src/sketch_board.rs
++++ b/src/sketch_board.rs
+@@ -23,6 +23,7 @@
+ use crate::ime::pango_adapter::spans_from_pango_attrs;
+ use crate::math::Vec2D;
+ use crate::notification::{log_result, log_result_with_pixbuf};
++use crate::toast::{self, Kind};
+ use crate::style::Style;
+ use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
+ use crate::ui::toolbars::ToolbarEvent;
+@@ -418,6 +419,7 @@
+                 output_filename = home_dir.to_string_lossy().into_owned();
+             } else {
+                 log_result("~ found but could not determine homedir", true);
++                toast::show(Kind::Error, "Couldn't save", Some("no home folder"));
+                 return None;
+             }
+         }
+@@ -504,6 +506,7 @@
+                 "The only supported format is png, but the filename does not end in png",
+                 true,
+             );
++            toast::show(Kind::Error, "Couldn't save", Some("PNG only"));
+             return;
+         }
+ 
+@@ -525,8 +528,12 @@
+             return;
+         }
+         match fs::write(&output_filename, data) {
+-            Err(e) => log_result(&format!("Error while saving file: {e}"), true),
++            Err(e) => {
++                log_result(&format!("Error while saving file: {e}"), true);
++                toast::show(Kind::Error, "Couldn't save", Some(&save_error(&e)));
++            }
+             Ok(_) => {
++                toast::show(Kind::Done, "Saved", Some(&shown_folder(&output_filename)));
+                 // Store the filepath for copy-filepath action
+                 *self.last_saved_filepath.borrow_mut() = Some(output_filename.clone());
+                 log_result_with_pixbuf(
+@@ -601,8 +608,16 @@
+                     };
+ 
+                     match fs::write(&output_filename, &data) {
+-                        Err(e) => log_result(&format!("Error while saving file: {e}"), true),
++                        Err(e) => {
++                            log_result(&format!("Error while saving file: {e}"), true);
++                            toast::show(Kind::Error, "Couldn't save", Some(&save_error(&e)));
++                        }
+                         Ok(_) => {
++                            toast::show(
++                                Kind::Done,
++                                "Saved",
++                                Some(&shown_folder(&output_filename)),
++                            );
+                             exit_app = APP_CONFIG.read().early_exit_save_as();
+                             filename = Some(output_filename.clone());
+                             Self::remember_save_as_dir(Path::new(&output_filename));
+@@ -676,9 +691,15 @@
+         };
+ 
+         match result {
+-            Err(e) => eprintln!("Error saving {e}"),
++            Err(e) => {
++                eprintln!("Error saving {e}");
++                toast::show(Kind::Error, "Couldn't copy", None);
++            }
+             Ok(()) => {
+-                log_result_with_pixbuf("Copied to clipboard.", image.clone());
++                // coucou-shell: the pill only. A notification for every copy
++                // filled the history, and its popup stayed under satty.
++                log_result("Copied to clipboard.", false);
++                toast::show(Kind::Done, "Copied", None);
+ 
+                 // TODO: rethink order and messaging patterns
+                 if APP_CONFIG.read().save_after_copy() {
+@@ -714,8 +735,14 @@
+         };
+ 
+         match result {
+-            Err(e) => log_result(&format!("Error copying filepath: {e}"), true),
+-            Ok(()) => log_result(&format!("Filepath copied to clipboard: {}", filepath), true),
++            Err(e) => {
++                log_result(&format!("Error copying filepath: {e}"), false);
++                toast::show(Kind::Error, "Couldn't copy the path", None);
++            }
++            Ok(()) => {
++                log_result(&format!("Filepath copied to clipboard: {}", filepath), false);
++                toast::show(Kind::Done, "Path copied", None);
++            }
+         }
+     }
+ 
+@@ -1552,3 +1579,29 @@
+         SketchBoard::write_save_as_last_dir(temp.path(), &saved_dir.join("image.png"));
+     }
+ }
++
++/// The folder a file went to, as the pill shows it: from the home folder,
++/// without the file's own name ("Pictures/Screenshots").
++fn shown_folder(path: &str) -> String {
++    let path = Path::new(path);
++    let dir = path.parent().unwrap_or(path);
++    let shown = match std::env::home_dir() {
++        Some(home) => match dir.strip_prefix(&home) {
++            Ok(rel) if rel.as_os_str().is_empty() => return "Home".to_owned(),
++            Ok(rel) => rel.to_path_buf(),
++            Err(_) => dir.to_path_buf(),
++        },
++        None => dir.to_path_buf(),
++    };
++    shown.to_string_lossy().into_owned()
++}
++
++/// Why a write failed, in a few words.
++fn save_error(e: &io::Error) -> String {
++    match e.kind() {
++        io::ErrorKind::NotFound => "folder missing".to_owned(),
++        io::ErrorKind::PermissionDenied => "no permission".to_owned(),
++        io::ErrorKind::StorageFull => "disk full".to_owned(),
++        _ => e.to_string(),
++    }
++}
+diff -ruN a/src/toast.rs b/src/toast.rs
+--- a/src/toast.rs
++++ b/src/toast.rs
+@@ -0,0 +1,141 @@
++//! A short pill over the image that says what an action did: Copied,
++//! Saved, Path copied, or what went wrong.
++//!
++//! coucou-shell patch, not upstream. Satty only reported through desktop
++//! notifications, and a notification popup stays under a fullscreen window:
++//! with satty fullscreen, Ctrl+C showed nothing at all. The pill lives in
++//! satty's own window instead. Its look is `.toast` in overrides.css; it
++//! fades through the `shown` class.
++
++use relm4::gtk::{self, glib, prelude::*};
++use std::cell::RefCell;
++
++use crate::icons::icon_names;
++
++const SHOWN_FOR: u64 = 1500;
++const ERROR_SHOWN_FOR: u64 = 4000;
++
++#[derive(Clone, Copy, PartialEq)]
++pub enum Kind {
++    Done,
++    Error,
++}
++
++struct Toast {
++    root: gtk::Box,
++    icon: gtk::Image,
++    title: gtk::Label,
++    detail: gtk::Label,
++    timer: Option<glib::SourceId>,
++}
++
++thread_local! {
++    static TOAST: RefCell<Option<Toast>> = const { RefCell::new(None) };
++}
++
++/// Builds the pill, hidden. The caller lays it over the image.
++pub fn widget() -> gtk::Box {
++    let root = gtk::Box::new(gtk::Orientation::Horizontal, 8);
++    root.add_css_class("toast");
++    root.set_halign(gtk::Align::Center);
++    root.set_valign(gtk::Align::Start);
++    root.set_can_target(false);
++    root.set_margin_top(16);
++    root.set_visible(false);
++
++    let icon = gtk::Image::new();
++    icon.add_css_class("toast-icon");
++    icon.set_valign(gtk::Align::Center);
++    let title = gtk::Label::new(None);
++    title.add_css_class("toast-title");
++    let detail = gtk::Label::new(None);
++    detail.add_css_class("toast-detail");
++    detail.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
++    detail.set_max_width_chars(48);
++    root.append(&icon);
++    root.append(&title);
++    root.append(&detail);
++
++    TOAST.with(|t| {
++        t.replace(Some(Toast {
++            root: root.clone(),
++            icon,
++            title,
++            detail,
++            timer: None,
++        }))
++    });
++    root
++}
++
++/// Shows `title`, and `detail` beside it in a lighter ink.
++pub fn show(kind: Kind, title: &str, detail: Option<&str>) {
++    let title = title.to_owned();
++    let detail = detail.map(str::to_owned);
++    let ctx = glib::MainContext::default();
++    if ctx.is_owner() {
++        show_now(kind, &title, detail.as_deref());
++    } else {
++        ctx.invoke(move || show_now(kind, &title, detail.as_deref()));
++    }
++}
++
++fn show_now(kind: Kind, title: &str, detail: Option<&str>) {
++    TOAST.with(|t| {
++        let mut t = t.borrow_mut();
++        let Some(t) = t.as_mut() else { return };
++        if let Some(timer) = t.timer.take() {
++            timer.remove();
++        }
++
++        t.icon.set_icon_name(Some(match kind {
++            Kind::Done => icon_names::shipped::CHECKMARK_REGULAR,
++            Kind::Error => icon_names::shipped::DISMISS_REGULAR,
++        }));
++        t.title.set_label(title);
++        t.detail.set_label(detail.unwrap_or_default());
++        t.detail.set_visible(detail.is_some());
++        if kind == Kind::Error {
++            t.root.add_css_class("error");
++        } else {
++            t.root.remove_css_class("error");
++        }
++
++        t.root.set_visible(true);
++        // A frame later, so the opacity transition runs from 0.
++        let root = t.root.clone();
++        glib::idle_add_local_once(move || root.add_css_class("shown"));
++
++        let ms = if kind == Kind::Error { ERROR_SHOWN_FOR } else { SHOWN_FOR };
++        t.timer = Some(glib::timeout_add_local_once(
++            std::time::Duration::from_millis(ms),
++            hide,
++        ));
++    });
++}
++
++fn hide() {
++    TOAST.with(|t| {
++        let mut t = t.borrow_mut();
++        let Some(t) = t.as_mut() else { return };
++        t.timer = None;
++        t.root.remove_css_class("shown");
++        // Gone once the fade is over, unless a new pill came meanwhile.
++        let root = t.root.clone();
++        glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
++            if !root.has_css_class("shown") {
++                root.set_visible(false);
++            }
++        });
++    });
++}
++
++/// Follows the toolbars: in fullscreen the top one floats over the image,
++/// and the pill goes under it.
++pub fn set_fullscreen(fullscreen: bool) {
++    TOAST.with(|t| {
++        if let Some(t) = t.borrow().as_ref() {
++            t.root.set_margin_top(if fullscreen { 76 } else { 16 });
++        }
++    });
++}

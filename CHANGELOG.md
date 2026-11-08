@@ -17,6 +17,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Neovim, Rust:** errors, completion and syntax colours in Rust files. Type errors show as you type, borrow-checker errors and lints when you save.
 - **Installation:** the developer setup also installs Rust's linter, formatter and language server, at the same version as the compiler.
 - **Bar:** a demo mode for screenshots, which shows made-up figures instead of your time, battery, system figures, next event and Wi-Fi name.
+- **Screenshots:** copying, saving or copying the path shows a short confirmation over the image, fullscreen included. Copying no longer adds a notification; saving still does, with its thumbnail.
 
 ### Changed
 - **Neovim, C/C++:** finer syntax colours.
@@ -24,6 +25,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Glass panels:** the blur behind Prisme and the panels fades in and out with them instead of appearing all at once.
 - **Terminal:** WezTerm's tab bar is as see-through as the terminal, blur included, instead of an opaque band.
 - **Veille:** a time you set for it moves the whole shell's clock, so the bar and Veille always agree. It no longer needs debug mode.
+- **Screenshots:** the editor's toolbars match the drawers: flat glass with rounded corners, each tool on its own card.
 - **Hyprland:** the Support Hyprland window no longer opens after an update.
 
 ## 2.2.0 (November 6 2026)

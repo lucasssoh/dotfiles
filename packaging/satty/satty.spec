@@ -1,8 +1,9 @@
 # satty, the screenshot editor behind Super + S, rebuilt from upstream's
-# tagged tarball with two patches: frosted glass behind its toolbars in
-# fullscreen (satty-glass.patch), and "Screenshot" as its name to the rest
+# tagged tarball with three patches: frosted glass behind its toolbars in
+# fullscreen (satty-glass.patch), "Screenshot" as its name to the rest
 # of the system, with its own id, desktop entry and icon
-# (satty-screenshot.patch). The package and the command stay `satty`. Its
+# (satty-screenshot.patch), and a pill over the image that says what an
+# action did, Copied or Saved (satty-toast.patch). The package and the command stay `satty`. Its
 # look is ~/.config/satty/overrides.css.
 #
 # packaging/build-rpms.sh fetches the tarball, checks it against
@@ -16,7 +17,7 @@ Name:           satty
 # still have enabled: dnf keeps this one whatever the COPR publishes.
 Epoch:          1
 Version:        0.22.0
-Release:        2.coucou%{?dist}
+Release:        3.coucou%{?dist}
 Summary:        Screenshot annotation tool
 # satty itself; the Rust crates bundled into the binary are MIT or Apache-2.0.
 License:        MPL-2.0
@@ -24,6 +25,7 @@ URL:            https://github.com/Satty-org/Satty
 Source0:        https://github.com/Satty-org/Satty/archive/v%{version}/Satty-%{version}.tar.gz
 Patch0:         satty-glass.patch
 Patch1:         satty-screenshot.patch
+Patch2:         satty-toast.patch
 Source1:        io.github.lucasssoh.Screenshot.desktop
 Source2:        io.github.lucasssoh.Screenshot.svg
 ExclusiveArch:  x86_64
@@ -38,8 +40,9 @@ BuildRequires:  pkgconfig(fontconfig)
 
 %description
 Satty annotates screenshots: crop, arrows, text, blur, highlight. This
-build frosts the image behind its toolbars in fullscreen, and shows itself
-to the system as Screenshot (io.github.lucasssoh.Screenshot).
+build frosts the image behind its toolbars in fullscreen, says what an
+action did over the image, and shows itself to the system as Screenshot
+(io.github.lucasssoh.Screenshot).
 
 %prep
 %autosetup -n Satty-%{version} -p1

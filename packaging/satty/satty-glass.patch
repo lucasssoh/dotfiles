@@ -1,21 +1,22 @@
 diff -ruN a/src/glass.rs b/src/glass.rs
 --- a/src/glass.rs
 +++ b/src/glass.rs
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,156 @@
 +//! Frosted glass behind the toolbars in fullscreen.
 +//!
 +//! coucou-shell patch, not upstream. In fullscreen the toolbars float over
 +//! the image, and GTK has no backdrop-filter: a translucent toolbar shows
 +//! the screenshot sharp through it, text included. `Glass` wraps a toolbar
 +//! and paints, under it, a blurred and dimmed copy of the sketch board cut
-+//! to the toolbar's capsule. The toolbar's own CSS (veil, rim) draws on top.
-+//!
-+//! The capsule's radius is half the toolbar's height: the stylesheet gives
-+//! the toolbars fully round ends, so nothing here has to match a number in
-+//! the CSS.
++//! to the toolbar's rounded shape. The toolbar's own CSS (veil, rim) draws
++//! on top.
 +
 +use relm4::gtk::{self, glib, graphene, gsk, prelude::*, subclass::prelude::*};
 +
++/// Corner radius of the toolbars, in px. KEEP IN STEP with `.toolbar`'s
++/// border-radius in ~/.config/satty/overrides.css: GTK gives a widget no
++/// way to read its CSS radius back.
++const RADIUS: f32 = 18.0;
 +/// Blur radius of the backdrop, in px.
 +const BLUR: f64 = 16.0;
 +/// Brightness of the blurred backdrop: below 1 so white ink reads on a
@@ -87,7 +88,7 @@ diff -ruN a/src/glass.rs b/src/glass.rs
 +                return;
 +            }
 +
-+            let radius = bounds.height().min(bounds.width()) / 2.0;
++            let radius = RADIUS.min(bounds.height().min(bounds.width()) / 2.0);
 +            let pad = (BLUR * 2.0) as f32;
 +            let reach = graphene::Rect::new(
 +                bounds.x() - pad,
