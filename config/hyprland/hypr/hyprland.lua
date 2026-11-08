@@ -473,6 +473,11 @@ hl.config({
         preserve_split = true,
         smart_resizing = true,
     },
+    -- No "Support Hyprland" dialog after an update: already given to, more
+    -- than once.
+    ecosystem = {
+        no_donation_nag = true,
+    },
     misc = {
         -- Hyprland paints its own built-in wallpaper (and a small logo
         -- watermark) on whatever isn't yet covered by a real client --
