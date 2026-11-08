@@ -44,8 +44,8 @@ Rectangle {
     readonly property bool hasBody: card.notification && card.notification.body !== ""
 
     width: 340
-    radius: 20
-    height: layout.height + 28
+    radius: card.row ? 0 : 20
+    height: layout.height + (card.row ? 20 : 28)
 
     // No `gradient` at all now, which is also the only way to actually
     // get rid of one: Rectangle.gradient is a QJSValue that accepts a
@@ -62,18 +62,17 @@ Rectangle {
     // forgotten, and every gram of decoration on it works against that.
     property bool toast: false
 
-    // The notification centre's grouped list (N2) adds a meta line above
-    // the summary -- the app's name, the size of its stack when collapsed,
-    // and the arrival time -- and makes a collapsed stack clickable to
-    // unfold it. Toasts leave all four at their defaults and look as before.
-    property bool showMeta: false
-    property bool showApp: true
-    property int count: 1
+    // A line in the notification centre's app card: no fill of its own
+    // (the app's card is under it), no app name or icon (its header has
+    // them), and the arrival time at the end of the summary. An image of
+    // its own, a contact's photo say, still shows: `groupImage` is the one
+    // the header already shows.
+    property bool row: false
+    property string groupImage: ""
     property string timeText: ""
-    property bool clickable: false
-    signal clicked()
+    readonly property bool showIcon: !card.row || (card.hasImage && card.notification.image !== card.groupImage)
 
-    color: card.toast ? DrawerTheme.panelTop : DrawerTheme.card
+    color: card.row ? "transparent" : (card.toast ? DrawerTheme.panelTop : DrawerTheme.card)
 
     // The card itself carries NO glass edge in either mode. It shows
     // text; it is not a button. The rule the whole bar follows now is
@@ -82,30 +81,24 @@ Rectangle {
     // surface they sit on. `toast` therefore only changes the fill.
 
 
-    // Behind everything else on the card, so the close button and the
-    // action pills (declared later, hence on top) keep their own clicks.
-    MouseArea {
-        anchors.fill: parent
-        enabled: card.clickable
-        cursorShape: Qt.PointingHandCursor
-        onClicked: card.clicked()
-    }
-
     Column {
         id: layout
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: 14
+        anchors.leftMargin: 14
+        anchors.rightMargin: card.row ? 10 : 14
+        anchors.topMargin: card.row ? 10 : 14
         spacing: 8
 
         Item {
             id: headerRow
             width: layout.width
-            height: Math.max(iconTile.height, textCol.height, closeBtn.height)
+            height: Math.max(card.showIcon ? iconTile.height : 0, textCol.height, closeBtn.height)
 
             Rectangle {
                 id: iconTile
+                visible: card.showIcon
                 anchors.left: parent.left
                 anchors.top: parent.top
                 width: 28
@@ -114,14 +107,17 @@ Rectangle {
                 color: DrawerTheme.cardRaised
 
                 Image {
+                    id: iconImage
                     anchors.fill: parent
                     anchors.margins: 2
-                    visible: card.hasImage
+                    visible: card.hasImage && status !== Image.Error
                     fillMode: Image.PreserveAspectCrop
                     source: card.hasImage ? card.notification.image : ""
                 }
+                // Also when the image is gone: a sender's temporary file
+                // (satty's thumbnails) no longer exists once it has quit.
                 Text {
-                    visible: !card.hasImage
+                    visible: !iconImage.visible
                     anchors.centerIn: parent
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
@@ -164,64 +160,36 @@ Rectangle {
 
             Column {
                 id: textCol
-                anchors.left: iconTile.right
-                anchors.leftMargin: 10
+                anchors.left: card.showIcon ? iconTile.right : parent.left
+                anchors.leftMargin: card.showIcon ? 10 : 0
                 anchors.right: closeBtn.left
                 anchors.rightMargin: 8
                 anchors.top: parent.top
                 spacing: 2
 
                 Item {
-                    visible: card.showMeta
                     width: parent.width
-                    height: Math.max(appLabel.implicitHeight, countPill.height) + 3
+                    height: summary.implicitHeight
 
-                    Row {
+                    Text {
+                        id: summary
                         anchors.left: parent.left
-                        anchors.right: timeLabel.left
-                        anchors.rightMargin: 8
-                        spacing: 6
-
-                        Text {
-                            id: appLabel
-                            visible: card.showApp
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Math.min(implicitWidth, parent.width - (countPill.visible ? countPill.width + 6 : 0))
-                            renderType: Text.NativeRendering
-                            font.hintingPreference: Font.PreferNoHinting
-                            text: card.notification ? (card.notification.appName || "Notifications") : ""
-                            color: DrawerTheme.secondary
-                            font.family: Fonts.ui
-                            font.pixelSize: 12
-                            font.weight: Font.Medium
-                            elide: Text.ElideRight
-                        }
-                        Rectangle {
-                            id: countPill
-                            visible: card.count > 1
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: countLabel.implicitWidth + 12
-                            height: 16
-                            radius: 8
-                            color: DrawerTheme.cardRaised
-                            Text {
-                                id: countLabel
-                                anchors.centerIn: parent
-                                renderType: Text.NativeRendering
-                                font.hintingPreference: Font.PreferNoHinting
-                                text: card.count
-                                color: DrawerTheme.primary
-                                font.family: Fonts.ui
-                                font.pixelSize: 11
-                                font.weight: Font.Medium
-                                font.features: { "tnum": 1 }
-                            }
-                        }
+                        anchors.right: timeLabel.visible ? timeLabel.left : parent.right
+                        anchors.rightMargin: timeLabel.visible ? 8 : 0
+                        renderType: Text.NativeRendering
+                        font.hintingPreference: Font.PreferNoHinting
+                        text: card.notification ? card.notification.summary : ""
+                        color: DrawerTheme.primary
+                        font.family: Fonts.ui
+                        font.pixelSize: 14
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
                     }
                     Text {
                         id: timeLabel
+                        visible: card.timeText !== ""
                         anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.baseline: summary.baseline
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: card.timeText
@@ -230,18 +198,6 @@ Rectangle {
                         font.pixelSize: 12
                         font.features: { "tnum": 1 }
                     }
-                }
-
-                Text {
-                    width: parent.width
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: card.notification ? card.notification.summary : ""
-                    color: DrawerTheme.primary
-                    font.family: Fonts.ui
-                    font.pixelSize: 14
-                    font.weight: Font.Medium
-                    elide: Text.ElideRight
                 }
                 Text {
                     width: parent.width

@@ -609,25 +609,18 @@ Item {
         }
     }
 
-    // ---- notification history, grouped by app (N2) ----------------------
+    // ---- notification history, one card per app ------------------------
     //
-    // One stack per app, newest app first, under TODAY / EARLIER labels
-    // (a stack goes where its newest notification does). A collapsed stack
-    // shows its newest card with the stack's size beside the app name and
-    // up to two ghost edges under it; clicking the card unfolds the stack,
-    // "Show less" folds it back. Single-notification apps are just a card.
+    // One card per app, newest app first, under TODAY / EARLIER labels (a
+    // card goes where its newest notification does). The card names the
+    // app once, then gives every notification its own line, time and x;
+    // the header's x clears the app. Nothing folds: asked for, "une ligne
+    // pour chaque notif même si c'est la même app".
     //
     // Rebuilt from NotificationServer's own list on every change, so a
     // dismissed notification simply drops out of the next build.
     // Arrival times come from NotificationState.receivedAt; anything
     // without one (none should be) counts as Earlier, oldest.
-    property var expanded: ({})
-
-    function toggleApp(app) {
-        const e = Object.assign({}, root.expanded);
-        if (e[app]) delete e[app]; else e[app] = true;
-        root.expanded = e;
-    }
 
     // Re-read when midnight passes while the drawer is open.
     readonly property real midnight: {
@@ -671,16 +664,13 @@ Item {
         return [today, earlier].filter((sec) => sec.groups.length > 0);
     }
 
-    // What "Clear all" takes away together, in screen order: a folded
-    // stack is one card on screen, so it goes as one; an unfolded one goes
-    // card by card. See NotificationState.clearAll().
+    // What "Clear all" takes away together, in screen order: line by
+    // line. See NotificationState.clearAll().
     function clearUnits() {
         const units = [];
         for (const sec of root.sections)
-            for (const g of sec.groups) {
-                if (g.notes.length > 1 && root.expanded[g.app]) g.notes.forEach((n) => units.push([n]));
-                else units.push(g.notes.slice());
-            }
+            for (const g of sec.groups)
+                g.notes.forEach((n) => units.push([n]));
         return units;
     }
 
@@ -764,7 +754,7 @@ Item {
 
                         Repeater {
                             model: section.modelData.groups
-                            delegate: AppStack {
+                            delegate: AppCard {
                                 required property var modelData
                                 required property int index
                                 width: sectionBody.width
@@ -811,8 +801,8 @@ Item {
     // NotificationState holds the real dismissal until both are done.
     //
     // `slides: false` skips the slide and only fades and closes -- for a
-    // section title or an unfolded stack's header, whose cards already
-    // slide out on their own.
+    // section title or an app's card, whose lines already slide out on
+    // their own.
     component Exit: Item {
         id: exit
         property bool leaving: false
@@ -850,125 +840,142 @@ Item {
         }
     }
 
-    // One app's notifications. Collapsed: the newest card, the stack's size
-    // on its meta line, and ghost edges for what is under it. Unfolded: a
-    // small header (app, "Show less") over every card.
-    component AppStack: Exit {
-        id: stack
+    // One app's notifications: a header (icon, name, an x that clears
+    // them all) over one line per notification, newest first, a hairline
+    // between lines. The card fades and closes with its last line.
+    component AppCard: Exit {
+        id: appCard
         property var group
 
-        readonly property int size: stack.group ? stack.group.notes.length : 0
-        readonly property bool open: stack.size > 1 && root.expanded[stack.group.app] === true
-        readonly property int ghosts: stack.open ? 0 : Math.min(2, stack.size - 1)
-
-        // Folded, it is one card on screen and leaves as one (Clear all
-        // marks all of it at once, so does its x). Unfolded, the cards
-        // leave one by one and the header goes with the last of them.
-        leaving: stack.open ? stack.group.notes.every((n) => root.isLeaving(n))
-                            : stack.group.notes.some((n) => root.isLeaving(n))
-        slides: !stack.open
-        bodyHeight: stack.open ? openColumn.height : (frontCard.height + stack.ghosts * 5)
-
-        // ---- collapsed ----
-        Rectangle {
-            visible: stack.ghosts >= 2
-            x: 20
-            width: parent.width - 40
-            y: frontCard.height - 14
-            height: 24
-            radius: 14
-            color: DrawerTheme.stackBack
+        readonly property var newest: appCard.group.notes[0]
+        // The header shows the app's own icon when it sends one. Else the
+        // image its notifications share, if they all carry the same. When
+        // each has its own (a screenshot's thumbnail, a contact's photo),
+        // each line shows its own and the header the generic bell.
+        readonly property bool oneImage: appCard.group.notes.every((n) => n.image === appCard.newest.image)
+        readonly property string sharedImage: appCard.oneImage ? appCard.newest.image : ""
+        readonly property string appIconPath: {
+            const icon = appCard.newest ? appCard.newest.appIcon : "";
+            if (!icon) return "";
+            if (icon.startsWith("/") || icon.includes("://")) return icon;
+            return Quickshell.iconPath(icon, true);
         }
+        readonly property string image: appCard.appIconPath || appCard.sharedImage
+
+        leaving: appCard.group.notes.every((n) => root.isLeaving(n))
+        slides: false
+        bodyHeight: cardColumn.height
+
         Rectangle {
-            visible: stack.ghosts >= 1
-            x: 10
-            width: parent.width - 20
-            y: frontCard.height - 14
-            height: 19
-            radius: 14
-            color: DrawerTheme.stackMid
-        }
-        NotificationCard {
-            id: frontCard
-            visible: !stack.open
             width: parent.width
-            notification: stack.group.notes[0]
-            showMeta: true
-            count: stack.size
-            timeText: root.timeText(stack.group.stamps[0])
-            clickable: stack.size > 1
-            onClicked: root.toggleApp(stack.group.app)
-            // The x on a folded stack clears the whole stack -- it is the
-            // only card of it you can see.
-            onDismissRequested: NotificationState.leave(stack.group.notes)
-            onActionRequested: (action) => NotificationState.invokeAction(notification, action)
+            height: cardColumn.height
+            radius: 20
+            color: DrawerTheme.card
         }
 
-        // ---- unfolded ----
         Column {
-            id: openColumn
-            visible: stack.open
+            id: cardColumn
             width: parent.width
 
             Item {
                 width: parent.width
-                height: 28
-                Text {
+                height: 40
+
+                Rectangle {
+                    id: appIcon
                     anchors.left: parent.left
-                    anchors.leftMargin: 4
-                    y: (20 - height) / 2
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: stack.group.app
-                    color: DrawerTheme.primary
-                    font.family: Fonts.ui
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
+                    anchors.leftMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: 2
+                    width: 22
+                    height: 22
+                    radius: 7
+                    color: DrawerTheme.cardRaised
+
+                    Image {
+                        id: appImage
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        visible: appCard.image !== "" && status !== Image.Error
+                        fillMode: Image.PreserveAspectCrop
+                        source: appCard.image
+                    }
+                    Text {
+                        visible: !appImage.visible
+                        anchors.centerIn: parent
+                        renderType: Text.NativeRendering
+                        font.hintingPreference: Font.PreferNoHinting
+                        text: "\uF126"   // mgc notification
+                        color: DrawerTheme.accent
+                        font.family: Fonts.iconMingcute
+                        font.pixelSize: 12
+                    }
                 }
                 Text {
-                    id: lessLabel
-                    anchors.right: parent.right
-                    anchors.rightMargin: 4
-                    y: (20 - height) / 2
+                    anchors.left: appIcon.right
+                    anchors.leftMargin: 8
+                    anchors.right: clearApp.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: appIcon.verticalCenter
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: "Show less"
+                    text: appCard.group.app
                     color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 12
+                    font.weight: Font.Medium
+                    elide: Text.ElideRight
                 }
-                MouseArea {
-                    anchors.fill: lessLabel
-                    anchors.margins: -6
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.toggleApp(stack.group.app)
+                Item {
+                    id: clearApp
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: appIcon.verticalCenter
+                    width: 20
+                    height: 20
+                    Rectangle { anchors.centerIn: parent; width: 12; height: 1.5; radius: 1; color: DrawerTheme.ink(0.5); rotation: 45 }
+                    Rectangle { anchors.centerIn: parent; width: 12; height: 1.5; radius: 1; color: DrawerTheme.ink(0.5); rotation: -45 }
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: NotificationState.leave(appCard.group.notes)
+                    }
                 }
             }
 
             Repeater {
-                model: stack.open ? stack.group.notes : []
+                model: appCard.group.notes
                 delegate: Exit {
-                    id: entry
+                    id: line
                     required property var modelData
                     required property int index
-                    width: openColumn.width
-                    gap: entry.index < stack.size - 1 ? 8 : 0
-                    leaving: root.isLeaving(entry.modelData)
-                    bodyHeight: card.height
+                    width: cardColumn.width
+                    leaving: root.isLeaving(line.modelData)
+                    bodyHeight: rowCard.height
 
+                    Rectangle {
+                        visible: line.index > 0
+                        x: 14
+                        width: parent.width - 28
+                        height: 1
+                        color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
+                    }
                     NotificationCard {
-                        id: card
+                        id: rowCard
                         width: parent.width
-                        notification: entry.modelData
-                        showMeta: true
-                        // The header above already names the app.
-                        showApp: false
-                        timeText: root.timeText(stack.group.stamps[entry.index])
+                        notification: line.modelData
+                        row: true
+                        groupImage: appCard.sharedImage
+                        timeText: root.timeText(appCard.group.stamps[line.index])
                         onDismissRequested: NotificationState.leave([notification])
                         onActionRequested: (action) => NotificationState.invokeAction(notification, action)
                     }
                 }
             }
+
+            // Room under the last line, inside the card.
+            Item { width: 1; height: 4 }
         }
     }
 }

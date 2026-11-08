@@ -128,10 +128,6 @@ QtObject {
     readonly property color accentMedium: root.dark ? "#222226" : "#e1dfd8"
     readonly property color accentStrong: root.dark ? "#2a2a2f" : "#d9d7d0"
     readonly property color accentStrongest: root.dark ? root.ink(0.16) : Qt.rgba(0, 0, 0, 0.12)
-    // The two cards peeking under a collapsed notification stack, each a
-    // step further from the front card.
-    readonly property color stackMid: root.dark ? root.ink(0.06) : Qt.rgba(1, 1, 1, 0.36)
-    readonly property color stackBack: root.dark ? root.ink(0.04) : Qt.rgba(1, 1, 1, 0.26)
     readonly property color destructive: root.danger
     readonly property color destructiveSoft: root.dark ? "#2b1f22" : "#f5dedd"
     // ---- glass ---------------------------------------------------------
