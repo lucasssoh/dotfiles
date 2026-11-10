@@ -297,6 +297,13 @@ function M.set_plugin_groups(p)
     hl("NvimTreeFolderName",      { fg = p.text })
     hl("NvimTreeOpenedFolderName",{ fg = p.cyan_light })
     hl("NvimTreeOpenedFile",      { fg = p.cyan_light })
+    -- The current name of the group above, set outright: nvim-tree only
+    -- links it to the legacy one when it finds it empty, which depends on
+    -- which of the two loaded first.
+    hl("NvimTreeOpenedHL",        { fg = p.cyan_light })
+    -- Files on screen, then the one being edited (lua/tree_shown.lua).
+    hl("NvimTreeShownHL",         { fg = p.cyan, italic = true })
+    hl("NvimTreeFocusedHL",       { fg = p.cyan, italic = true, bold = true })
     hl("NvimTreeSpecialFile",     { fg = p.yellow, underline = true })
     hl("NvimTreeIndentMarker",    { fg = p.muted })
     hl("NvimTreeWinSeparator",    { fg = p.border, bg = p.bg })

@@ -214,6 +214,22 @@ return {
                 -- not the row background) in the matching NvimTreeGit*
                 -- colour — text colour only, no highlight block.
                 highlight_git = "name",
+                -- Open buffers in the opened colour, and among them the
+                -- files on screen in italic, the one being edited in the
+                -- accent (lua/tree_shown.lua). After "Open" so it wins
+                -- over it, before "Diagnostics" so the underline stays.
+                highlight_opened_files = "name",
+                decorators = {
+                    "Git",
+                    "Open",
+                    require("tree_shown").Decorator,
+                    "Hidden",
+                    "Modified",
+                    "Bookmark",
+                    "Diagnostics",
+                    "Copied",
+                    "Cut",
+                },
                 icons = {
                     show = {
                         git = true,
@@ -276,6 +292,8 @@ return {
                 },
             },
         })
+
+        require("tree_shown").setup()
 
         -- Re-elide after every draw: nvim-tree has already resized the
         -- window by the time TreeRendered fires (renderer/init.lua calls
