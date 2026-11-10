@@ -19,6 +19,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Programme:** in Today, the current session's card is outlined, the course under way has a dot, and Coming up is grouped by day.
 - **Bar, centre island:** the window title, workspaces and media now float on their own pane on the bar, and what opens under them hangs as a separate pane in the same glass.
 - **Key bindings:** holding Super opens a compact keyboard with only the keys that do something, where they sit on yours; Shift shows the second layer.
+- **Windows:** the outer gap above a window is now the same as on the sides.
 
 ### Fixed
 - **Programme and notifications:** the side panels slide in smoothly, without a jolt as they start.
