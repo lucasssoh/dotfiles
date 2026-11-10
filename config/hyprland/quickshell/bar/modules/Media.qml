@@ -295,7 +295,7 @@ Item {
             visible: !root.active
             anchors.centerIn: parent
             text: root.placeholderText
-            color: Ink.muted   // colors.lua "muted" -- same token Hdr.qml/ActiveWindow.qml's own placeholder use
+            color: DrawerTheme.islandMuted   // the island's glass-muted, same tier as ActiveWindow's ctx above
             font.family: Fonts.ui
             font.pixelSize: 13
         }

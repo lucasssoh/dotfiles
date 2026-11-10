@@ -46,7 +46,10 @@ Item {
     property bool drawerOpen: false
     // Kept equal to centerIsland's own `revealDuration` (its default,
     // 320 -- centerIsland overrides none of DrawerIsland's timings).
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
     Behavior on height {
+        enabled: !root.dropSnap
         NumberAnimation { duration: 320; easing.type: Easing.InOutCubic }
     }
 

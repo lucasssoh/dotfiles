@@ -920,12 +920,33 @@ ShellRoot {
             // blurred, and nothing is computed, while the bar is idle.
             // The weakest fading pane on this bar sets the blur, unless a
             // pane that does not fade (Boussole's, the notification
-            // centre's) is up and needs it whole.
-            readonly property real glassFade: (ProgrammeState.panelOpen || NotificationState.centerOpen) ? 1
+            // centre's, the central island's row slab) is up and needs it
+            // whole.
+            readonly property real glassFade: (ProgrammeState.panelOpen
+                || NotificationState.centerOpen || centerIsland.rowIsland) ? 1
                 : Math.min(clockIsland.glassFade, launchers.glassFade, toolsIsland.glassFade)
             onGlassFadeChanged: shell.glassLevel = bar.glassFade
 
             BackgroundEffect.blurRegion: Region {
+                // The row's own slab first -- the one pane on this bar
+                // that is up while the bar is idle, always whole: it
+                // never fades, so it is on `glassFade`'s forces-1 list
+                // below like Boussole's and the notification centre's,
+                // not on the fading drawers' min().
+                Region {
+                    x: centerIsland.x + centerIsland.rowPaneX
+                    y: centerIsland.y + centerIsland.rowPaneY
+                    width: DrawerTheme.glass && centerIsland.rowIsland ? centerIsland.rowPaneW : 0
+                    height: centerIsland.rowPaneH
+                    radius: centerIsland.rowPaneR
+                }
+                Region {
+                    x: centerIsland.x + centerIsland.paneX
+                    y: centerIsland.y + centerIsland.paneY
+                    width: DrawerTheme.glass && centerIsland.paneShown ? centerIsland.paneWidth : 0
+                    height: centerIsland.paneHeight
+                    radius: centerIsland.paneRadius
+                }
                 Region {
                     x: clockIsland.x + clockIsland.paneX
                     y: clockIsland.y + clockIsland.paneY
@@ -1046,8 +1067,7 @@ ShellRoot {
                     // instead of quietly becoming a coincidence.
                     x: centerIsland.x + centerIsland.drawerBandX
                        + centerIsland.margin + veilleDrawer.closeHitX
-                    y: centerIsland.y + centerIsland.rowHeight
-                       + centerIsland.drawerGap * centerIsland.opaqueProgress
+                    y: centerIsland.y + centerIsland.drawerTop
                        + veilleDrawer.closeHitY
                     width: veilleDrawer.closeHitWidth
                     height: Math.max(0, Math.min(veilleDrawer.closeHitHeight,
@@ -1088,8 +1108,7 @@ ShellRoot {
                 Region {
                     x: centerIsland.x + centerIsland.drawerBandX
                        + centerIsland.margin + programmeAlert.hitX
-                    y: centerIsland.y + centerIsland.rowHeight
-                       + centerIsland.drawerGap * centerIsland.opaqueProgress
+                    y: centerIsland.y + centerIsland.drawerTop
                        + veilleDrawer.height + programmeAlert.hitY
                     width: programmeAlert.hitWidth
                     height: programmeAlert.hitHeight
@@ -1234,12 +1253,40 @@ ShellRoot {
                 // at 24 -- that is what tiled windows reserve, and this
                 // island was already free to overhang it.
                 rowHeight: bar.bandHeight
-                // Convex glass rather than the traced GlassRim it had --
-                // asked for, and it carries onto whatever extends below
-                // (Veille, the keybinds sheet) because with splitDrawer
-                // false that extension is this same block grown tall.
-                // See DrawerIsland's `rowLens`.
-                rowLens: true
+                // The row as a floating pane ("en îlot", 2026-11-10,
+                // after an afternoon bare -- "Nue" -- which left the notch
+                // look behind but the title and marks unanchored on the
+                // band): inset 2 px from the band's top, four corners rounded at
+                // 10 -- "pas en pill... en coin arrondi" -- wearing the
+                // same material as the drawers hanging below (Veille, the
+                // keybinds sheet): islandPane, a hairline, the bar's blur
+                // ("change le bg de l'ilot centrale au même que veille et
+                // keybings"). Its content stays on the island's own fixed
+                // inks (the modules' defaults, Ink.qml's "the central
+                // island stays dark"), not the band's adaptive one.
+                //
+                // The drawer keeps the OLD reveal -- the island stretches
+                // horizontally first, then down ("garde l'ancienne
+                // animation où c'est l'island centrale qui s'étire
+                // horizontalement d'abord puis verticalement") -- not the
+                // corner zoom the other islands wear: widen, then the
+                // height stretch, then the content fade, in that order.
+                rowPane: false
+                rowIsland: true
+                rowIslandInset: 2
+                rowIslandRadius: 10
+                splitDrawer: true
+                drawerFillTop: DrawerTheme.islandPane
+                drawerFillBottom: DrawerTheme.islandPane
+                drawerRadius: 28
+                paneEdge: true
+                paneShadow: false
+                paneRim: DrawerTheme.islandPaneRim
+                paneHighlight: DrawerTheme.islandPaneHighlight
+                drawerGap: 0
+                drawerTop: bar.bandHeight + 6
+                fixedDrawerWidth: Math.round(Math.max(centerIsland.maxRowWidth, centerIsland.entryWidthWanted))
+                drawerAnchorX: centerIsland.margin + centerIsland.effectiveWidth / 2
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
 

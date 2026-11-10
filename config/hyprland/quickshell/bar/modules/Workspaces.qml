@@ -102,7 +102,7 @@ Item {
                     readonly property bool hollow: pill.modelData.active && !pill.hasWindows
                     color: mark.hollow ? DrawerTheme.clear(DrawerTheme.cream)
                         : (pill.modelData.active ? DrawerTheme.cream
-                        : (pill.occupied ? DrawerTheme.cream2 : Ink.faint))
+                        : (pill.occupied ? DrawerTheme.cream2 : DrawerTheme.islandFaint))
                     border.width: mark.hollow ? 1.2 : 0
                     border.color: DrawerTheme.cream
                     // The bar stretching into place on a workspace switch.

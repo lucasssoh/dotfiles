@@ -80,14 +80,26 @@ QtObject {
     }
 
     // ---- the central island ------------------------------------------
-    // The island (window title, workspaces, media, Veille, the keybinds
-    // sheet) stays black in both modes, so what it reads from here is
-    // fixed: the dark values, under their own names.
+    // What opens under the middle of the bar (Veille, Programme's alert,
+    // the keybinds sheet) is a dark glass pane in both modes, so what it
+    // reads from here is fixed: light inks, one step further from the
+    // glass than they were from the black island, and veils for cards.
     readonly property color islandAccent: "#f2f2f7"
-    readonly property color islandMuted: "#636366"
-    readonly property color islandFaint: "#48484a"
-    readonly property color islandCard: "#17171a"
-    readonly property color islandCardRaised: "#2a2a2f"
+    readonly property color islandMuted: "#8e8e93"
+    readonly property color islandFaint: "#6a6a6e"
+    readonly property color islandCard: Qt.rgba(0.95, 0.95, 0.97, 0.08)
+    readonly property color islandKey: Qt.rgba(0.95, 0.95, 0.97, 0.11)
+    readonly property color islandCardRaised: Qt.rgba(0.95, 0.95, 0.97, 0.16)
+    // The pane itself. In dark it is the drawers' own glass; in light the
+    // blur behind is bright, so the veil thickens to keep the cream inks
+    // readable.
+    readonly property color islandPane: root.dark ? root.glassPane : Qt.rgba(0.078, 0.078, 0.094, 0.72)
+    // The edge of that pane, fixed dark like the rest of this palette:
+    // the light-mode `paneRim` (white at 65%, the top light at 80%) drew
+    // a glaring border around a dark pane ("une bordure blanche bizarre
+    // qui n'est pas censé être là").
+    readonly property color islandPaneRim: Qt.rgba(1, 1, 1, 0.14)
+    readonly property color islandPaneHighlight: Qt.rgba(1, 1, 1, 0.10)
 
     // ---- the inversion ("on") -----------------------------------------
     readonly property color on: root.primary

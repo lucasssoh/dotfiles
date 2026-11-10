@@ -16,7 +16,10 @@ Item {
     id: root
 
     property bool drawerOpen: false
+    // Set by DrawerIsland while its drop reveal is moving.
+    property bool dropSnap: false
     Behavior on height {
+        enabled: !root.dropSnap
         NumberAnimation { duration: 320; easing.type: Easing.InOutCubic }
     }
 

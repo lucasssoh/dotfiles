@@ -22,6 +22,12 @@ Item {
     property real bottomRightRadius: edge.radius
     property bool highlight: true
     property bool fade: false
+    // The rim and the top light, overridable: the island panes are dark
+    // in both modes, so they keep the dark rim -- the light-mode white
+    // (65% and 80%) drew a glaring border around them ("une bordure
+    // blanche bizarre qui n'est pas censé être là").
+    property color rimColor: DrawerTheme.paneRim
+    property color highlightColor: DrawerTheme.paneHighlight
 
     anchors.fill: parent
 
@@ -46,7 +52,7 @@ Item {
             bottomLeftRadius: edge.bottomLeftRadius
             bottomRightRadius: edge.bottomRightRadius
             border.width: 1
-            border.color: DrawerTheme.paneRim
+            border.color: edge.rimColor
         }
     }
     Repeater {
@@ -59,8 +65,8 @@ Item {
             width: 1
             height: Math.round(edge.height * 0.65)
             gradient: Gradient {
-                GradientStop { position: 0.0; color: DrawerTheme.paneRim }
-                GradientStop { position: 1.0; color: DrawerTheme.clear(DrawerTheme.paneRim) }
+                GradientStop { position: 0.0; color: edge.rimColor }
+                GradientStop { position: 1.0; color: DrawerTheme.clear(edge.rimColor) }
             }
         }
     }
@@ -74,7 +80,7 @@ Item {
         bottomLeftRadius: edge.bottomLeftRadius
         bottomRightRadius: edge.bottomRightRadius
         border.width: 1
-        border.color: DrawerTheme.paneRim
+        border.color: edge.rimColor
     }
 
     // The top light: a second ring one pixel in, kept to the top band so
@@ -96,7 +102,7 @@ Item {
             bottomLeftRadius: Math.max(0, edge.bottomLeftRadius - 1)
             bottomRightRadius: Math.max(0, edge.bottomRightRadius - 1)
             border.width: 1
-            border.color: DrawerTheme.paneHighlight
+            border.color: edge.highlightColor
         }
     }
 }

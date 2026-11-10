@@ -247,6 +247,23 @@ Item {
     // DrawerIsland is shared.
     property bool rowLens: false
 
+    // The row as its own floating pane ("en îlot", asked for after an
+    // afternoon bare): the same material as the drawers hanging below
+    // (Veille, the keybinds sheet) -- `islandPane`, a hairline edge and
+    // the bar's blur behind it (shell.qml's regions) -- inset from
+    // whatever the row is flush against so it reads as a pane sitting ON
+    // the strip, not the capsule the row's pill was ("pas en pill... en
+    // coin arrondi", the radius stays under half the height) and not the
+    // notch `flushTop` squares against the screen's edge. The opaque
+    // black it wore for a while was dropped again: "change le bg de
+    // l'ilot centrale au même que veille et keybings".
+    //
+    // Opt-in from shell.qml like every look knob here, because
+    // DrawerIsland is shared.
+    property bool rowIsland: false
+    property real rowIslandInset: 2
+    property real rowIslandRadius: 10
+
     // The drawer block's own fill. Overridable per consumer because the
     // two islands want opposite things: TOOLS' drawers (Balise, the
     // notification center) put opaque cards on it and can therefore
@@ -449,7 +466,16 @@ Item {
     // Overrides `drawerLens`. The surface grows by `paneShadowRoom` so the
     // shadow under the tallest drawer is not cut off at its bottom edge.
     property bool paneEdge: false
-    readonly property int paneShadowRoom: root.paneEdge ? 64 : 0
+    // The shadow itself, off for centerIsland ("enlève l'ombre derrière"):
+    // its drawer is one more pane lying on the band's own strip, and the
+    // shadow behind it read as a second slab.
+    property bool paneShadow: true
+    readonly property int paneShadowRoom: root.paneEdge && root.paneShadow ? 64 : 0
+    // What PaneEdge draws its hairline in, overridable for the same reason
+    // `paneEdge` is: centerIsland's panes are dark in both modes and keep
+    // the dark rim, where the light-mode white would glare around them.
+    property color paneRim: DrawerTheme.paneRim
+    property color paneHighlight: DrawerTheme.paneHighlight
 
     // ---- drop reveal ----------------------------------------------------
     //
@@ -555,6 +581,11 @@ Item {
     }
     // Coin's progress: a spring of 0.36 s at 0.85 damping opening (the
     // mockup's numbers), an ease-in closing once the cards have burst.
+    // The spring lands early -- nearly full by 220 ms, when the content
+    // fade below finishes -- and that is what the fade is timed on: an
+    // S-curve spread over the whole 550 ms instead faded the content in
+    // on a pane still at a third of its size ("les animations des autres
+    // tiroirs sont un peu cassé"), the text growing with it.
     readonly property real cornerX: {
         if (root.dropClosing)
             return root.cornerFrom * (1 - root.easeInCubic((root.dropCloseMs - 30) / (root.dropCloseDuration - 30)));
@@ -728,6 +759,17 @@ Item {
     readonly property real paneY: drawerFill.y + root.paneShift
     readonly property real paneWidth: drawerFill.width * root.paneScale
     readonly property real paneHeight: drawerFill.height * root.paneScale
+    // The row pane's own rect, for shell.qml's blur region -- separate
+    // reals for the same reason paneX above are: a Region reading its
+    // geometry through a rect never follows it. The row's live width IS
+    // the island's (the pane spans it edge to edge, margins included,
+    // like `fill` always did), so this tracks the content reflowing
+    // under it with nothing extra to animate.
+    readonly property real rowPaneX: 0
+    readonly property real rowPaneY: root.rowIslandInset
+    readonly property real rowPaneW: root.width
+    readonly property real rowPaneH: Math.max(0, root.rowHeight - 2 * root.rowIslandInset)
+    readonly property real rowPaneR: Math.min(root.rowIslandRadius, root.rowPaneH / 2)
     // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
     // this 6px auto-spacing entirely, no manual spacers between its
     // children. TOOLS' own content instead uses spacing:0 plus hand-tuned
@@ -1294,6 +1336,29 @@ Item {
         }
     }
 
+    // The row's glass slab -- see `rowIsland` for the look. Drawn instead
+    // of everything `fill` carries (rowPane stands false): the veil and
+    // the hairline are this pane's whole material, no rim, no gloss, no
+    // lens. No RectangularShadow either: the slab sits 2 px above the
+    // band's own bottom line and the window ends with the band, so a
+    // shadow below it would be guillotined at the surface's edge -- the
+    // hairline is what carries a pane lying ON a strip, not elevation.
+    Rectangle {
+        visible: root.rowIsland
+        x: 0
+        y: root.rowPaneY
+        width: root.rowPaneW
+        height: root.rowPaneH
+        radius: root.rowPaneR
+        color: DrawerTheme.islandPane
+
+        PaneEdge {
+            radius: root.rowPaneR
+            rimColor: root.paneRim
+            highlightColor: root.paneHighlight
+        }
+    }
+
     // Top row -- centered within root's own (possibly wider than the
     // row itself, see `effectiveWidth` above) width, not just flush
     // left with margin, so it stays visually centered ("en gardant
@@ -1308,7 +1373,13 @@ Item {
         // not tolerate that quietly -- it re-rasterizes rather than
         // sliding, so the row appears to vibrate horizontally.
         x: Math.round(root.margin + (root.effectiveWidth - topRow.implicitWidth) / 2)
-        y: 0
+        // Centred in the row's own height, not pinned to its top: a Row
+        // lays its children out at y 0, so a row taller than its content
+        // (centerIsland's 31 against the modules' 24) left the title and
+        // marks riding high -- "le text n'est pas verticalement centré
+        // comme les autres". Same rounding as the side islands' own
+        // topMargin, so all of them sit on one axis.
+        y: Math.round((root.rowHeight - topRow.implicitHeight) / 2)
         height: root.rowHeight
         spacing: root.rowSpacing
     }
@@ -1344,7 +1415,7 @@ Item {
     // RectangularShadow is a distance field, not a blurred copy, so it
     // costs next to nothing while the pane changes size every frame.
     RectangularShadow {
-        visible: root.paneEdge && root.splitDrawer && root.paneShown
+        visible: root.paneEdge && root.paneShadow && root.splitDrawer && root.paneShown
         x: drawerFill.x
         y: drawerFill.y
         width: drawerFill.width
@@ -1401,6 +1472,8 @@ Item {
         PaneEdge {
             visible: root.paneEdge
             radius: drawerFill.radius
+            rimColor: root.paneRim
+            highlightColor: root.paneHighlight
         }
 
         layer.enabled: root.drawerLens && !root.paneEdge && root.paneShown
