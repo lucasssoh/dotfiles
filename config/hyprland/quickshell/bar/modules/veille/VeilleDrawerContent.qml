@@ -58,14 +58,13 @@ Item {
     readonly property int bottomGap: 20
 
     readonly property bool showSeconds: root.veille ? root.veille.config.showSeconds : true
-    // The width this card asks the island for (DrawerIsland's
-    // `entryWidthFloor`): the row alone is ~520 px with nothing playing,
-    // which squeezed the message into five lines. Also
-    // the most it takes when the keybinds sheet widens the island
-    // further -- the card then stays this wide, centred.
-    readonly property int drawerWidth: 840
-    readonly property real textWidth: Math.max(0, Math.min(root.width, root.drawerWidth) - root.hPad * 2)
-    readonly property real contentInset: root.hPad + Math.max(0, (root.width - root.textWidth - root.hPad * 2) / 2)
+    // The width this card asks the island for, set in shell.qml to the
+    // keybinds sheet's own: the island then opens at the same size for
+    // both ("la même largeur que keybindings"), instead of widening
+    // further for Veille's old 840 and shrinking back when it closed.
+    // 0 (the default) leaves the card to the island's row width.
+    property real drawerWidth: 0
+    readonly property real textWidth: Math.max(0, root.width - root.hPad * 2)
 
     // + the handle's own band: it sits ABOVE topGap, so the drawer grows
     // by exactly what the handle takes.
@@ -115,7 +114,7 @@ Item {
     // ---- the pulse -----------------------------------------------------
     Column {
         id: content
-        x: root.contentInset
+        x: root.hPad
         anchors.top: handle.bottom
         anchors.topMargin: root.topGap
         width: root.textWidth

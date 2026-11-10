@@ -1317,6 +1317,9 @@ ShellRoot {
                     VeilleDrawerContent {
                         id: veilleDrawer
                         veille: shell.veille
+                        // Same footprint as the keybinds sheet below, so
+                        // the island does not resize between the two.
+                        drawerWidth: keybindsDrawer.drawerWidth
                         drawerOpen: !shell.veille.suppressed && bar.screen === shell.veille.activeScreen
                     },
                     // Programme's alerts, under Veille's pulse when both
@@ -1326,6 +1329,7 @@ ShellRoot {
                         drawerOpen: ProgrammeState.alertShown && bar.screen === shell.veille.activeScreen
                     },
                     Modules.KeybindsDrawerContent {
+                        id: keybindsDrawer
                         drawerOpen: shell.keybindsVisible
                         shiftHeld: shell.keybindsShift
                     }

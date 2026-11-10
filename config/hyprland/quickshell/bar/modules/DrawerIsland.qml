@@ -843,9 +843,10 @@ Item {
 
     // The widest `drawerWidth` any entry on screen asks for, 0 if none
     // does. Opt-in per entry and only honoured on the widen-on-open path
-    // (centerIsland): the keybinds sheet draws a 15-unit keyboard, and
-    // Veille's pulse wants 840 px, while the row alone can be as
-    // narrow as ~520 with nothing playing.
+    // (centerIsland): the keybinds sheet draws a 15-unit keyboard and
+    // Programme's alert wants 840 px, while the row alone can be as
+    // narrow as ~520 with nothing playing. Veille asks for the keybinds
+    // sheet's own width, so the island opens at the same size for both.
     //
     // "On screen" is `drawerOpen || height > 0`, not just drawerOpen: an
     // entry closing still has height while it collapses, and the island
