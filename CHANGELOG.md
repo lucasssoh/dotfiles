@@ -14,6 +14,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Programme and notifications:** the side panels are rounded like the screen's corners, with a single edge that fades towards the bottom, and their glass is denser lower down.
 
 ### Fixed
+- **Programme and notifications:** the side panels slide in smoothly, without a jolt as they start.
 - **Neovim:** with a transparent background, the status bar no longer shows solid triangles between its sections.
 - **Notifications:** during a Programme session, the bell opens the notification centre again on a workspace without Boussole. It stays closed with Boussole in front.
 - **Updates:** `cc-pkg-mng upgrade` brings the screenshot editor's new builds too. It used to keep the one first installed.

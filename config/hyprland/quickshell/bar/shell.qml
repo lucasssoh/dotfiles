@@ -2821,7 +2821,13 @@ ShellRoot {
                 height: parent.height
                 x: entered && ProgrammeState.panelOpen ? 0 : -width
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                Component.onCompleted: Qt.callLater(() => programmeSheet.entered = true)
+                // The slide waits for the new window's first few frames:
+                // started on creation, it shared them with the first render
+                // (shaders, glyphs), and held its first frame twice.
+                FrameAnimation {
+                    running: !programmeSheet.entered
+                    onTriggered: if (currentFrame >= 3) programmeSheet.entered = true
+                }
                 color: DrawerTheme.paneTop
                 // Rounded where it meets the desktop, and on the screen's
                 // side with the screen's own corners (ScreenCorner.qml's 18).
@@ -2910,7 +2916,11 @@ ShellRoot {
                 height: parent.height
                 x: entered && NotificationState.centerOpen ? 0 : width
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                Component.onCompleted: Qt.callLater(() => notificationsSheet.entered = true)
+                // As Programme's sheet: the slide waits for the first frames.
+                FrameAnimation {
+                    running: !notificationsSheet.entered
+                    onTriggered: if (currentFrame >= 3) notificationsSheet.entered = true
+                }
                 color: DrawerTheme.paneTop
                 // As Programme's sheet, mirrored.
                 topLeftRadius: 32
