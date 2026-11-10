@@ -1404,9 +1404,18 @@ impl Service {
                 let day = i18n::date(s.date, lang);
                 let day = day.split(' ').next().unwrap_or("").trim_end_matches('.');
                 let when = if s.date == now.date { s.start.to_string() } else { format!("{day} {}", s.start) };
+                // The panel groups by day: the day as a heading ("" today),
+                // the time on the row. `when` stays for older panels.
+                let heading = if s.date == now.date {
+                    String::new()
+                } else if s.date == now.date.add(1) {
+                    (if lang == Lang::Fr { "Demain" } else { "Tomorrow" }).to_string()
+                } else {
+                    i18n::weekday(s.date, lang)
+                };
                 let m = s.end.0 - s.start.0;
                 let len = if m >= 60 { format!("{} h{}", m / 60, if m % 60 > 0 { format!(" {:02}", m % 60) } else { String::new() }) } else { format!("{m} min") };
-                json!({ "id": s.id, "when": when, "title": self.headline(s), "len": len })
+                json!({ "id": s.id, "when": when, "day": heading, "time": s.start.to_string(), "title": self.headline(s), "len": len })
             })
             .collect();
         Value::Array(rows)

@@ -8,6 +8,8 @@ use crate::time::{Date, Hm, Local};
 
 const DAYS_EN: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAYS_FR: [&str; 7] = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
+const WEEKDAYS_EN: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const WEEKDAYS_FR: [&str; 7] = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const MONTHS_EN: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS_FR: [&str; 12] =
     ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -19,6 +21,15 @@ pub fn date(d: Date, lang: Lang) -> String {
     match lang {
         Lang::En => format!("{} {} {day}", DAYS_EN[wd], MONTHS_EN[m as usize - 1]),
         Lang::Fr => format!("{} {day} {}", DAYS_FR[wd], MONTHS_FR[m as usize - 1]),
+    }
+}
+
+/// "Wednesday" / "Mercredi", as a heading.
+pub fn weekday(d: Date, lang: Lang) -> String {
+    let wd = d.weekday() as usize;
+    match lang {
+        Lang::En => WEEKDAYS_EN[wd].to_string(),
+        Lang::Fr => WEEKDAYS_FR[wd].to_string(),
     }
 }
 

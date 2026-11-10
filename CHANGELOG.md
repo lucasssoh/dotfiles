@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Screen corners:** the rounded corners stay above everything, fullscreen windows included.
 - **Programme and notifications:** the side panels are rounded like the screen's corners, with a single edge that fades towards the bottom, and their glass is denser lower down.
 - **Notifications:** a finer clock, a round Do not disturb button lined up with Programme's tabs, Clear all only when there is something to clear, and a pale bell when the list is empty.
+- **Programme:** in Today, the current session's card is outlined, the course under way has a dot, and Coming up is grouped by day.
 
 ### Fixed
 - **Programme and notifications:** the side panels slide in smoothly, without a jolt as they start.

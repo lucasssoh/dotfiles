@@ -104,11 +104,14 @@ Column {
         width: parent.width
         spacing: 10
         Label { text: root.b.tr("Under way", "En cours") }
+        // Outlined like "Next", no solid fill.
         Rectangle {
             width: parent.width
             height: activeCol.implicitHeight + 36
             radius: 20
-            color: DrawerTheme.card
+            color: DrawerTheme.clear(DrawerTheme.card)
+            border.width: 1
+            border.color: DrawerTheme.faint
             Column {
                 id: activeCol
                 x: 18
@@ -365,6 +368,16 @@ Column {
                 required property var modelData
                 width: root.width
                 height: 36
+                // A dot in the margin before the course under way.
+                Rectangle {
+                    visible: modelData.now
+                    x: -12
+                    anchors.verticalCenter: courseTime.verticalCenter
+                    width: 6
+                    height: 6
+                    radius: 3
+                    color: DrawerTheme.primary
+                }
                 ProgrammeText {
                     id: courseTime
                     anchors.verticalCenter: parent.verticalCenter
@@ -406,17 +419,37 @@ Column {
         Label { text: root.b.tr("Coming up", "À venir"); bottomPadding: 6 }
         Repeater {
             model: root.b.status.upcoming || []
-            delegate: Row {
+            // Grouped by day: the day once, over its first row, rather
+            // than on every row ("day" is empty for today).
+            delegate: Column {
+                id: upRow
                 required property var modelData
+                required property int index
+                readonly property string day: modelData.day !== undefined ? modelData.day : ""
+                readonly property bool opensDay: upRow.day !== ""
+                    && (upRow.index === 0 || (root.b.status.upcoming[upRow.index - 1] || {}).day !== upRow.day)
+                width: root.width
+
+                ProgrammeText {
+                    visible: upRow.opensDay
+                    topPadding: upRow.index === 0 ? 0 : 10
+                    bottomPadding: 2
+                    text: upRow.day
+                    color: DrawerTheme.muted
+                    font.pixelSize: 12
+                    font.weight: Font.Medium
+                }
+            Row {
                 width: root.width
                 height: 36
                 spacing: 14
                 ProgrammeText {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 92
-                    text: modelData.when
+                    text: modelData.time !== undefined ? modelData.time : modelData.when
                     color: DrawerTheme.secondary
                     font.pixelSize: 13
+                    font.features: { "tnum": 1 }
                 }
                 ProgrammeText {
                     anchors.verticalCenter: parent.verticalCenter
@@ -433,6 +466,7 @@ Column {
                     color: DrawerTheme.muted
                     font.pixelSize: 13
                 }
+            }
             }
         }
     }

@@ -117,7 +117,9 @@ Item {
         id: flick
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 20
+        // The clip starts 14px left of the page, so a mark in its margin
+        // (Today's dot before the course under way) is not cut off.
+        anchors.leftMargin: 6
         anchors.rightMargin: 20
         anchors.top: tabs.visible ? tabs.bottom : handle.bottom
         anchors.topMargin: tabs.visible ? 14 : 12
@@ -129,7 +131,8 @@ Item {
 
         Loader {
             id: page
-            width: flick.width
+            x: 14
+            width: flick.width - 14
             sourceComponent: root.b.page === "week" ? week
                            : root.b.page === "plus" ? plus
                            : root.b.page === "setup" ? setup : today
