@@ -15,6 +15,7 @@ return {
     bg          = "#f5f3ee", -- DrawerTheme panelTop (light)
     surface     = "#ebe8e1", -- one step darker: floats, cursor line
     overlay     = "#dedad2", -- second step: selection, prompts
+    pill        = "#dedad2", -- the active tab's pill, see palette.lua
     border      = "#c4c3be", -- DrawerTheme faint
     muted       = "#7a7a80", -- comments, line numbers: DrawerTheme muted, darkened to hold on glass
     subtle      = "#56565b", -- DrawerTheme secondary

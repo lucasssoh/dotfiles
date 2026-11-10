@@ -67,6 +67,10 @@ return {
             return diagnostic_prefix(buf.bufnr) .. buf.name
           end,
 
+          -- The active tab is set apart by its pill (coucou's
+          -- p.pill, below), so no bar in front of it.
+          indicator = { style = "none" },
+
           offsets = {
             {
               filetype = "NvimTree",
@@ -75,7 +79,26 @@ return {
               separator = false,
             }
           },
-        }
+        },
+
+        -- The pill has to reach bufferline's own copies of the selected
+        -- colours, not only the groups coucou overrides afterwards: the
+        -- file-type icon's group is built from these (highlights.lua,
+        -- set_icon_highlight) and would otherwise punch a hole in it.
+        -- Called again on every ColorScheme, so it follows light/dark.
+        highlights = function(defaults)
+          if vim.g.colors_name ~= "coucou" then
+            return {}
+          end
+          local p = require(vim.o.background == "light" and "coucou.palette_light" or "coucou.palette")
+          local hls = {}
+          for name in pairs(defaults.highlights) do
+            if name:match("_selected$") then
+              hls[name] = { bg = p.pill }
+            end
+          end
+          return hls
+        end,
       })
 
       -- bufferline ne s'abonne pas à DiagnosticChanged (ses autocmds :

@@ -12,6 +12,10 @@ return {
     bg          = "#0e0e0e", -- waybar/style.css:5 (#141414), darkened a touch for the editor
     surface     = "#17171a", -- waybar/style.css:6 (#1e1e20), darkened to match
     overlay     = "#232326", -- waybar/style.css:7 (#2c2c2e), darkened to match
+    -- The active tab's pill. Kept at waybar's own #2c2c2e rather than
+    -- `overlay`: it has to stand out over a dimmed wallpaper too, since
+    -- the transparent background keeps this fill (lua/theme.lua).
+    pill        = "#2c2c2e",
     border      = "#505050", -- waybar/style.css:8   signature 1-2px border
     muted       = "#48484a", -- waybar/style.css:12  disabled / empty state
     subtle      = "#8e8e93", -- rofi/share.rasi:21   secondary text

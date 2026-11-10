@@ -89,6 +89,16 @@ local keep_bg = {
     VisualNOS = true,
 }
 
+-- coucou marks the active tab with a pill (lua/plugins/bufferline.lua):
+-- every bufferline group of the selected tab, its file-type icon
+-- included (BufferLineDevIconLuaSelected…), keeps that fill. Other
+-- themes paint their selected tab like the editor, so clearing it there
+-- is still right.
+local function keep(name)
+    return keep_bg[name]
+        or (vim.g.colors_name == "coucou" and name:match("^BufferLine.*Selected$") ~= nil)
+end
+
 -- Remove every panel/surface background instead of patching a fixed list of
 -- groups, so the whole UI lets the terminal's own translucency through --
 -- nvim-tree, statusline, tabline, floats, popups, lualine, plugins.
@@ -115,7 +125,7 @@ local function clear_backgrounds()
 
     for name, attrs in pairs(vim.api.nvim_get_hl(0, {})) do
         -- Linked groups follow their target, which is handled on its own.
-        if not attrs.link and not attrs.reverse and not keep_bg[name] and is_surface(attrs.bg) then
+        if not attrs.link and not attrs.reverse and not keep(name) and is_surface(attrs.bg) then
             local hl = vim.deepcopy(attrs)
             hl.bg = nil
             hl.ctermbg = nil

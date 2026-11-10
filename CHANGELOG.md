@@ -10,6 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Neovim:** the light theme uses the shell's colours, and its status bar is light too.
+- **Neovim:** the active tab stands out as a pill, transparent background included.
 - **Screen corners:** the rounded corners stay above everything, fullscreen windows included.
 - **Programme and notifications:** the side panels are rounded like the screen's corners, with a single edge that fades towards the bottom, and their glass is denser lower down.
 - **Notifications:** a finer clock, a round Do not disturb button lined up with Programme's tabs, Clear all only when there is something to clear, and a pale bell when the list is empty.
