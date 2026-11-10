@@ -2,6 +2,15 @@
 //! memory, the package temperature, the fan and the download rate. Load and
 //! rate are deltas between two reads, so something has to sample; this is
 //! that something, and it only runs while the bar is looking (main.rs).
+//!
+//! The battery's draw belongs here too. power_supply does send a uevent,
+//! but only when the EC reports a change of state or a step in the level:
+//! minutes apart on battery (measured: two in 90 s, 0.4 s apart, then none),
+//! and upowerd's own re-read is every 30 s. So it is sampled with the rest,
+//! on battery only. One read costs 0.5 ms of EC (measured, the kernel keeps
+//! it 1 s), inside a wakeup that happens anyway.
+
+use std::collections::VecDeque;
 
 use std::time::Instant;
 
@@ -20,6 +29,11 @@ pub struct Sampler {
     temp: Option<Attr>,
     fan: Option<Attr>,
     rx: Option<(String, Attr)>,
+    draw: Option<Draw>,
+    on_battery: bool,
+    /// The last few draws, averaged: power_now swings by ±0.35 W from one
+    /// read to the next, and the decimal would change on every sample.
+    draws: VecDeque<f64>,
     prev_cpu: Option<(u64, u64)>,
     prev_rx: Option<(u64, Instant)>,
     buf: Vec<u8>,
@@ -35,7 +49,20 @@ pub struct Figures {
     temp: Option<i64>,
     fan: Option<i64>,
     net: f64,
+    /// Watts, on battery only: on mains the battery reports its charge rate
+    /// (or 0 once full or capped), not what the machine draws.
+    watts: Option<f64>,
 }
+
+/// Energy gauges expose the power directly; charge gauges leave it to
+/// current × voltage.
+enum Draw {
+    Power(Attr),
+    Charge(Attr, Attr),
+}
+
+/// 5 samples of 3 s: follows a build within seconds, steady at rest.
+const DRAW_WINDOW: usize = 5;
 
 impl Figures {
     pub fn to_json(&self, has_temp: bool, has_fan: bool) -> Value {
@@ -50,6 +77,8 @@ impl Figures {
             "hasFan": has_fan,
             "fan": self.fan,
             "net": self.net,
+            "hasWatts": self.watts.is_some(),
+            "watts": self.watts.unwrap_or(0.0),
         })
     }
 
@@ -58,14 +87,15 @@ impl Figures {
     /// not sent and the bar is not woken for it.
     pub fn shown(&self) -> String {
         format!(
-            "{} {:.1} {:.1} {} {:?} {:?} {}",
+            "{} {:.1} {:.1} {} {:?} {:?} {} {}",
             self.cpu,
             self.ghz,
             self.mem_gb,
             self.mem_pct,
             self.temp,
             self.fan,
-            rate_shown(self.net)
+            rate_shown(self.net),
+            self.watts.map(|w| format!("{w:.1}")).unwrap_or_default()
         )
     }
 }
@@ -97,6 +127,9 @@ impl Sampler {
             temp: temp_path().and_then(Attr::open),
             fan: sorted_dir("/sys/class/hwmon").iter().find_map(|h| Attr::open(format!("{h}/fan1_input"))),
             rx: None,
+            draw: draw_attrs(),
+            on_battery: false,
+            draws: VecDeque::with_capacity(DRAW_WINDOW),
             prev_cpu: None,
             prev_rx: None,
             buf: Vec::with_capacity(8192),
@@ -127,11 +160,26 @@ impl Sampler {
         };
     }
 
+    /// From the charger's state (power.rs, on its uevent). True when that
+    /// changes what the bar shows.
+    pub fn set_on_battery(&mut self, on: bool) -> bool {
+        let on = on && self.draw.is_some();
+        if on == self.on_battery {
+            return false;
+        }
+        self.on_battery = on;
+        self.draws.clear();
+        // Plugged in: hidden at once. Unplugged: shown from the next sample,
+        // the EC needing a moment before power_now means the new state.
+        self.now.watts.take().is_some()
+    }
+
     /// Drop the baselines, so the first sample after a pause does not report
     /// the average of the whole time the screen was off.
     pub fn forget(&mut self) {
         self.prev_cpu = None;
         self.prev_rx = None;
+        self.draws.clear();
     }
 
     pub fn sample(&mut self, now: Instant) {
@@ -145,6 +193,29 @@ impl Sampler {
             self.now.fan = f.read_int(&mut self.buf);
         }
         self.sample_rx(now);
+        self.sample_draw();
+    }
+
+    fn sample_draw(&mut self) {
+        if !self.on_battery {
+            return;
+        }
+        let w = match &self.draw {
+            Some(Draw::Power(p)) => p.read_int(&mut self.buf).map(|uw| uw as f64 / 1e6),
+            Some(Draw::Charge(i, v)) => {
+                let ua = i.read_int(&mut self.buf);
+                let uv = v.read_int(&mut self.buf);
+                ua.zip(uv).map(|(a, v)| (a as f64 * v as f64 / 1e12).abs())
+            }
+            None => None,
+        };
+        // 0 right after an unplug, before the gauge has a reading.
+        let Some(w) = w.filter(|&w| w > 0.0) else { return };
+        if self.draws.len() == DRAW_WINDOW {
+            self.draws.pop_front();
+        }
+        self.draws.push_back(w);
+        self.now.watts = Some(self.draws.iter().sum::<f64>() / self.draws.len() as f64);
     }
 
     fn sample_cpu(&mut self) {
@@ -216,6 +287,17 @@ impl Sampler {
         }
         self.prev_rx = Some((v, now));
     }
+}
+
+/// The first battery's draw attributes, by type rather than by name.
+fn draw_attrs() -> Option<Draw> {
+    let bat = sorted_dir("/sys/class/power_supply")
+        .into_iter()
+        .find(|d| read_trimmed(format!("{d}/type")).as_deref() == Some("Battery"))?;
+    if let Some(p) = Attr::open(format!("{bat}/power_now")) {
+        return Some(Draw::Power(p));
+    }
+    Some(Draw::Charge(Attr::open(format!("{bat}/current_now"))?, Attr::open(format!("{bat}/voltage_now"))?))
 }
 
 /// The CPU package sensor, by preference rather than by glob order:

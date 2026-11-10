@@ -4,7 +4,7 @@
 //!   - the kernel's uevent socket, for the charger and the battery;
 //!   - the socket at $XDG_RUNTIME_DIR/pouls.sock and its clients.
 //! poll only gets a timeout while a client is watching and the screen is on:
-//! that is the 3 s sample of the figures that have no event (stats.rs). With
+//! that is the 3 s sample of the figures that have no usable event (stats.rs). With
 //! the screen off or the bar in zen mode, only a uevent wakes it.
 //!
 //! The socket speaks JSON lines, like Balise's and Manette's.
@@ -117,6 +117,7 @@ fn run() -> io::Result<()> {
         adapter_check: None,
     };
     d.power_state = d.power.read();
+    d.sampler.set_on_battery(d.power_state.mains == Some(false));
     d.run()
 }
 
@@ -200,7 +201,8 @@ impl Daemon {
                 self.next_tick = Some(now + TICK);
                 self.sampler.sample(now);
                 self.push_stats(false);
-                // No power read here. conservation_mode and charge_types
+                // No charger or charge-policy read here (the battery's draw
+                // is in the sample, stats.rs). conservation_mode and charge_types
                 // are answered by the embedded controller, 6.7 ms each with
                 // the process put to sleep for it (measured), and the
                 // charger has its uevent: every 3 s that would be paying
@@ -263,6 +265,9 @@ impl Daemon {
         self.power_state = s;
         let msg = self.power_state.to_json();
         self.broadcast(&msg);
+        if self.sampler.set_on_battery(self.power_state.mains == Some(false)) && self.next_tick.is_some() {
+            self.push_stats(false);
+        }
     }
 
     fn stats_msg(&self) -> Value {

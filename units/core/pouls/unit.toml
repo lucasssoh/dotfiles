@@ -1,6 +1,6 @@
 name     = "pouls"
 layer    = "core"
-summary  = "The bar's system figures: CPU, memory, temperature, download rate, charger and charge policy"
+summary  = "The bar's system figures: CPU, memory, temperature, power draw, download rate, charger and charge policy"
 requires = ["hyprland"]
 
 # stable: the RPM from the coucou-shell repo, same version as the release.
