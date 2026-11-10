@@ -27,7 +27,16 @@ config.automatically_reload_config = true
 -- =========================
 -- APPEARANCE
 -- =========================
-config.window_background_opacity = 0.4
+-- Light or dark, following the desktop (the portal's color-scheme, the bar's
+-- toggle). WezTerm re-reads this file by itself when it changes. wezterm.gui
+-- is absent when the config is read outside the GUI (the CLI, the mux).
+local light = wezterm.gui ~= nil and wezterm.gui.get_appearance():find("Light") ~= nil
+
+-- In dark, a 40% black veil: the blur behind already darkens the wallpaper.
+-- In light, a cream veil can't stay that thin: over a dark wallpaper (one
+-- with no light version stays dark in light mode) dark text would sink.
+-- 85% holds on every wallpaper and looks the same whatever is behind.
+config.window_background_opacity = light and 0.85 or 0.4
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
@@ -67,9 +76,10 @@ config.inactive_pane_hsb = {
 -- background and its opacity. Its tones are therefore derived from those two
 -- values: the bar is exactly as see-through as the terminal, so the
 -- compositor's blur shows through it too, and it follows any change to
--- window_background_opacity. The active tab is a darker veil of the same
--- colour: a white one turns opaque cream, as WezTerm does not blend it.
-local background = "#000000"
+-- window_background_opacity. The active tab is a denser veil of the same
+-- colour (black in dark, cream in light): a white one over black turns
+-- opaque cream, as WezTerm does not blend it.
+local background = light and "#f5f3ee" or "#000000"
 local function veil(extra)
   local r, g, b = background:match("#(%x%x)(%x%x)(%x%x)")
   local alpha = math.min(1, config.window_background_opacity + extra)
@@ -77,46 +87,58 @@ local function veil(extra)
     tonumber(r, 16), tonumber(g, 16), tonumber(b, 16), alpha)
 end
 
-config.colors = {
-  foreground = "#f8f8f2",
-  background = background,
-  cursor_bg = "#ffffff",
-  selection_fg = "#f8f8f2",
-  selection_bg = "#484e54",
-  -- Green separator = visual indicator of the active pane
-  split = "#605b51",
-  ansi = {
-    "#232629", "#b0151a", "#028902", "#ffb400",
-    "#0082c9", "#6d61a1", "#008b8b", "#f8f8f2",
-  },
-  brights = {
-    "#484e54", "#b0151a", "#028902", "#ffb400",
-    "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
-  },
-  tab_bar = {
+local function tab_bar(ink, dim, hover)
+  return {
     background = veil(0),
-    active_tab = {
-      bg_color = veil(0.18),
-      fg_color = "#f8f8f2",
+    active_tab = { bg_color = veil(0.18), fg_color = ink },
+    inactive_tab = { bg_color = veil(0), fg_color = dim },
+    inactive_tab_hover = { bg_color = veil(0.08), fg_color = hover },
+    new_tab = { bg_color = veil(0), fg_color = dim },
+    new_tab_hover = { bg_color = veil(0.08), fg_color = ink },
+  }
+end
+
+if light then
+  -- The shell's light inks (quickshell/bar/theme/DrawerTheme.qml), the same
+  -- as nvim's coucou light: neutral greys, the cream panel, dark accents.
+  config.colors = {
+    foreground = "#1c1c1e",
+    background = background,
+    cursor_bg = "#1c1c1e",
+    cursor_fg = "#f5f3ee",
+    cursor_border = "#1c1c1e",
+    selection_fg = "#1c1c1e",
+    selection_bg = "#dedad2",
+    split = "#c4c3be",
+    ansi = {
+      "#1c1c1e", "#b3261e", "#24692a", "#6e5c0f",
+      "#1d6386", "#6b4a96", "#006b75", "#86868b",
     },
-    inactive_tab = {
-      bg_color = veil(0),
-      fg_color = "#8a8a8a",
+    brights = {
+      "#56565b", "#c4473f", "#2f7d36", "#875000",
+      "#1f56b8", "#7d5aa8", "#2b7a82", "#c4c3be",
     },
-    inactive_tab_hover = {
-      bg_color = veil(0.08),
-      fg_color = "#dddddd",
+    tab_bar = tab_bar("#1c1c1e", "#86868b", "#3f3f44"),
+  }
+else
+  config.colors = {
+    foreground = "#f8f8f2",
+    background = background,
+    cursor_bg = "#ffffff",
+    selection_fg = "#f8f8f2",
+    selection_bg = "#484e54",
+    split = "#605b51",
+    ansi = {
+      "#232629", "#b0151a", "#028902", "#ffb400",
+      "#0082c9", "#6d61a1", "#008b8b", "#f8f8f2",
     },
-    new_tab = {
-      bg_color = veil(0),
-      fg_color = "#8a8a8a",
+    brights = {
+      "#484e54", "#b0151a", "#028902", "#ffb400",
+      "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
     },
-    new_tab_hover = {
-      bg_color = veil(0.08),
-      fg_color = "#ffffff",
-    },
-  },
-}
+    tab_bar = tab_bar("#f8f8f2", "#8a8a8a", "#dddddd"),
+  }
+end
 
 -- =========================
 -- SHORTCUTS

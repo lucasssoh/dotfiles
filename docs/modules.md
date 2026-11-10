@@ -472,7 +472,7 @@ zsh and bash with my prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux.
 
 ### `config-wezterm`
 
-My WezTerm setup: [`config/wezterm/wezterm.lua`](../config/wezterm/wezterm.lua).
+My WezTerm setup: [`config/wezterm/wezterm.lua`](../config/wezterm/wezterm.lua). It turns light or dark with the desktop. In light mode it is more opaque, so the text stays readable on any wallpaper.
 
 ### `config-nvim`
 
