@@ -200,7 +200,8 @@ Item {
         anchors.top: handle.bottom
         anchors.leftMargin: 12
         anchors.rightMargin: 12
-        anchors.topMargin: 20
+        // 12, as Programme's tabs: the two sheets start on the same line.
+        anchors.topMargin: 12
         spacing: 10
 
         // ---- clock + DND ----
@@ -244,16 +245,20 @@ Item {
             width: parent.width
             height: Math.max(clockBlock.height, dndButton.height)
 
+            // Round and outlined like Programme's pills, its top and height
+            // those of Programme's tabs; filled and inverted while on.
             Rectangle {
                 id: dndButton
                 anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 40
-                height: 40
-                radius: 12
+                anchors.top: parent.top
+                width: 38
+                height: 38
+                radius: height / 2
                 color: NotificationState.dnd ? DrawerTheme.accent
                      : dndHover.containsMouse ? DrawerTheme.cardHover
-                     : DrawerTheme.card
+                     : DrawerTheme.clear(DrawerTheme.cardHover)
+                border.width: NotificationState.dnd ? 0 : 1
+                border.color: DrawerTheme.faint
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 // Same glass edge every other block in this bar now
@@ -271,7 +276,7 @@ Item {
                     text: NotificationState.dnd ? "\uF12A" : "\uF126"   // mgc notification_off / notification
                     color: NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.primary
                     font.family: Fonts.iconMingcute
-                    font.pixelSize: 18
+                    font.pixelSize: 17
                 }
                 MouseArea {
                     id: dndHover
@@ -285,7 +290,7 @@ Item {
             Column {
                 id: clockBlock
                 width: parent.width
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.top: parent.top
                 spacing: 2
 
                 Text {
@@ -296,8 +301,8 @@ Item {
                     text: Qt.formatDateTime(ShellClock.at(clock.date), "HH:mm")
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
-                    font.pixelSize: 34
-                    font.weight: Font.Medium
+                    font.pixelSize: 42
+                    font.weight: Font.Light
                     font.features: ({ "tnum": 1 })
                 }
                 Text {
@@ -594,9 +599,9 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: "Clear all"
-            // Muted, not faint, when there is nothing to clear: on the
-            // glass sheet faint vanished entirely.
-            color: NotificationState.shown.length > 0 ? DrawerTheme.accent : DrawerTheme.muted
+            // Only when there is something to clear.
+            visible: NotificationState.shown.length > 0
+            color: DrawerTheme.accent
             font.family: Fonts.ui
             font.pixelSize: 13
         }
@@ -770,16 +775,31 @@ Item {
         // Positioned, not `anchors.centerIn: parent`: a Flickable's child
         // lands in its contentItem, which is as tall as the (empty) list --
         // centring on it put the text up against "Clear all".
-        Text {
+        // A pale bell over the line, a third of the way down.
+        Column {
             x: (list.width - width) / 2
-            y: (list.height - height) / 2
+            y: Math.round(list.height / 3 - height / 2)
             visible: NotificationState.shown.length === 0
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
-            text: "No notifications"
-            color: DrawerTheme.ink(0.4)
-            font.family: Fonts.ui
-            font.pixelSize: 13
+            spacing: 10
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: "\uF126"   // mgc notification, the bell the DND button shows
+                color: DrawerTheme.faint
+                font.family: Fonts.iconMingcute
+                font.pixelSize: 26
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: "No notifications"
+                color: DrawerTheme.ink(0.4)
+                font.family: Fonts.ui
+                font.pixelSize: 13
+            }
         }
     }
 
