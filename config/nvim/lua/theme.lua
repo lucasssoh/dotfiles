@@ -12,20 +12,53 @@ for _, file in ipairs(vim.fn.readdir(themes_path)) do
     end
 end
 
+-- The cache holds three lines: the theme, the surface (default, black or
+-- transparent) and the scheme (auto, light or dark). Two settings that
+-- used to share the second line: `light` there meant "light, opaque".
+-- A file from then still reads the same.
 local function load_saved_theme()
     local f = io.open(cache_file, "r")
     if f then
-        local name = f:read("*l")
-        local bg   = f:read("*l")
+        local name   = f:read("*l")
+        local bg     = f:read("*l") or "default"
+        local scheme = f:read("*l")
         f:close()
+        if not scheme then
+            scheme = (bg == "light") and "light" or "dark"
+        end
+        if bg == "light" then
+            bg = "default"
+        end
         if name and themes[name] then
-            return name, bg or "default"
+            return name, bg, scheme
         end
     end
-    return "melange", "default"
+    return "melange", "default", "auto"
+end
+
+-- The desktop's scheme, as WezTerm reads it too (org.gnome.desktop.interface
+-- color-scheme is what the portal serves). ~7 ms, once at startup and then
+-- only when the monitor below says it changed. Dark when there is no
+-- desktop to ask (SSH, a tty).
+local function system_background()
+    local ok, res = pcall(function()
+        return vim.system({ "gsettings", "get", "org.gnome.desktop.interface", "color-scheme" }, { text = true }):wait()
+    end)
+    if not ok or res.code ~= 0 then
+        return "dark"
+    end
+    return res.stdout:match("prefer%-dark") and "dark" or "light"
+end
+
+local function resolve_background(scheme)
+    if scheme == "light" or scheme == "dark" then
+        return scheme
+    end
+    return system_background()
 end
 
 local active_bg = "default"
+local active_name, active_scheme = nil, "auto"
 
 -- Relative luminance of a highlight colour. nvim_get_hl hands colours back
 -- as 0xRRGGBB integers; strings are accepted too so the helper stays usable
@@ -145,15 +178,17 @@ local function apply_bg(bg)
     end
 end
 
-local function apply_theme(name, bg)
+local function apply_theme(name, bg, scheme)
     active_bg = bg or "default"
+    active_name = name
+    active_scheme = scheme or "auto"
     -- Read by lualine's coucou theme so its b/c segments are born
     -- transparent instead of being painted and then cleared.
     vim.g.theme_bg = active_bg
 
     -- Set before colorscheme() so a theme's colors/*.lua can branch on
     -- vim.o.background (used by coucou's dark/light palette switch).
-    vim.o.background = (bg == "light") and "light" or "dark"
+    vim.o.background = resolve_background(active_scheme)
 
     local ok, err = pcall(vim.cmd.colorscheme, name)
     if not ok then
@@ -163,29 +198,73 @@ local function apply_theme(name, bg)
     -- Fire the plugins' own ColorScheme handlers first, then clear: several
     -- of them (bufferline, coucou) rebuild their groups from that event.
     vim.cmd("doautocmd ColorScheme")
-    apply_bg(bg or "default")
+    apply_bg(active_bg)
 end
 
-local function save_theme(name, bg)
+local function save_theme(name, bg, scheme)
     local f = io.open(cache_file, "w")
     if f then
-        f:write(name .. "\n" .. (bg or "default"))
+        f:write(name .. "\n" .. (bg or "default") .. "\n" .. (scheme or "auto"))
         f:close()
     end
 end
 
+-- In `auto`, follow the desktop while nvim runs: `gsettings monitor` blocks
+-- until the setting changes, so nothing runs between two switches (the same
+-- watcher as wallpaper-follow-scheme). A job, not vim.system: nvim stops its
+-- jobs when it exits, so no monitor outlives the editor.
+local follow_job = nil
+
+local function follow_system(on)
+    if not on then
+        if follow_job then
+            pcall(vim.fn.jobstop, follow_job)
+            follow_job = nil
+        end
+        return
+    end
+    if follow_job or vim.fn.executable("gsettings") == 0 or #vim.api.nvim_list_uis() == 0 then
+        return
+    end
+    follow_job = vim.fn.jobstart({ "gsettings", "monitor", "org.gnome.desktop.interface", "color-scheme" }, {
+        on_stdout = function(_, lines)
+            for _, line in ipairs(lines) do
+                if line:find("color-scheme", 1, true) then
+                    local bg = line:match("prefer%-dark") and "dark" or "light"
+                    if active_scheme == "auto" and active_name and bg ~= vim.o.background then
+                        apply_theme(active_name, active_bg, "auto")
+                    end
+                end
+            end
+        end,
+        on_exit = function()
+            follow_job = nil
+        end,
+    })
+    if follow_job <= 0 then
+        follow_job = nil
+    end
+end
+
+-- :SetTheme [--auto|--light|--dark] [--bg=default|black|transparent] <theme>
+-- A flag left out keeps its current value.
 vim.api.nvim_create_user_command("SetTheme", function(opts)
-    local bg   = "default"
-    local name = nil
+    local bg     = active_bg
+    local scheme = active_scheme
+    local name   = nil
 
     for _, arg in ipairs(vim.split(opts.args, "%s+")) do
-        if arg == "--light" then
-            bg = "light"
+        local flag = arg:match("^%-%-(%a+)$")
+        if flag == "auto" or flag == "light" or flag == "dark" then
+            scheme = flag
         else
             local val = arg:match("^%-%-bg=(.+)$")
-            if val then
-                if val ~= "black" and val ~= "transparent" and val ~= "light" and val ~= "default" then
-                    print("Unknown bg: " .. val .. " (available: black, transparent, light, default)")
+            if val == "light" then
+                -- What --bg=light meant before the scheme had its own flag.
+                scheme = "light"
+            elseif val then
+                if val ~= "black" and val ~= "transparent" and val ~= "default" then
+                    print("Unknown bg: " .. val .. " (available: default, black, transparent)")
                     return
                 end
                 bg = val
@@ -196,7 +275,7 @@ vim.api.nvim_create_user_command("SetTheme", function(opts)
     end
 
     if not name then
-        print("Usage: SetTheme [--bg=black|transparent|default] <theme>")
+        print("Usage: SetTheme [--auto|--light|--dark] [--bg=default|black|transparent] <theme>")
         return
     end
 
@@ -206,38 +285,35 @@ vim.api.nvim_create_user_command("SetTheme", function(opts)
         return
     end
 
-    apply_theme(name, bg)
-    save_theme(name, bg)
-    print("Theme applied: " .. name .. " (bg: " .. bg .. ")")
+    apply_theme(name, bg, scheme)
+    save_theme(name, bg, scheme)
+    follow_system(scheme == "auto")
+    print("Theme applied: " .. name .. " (" .. scheme .. ", bg: " .. bg .. ")")
 end, {
     nargs = "+",
-    complete = function(arglead, cmdline, cursorpos)
-        if arglead:match("^%-%-bg") then
-            return { "--bg=black", "--bg=transparent", "--bg=light", "--bg=default" }
+    complete = function(arglead)
+        local flags = { "--auto", "--light", "--dark", "--bg=default", "--bg=black", "--bg=transparent" }
+        if arglead:match("^%-") then
+            return vim.tbl_filter(function(f) return vim.startswith(f, arglead) end, flags)
         end
-
-        if cmdline:match("%-%-bg=%S+") or cmdline:match("%-%-light%s") then
-            return vim.tbl_keys(themes)
-        end
-
-        local results = { "--bg=black", "--bg=transparent", "--bg=light", "--bg=default", "--light" }
-        for name in pairs(themes) do
-            table.insert(results, name)
-        end
-        return results
+        local names = vim.tbl_keys(themes)
+        table.sort(names)
+        return vim.tbl_filter(function(n) return vim.startswith(n, arglead) end, names)
     end,
 })
 
 -- Startup: load the saved theme + bg
-local saved_name, saved_bg = load_saved_theme()
+local saved_name, saved_bg, saved_scheme = load_saved_theme()
 active_bg = saved_bg
+active_name = saved_name
+active_scheme = saved_scheme
 vim.g.theme_bg = active_bg
 
 -- Set before the active theme's colorscheme() runs below (lazy.nvim's
 -- config() for the priority=1000 spec fires synchronously inside
 -- require("lazy").setup(), which happens after this module returns —
 -- so this assignment lands in time for colors/*.lua to see it).
-vim.o.background = (saved_bg == "light") and "light" or "dark"
+vim.o.background = resolve_background(saved_scheme)
 
 -- A bare :colorscheme (or one that reloads itself) repaints backgrounds
 -- from scratch; reapply transparency after it when that is the active mode.
@@ -254,6 +330,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
     callback = function()
         apply_bg(saved_bg)
+        follow_system(saved_scheme == "auto")
     end,
 })
 

@@ -4,6 +4,12 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
+### Added
+- **Neovim:** the editor follows the desktop's light or dark mode, even while it is open.
+
+### Changed
+- **Neovim:** the light theme uses the shell's colours, and its status bar is light too.
+
 ### Fixed
 - **Notifications:** during a Programme session, the bell opens the notification centre again on a workspace without Boussole. It stays closed with Boussole in front.
 - **Updates:** `cc-pkg-mng upgrade` brings the screenshot editor's new builds too. It used to keep the one first installed.

@@ -1,33 +1,35 @@
 -- ============================================================
 -- COUCOU / PALETTE_LIGHT.LUA
--- Light variant of palette.lua — same token names and same hue
--- family (nothing warmer than yellow, red reserved for errors),
--- but bg/fg flipped and accents darkened/saturated enough to stay
--- readable on a light background (the desktop setup is dark-only,
--- so there's no dotfiles source to pull these from directly).
+-- Light variant of palette.lua: same token names, same roles (blue
+-- keywords, sand types and numbers, green strings, red only for
+-- errors). The values are the shell's light inks
+-- (quickshell/bar/theme/DrawerTheme.qml): the neutral greys, the
+-- cream panel, and its dark teal/blue/green/red, so nvim reads like
+-- the drawers around it rather than like a stock light theme.
+--
+-- Picked for a translucent WezTerm too: the light terminal is a cream
+-- veil over the blurred wallpaper (wezterm.lua), so every ink here
+-- holds against a veil that is not pure cream.
 -- ============================================================
 return {
-    bg          = "#f0f1f3", -- soft cool off-white
-    surface     = "#e5e6ea", -- elevated capsules
-    overlay     = "#d7d9de", -- second-tier surface
-    border      = "#b3b6bd", -- signature border
-    muted       = "#9799a1", -- disabled / empty state
-    subtle      = "#63656d", -- secondary text
-    text        = "#1b1c20", -- primary text
+    bg          = "#f5f3ee", -- DrawerTheme panelTop (light)
+    surface     = "#ebe8e1", -- one step darker: floats, cursor line
+    overlay     = "#dedad2", -- second step: selection, prompts
+    border      = "#c4c3be", -- DrawerTheme faint
+    muted       = "#7a7a80", -- comments, line numbers: DrawerTheme muted, darkened to hold on glass
+    subtle      = "#56565b", -- DrawerTheme secondary
+    text        = "#1c1c1e", -- DrawerTheme primary
 
-    cyan        = "#0e8a97", -- darkened take on the dark theme's cyan accent
-    cyan_light  = "#1c9dab", -- lighter secondary teal
-    blue        = "#1f6fd6", -- darkened take on the dark theme's blue accent
-    -- Darkened rofi accent, kept apart from `blue` above (see palette.lua:
-    -- the dark-theme `blue` was later recalibrated for syntax and drifted
-    -- toward cyan, but this light `blue` never was — so the two already
-    -- sit at nearly the same hue here; pushed darker/more saturated so
-    -- azure still reads as distinct next to it).
-    azure       = "#0b4fb0",
-    green       = "#1f9d57", -- darkened take on the dark theme's green
-    green_dim   = "#1a7a44", -- media/power-saver equivalent
-    yellow      = "#8a7328", -- dark khaki/sand instead of pale sand
+    cyan        = "#006b75", -- DrawerTheme hdr: the accent
+    cyan_light  = "#2b7a82", -- a lighter step of the same teal
+    blue        = "#1d6386", -- DrawerTheme conserve: keywords
+    -- Kept apart from `blue`, as in palette.lua: a saturated blue for git
+    -- status, which must not read as a keyword.
+    azure       = "#1f56b8",
+    green       = "#24692a", -- DrawerTheme positive
+    green_dim   = "#3d7a41",
+    yellow      = "#6e5c0f", -- dark sand: the dark theme's #e1df95, never amber
 
-    red_soft    = "#d1483f", -- critical metrics, darkened for contrast
-    red         = "#c22f26", -- urgent, darkened for contrast
+    red_soft    = "#b3261e", -- DrawerTheme danger
+    red         = "#9c1f18",
 }

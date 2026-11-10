@@ -2,8 +2,10 @@
 -- LUALINE THEME: coucou
 -- Picked up automatically by plugins/lualine.lua's `theme = "auto"`
 -- when the coucou colorscheme is active (lualine.themes.<colors_name>).
+-- lualine dofile()s this on every ColorScheme, so the palette follows
+-- the light/dark switch without a restart.
 -- ============================================================
-local p = require("coucou.palette")
+local p = require(vim.o.background == "light" and "coucou.palette_light" or "coucou.palette")
 
 -- `--bg=transparent` removes the surfaces after the fact, but lualine
 -- rebuilds its separators from the theme colours cached here. Handing it

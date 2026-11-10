@@ -480,6 +480,7 @@ My Neovim setup: `init.lua`, `lua/`, `ftplugin/`, `colors/` and `bin/`, linked i
 
 | Feature | How to use it |
 |---|---|
+| Theme | `:SetTheme coucou` sets the colour scheme. `--auto` follows the desktop's light or dark mode (the default), `--light` and `--dark` fix it. `--bg=transparent` shows the terminal's background, `--bg=black` makes it black |
 | Live Markdown preview | `Alt + P` opens a GTK 4 window that updates block by block, maths included |
 | Python | Pyright completion and diagnostics, plus Ruff linting. The game's `.py` scripts use the same setup |
 | PlantUML | Highlighting, linting, completion, and a live preview window. `:PumlFromJava` draws a class diagram from Java sources, and `:PumlExport` exports it |
