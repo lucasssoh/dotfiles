@@ -106,7 +106,7 @@ The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../conf
 
 | Area | What's there |
 |---|---|
-| Left | The clock (click it for the calendar and agenda), CPU, temperature, fan speed (hidden if the machine has no fan sensor), memory |
+| Left | The clock (click it for the calendar and agenda), CPU, temperature, fan speed (hidden if the machine has no fan sensor), memory, power draw (on battery only) |
 | Centre island | The active window, workspaces, and what's playing |
 | Launchers | Your open apps. Right-click one to focus, close or quit it |
 | Right | HDR, audio output and input, network rate, Balise, power profile, battery, notifications |
@@ -258,7 +258,7 @@ The service behind it runs as `systemd --user` (`sesame.service`). It's built fr
 
 ### `pouls`
 
-The figures on the left of the bar come from Pouls: CPU load and frequency, memory, the CPU temperature, the fan when the machine reports one, and the download rate. It also tells the bar when the charger comes or goes, notices a charger that has quietly stopped charging, and switches the battery's conservation mode and fast charge on Lenovo IdeaPads.
+The figures on the left of the bar come from Pouls: CPU load and frequency, memory, the CPU temperature, the fan when the machine reports one, the power draw on battery, and the download rate. It also tells the bar when the charger comes or goes, notices a charger that has quietly stopped charging, and switches the battery's conservation mode and fast charge on Lenovo IdeaPads.
 
 The figures are read every 3 seconds, only while you can see them. With the screen off or the bar hidden in zen mode, nothing is read; the charger and the battery still reach the bar as soon as they change.
 
