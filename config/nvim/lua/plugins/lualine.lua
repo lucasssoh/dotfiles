@@ -71,6 +71,16 @@ return {
             return "  " .. vim.fn.fnamemodify(cwd, ":t")
         end
 
+        -- With --bg=transparent the b/c/x/y sections have no background, so a
+        -- transition between two of them has no colour to draw itself in:
+        -- lualine then paints the glyph in the text colour, a solid triangle.
+        -- Keep only the rounded edges of the two filled pills (mode and
+        -- location), which carry their own separators below.
+        local glass = vim.g.theme_bg == "transparent"
+        local function edge(sep)
+            return not glass and sep or nil
+        end
+
         require("lualine").setup({
             options = {
                 theme = "auto",
@@ -83,7 +93,7 @@ return {
                 },
 
                 -- Borders only facing inward
-                section_separators = {
+                section_separators = glass and { left = "", right = "" } or {
                     left = "",
                     right = "",
                 },
@@ -105,7 +115,7 @@ return {
 
                     {
                         "branch",
-                        separator = { right = "" },
+                        separator = edge({ right = "" }),
                     },
 
                     "diff",
@@ -133,7 +143,7 @@ return {
                 lualine_y = {
                     {
                         "progress",
-                        separator = { left = "" },
+                        separator = edge({ left = "" }),
                     }
                 },
 

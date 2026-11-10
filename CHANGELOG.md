@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Neovim:** the light theme uses the shell's colours, and its status bar is light too.
 
 ### Fixed
+- **Neovim:** with a transparent background, the status bar no longer shows solid triangles between its sections.
 - **Notifications:** during a Programme session, the bell opens the notification centre again on a workspace without Boussole. It stays closed with Boussole in front.
 - **Updates:** `cc-pkg-mng upgrade` brings the screenshot editor's new builds too. It used to keep the one first installed.
 - **Notifications:** with Veille's clock set or in demo mode, the notification centre shows arrival times by the shell's clock, like the bar.
