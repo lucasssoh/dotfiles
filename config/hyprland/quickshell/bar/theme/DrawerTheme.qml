@@ -164,6 +164,9 @@ QtObject {
     // the top, a soft shadow under.
     readonly property color paneRim: root.dark ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.65)
     readonly property color paneHighlight: root.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.80)
+    // What the side sheets add over their glass towards the bottom, where
+    // they are mostly empty: about 0.72 of glass in light, 0.55 in dark.
+    readonly property color paneVeil: Qt.rgba(root.paneTop.r, root.paneTop.g, root.paneTop.b, root.dark ? 0.39 : 0.52)
     readonly property color paneShadow: root.dark ? Qt.rgba(0, 0, 0, 0.30) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color paneTop: root.glass ? root.glassPane : root.panelTop
     readonly property color paneBottom: root.glass ? root.glassPane : root.panelBottom

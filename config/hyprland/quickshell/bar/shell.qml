@@ -2808,7 +2808,9 @@ ShellRoot {
                 x: programmeSheet.x
                 width: DrawerTheme.glass && -programmeSheet.x < programmeSheet.width * 0.8 ? programmeSheet.width : 0
                 height: programmeSheet.height
+                topLeftRadius: programmeSheet.topLeftRadius
                 topRightRadius: programmeSheet.topRightRadius
+                bottomLeftRadius: programmeSheet.bottomLeftRadius
                 bottomRightRadius: programmeSheet.bottomRightRadius
             }
 
@@ -2821,11 +2823,30 @@ ShellRoot {
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => programmeSheet.entered = true)
                 color: DrawerTheme.paneTop
-                // Flush on the left and the bottom, rounded where it meets
-                // the desktop.
+                // Rounded where it meets the desktop, and on the screen's
+                // side with the screen's own corners (ScreenCorner.qml's 18).
+                topLeftRadius: 18
                 topRightRadius: 32
+                bottomLeftRadius: 18
                 bottomRightRadius: 32
-                Modules.PaneEdge { radius: 0; topRightRadius: 32; bottomRightRadius: 32 }
+                // Denser glass on the lower part, mostly empty, where the
+                // wallpaper's colours showed through in blotches.
+                Rectangle {
+                    anchors.fill: parent
+                    topLeftRadius: parent.topLeftRadius
+                    topRightRadius: parent.topRightRadius
+                    bottomLeftRadius: parent.bottomLeftRadius
+                    bottomRightRadius: parent.bottomRightRadius
+                    gradient: Gradient {
+                        GradientStop { position: 0.38; color: DrawerTheme.clear(DrawerTheme.paneVeil) }
+                        GradientStop { position: 1.0; color: DrawerTheme.paneVeil }
+                    }
+                }
+                Modules.PaneEdge {
+                    topLeftRadius: 18; topRightRadius: 32; bottomLeftRadius: 18; bottomRightRadius: 32
+                    highlight: false
+                    fade: true
+                }
 
                 ProgrammeHome {
                     anchors.fill: parent
@@ -2877,7 +2898,9 @@ ShellRoot {
                 width: DrawerTheme.glass && notificationsSheet.x < notificationsSheet.width * 0.8 ? notificationsSheet.width : 0
                 height: notificationsSheet.height
                 topLeftRadius: notificationsSheet.topLeftRadius
+                topRightRadius: notificationsSheet.topRightRadius
                 bottomLeftRadius: notificationsSheet.bottomLeftRadius
+                bottomRightRadius: notificationsSheet.bottomRightRadius
             }
 
             Rectangle {
@@ -2889,9 +2912,27 @@ ShellRoot {
                 Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
                 Component.onCompleted: Qt.callLater(() => notificationsSheet.entered = true)
                 color: DrawerTheme.paneTop
+                // As Programme's sheet, mirrored.
                 topLeftRadius: 32
+                topRightRadius: 18
                 bottomLeftRadius: 32
-                Modules.PaneEdge { radius: 0; topLeftRadius: 32; bottomLeftRadius: 32 }
+                bottomRightRadius: 18
+                Rectangle {
+                    anchors.fill: parent
+                    topLeftRadius: parent.topLeftRadius
+                    topRightRadius: parent.topRightRadius
+                    bottomLeftRadius: parent.bottomLeftRadius
+                    bottomRightRadius: parent.bottomRightRadius
+                    gradient: Gradient {
+                        GradientStop { position: 0.38; color: DrawerTheme.clear(DrawerTheme.paneVeil) }
+                        GradientStop { position: 1.0; color: DrawerTheme.paneVeil }
+                    }
+                }
+                Modules.PaneEdge {
+                    topLeftRadius: 32; topRightRadius: 18; bottomLeftRadius: 32; bottomRightRadius: 18
+                    highlight: false
+                    fade: true
+                }
 
                 Modules.NotificationCenter {
                     anchors.fill: parent
