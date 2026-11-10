@@ -116,7 +116,7 @@ bind(mod .. "+ A",       hl.dsp.exec_cmd("~/.config/hypr/scripts/agenda.py"), { 
 bind(mod .. "+ D",       hl.dsp.exec_cmd("qs -c bar ipc call bar toggleProgramme"), { description = "Programme" })
 -- Quick add: one line in fuzzel ("examen L&MC 18/12"), shown as understood
 -- before it is kept. Does nothing without the programme unit.
-bind(mod .. "+SHIFT+ D", hl.dsp.exec_cmd("[ -x $HOME/.local/bin/programme ] && $HOME/.local/bin/programme add --fuzzel"), { description = "Programme: quick add" })
+bind(mod .. "+SHIFT+ D", hl.dsp.exec_cmd("[ -x $HOME/.local/bin/programme ] && $HOME/.local/bin/programme add --fuzzel"), { description = "Quick add" })
 
 -- Power wheel, RPG weapon-menu style (LB/L1): pressing opens it and arms
 -- the selection on the hovered sector, releasing (the `release` option,
@@ -291,11 +291,11 @@ for n = 1, 10 do
 
     -- SUPER+key: switches focus to workspace n
     bind(mod .. "+ " .. key, hl.dsp.focus({ workspace = tostring(n) }),
-         { description = "WS " .. n })
+         { description = "Workspace " .. n })
 
     -- SUPER+SHIFT+key: moves the active window to workspace n
     bind(mod .. "+ SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(n) }),
-         { description = "→ WS " .. n })
+         { description = "→ Workspace " .. n })
 end
 
 -- Mouse wheel: navigates between workspaces on the monitor under the

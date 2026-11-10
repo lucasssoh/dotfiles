@@ -132,7 +132,7 @@ To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-u
 
 The notification centre is a panel from under the bar to the bottom of the screen, flush with its right edge, sliding in from the right. Only one of the drawers on the right can be open at a time.
 
-Hold `Super` and the centre island turns into a keyboard showing every key binding. Press `Shift` as well to see the second layer. The full list is in [key bindings](keybindings.md).
+Hold `Super` and a keyboard opens under the middle of the bar, showing the keys that do something. Press `Shift` as well to see the second layer. The full list is in [key bindings](keybindings.md).
 
 #### Indicators
 
