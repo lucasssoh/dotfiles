@@ -2939,9 +2939,8 @@ ShellRoot {
         }
     }
 
-    // The screen's four rounded corners, over everything but a fullscreen
-    // window: see modules/ScreenCorner.qml. Created after the bar, so on
-    // the same layer they sit above its band and round its two ends too.
+    // The screen's four rounded corners, over everything, fullscreen
+    // windows included: see modules/ScreenCorner.qml.
     Variants {
         model: Quickshell.screens
 

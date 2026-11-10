@@ -10,6 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Neovim:** the light theme uses the shell's colours, and its status bar is light too.
+- **Screen corners:** the rounded corners stay above everything, fullscreen windows included.
 
 ### Fixed
 - **Neovim:** with a transparent background, the status bar no longer shows solid triangles between its sections.

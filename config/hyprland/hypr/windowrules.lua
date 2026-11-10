@@ -484,5 +484,6 @@ hl.layer_rule({ match = { namespace = "^quickshell-sheet$" },   no_anim = true }
 -- animation left their blur behind for a few frames once they had gone.
 hl.layer_rule({ match = { namespace = "^(quickshell-popup|sesame|library)$" }, no_anim = true })
 -- The screen's rounded corners (quickshell/bar/modules/ScreenCorner.qml)
--- are part of the screen's shape: there from the first frame, not faded in.
-hl.layer_rule({ match = { namespace = "^quickshell-corner$" },  no_anim = true })
+-- are part of the screen's shape: there from the first frame, not faded in,
+-- and on top of every other layer surface, whatever maps after them.
+hl.layer_rule({ match = { namespace = "^quickshell-corner$" },  no_anim = true, order = 100 })

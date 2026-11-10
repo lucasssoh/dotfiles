@@ -7,11 +7,12 @@ import Quickshell.Wayland
 // cut out, laid over the desktop so the panel reads with the silhouette
 // of a phone's screen instead of a sharp rectangle.
 //
-// On the Top layer, like the bar, not Overlay: a fullscreen window covers
-// it, so a video or a game shows its own corners and keeps direct scanout,
-// with nothing to track. Drawn once and never repainted; it takes no
-// input (empty mask), reserves no space and is not animated (no_anim in
-// hypr/windowrules.lua).
+// Above everything: on the Overlay layer, fullscreen windows included,
+// and ordered over the other Overlay surfaces (Sesame, Liseuse's picker,
+// fuzzel, the raised bar) by an `order` rule in hypr/windowrules.lua,
+// even when they map after it. Drawn once and never repainted; it takes
+// no input (empty mask), reserves no space and is not animated (no_anim
+// in the same rule).
 PanelWindow {
     id: root
 
@@ -35,7 +36,7 @@ PanelWindow {
     implicitWidth: root.radius
     implicitHeight: root.radius
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-corner"
     mask: Region { width: 0; height: 0 }
     color: "transparent"
