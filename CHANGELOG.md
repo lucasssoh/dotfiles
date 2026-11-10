@@ -7,6 +7,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Terminal:** WezTerm turns light or dark with the desktop. In light mode it is more opaque, so the text stays readable on any wallpaper.
 - **Neovim:** the editor follows the desktop's light or dark mode, even while it is open.
+- **Bar:** on battery, the power draw in watts appears after memory.
 
 ### Changed
 - **Neovim:** the light theme uses the shell's colours, and its status bar is light too.

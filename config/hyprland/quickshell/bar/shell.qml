@@ -1487,6 +1487,7 @@ ShellRoot {
                 Modules.Temperature { ink: metricsInk }
                 Modules.Fan { ink: metricsInk }
                 Modules.Memory { ink: metricsInk }
+                Modules.Watts { ink: metricsInk }
                 // Traffic (the network rate) used to close this group; it
                 // moved back to TOOLS, next to the wifi it measures.
             }

@@ -10,7 +10,7 @@ import Quickshell.Io
 // What it changes, and only on screen:
 //   - the time, frozen through ShellClock;
 //   - the battery, through BatteryPreviewState;
-//   - CPU, frequency, memory, temperature and network rate (SystemStats
+//   - CPU, frequency, memory, temperature, power draw and network rate (SystemStats
 //     ignores Pouls's figures meanwhile);
 //   - Programme's indicator, which shows `event`;
 //   - the Wi-Fi name in Balise.
@@ -35,6 +35,7 @@ Singleton {
     readonly property int memPct: 15
     readonly property int temp: 41
     readonly property real netBps: 1200
+    readonly property real watts: 4.8
 
     // Notifications received while active, closed by off().
     property var _notifications: []
@@ -54,6 +55,8 @@ Singleton {
         SystemStats.memUsedPct = root.memPct;
         SystemStats.tempCelsius = root.temp;
         SystemStats.netRateBps = root.netBps;
+        SystemStats.hasWatts = true;
+        SystemStats.watts = root.watts;
     }
 
     function off() {

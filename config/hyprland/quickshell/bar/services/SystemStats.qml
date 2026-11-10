@@ -50,6 +50,12 @@ Singleton {
     property bool hasFan: false
     property string fanRpm: "N/A"
 
+    // ---- Watts.qml ----
+    // What the machine draws, on battery only (on mains the battery gives
+    // its charge rate, not that). Averaged by Pouls over ~15 s.
+    property bool hasWatts: false
+    property real watts: 0
+
     // ---- Battery.qml / PowerHome.qml (Lenovo conservation mode) ----
     // The EC's binary ~60 % cap. Only IdeaPads expose it; hasConservation
     // stays false everywhere else and Battery.qml's colour behaves as before.
@@ -114,6 +120,8 @@ Singleton {
             root.hasFan = m.hasFan;
             root.fanRpm = m.fan === null ? "N/A" : String(m.fan).padStart(4, " ");
             root.netRateBps = m.net;
+            root.hasWatts = m.hasWatts;
+            root.watts = m.watts;
         } else if (m.event === "power") {
             root.hasMains = m.hasMains;
             root.mainsOnline = m.mains;
