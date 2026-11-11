@@ -33,7 +33,8 @@ Item {
         id: handle
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         onCloseRequested: ProgrammeState.close()
     }
 
@@ -46,7 +47,7 @@ Item {
         anchors.right: parent.right
         anchors.leftMargin: 20
         anchors.rightMargin: 20
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.topMargin: 12
         height: 38
         radius: height / 2
@@ -121,7 +122,8 @@ Item {
         // (Today's dot before the course under way) is not cut off.
         anchors.leftMargin: 6
         anchors.rightMargin: 20
-        anchors.top: tabs.visible ? tabs.bottom : handle.bottom
+        anchors.top: tabs.visible ? tabs.bottom
+            : BarPosition.bottom ? parent.top : handle.bottom
         anchors.topMargin: tabs.visible ? 14 : 12
         height: root.pageHeight
         contentHeight: page.item ? page.item.implicitHeight : 0

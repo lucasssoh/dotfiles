@@ -50,8 +50,8 @@ Cost, measured on this machine rather than assumed:
   - numpy+PIL import ................ 110 ms
   - JPEG decode via draft 1/8 ....... 8.9 ms
   - hyprctl monitors + bucket maths .. ~70 ms
-  - grim -g "0,0 2560x30" ........... 20 ms wall, ~0 ms CPU (frame wait),
-    fallback only
+  - grim -g "x,y 2560x32" ........... 20 ms wall, ~0 ms CPU (frame wait),
+    selected bar edge, fallback only
 ~190 ms in total, once per wallpaper change. The import dominates and is
 now paid every time rather than once at login, which was the argument for
 the daemon this used to be -- and it does not hold up: on a 120 s
@@ -110,9 +110,9 @@ from PIL import Image
 # Tunables
 # ---------------------------------------------------------------------------
 
-# Height of the strip sampled, in layout pixels from the top of each
-# monitor. The bar reserves 24 and its pills hang to 30; 32 covers both
-# with a margin and the extra rows barely move a mean.
+# Height of the strip sampled, in layout pixels from the selected bar edge.
+# The bar reserves 24 and its pills hang to 30; 32 covers both with a margin
+# and the extra rows barely move a mean.
 BAND_H = 32
 
 # Buckets across the monitor's width. 64 over 2560 is a 40px bucket, and
@@ -126,6 +126,7 @@ BUCKETS = 64
 # inotify-only. A regular file in the cache dir is exactly the case
 # inotify does handle.
 OUT_PATH = os.path.expanduser("~/.cache/bar-tint.json")
+POSITION_PATH = os.path.expanduser("~/.config/hypr/bar-position.json")
 
 
 # ---------------------------------------------------------------------------
@@ -210,9 +211,31 @@ def fullscreen_workspaces():
     return {w["id"] for w in (hypr("workspaces") or []) if w.get("hasfullscreen")}
 
 
-def strip_from_wallpaper(path, mon):
-    """The monitor's top BAND_H rows, as awww's `crop` mode will lay the
-    image out: scale to COVER the output, centre, crop.
+def bar_position():
+    """Read the local bar edge, matching BarPosition.qml's top fallback."""
+    try:
+        with open(POSITION_PATH, encoding="utf-8") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        return "top"
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"bar-tint: cannot read {POSITION_PATH}: {e}; using top", file=sys.stderr)
+        return "top"
+    if isinstance(config, dict) and config.get("position") in ("top", "bottom"):
+        return config["position"]
+    print(f"bar-tint: invalid position in {POSITION_PATH}; using top", file=sys.stderr)
+    return "top"
+
+
+def band_offset(mon, position):
+    """Rows from the monitor's top edge to the sampled bar band."""
+    sample_h = min(BAND_H, mon["h"])
+    return max(0, mon["h"] - sample_h) if position == "bottom" else 0
+
+
+def strip_from_wallpaper(path, mon, position="top"):
+    """The monitor's BAND_H rows at the bar edge, as awww's `crop` mode will
+    lay the image out: scale to COVER the output, centre, crop.
 
     Kept in step with awww's own default (`--resize`, default `crop`,
     anchored centre). If that default is ever changed on the command
@@ -236,10 +259,12 @@ def strip_from_wallpaper(path, mon):
     nw, nh = max(mon["w"], round(iw * s)), max(mon["h"], round(ih * s))
     im = im.resize((nw, nh), Image.BILINEAR)
     ox, oy = (nw - mon["w"]) // 2, (nh - mon["h"]) // 2
-    return np.asarray(im.crop((ox, oy, ox + mon["w"], oy + BAND_H)))
+    sample_h = min(BAND_H, mon["h"])
+    y = oy + band_offset(mon, position)
+    return np.asarray(im.crop((ox, y, ox + mon["w"], y + sample_h)))
 
 
-def strip_from_grim(mon):
+def strip_from_grim(mon, position="top"):
     """Fallback: the composited strip straight off the output.
 
     Skipped on a fullscreen workspace -- a screencopy there would break
@@ -249,7 +274,9 @@ def strip_from_grim(mon):
     """
     if mon["ws"] in fullscreen_workspaces():
         return None
-    geom = f"{mon['x']},{mon['y']} {mon['w']}x{BAND_H}"
+    sample_h = min(BAND_H, mon["h"])
+    y = mon["y"] + band_offset(mon, position)
+    geom = f"{mon['x']},{y} {mon['w']}x{sample_h}"
     with tempfile.NamedTemporaryFile(suffix=".ppm", delete=False) as f:
         tmp = f.name
     try:
@@ -318,13 +345,14 @@ def emit(profiles):
 
 def sample(explicit_path=None, verbose=False):
     startup_paths = {} if explicit_path else awww_paths()
+    position = bar_position()
     profiles = {}
     for mon in monitors():
         path = explicit_path or startup_paths.get(mon["name"])
-        strip = strip_from_wallpaper(path, mon) if path else None
+        strip = strip_from_wallpaper(path, mon, position) if path else None
         src = "wallpaper"
         if strip is None:
-            strip = strip_from_grim(mon)
+            strip = strip_from_grim(mon, position)
             src = "grim"
         if strip is None:
             if verbose:

@@ -935,7 +935,8 @@ Item {
         id: handle
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         onCloseRequested: BaliseState.close()
     }
 
@@ -943,7 +944,7 @@ Item {
         id: pageArea
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.bottom: parent.bottom
         anchors.leftMargin: 10
         anchors.rightMargin: 10

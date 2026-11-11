@@ -1,4 +1,5 @@
 singleton SystemStats 1.0 SystemStats.qml
+singleton BarPosition 1.0 BarPosition.qml
 singleton OsdState 1.0 OsdState.qml
 singleton BatteryAlertState 1.0 BatteryAlertState.qml
 singleton BatteryPreviewState 1.0 BatteryPreviewState.qml

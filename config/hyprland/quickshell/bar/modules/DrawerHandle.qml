@@ -1,8 +1,8 @@
 import QtQuick
 import "../theme"
 
-// The grabber bar at the top of a drawer -- a short thick rounded line,
-// clicked to close.
+// The grabber at the bar-facing edge of a drawer -- a short thick rounded
+// line, clicked to close.
 //
 // Why it exists: toolsIsland's drawers (Balise, the notification center)
 // could always be closed, but only from OUTSIDE themselves -- by clicking
@@ -20,11 +20,9 @@ import "../theme"
 // it call its own close function directly rather than routing a signal
 // back through the island.
 //
-// Sits at the TOP, under the pill, rather than on the drawer's free
-// bottom edge (asked for). Worth knowing it inverts the usual phone-sheet
-// convention -- those rise from the bottom and put the grabber on the
-// edge you pull -- because these drop DOWN from the bar, so the top is
-// the hinge, not the free edge.
+// Its caller anchors it to the edge facing the bar: top for a top bar,
+// bottom for a bottom bar. The handle remains upright and clickable in
+// either orientation.
 Item {
     id: root
 

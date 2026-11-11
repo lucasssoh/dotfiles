@@ -189,7 +189,8 @@ Item {
         id: handle
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         onCloseRequested: NotificationState.close()
     }
 
@@ -197,7 +198,7 @@ Item {
         id: topSection
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.leftMargin: 12
         anchors.rightMargin: 12
         // 12, as Programme's tabs: the two sheets start on the same line.
@@ -688,7 +689,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: listHeader.bottom
-        anchors.bottom: parent.bottom
+        anchors.bottom: BarPosition.bottom ? handle.top : parent.bottom
         anchors.leftMargin: 20
         anchors.rightMargin: 20
         anchors.topMargin: 12

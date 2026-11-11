@@ -470,6 +470,13 @@ hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fad
 -- seconds at a time, and a still desktop is blurred once and cached.
 hl.layer_rule({ match = { namespace = "^prisme$" },             animation = "fade", blur = true })
 
+-- The bar's layer entrance follows its configured screen edge, including
+-- after QuickShell restarts to apply a changed position. no_anim skips
+-- Hyprland's snapshot-based exit animation; animateIn still uses the
+-- directional style, so the old surface disappears instead of ghosting.
+hl.layer_rule({ match = { namespace = "^quickshell-bar-top$" },    animation = "slide top",    no_anim = true })
+hl.layer_rule({ match = { namespace = "^quickshell-bar-bottom$" }, animation = "slide bottom", no_anim = true })
+
 -- ============================================================
 -- LAYER NO-ANIM — the bar's side sheets (Programme, notifications)
 -- ============================================================

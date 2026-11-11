@@ -1,5 +1,6 @@
 import QtQuick
 import ".."
+import "../../services"
 import "../../theme"
 
 // Veille's pulse -- the "Classique" layout (2026-09-29): the hour, large
@@ -91,7 +92,8 @@ Item {
     DrawerHandle {
         id: handle
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         width: 120
         tint: DrawerTheme.islandAccent
         onCloseRequested: if (root.veille) root.veille.dismiss()
@@ -115,7 +117,7 @@ Item {
     Column {
         id: content
         x: root.hPad
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.topMargin: root.topGap
         width: root.textWidth
         spacing: 12

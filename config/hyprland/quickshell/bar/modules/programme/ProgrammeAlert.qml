@@ -41,7 +41,8 @@ Item {
     DrawerHandle {
         id: handle
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         width: 120
         tint: DrawerTheme.islandAccent
         onCloseRequested: ProgrammeState.answer("dismiss")
@@ -50,7 +51,7 @@ Item {
     Column {
         id: content
         x: root.contentInset
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.topMargin: 10
         width: root.textWidth
         spacing: 12

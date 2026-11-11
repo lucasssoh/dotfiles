@@ -355,8 +355,8 @@ Singleton {
     //     this open has already been made, and re-running the delay
     //     there would just make the retarget feel broken.
     //
-    //   * THE GAP. The drawer is a separate block sitting `drawerTop -
-    //     rowHeight` px below the chips (7 on this bar), so travelling
+    //   * THE GAP. The drawer is a separate block sitting `drawerEdge -
+    //     rowHeight` px from the chips (7 on this bar), so travelling
     //     from the chip into the panel means leaving both for a few
     //     frames. Hence `hoverCloseGrace`: leaving arms a close, it does
     //     not perform one, and anything that re-enters (the same chip,

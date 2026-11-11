@@ -8,6 +8,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Terminal:** WezTerm turns light or dark with the desktop. In light mode it is more opaque, so the text stays readable on any wallpaper.
 - **Neovim:** the editor follows the desktop's light or dark mode, even while it is open.
 - **Bar:** on battery, the power draw in watts appears after memory.
+- **Bar:** choose its top or bottom edge; drawers and wallpaper tint follow it.
 
 ### Changed
 - **Neovim:** the light theme uses the shell's colours, and its status bar is light too.
@@ -21,6 +22,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Key bindings:** holding Super opens a compact keyboard with only the keys that do something, where they sit on yours; Shift shows the second layer.
 - **Windows:** the outer gap above a window is now the same as on the sides.
 - **Veille:** the card opens at the keybinds sheet's width, so the bar no longer widens further for it.
+- **Bar:** changing edges restarts QuickShell instead of moving the bar across the screen. A brief ghost at the old edge remains a known issue.
 
 ### Fixed
 - **Programme and notifications:** the side panels slide in smoothly, without a jolt as they start.

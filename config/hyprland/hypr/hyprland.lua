@@ -124,7 +124,7 @@ hl.on("hyprland.start", function()
     -- side, the bar could connect mid-creation and show workspace 1
     -- alone (or 1 and 6 on two screens) until each one was visited.
     -- `;`, not `&&`: a failing script still gets a bar.
-    hl.exec_cmd("bash -c 'bash ~/.config/hypr/scripts/workspace-manager.sh; exec quickshell -c bar'")
+    hl.exec_cmd("bash -c 'bash ~/.config/hypr/scripts/workspace-manager.sh; exec bash ~/.config/hypr/scripts/restart-quickshell-bar.sh'")
 
     -- Balise BACKEND only. The Rust crate in balise-src/ (built by
     -- install.sh) is now two separable things, and this starts just the

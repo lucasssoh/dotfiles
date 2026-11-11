@@ -1,13 +1,13 @@
 import QtQuick
 import "../services"
 
-// Transient corner popup stack -- one PanelWindow instance per screen
-// (shell.qml's Variants), always mapped so the cards' own transitions can
-// actually animate rather than pop (same convention Osd.qml/
-// BatteryAlert.qml already use). NotificationState.qml owns which rows are
-// in `toasts` and when they expire; this file only renders that model --
-// dismissing a card here just calls dismissToast() (hides the popup, keeps
-// the notification in the center's history), never dismissForever().
+// Transient notification stack -- one PanelWindow instance per screen
+// (shell.qml's Variants), mapped while toasts exist and briefly after the
+// last row leaves so its exit transition can finish. NotificationState.qml
+// owns which rows are in `toasts` and when they expire; this file only
+// renders that model -- dismissing a card here just calls dismissToast()
+// (hides the popup, keeps the notification in the center's history), never
+// dismissForever().
 //
 // A ListView, where this was a Column + Repeater over a JS array. Two
 // reasons, both of them about the animations below:
@@ -19,8 +19,8 @@ import "../services"
 //     card that happened to still be on screen.
 // See NotificationState.qml's `toastModel` for the model half of that.
 //
-// Newest-on-top needs no reversing here any more either: the model itself
-// is newest-first (rows are inserted at index 0).
+// The model is newest-first (rows are inserted at index 0), so new toasts
+// appear at the top of the vertically centered stack.
 ListView {
     id: root
 
@@ -37,6 +37,7 @@ ListView {
     width: root.cardWidth
     interactive: false          // a popup stack, not something to flick
     spacing: 8
+    verticalLayoutDirection: ListView.TopToBottom
     model: NotificationState.toasts
 
     // The cards on screen, leaving ones included until their exit is over:
@@ -67,11 +68,8 @@ ListView {
     // parked at -cardWidth is entirely outside the Wayland surface and
     // simply is not drawn, then wipes into view as x climbs back to 0.
     //
-    // That surface starts at the top-left tile's INNER edge (shell.qml
-    // pins it at left: 20), which is deliberate: the card emerges from
-    // there rather than from the screen edge, so the slide never passes
-    // over the tile's border -- the thing the margins were moved to stop
-    // happening in the first place.
+    // The surface is inset from the left screen edge (shell.qml pins it
+    // at left: 20), so the card slides in without crossing the edge.
     add: Transition {
         NumberAnimation {
             property: "x"
@@ -99,10 +97,8 @@ ListView {
         }
     }
 
-    // Newest lands on TOP, so every card already on screen is pushed down
-    // by one as it arrives, and pulled back up as one leaves. Without
-    // these they jump a full card height in a single frame while the other
-    // one is still gliding -- two different motions for one event.
+    // Keep the stack's motion smooth in either vertical direction: the
+    // new card pushes existing ones inward, and its removal pulls them back.
     addDisplaced: Transition {
         NumberAnimation { properties: "y"; duration: 260; easing.type: Easing.OutCubic }
     }

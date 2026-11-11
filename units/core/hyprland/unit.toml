@@ -24,6 +24,12 @@ copr = ["lionheartp/Hyprland"]
 user = ["wallpaper-slideshow"]
 
 [[hooks]]
+name   = "bar-position"
+run_as = "user"
+does   = "create the local Quickshell bar position setting if it is missing"
+run    = "units/core/hyprland/hooks/bar-position.sh"
+
+[[hooks]]
 name   = "sensors-detect"
 run_as = "root"
 does   = "sensors-detect --auto"

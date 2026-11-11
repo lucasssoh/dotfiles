@@ -103,7 +103,7 @@ after = ["ipc bar dismissBattery", "wait 0.8"]
 [[scene]]
 name = "osd"
 doc = "docs/modules.md"
-crop = [640, 800, 640, 400]
+crop = [0, 800, 480, 400]
 steps = ["ipc bar pokeBrightness", "wait 0.35"]
 after = ["wait 2"]
 

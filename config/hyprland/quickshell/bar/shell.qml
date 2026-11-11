@@ -800,7 +800,12 @@ ShellRoot {
             focusable: BaliseState.textInputActive
                        && BaliseState.panelOpen
                        && BaliseState.activeScreen === bar.screen
-            visible: !shell.zenMode
+            // Do not map before the initial position is verified. Also
+            // unmap before restarting so Hyprland cannot animate a snapshot
+            // of the old edge while the new bar appears.
+            visible: BarPosition.configLoaded
+                     && !BarPosition.restartPending
+                     && !shell.zenMode
             // exclusiveZone stays at the main bar's own height (24), not
             // the window's full implicitHeight below (30) -- the metrics
             // pill's extra 6px is purely decorative floating space, not
@@ -813,21 +818,19 @@ ShellRoot {
             // Programme's and the notifications' sheets while the keybinds
             // sheet is showing.
             WlrLayershell.layer: shell.barRaised ? WlrLayer.Overlay : WlrLayer.Top
+            WlrLayershell.namespace: BarPosition.bottom ? "quickshell-bar-bottom" : "quickshell-bar-top"
             color: "transparent"
 
-            anchors { top: true; left: true; right: true }
+            anchors { top: !BarPosition.bottom; bottom: BarPosition.bottom; left: true; right: true }
             // Content is now a single centered island (see "── ONE BAR ──"
             // below), not 3 zones spanning the full width, so left/right
             // margins rarely matter in practice any more --
             // kept at 0 anyway (harmless, and still correct if content
             // ever does grow wide enough to reach an actual screen edge).
-            // top: 0 still matters always -- the main bar stays flush
-            // against the screen's top edge regardless of horizontal
-            // content (its Block's top corners are unconditionally square,
-            // see Block.qml's flushTop -- squareLeft/squareRight there are
-            // unused now but kept for the same "still correct if it ever
-            // reaches an edge" reason).
-            margins { top: 0; left: 0; right: 0 }
+            // The selected edge stays flush against the screen regardless
+            // of horizontal content; BarPosition switches top/bottom
+            // anchors without changing the row's layout or orientation.
+            margins { top: 0; bottom: 0; left: 0; right: 0 }
             // `openHeight`, not the islands' live `height` -- the real
             // Wayland surface is allocated ONCE, at the tallest a single
             // open drawer can need, and is never resized at the
@@ -986,13 +989,13 @@ ShellRoot {
             mask: Region {
                 Region {
                     x: 0
-                    y: 0
+                    y: centerIsland.y + centerIsland.rowY
                     width: bar.width
                     height: bar.bandHeight
                 }
                 Region {
                     x: toolsIsland.x
-                    y: 0
+                    y: toolsIsland.y
                     width: toolsIsland.width
                     height: toolsIsland.height
                 }
@@ -1016,7 +1019,7 @@ ShellRoot {
                 // follows it.
                 Region {
                     x: toolsIsland.x + toolsIsland.drawerBandX
-                    y: 0
+                    y: toolsIsland.y
                     width: toolsIsland.drawerBandWidth
                     height: toolsIsland.height
                 }
@@ -1034,14 +1037,9 @@ ShellRoot {
                 //
                 // Geometry is derived, not typed in twice: the entry
                 // publishes the handle's band in its OWN coordinates
-                // (closeHitX/Y/Width/Height) and this adds the two offsets
-                // between the entry and the window -- centerIsland's own x
-                // plus its `margin` (drawerColumn.x), and rowHeight plus
-                // the animated drawerGap (drawerColumn.y; the gap is 0 for
-                // centerIsland, which is not split, but reading it keeps
-                // this correct if that ever changes). VeilleDrawerContent
-                // is the FIRST entry in drawerItems, so its own offset
-                // within that column is 0.
+                // (closeHitX/Y/Width/Height); its live item position and
+                // the island's drawerY provide the offsets in either
+                // orientation.
                 //
                 // Four separate ints and not one `rect` property, which is
                 // what this was first written as: a Region whose x/width
@@ -1067,7 +1065,7 @@ ShellRoot {
                     // instead of quietly becoming a coincidence.
                     x: centerIsland.x + centerIsland.drawerBandX
                        + centerIsland.margin + veilleDrawer.closeHitX
-                    y: centerIsland.y + centerIsland.drawerTop
+                    y: centerIsland.y + centerIsland.drawerY + veilleDrawer.y
                        + veilleDrawer.closeHitY
                     width: veilleDrawer.closeHitWidth
                     height: Math.max(0, Math.min(veilleDrawer.closeHitHeight,
@@ -1083,13 +1081,13 @@ ShellRoot {
                 // overhang, exactly as TOOLS' own does.
                 Region {
                     x: launchers.x
-                    y: 0
+                    y: launchers.y
                     width: launchers.width
                     height: launchers.height
                 }
                 Region {
                     x: launchers.x + launchers.drawerBandX
-                    y: 0
+                    y: launchers.y
                     width: launchers.drawerBandWidth
                     height: launchers.height
                 }
@@ -1097,7 +1095,7 @@ ShellRoot {
                 // clock's.
                 Region {
                     x: programmeIsland.x + programmeIsland.drawerBandX
-                    y: 0
+                    y: programmeIsland.y
                     width: programmeIsland.visible ? programmeIsland.drawerBandWidth : 0
                     height: programmeIsland.height
                 }
@@ -1108,8 +1106,8 @@ ShellRoot {
                 Region {
                     x: centerIsland.x + centerIsland.drawerBandX
                        + centerIsland.margin + programmeAlert.hitX
-                    y: centerIsland.y + centerIsland.drawerTop
-                       + veilleDrawer.height + programmeAlert.hitY
+                    y: centerIsland.y + centerIsland.drawerY
+                       + programmeAlert.y + programmeAlert.hitY
                     width: programmeAlert.hitWidth
                     height: programmeAlert.hitHeight
                 }
@@ -1118,7 +1116,7 @@ ShellRoot {
                 // drawer that moved over with the clock.
                 Region {
                     x: clockIsland.x + clockIsland.drawerBandX
-                    y: 0
+                    y: clockIsland.y
                     width: clockIsland.drawerBandWidth
                     height: clockIsland.height
                 }
@@ -1153,7 +1151,8 @@ ShellRoot {
                 id: barBand
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 // The band's bottom line IS the central island's bottom
                 // edge -- asked for: the island's corner arcs have to
                 // finish exactly on it, and that had to come from raising
@@ -1275,6 +1274,7 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
+                flushTop: !BarPosition.bottom
                 splitDrawer: true
                 drawerFillTop: DrawerTheme.islandPane
                 drawerFillBottom: DrawerTheme.islandPane
@@ -1284,10 +1284,11 @@ ShellRoot {
                 paneRim: DrawerTheme.islandPaneRim
                 paneHighlight: DrawerTheme.islandPaneHighlight
                 drawerGap: 0
-                drawerTop: bar.bandHeight + 6
+                drawerEdge: bar.bandHeight + 6
                 fixedDrawerWidth: Math.round(Math.max(centerIsland.maxRowWidth, centerIsland.entryWidthWanted))
                 drawerAnchorX: centerIsland.margin + centerIsland.effectiveWidth / 2
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 // `shell.veille` is the single shared logic instance
@@ -1308,9 +1309,9 @@ ShellRoot {
                 // for each one that opens. So holding SUPER while
                 // Veille's clock is already showing adds the cheatsheet
                 // underneath it instead of replacing it, and letting go
-                // retracts by exactly that much again. Listed here in
-                // the order they stack, top to bottom. `drawerItems`,
-                // not bare children -- an unnamed child of a
+                // retracts by exactly that much again. Listed in bar-edge
+                // order; DrawerIsland reverses the stack for a bottom bar.
+                // `drawerItems`, not bare children -- an unnamed child of a
                 // DrawerIsland lands in its TOP row instead, via its
                 // default-property alias.
                 drawerItems: [
@@ -1364,9 +1365,11 @@ ShellRoot {
 
                 rowPane: false
                 rowHeight: 24
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 // `rowHeight`, not `height` -- see toolsIsland's topMargin.
-                anchors.topMargin: Math.round((barBand.height - clockIsland.rowHeight) / 2)
+                anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - clockIsland.rowHeight) / 2)
+                anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - clockIsland.rowHeight) / 2) : 0
                 anchors.left: parent.left
                 anchors.leftMargin: 6
                 flushTop: false
@@ -1388,7 +1391,7 @@ ShellRoot {
                 drawerRadius: 32
                 paneEdge: true
                 drawerGap: 0
-                drawerTop: bar.bandHeight
+                drawerEdge: bar.bandHeight
                 // Left-aligned band, the mirror of TOOLS' right-aligned
                 // one: an anchor half a pane in from the island's own
                 // margin lands the band's outer edge exactly on the
@@ -1436,8 +1439,10 @@ ShellRoot {
                 visible: programmeIndicator.visible || ProgrammeState.panelOpen
                 rowPane: false
                 rowHeight: 24
-                anchors.top: parent.top
-                anchors.topMargin: Math.round((barBand.height - programmeIsland.rowHeight) / 2)
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
+                anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - programmeIsland.rowHeight) / 2)
+                anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - programmeIsland.rowHeight) / 2) : 0
                 anchors.left: clockIsland.right
                 flushTop: false
 
@@ -1455,7 +1460,7 @@ ShellRoot {
                 drawerRadius: 32
                 paneEdge: true
                 drawerGap: 0
-                drawerTop: bar.bandHeight
+                drawerEdge: bar.bandHeight
                 // Flush with the clock's left edge, so with the screen's,
                 // the way the notification centre sits on the right one
                 // ("aligne avec le bord gauche comme notif avec bord
@@ -1474,14 +1479,16 @@ ShellRoot {
             Modules.Block {
                 id: metrics
 
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 // Centred in the band rather than pinned 3px down: the
                 // band's height is the island's now, so a fixed margin
                 // would leave these sitting high in it. Bound, so they
                 // stay centred whatever it becomes -- and it puts them on
                 // the central island's own content axis, which a fixed 3
                 // did not.
-                anchors.topMargin: Math.round((barBand.height - height) / 2)
+                anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - height) / 2)
+                anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - height) / 2) : 0
                 // Right after the clock since the HyperOS pass. They sat
                 // in the right-hand cluster for a while, HyperOS-style,
                 // which left the clock alone on a very empty left half
@@ -1573,7 +1580,8 @@ ShellRoot {
                 // where they always did.
                 rowHeight: 24
 
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 // Centred in the band rather than pinned 3px down: the
                 // band's height is the island's now, so a fixed margin
                 // would leave these sitting high in it. Bound, so they
@@ -1585,7 +1593,8 @@ ShellRoot {
                 // the whole island (chips and all) up the band the moment
                 // the actions panel opened -- the same trap toolsIsland
                 // documents on its own topMargin.
-                anchors.topMargin: Math.round((barBand.height - launchers.rowHeight) / 2)
+                anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - launchers.rowHeight) / 2)
+                anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - launchers.rowHeight) / 2) : 0
                 anchors.right: toolsIsland.left
                 // 6 -> 0, and the chips do not move: a DrawerIsland insets
                 // its row by its own `margin` (6, and readonly) where a
@@ -1641,13 +1650,13 @@ ShellRoot {
                 // put and the pane grows into the space under it
                 // (`splitDrawer`), butted against the band's bottom edge
                 // rather than overlapping it (`drawerGap: 0` +
-                // `drawerTop`), and opening does not widen the row
+                // `drawerEdge`), and opening does not widen the row
                 // (`widenOnOpen: false` -- this row is five chips that
                 // come and go, and widening it would shove them sideways
                 // under the pointer that just clicked one).
                 splitDrawer: true
                 drawerGap: 0
-                drawerTop: bar.bandHeight
+                drawerEdge: bar.bandHeight
                 drawerRadius: 32
                 paneEdge: true
                 widenOnOpen: false
@@ -1760,7 +1769,8 @@ ShellRoot {
                 // the drawer below it (the notification centre, Balise)
                 // is a separate block and keeps everything it had.
                 rowPane: false
-                anchors.top: parent.top
+                anchors.top: BarPosition.bottom ? undefined : parent.top
+                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 // Centred in the band rather than pinned 3px down: the
                 // band's height is the island's now, so a fixed margin
                 // would leave these sitting high in it. Bound, so they
@@ -1772,7 +1782,8 @@ ShellRoot {
                 // whole island (and Balise / the notification centre with
                 // it) hundreds of px up the moment one opened. Only the
                 // ROW is what sits in the band.
-                anchors.topMargin: Math.round((barBand.height - toolsIsland.rowHeight) / 2)
+                anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - toolsIsland.rowHeight) / 2)
+                anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - toolsIsland.rowHeight) / 2) : 0
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 flushTop: false
@@ -1943,7 +1954,7 @@ ShellRoot {
                 // partir d'une ligne imaginaire mais directement c'est
                 // l'island qui s'etend").
                 //
-                // `drawerTop` then answers where the pane actually
+                // `drawerEdge` then answers where the pane actually
                 // belongs. This island's row is 24px but the band
                 // behind it is 31 (barBand is sized on centerIsland's
                 // row, not this one), so with the gap gone the pane sat
@@ -1963,7 +1974,7 @@ ShellRoot {
                 // wants a rounded top ("arrondi les coins du dessus ...
                 // vu qu'il y a un espace").
                 drawerGap: 0
-                drawerTop: bar.bandHeight
+                drawerEdge: bar.bandHeight
 
                 // The notification centre is a panel of its own, down the
                 // screen's right edge (the LazyLoader after the bars).
@@ -2424,8 +2435,17 @@ ShellRoot {
             // worth it -- one wakeup to display beats polling forever.
             visible: OsdState.osdVisible || osd.opacity > 0
 
-            anchors { bottom: true }
-            margins.bottom: 48
+            // The OSD sits on the edge opposite the bar.
+            anchors {
+                top: BarPosition.bottom
+                bottom: !BarPosition.bottom
+                left: true
+            }
+            margins {
+                top: BarPosition.bottom ? 48 : 0
+                bottom: BarPosition.bottom ? 0 : 48
+                left: 20
+            }
             implicitWidth: osd.width
             implicitHeight: osd.height
 
@@ -2438,7 +2458,7 @@ ShellRoot {
             // the card at its full 280x92, and `implicitWidth/Height`
             // above read that size whether or not anything is showing --
             // so an unmasked layer surface was taking input across a
-            // permanent invisible rectangle at bottom-center, 48px up.
+            // permanent invisible rectangle.
             //
             // ALWAYS empty here, where the battery alert's own mask is
             // merely empty-while-hidden: that card is click-to-dismiss
@@ -2547,13 +2567,9 @@ ShellRoot {
 
     // Notification toasts -- replaces swaync's own notification-window
     // popups. Same per-screen Variants/exclusionMode/aboveWindows shape
-    // as OSD/BatteryAlert above; anchored top-left with swaync's own
-    // margins (positionX/positionY: "left"/"top" in swaync/config.json --
-    // that pair only ever governed TOAST position, unlike the
-    // control-center below). Always mapped, like OSD, so
-    // NotificationCard's own state can drive fades later without a
-    // window remap; content is simply empty/zero-height when
-    // NotificationState.toastQueue is empty.
+    // as OSD/BatteryAlert above; left-aligned and vertically centered.
+    // Mapped while a toast exists, then kept up for 260ms so the last
+    // card's 180ms exit transition can finish before the surface vanishes.
     Variants {
         model: Quickshell.screens
 
@@ -2617,27 +2633,10 @@ ShellRoot {
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
 
-            anchors { top: true; left: true }
-            // Nudged down/right to sit INSIDE the top-left tile instead
-            // of straddling its frame -- asked for: "descend un peu en
-            // bas à droite pour qu'elles ne coupent pas la bordure de la
-            // tuile du dessous". `exclusionMode: Ignore` above means this
-            // surface is placed against the raw monitor edge, NOT below
-            // the bar's exclusive zone, so the old top:8/left:3 put the
-            // card over the bar AND across the tile's border lines, which
-            // then read as interrupted where the card covered them.
-            //
-            // Where that tile actually starts, on this setup:
-            //   top  = 24 (bar exclusive zone) + 10 (gaps_out.top)
-            //          +  3 (border_size)      = 37
-            //   left =  8 (gaps_out.left)      +  3 (border_size) = 11
-            // (all three from hypr/hyprland.lua). +9 past each clears the
-            // rounding=12 corner arc too, so the frame stays unbroken all
-            // the way around the card rather than just along the straight
-            // runs. Hardcoded like the numbers it replaces -- Hyprland's
-            // gaps/border aren't queryable from here -- so if gaps_out,
-            // border_size or the bar's height change, these follow.
-            margins { top: 46; left: 20 }
+            // This fixed viewport is centered on the unanchored vertical
+            // axis; its live toast stack is centered inside it.
+            anchors { left: true }
+            margins { left: 20 }
 
             // FIXED size, where this used to track the stack's own height.
             // A card leaving now animates for 180ms AFTER its model row is
@@ -2657,13 +2656,15 @@ ShellRoot {
             // stack currently fills, and collapses to nothing (fully
             // click-through) when there are no toasts at all.
             mask: Region {
+                y: toastStack.y
                 width: toastStack.cardWidth
                 height: toastStack.contentHeight
             }
 
             Modules.NotificationToast {
                 id: toastStack
-                anchors.fill: parent
+                y: Math.round((parent.height - height) / 2)
+                height: contentHeight
             }
 
             // Glass like the drawers: Hyprland blurs behind each card, and
@@ -2751,7 +2752,12 @@ ShellRoot {
             screen: Quickshell.screens.find(s => s.name === SesameState.screenName) || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
-            anchors { top: true; bottom: true; left: true; right: true }
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "sesame"
             WlrLayershell.keyboardFocus: SesameState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
@@ -2839,9 +2845,10 @@ ShellRoot {
             // on demand, so it is handed over on a click, not seized.
             WlrLayershell.keyboardFocus: ProgrammeState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
             anchors { top: true; left: true; bottom: true }
-            // Under the bar, never over it: from the band's bottom line
-            // (bar.bandHeight) down to the screen's bottom edge.
-            margins.top: 31
+            margins {
+                top: BarPosition.bottom ? 0 : 31
+                bottom: BarPosition.bottom ? 31 : 0
+            }
             implicitWidth: 440
 
             // Glass like the bar's drawers (see GLASS there): Hyprland
@@ -2942,7 +2949,10 @@ ShellRoot {
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
             anchors { top: true; right: true; bottom: true }
-            margins.top: 31
+            margins {
+                top: BarPosition.bottom ? 0 : 31
+                bottom: BarPosition.bottom ? 31 : 0
+            }
             implicitWidth: 440
 
             // Glass, like Programme's sheet above (and cut short the same
@@ -3006,8 +3016,8 @@ ShellRoot {
         }
     }
 
-    // The pill announcing a controller that just arrived. Bottom-centre,
-    // where the OSD sits, and never taking input.
+    // The pill announcing a controller that just arrived. Opposite the
+    // bar edge, like the other OSDs, and never taking input.
     Variants {
         model: Quickshell.screens
 
@@ -3022,8 +3032,16 @@ ShellRoot {
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
-            anchors { bottom: true }
-            margins.bottom: 48
+            anchors {
+                top: BarPosition.bottom
+                bottom: !BarPosition.bottom
+                left: true
+            }
+            margins {
+                top: BarPosition.bottom ? 48 : 0
+                bottom: BarPosition.bottom ? 0 : 48
+                left: 20
+            }
             implicitWidth: controllerBanner.implicitWidth
             implicitHeight: controllerBanner.implicitHeight
             mask: Region { width: 0; height: 0 }

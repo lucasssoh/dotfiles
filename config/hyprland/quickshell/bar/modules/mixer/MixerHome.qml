@@ -120,7 +120,8 @@ Item {
         id: handle
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: BarPosition.bottom ? undefined : parent.top
+        anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         onCloseRequested: MixerState.close()
     }
 
@@ -133,7 +134,7 @@ Item {
         id: pageLoader
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: handle.bottom
+        anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.leftMargin: 10
         anchors.rightMargin: 10
         anchors.topMargin: 14

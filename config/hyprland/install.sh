@@ -205,8 +205,8 @@ if [ "$DISTRO" = "fedora" ]; then
         # entre quand meme dans la liste -- une detection qui repond "oui"
         # faute d'outil n'est pas une detection.
         v4l-utils
-        # hypr/scripts/bar-tint.py's two hard imports. It samples the top
-        # strip of the wallpaper and writes ~/.cache/bar-tint.json, which
+        # hypr/scripts/bar-tint.py's two hard imports. It samples the strip
+        # at the configured bar edge and writes ~/.cache/bar-tint.json, which
         # quickshell/bar/services/BandTint.qml watches -- that file is the
         # ONLY thing telling the bar whether to draw light or dark ink, and
         # the band is 55% transparent (#730c0c0e), so getting it wrong leaves

@@ -159,11 +159,13 @@ Item {
     // island's own `fill` is invisible and there would be nothing left
     // to paint behind the notification cards.
     property int drawerGap: root.splitDrawer ? 8 : 0
+    // The row stays attached to the screen edge; drawers occupy the space
+    // inward from it without transforming their text or controls.
+    readonly property bool bottomEdge: BarPosition.bottom
 
 
-    // Where the drawer BLOCK starts, in island-local coordinates.
-    // Defaults to this island's own row, which is what it always
-    // implicitly was -- so centerIsland is unaffected.
+    // Distance from the bar-facing edge to the drawer block.
+    // Defaults to this island's own row.
     //
     // TOOLS needs it to differ. Its row is 24px, but the bar band behind
     // it (shell.qml's `barBand`) is 31 -- sized on centerIsland's row,
@@ -177,7 +179,7 @@ Item {
     // Stacking is the whole hazard of tinting a surface the same colour
     // as the one behind it, and the answer is to butt the two edges
     // rather than overlap them: the drawer starts where the band ends.
-    property real drawerTop: root.rowHeight
+    property real drawerEdge: root.rowHeight
 
     // Visual chrome, generalized for a second consumer with a different
     // look (TOOLS' own floating pane, unlike centerIsland which is flush
@@ -219,6 +221,28 @@ Item {
     // MECHANICS is not sharing the look: every visual difference between
     // the two islands is a knob the consumer sets.
     property bool splitDrawer: false
+
+    readonly property var arrangedDrawerItems: {
+        const items = [];
+        for (let i = 0; i < root.drawerItems.length; i++) {
+            const index = root.bottomEdge && !root.dropReveal
+                ? root.drawerItems.length - i - 1 : i;
+            items.push(root.drawerItems[index]);
+        }
+        return items;
+    }
+
+    property bool _arrangedBottomEdge: false
+    function arrangeDrawerItems() {
+        if (root.dropReveal || root._arrangedBottomEdge === root.bottomEdge) return;
+        root._arrangedBottomEdge = root.bottomEdge;
+        const items = root.arrangedDrawerItems;
+        for (let i = 0; i < items.length; i++) items[i].parent = null;
+        for (let i = 0; i < items.length; i++) items[i].parent = drawerColumn;
+    }
+
+    Component.onCompleted: Qt.callLater(root.arrangeDrawerItems)
+    onBottomEdgeChanged: Qt.callLater(root.arrangeDrawerItems)
 
     // false = this island's ROW draws no background whatever: no fill,
     // no gloss, no edge. Set by TOOLS, whose surface is now shell.qml's
@@ -599,7 +623,7 @@ Item {
         : !root.breath ? 1
         : root.dropClosing ? 0.95 + 0.05 * root.breathX : 0.92 + 0.08 * root.breathX
     readonly property real paneShift: !root.breath ? 0
-        : (root.dropClosing ? -8 : -10) * (1 - root.breathX)
+        : (root.dropClosing ? -8 : -10) * (1 - root.breathX) * (root.bottomEdge ? -1 : 1)
     // The point the pane grows from, in island coordinates: under the chip.
     // Coin: the band's outer edge on the corner side.
     readonly property real paneOriginX: root.corner && root.dropCorner === "left" ? root.drawerBandX
@@ -624,13 +648,15 @@ Item {
     readonly property bool dropSettled: !root.dropClosing && root.dropT >= 1
 
     // The pane's live rect, from the pill to the full band.
-    readonly property real dropFullY: root.drawerTop + root.drawerGap * root.opaqueProgress
     readonly property real dropPillH: 24
     readonly property real dropPillX: (root.dropOriginX >= 0 ? root.dropOriginX : root.drawerBandX + root.drawerBandWidth / 2)
                                       - root.dropOriginWidth / 2
     readonly property real dropPaneX: root.dropPillX + (root.drawerBandX - root.dropPillX) * root.dropW
     readonly property real dropPaneW: root.dropOriginWidth + (root.drawerBandWidth - root.dropOriginWidth) * root.dropW
     readonly property real dropPaneH: Math.max(0, root.dropPillH + (drawerColumn.height - root.dropPillH) * root.dropH)
+    readonly property real dropPaneY: root.bottomEdge
+        ? root.height - root.drawerEdge - root.drawerGap * root.opaqueProgress - root.dropPaneH
+        : root.dropFullY
     readonly property real dropRadius: Math.min(root.dropPaneW / 2, root.dropPaneH / 2,
                                                 12 + (root.drawerRadius - 12) * Math.min(1, root.dropH))
 
@@ -756,7 +782,9 @@ Item {
     // With Souffle's scale and shift applied, so the blur stays under
     // the glass while it grows.
     readonly property real paneX: root.paneOriginX + (drawerFill.x - root.paneOriginX) * root.paneScale
-    readonly property real paneY: drawerFill.y + root.paneShift
+    readonly property real paneY: drawerFill.y
+        + (root.bottomEdge ? drawerFill.height * (1 - root.paneScale) : 0)
+        + root.paneShift
     readonly property real paneWidth: drawerFill.width * root.paneScale
     readonly property real paneHeight: drawerFill.height * root.paneScale
     // The row pane's own rect, for shell.qml's blur region -- separate
@@ -766,7 +794,7 @@ Item {
     // like `fill` always did), so this tracks the content reflowing
     // under it with nothing extra to animate.
     readonly property real rowPaneX: 0
-    readonly property real rowPaneY: root.rowIslandInset
+    readonly property real rowPaneY: root.rowY + root.rowIslandInset
     readonly property real rowPaneW: root.width
     readonly property real rowPaneH: Math.max(0, root.rowHeight - 2 * root.rowIslandInset)
     readonly property real rowPaneR: Math.min(root.rowIslandRadius, root.rowPaneH / 2)
@@ -813,8 +841,13 @@ Item {
         // The drop's bounce takes the pane a few percent past its full
         // height for a moment; the slack keeps that inside the surface.
         const slack = root.dropReveal ? Math.ceil(tallest * 0.05) : 0;
-        return tallest > 0 ? root.drawerTop + root.drawerGap + tallest + slack + root.paneShadowRoom : root.rowHeight;
+        return tallest > 0 ? root.drawerEdge + root.drawerGap + tallest + slack + root.paneShadowRoom : root.rowHeight;
     }
+
+    readonly property real rowY: root.bottomEdge ? root.height - root.rowHeight : 0
+    readonly property real drawerY: root.bottomEdge
+        ? root.height - root.drawerEdge - root.drawerGap * root.opaqueProgress - drawerColumn.height
+        : root.drawerEdge + root.drawerGap * root.opaqueProgress
 
     // The row's width at its OWN theoretical widest -- not a live
     // snapshot, a genuine constant: sums each top-row child's own
@@ -1012,7 +1045,7 @@ Item {
     // discontinuous 8px jump on the very first frame of a grow/shrink
     // instead of easing in with the other thing the same progress
     // already drives (drawerFill's own opacity).
-    implicitHeight: root.drawerTop + root.drawerGap * root.opaqueProgress + drawerColumn.height
+    implicitHeight: root.drawerEdge + root.drawerGap * root.opaqueProgress + drawerColumn.height
     width: root.implicitWidth
     height: root.implicitHeight
 
@@ -1240,7 +1273,7 @@ Item {
         id: fill
         visible: root.rowPane
         x: 0
-        y: 0
+        y: root.rowY
         width: parent.width
         height: root.splitDrawer ? root.rowHeight : root.height
         topLeftRadius: root.flushTop ? 0 : root.rowRadius
@@ -1380,7 +1413,7 @@ Item {
         // marks riding high -- "le text n'est pas verticalement centré
         // comme les autres". Same rounding as the side islands' own
         // topMargin, so all of them sit on one axis.
-        y: Math.round((root.rowHeight - topRow.implicitHeight) / 2)
+        y: root.rowY + Math.round((root.rowHeight - topRow.implicitHeight) / 2)
         height: root.rowHeight
         spacing: root.rowSpacing
     }
@@ -1423,12 +1456,13 @@ Item {
         height: drawerFill.height
         radius: drawerFill.radius
         opacity: drawerFill.opacity
-        offset.y: 18
+        offset.y: root.bottomEdge ? -18 : 18
         blur: 50
         color: DrawerTheme.paneShadow
         transform: [
             Scale {
                 origin.x: root.paneOriginX - drawerFill.x
+                origin.y: root.bottomEdge ? drawerFill.height : 0
                 xScale: root.paneScale; yScale: root.paneScale
             },
             Translate { y: root.paneShift }
@@ -1439,7 +1473,7 @@ Item {
         id: drawerFill
         visible: root.splitDrawer
         x: root.dropReveal ? root.dropPaneX : root.drawerBandX
-        y: root.drawerTop + root.drawerGap * root.opaqueProgress
+        y: root.dropReveal ? root.dropPaneY : root.drawerY
         width: root.dropReveal ? root.dropPaneW : root.drawerBandWidth
         height: root.dropReveal ? root.dropPaneH : drawerColumn.height
         radius: root.dropReveal ? root.dropRadius : root.drawerRadius
@@ -1447,13 +1481,14 @@ Item {
         transform: [
             Scale {
                 origin.x: root.paneOriginX - drawerFill.x
+                origin.y: root.bottomEdge ? drawerFill.height : 0
                 xScale: root.paneScale; yScale: root.paneScale
             },
             Translate { y: root.paneShift }
         ]
         gradient: Gradient {
-            GradientStop { position: 0.0; color: root.drawerFillTop }
-            GradientStop { position: 1.0; color: root.drawerFillBottom }
+            GradientStop { position: 0.0; color: root.bottomEdge ? root.drawerFillBottom : root.drawerFillTop }
+            GradientStop { position: 1.0; color: root.bottomEdge ? root.drawerFillTop : root.drawerFillBottom }
         }
 
         // Thick-glass edge -- see GlassLens.qml / shaders/glass.frag.
@@ -1512,6 +1547,7 @@ Item {
         transform: [
             Scale {
                 origin.x: root.paneOriginX - drawerClip.x
+                origin.y: root.bottomEdge ? drawerClip.height : 0
                 xScale: root.paneScale; yScale: root.paneScale
             },
             Translate { y: root.paneShift }
@@ -1528,7 +1564,7 @@ Item {
         // inside -- the pane widens leftward and the column does not
         // follow, so every entry keeps starting where the ROW starts.
         x: root.drawerBandX + root.margin - drawerClip.x
-        y: root.drawerTop + root.drawerGap * root.opaqueProgress - drawerClip.y
+        y: root.drawerY - drawerClip.y
         width: root.drawerContentWidth
     }
     }
@@ -1536,7 +1572,7 @@ Item {
     // One set of bindings per entry. An Instantiator rather than a
     // Repeater because these delegates are not visual children of
     // anything -- they exist only to own the three Bindings below and to
-    // reparent their entry into drawerColumn once; the entry itself is
+    // reparent their entry into drawerColumn; the entry itself is
     // an already-built Item passed in from outside, not something a
     // delegate creates.
     Instantiator {

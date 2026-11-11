@@ -2,6 +2,7 @@ config/hyprland/hypr/wallpaper-playlist.json
 config/hyprland/hypr/display-layout.json
 config/hyprland/hypr/monitor-layout.json
 config/hyprland/hypr/scale.json
+config/hyprland/hypr/bar-position.json
 config/hyprland/hypr/hdr-state.json
 config/hyprland/hypr/private.lua
 config/hyprland/.claude/
