@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir rpms
           for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName'); do
-            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.rpm' --dir rpms
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.rpm' --dir rpms --skip-existing
           done
 
       - name: Repository
