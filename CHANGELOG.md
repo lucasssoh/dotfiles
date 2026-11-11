@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.4.0 (November 11 2026)
 
 ### Added
 - **Terminal:** WezTerm turns light or dark with the desktop. In light mode it is more opaque, so the text stays readable on any wallpaper.
