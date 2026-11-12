@@ -14,15 +14,26 @@ return {
     "NvChad/nvim-colorizer.lua",
     config = function()
       require("colorizer").setup({
-        filetypes = { "*" }, -- Syntaxe propre pour cibler tous les fichiers
+        -- Les codes explicites (#ff0000, rgb(), hsl()...) sont colores
+        -- partout : une variable ne peut pas leur ressembler. Les noms
+        -- de couleurs (Red, Green...), eux, se confondent avec des
+        -- identifiants, donc ils ne s'allument que dans les fichiers
+        -- qui parlent vraiment de couleur.
+        filetypes = {
+          "*",
+          css = { names = true },
+          scss = { names = true },
+          sass = { names = true },
+          less = { names = true },
+          stylus = { names = true },
+        },
         user_default_options = {
+          names = false,
           RGB = true,
           RRGGBB = true,
-          names = true,
           RRGGBBAA = true,
           rgb_fn = true,
           hsl_fn = true,
-          css = true,
           css_fn = true,
         },
       })

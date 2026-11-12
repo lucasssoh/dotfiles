@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
+
 ## 2.4.0 (November 11 2026)
 
 ### Added
