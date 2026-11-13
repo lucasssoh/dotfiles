@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../theme"
 import "../services"
 
@@ -70,15 +71,54 @@ Item {
         alpha: 0.9
     }
 
-    Text {
+    // The parked toasts' app icons, overlapping, then their count.
+    Row {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: 16
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
-        text: "+" + root.shown
-        color: DrawerTheme.secondary
-        font.family: Fonts.ui
-        font.pixelSize: 12
-        font.weight: Font.Medium
+        y: 15
+        spacing: 6
+
+        Row {
+            visible: iconRepeater.count > 0
+            spacing: -6
+            anchors.verticalCenter: parent.verticalCenter
+
+            Repeater {
+                id: iconRepeater
+                model: NotificationState.parkedIcons.filter((icon) => icon !== "")
+                delegate: Rectangle {
+                    id: iconTile
+                    required property string modelData
+                    width: 18
+                    height: 18
+                    radius: 6
+                    color: DrawerTheme.paneTop
+                    border.width: 1.5
+                    border.color: DrawerTheme.paneTop
+                    Image {
+                        anchors.centerIn: parent
+                        width: 13
+                        height: 13
+                        fillMode: Image.PreserveAspectFit
+                        sourceSize.width: 26
+                        sourceSize.height: 26
+                        source: {
+                            const icon = iconTile.modelData;
+                            if (icon.startsWith("/") || icon.includes("://")) return icon;
+                            return Quickshell.iconPath(icon, true);
+                        }
+                    }
+                }
+            }
+        }
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            renderType: Text.NativeRendering
+            font.hintingPreference: Font.PreferNoHinting
+            text: "+" + root.shown
+            color: DrawerTheme.secondary
+            font.family: Fonts.ui
+            font.pixelSize: 12
+            font.weight: Font.Medium
+        }
     }
 }

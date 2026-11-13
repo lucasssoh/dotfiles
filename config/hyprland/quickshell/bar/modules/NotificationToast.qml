@@ -76,6 +76,7 @@ ListView {
 
         width: root.cardWidth
         notification: toastDelegate.model.notification
+        count: toastDelegate.model.count || 1
         // Set just before a click dismisses it: the remove transition
         // reads it to pick the exit.
         property bool exitByClick: false

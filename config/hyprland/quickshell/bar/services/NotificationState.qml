@@ -140,6 +140,10 @@ Singleton {
     // Waiting behind a full stack, newest first: {notifId, notification}.
     property var _parked: []
     property int parkedCount: 0
+    // The app icons of the first two parked toasts, for the deck; the
+    // notification's picture when it names no app icon (notify-send -i
+    // lands there).
+    property var parkedIcons: []
     // ms left per notifId, on screen or parked; 0 = never auto-hide.
     property var _remaining: ({})
     // The full timeout per notifId, from arrival to the stack.
@@ -236,7 +240,7 @@ Singleton {
         //       && BatteryAlertState.battDischarging
         //       && BatteryAlertState.battPercent <= BatteryAlertState.tiers[0]) return;
 
-        root._enqueue({ notifId: n.id, notification: n }, root._timeoutFor(n));
+        root._enqueue({ notifId: n.id, notification: n, count: 1 }, root._timeoutFor(n));
     }
 
     function _enqueue(row, timeout) {
@@ -260,6 +264,22 @@ Singleton {
     }
 
     function _insertToast(row) {
+        // Another message from the app and sender on top of the stack
+        // (same app name and summary, a chat's contact say) merges into
+        // that toast: one card counting them, the latest text, its time
+        // restarted. Three messages in a row no longer fill the stack.
+        if (toastModel.count > 0) {
+            const top = toastModel.get(0);
+            const a = top.notification, b = row.notification;
+            if (a && b && a.appName !== "" && a.appName === b.appName && a.summary === b.summary
+                && a.urgency !== NotificationUrgency.Critical && b.urgency !== NotificationUrgency.Critical) {
+                const merged = (top.count || 1) + 1;
+                delete root._remaining[top.notifId];
+                toastModel.set(0, { notifId: row.notifId, notification: b, count: merged });
+                root._remaining[row.notifId] = root._timeouts[row.notifId];
+                return;
+            }
+        }
         // Opening a fresh stack picks the monitor -- see toastScreenName.
         if (toastModel.count === 0)
             root.toastScreenName = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
@@ -269,10 +289,10 @@ Singleton {
         toastModel.insert(0, row);
         while (toastModel.count > root.maxToasts) {
             const last = toastModel.get(toastModel.count - 1);
-            root._parked.unshift({ notifId: last.notifId, notification: last.notification });
+            root._parked.unshift({ notifId: last.notifId, notification: last.notification, count: last.count || 1 });
             toastModel.remove(toastModel.count - 1);
         }
-        root.parkedCount = root._parked.length;
+        root._syncParked();
     }
 
     // A place freed by a click brings the newest parked toast back at the
@@ -285,7 +305,12 @@ Singleton {
                 root._remaining[row.notifId] = Math.max(root._remaining[row.notifId], 2000);
             toastModel.append(row);
         }
+        root._syncParked();
+    }
+
+    function _syncParked() {
         root.parkedCount = root._parked.length;
+        root.parkedIcons = root._parked.slice(0, 2).map((r) => r.notification ? (r.notification.appIcon || r.notification.image) : "");
     }
 
     function _toastIndex(id) {
@@ -298,6 +323,7 @@ Singleton {
     function _removeToast(id) {
         root._arrivals = root._arrivals.filter((r) => r.notifId !== id);
         root._parked = root._parked.filter((r) => r.notifId !== id);
+        root._syncParked();
         const i = root._toastIndex(id);
         if (i >= 0) toastModel.remove(i);
         delete root._remaining[id];

@@ -21,6 +21,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Notifications:** closed with ×, a pop-up slides off the screen; when its time is up, it fades out.
 - **Notifications:** pop-ups are rounder, with the app's icon or picture on the left and the app's name above the title. Actions are a row of buttons along the bottom, and × shows when the pointer is on the pop-up.
 - **Notifications:** a critical pop-up has an amber edge and title. The pop-ups waiting under the stack show as card edges with their count.
+- **Notifications:** messages in a row from the same app and sender share one pop-up, with their count next to the app's name.
+- **Notifications:** a screenshot or other wide picture shows in full under the text. The pop-ups waiting under the stack show their apps' icons.
+- **Notifications:** a pop-up lightens slightly under the pointer, its text follows it in as it arrives, a pressed action button stays dark as the pop-up leaves, and a critical one flares once.
 
 ## 2.4.0 (November 11 2026)
 
