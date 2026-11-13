@@ -328,7 +328,9 @@ Item {
         Item {
             width: parent.width
             height: mediaColumn.height
-            visible: root.mprisPlayer !== null
+            // Not in demo mode: what you are playing is yours, like the
+            // figures demo mode makes up.
+            visible: root.mprisPlayer !== null && !DemoState.active
 
             Item {
                 id: artDisc
