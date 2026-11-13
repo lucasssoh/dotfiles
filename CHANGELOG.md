@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
+- **Bar:** an app chip opens its drawer on a click, like the other drawers, and no longer on hover; Focus is the drawer's first row.
 - **Bar:** drawers start right at the bar's edge, without the 4px gap.
 - **Bar:** it slides in and out from its own edge, the same way at the top and at the bottom, while windows make room.
 - **Lock screen:** the time stands alone in light ink on black, without the white card; the password field is an outlined rounded rectangle.

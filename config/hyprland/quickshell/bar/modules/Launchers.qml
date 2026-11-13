@@ -148,9 +148,7 @@ Item {
                 // un highlight leger"). Two things made that one read far
                 // heavier here than on a tile: it is opaque, so on this
                 // translucent band it painted a solid plate where every
-                // neighbouring chip shows the wallpaper through, and it now
-                // fires on a plain hover rather than on a deliberate right
-                // click. 10% of the band's ink (white on a dark band) is
+                // neighbouring chip shows the wallpaper through. 10% of the band's ink (white on a dark band) is
                 // the same wash BatteryRing's track and the OSD's own
                 // surfaces use -- it marks the chip without becoming an
                 // object sitting on the bar. At rest it is that ink at
@@ -202,66 +200,12 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    // Plain hover opens the drawer now -- asked for. All
-                    // of the debouncing this needs (the open delay that
-                    // keeps a pointer merely crossing the row from
-                    // flashing five panels, the grace period that lets it
-                    // cross the 7px gap down into the pane, the refusal to
-                    // steal another island's open drawer) lives in
-                    // LauncherActionsState's hover section rather than
-                    // here: there is one state machine and five chips per
-                    // screen feeding it, and `containsMouse` on any one of
-                    // them knows nothing about the other four.
-                    hoverEnabled: true
-                    onEntered: LauncherActionsState.hoverEnter(root.screen, chip.modelData)
-                    onExited: LauncherActionsState.hoverExit()
-                    // hl.dsp.focus, not the plain `focuswindow`. The
-                    // comment that used to sit here reasoned that
-                    // pip-daemon.sh (since removed) "already proves"
-                    // address-targeted dispatchers work as vanilla
-                    // hyprctl dispatch on this system -- but its dispatches
-                    // were broken the whole time, so it proved nothing,
-                    // and this chip never focused anything either.
-                    // hyprland.lua configures this compositor in Lua, so
-                    // `hyprctl dispatch` evaluates its argument AS LUA
-                    // and a native dispatcher name is not a parse error
-                    // away from working, it IS one:
-                    //
-                    //   error: [string "return hl.dispatch(focuswindow
-                    //   address:0x5...)"]:1: ')' expected near 'address'
-                    //
-                    // Being Hyprland's own dispatcher is irrelevant: the
-                    // Lua layer is in front of all of them.
-                    //
-                    // RIGHT click opens the actions drawer for this app
-                    // instead -- focus is the common case and stays on
-                    // the plain click, while "close this window" and
-                    // "quit this app" live one level in, where a misfire
-                    // costs nothing. See LauncherActionsState.qml for why
-                    // an app chip needed those two at all.
-                    onClicked: (mouse) => {
-                        if (mouse.button === Qt.RightButton) {
-                            LauncherActionsState.toggleFor(root.screen, chip.modelData);
-                            return;
-                        }
-                        // An open panel is about ONE app, and a plain
-                        // click here is the user moving on to another
-                        // one -- so it closes, rather than being left
-                        // behind naming the app they just navigated away
-                        // from. shell.qml's event-based dismissal does
-                        // not cover this case: focusing a window on the
-                        // CURRENT workspace only emits `activewindow`,
-                        // which is deliberately not in
-                        // keybindsDismissEvents (it also fires on plain
-                        // focus-follows-mouse -- see there).
-                        LauncherActionsState.close();
-                        if (chip.modelData.hidden) {
-                            LauncherActionsState.resume(chip.modelData.label);
-                            return;
-                        }
-                        Quickshell.execDetached(["hyprctl", "dispatch",
-                            "hl.dsp.focus({ window = 'address:" + chip.modelData.address + "' })"]);
-                    }
+                    // A click opens this app's drawer, like every other
+                    // drawer on the bar (it opened on hover for a while;
+                    // asked back to a click). Either button: focusing the
+                    // window is the drawer's first row, next to closing it
+                    // and quitting the app.
+                    onClicked: LauncherActionsState.toggleFor(root.screen, chip.modelData)
                 }
             }
         }

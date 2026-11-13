@@ -37,8 +37,8 @@ import "../../services"
 //
 // The per-row RevealPop cascade went the same way, and for the same
 // reason the island's staged reveal did (see `instantDrawer` in
-// DrawerIsland.qml): a staggered pop is an entrance, and this panel opens
-// on a hover now. One quick fade of the whole pane, nothing staged --
+// DrawerIsland.qml): a staggered pop is an entrance, and this panel opened
+// on a hover then. One quick fade of the whole pane, nothing staged --
 // asked for ("pas d'effet tiroir, juste un fade rapide"). The rows keep
 // their own hover tint, which is the only motion left in here.
 Item {
@@ -57,26 +57,6 @@ Item {
     // opts out -- that clause exists so the island's PauseAnimation can
     // wait out the stretch, and in `instantDrawer` there is no pause and
     // no stretch to wait for.
-
-    // Keeps the panel alive while the pointer is inside it, and arms its
-    // close when it leaves -- the other half of the hover open in
-    // Launchers.qml (see LauncherActionsState's hover section for the whole
-    // state machine, including why leaving arms rather than closes).
-    //
-    // A HoverHandler and NOT a MouseArea: a MouseArea over this whole item
-    // would sit on top of every ActionRow's own MouseArea and eat the
-    // clicks the panel exists for. Handlers are passive about buttons.
-    //
-    // Bounded by this item, which the island sizes to `drawerContentWidth`
-    // -- so the pane's own 6px margin on each side is outside it. Leaving
-    // through that strip starts the grace period a frame or two early,
-    // which is 240ms of slack against 6px of travel.
-    HoverHandler {
-        onHoveredChanged: {
-            if (hovered) LauncherActionsState.hoverKeep();
-            else LauncherActionsState.hoverExit();
-        }
-    }
 
     // The `BaliseReveal.replay()` kick that used to be here is gone with
     // the cascade it drove -- see the RevealPop note below.

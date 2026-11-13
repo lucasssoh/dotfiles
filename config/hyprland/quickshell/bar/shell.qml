@@ -1746,12 +1746,12 @@ ShellRoot {
                 // gives it nothing to be the light for -- it was tracing a
                 // rim around a pane with no modelling behind it. It also
                 // takes an FBO the size of the pane out of a panel that
-                // now opens and closes on hover.
+                // opened and closed on hover at the time.
                 // Lens on too, like every other drawer pane (it was the
                 // one flat exception; asked for on "chaque tiroir").
                 drawerLens: true
 
-                // Drops out of the hovered chip, like every other drawer
+                // Drops out of the clicked chip, like every other drawer
                 // under the bar. This replaces the plain fade it had
                 // (`instantDrawer`); the drop's spring does not depend on
                 // revealDuration or the fades below.
