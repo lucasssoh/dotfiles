@@ -812,7 +812,10 @@ ShellRoot {
             // reserved from tiled windows (same reasoning the corner-flare
             // experiment used, before it got reverted for a different
             // reason: the pixel math itself was fine).
-            exclusiveZone: 24
+            //
+            // Reserved only while the bar is in place, so windows make
+            // room as it slides in and take the room back as it leaves.
+            exclusiveZone: bar.shown ? 24 : 0
             // The layer spelled out rather than `aboveWindows: true`, which
             // pins it to Top: see `barRaised`, the bar climbs above
             // Programme's and the notifications' sheets while the keybinds
@@ -888,13 +891,13 @@ ShellRoot {
             // Against the bottom one Hyprland moves the box at once and
             // keeps the old buffer at its top until the next commit, so
             // the whole bar was drawn 82px too high for ~150 ms, over the
-            // window. Two guards: the height never shrinks, and at the
-            // bottom the content stays hidden until the first resizes are
-            // through (`settled`).
+            // window. Two guards: the height never shrinks, and the
+            // content stays hidden until the first resizes are through
+            // (`settled`), at either edge so both start alike.
             readonly property real wantedHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight,
                                                           launchers.openHeight, clockIsland.openHeight)
             property real surfaceHeight: 0
-            property bool settled: !BarPosition.bottom
+            property bool settled: false
             onWantedHeightChanged: surfaceHeight = Math.max(surfaceHeight, wantedHeight)
             Component.onCompleted: surfaceHeight = Math.max(surfaceHeight, wantedHeight)
             onSurfaceHeightChanged: if (!settled) settleTimer.restart()
@@ -914,6 +917,28 @@ ShellRoot {
                 target: bar.contentItem
                 property: "opacity"
                 value: bar.settled ? 1 : 0
+            }
+
+            // ── ENTRANCE AND EXIT ─────────────────────────────────────
+            // The bar moves itself: its own height, from and to the edge
+            // it lives on, the same at the top and at the bottom. Hyprland
+            // would slide the whole surface instead, drawer room included,
+            // and the band only showed at the very end of that travel.
+            // In once the surface has settled; out when BarPosition is
+            // about to restart the shell on the other edge.
+            readonly property bool shown: bar.settled && !BarPosition.leaving
+            property real slide: bar.shown ? 0 : 1
+            readonly property real slideOffset: (BarPosition.bottom ? 1 : -1) * bar.bandHeight * bar.slide
+            Behavior on slide {
+                NumberAnimation {
+                    duration: bar.shown ? 280 : 160
+                    easing.type: bar.shown ? Easing.OutCubic : Easing.InCubic
+                }
+            }
+            Binding {
+                target: bar.contentItem
+                property: "y"
+                value: bar.slideOffset
             }
 
             // Input stays restricted to the NORMAL bar's own height
@@ -971,7 +996,7 @@ ShellRoot {
                 // not on the fading drawers' min().
                 Region {
                     x: centerIsland.x + centerIsland.rowPaneX
-                    y: centerIsland.y + centerIsland.rowPaneY
+                    y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
                     width: DrawerTheme.glass && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
                     height: centerIsland.rowPaneH
                     radius: centerIsland.rowPaneR

@@ -10,6 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
+- **Bar:** it slides in and out from its own edge, the same way at the top and at the bottom, while windows make room.
 
 ## 2.4.0 (November 11 2026)
 

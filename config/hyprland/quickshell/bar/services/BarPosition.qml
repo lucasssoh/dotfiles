@@ -16,7 +16,18 @@ Singleton {
         ? "bottom" : "top"
     readonly property bool bottom: position === "bottom"
     property bool configLoaded: false
+    // The bars slide out on `leaving`, then unmap on `restartPending`.
+    property bool leaving: false
     property bool restartPending: false
+
+    Timer {
+        id: leaveTimer
+        interval: 180
+        onTriggered: {
+            root.restartPending = true;
+            Quickshell.execDetached(["bash", root.restartScript]);
+        }
+    }
 
     FileView {
         id: file
@@ -53,8 +64,8 @@ Singleton {
     }
 
     function requestRestart() {
-        if (root.restartPending) return;
-        root.restartPending = true;
-        Quickshell.execDetached(["bash", root.restartScript]);
+        if (root.leaving) return;
+        root.leaving = true;
+        leaveTimer.start();
     }
 }
