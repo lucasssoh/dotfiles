@@ -128,7 +128,9 @@ To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-u
 | | | |
 |:---:|:---:|:---:|
 | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/balise-dark.webp"><img src="screenshots/balise.webp" alt="Balise"></picture><br>Balise | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/power-dark.webp"><img src="screenshots/power.webp" alt="Power"></picture><br>Power | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/mixer-dark.webp"><img src="screenshots/mixer.webp" alt="Mixer"></picture><br>Mixer |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/notifications-dark.webp"><img src="screenshots/notifications.webp" alt="Notification centre"></picture><br>Notification centre | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/calendar-dark.webp"><img src="screenshots/calendar.webp" alt="Calendar"></picture><br>Calendar | |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/notifications-dark.webp"><img src="screenshots/notifications.webp" alt="Notification centre"></picture><br>Notification centre | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/calendar-dark.webp"><img src="screenshots/calendar.webp" alt="Calendar"></picture><br>Calendar | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/toasts-dark.webp"><img src="screenshots/toasts.webp" alt="Notification pop-ups"></picture><br>Pop-ups |
+
+Notifications pop up on the left, in the middle of the screen. They stay while the pointer is on them. Past three, the others wait underneath. Messages in a row from the same app and sender share one pop-up.
 
 The notification centre is a panel from under the bar to the bottom of the screen, flush with its right edge, sliding in from the right. Only one of the drawers on the right can be open at a time.
 

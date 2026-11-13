@@ -7,7 +7,9 @@
 # a scene opens are closed before the next one.
 #
 # Steps: ipc TARGET FUNCTION [ARGS...] · wait SECONDS · run COMMAND... ·
-#        close CLASS · notify APP | SUMMARY | BODY
+#        close CLASS · notify APP | SUMMARY | BODY [| OPTIONS]
+# A notify step's OPTIONS: entry=DESKTOP_ID (the app's icon) icon=NAME
+# image=PATH urgency=low|normal|critical.
 #
 # After changing an IpcHandler, or a command a scene runs:
 #     scripts/pellicule check
@@ -20,6 +22,9 @@ wallpaper = "coucou-aube-plis.jxl"
 quality = 85
 # Seconds for the wallpaper and the apps to follow a colour scheme change.
 scheme_wait = 3
+# Where the pointer waits during a take, clear of every scene: under it a
+# pop-up lightens and holds its timer.
+pointer = [960, 1100]
 
 [[scene]]
 name = "bar"
@@ -79,19 +84,37 @@ after = ["ipc bar toggleCalendar", "wait 0.8"]
 [[scene]]
 name = "notifications"
 doc = "docs/modules.md"
-crop = [960, 0, 960, 600]
+crop = [1280, 0, 640, 1000]
+# Two from Prisme in a row show the sender once; the screenshot shows in
+# full. The centre opens past 1.5 s, once the lines no longer slide in;
+# the pop-ups still up on the left are outside the crop.
 steps = [
+    "notify cc-pkg-mng | Up to date | coucou-shell 2.4.0 on the stable channel",
     "notify Liseuse | Resuming | Plus courts chemins, page 12 of 48",
-    "wait 0.3",
     "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200",
-    "wait 0.3",
-    "notify cc-pkg-mng | Up to date | coucou-shell 2.2.0 on the stable channel",
-    # The toasts leave before the centre opens.
-    "wait 7",
+    "notify Prisme | Wallpapers ready | 2 fitted for 2560x1440",
+    "notify Screenshot | Screenshot saved | Pictures/Screenshots/work.png | entry=io.github.lucasssoh.Screenshot image={repo}/docs/screenshots/work-dark.webp",
+    "wait 1.8",
     "ipc bar toggleNotificationCenter",
     "wait 1.4",
 ]
 after = ["ipc bar closeNotificationCenter", "wait 0.8"]
+
+[[scene]]
+name = "toasts"
+doc = "docs/modules.md"
+crop = [0, 250, 640, 700]
+# The same five as pop-ups: the screenshot on top, the two from Prisme in
+# one pop-up, Liseuse, and cc-pkg-mng waiting underneath. They come in one
+# by one, 110 ms apart, each text 60 ms behind its card: all settled by 1.4 s.
+steps = [
+    "notify cc-pkg-mng | Up to date | coucou-shell 2.4.0 on the stable channel",
+    "notify Liseuse | Resuming | Plus courts chemins, page 12 of 48",
+    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200",
+    "notify Prisme | Wallpapers ready | 2 fitted for 2560x1440",
+    "notify Screenshot | Screenshot saved | Pictures/Screenshots/work.png | entry=io.github.lucasssoh.Screenshot image={repo}/docs/screenshots/work-dark.webp",
+    "wait 1.4",
+]
 
 [[scene]]
 name = "battery-alert"
