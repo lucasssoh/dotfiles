@@ -50,6 +50,19 @@ Item {
         const image = card.hasImage ? card.notification.image : "";
         return image.startsWith("image://icon//") ? "file://" + image.slice("image://icon/".length) : image;
     }
+    // satty sends a 96x60 thumbnail, in a temporary file gone once it
+    // quits, and names the saved file in its body: "File saved to
+    // '<path>'". When a notification's picture is a file and its body
+    // quotes an absolute path, that file is the picture -- full size, and
+    // still there later. Back to the sent picture if it will not load.
+    readonly property string savedPath: {
+        if (!card.imageSource.startsWith("file://") || !card.hasBody) return "";
+        const m = card.notification.body.match(/'(\/[^']+)'/);
+        return m ? m[1] : "";
+    }
+    property bool savedFailed: false
+    readonly property string pictureSource: card.savedPath !== "" && !card.savedFailed
+        ? "file://" + card.savedPath : card.imageSource
     readonly property bool imageIsIcon: card.imageSource.startsWith("image://icon/")
     // A wide picture (a screenshot) shows under the text; a square one (a
     // contact's photo) in the tile, unless the header already shows it.
@@ -131,8 +144,9 @@ Item {
             id: probe
             visible: false
             asynchronous: true
-            source: card.hasImage && !card.imageIsIcon ? card.imageSource : ""
+            source: card.hasImage && !card.imageIsIcon ? card.pictureSource : ""
             sourceSize.width: 640
+            onStatusChanged: if (status === Image.Error && card.savedPath !== "") card.savedFailed = true
         }
 
         Column {
@@ -183,7 +197,7 @@ Item {
                     height: card.thumbHeight
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
-                    source: card.widePicture ? card.imageSource : ""
+                    source: card.widePicture ? card.pictureSource : ""
                     sourceSize.width: 640
                     layer.enabled: card.widePicture
                     layer.effect: OpacityMask {

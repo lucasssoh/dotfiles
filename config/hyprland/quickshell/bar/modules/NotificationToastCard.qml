@@ -51,6 +51,19 @@ Rectangle {
         const image = card.hasImage ? card.notification.image : "";
         return image.startsWith("image://icon//") ? "file://" + image.slice("image://icon/".length) : image;
     }
+    // satty sends a 96x60 thumbnail, in a temporary file gone once it
+    // quits, and names the saved file in its body: "File saved to
+    // '<path>'". When a notification's picture is a file and its body
+    // quotes an absolute path, that file is the picture -- full size, and
+    // still there later. Back to the sent picture if it will not load.
+    readonly property string savedPath: {
+        if (!card.imageSource.startsWith("file://") || !card.hasBody) return "";
+        const m = card.notification.body.match(/'(\/[^']+)'/);
+        return m ? m[1] : "";
+    }
+    property bool savedFailed: false
+    readonly property string pictureSource: card.savedPath !== "" && !card.savedFailed
+        ? "file://" + card.savedPath : card.imageSource
     // An icon named as the picture (notify-send -i lands there): drawn at
     // icon size, never taken for a screenshot.
     readonly property bool imageIsIcon: card.imageSource.startsWith("image://icon/")
@@ -144,7 +157,8 @@ Rectangle {
             visible: card.hasImage && !card.widePicture && status === Image.Ready
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
-            source: card.imageSource
+            source: card.imageIsIcon ? card.imageSource : card.pictureSource
+            onStatusChanged: if (status === Image.Error && card.savedPath !== "") card.savedFailed = true
             // A picture is decoded once, at the width the wide picture
             // needs; its implicit size is what tells a screenshot from a
             // photo. An icon is asked for at the tile's size.
@@ -237,7 +251,7 @@ Rectangle {
                 height: card.thumbHeight
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
-                source: card.widePicture ? card.imageSource : ""
+                source: card.widePicture ? card.pictureSource : ""
                 sourceSize.width: 640
                 layer.enabled: card.widePicture
                 layer.effect: OpacityMask {
