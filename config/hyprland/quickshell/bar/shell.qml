@@ -880,8 +880,41 @@ ShellRoot {
             // metrics and the drawers use the space below, which renders
             // as empty/transparent -- and stays outside the input mask
             // just below -- whenever a drawer isn't open.
-            implicitHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight,
-                                     launchers.openHeight, clockIsland.openHeight)
+            //
+            // Constant is the aim, not the fact: the drawers' implicit
+            // heights follow their data and only settle once the window
+            // has a size (traced at start: mapped at 532, 614 wanted
+            // 15 ms later). Against the top edge a resize shows nothing.
+            // Against the bottom one Hyprland moves the box at once and
+            // keeps the old buffer at its top until the next commit, so
+            // the whole bar was drawn 82px too high for ~150 ms, over the
+            // window. Two guards: the height never shrinks, and at the
+            // bottom the content stays hidden until the first resizes are
+            // through (`settled`).
+            readonly property real wantedHeight: Math.max(centerIsland.openHeight, toolsIsland.openHeight,
+                                                          launchers.openHeight, clockIsland.openHeight)
+            property real surfaceHeight: 0
+            property bool settled: !BarPosition.bottom
+            onWantedHeightChanged: surfaceHeight = Math.max(surfaceHeight, wantedHeight)
+            Component.onCompleted: surfaceHeight = Math.max(surfaceHeight, wantedHeight)
+            onSurfaceHeightChanged: if (!settled) settleTimer.restart()
+            onHeightChanged: if (!settled) settleTimer.restart()
+            implicitHeight: surfaceHeight
+
+            Timer {
+                id: settleTimer
+                interval: 200
+                running: bar.visible && !bar.settled
+                onTriggered: {
+                    if (bar.height === bar.surfaceHeight) bar.settled = true;
+                    else restart();
+                }
+            }
+            Binding {
+                target: bar.contentItem
+                property: "opacity"
+                value: bar.settled ? 1 : 0
+            }
 
             // Input stays restricted to the NORMAL bar's own height
             // (centerIsland.rowHeight, 31) regardless of how tall the
@@ -939,7 +972,7 @@ ShellRoot {
                 Region {
                     x: centerIsland.x + centerIsland.rowPaneX
                     y: centerIsland.y + centerIsland.rowPaneY
-                    width: DrawerTheme.glass && centerIsland.rowIsland ? centerIsland.rowPaneW : 0
+                    width: DrawerTheme.glass && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
                     height: centerIsland.rowPaneH
                     radius: centerIsland.rowPaneR
                 }

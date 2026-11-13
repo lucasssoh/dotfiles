@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Neovim:** :bd moves to the next open file, or to the file tree when it was the last one.
+- **Bar:** at the bottom edge, it no longer shows too high for an instant when it starts or changes edge.
 
 ### Changed
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
