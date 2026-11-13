@@ -4,15 +4,12 @@ import Quickshell.Services.Notifications
 import "../theme"
 import "../services"
 
-// One rendered notification -- shared between NotificationToast.qml (the
-// transient corner popup stack) and NotificationCenter.qml (the history
-// list), since both show the exact same content (icon/image, summary,
-// body, actions, a close button), just inside different containers.
-// Pure rendering + two request signals; NotificationState.qml decides
-// what dismiss/action actually do (toast-only hide vs. real dismiss()).
+// One rendered notification in NotificationCenter.qml (the history list):
+// icon/image, summary, body, actions, a close button. Pure rendering + two
+// request signals; NotificationState.qml decides what dismiss/action do.
+// The toasts have their own card, NotificationToastCard.qml.
 //
-// In the centre the card is a flat veil of the ink over the drawer's
-// glass; in a toast it is a pane of that glass itself (see `toast`).
+// The card is a flat veil of the ink over the drawer's glass.
 // Height is content-driven: `layout` below has no bottom anchor, so its
 // implicit height drives `card.height` with no feedback loop.
 Rectangle {
@@ -31,19 +28,13 @@ Rectangle {
 
     width: 340
     radius: card.row ? 0 : 20
-    height: card.contentHeight + (card.row ? 20 : (card.toast ? 24 : 28))
+    height: card.contentHeight + (card.row ? 20 : 28)
     // Summed here rather than read off `layout`: a Column settles its
     // height a frame late, and the toast list had by then placed the next
     // card where this one ends up, overlapping it.
     readonly property real textHeight: summary.implicitHeight + (card.hasBody ? 2 + bodyText.implicitHeight : 0)
-    readonly property real contentHeight: (card.toast ? 20 + 8 : 0)
-        + Math.max(card.showIcon ? 28 : 0, card.textHeight, card.toast ? 0 : 20)
+    readonly property real contentHeight: Math.max(card.showIcon ? 28 : 0, card.textHeight, 20)
         + (card.hasActions ? 8 + 28 : 0)
-
-    // Toast mode: the drawers' glass (B1), where it used to be pure black.
-    // Same content as in the centre, read in one glance: app, summary,
-    // body, actions.
-    property bool toast: false
 
     // A line in the notification centre's app card: no fill of its own
     // (the app's card is under it), no app name or icon (its header has
@@ -53,26 +44,9 @@ Rectangle {
     property bool row: false
     property string groupImage: ""
     property string timeText: ""
-    readonly property bool showIcon: card.toast ? card.hasImage
-        : (!card.row || (card.hasImage && card.notification.image !== card.groupImage))
+    readonly property bool showIcon: !card.row || (card.hasImage && card.notification.image !== card.groupImage)
 
-    // A toast is a pane of the drawers' glass (B1): their veil, with
-    // Hyprland's blur under it (shell.qml asks for it over each toast) and
-    // their edge on top. It names its app on a first line, as the centre's
-    // cards do; its picture, if it has one, stays beside the text.
-    readonly property string appIconPath: {
-        const icon = card.notification ? card.notification.appIcon : "";
-        if (!icon) return "";
-        if (icon.startsWith("/") || icon.includes("://")) return icon;
-        return Quickshell.iconPath(icon, true);
-    }
-
-    color: card.row ? "transparent" : (card.toast ? DrawerTheme.paneTop : DrawerTheme.card)
-
-    PaneEdge {
-        visible: card.toast
-        radius: card.radius
-    }
+    color: card.row ? "transparent" : DrawerTheme.card
 
     // In the centre the card carries no edge: it shows text, it is not a
     // button. The action pills and the close button are what you press.
@@ -84,67 +58,14 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.leftMargin: 14
-        anchors.rightMargin: card.row || card.toast ? 10 : 14
-        anchors.topMargin: card.row ? 10 : (card.toast ? 11 : 14)
+        anchors.rightMargin: card.row ? 10 : 14
+        anchors.topMargin: card.row ? 10 : 14
         spacing: 8
-
-        Item {
-            visible: card.toast
-            width: layout.width
-            height: 20
-
-            Rectangle {
-                id: metaIcon
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 16
-                height: 16
-                radius: 5
-                color: DrawerTheme.cardRaised
-                Image {
-                    id: metaImage
-                    anchors.fill: parent
-                    visible: card.appIconPath !== "" && status !== Image.Error
-                    fillMode: Image.PreserveAspectFit
-                    source: card.appIconPath
-                }
-                Text {
-                    visible: !metaImage.visible
-                    anchors.centerIn: parent
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: "\uF126"   // mgc notification
-                    color: card.accent
-                    font.family: Fonts.iconMingcute
-                    font.pixelSize: 10
-                }
-            }
-            Text {
-                anchors.left: metaIcon.right
-                anchors.leftMargin: 6
-                anchors.right: metaClose.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                renderType: Text.NativeRendering
-                font.hintingPreference: Font.PreferNoHinting
-                text: card.notification ? (card.notification.appName || "Notifications") : ""
-                color: DrawerTheme.secondary
-                font.family: Fonts.ui
-                font.pixelSize: 12
-                font.weight: Font.Medium
-                elide: Text.ElideRight
-            }
-            CloseCross {
-                id: metaClose
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
 
         Item {
             id: headerRow
             width: layout.width
-            height: Math.max(card.showIcon ? iconTile.height : 0, textCol.height, card.toast ? 0 : closeBtn.height)
+            height: Math.max(card.showIcon ? iconTile.height : 0, textCol.height, closeBtn.height)
 
             Rectangle {
                 id: iconTile
@@ -180,7 +101,6 @@ Rectangle {
 
             CloseCross {
                 id: closeBtn
-                visible: !card.toast
                 anchors.right: parent.right
                 anchors.top: parent.top
             }
@@ -189,8 +109,8 @@ Rectangle {
                 id: textCol
                 anchors.left: card.showIcon ? iconTile.right : parent.left
                 anchors.leftMargin: card.showIcon ? 10 : 0
-                anchors.right: card.toast ? parent.right : closeBtn.left
-                anchors.rightMargin: card.toast ? 4 : 8
+                anchors.right: closeBtn.left
+                anchors.rightMargin: 8
                 anchors.top: parent.top
                 spacing: 2
 
@@ -260,15 +180,6 @@ Rectangle {
                     color: actionArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
                     Behavior on color { ColorAnimation { duration: 120 } }
 
-                    // Border and glass SWAP rather than stack: at rest
-                    // the pill keeps the plain 1px ring that has always
-                    // been its only resting shape, and on hover that
-                    // ring steps aside for the lens' own edge. Drawing
-                    // both would put two lines on the same silhouette.
-                    //
-                    // Never in a toast, whichever state it is in -- see
-                    // `toast` at the top of this file.
-                    readonly property bool lit: !card.toast && actionArea.containsMouse
                     border.width: 0
 
 

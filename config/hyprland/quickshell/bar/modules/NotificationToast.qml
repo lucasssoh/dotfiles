@@ -40,7 +40,7 @@ ListView {
     // of parked toasts under them. `growing` is set BEFORE `heldHeight`
     // changes, so the window's animation on y can tell an arrival (move
     // now, with the cards) from a departure (wait closeDelay, like them).
-    readonly property int deckHeight: NotificationState.parkedCount > 0 ? 18 : 0
+    readonly property int deckHeight: NotificationState.parkedCount > 0 ? 32 : 0
     readonly property real fullHeight: root.contentHeight + root.deckHeight
     property bool growing: true
     property real heldHeight: 0
@@ -67,17 +67,15 @@ ListView {
     // shell.qml asks Hyprland to blur behind each of them, and only them.
     property var cards: []
 
-    delegate: NotificationCard {
+    delegate: NotificationToastCard {
         id: toastDelegate
         // `model` rather than named role properties: the roles are dynamic
         // (see NotificationState.qml), and one of them would collide with
-        // NotificationCard's own `notification` property anyway.
+        // the card's own `notification` property anyway.
         required property var model
 
         width: root.cardWidth
         notification: toastDelegate.model.notification
-        // Pure black, no edge -- see NotificationCard's `toast`.
-        toast: true
         // Set just before a click dismisses it: the remove transition
         // reads it to pick the exit.
         property bool exitByClick: false

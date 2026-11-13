@@ -2786,17 +2786,19 @@ ShellRoot {
             // The deck's two strips, in window coordinates for the same reason.
             Region {
                 id: deckFrontBlur
-                x: toastDeck.x + toastDeck.front.x
-                y: toastDeck.y + toastDeck.front.y
-                width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.front.width : 0
-                height: toastDeck.front.height
+                x: toastDeck.x + toastDeck.frontBlur.x
+                y: toastDeck.y + toastDeck.frontBlur.y
+                width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.frontBlur.width : 0
+                height: toastDeck.frontBlur.height
+                radius: 16
             }
             Region {
                 id: deckBackBlur
-                x: toastDeck.x + toastDeck.back.x
-                y: toastDeck.y + toastDeck.back.y
-                width: DrawerTheme.glass && toastDeck.opacity > 0.5 && toastDeck.back.visible ? toastDeck.back.width : 0
-                height: toastDeck.back.height
+                x: toastDeck.x + toastDeck.backBlur.x
+                y: toastDeck.y + toastDeck.backBlur.y
+                width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.backBlur.width : 0
+                height: toastDeck.backBlur.height
+                radius: 16
             }
             BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs.concat([deckFrontBlur, deckBackBlur]) }
         }

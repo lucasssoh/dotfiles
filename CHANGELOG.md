@@ -18,6 +18,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Notifications:** pop-ups come in with a short slide, one at a time when several arrive together, and the stack no longer jumps when one comes or goes.
 - **Notifications:** pop-ups stay while the pointer is on them. Past three, the others wait underneath instead of being dropped.
 - **Notifications:** closed with ×, a pop-up slides off the screen; when its time is up, it fades out.
+- **Notifications:** pop-ups are rounder, with the app's icon or picture on the left and the app's name above the title. Actions are a row of buttons along the bottom, and × shows when the pointer is on the pop-up.
+- **Notifications:** a critical pop-up has an amber edge and title. The pop-ups waiting under the stack show as card edges with their count.
 
 ## 2.4.0 (November 11 2026)
 
