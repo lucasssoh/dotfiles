@@ -1449,7 +1449,10 @@ ShellRoot {
                 drawerRadius: 32
                 paneEdge: true
                 drawerGap: 0
-                drawerEdge: bar.bandHeight
+                // Measured from the island, which sits a few pixels inside the
+                // band: taking that inset off butts the pane against the band's
+                // own edge, at the top as at the bottom.
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - clockIsland.rowHeight) / 2)
                 // Left-aligned band, the mirror of TOOLS' right-aligned
                 // one: an anchor half a pane in from the island's own
                 // margin lands the band's outer edge exactly on the
@@ -1518,7 +1521,7 @@ ShellRoot {
                 drawerRadius: 32
                 paneEdge: true
                 drawerGap: 0
-                drawerEdge: bar.bandHeight
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - programmeIsland.rowHeight) / 2)
                 // Flush with the clock's left edge, so with the screen's,
                 // the way the notification centre sits on the right one
                 // ("aligne avec le bord gauche comme notif avec bord
@@ -1714,7 +1717,7 @@ ShellRoot {
                 // under the pointer that just clicked one).
                 splitDrawer: true
                 drawerGap: 0
-                drawerEdge: bar.bandHeight
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - launchers.rowHeight) / 2)
                 drawerRadius: 32
                 paneEdge: true
                 widenOnOpen: false
@@ -2032,7 +2035,7 @@ ShellRoot {
                 // wants a rounded top ("arrondi les coins du dessus ...
                 // vu qu'il y a un espace").
                 drawerGap: 0
-                drawerEdge: bar.bandHeight
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - toolsIsland.rowHeight) / 2)
 
                 // The notification centre is a panel of its own, down the
                 // screen's right edge (the LazyLoader after the bars).
