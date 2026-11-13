@@ -2767,26 +2767,35 @@ ShellRoot {
             Instantiator {
                 id: toastBlurList
                 model: toastStack.cards
+                // In window coordinates, not `item: modelData`: a Region
+                // tied to an item follows that item's own moves only, and
+                // the whole stack now moves when it recentres -- the blur
+                // stayed behind, a pane of frosted nothing over the gap.
+                // Dropped halfway through a fade, for the same reason.
                 delegate: Region {
                     required property var modelData
-                    item: modelData
-                    width: DrawerTheme.glass && modelData ? modelData.width : 0
+                    x: modelData ? toastStack.x + toastStack.contentItem.x + modelData.x : 0
+                    y: modelData ? toastStack.y + toastStack.contentItem.y + modelData.y : 0
+                    width: DrawerTheme.glass && modelData && modelData.opacity > 0.5 ? modelData.width : 0
                     height: modelData ? modelData.height : 0
                     radius: modelData ? modelData.radius : 0
                 }
                 onObjectAdded: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.concat([object])
                 onObjectRemoved: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.filter((r) => r !== object)
             }
+            // The deck's two strips, in window coordinates for the same reason.
             Region {
                 id: deckFrontBlur
-                item: toastDeck.front
-                width: DrawerTheme.glass && toastDeck.visible ? toastDeck.front.width : 0
+                x: toastDeck.x + toastDeck.front.x
+                y: toastDeck.y + toastDeck.front.y
+                width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.front.width : 0
                 height: toastDeck.front.height
             }
             Region {
                 id: deckBackBlur
-                item: toastDeck.back
-                width: DrawerTheme.glass && toastDeck.visible && toastDeck.back.visible ? toastDeck.back.width : 0
+                x: toastDeck.x + toastDeck.back.x
+                y: toastDeck.y + toastDeck.back.y
+                width: DrawerTheme.glass && toastDeck.opacity > 0.5 && toastDeck.back.visible ? toastDeck.back.width : 0
                 height: toastDeck.back.height
             }
             BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs.concat([deckFrontBlur, deckBackBlur]) }

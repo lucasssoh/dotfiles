@@ -113,10 +113,12 @@ Singleton {
     // {notifId, notification} rows, newest FIRST (that is also the
     // on-screen order, so nothing has to reverse this to render it). How
     // long each has left lives in `_remaining`, not in the row: it counts
-    // down, pauses under the pointer and only starts once the toast is
-    // actually on screen. Capped at maxToasts: a toast pushed past the cap
-    // waits in `_parked` (shown as a deck under the stack) and comes back
-    // when a place frees up, rather than being dropped unseen.
+    // down from arrival and pauses under the pointer. Capped at maxToasts:
+    // a toast pushed past the cap waits in `_parked` (shown as a deck under
+    // the stack) instead of being dropped. Its time keeps running there,
+    // so the oldest always leave first -- deck, then the stack from the
+    // bottom up. Restarting it on the way back up let old toasts outlive
+    // the newer ones above them.
     //
     // A ListModel, not the plain JS array this used to be. A JS array is
     // not a diffable model: any change to it resets the view wholesale, so
@@ -138,9 +140,9 @@ Singleton {
     // Waiting behind a full stack, newest first: {notifId, notification}.
     property var _parked: []
     property int parkedCount: 0
-    // ms left per notifId while on screen; 0 = never auto-hide.
+    // ms left per notifId, on screen or parked; 0 = never auto-hide.
     property var _remaining: ({})
-    // The full timeout per notifId, given back when a parked toast returns.
+    // The full timeout per notifId, from arrival to the stack.
     property var _timeouts: ({})
     // A burst arrives one card at a time, `arrivalGap` apart.
     property var _arrivals: []
@@ -151,8 +153,7 @@ Singleton {
     property bool toastsHovered: false
     onToastsHoveredChanged: {
         if (root.toastsHovered) return;
-        for (let i = 0; i < toastModel.count; i++) {
-            const id = toastModel.get(i).notifId;
+        for (const id of root._shownIds()) {
             if (root._remaining[id] > 0) root._remaining[id] = Math.max(root._remaining[id], 1500);
         }
     }
@@ -262,18 +263,19 @@ Singleton {
         while (toastModel.count > root.maxToasts) {
             const last = toastModel.get(toastModel.count - 1);
             root._parked.unshift({ notifId: last.notifId, notification: last.notification });
-            delete root._remaining[last.notifId];
             toastModel.remove(toastModel.count - 1);
         }
         root.parkedCount = root._parked.length;
     }
 
-    // Parked toasts come back at the bottom, newest of them first, with
-    // their full timeout: they have not been seen yet.
+    // A place freed by a click brings the newest parked toast back at the
+    // bottom, with at least 2s to be read. (Expiry never frees a place
+    // while toasts are parked: theirs runs out first.)
     function _promote() {
         while (toastModel.count < root.maxToasts && root._parked.length > 0) {
             const row = root._parked.shift();
-            root._remaining[row.notifId] = root._timeouts[row.notifId];
+            if (root._remaining[row.notifId] > 0)
+                root._remaining[row.notifId] = Math.max(root._remaining[row.notifId], 2000);
             toastModel.append(row);
         }
         root.parkedCount = root._parked.length;
@@ -298,9 +300,16 @@ Singleton {
         if (toastModel.count === 0) root.toastsHovered = false;
     }
 
+    // Every toast on screen or parked, by notifId.
+    function _shownIds() {
+        const ids = root._parked.map((r) => r.notifId);
+        for (let i = 0; i < toastModel.count; i++) ids.push(toastModel.get(i).notifId);
+        return ids;
+    }
+
     // One shared Timer rather than one per notification -- simplest way to
-    // count down the handful of toasts on screen. Expired ids are collected
-    // first: removing one promotes a parked toast into the model.
+    // count down the handful of toasts there are. Expired ids are collected
+    // first, then removed.
     property real _lastTick: 0
     Timer {
         interval: 250
@@ -313,8 +322,7 @@ Singleton {
             root._lastTick = now;
             if (root.toastsHovered) return;
             const expired = [];
-            for (let i = 0; i < toastModel.count; i++) {
-                const id = toastModel.get(i).notifId;
+            for (const id of root._shownIds()) {
                 const left = root._remaining[id];
                 if (!(left > 0)) continue;
                 root._remaining[id] = left - dt;

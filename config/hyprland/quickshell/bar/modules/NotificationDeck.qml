@@ -4,7 +4,8 @@ import "../services"
 
 // What waits behind a full toast stack (NotificationState's maxToasts):
 // the bottoms of the cards underneath and how many there are. Only a
-// picture -- parked toasts come back into the stack as places free up.
+// picture: parked toasts run out here, or come back up when one above is
+// closed.
 Item {
     id: root
 
