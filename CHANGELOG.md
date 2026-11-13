@@ -15,6 +15,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** drawers start right at the bar's edge, without the 4px gap.
 - **Bar:** it slides in and out from its own edge, the same way at the top and at the bottom, while windows make room.
 - **Lock screen:** the time stands alone in light ink on black, without the white card; the password field is an outlined rounded rectangle.
+- **Notifications:** pop-ups come in with a short slide, one at a time when several arrive together, and the stack no longer jumps when one comes or goes.
+- **Notifications:** pop-ups stay while the pointer is on them. Past three, the others wait underneath instead of being dropped.
+- **Notifications:** closed with ×, a pop-up slides off the screen; when its time is up, it fades out.
 
 ## 2.4.0 (November 11 2026)
 

@@ -2630,7 +2630,7 @@ ShellRoot {
     // popups. Same per-screen Variants/exclusionMode/aboveWindows shape
     // as OSD/BatteryAlert above; left-aligned and vertically centered.
     // Mapped while a toast exists, then kept up for 260ms so the last
-    // card's 180ms exit transition can finish before the surface vanishes.
+    // card's 200ms exit transition can finish before the surface vanishes.
     Variants {
         model: Quickshell.screens
 
@@ -2660,7 +2660,7 @@ ShellRoot {
             //
             // This one cannot use OSD's `|| opacity > 0` trick. Toasts
             // do not fade one card in and out: a card leaving keeps
-            // animating for 180ms AFTER its model row is gone (see
+            // animating for 200ms AFTER its model row is gone (see
             // NotificationToast.qml's `remove` transition), and both
             // `toasts.count` and the stack's contentHeight drop the
             // instant that row goes. Binding straight to either would
@@ -2668,7 +2668,7 @@ ShellRoot {
             // precisely the guillotine that `implicitHeight: 640` below
             // was introduced to prevent, reintroduced one level up.
             // Hence the linger below: the surface outlives the last
-            // toast by 260ms, comfortably past that 180ms transition.
+            // toast by 260ms, comfortably past that 200ms transition.
             visible: (shell.toastScreen === null || shell.toastScreen === modelData) && mapped
 
             // `hasToasts` is the raw truth, `mapped` the lingering one
@@ -2695,19 +2695,21 @@ ShellRoot {
             aboveWindows: true
 
             // This fixed viewport is centered on the unanchored vertical
-            // axis; its live toast stack is centered inside it.
+            // axis; its live toast stack is centered inside it. Flush with
+            // the screen edge, the stack edgeGap in: a card dismissed by a
+            // click leaves past the real edge, not into the surface's own.
             anchors { left: true }
-            margins { left: 20 }
 
             // FIXED size, where this used to track the stack's own height.
-            // A card leaving now animates for 180ms AFTER its model row is
+            // A card leaving now animates for 200ms AFTER its model row is
             // gone (see NotificationToast.qml's `remove` transition), and
             // the stack's contentHeight drops the instant that row goes --
             // so a surface sized off it would shrink out from under the
             // very animation it is meant to be showing, guillotining the
-            // bottom card mid-exit. Tall enough for maxToasts (4) cards at
-            // their realistic worst (two body lines plus an action row).
-            implicitWidth: toastStack.cardWidth
+            // bottom card mid-exit. Tall enough for maxToasts (3) cards at
+            // their realistic worst (two body lines plus an action row) and
+            // the deck under them.
+            implicitWidth: toastStack.edgeGap + toastStack.cardWidth
             implicitHeight: 640
 
             // ...which then has to be masked, or that fixed 640x340 of
@@ -2717,15 +2719,43 @@ ShellRoot {
             // stack currently fills, and collapses to nothing (fully
             // click-through) when there are no toasts at all.
             mask: Region {
+                x: toastStack.x
                 y: toastStack.y
                 width: toastStack.cardWidth
                 height: toastStack.contentHeight
             }
 
+            // Centered on heldHeight, and animated: the stack's height
+            // changes in one frame, and a bare binding recentered it
+            // before the cards had moved -- every card jumped half a card
+            // up, then slid down. Now the centre moves with them, waiting
+            // closeDelay on a departure as they do.
             Modules.NotificationToast {
                 id: toastStack
-                y: Math.round((parent.height - height) / 2)
+                x: edgeGap
+                y: Math.round((parent.height - heldHeight) / 2)
                 height: contentHeight
+                Behavior on y {
+                    SequentialAnimation {
+                        PauseAnimation { duration: toastStack.growing ? 0 : toastStack.closeDelay }
+                        NumberAnimation { duration: 270; easing.type: Easing.OutQuint }
+                    }
+                }
+            }
+
+            // Toasts past maxToasts, waiting under the last card.
+            Modules.NotificationDeck {
+                id: toastDeck
+                x: toastStack.x
+                cardWidth: toastStack.cardWidth
+                property real offset: toastStack.contentHeight
+                Behavior on offset {
+                    SequentialAnimation {
+                        PauseAnimation { duration: toastStack.growing ? 0 : toastStack.closeDelay }
+                        NumberAnimation { duration: 270; easing.type: Easing.OutQuint }
+                    }
+                }
+                y: toastStack.y + offset
             }
 
             // Glass like the drawers: Hyprland blurs behind each card, and
@@ -2747,7 +2777,19 @@ ShellRoot {
                 onObjectAdded: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.concat([object])
                 onObjectRemoved: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.filter((r) => r !== object)
             }
-            BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs }
+            Region {
+                id: deckFrontBlur
+                item: toastDeck.front
+                width: DrawerTheme.glass && toastDeck.visible ? toastDeck.front.width : 0
+                height: toastDeck.front.height
+            }
+            Region {
+                id: deckBackBlur
+                item: toastDeck.back
+                width: DrawerTheme.glass && toastDeck.visible && toastDeck.back.visible ? toastDeck.back.width : 0
+                height: toastDeck.back.height
+            }
+            BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs.concat([deckFrontBlur, deckBackBlur]) }
         }
     }
 

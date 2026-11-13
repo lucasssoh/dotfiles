@@ -30,6 +30,29 @@ ListView {
     // and its width is still 0 -- that card would then "slide" from 0 to 0,
     // i.e. just appear.
     readonly property int cardWidth: 340
+    // The stack's inset from the screen edge; shell.qml places it there,
+    // and a card dismissed by a click slides out past the real edge.
+    readonly property int edgeGap: 20
+    // How long the others wait before closing a leaving card's gap.
+    readonly property int closeDelay: 100
+
+    // The height shell.qml centres the stack on: the cards plus the deck
+    // of parked toasts under them. `growing` is set BEFORE `heldHeight`
+    // changes, so the window's animation on y can tell an arrival (move
+    // now, with the cards) from a departure (wait closeDelay, like them).
+    readonly property int deckHeight: NotificationState.parkedCount > 0 ? 18 : 0
+    readonly property real fullHeight: root.contentHeight + root.deckHeight
+    property bool growing: true
+    property real heldHeight: 0
+    onFullHeightChanged: {
+        root.growing = root.fullHeight >= root.heldHeight;
+        root.heldHeight = root.fullHeight;
+    }
+
+    // The timers stop under the pointer (NotificationState.toastsHovered).
+    HoverHandler {
+        onHoveredChanged: NotificationState.toastsHovered = hovered
+    }
 
     // The parent window is a fixed size (see shell.qml) and this fills it,
     // so the stack's own extent is `contentHeight` -- which is what that
@@ -55,54 +78,56 @@ ListView {
         notification: toastDelegate.model.notification
         // Pure black, no edge -- see NotificationCard's `toast`.
         toast: true
+        // Set just before a click dismisses it: the remove transition
+        // reads it to pick the exit.
+        property bool exitByClick: false
         Component.onCompleted: root.cards = root.cards.concat([toastDelegate])
         Component.onDestruction: root.cards = root.cards.filter((c) => c !== toastDelegate)
 
-        onDismissRequested: NotificationState.dismissToast(toastDelegate.model.notifId)
+        onDismissRequested: {
+            toastDelegate.exitByClick = true;
+            NotificationState.dismissToast(toastDelegate.model.notifId);
+        }
         onActionRequested: (action) => NotificationState.invokeAction(toastDelegate.notification, action)
     }
 
-    // Enter by sliding in from the left -- asked for: the popups "doivent
-    // plutot glisser de la gauche vers l'ecran". Nothing clips this by
-    // hand: the parent PanelWindow is exactly one card wide, so a card
-    // parked at -cardWidth is entirely outside the Wayland surface and
-    // simply is not drawn, then wipes into view as x climbs back to 0.
-    //
-    // The surface is inset from the left screen edge (shell.qml pins it
-    // at left: 20), so the card slides in without crossing the edge.
+    // Arrive with a short step and a fade, rather than sliding the whole
+    // card width in: a notification is secondary, it should settle, not
+    // sweep across the screen.
     add: Transition {
+        NumberAnimation { property: "x"; from: -28; to: 0; duration: 240; easing.type: Easing.OutQuint }
+        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutQuint }
+    }
+
+    // Leave by how it was closed. Dismissed by a click: it slides off past
+    // the screen's edge, a clear answer to the gesture. Timed out or closed
+    // elsewhere: it fades where it is, nobody asked for it to go.
+    remove: Transition {
+        id: removeTrans
+        readonly property bool byClick: removeTrans.ViewTransition.item ? removeTrans.ViewTransition.item.exitByClick : false
         NumberAnimation {
             property: "x"
-            from: -root.cardWidth
-            to: 0
-            duration: 260
-            easing.type: Easing.OutCubic
+            to: removeTrans.byClick ? -(root.cardWidth + root.edgeGap) : -12
+            duration: 200
+            easing.type: removeTrans.byClick ? Easing.InQuad : Easing.OutQuad
         }
+        NumberAnimation { property: "opacity"; to: 0; duration: 200; easing.type: Easing.OutQuad }
     }
 
-    // ...and leaves back the way it came in, to the LEFT -- asked for
-    // ("pour popup il repart vers la gauche"), whether it was dismissed by
-    // hand or simply timed out. Faster than the entrance (180 vs 260) and
-    // `InCubic` rather than OutCubic: an arrival should settle, a
-    // dismissal should get out of the way.
-    remove: Transition {
-        ParallelAnimation {
-            NumberAnimation {
-                property: "x"
-                to: -root.cardWidth
-                duration: 180
-                easing.type: Easing.InCubic
-            }
-            NumberAnimation { property: "opacity"; to: 0; duration: 180 }
-        }
-    }
-
-    // Keep the stack's motion smooth in either vertical direction: the
-    // new card pushes existing ones inward, and its removal pulls them back.
+    // A new card pushes the others down. The opacity and x lines finish
+    // the arrival of a card displaced while still arriving (a burst comes
+    // in 110ms apart), which would otherwise freeze half faded.
     addDisplaced: Transition {
-        NumberAnimation { properties: "y"; duration: 260; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "y"; duration: 280; easing.type: Easing.OutQuint }
+        NumberAnimation { property: "opacity"; to: 1; duration: 240 }
+        NumberAnimation { property: "x"; to: 0; duration: 240; easing.type: Easing.OutQuint }
     }
+    // ...and a leaving one lets the others close the gap once it has
+    // mostly gone, so the two moves read one after the other.
     removeDisplaced: Transition {
-        NumberAnimation { properties: "y"; duration: 180; easing.type: Easing.OutCubic }
+        SequentialAnimation {
+            PauseAnimation { duration: root.closeDelay }
+            NumberAnimation { property: "y"; duration: 260; easing.type: Easing.OutQuint }
+        }
     }
 }

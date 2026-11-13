@@ -110,11 +110,13 @@ Singleton {
     }
 
     // ---- toasts ----
-    // {notifId, notification, expiresAt} rows, newest FIRST (that is also
-    // the on-screen order, so nothing has to reverse this to render it).
-    // expiresAt: 0 means "never auto-hide" (critical urgency). Capped
-    // purely as a render/height concern -- the cap never drops anything
-    // from trackedNotifications, only from this presentation list.
+    // {notifId, notification} rows, newest FIRST (that is also the
+    // on-screen order, so nothing has to reverse this to render it). How
+    // long each has left lives in `_remaining`, not in the row: it counts
+    // down, pauses under the pointer and only starts once the toast is
+    // actually on screen. Capped at maxToasts: a toast pushed past the cap
+    // waits in `_parked` (shown as a deck under the stack) and comes back
+    // when a place frees up, rather than being dropped unseen.
     //
     // A ListModel, not the plain JS array this used to be. A JS array is
     // not a diffable model: any change to it resets the view wholesale, so
@@ -131,7 +133,29 @@ Singleton {
     // and do not hold object references.
     ListModel { id: toastModel; dynamicRoles: true }
     readonly property alias toasts: toastModel
-    readonly property int maxToasts: 4
+    readonly property int maxToasts: 3
+
+    // Waiting behind a full stack, newest first: {notifId, notification}.
+    property var _parked: []
+    property int parkedCount: 0
+    // ms left per notifId while on screen; 0 = never auto-hide.
+    property var _remaining: ({})
+    // The full timeout per notifId, given back when a parked toast returns.
+    property var _timeouts: ({})
+    // A burst arrives one card at a time, `arrivalGap` apart.
+    property var _arrivals: []
+
+    // Set by NotificationToast.qml while the pointer is over the stack:
+    // the timers stop, and leaving gives every card at least 1.5s more so
+    // the one just read does not vanish the instant the pointer moves off.
+    property bool toastsHovered: false
+    onToastsHoveredChanged: {
+        if (root.toastsHovered) return;
+        for (let i = 0; i < toastModel.count; i++) {
+            const id = toastModel.get(i).notifId;
+            if (root._remaining[id] > 0) root._remaining[id] = Math.max(root._remaining[id], 1500);
+        }
+    }
 
     // Which monitor the current stack of toasts belongs on, by Hyprland
     // output NAME (not a screen object): the toast surface is a
@@ -204,18 +228,55 @@ Singleton {
         //       && BatteryAlertState.battDischarging
         //       && BatteryAlertState.battPercent <= BatteryAlertState.tiers[0]) return;
 
-        const timeout = root._timeoutFor(n);
+        root._enqueue({ notifId: n.id, notification: n }, root._timeoutFor(n));
+    }
+
+    function _enqueue(row, timeout) {
+        root._timeouts[row.notifId] = timeout;
+        if (arrivalGap.running) {
+            root._arrivals.push(row);
+        } else {
+            root._insertToast(row);
+            arrivalGap.start();
+        }
+    }
+
+    Timer {
+        id: arrivalGap
+        interval: 110
+        repeat: true
+        onTriggered: {
+            if (root._arrivals.length > 0) root._insertToast(root._arrivals.shift());
+            else stop();
+        }
+    }
+
+    function _insertToast(row) {
         // Opening a fresh stack picks the monitor -- see toastScreenName.
         if (toastModel.count === 0)
             root.toastScreenName = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
-        // Inserted at the front, and the cap trims from the BACK -- newest
-        // first in the model is also newest on top on screen.
-        toastModel.insert(0, {
-            notifId: n.id,
-            notification: n,
-            expiresAt: timeout > 0 ? Date.now() + timeout : 0
-        });
-        while (toastModel.count > root.maxToasts) toastModel.remove(toastModel.count - 1);
+        root._remaining[row.notifId] = root._timeouts[row.notifId];
+        // Inserted at the front, the overflow parked from the BACK --
+        // newest first in the model is also newest on top on screen.
+        toastModel.insert(0, row);
+        while (toastModel.count > root.maxToasts) {
+            const last = toastModel.get(toastModel.count - 1);
+            root._parked.unshift({ notifId: last.notifId, notification: last.notification });
+            delete root._remaining[last.notifId];
+            toastModel.remove(toastModel.count - 1);
+        }
+        root.parkedCount = root._parked.length;
+    }
+
+    // Parked toasts come back at the bottom, newest of them first, with
+    // their full timeout: they have not been seen yet.
+    function _promote() {
+        while (toastModel.count < root.maxToasts && root._parked.length > 0) {
+            const row = root._parked.shift();
+            root._remaining[row.notifId] = root._timeouts[row.notifId];
+            toastModel.append(row);
+        }
+        root.parkedCount = root._parked.length;
     }
 
     function _toastIndex(id) {
@@ -226,24 +287,40 @@ Singleton {
     }
 
     function _removeToast(id) {
+        root._arrivals = root._arrivals.filter((r) => r.notifId !== id);
+        root._parked = root._parked.filter((r) => r.notifId !== id);
         const i = root._toastIndex(id);
         if (i >= 0) toastModel.remove(i);
+        delete root._remaining[id];
+        delete root._timeouts[id];
+        root._promote();
+        // An unmapped stack gets no hover-out: never leave the timers frozen.
+        if (toastModel.count === 0) root.toastsHovered = false;
     }
 
-    // One shared re-checking Timer rather than one Timer per notification
-    // -- simplest way to expire rows for the handful of concurrent toasts
-    // this ever sees. Backwards so removing a row cannot shift one that
-    // has not been examined yet out from under the loop.
+    // One shared Timer rather than one per notification -- simplest way to
+    // count down the handful of toasts on screen. Expired ids are collected
+    // first: removing one promotes a parked toast into the model.
+    property real _lastTick: 0
     Timer {
         interval: 250
         repeat: true
         running: toastModel.count > 0
+        onRunningChanged: if (running) root._lastTick = Date.now()
         onTriggered: {
             const now = Date.now();
-            for (let i = toastModel.count - 1; i >= 0; i--) {
-                const e = toastModel.get(i).expiresAt;
-                if (e !== 0 && e <= now) toastModel.remove(i);
+            const dt = now - root._lastTick;
+            root._lastTick = now;
+            if (root.toastsHovered) return;
+            const expired = [];
+            for (let i = 0; i < toastModel.count; i++) {
+                const id = toastModel.get(i).notifId;
+                const left = root._remaining[id];
+                if (!(left > 0)) continue;
+                root._remaining[id] = left - dt;
+                if (left - dt <= 0) expired.push(id);
             }
+            for (const id of expired) root._removeToast(id);
         }
     }
 
