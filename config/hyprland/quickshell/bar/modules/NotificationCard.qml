@@ -6,8 +6,8 @@ import "../theme"
 import "../services"
 
 // One notification's line in a NotificationCenter.qml app card: no fill
-// of its own (the app's card is under it), no app name (the card's header
-// has it), its arrival time at the end of the summary. Same language as
+// of its own, no app name (the card's header has it), its arrival time at
+// the end of the summary. Same language as
 // the toasts (NotificationToastCard.qml): the close button shows under
 // the pointer, in the time's place; the line lightens a touch there; a
 // wide picture shows in full under the text; actions are a row of
@@ -37,6 +37,8 @@ Item {
     property bool last: false
     // Arrived while the drawer is open: comes in like a toast.
     property bool arriving: false
+    // Its side margins: the app card's header lines up with them.
+    property int inset: 14
 
     readonly property bool critical: card.notification
         && card.notification.urgency === NotificationUrgency.Critical
@@ -90,10 +92,11 @@ Item {
     // Under the pointer the line lightens a touch, as a toast does.
     Rectangle {
         anchors.fill: parent
+        anchors.leftMargin: -8
+        anchors.rightMargin: -8
+        radius: 10
         color: DrawerTheme.ink(0.05)
         opacity: hover.hovered ? 1 : 0
-        bottomLeftRadius: card.last ? 16 : 0
-        bottomRightRadius: card.last ? 16 : 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
     }
 
@@ -106,7 +109,7 @@ Item {
         Rectangle {
             id: iconTile
             visible: card.showIcon
-            x: 14
+            x: card.inset
             y: card.topPad
             width: 28
             height: 28
@@ -151,9 +154,9 @@ Item {
 
         Column {
             id: textCol
-            x: card.showIcon ? iconTile.x + iconTile.width + 10 : 14
+            x: card.showIcon ? iconTile.x + iconTile.width + 10 : card.inset
             y: card.topPad
-            width: card.width - x - 10 - 20 - 8   // clear of the time / close slot
+            width: card.width - x - card.inset - 20 - 8   // clear of the time / close slot
             spacing: 2
             transform: Translate { id: textShift }
 
@@ -225,7 +228,7 @@ Item {
             id: timeLabel
             visible: card.timeText !== "" && opacity > 0
             anchors.right: parent.right
-            anchors.rightMargin: 10
+            anchors.rightMargin: card.inset
             // On the first text line's baseline. By hand: that line lives
             // in textCol, and anchors only reach siblings.
             readonly property Item firstLine: card.continued && card.hasBody ? bodyText : summary
@@ -243,7 +246,7 @@ Item {
         Item {
             id: closeBtn
             anchors.right: parent.right
-            anchors.rightMargin: 10
+            anchors.rightMargin: card.inset - 4
             y: card.topPad + (card.continued && card.hasBody ? bodyText.y : summary.y)
                 + ((card.continued && card.hasBody ? 18 : summary.implicitHeight) - height) / 2
             width: 20
@@ -274,8 +277,8 @@ Item {
             height: card.hasActions ? 38 : 0
 
             Rectangle {
-                x: 14
-                width: parent.width - 28
+                x: card.inset
+                width: parent.width - 2 * card.inset
                 height: 1
                 color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
             }
@@ -299,8 +302,7 @@ Item {
                             color: actionArea.pressed || card.chosenAction === actionCell.index
                                 ? DrawerTheme.ink(0.12)
                                 : (actionArea.containsMouse ? DrawerTheme.ink(0.06) : DrawerTheme.ink(0))
-                            bottomLeftRadius: card.last && actionCell.index === 0 ? 16 : 0
-                            bottomRightRadius: card.last && actionCell.index === actionRepeater.count - 1 ? 16 : 0
+                            radius: 8
                             Behavior on color { ColorAnimation { duration: 90 } }
                         }
                         Rectangle {

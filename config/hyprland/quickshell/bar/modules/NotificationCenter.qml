@@ -2,7 +2,6 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Services.Mpris
-import Quickshell.Services.Notifications
 import "../theme"
 import "../services"
 
@@ -180,6 +179,9 @@ Item {
     // applies to its mpris widget") -- copied rather than reusing
     // Media.qml itself, which is built for a 24px bar pill, not a 340px
     // vertical card.
+    // The player's cover, round beside the title when it loads.
+    readonly property string artUrl: root.mprisPlayer ? (root.mprisPlayer.trackArtUrl || "") : ""
+
     readonly property var mprisPlayer: {
         const real = Mpris.players.values.filter((p) => p.dbusName.indexOf("playerctld") === -1);
         for (let i = 0; i < real.length; i++) if (real[i].isPlaying) return real[i];
@@ -200,119 +202,62 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: BarPosition.bottom ? parent.top : handle.bottom
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
+        // 20, the history's own margins: one left edge down the drawer.
+        anchors.leftMargin: 20
+        anchors.rightMargin: 20
         // 12, as Programme's tabs: the two sheets start on the same line.
         anchors.topMargin: 12
-        spacing: 10
+        spacing: 12
 
-        // ---- clock + DND ----
+        // ---- clock, date, DND ----
         //
-        // The "Notifications" title is gone (asked for) and the DND
-        // control came up here with it, as the icon button on the LEFT of
-        // the clock -- the layout in the reference screenshot, mirrored,
-        // since the clock stays right-aligned. What it replaces was a
-        // full-width 44px row reading "Do not disturb" with a switch on
-        // its end: that row cost the drawer a whole band to carry one
-        // boolean, and with the title deleted there was no longer a
-        // left-hand column of labels for it to line up with anyway.
+        // Editorial (asked for, variant C): a big, very thin clock on the
+        // left, the day spelled out on its right, then "Do not disturb" as
+        // a named switch on its own row under a hairline. Fewer boxes: the
+        // player and the history lose their fills, hairlines part them.
         //
-        // Same two Phosphor codepoints NotificationBell.qml already uses
-        // for these exact two states -- U+E0CE bell / U+E5EE bell-z --
-        // reused verbatim rather than re-picked, so the trigger in the
-        // bar and the toggle in the drawer never drift into showing
-        // different glyphs for one state. "On" is carried by an inverted
-        // fill (accent plate, dark glyph) rather than by the glyph swap
-        // alone: bell and bell-z differ by a couple of small strokes,
-        // which at 18px is not a state you can read at a glance.
-        //
-        // The time is inked to the RIGHT edge (asked for). That is
-        // exactly where proportional figures hurt most -- the ragged edge
-        // lands on the side the eye is using as its alignment reference,
-        // so a "1" in the minutes would visibly pull the whole string
-        // sideways on the turn of a minute. Inter's TABULAR figures
-        // (`tnum`) fix every digit to one advance; its proportional "1"
-        // inks barely two thirds the width of its "0". Clash Grotesk
-        // (Fonts.clock, what Veille's big clock uses) was the other
-        // candidate and is out for that reason -- it ships no tnum
-        // feature at all and its "1" is less than half the width of its
-        // "0" (checked in the font's own hmtx/GSUB tables, not guessed).
-        //
-        // The date is forced to en_US rather than run through
-        // Qt.formatDateTime, which would follow this session's fr_FR
-        // locale and print "dim. 13 sept." -- every other string in this
-        // drawer is English ("Clear all", "No notifications"), and the
-        // format asked for was "Sun 13 Sep".
+        // The time keeps Inter-style TABULAR figures (`tnum`): every digit
+        // one advance, so the minutes turning never shifts the string.
+        // The date is forced to en_US, like every string in this drawer.
         Item {
             width: parent.width
-            height: Math.max(clockBlock.height, dndButton.height)
+            height: clockText.implicitHeight
 
-            // Round and outlined like Programme's pills, its top and height
-            // those of Programme's tabs; filled and inverted while on.
-            Rectangle {
-                id: dndButton
+            Text {
+                id: clockText
                 anchors.left: parent.left
-                anchors.top: parent.top
-                width: 38
-                height: 38
-                radius: height / 2
-                color: NotificationState.dnd ? DrawerTheme.accent
-                     : dndHover.containsMouse ? DrawerTheme.cardHover
-                     : DrawerTheme.clear(DrawerTheme.cardHover)
-                border.width: NotificationState.dnd ? 0 : 1
-                border.color: DrawerTheme.faint
-                Behavior on color { ColorAnimation { duration: 140 } }
-
-                // Same glass edge every other block in this bar now
-                // carries -- see GlassCard.qml. The colour Behavior
-                // above still runs underneath it: the layer simply
-                // re-renders as the fill crossfades.
-                //
-                // Only while ON or hovered -- asked for: the glass is a
-                // state cue, not decoration.
-
-                Text {
-                    anchors.centerIn: parent
-                    renderType: Text.NativeRendering
-                    font.hintingPreference: Font.PreferNoHinting
-                    text: NotificationState.dnd ? "\uF12A" : "\uF126"   // mgc notification_off / notification
-                    color: NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.primary
-                    font.family: Fonts.iconMingcute
-                    font.pixelSize: 17
-                }
-                MouseArea {
-                    id: dndHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: NotificationState.toggleDnd()
-                }
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: Qt.formatDateTime(ShellClock.at(clock.date), "HH:mm")
+                color: DrawerTheme.primary
+                font.family: Fonts.ui
+                font.pixelSize: 54
+                font.weight: Font.ExtraLight
+                font.letterSpacing: -1.5
+                font.features: ({ "tnum": 1 })
             }
-
+            // Its second line sits on the clock's baseline.
             Column {
-                id: clockBlock
-                width: parent.width
-                anchors.top: parent.top
-                spacing: 2
+                anchors.right: parent.right
+                y: clockText.baselineOffset - (dateLine.y + dateLine.baselineOffset)
+                spacing: 1
 
                 Text {
-                    width: parent.width
-                    horizontalAlignment: Text.AlignRight
+                    anchors.right: parent.right
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: Qt.formatDateTime(ShellClock.at(clock.date), "HH:mm")
+                    text: ShellClock.at(clock.date).toLocaleDateString(Qt.locale("en_US"), "dddd")
                     color: DrawerTheme.primary
                     font.family: Fonts.ui
-                    font.pixelSize: 42
-                    font.weight: Font.Light
-                    font.features: ({ "tnum": 1 })
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
                 }
                 Text {
-                    width: parent.width
-                    horizontalAlignment: Text.AlignRight
+                    id: dateLine
+                    anchors.right: parent.right
                     renderType: Text.NativeRendering
                     font.hintingPreference: Font.PreferNoHinting
-                    text: ShellClock.at(clock.date).toLocaleDateString(Qt.locale("en_US"), "ddd MMM d")
+                    text: ShellClock.at(clock.date).toLocaleDateString(Qt.locale("en_US"), "MMMM d")
                     color: DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 13
@@ -320,46 +265,105 @@ Item {
             }
         }
 
+        // The whole row toggles; the switch shows the state.
+        Item {
+            width: parent.width
+            height: 40
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
+            }
+            Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: 2
+                renderType: Text.NativeRendering
+                font.hintingPreference: Font.PreferNoHinting
+                text: "Do not disturb"
+                color: DrawerTheme.primary
+                font.family: Fonts.ui
+                font.pixelSize: 13
+            }
+            Rectangle {
+                id: dndSwitch
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: 2
+                width: 34
+                height: 20
+                radius: 10
+                color: NotificationState.dnd ? DrawerTheme.accent : DrawerTheme.cardRaised
+                border.width: NotificationState.dnd ? 0 : 1
+                border.color: DrawerTheme.ink(DrawerTheme.dark ? 0.10 : 0.12)
+                Behavior on color { ColorAnimation { duration: 140 } }
+
+                Rectangle {
+                    x: NotificationState.dnd ? parent.width - width - 3 : 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 14
+                    height: 14
+                    radius: 7
+                    color: NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.secondary
+                    Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: 140 } }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: NotificationState.toggleDnd()
+            }
+        }
+
         // ---- mpris (autohide when nothing's playing, like swaync's own) ----
         //
-        // No album art. It was a 36px thumbnail that spent most of its life
-        // either empty (players that publish no trackArtUrl) or showing a
-        // postage stamp too small to recognise, and it was the one element
-        // in this drawer pulling a raster image into an otherwise entirely
-        // drawn interface. Dropping it is what makes the row read as part
-        // of the panel rather than as an embedded widget -- asked for
-        // ("miser surtout sur le côté sleek de l'élément"). Note this is
-        // the one thing from the reference screenshot's player NOT
-        // reproduced here: only its elapsed/remaining readout was asked
-        // about ("si c'est possible de recup la durée du media").
-        //
-        // radius 16, not the 12 this had: that is NotificationCard.qml's
-        // own corner, and this row sits directly above a stack of them.
-        //
-        // Height follows the content rather than the flat 56 it was, so
-        // the progress row below simply makes the card taller on the
-        // players that publish a length and leaves it at its old size on
-        // the ones that do not.
-        Rectangle {
+        // No card under it any more: the row sits on the drawer itself. The
+        // album art is back, round, but only when the player publishes one
+        // that loads -- no empty tile in its place. Elapsed / total as two
+        // numbers under the title; the total only when the player gives a
+        // length (some never do: YouTube mixes, live streams), so the row
+        // never waits on a field the player drops and re-adds.
+        Item {
             width: parent.width
-            height: mediaColumn.height + 24
-            radius: 16
-            color: DrawerTheme.card
+            height: mediaColumn.height
             visible: root.mprisPlayer !== null
 
+            Item {
+                id: artDisc
+                readonly property bool shown: artImage.status === Image.Ready
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: artDisc.shown ? 38 : 0
+                height: 38
+
+                // Round by a mask: a layer drawn once per cover and cached.
+                Image {
+                    id: artImage
+                    anchors.fill: parent
+                    visible: artDisc.shown
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectCrop
+                    source: root.artUrl
+                    sourceSize.width: 76
+                    sourceSize.height: 76
+                    layer.enabled: artDisc.shown
+                    layer.effect: OpacityMask {
+                        maskSource: Rectangle { width: 38; height: 38; radius: 19 }
+                    }
+                }
+            }
 
             Column {
                 id: mediaColumn
-                anchors.left: parent.left
-                anchors.leftMargin: 16
+                anchors.left: artDisc.right
+                anchors.leftMargin: artDisc.shown ? 12 : 0
                 anchors.right: parent.right
-                // 6, not 16: the transport buttons carry ~7px of their own
-                // padding inside their 30px hit target, so a real 16 here
-                // would optically sit the glyphs a good 23px off the edge.
-                // The progress row below re-adds the difference itself.
-                anchors.rightMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
+                // The transport buttons carry ~7px of their own padding
+                // inside their 30px hit target.
+                anchors.rightMargin: -7
+                spacing: 4
 
                 Item {
                     width: parent.width
@@ -381,6 +385,7 @@ Item {
                             color: DrawerTheme.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
+                            font.weight: Font.Medium
                             elide: Text.ElideRight
                         }
                         Text {
@@ -389,16 +394,15 @@ Item {
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.mprisPlayer ? (root.mprisPlayer.trackArtist || "") : ""
-                            color: DrawerTheme.ink(0.6)
+                            color: DrawerTheme.secondary
                             font.family: Fonts.ui
                             font.pixelSize: 13
                             elide: Text.ElideRight
                         }
                     }
 
-                    // Transport. Replaces a MouseArea over the WHOLE card that
-                    // toggled playback -- with real buttons on it, that made every
-                    // stray click on the title pause the music.
+                    // Transport. Real buttons, so a stray click on the title
+                    // never pauses the music.
                     Row {
                         id: transport
                         anchors.right: parent.right
@@ -411,8 +415,6 @@ Item {
                             onTriggered: root.mprisPlayer.previous()
                         }
                         TransportButton {
-                            // The only one that changes shape, and the reason the
-                            // row needs no play/pause label anywhere else.
                             glyph: (root.mprisPlayer && root.mprisPlayer.isPlaying) ? "\uF17A" : "\uF1D8"   // mgc pause / play
                             glyphSize: 17
                             enabled: root.mprisPlayer ? root.mprisPlayer.canTogglePlaying : false
@@ -426,91 +428,18 @@ Item {
                     }
                 }
 
-                // ---- elapsed / scrubber / total ----
-                //
-                // Two tiers, because the two halves of this readout do not
-                // come from the same place. `position` is supported by
-                // every player worth showing, so the elapsed time on the
-                // left is shown whenever the card is. The bar and the
-                // total need a LENGTH, which some media never publish at
-                // all (YouTube mixes/live streams through Firefox are the
-                // case at hand) -- those two hide on their own and leave
-                // the elapsed count standing.
-                //
-                // Splitting it that way is the point: the row's presence no
-                // longer depends on a field the player drops and re-adds,
-                // so the card stops changing height under the pointer.
-                // A scrubber with nothing to scrub along is still worse
-                // than no scrubber, which is why the bar itself goes rather
-                // than sitting at zero.
-                //
-                // Read-only: dragging it would be a seek, and `canSeek` is
-                // a separate capability this is not wired to. It shows
-                // where the track is, nothing more.
-                Item {
-                    id: progressRow
-                    width: parent.width - 10
-                    height: 14
+                // Read-only: where the track is, nothing more.
+                Text {
                     visible: root.mprisPlayer !== null && root.mprisPlayer.positionSupported
-
-                    readonly property bool hasLength: root.mprisTrackLength > 0
-                    readonly property real progress: {
-                        if (!progressRow.hasLength) return 0;
-                        return Math.max(0, Math.min(1, root.mprisPosition / root.mprisTrackLength));
-                    }
-
-                    Text {
-                        id: elapsedLabel
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        renderType: Text.NativeRendering
-                        font.hintingPreference: Font.PreferNoHinting
-                        text: root.formatDuration(root.mprisPosition)
-                        color: DrawerTheme.ink(0.5)
-                        font.family: Fonts.ui
-                        font.pixelSize: 12
-                        // Same reason as the clock's own: this one ticks
-                        // every second, and a proportional "1" would walk
-                        // the track's left end back and forth as it counts.
-                        font.features: ({ "tnum": 1 })
-                    }
-                    Text {
-                        id: totalLabel
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: progressRow.hasLength
-                        renderType: Text.NativeRendering
-                        font.hintingPreference: Font.PreferNoHinting
-                        text: root.formatDuration(root.mprisTrackLength)
-                        color: DrawerTheme.ink(0.5)
-                        font.family: Fonts.ui
-                        font.pixelSize: 12
-                        font.features: ({ "tnum": 1 })
-                    }
-
-                    Rectangle {
-                        anchors.left: elapsedLabel.right
-                        anchors.right: totalLabel.left
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        // `visible: false` does not zero an item's size, and
-                        // this one is anchored to totalLabel, which is also
-                        // hidden -- both still resolve, they just draw
-                        // nothing. Nothing below reads this item's geometry,
-                        // so there is no layout left to get wrong.
-                        visible: progressRow.hasLength
-                        height: 3
-                        radius: height / 2
-                        color: DrawerTheme.ink(0.14)
-
-                        Rectangle {
-                            width: parent.width * progressRow.progress
-                            height: parent.height
-                            radius: parent.radius
-                            color: DrawerTheme.accent
-                        }
-                    }
+                    renderType: Text.NativeRendering
+                    font.hintingPreference: Font.PreferNoHinting
+                    text: root.formatDuration(root.mprisPosition)
+                        + (root.mprisTrackLength > 0 ? " / " + root.formatDuration(root.mprisTrackLength) : "")
+                    color: DrawerTheme.secondary
+                    font.family: Fonts.ui
+                    font.pixelSize: 12
+                    // Ticks every second: tabular, so it never walks.
+                    font.features: ({ "tnum": 1 })
                 }
             }
         }
@@ -736,7 +665,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: section.modelData.title.toUpperCase()
-                                color: DrawerTheme.secondary
+                                color: DrawerTheme.muted
                                 font.family: Fonts.ui
                                 font.pixelSize: 11
                                 font.weight: Font.Medium
@@ -751,7 +680,7 @@ Item {
                                 renderType: Text.NativeRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: section.modelData.count
-                                color: DrawerTheme.primary
+                                color: DrawerTheme.muted
                                 font.family: Fonts.ui
                                 font.pixelSize: 12
                                 font.weight: Font.Medium
@@ -766,7 +695,7 @@ Item {
                                 required property int index
                                 width: sectionBody.width
                                 group: modelData
-                                gap: index < section.modelData.groups.length - 1 ? 14 : 0
+                                gap: index < section.modelData.groups.length - 1 ? 6 : 0
                             }
                         }
                     }
@@ -888,20 +817,16 @@ Item {
             const image = appCard.appIconPath || appCard.sharedImage;
             return image.startsWith("image://icon//") ? "file://" + image.slice("image://icon/".length) : image;
         }
-        // A critical notification in it gives the card an amber edge.
-        readonly property bool hasCritical: appCard.group.notes.some((n) => n.urgency === NotificationUrgency.Critical)
 
         leaving: appCard.group.notes.every((n) => root.isLeaving(n))
         slides: false
         bodyHeight: cardColumn.height
 
+        // No fill: a hairline above each app parts it from the last.
         Rectangle {
             width: parent.width
-            height: cardColumn.height
-            radius: 20
-            color: DrawerTheme.card
-            border.width: appCard.hasCritical ? 1 : 0
-            border.color: Qt.rgba(DrawerTheme.warning.r, DrawerTheme.warning.g, DrawerTheme.warning.b, 0.55)
+            height: 1
+            color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
         }
 
         Column {
@@ -910,7 +835,7 @@ Item {
 
             Item {
                 width: parent.width
-                height: 40
+                height: 38
 
                 // The x that clears the app shows under the pointer only.
                 HoverHandler { id: headerHover }
@@ -918,7 +843,7 @@ Item {
                 Rectangle {
                     id: appIcon
                     anchors.left: parent.left
-                    anchors.leftMargin: 14
+                    anchors.leftMargin: 2
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: 2
                     width: 22
@@ -963,7 +888,7 @@ Item {
                 Item {
                     id: clearApp
                     anchors.right: parent.right
-                    anchors.rightMargin: 10
+                    anchors.rightMargin: 0
                     anchors.verticalCenter: appIcon.verticalCenter
                     width: 20
                     height: 20
@@ -999,8 +924,8 @@ Item {
 
                     Rectangle {
                         visible: line.index > 0 && !line.continued
-                        x: 14
-                        width: parent.width - 28
+                        x: 2
+                        width: parent.width - 4
                         height: 1
                         color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
                     }
@@ -1008,6 +933,7 @@ Item {
                         id: rowCard
                         width: parent.width
                         notification: line.modelData
+                        inset: 2
                         groupImage: appCard.sharedImage
                         timeText: root.timeText(line.stamp)
                         continued: line.continued
