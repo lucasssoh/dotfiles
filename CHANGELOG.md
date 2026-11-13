@@ -24,6 +24,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Notifications:** messages in a row from the same app and sender share one pop-up, with their count next to the app's name.
 - **Notifications:** a screenshot or other wide picture shows in full under the text. The pop-ups waiting under the stack show their apps' icons.
 - **Notifications:** a pop-up lightens slightly under the pointer, its text follows it in as it arrives, a pressed action button stays dark as the pop-up leaves, and a critical one flares once.
+- **Notification centre:** it matches the pop-ups. × shows under the pointer, in place of the time; a line lightens under the pointer; actions are a row of buttons; a screenshot shows in full; a critical notification is amber.
+- **Notification centre:** messages in a row from the same sender show the sender's name once, each message still on its own line. A notification arriving while the centre is open slides in.
 
 ## 2.4.0 (November 11 2026)
 

@@ -2,6 +2,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Services.Mpris
+import Quickshell.Services.Notifications
 import "../theme"
 import "../services"
 
@@ -881,7 +882,14 @@ Item {
             if (icon.startsWith("/") || icon.includes("://")) return icon;
             return Quickshell.iconPath(icon, true);
         }
-        readonly property string image: appCard.appIconPath || appCard.sharedImage
+        // A picture sent as a file path arrives as "image://icon//<path>",
+        // which the icon provider returns at icon size: load the file.
+        readonly property string image: {
+            const image = appCard.appIconPath || appCard.sharedImage;
+            return image.startsWith("image://icon//") ? "file://" + image.slice("image://icon/".length) : image;
+        }
+        // A critical notification in it gives the card an amber edge.
+        readonly property bool hasCritical: appCard.group.notes.some((n) => n.urgency === NotificationUrgency.Critical)
 
         leaving: appCard.group.notes.every((n) => root.isLeaving(n))
         slides: false
@@ -892,6 +900,8 @@ Item {
             height: cardColumn.height
             radius: 20
             color: DrawerTheme.card
+            border.width: appCard.hasCritical ? 1 : 0
+            border.color: Qt.rgba(DrawerTheme.warning.r, DrawerTheme.warning.g, DrawerTheme.warning.b, 0.55)
         }
 
         Column {
@@ -901,6 +911,9 @@ Item {
             Item {
                 width: parent.width
                 height: 40
+
+                // The x that clears the app shows under the pointer only.
+                HoverHandler { id: headerHover }
 
                 Rectangle {
                     id: appIcon
@@ -954,6 +967,9 @@ Item {
                     anchors.verticalCenter: appIcon.verticalCenter
                     width: 20
                     height: 20
+                    opacity: headerHover.hovered ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
                     Rectangle { anchors.centerIn: parent; width: 12; height: 1.5; radius: 1; color: DrawerTheme.ink(0.5); rotation: 45 }
                     Rectangle { anchors.centerIn: parent; width: 12; height: 1.5; radius: 1; color: DrawerTheme.ink(0.5); rotation: -45 }
                     MouseArea {
@@ -975,8 +991,14 @@ Item {
                     leaving: root.isLeaving(line.modelData)
                     bodyHeight: rowCard.height
 
+                    // Same sender as the line above: the summary is not
+                    // repeated, and no hairline splits the two.
+                    readonly property bool continued: line.index > 0
+                        && appCard.group.notes[line.index - 1].summary === line.modelData.summary
+                    readonly property real stamp: appCard.group.stamps[line.index]
+
                     Rectangle {
-                        visible: line.index > 0
+                        visible: line.index > 0 && !line.continued
                         x: 14
                         width: parent.width - 28
                         height: 1
@@ -986,9 +1008,15 @@ Item {
                         id: rowCard
                         width: parent.width
                         notification: line.modelData
-                        row: true
                         groupImage: appCard.sharedImage
-                        timeText: root.timeText(appCard.group.stamps[line.index])
+                        timeText: root.timeText(line.stamp)
+                        continued: line.continued
+                        last: line.index === appCard.group.notes.length - 1
+                        // Arrived just now, with the drawer open: comes in
+                        // like a toast. The list is rebuilt on every
+                        // change, so only the newest line may animate.
+                        arriving: root.drawerOpen && line.stamp > 0
+                            && ShellClock.now().getTime() - line.stamp < 1500
                         onDismissRequested: NotificationState.leave([notification])
                         onActionRequested: (action) => NotificationState.invokeAction(notification, action)
                     }
