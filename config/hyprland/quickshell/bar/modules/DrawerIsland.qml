@@ -656,7 +656,7 @@ Item {
     readonly property real dropPaneH: Math.max(0, root.dropPillH + (drawerColumn.height - root.dropPillH) * root.dropH)
     readonly property real dropPaneY: root.bottomEdge
         ? root.height - root.drawerEdge - root.drawerGap * root.opaqueProgress - root.dropPaneH
-        : root.dropFullY
+        : root.drawerEdge + root.drawerGap * root.opaqueProgress
     readonly property real dropRadius: Math.min(root.dropPaneW / 2, root.dropPaneH / 2,
                                                 12 + (root.drawerRadius - 12) * Math.min(1, root.dropH))
 
