@@ -13,7 +13,8 @@ import Quickshell.Io
 //   - CPU, frequency, memory, temperature, power draw and network rate (SystemStats
 //     ignores Pouls's figures meanwhile);
 //   - Programme's indicator, which shows `event`;
-//   - the Wi-Fi name in Balise.
+//   - the Wi-Fi name in Balise;
+//   - what's playing, `player` in place of your own.
 // Notifications that arrive while it is on are closed when it ends, so
 // the ones a capture sends never stay in your history.
 //
@@ -36,6 +37,30 @@ Singleton {
     readonly property int temp: 41
     readonly property real netBps: 1200
     readonly property real watts: 4.8
+
+    // What's playing, in place of your own player: the centre and the
+    // bar's island read it as they read an MPRIS player. It stands still
+    // (the elapsed time never moves), so every take matches; play/pause
+    // only swaps its glyph.
+    readonly property QtObject player: QtObject {
+        readonly property string dbusName: "demo"
+        readonly property string identity: "Music"
+        readonly property string trackTitle: "December Dream"
+        readonly property string trackArtist: "Fourplay"
+        readonly property string trackArtUrl: ""
+        property bool isPlaying: true
+        readonly property bool canGoPrevious: true
+        readonly property bool canGoNext: true
+        readonly property bool canTogglePlaying: true
+        readonly property bool positionSupported: true
+        readonly property real position: 107
+        readonly property bool lengthSupported: true
+        readonly property real length: 343
+        readonly property int uniqueId: 1
+        function togglePlaying() { isPlaying = !isPlaying; }
+        function next() {}
+        function previous() {}
+    }
 
     // Notifications received while active, closed by off().
     property var _notifications: []

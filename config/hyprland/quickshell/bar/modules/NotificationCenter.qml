@@ -183,6 +183,8 @@ Item {
     readonly property string artUrl: root.mprisPlayer ? (root.mprisPlayer.trackArtUrl || "") : ""
 
     readonly property var mprisPlayer: {
+        // Demo mode plays its own track: yours stays out of screenshots.
+        if (DemoState.active) return DemoState.player;
         const real = Mpris.players.values.filter((p) => p.dbusName.indexOf("playerctld") === -1);
         for (let i = 0; i < real.length; i++) if (real[i].isPlaying) return real[i];
         return real.length > 0 ? real[0] : null;
@@ -328,9 +330,7 @@ Item {
         Item {
             width: parent.width
             height: mediaColumn.height
-            // Not in demo mode: what you are playing is yours, like the
-            // figures demo mode makes up.
-            visible: root.mprisPlayer !== null && !DemoState.active
+            visible: root.mprisPlayer !== null
 
             Item {
                 id: artDisc

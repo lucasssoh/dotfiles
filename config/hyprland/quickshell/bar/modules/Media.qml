@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Services.Mpris
 import "../theme"
+import "../services"
 
 // Native port of waybar's `mpris` module -- no exec, no poll:
 // Mpris.players is a live DBus-backed model. Same colors/shape as
@@ -26,6 +27,8 @@ Item {
     id: root
 
     property var player: {
+        // Demo mode plays its own track: yours stays out of screenshots.
+        if (DemoState.active) return DemoState.player;
         const ps = Mpris.players.values;
         // playerctld itself shows up as an MPRIS player (it's a proxy
         // for "whichever real player is active") but has no metadata of

@@ -113,7 +113,7 @@ The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../conf
 
 The bar also rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them, and they show in screenshots.
 
-To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-up figures instead of yours: the time, the battery, the system figures, the next event and the Wi-Fi name. What's playing is hidden. Notifications received meanwhile are closed when you turn it off with `demo off`.
+To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-up figures instead of yours: the time, the battery, the system figures, the next event, the Wi-Fi name and what's playing. Notifications received meanwhile are closed when you turn it off with `demo off`.
 
 #### Drawers
 
