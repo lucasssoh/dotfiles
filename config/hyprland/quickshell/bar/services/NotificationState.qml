@@ -217,6 +217,13 @@ Singleton {
         root.receivedAt = stamps;
         DemoState.track(n);   // closed when demo mode ends
         n.closed.connect(() => root._removeToast(n.id));
+        // An app replacing its notification updates this same object, and
+        // the toast in place: it gets its time back, it is news again.
+        const refresh = () => {
+            if (root._remaining[n.id] > 0) root._remaining[n.id] = root._timeouts[n.id];
+        };
+        n.summaryChanged.connect(refresh);
+        n.bodyChanged.connect(refresh);
 
         if (root.dnd || root.studyQuiet) return;   // still tracked/in history, just no popup
 

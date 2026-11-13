@@ -8,6 +8,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Neovim:** :bd moves to the next open file, or to the file tree when it was the last one.
 - **Bar:** at the bottom edge, it no longer shows too high for an instant when it starts or changes edge.
 - **Bar:** at the top edge, the clock, launcher and tools drawers open under the bar again instead of over it.
+- **Notifications:** a pop-up that its app updates (a copy's progress, a new status) stays its full time again, instead of leaving on the first one's schedule.
 
 ### Changed
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
