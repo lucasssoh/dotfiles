@@ -26,6 +26,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Notifications:** a pop-up lightens slightly under the pointer, its text follows it in as it arrives, a pressed action button stays dark as the pop-up leaves, and a critical one flares once.
 - **Notification centre:** it matches the pop-ups. × shows under the pointer, in place of the time; a line lightens under the pointer; actions are a row of buttons; a screenshot shows in full; a critical notification is amber.
 - **Notification centre:** messages in a row from the same sender show the sender's name once, each message still on its own line. A notification arriving while the centre is open slides in.
+- **Notifications:** pop-ups, the centre and the pop-ups waiting under the stack show the app's icon from its desktop entry, even beside a picture.
 - **Notification centre:** a lighter layout. A large, thin clock with the day spelled out beside it; Do not disturb is a switch on its own row; the player and the notifications sit on the drawer itself, parted by hairlines. The player shows the track's cover when there is one, and the elapsed and total time as numbers.
 
 ## 2.4.0 (November 11 2026)

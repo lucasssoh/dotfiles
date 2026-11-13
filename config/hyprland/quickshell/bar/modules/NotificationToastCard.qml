@@ -38,8 +38,16 @@ Rectangle {
         const name = card.notification ? card.notification.appName : "";
         return name === "notify-send" ? "" : name;
     }
+    // The app's icon: its own, else its desktop entry's (the
+    // desktop-entry hint). An icon sent with -i lands in `image` instead,
+    // and a real picture takes its place there.
     readonly property string appIconPath: {
-        const icon = card.notification ? card.notification.appIcon : "";
+        const n = card.notification;
+        let icon = n ? n.appIcon : "";
+        if (!icon && n && n.desktopEntry) {
+            const entry = DesktopEntries.byId(n.desktopEntry);
+            icon = entry ? entry.icon : "";
+        }
         if (!icon) return "";
         if (icon.startsWith("/") || icon.includes("://")) return icon;
         return Quickshell.iconPath(icon, true);

@@ -806,7 +806,14 @@ Item {
         readonly property bool oneImage: appCard.group.notes.every((n) => n.image === appCard.newest.image)
         readonly property string sharedImage: appCard.oneImage ? appCard.newest.image : ""
         readonly property string appIconPath: {
-            const icon = appCard.newest ? appCard.newest.appIcon : "";
+            const n = appCard.newest;
+            let icon = n ? n.appIcon : "";
+            // Else the desktop entry's (the desktop-entry hint): an icon
+            // sent with -i lands in `image`, where a picture replaces it.
+            if (!icon && n && n.desktopEntry) {
+                const entry = DesktopEntries.byId(n.desktopEntry);
+                icon = entry ? entry.icon : "";
+            }
             if (!icon) return "";
             if (icon.startsWith("/") || icon.includes("://")) return icon;
             return Quickshell.iconPath(icon, true);

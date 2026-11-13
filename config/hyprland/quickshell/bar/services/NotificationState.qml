@@ -310,7 +310,16 @@ Singleton {
 
     function _syncParked() {
         root.parkedCount = root._parked.length;
-        root.parkedIcons = root._parked.slice(0, 2).map((r) => r.notification ? (r.notification.appIcon || r.notification.image) : "");
+        root.parkedIcons = root._parked.slice(0, 2).map((r) => root._iconOf(r.notification));
+    }
+
+    // A notification's icon for the deck: its own, its desktop entry's,
+    // else its picture (notify-send -i lands there).
+    function _iconOf(n) {
+        if (!n) return "";
+        if (n.appIcon) return n.appIcon;
+        const entry = n.desktopEntry ? DesktopEntries.byId(n.desktopEntry) : null;
+        return entry && entry.icon ? entry.icon : n.image;
     }
 
     function _toastIndex(id) {
