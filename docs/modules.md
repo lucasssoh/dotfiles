@@ -408,7 +408,7 @@ cc-pkg-mng install wezterm
 
 ### `firefox`
 
-The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing.
+The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing. After a crash or a forced quit, Firefox opens as usual, never on the session restore page; your last session stays in History → Restore Previous Session.
 
 The look comes from two stylesheets in the profile, [`userChrome.css`](../config/firefox/chrome/userChrome.css) for the browser and [`userContent.css`](../config/firefox/chrome/userContent.css) for the new-tab page. Both follow Firefox's **Website appearance** setting (Settings → General → Language and Appearance): Light, Dark or System. Dark is OLED black. The colours apply with Firefox's default, Light and Dark themes; pick any other theme (Settings → Extensions & Themes) and Firefox shows that theme instead. The new tab's ground is a faint 32 px grid that fades out towards the edges; a wallpaper or colour chosen with the pencil on the new tab replaces it.
 

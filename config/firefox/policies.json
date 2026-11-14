@@ -75,6 +75,10 @@
         "Value": "[{\"url\":\"https://github.com/\",\"title\":\"GitHub\"},{\"url\":\"https://www.youtube.com/\",\"title\":\"YouTube\"},{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\"},{\"url\":\"https://gemini.google.com/\",\"title\":\"Gemini\"},{\"url\":\"https://claude.ai/\",\"title\":\"Claude\"},{\"url\":\"https://www.wikipedia.org/\",\"title\":\"Wikipedia\"}]",
         "Status": "default"
       },
+      "browser.sessionstore.resume_from_crash": {
+        "Value": false,
+        "Status": "locked"
+      },
       "browser.theme.content-theme": {
         "Value": 2,
         "Status": "default"
