@@ -678,9 +678,18 @@ fn build_ui(app: &Application) {
                 // `insert` returns true only if the index wasn't already
                 // there -- neither loaded nor already queued.
                 if loaded.insert(i) {
-                    loader.request(i, false, walls[i].path.clone());
-                    if let Some(dark) = &walls[i].dark {
-                        loader.request(i, true, dark.clone());
+                    // A pair's half on screen first, the other after it.
+                    let dark_first = carousel.card_at(i).is_some_and(|c| c.dark_scheme());
+                    match &walls[i].dark {
+                        Some(dark) if dark_first => {
+                            loader.request(i, true, dark.clone());
+                            loader.request(i, false, walls[i].path.clone());
+                        }
+                        Some(dark) => {
+                            loader.request(i, false, walls[i].path.clone());
+                            loader.request(i, true, dark.clone());
+                        }
+                        None => loader.request(i, false, walls[i].path.clone()),
                     }
                 }
             }

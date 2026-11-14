@@ -108,23 +108,42 @@ mod imp {
                     let shown = self.shown.get() as f32;
                     let open = (1.0 - SHOWN_SHARE) + (2.0 * SHOWN_SHARE - 1.0) * (1.0 - shown);
                     let cut = rest + (open - rest) * focus as f32;
-                    draw_cover(snapshot, &light, w as f64, h as f64);
                     let f = focus as f32;
-                    if f * shown > 0.001 {
-                        snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * shown), &full);
+                    // Each half is drawn only over its own side of the cut,
+                    // and not at all once the cut has left the card: a half
+                    // painted underneath the other would bleed through the
+                    // antialiased rounded corners as a light rim.
+                    let (top, bottom) = ((cut + CUT_SLANT) * w, (cut - CUT_SLANT) * w);
+                    if top > 0.5 || bottom > 0.5 {
+                        let side = gsk::PathBuilder::new();
+                        side.move_to(-1.0, 0.0);
+                        // A pixel past the cut, so the seam has the light
+                        // half under it rather than a gap.
+                        side.line_to(top + 1.0, 0.0);
+                        side.line_to(bottom + 1.0, h);
+                        side.line_to(-1.0, h);
+                        side.close();
+                        snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
+                        draw_cover(snapshot, &light, w as f64, h as f64);
+                        if f * shown > 0.001 {
+                            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * shown), &full);
+                        }
+                        snapshot.pop();
                     }
-                    let path = gsk::PathBuilder::new();
-                    path.move_to((cut + CUT_SLANT) * w, 0.0);
-                    path.line_to(w + 1.0, 0.0);
-                    path.line_to(w + 1.0, h);
-                    path.line_to((cut - CUT_SLANT) * w, h);
-                    path.close();
-                    snapshot.push_fill(&path.to_path(), gsk::FillRule::Winding);
-                    draw_cover(snapshot, &dark, w as f64, h as f64);
-                    if f * (1.0 - shown) > 0.001 {
-                        snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * (1.0 - shown)), &full);
+                    if top < w - 0.5 || bottom < w - 0.5 {
+                        let side = gsk::PathBuilder::new();
+                        side.move_to(top, 0.0);
+                        side.line_to(w + 1.0, 0.0);
+                        side.line_to(w + 1.0, h);
+                        side.line_to(bottom, h);
+                        side.close();
+                        snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
+                        draw_cover(snapshot, &dark, w as f64, h as f64);
+                        if f * (1.0 - shown) > 0.001 {
+                            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * (1.0 - shown)), &full);
+                        }
+                        snapshot.pop();
                     }
-                    snapshot.pop();
                     let dim = (1.0 - focus) * REST_DIM;
                     if dim > 0.001 {
                         snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, dim as f32), &full);
@@ -209,16 +228,21 @@ impl Card {
         self.queue_draw();
     }
 
-    /// The thumbnail of one half (`dark`), falling back to the other half
-    /// while that one is still loading -- main.rs stretches it over the
-    /// screen until the sharp preview arrives.
+    /// The thumbnail of one half (`dark`), None while it is still loading.
+    /// Never the other half instead: it would flash the light picture on a
+    /// dark desktop (and the reverse) until the right one decodes.
     pub fn texture(&self, dark: bool) -> Option<gdk::Texture> {
         let imp = self.imp();
-        let (wanted, other) = if dark { (&imp.dark_texture, &imp.texture) } else { (&imp.texture, &imp.dark_texture) };
-        wanted.borrow().clone().or_else(|| other.borrow().clone())
+        let slot = if dark && self.wallpaper().dark.is_some() { &imp.dark_texture } else { &imp.texture };
+        slot.borrow().clone()
     }
 
-    /// The half the colour scheme asks for, or whichever has loaded.
+    /// Whether pairs show their dark half (see `set_dark_scheme`).
+    pub fn dark_scheme(&self) -> bool {
+        self.imp().dark_scheme.get()
+    }
+
+    /// The half the colour scheme asks for.
     fn shown_texture(&self) -> Option<gdk::Texture> {
         self.texture(self.imp().dark_scheme.get())
     }
