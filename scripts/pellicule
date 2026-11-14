@@ -23,15 +23,19 @@ Steps, one string each:
                                     ({library}: the made-up games, see [[settings.game]])
     wait SECONDS
     run COMMAND...                  started in the background, killed at the end of the scene
-    close CLASS                     closes the windows of that class on the workspace
+    close CLASS [last]              closes the windows of that class on the workspace, as Super+Q
+                                    (last: only the newest)
+    key KEY                         types a key into the app in front (Right, c, Return),
+                                    on a keyboard of its own
+    scheme light|dark               switches the colour scheme, as the bar's toggle
     notify APP | SUMMARY | BODY [| OPTIONS]
                                     a notification (closed when demo mode ends); OPTIONS,
                                     space-separated: entry=DESKTOP_ID (the app's icon),
                                     icon=NAME, image=PATH ({repo}; a .webp is handed over
                                     as PNG), urgency=low|normal|critical
 
-The pointer is parked out of the way for every scene (settings `pointer`)
-and put back at the end: under it, a pop-up lightens, shows its x and
+The pointer is hidden for the whole run, and parked out of the way for
+every scene (settings `pointer`), then shown and put back at the end: under it, a pop-up lightens, shows its x and
 holds its timer.
 
 The calls this file makes to the shell, Hyprland and gsettings are the
@@ -135,8 +139,98 @@ def pointer_go(x, y):
     sh("hyprctl", "eval", f"hl.dispatch(hl.dsp.cursor.move({{ x = {int(x)}, y = {int(y)} }}))")
 
 
+def cursor_hidden_get():
+    return json.loads(sh("hyprctl", "-j", "getoption", "cursor:invisible")).get("bool") is True
+
+
+def cursor_hide(on):
+    sh("hyprctl", "eval", f"hl.config({{ cursor = {{ invisible = {'true' if on else 'false'} }} }})")
+
+
 def workspace_go(ws):
     sh("hyprctl", "eval", f'hl.dispatch(hl.dsp.focus({{ workspace = "{ws}" }}))')
+
+
+# ---- keys -------------------------------------------------------------------
+# A key step types one key into the app in front (Prisme has no other
+# way in), on a keyboard of its own (uinput). Keys are keysym names, found
+# in Hyprland's layout: c is c wherever the layout puts it.
+
+def keymap_codes(names):
+    """The evdev keycode of each keysym name in Hyprland's layout, through
+    libxkbcommon. A name the layout cannot type is left out."""
+    import ctypes
+    xkb = ctypes.CDLL("libxkbcommon.so.0")
+    xkb.xkb_context_new.restype = ctypes.c_void_p
+    xkb.xkb_keymap_new_from_names.restype = ctypes.c_void_p
+    xkb.xkb_keymap_new_from_names.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    xkb.xkb_keymap_key_get_syms_by_level.argtypes = [
+        ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32,
+        ctypes.POINTER(ctypes.POINTER(ctypes.c_uint32))]
+    xkb.xkb_keysym_from_name.restype = ctypes.c_uint32
+    xkb.xkb_keymap_unref.argtypes = [ctypes.c_void_p]
+    xkb.xkb_context_unref.argtypes = [ctypes.c_void_p]
+
+    def option(name):
+        out = json.loads(sh("hyprctl", "-j", "getoption", f"input:{name}")).get("str", "")
+        return out.encode() if out and out != "[[EMPTY]]" else None
+
+    class Names(ctypes.Structure):
+        _fields_ = [(f, ctypes.c_char_p) for f in ("rules", "model", "layout", "variant", "options")]
+
+    rmlvo = Names(option("kb_rules"), option("kb_model"), option("kb_layout"),
+                  option("kb_variant"), option("kb_options"))
+    ctx = xkb.xkb_context_new(0)
+    keymap = xkb.xkb_keymap_new_from_names(ctx, ctypes.byref(rmlvo), 0)
+    if not keymap:
+        xkb.xkb_context_unref(ctx)
+        raise RuntimeError("libxkbcommon could not build Hyprland's keymap")
+    wanted = {xkb.xkb_keysym_from_name(n.encode(), 0): n for n in names}
+    found = {}
+    syms = ctypes.POINTER(ctypes.c_uint32)()
+    for code in range(8, 256):
+        # Level 0 only: a key typed without Shift.
+        for i in range(xkb.xkb_keymap_key_get_syms_by_level(keymap, code, 0, 0, ctypes.byref(syms))):
+            name = wanted.get(syms[i])
+            if name and name not in found:
+                found[name] = code - 8
+    xkb.xkb_keymap_unref(keymap)
+    xkb.xkb_context_unref(ctx)
+    return found
+
+
+class Keyboard:
+    """A virtual keyboard on /dev/uinput, made at the first key step."""
+
+    EV_SYN, EV_KEY = 0, 1
+    UI_SET_EVBIT, UI_SET_KEYBIT = 0x40045564, 0x40045565
+    UI_DEV_SETUP, UI_DEV_CREATE, UI_DEV_DESTROY = 0x405C5503, 0x5501, 0x5502
+
+    def __init__(self):
+        import fcntl
+        import struct
+        self.fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
+        fcntl.ioctl(self.fd, self.UI_SET_EVBIT, self.EV_KEY)
+        for code in range(1, 256):
+            fcntl.ioctl(self.fd, self.UI_SET_KEYBIT, code)
+        fcntl.ioctl(self.fd, self.UI_DEV_SETUP, struct.pack("4H80sI", 0x06, 1, 1, 1, b"pellicule", 0))
+        fcntl.ioctl(self.fd, self.UI_DEV_CREATE)
+        # Hyprland has to see the new keyboard before its first key.
+        time.sleep(0.6)
+
+    def press(self, code):
+        import struct
+        for value in (1, 0):
+            os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_KEY, code, value))
+            os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_SYN, 0, 0))
+            time.sleep(0.04)
+
+    def close(self):
+        import fcntl
+        try:
+            fcntl.ioctl(self.fd, self.UI_DEV_DESTROY)
+        finally:
+            os.close(self.fd)
 
 
 WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
@@ -278,7 +372,16 @@ def check_step(step, surface):
             ["sh", "-c", f"command -v {shlex.quote(cmd)}"], capture_output=True).returncode == 0
         return [] if found else [f"{step!r}: {args[0]} is not installed"]
     if verb == "close":
-        return [] if len(args) == 1 else [f"{step!r}: close CLASS"]
+        return [] if len(args) == 1 or args[1:] == ["last"] else [f"{step!r}: close CLASS [last]"]
+    if verb == "key":
+        if len(args) != 1:
+            return [f"{step!r}: key KEY"]
+        codes = KEY_CODES.setdefault("codes", {})
+        if args[0] not in codes:
+            codes.update(keymap_codes([args[0]]))
+        return [] if args[0] in codes else [f"{step!r}: the keyboard layout has no key {args[0]!r}"]
+    if verb == "scheme":
+        return [] if args in (["light"], ["dark"]) else [f"{step!r}: scheme light|dark"]
     if verb == "notify":
         parts = " ".join(args).split("|")
         if len(parts) not in (3, 4):
@@ -297,6 +400,8 @@ def check_step(step, surface):
 
 
 NOTIFY_OPTIONS = ("entry", "icon", "image", "urgency")
+# The keymap's codes, looked up once per run by the key steps.
+KEY_CODES = {}
 
 
 def notify_args(options):
@@ -341,6 +446,8 @@ class Take:
         self.notes = []
         self.pointer = tuple(settings.get("pointer", [960, 1100]))
         self.saved_pointer = pointer_get()
+        self.keyboard = None
+        self.saved_cursor_hidden = cursor_hidden_get()
 
     def park(self):
         pointer_go(*self.pointer)
@@ -351,6 +458,8 @@ class Take:
             fail(f"workspace {self.ws} is not empty ({busy[0]['class']}); "
                  "close its windows or set another one in scenes.toml")
         ipc("demo", "on")
+        # Out of every picture and video; still parked, for what it hovers.
+        cursor_hide(True)
         if self.wallpaper:
             # One file of a light/dark pair stands for both: the scheme
             # changes below bring the other half.
@@ -380,7 +489,15 @@ class Take:
             self.procs.append(subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                                                stderr=subprocess.DEVNULL, start_new_session=True))
         elif verb == "close":
-            self.close(args[0])
+            self.close(args[0], last=args[1:] == ["last"])
+        elif verb == "key":
+            codes = KEY_CODES.setdefault("codes", {})
+            if args[0] not in codes:
+                codes.update(keymap_codes([args[0]]))
+            self.keyboard = self.keyboard or Keyboard()
+            self.keyboard.press(codes[args[0]])
+        elif verb == "scheme":
+            scheme_set(*SCHEMES[args[0]])
         elif verb == "notify":
             parts = [p.strip() for p in " ".join(args).split("|")]
             app, summary, body = parts[:3]
@@ -389,9 +506,27 @@ class Take:
                                  capture_output=True, text=True, check=True).stdout.strip()
             self.notes.append(nid)
 
-    def close(self, cls):
-        for c in clients():
-            if c["class"] == cls and str(c["workspace"]["id"]) == self.ws:
+    def close(self, cls=None, last=False):
+        """Closes the workspace's windows (of that class) as Super+Q does,
+        so a browser quits cleanly and does not offer to restore its pages
+        next time. A program still there after 2 s is ended, unless it also
+        has windows elsewhere (your browser, say). `last`: only the newest
+        one, Hyprland listing its windows in the order they opened."""
+        def mine():
+            return [c for c in clients() if str(c["workspace"]["id"]) == self.ws
+                    and (not cls or c["class"] == cls)]
+        targets = mine()[-1:] if last else mine()
+        gone = {c["address"] for c in targets}
+        for c in targets:
+            sh("hyprctl", "eval",
+               f'hl.dispatch(hl.dsp.window.close({{ window = "address:{c["address"]}" }}))')
+        deadline = time.time() + 2
+        while targets and time.time() < deadline:
+            time.sleep(0.1)
+            targets = [c for c in mine() if c["address"] in gone]
+        elsewhere = {c["pid"] for c in clients() if str(c["workspace"]["id"]) != self.ws}
+        for c in targets:
+            if c["pid"] not in elsewhere:
                 try:
                     os.kill(c["pid"], signal.SIGTERM)
                 except ProcessLookupError:
@@ -413,17 +548,14 @@ class Take:
                             "--method", "org.freedesktop.Notifications.CloseNotification", nid],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.notes = []
-        for c in clients():
-            if str(c["workspace"]["id"]) == self.ws:
-                try:
-                    os.kill(c["pid"], signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
+        self.close()
 
     def restore(self):
         try:
             self.end_scene()
         finally:
+            if self.keyboard:
+                self.keyboard.close()
             if self._library:
                 ipc("controller", "reset")
             if not self.saved_demo:
@@ -438,6 +570,7 @@ class Take:
                 wallpaper_set(self.saved_wallpaper)
             workspace_go(self.saved_ws)
             pointer_go(*self.saved_pointer)
+            cursor_hide(self.saved_cursor_hidden)
 
 
 def shoot(scene, mode, take, out, settings):
