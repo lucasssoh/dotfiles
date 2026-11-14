@@ -20,6 +20,12 @@ if have gsettings; then
         && gsettings set org.nemo.window-state sidebar-width 210
     [ "$(gsettings get org.nemo.preferences thumbnail-limit)" = "uint64 1048576" ] \
         && gsettings set org.nemo.preferences thumbnail-limit 33554432
+    # The menubar is the only one on the desktop: hidden, Alt shows it.
+    # No status bar either: Nemo shows its floating bar instead.
+    [ "$(gsettings get org.nemo.window-state start-with-menu-bar)" = "true" ] \
+        && gsettings set org.nemo.window-state start-with-menu-bar false
+    [ "$(gsettings get org.nemo.window-state start-with-status-bar)" = "true" ] \
+        && gsettings set org.nemo.window-state start-with-status-bar false
     # "Open in Terminal" runs this command. Fedora 45's Cinnamon schema
     # defaults it to velocitty, which nothing installs: a terminal that
     # isn't there is replaced by xdg-terminal-exec, which follows the

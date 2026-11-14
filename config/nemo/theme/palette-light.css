@@ -1,0 +1,49 @@
+/* ============================================================
+   Palette of the light GTK3 theme (Adwaita-light), read by overlay.css.
+
+   The light side of quickshell/bar/theme/DrawerTheme.qml: the same
+   vocabulary inverted on a light cream, never pure white, with hairlines
+   doing the work of large white areas. Nemo, its dialogs, the file
+   chooser and other GTK3 apps all use it. ink(a) below is the primary ink
+   #1c1c1e at a.
+   PALETTE SYNC: change a token in DrawerTheme, carry it here by hand.
+   ============================================================ */
+
+@define-color c_chrome   #f5f3ee;                  /* panelTop */
+@define-color c_well     #f5f3ee;                  /* same cream: only the hairline draws it */
+@define-color c_wellrim  alpha(#1c1c1e, 0.13);
+@define-color c_deep     #efede7;
+@define-color c_ink      #1c1c1e;                  /* primary */
+@define-color c_ink2     #56565b;                  /* secondary */
+@define-color c_muted    #86868b;                  /* muted */
+@define-color c_faint    #c4c3be;                  /* faint */
+@define-color c_hover    alpha(#1c1c1e, 0.05);
+@define-color c_act      alpha(#1c1c1e, 0.07);
+@define-color c_actedge  alpha(#1c1c1e, 0.12);
+@define-color c_on       #1c1c1e;
+@define-color c_onink    #f7f5f0;                  /* onLight */
+@define-color c_field    #f5f3ee;
+@define-color c_fieldrim alpha(#1c1c1e, 0.16);
+@define-color c_card     #ebe9e3;                  /* Firefox card */
+@define-color c_cardh    #e3e1da;
+@define-color c_menu     #f7f5f0;
+@define-color c_menurim  alpha(#1c1c1e, 0.12);
+@define-color c_hair     alpha(#1c1c1e, 0.08);
+@define-color c_gtrack   #dedbd4;
+@define-color c_danger   #b3261e;
+@define-color c_dsoft    #f5dedd;
+@define-color c_warning  #875000;
+@define-color c_tip      #1c1c1e;                  /* tooltips stay dark: they float over the cream */
+@define-color c_tipink   #f2f2f7;
+@define-color c_shadow   alpha(black, 0.16);
+
+/* Nemo paints its disk gauges with the RGB of these, ignoring alpha, so
+   they are opaque on purpose. */
+.places-treeview {
+    -NemoPlacesTreeView-disk-full-bg-color: #dedbd4;
+    -NemoPlacesTreeView-disk-full-fg-color: #56565b;
+}
+.places-treeview:selected {
+    -NemoPlacesTreeView-disk-full-bg-color: #c9c7c0;
+    -NemoPlacesTreeView-disk-full-fg-color: #1c1c1e;
+}

@@ -27,12 +27,13 @@ Downloads the JetBrains Mono, Iosevka and Cascadia Code Nerd Fonts and MiSans La
 
 ### `theme`
 
-Gives every GTK3 app (Nemo, the file chooser) the bar's colours, through a generated `Adwaita-dark` theme in `~/.local/share/themes/` that follows the desktop's light or dark setting. It also brings the Papirus icons, Comix Cursors (built if `~/.icons/ComixCursors-White` is missing) and the Qt settings.
+Gives every GTK3 app (Nemo, the file chooser) the shell's colours, through two generated themes in `~/.local/share/themes/`, `Adwaita-dark` and `Adwaita-light`, which follow the desktop's light or dark setting. It also brings the Papirus icons, Comix Cursors (built if `~/.icons/ComixCursors-White` is missing) and the Qt settings.
 
 | To change | Edit this, then run `cc-pkg-mng install theme` |
 |---|---|
-| The colours | [`theme/build-adwaita-dark.py`](../config/nemo/theme/build-adwaita-dark.py), which takes them from `quickshell/bar/theme/DrawerTheme.qml` |
-| Nemo's own styling | [`theme/overlay.css`](../config/nemo/theme/overlay.css). Restart Nemo to see it |
+| The colours | [`theme/palette-dark.css`](../config/nemo/theme/palette-dark.css) and [`theme/palette-light.css`](../config/nemo/theme/palette-light.css), copies of `quickshell/bar/theme/DrawerTheme.qml`. Restart Nemo to see them |
+| The shapes (Nemo, buttons, menus, dialogs) | [`theme/overlay.css`](../config/nemo/theme/overlay.css). Restart Nemo to see it |
+| How GTK's own colours are remapped | [`theme/build-themes.py`](../config/nemo/theme/build-themes.py) |
 
 ### `audio`
 
@@ -422,7 +423,7 @@ Installed from Brave's own repository. Not installed by default.
 
 ### `nemo`
 
-The default file manager. It opens folders, answers to `org.freedesktop.FileManager1`, and shows thumbnails for files up to 32 MiB.
+The default file manager. It opens folders, answers to `org.freedesktop.FileManager1`, and shows thumbnails for files up to 32 MiB. Its menu bar and status bar are hidden: press `Alt` to show the menu bar.
 
 ### `neovim`
 

@@ -1,0 +1,48 @@
+/* ============================================================
+   Palette of the dark GTK3 theme (Adwaita-dark), read by overlay.css.
+
+   Copies of quickshell/bar/theme/DrawerTheme.qml, dark side. Opaque,
+   the scale Firefox uses (config/firefox/chrome/userChrome.css): Nemo,
+   its dialogs, the file chooser and other GTK3 apps. ink(a)
+   below is the primary ink #f2f2f7 at a.
+   PALETTE SYNC: change a token in DrawerTheme, carry it here by hand.
+   ============================================================ */
+
+@define-color c_chrome   #000000;                  /* panelTop: toolbar, sidebar, status */
+@define-color c_well     #121214;                  /* Firefox card: the file area */
+@define-color c_wellrim  alpha(#f2f2f7, 0.08);     /* its hairline */
+@define-color c_deep     #0a0a0b;                  /* the inactive pane of F3 */
+@define-color c_ink      #f2f2f7;                  /* primary */
+@define-color c_ink2     #8e8e93;                  /* secondary */
+@define-color c_muted    #636366;                  /* muted */
+@define-color c_faint    #48484a;                  /* faint */
+@define-color c_hover    alpha(#f2f2f7, 0.07);
+@define-color c_act      alpha(#f2f2f7, 0.12);     /* a large thing that is on */
+@define-color c_actedge  alpha(#f2f2f7, 0.20);
+@define-color c_on       #f2f2f7;                  /* a small thing that is on */
+@define-color c_onink    #0c0c0e;                  /* onInk */
+@define-color c_field    #121214;
+@define-color c_fieldrim alpha(#f2f2f7, 0.12);
+@define-color c_card     #1c1c1f;                  /* buttons, cards */
+@define-color c_cardh    #26262a;
+@define-color c_menu     #1c1c1f;
+@define-color c_menurim  alpha(white, 0.10);
+@define-color c_hair     alpha(#f2f2f7, 0.08);
+@define-color c_gtrack   #2a2a2f;                  /* tracks: gauges, sliders, progress */
+@define-color c_danger   #ff6e6e;
+@define-color c_dsoft    #2b1f22;                  /* destructiveSoft */
+@define-color c_warning  #ffb454;
+@define-color c_tip      #2a2a2f;
+@define-color c_tipink   #f2f2f7;
+@define-color c_shadow   alpha(black, 0.55);
+
+/* Nemo paints its disk gauges with the RGB of these, ignoring alpha, so
+   they are opaque on purpose. */
+.places-treeview {
+    -NemoPlacesTreeView-disk-full-bg-color: #2a2a2f;
+    -NemoPlacesTreeView-disk-full-fg-color: #8e8e93;
+}
+.places-treeview:selected {
+    -NemoPlacesTreeView-disk-full-bg-color: #3a3a3e;
+    -NemoPlacesTreeView-disk-full-fg-color: #f2f2f7;
+}

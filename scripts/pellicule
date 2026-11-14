@@ -61,7 +61,7 @@ SCENES = REPO / "docs" / "screenshots" / "scenes.toml"
 
 # The colour scheme as the bar's own toggle sets it (AppearanceState.qml).
 SCHEMES = {
-    "light": ("prefer-light", "Adwaita"),
+    "light": ("prefer-light", "Adwaita-light"),
     "dark": ("prefer-dark", "Adwaita-dark"),
 }
 

@@ -13,6 +13,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Prisme:** a light and dark wallpaper opens on the version matching your desktop, without showing the other one for an instant.
 
 ### Changed
+- **Files:** Nemo has a lighter layout in the shell's colours. The current folder shows in full ink with its parent folders quietly beside it, files sit straight on the window without frames, a hairline parts them from the sidebar, and the status shows in a small floating label. A selected name is inverted like the active workspace; a selected row or place is shaded. In light mode it is cream instead of white and blue.
+- **Files:** Nemo's dialogs and the file chooser of other apps take the same colours: separate rounded buttons, Delete in a calm red.
+- **Files:** the menu bar and status bar are hidden; press Alt to show the menu bar. Nemo is no longer slightly see-through.
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
 - **Bar:** an app chip opens its drawer on a click, like the other drawers, and no longer on hover; Focus is the drawer's first row.
 - **Bar:** drawers start right at the bar's edge, without the 4px gap.

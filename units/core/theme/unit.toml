@@ -17,7 +17,7 @@ dnf = [
 [[hooks]]
 name   = "gtk-theme"
 run_as = "user"
-does   = "build ~/.local/share/themes/Adwaita-dark with config/nemo/theme/build-adwaita-dark.py; align gtk-theme with color-scheme in dconf; restart the GTK portal"
+does   = "build ~/.local/share/themes/Adwaita-dark and Adwaita-light with config/nemo/theme/build-themes.py; align gtk-theme with color-scheme in dconf; restart the GTK portal"
 from   = "config/nemo/install.sh"
 run    = "units/core/theme/hooks/gtk-theme.sh"
 watch  = ["config/nemo/theme"]

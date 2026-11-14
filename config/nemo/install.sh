@@ -76,20 +76,19 @@ systemctl --user restart xdg-desktop-portal.service || true
 # that opens next to it would be the odd one out.
 #
 # Three pieces, because the bar's appearance toggle (AppearanceState.qml)
-# switches GTK3 by theme NAME -- "Adwaita-dark" / "Adwaita" in
+# switches GTK3 by theme NAME -- "Adwaita-dark" / "Adwaita-light" in
 # org.gnome.desktop.interface gtk-theme:
-#   a. ~/.local/share/themes/Adwaita-dark, GENERATED from the Adwaita dark
-#      sheet compiled into libgtk-3, recoloured to the bar's palette, plus
-#      theme/overlay.css. GTK3 has no built-in theme by that name, so until
-#      this exists "Adwaita-dark" silently means LIGHT Adwaita -- which is
-#      what Nemo had been running on under a dark-only user stylesheet
-#      (white properties page, blue tab underline, invisible disk gauges).
+#   a. ~/.local/share/themes/Adwaita-dark and Adwaita-light, GENERATED from
+#      the Adwaita sheets compiled into libgtk-3, recoloured to the shell's
+#      palette, plus theme/palette-*.css and theme/overlay.css. GTK3 has no
+#      built-in theme by either name, which is what lets these files win
+#      (plain "Adwaita" always means the compiled one).
 #      Rebuilt on every run: it is cheap and it tracks GTK updates.
 #   b. ~/.config/gtk-3.0/{settings.ini,gtk.css}: the no-portal fallback and
 #      colour-free geometry that reads right on both themes.
 #   c. dconf, below.
 info "Theming GTK3 (Nemo + the GTK file chooser portal)..."
-python3 "$SCRIPT_DIR/theme/build-adwaita-dark.py" >/dev/null
+python3 "$SCRIPT_DIR/theme/build-themes.py" >/dev/null
 # A running GTK3 process resolves its theme once, at startup, and never
 # re-reads the files: the file-chooser portal, alive since login, would
 # keep drawing whatever the theme was before this run (seen: a light
@@ -109,7 +108,7 @@ safe_link "$SCRIPT_DIR/gtk-3.0/gtk.css"      "$HOME/.config/gtk-3.0/gtk.css"
 # migrates a machine set up by the previous version of this script, which
 # rewrote 'Adwaita-dark' to 'Adwaita' + prefer-dark (dark only through
 # settings.ini's prefer-dark flag, now 0 so the light toggle works).
-# A value that is neither Adwaita name is somebody's choice and is left be.
+# Any other value is somebody's choice and is left be.
 if command -v gsettings &> /dev/null; then
     CUR_SCHEME="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || echo "")"
     if [ "$CUR_SCHEME" = "'default'" ]; then
@@ -118,8 +117,9 @@ if command -v gsettings &> /dev/null; then
     fi
     CUR_GTK_THEME="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || echo "")"
     case "$CUR_GTK_THEME" in
-        "'Adwaita'"|"'Adwaita-dark'")
-            WANT="Adwaita"
+        # Plain Adwaita is the previous light name: moved to Adwaita-light.
+        "'Adwaita'"|"'Adwaita-light'"|"'Adwaita-dark'")
+            WANT="Adwaita-light"
             [ "$CUR_SCHEME" = "'prefer-dark'" ] && WANT="Adwaita-dark"
             if [ "$CUR_GTK_THEME" != "'$WANT'" ]; then
                 info "Aligning gtk-theme with color-scheme -> '$WANT'..."
@@ -162,6 +162,15 @@ if command -v gsettings &> /dev/null; then
     if [ "$CUR_THUMB_LIMIT" = "uint64 1048576" ]; then
         info "Raising Nemo's 1 MiB thumbnail limit to 32 MiB..."
         gsettings set org.nemo.preferences thumbnail-limit 33554432
+    fi
+    # The menubar is the only one on the desktop: hidden, Alt shows it.
+    # Same rule: only from Nemo's default.
+    if [ "$(gsettings get org.nemo.window-state start-with-menu-bar 2>/dev/null)" = "true" ]; then
+        gsettings set org.nemo.window-state start-with-menu-bar false
+    fi
+    # No status bar either: Nemo shows its floating bar instead.
+    if [ "$(gsettings get org.nemo.window-state start-with-status-bar 2>/dev/null)" = "true" ]; then
+        gsettings set org.nemo.window-state start-with-status-bar false
     fi
 fi
 

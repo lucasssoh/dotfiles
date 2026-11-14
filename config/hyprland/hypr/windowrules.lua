@@ -244,12 +244,6 @@ hl.window_rule({
     center = true,
 })
 
--- Global opacity for Nemo
-hl.window_rule({
-    match   = { class = "nemo" },
-    opacity = "0.95 override",
-})
-
 -- ============================================================
 -- FIREFOX — downloads, preferences, and popups
 -- ============================================================
