@@ -8,8 +8,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar, OSD:** the volume, microphone and brightness dials now sit centred at the bottom, above the island's drawers, with a round blur that follows their edge and no straight side highlights.
 - **Apps, OPL IDE:** CPLEX Studio's launcher appears when you install the extra configs.
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
-- **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
+- **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade and without a stutter mid-way, instead of catching up afterwards.
 - **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
+- **Wallpapers:** a light and dark wallpaper keeps following light or dark mode after its background helper restarts.
 
 ### Added
 - **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.
@@ -17,10 +18,10 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Bar, centre island:** long window titles leave more room for workspaces and music.
-- **Bar, centre island:** no more dark slab: a light graphite tint. The window's name, its title, each workspace mark and the music turn light or dark to suit what is right behind them, a title across two grounds even part by part.
+- **Bar, centre island:** no more dark slab: a light graphite tint, without a border. The window's name, its title, each workspace mark and the music turn light or dark to suit what is right behind them, a title across two grounds even part by part.
 - **Bar, centre island:** empty workspaces are hollow dots, like the hollow bar of an empty current workspace.
 - **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
-- **Bar:** each block's text turns light or dark to suit the wallpaper behind it, and the veil under it follows the wallpaper: only where the text needs it, light under dark text, and fading out past the bar instead of ending on a line.
+- **Bar:** each block's text turns light or dark to suit the wallpaper behind it, and the veil under it follows the wallpaper: only where the text needs it, light under dark text, and fading out past the bar instead of ending on a line, never over your windows.
 
 ## 2.5.0 (November 15 2026)
 
