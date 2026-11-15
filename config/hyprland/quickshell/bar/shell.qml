@@ -757,7 +757,7 @@ ShellRoot {
 
             // The veil under the band, in a surface of its own on the
             // BOTTOM layer: above the wallpaper, under every window. It fades
-            // out over 44 px past the band, and drawn in the bar's own
+            // out over 20 px past the band, and drawn in the bar's own
             // surface (the top layer) that fade lay over the bottom of the
             // windows above the bar. Down here a window simply covers it,
             // and it only ever shows on the desktop. No input: clicks go
@@ -771,7 +771,7 @@ ShellRoot {
                 WlrLayershell.layer: WlrLayer.Bottom
                 WlrLayershell.namespace: "quickshell-bar-veil"
                 anchors { top: !BarPosition.bottom; bottom: BarPosition.bottom; left: true; right: true }
-                implicitHeight: 70
+                implicitHeight: 46
                 mask: Region { width: 0; height: 0 }
 
                 Modules.BandVeil {

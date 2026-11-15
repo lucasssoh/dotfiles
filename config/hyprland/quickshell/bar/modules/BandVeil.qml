@@ -4,7 +4,7 @@ import "../services"
 
 // The band's veil: one density per profile slice across the screen
 // (BarInk.veils), full behind the text, then fading out over the next
-// 44 px instead of stopping on a hard line ("la coupure nette n'est pas
+// 20 px instead of stopping on a hard line ("la coupure nette n'est pas
 // forcément très élégante").
 //
 // Canvases rather than a Rectangle gradient: a QML Gradient takes a fixed
