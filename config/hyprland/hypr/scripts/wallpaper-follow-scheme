@@ -19,7 +19,9 @@ on_screen() {
     awww query 2>/dev/null | sed -n 's/.*currently displaying: image: //p' | head -n1
 }
 
-gsettings monitor org.gnome.desktop.interface color-scheme | while read -r _; do
+# 9>&-: the monitor must not inherit the lock. It outlives the script when
+# the script is killed, and holding the lock it kept any new instance out.
+gsettings monitor org.gnome.desktop.interface color-scheme 9>&- | while read -r _; do
     current="$(on_screen)"
     [ -n "$current" ] || continue
     wanted="$("$SET" --resolve "$current" 2>/dev/null)" || continue
