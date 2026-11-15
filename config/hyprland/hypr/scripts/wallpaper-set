@@ -111,10 +111,14 @@ if [ -n "$screens" ]; then
     done <<< "$screens"
 fi
 
-# The tint BEFORE the image (~0.25 s): the bar starts easing its ink and
-# veil, over the transition's own length, as the wallpaper starts fading,
-# instead of a quarter of a second behind it.
-"$HOME/.config/hypr/scripts/bar-tint.py" --transition "$transition_ms" "$tint_source" \
+# The tint is sampled BEFORE the image (~0.25 s) into a side file, and
+# published the moment awww has started: the bar eases its ink and veil
+# over the transition's own length, on the same frame as the wallpaper.
+# Sampled after awww, the bar lagged the fade; published before it, the
+# bar moved ahead of the wallpaper.
+tint_out="$HOME/.cache/bar-tint.json"
+tint_next="$tint_out.next"
+"$HOME/.config/hypr/scripts/bar-tint.py" --transition "$transition_ms" --out "$tint_next" "$tint_source" \
     >/dev/null 2>"$HOME/.cache/bar-tint.log"
 
 if [ ${#plan[@]} -eq 0 ]; then
@@ -124,4 +128,11 @@ else
     for ((i = 0; i < ${#plan[@]}; i += 2)); do
         awww img -o "${plan[i]}" "${plan[i+1]}" "${transition[@]}"
     done
+fi
+
+# Written in place, not renamed over: the bar watches this file, and a
+# rename would hand it a new inode to lose track of.
+if [ -s "$tint_next" ]; then
+    cat "$tint_next" > "$tint_out"
+    rm -f "$tint_next"
 fi

@@ -69,10 +69,11 @@ the setter passes it as an argument, because the setter is the only thing
 that actually knows.
 
 The setter (wallpaper-set) runs this BEFORE it hands the image to awww,
-and passes the length of awww's transition: the bar then eases its ink and
-veil over the same time, starting with the wallpaper's fade instead of a
-quarter of a second into it, which left the old band ghosting over the new
-image.
+into a side file (--out), and passes the length of awww's transition; it
+publishes the profile the moment awww has started. The bar then eases its
+ink and veil over the same time, on the same frame as the wallpaper's fade:
+sampled after awww, the old band ghosted over the new image; published
+before awww, the bar moved ahead of the wallpaper.
 
 The first draft of this file WAS a daemon woken by SIGUSR1, with a
 pidfile and a state file. All of that existed only to carry the path from
@@ -323,7 +324,7 @@ def awww_paths():
 # Output
 # ---------------------------------------------------------------------------
 
-def emit(profiles, transition=None):
+def emit(profiles, transition=None, out_path=None):
     """Write the profile file quickshell watches.
 
     Written in ONE os.write to a pre-serialised buffer rather than
@@ -345,15 +346,16 @@ def emit(profiles, transition=None):
     if transition is not None:
         payload["transition"] = transition
     blob = json.dumps(payload, separators=(",", ":")).encode()
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    fd = os.open(OUT_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    path = out_path or OUT_PATH
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
     try:
         os.write(fd, blob)
     finally:
         os.close(fd)
 
 
-def sample(explicit_path=None, verbose=False, transition=None):
+def sample(explicit_path=None, verbose=False, transition=None, out_path=None):
     startup_paths = {} if explicit_path else awww_paths()
     position = bar_position()
     profiles = {}
@@ -376,7 +378,7 @@ def sample(explicit_path=None, verbose=False, transition=None):
             print(f"{mon['name']}: {src}, {len(cells)} buckets, "
                   f"moyenne {cells.mean():.0f}/255", file=sys.stderr)
     if profiles:
-        emit(profiles, transition)
+        emit(profiles, transition, out_path)
     return bool(profiles)
 
 
@@ -393,6 +395,9 @@ def main():
     ap.add_argument("--transition", type=int, metavar="MS",
                     help="duree de la transition du wallpaper, que la barre "
                          "reprend pour son encre et son voile (0: coupe)")
+    ap.add_argument("--out", metavar="FICHIER",
+                    help="ecrire le profil ici plutot que dans le fichier que "
+                         "la barre surveille (wallpaper-set le publie ensuite)")
     args = ap.parse_args()
 
     path = None
@@ -404,8 +409,9 @@ def main():
             print(f"bar-tint: {path} introuvable", file=sys.stderr)
             path = None
     try:
+        out = os.path.expanduser(args.out) if args.out else None
         return 0 if sample(explicit_path=path, verbose=args.verbose,
-                           transition=args.transition) else 1
+                           transition=args.transition, out_path=out) else 1
     except Exception as e:      # jamais faire echouer le setter qui nous appelle
         print(f"bar-tint: {e}", file=sys.stderr)
         return 1
