@@ -44,11 +44,61 @@ QtObject {
         else if (!glass.darkText && dark > light + glass.switchMargin) glass.darkText = true;
     }
     onMonitorChanged: glass.reevaluate()
-    onRectXChanged: glass.reevaluate()
-    onRectWChanged: glass.reevaluate()
+    onRectXChanged: { glass.reevaluate(); Qt.callLater(glass.bump); }
+    onRectWChanged: { glass.reevaluate(); Qt.callLater(glass.bump); }
     Component.onCompleted: glass.reevaluate()
     readonly property int profileSeq: BandTint.seq
-    onProfileSeqChanged: glass.reevaluate()
+    onProfileSeqChanged: { glass.reevaluate(); glass.bump(); }
+
+    // ---- per element ---------------------------------------------------
+    // One ink for the whole island failed where the wallpaper changes
+    // under it (a black trunk across a white sky): `at(item)` gives each
+    // element -- the app name, the title, every workspace mark, the media
+    // block -- the ink that holds best over what is right behind IT.
+    // `revision` is what the bindings depend on; it moves when the
+    // profile does or the island moves or resizes, once layout has run
+    // (mapToItem is a call, not a binding).
+    property int revision: 0
+    function bump(): void { glass.revision++; }
+
+    function at(item) {
+        glass.revision;
+        if (!item || !glass.monitor || !BandTint.ready) return glass._lightSet;
+        const p = item.mapToItem(null, 0, 0);
+        return glass._darkAt(p.x, Math.max(1, item.width)) ? glass._darkSet : glass._lightSet;
+    }
+    // A text that spans two grounds (a title across the trunk's edge)
+    // cannot hold in one ink: `runs(item)` splits the item's width at the
+    // profile's slices into runs of one ink each, in item coordinates, for
+    // AdaptiveText to draw a clipped copy per run.
+    function runs(item) {
+        glass.revision;
+        const w = item ? item.width : 0;
+        if (!item || w <= 0 || !glass.monitor || !BandTint.ready || !BandTint.profile[glass.monitor])
+            return [{ x0: 0, x1: Math.max(0, w), dark: false }];
+        const m = BandTint.profile[glass.monitor];
+        const step = m.width / m.cells.length;
+        const x = item.mapToItem(null, 0, 0).x;
+        const out = [];
+        let a = x;
+        while (a < x + w) {
+            const b = Math.min(x + w, (Math.floor(a / step) + 1) * step);
+            const dark = glass._darkAt(a, Math.max(1, b - a));
+            const last = out.length ? out[out.length - 1] : null;
+            if (last && last.dark === dark) last.x1 = b - x;
+            else out.push({ x0: a - x, x1: b - x, dark: dark });
+            a = b;
+        }
+        return out;
+    }
+    function _darkAt(x, w) {
+        const r = BandTint.rangeAt(glass.monitor, x, w);
+        const mean = BandTint.backgroundAt(glass.monitor, x, w);
+        if (!r || !mean) return false;
+        const over = [r.lo, r.hi, mean].map(c => BandTint.composite(glass.fill, c));
+        const worst = ink => Math.min.apply(null, over.map(o => BandTint.contrast(ink, o)));
+        return worst(glass._dark) > worst(glass._light);
+    }
 
     function mix(a, b) {
         return Qt.rgba(a.r + (b.r - a.r) * glass.t, a.g + (b.g - a.g) * glass.t,
@@ -68,4 +118,11 @@ QtObject {
     readonly property color faint: glass.mix(glass._faintLight, glass._faintDark)
     readonly property color positive: glass.mix(glass._positiveLight, glass._positiveDark)
     readonly property color play: "#237823"
+
+    readonly property var _lightSet: ({ primary: glass._light, secondary: glass._secondaryLight,
+                                        muted: glass._secondaryLight, faint: glass._faintLight,
+                                        positive: glass._positiveLight, play: glass.play })
+    readonly property var _darkSet: ({ primary: glass._dark, secondary: glass._secondaryDark,
+                                       muted: glass._secondaryDark, faint: glass._faintDark,
+                                       positive: glass._positiveDark, play: glass.play })
 }

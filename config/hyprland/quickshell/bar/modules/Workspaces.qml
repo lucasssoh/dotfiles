@@ -22,6 +22,7 @@ Item {
     // The bar's ink (BarInk in shell.qml): the island sits on the band
     // like every other block now, so its text follows the wallpaper.
     property QtObject ink: Ink
+    function inkOf(item) { return root.ink.at ? root.ink.at(item) : root.ink; }
 
     // Row's own implicitHeight is read-only (positioner-computed from
     // children, can't be assigned) -- so the 24px floor lives on this
@@ -101,14 +102,20 @@ Item {
                     width: pill.modelData.active ? 22 : 5
                     height: 5
                     radius: 2.5
-                    // The active workspace with nothing in it is the same
-                    // long bar, hollow: you are here, and here is empty.
-                    readonly property bool hollow: pill.modelData.active && !pill.hasWindows
-                    color: mark.hollow ? DrawerTheme.clear(root.ink.primary)
-                        : (pill.modelData.active ? root.ink.primary
-                        : (pill.occupied ? root.ink.secondary : root.ink.faint))
+                    // Empty is hollow: the active workspace with nothing in
+                    // it is the same long bar, hollow (you are here, and
+                    // here is empty), and an empty one elsewhere a hollow
+                    // dot -- a faint filled dot vanished over a busy
+                    // wallpaper. Each mark takes the ink of what is right
+                    // behind it (IslandGlass.at).
+                    readonly property bool hollow: !pill.hasWindows
+                    // pill.x read first: a dot moves when the active bar
+                    // does, with the island's own size unchanged.
+                    readonly property var tone: (pill.x, mark.width, root.inkOf(mark))
+                    readonly property color ink: pill.modelData.active ? mark.tone.primary : mark.tone.secondary
+                    color: mark.hollow ? DrawerTheme.clear(mark.ink) : mark.ink
                     border.width: mark.hollow ? 1.2 : 0
-                    border.color: root.ink.primary
+                    border.color: mark.ink
                     // The bar stretching into place on a workspace switch.
                     // Rare (workspace changes only): a one-off burst, not a
                     // recurring cost.

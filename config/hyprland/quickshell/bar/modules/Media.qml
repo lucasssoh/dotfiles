@@ -57,6 +57,9 @@ Item {
     // The bar's ink (BarInk in shell.qml): the island sits on the band
     // like every other block now, so its text follows the wallpaper.
     property QtObject ink: Ink
+    // One ink for the whole block, after what is behind it when the ink
+    // can tell (IslandGlass.at).
+    readonly property var blockInk: root.ink.at ? root.ink.at(root) : root.ink
 
     property bool announcing: false
     property string announcedKey: ""
@@ -140,7 +143,7 @@ Item {
     readonly property var spectrum: {
         const tint = root.coverTint;
         const pull = tint.a > 0;
-        const onLight = root.ink.primary.hslLightness < 0.5;
+        const onLight = root.blockInk.primary.hslLightness < 0.5;
         return root.duskAnchors.map(a => {
             let h = a[0], s = a[1];
             if (pull) {
@@ -304,7 +307,7 @@ Item {
             visible: !root.active
             anchors.centerIn: parent
             text: root.placeholderText
-            color: root.ink.secondary
+            color: root.blockInk.secondary
             font.family: Fonts.ui
             font.pixelSize: 13
         }
@@ -358,7 +361,7 @@ Item {
                 // Paused: the bar's ink, like the window title and
                 // the workspace marks beside it. Playing: each bar takes
                 // its own colour from root.spectrum (dusk, see above).
-                readonly property color barColor: root.ink.secondary
+                readonly property color barColor: root.blockInk.secondary
 
                 Row {
                     id: waveRow
@@ -415,7 +418,7 @@ Item {
                 width: root.announceTextWidth
                 text: root.announceText
                 elide: Text.ElideRight
-                color: root.ink.primary
+                color: root.blockInk.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
                 renderType: Text.NativeRendering
@@ -485,7 +488,7 @@ Item {
                                 // which faded the element, not just this
                                 // color) -- an opacity here too would double
                                 // it up.
-                                color: root.playing ? root.ink.play : root.ink.primary
+                                color: root.playing ? root.blockInk.play : root.blockInk.primary
                                 font.family: Fonts.ui
                                 font.pixelSize: 14
                                 rightPadding: viewport.gap  // each copy carries its own trailing gap

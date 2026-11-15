@@ -37,6 +37,9 @@ Item {
     // The bar's ink (BarInk in shell.qml): the island sits on the band
     // like every other block now, so its text follows the wallpaper.
     property QtObject ink: Ink
+    // The ink for one element: per element when the ink can tell
+    // (IslandGlass.at), the shared one otherwise.
+    function inkOf(item) { return root.ink.at ? root.ink.at(item) : root.ink; }
 
     // Hyprland.activeToplevel doesn't reset to null just because you
     // switched to an empty workspace -- it's the last-activated window
@@ -216,13 +219,18 @@ Item {
         visible: false
     }
 
-    Text {
-        renderType: Text.NativeRendering
-        font.hintingPreference: Font.PreferNoHinting
+    // Each text in the ink of what is behind each part of it (AdaptiveText
+    // with IslandGlass), or the plain ink elsewhere.
+    AdaptiveText {
+        id: placeholder
         visible: !root.hasWindow
         anchors.centerIn: parent
+        width: implicitWidth
+        height: implicitHeight
         text: root.placeholderText
-        color: root.ink.secondary
+        glass: root.ink.runs ? root.ink : null
+        tier: "secondary"
+        fallback: root.ink.secondary
         font.family: Fonts.ui
         font.pixelSize: 13
     }
@@ -237,23 +245,28 @@ Item {
         // Where first, in grey, then what, in the full ink -- the order the bar
         // always had (app, then title); swapped for a day and swapped
         // back ("je me suis un peu habitué à l'avant").
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
+        AdaptiveText {
+            id: ctxText
             visible: root.parts.ctx !== ""
+            width: implicitWidth
+            height: implicitHeight
             text: root.parts.ctx
-            color: root.ink.secondary
+            glass: root.ink.runs ? root.ink : null
+            tier: "secondary"
+            fallback: root.ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 14
         }
-        Text {
-            renderType: Text.NativeRendering
-            font.hintingPreference: Font.PreferNoHinting
+        AdaptiveText {
+            id: objText
             // Takes whatever the context half leaves; elides, so the app
             // or page before it stays readable however long the title runs.
             width: Math.max(0, Math.min(objMeasure.implicitWidth, root.width - 20 - root.ctxSpan))
+            height: implicitHeight
             text: root.parts.obj
-            color: root.ink.primary
+            glass: root.ink.runs ? root.ink : null
+            tier: "primary"
+            fallback: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 14
             font.weight: Font.Medium
