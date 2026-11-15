@@ -44,7 +44,7 @@ cc-pkg-mng status     # check that everything is in place
 |---|---|
 | [**Installation**](docs/installation.md) | Installing with dnf, the questions `init` asks, unattended installs |
 | [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Commands, channels, upgrading and rolling back |
-| [**Your settings**](docs/configuration.md) | Where every setting lives, and the files no upgrade touches |
+| [**Your settings**](docs/configuration.md) | Where each setting lives, and how to keep a change through an upgrade |
 | [**Key bindings**](docs/keybindings.md) | Every shortcut, on an AZERTY keyboard |
 | [**Units**](docs/units.md) | Every part of coucou-shell, with its guide |
 | [**Hardware**](docs/hardware.md) | CPU and GPU profiles, codecs, what's left for you to do by hand |

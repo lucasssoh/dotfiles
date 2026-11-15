@@ -2,7 +2,7 @@
 
 These are for an AZERTY keyboard. The bindings themselves are defined in [`config/hyprland/hypr/keybinds.lua`](../config/hyprland/hypr/keybinds.lua). If you read that file, the key names there (`ampersand`, `eacute`, …) are the characters the AZERTY number row types, not physical keys 1 to 10.
 
-You don't have to remember any of this: hold `Super` and the bar shows every binding on a keyboard. Add `Shift` to see the `Shift` layer. Let go and it disappears.
+Hold `Super` and the bar shows the bindings on a keyboard. Add `Shift` for the second layer.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/keybinds-dark.webp"><img src="screenshots/keybinds.webp" alt="Key bindings, held on Super"></picture>
 
@@ -18,20 +18,20 @@ You don't have to remember any of this: hold `Super` and the bar shows every bin
 | `Super + B` | Web browser (Firefox by default) |
 | `Super + W` | Prisme, the wallpaper picker |
 | `Super + F` | Liseuse: picks up the book you were reading, or opens the library to search one. Press `F1` inside a book for its manual |
-| `Super + V` | Clipboard history (cliphist, through fuzzel) |
-| `Super + A` | Agenda: add or delete an event (khal, through fuzzel) |
+| `Super + V` | Clipboard history |
+| `Super + A` | [Agenda](bar/clock-agenda.md): add or delete an event |
 | `Super + D` | Programme's drawer, with the [Programme](bar/programme.md) |
 | `Super + Shift + D` | Programme's quick add: an exam, a hand-in, a task or a busy slot in one line |
 
-The terminal, file manager and browser are whatever the machine's defaults are. See [default applications](session/hyprland.md#default-applications) to change them.
+To open another terminal, file manager or browser, see [default applications](session/hyprland.md#default-applications).
 
 ## Screenshots
 
 | Binding | Action |
 |---|---|
-| `Super + S` | Whole screen, annotated in `satty`. `Ctrl + C` or `Enter` copies it, and the copy stays after satty closes |
-| `Super + Shift + S` | Pick a region with `slurp`, annotate it in `satty`, same keys |
-| `q` / `Esc` in satty | Close it |
+| `Super + S` | The whole screen, opened in [Screenshot](tools/screenshot.md). `Ctrl + C` or `Enter` copies it |
+| `Super + Shift + S` | A region you drag, same keys |
+| `q` / `Esc` in Screenshot | Close it |
 
 ## Roue, the radial wheels
 
@@ -88,10 +88,10 @@ Mute, mic mute and the playback keys also work while the screen is locked.
 
 | Key | Action |
 |---|---|
-| Volume up / down | `wpctl`, in 5 % steps, never above 100 % |
-| Mute / mic mute | Toggles through `wpctl` |
-| Brightness up / down | [`brightness.sh`](../config/hyprland/hypr/scripts/brightness.sh). It never goes all the way to 0, so the screen can't go black by accident |
-| Play / pause, previous, next | `playerctl` |
+| Volume up / down | 5 % steps, up to 100 % |
+| Mute / mic mute | Mutes, or unmutes |
+| Brightness up / down | Never down to 0 |
+| Play / pause, previous, next | The player in the bar's island |
 
 ## Touchpad
 

@@ -16,7 +16,7 @@ None is installed by default.
 
 ## Personal setups
 
-If you adopt one, every file it would replace is moved to the backups first, and `cc-pkg-mng remove` puts them back.
+A setup replaces your own files: they go to the backups, and `cc-pkg-mng remove <unit>` puts them back.
 
 ### `config-shell`
 

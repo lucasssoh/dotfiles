@@ -17,7 +17,7 @@ Yes, if a person could see it or act on it:
 | A key binding | `docs/keybindings.md`, and the tool's guide |
 | An option, a command, a flag | The tool's guide; `docs/cc-pkg-mng.md` for the manager |
 | A setting, or a settings file (a key, a default, its path) | The tool's guide, with the key, its values and its default; `docs/configuration.md` if a file was added, moved, or changed owner |
-| A file an upgrade must never replace | The *Files that are yours* table in `docs/configuration.md` |
+| A file that exists on the person's machine only | The *Your own files* table in `docs/configuration.md`, and nowhere else |
 | A new screen, drawer or tool | A new guide, its screenshot scene, the sidebar, `docs/units.md`, the README's tool table if it's one of the main tools |
 | A unit added, removed or renamed | `docs/units.md`, `docs/installation.md` if `init` asks about it |
 | Anything users will notice | A line in `CHANGELOG.md` (see `CONTRIBUTING.md`) |
@@ -41,9 +41,10 @@ A new page also goes in the sidebar, in `site/astro.config.mjs`. Never edit `sit
 In English. Each guide answers, in this order and only where there is something to say: what the tool does (one sentence), how to open it, how to use it (keys and clicks, in a table), where it is set, its limits.
 
 - **Black box.** Describe the component and its configuration, never its design or how a script works inside.
-- **Usable without an agent.** A setting that lives in a file gets the file's path, an example, and a table of keys, values and defaults. Say whether the file is the person's own or the checkout's.
+- **Usable without an agent.** A setting that lives in a file gets the file's path, an example, and a table of keys, values and defaults.
 - **Check before you write.** Read the code for each claim: the key, the default, the label as it shows on screen. Don't describe a behaviour you inferred from a name.
 - **Apply the `microcopie` skill.** No justification of choices, no plumbing, no selling, nothing said twice. One idea per sentence.
+- **Say what the person asked, nothing around it.** No reassurance nobody asked for ("this file is yours: an upgrade never replaces it", "the copy stays after it closes", "nothing is read while the screen is off"), no "there's nothing to set up", no service name, package name or build channel in a guide, no reason after a rule ("…, so that…"). A fact about upgrades goes once, in *Your settings*. A warning stays only where the person would lose data.
 - **Screenshots** come in a light and dark pair:
 
   ```html

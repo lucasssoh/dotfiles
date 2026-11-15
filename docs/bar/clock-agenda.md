@@ -28,7 +28,7 @@ Reminders ring in the bar, and the next event shows right of the clock.
 
 ## Calendars
 
-Events are kept by khal, in three calendars:
+There are three calendars:
 
 | Calendar | Holds |
 |---|---|
@@ -36,7 +36,7 @@ Events are kept by khal, in three calendars:
 | `etude` | [Programme](programme.md)'s study sessions |
 | `cours` | Your courses, from Programme's timetable |
 
-To add a calendar or change the date format, edit [`config/hyprland/khal/config`](../../config/hyprland/khal/config). Any tool that writes to khal shows up in the drawer too.
+To add a calendar or change the date format, edit khal's [`config`](../../config/hyprland/khal/config).
 
 ## Try another time
 
@@ -48,4 +48,4 @@ qs -c bar ipc call clock freeze "02:00"   # stop it there
 qs -c bar ipc call clock reset            # back to the real time
 ```
 
-The bar, the notification centre and the calendar follow, and reminders keep ringing on time.
+The bar, the notification centre and the calendar follow.

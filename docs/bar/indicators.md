@@ -1,6 +1,6 @@
 # Indicators
 
-What the bar shows without being asked.
+What shows when something changes: a level, HDR, a controller, a low battery.
 
 ## Volume, microphone and brightness
 

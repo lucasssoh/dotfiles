@@ -12,7 +12,7 @@ The island also opens [Veille](veille.md), the [key sheet](key-sheet.md) and [Pr
 
 ## Its look
 
-Set it in `~/.config/hypr/bar-island.json`. Every key is optional, and saving the file changes the island at once.
+Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island changes as soon as you save.
 
 ```json
 {
@@ -31,5 +31,3 @@ Set it in `~/.config/hypr/bar-island.json`. Every key is optional, and saving th
 | `opacity` | From `0` (none) to `1` (opaque) | `0.2` |
 | `blur` | Blur what is behind the island | `false` |
 | `text` | The text's colour, in `static` mode only | `#f2f2f7` |
-
-This file is yours: it's created with these defaults when the bar is installed, and an upgrade never replaces it.

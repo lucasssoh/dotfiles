@@ -9,13 +9,13 @@ cc-pkg-mng upgrade    # move to the latest release (or the latest commit, on edg
 cc-pkg-mng status     # what's installed, and whether it's in place
 ```
 
-While it installs or upgrades, the work shows as a live list. Everything to do is listed from the start, the part in progress unfolds with its steps, finished parts fold to one line with their time, and the bar at the top counts them. Package installs show how many packages are done. If something fails, it stays unfolded with its last lines and the path of the full log.
+An install or an upgrade shows as a live list: the step in progress unfolds, finished steps fold to one line. A step that fails stays open, with its last lines and the path of the full log.
 
 ![An upgrade in progress](screenshots/v1.3.0/cc-pkg-mng-upgrade.webp)
 
 ![The same upgrade, done](screenshots/v1.3.0/cc-pkg-mng-done.webp)
 
-Outside a terminal (a pipe, a file), with `--verbose` or with `-q`, the output stays one line per step. The log in `~/.local/state/coucou-shell/logs/` always has every line.
+In a pipe, with `--verbose` or with `-q`, the output is one line per step. The full log is in `~/.local/state/coucou-shell/logs/`.
 
 `cc-pkg-mng` alone, or `--help`, lists the commands by what they are for:
 
@@ -46,7 +46,7 @@ coucou-shell is split into **units**, grouped in three layers:
 | `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies whatever changed. `--to vX.Y.Z` picks a specific release |
 | `rollback` | Goes back to the release you had before the last upgrade (stable only) |
 | `channel [stable\|edge]` | Shows the current channel, or switches to another one. The next `upgrade` follows it |
-| `dev [<unit>…]` | Runs one of coucou-shell's [own apps](#channels) built from the checkout you're in, in place of the release's (stable only). With no unit, shows what is running. `--off` goes back to the release's, `--from <path>` builds from another checkout. See [testing your changes](#testing-your-changes-on-stable) |
+| `dev [<unit>…]` | Runs one of coucou-shell's [own apps](#channels) built from the checkout you're in (stable only). With no unit, shows what is running. `--off` goes back to the release's, `--from <path>` builds from another checkout. See [testing your changes](#testing-your-changes-on-stable) |
 | `set <unit> <question> <value>` | Changes one of your answers, for example `set wezterm variant smear`. Run `install wezterm` afterwards to apply it |
 
 ## Options
@@ -69,11 +69,11 @@ coucou-shell is split into **units**, grouped in three layers:
 | **stable** | releases (`v1.0.0` and so on) | Installed from coucou-shell's repository, at the version that matches the release |
 | **edge** | every commit on the default branch | Built on your machine into `~/.local/bin`, and rebuilt whenever their code changes. The Rust toolchain is installed for this |
 
-The own apps are Roue, Prisme, Balise, Manette, Sésame, Pouls and Programme. Either way, the session starts them from `~/.local/bin`. If you switch from edge back to stable, the local builds there are replaced by the packaged versions.
+The own apps are Roue, Prisme, Balise, Manette, Sésame, Pouls and Programme.
 
 ## Testing your changes on stable
 
-You can stay on stable and still work on one of the own apps. Keep a separate checkout to code in (for example `~/code/dotfiles`, on `master`), so the one your machine follows stays on its release. Then, from that checkout:
+To work on one of coucou-shell's own apps while staying on stable, code in a second checkout (`~/code/dotfiles`, on `master`). From that checkout:
 
 ```bash
 cc-pkg-mng dev roue       # build Roue from here, and run it instead of the release's
@@ -81,24 +81,24 @@ cc-pkg-mng dev            # what is running instead of the release
 cc-pkg-mng dev --off      # back to the release's apps
 ```
 
-- **Your shortcuts and the bar use the new build straight away.** There's nothing to change in your configuration. A background service restarts on its own.
-- **Run it again after each change.** The first build takes a minute or two; after that, a small change is live in a few seconds.
-- **The rest of the machine stays on its release.** Your channel and version don't change, and `upgrade` still moves you from one release to the next. An `install` or `upgrade` that touches the unit puts the release's version back, and its plan says so.
-- **`status` shows the dev builds** that are running.
-- The first `dev` installs the Rust toolchain and the build dependencies.
+- Your shortcuts and the bar use the new build at once.
+- Run `dev` again after each change. The first build takes a minute or two, the next ones a few seconds.
+- An `install` or `upgrade` that touches the unit puts the release's version back. Its plan says so.
+- `status` lists the dev builds that are running.
+- The first `dev` installs the Rust toolchain.
 
-On edge, the checkout already is what runs: `cc-pkg-mng install roue` rebuilds what changed.
+On edge, `cc-pkg-mng install roue` rebuilds what changed.
 
 You can see what each release changed in the [changelog](../CHANGELOG.md).
 
-## How it behaves
+## What to expect
 
-- **You see the plan first.** Any command that changes the machine shows you what it's about to do and waits for your OK. Your password is asked once, and all packages go into a single dnf transaction.
-- **Only what changed gets redone.** A unit whose files haven't changed since it was applied is left alone. Running the same command twice does nothing the second time.
-- **Your files are safe.** If a unit would replace one of your files, that file goes into the backups first, and `remove` puts it back. The files that are [yours alone](configuration.md#files-that-are-yours) are never touched.
-- **Local edits block a version change.** If the checkout has uncommitted changes, `upgrade` and `rollback` stop and tell you which files.
-- **Nothing gets restarted behind your back**, except the audio stack when its configuration changes. Programs that are already running keep the old version until you restart them. The bar reloads itself.
-- **A word about dnf.** A plain `sudo dnf upgrade` will also bring the own apps up to the newest release. dnf looks for a new release at most an hour after it comes out; `sudo dnf upgrade --refresh` sees it at once. `cc-pkg-mng upgrade` always re-reads coucou-shell's repository before installing a release's packages. Your next `cc-pkg-mng upgrade` then brings everything else up to the same release.
+- A command that changes the machine shows its plan and waits for your OK. Your password is asked once.
+- A unit whose files haven't changed is skipped.
+- A file of yours that a unit replaces goes to the backups. `remove` puts it back.
+- `upgrade` and `rollback` stop when a file of the checkout has changed, and list the files. See [keep a change through an upgrade](configuration.md#keep-a-change-through-an-upgrade).
+- A program that is running keeps its old version until you restart it. The bar reloads itself, and the sound cuts out for a moment when the audio configuration changes.
+- `sudo dnf upgrade` updates coucou-shell's own apps too. Run `cc-pkg-mng upgrade` afterwards to bring the rest to the same release.
 
 ## Files
 

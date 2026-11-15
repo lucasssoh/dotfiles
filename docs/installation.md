@@ -12,13 +12,13 @@ cc-pkg-mng init
 
 The first line adds coucou-shell's package repository. dnf will ask you once whether to trust its signing key.
 
-Run `init` as yourself, not as root. It asks for your password when it needs it, and only once.
+Run `init` as yourself, not as root. It asks for your password once.
 
-When it's done, log out, log back in and pick the Hyprland session. If you installed the login screen, just reboot.
+When it's done, log out, log back in and pick the Hyprland session. If you installed the login screen, reboot.
 
 ## What `init` asks
 
-All the questions come first. Once you've answered them, the install runs to the end without stopping.
+The questions come first, then the install runs to the end.
 
 | Question | Default |
 |---|---|
@@ -31,7 +31,7 @@ All the questions come first. Once you've answered them, the install runs to the
 | WezTerm build | `stable`, the packaged one. `smear` builds it from source with a cursor smear effect |
 | Each personal setup (shell, WezTerm, Neovim, extras) | keep your own. If you take one, every file it replaces is backed up first |
 
-Before touching anything, `init` shows you the full plan: packages, links, services, and what each step does. Nothing happens until you say yes.
+`init` then shows its plan (packages, links, services) and waits for your yes.
 
 The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Manette, Sésame, Liseuse, the fonts and the theme. The [units](units.md) page lists every part, with its guide.
 
@@ -60,9 +60,9 @@ Anything you leave out gets its default. If you're happy with every default, `cc
 
 Every screen comes on at its preferred mode. To place them, scale them or turn one off, see [displays](session/displays.md).
 
-Hold `Super` to see the [key bindings](keybindings.md). Your own settings and the files an upgrade never touches are in [your settings](configuration.md).
+Hold `Super` to see the [key bindings](keybindings.md). To change something, see [your settings](configuration.md).
 
-Drivers for your CPU and GPU are installed along with everything else. If something has to be done by hand, you'll see it listed at the end of the run. [hardware.md](hardware.md) has the details.
+What's left to do by hand for your hardware is listed at the end of the run. See [hardware](hardware.md).
 
 `cc-pkg-mng status` tells you what's installed and whether it's all in place. For keeping things up to date, see [cc-pkg-mng.md](cc-pkg-mng.md).
 

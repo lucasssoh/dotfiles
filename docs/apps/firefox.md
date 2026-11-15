@@ -1,9 +1,44 @@
 # Firefox
 
-The default browser, with a system policy in `/etc/firefox/policies/`. The policy and the theme both apply at launch, so quit Firefox completely and relaunch it after installing. After a crash or a forced quit, Firefox opens as usual, never on the session restore page; your last session stays in History → Restore Previous Session.
+The web browser, on `Super + B`. After installing, quit Firefox completely and start it again.
 
-The look comes from two stylesheets in the profile, [`userChrome.css`](../../config/firefox/chrome/userChrome.css) for the browser and [`userContent.css`](../../config/firefox/chrome/userContent.css) for the new-tab page. Both follow Firefox's **Website appearance** setting (Settings → General → Language and Appearance): Light, Dark or System. Dark is OLED black. The colours apply with Firefox's default, Light and Dark themes; pick any other theme (Settings → Extensions & Themes) and Firefox shows that theme instead. The new tab's ground is coucou's Nuit wallpaper, light or dark; a wallpaper or colour chosen with the pencil on the new tab replaces it.
+## Colours
 
-**The tabs** run along the top or down the sidebar, Firefox's own switch: right-click the tabs and choose *Turn on vertical tabs* (or *Turn off*). Ctrl+Alt+Z opens or closes the sidebar. Along the top, the tabs are all the same width, with their title centred. The address under them reads centred until you click in it, and the page sits as a rounded card in the window, edge to edge in full screen.
+Firefox follows its **Website appearance** setting (Settings → General → Language and Appearance): Light, Dark or System. Dark is black.
 
-**The new tab** (Ctrl+T) is Firefox's own page, rearranged: the Firefox logo, a frosted-glass search field under it, and right under that one glass pane. **Pinned** holds the first six pinned shortcuts as icons, with a **+** to add one; **Frequent** lists the six sites you visit most. Right-click a site to pin it, edit it or remove it; drag pinned shortcuts to change their order, and so which six show. The pencil at the bottom right opens Firefox's own settings for the page. The policy pins GitHub, YouTube, ChatGPT, Gemini, Claude and Wikipedia on a new profile only, turns off sponsored sites, news stories and weather.
+The colours apply with Firefox's default, Light and Dark themes. Pick another theme in Settings → Extensions & Themes, and Firefox shows that one.
+
+## Tabs
+
+Along the top, tabs have the same width, with their title centred. The address reads centred until you click in it. The page sits as a rounded card in the window, edge to edge in full screen.
+
+To put the tabs down the side, right-click them and choose *Turn on vertical tabs*. `Ctrl + Alt + Z` opens or closes the sidebar.
+
+## New tab
+
+`Ctrl + T` opens the search field, and under it one pane:
+
+| Part | Holds |
+|---|---|
+| **Pinned** | Your first six pinned shortcuts, as icons, and a **+** to add one |
+| **Frequent** | The six sites you visit most |
+
+- Right-click a site to pin it, edit it or remove it.
+- Drag pinned shortcuts to change their order.
+- The pencil, bottom right, opens Firefox's settings for the page.
+
+The ground is coucou's Nuit wallpaper, light or dark. Choose another wallpaper or colour with the pencil.
+
+A new profile starts with GitHub, YouTube, ChatGPT, Gemini, Claude and Wikipedia pinned, and without sponsored sites, news stories or weather.
+
+## After a crash
+
+Your last session is in History → Restore Previous Session.
+
+## Settings
+
+| To change | Edit |
+|---|---|
+| The browser's look | [`userChrome.css`](../../config/firefox/chrome/userChrome.css) |
+| The new tab's look | [`userContent.css`](../../config/firefox/chrome/userContent.css) |
+| What a new profile starts with | [`policies.json`](../../config/firefox/policies.json) |

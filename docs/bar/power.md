@@ -20,8 +20,6 @@ Click the battery.
 | Profile | Power saver, balanced or performance |
 | History | The charge over the last hours |
 
-On a machine that doesn't have them, charge limit and fast charge aren't shown.
-
 ## Power profile
 
 The icon left of the battery opens the profile wheel. So does `Super + Shift + Delete`: see [Roue](../tools/roue.md).

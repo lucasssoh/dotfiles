@@ -1,20 +1,39 @@
 # Sésame
 
-Sésame brings every password asked for outside a terminal to one card in the middle of the screen. It shows what asks and which command asked for it, then waits for you. `su` and `sudo` keep asking in the terminal.
+One card, in the middle of the screen, for every password asked outside a terminal. It shows what asks, and which command asked for it.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/sesame-dark.webp"><img src="../screenshots/sesame.webp" alt="The Sésame card, asking for a password"></picture>
 
-| Who asks | When | The card |
+| Who asks | When | The card asks for |
 |---|---|---|
-| **The system** (polkit) | An app or a command needs administrator rights: `pkexec`, a service to start, a setting in Balise | Your password |
+| **The system** | An app or a command needs administrator rights: `pkexec`, a service to start, a setting in Balise | Your password |
 | **ssh** | A `git push`, `git pull` or `ssh` to a server, with a passphrase-protected key | The key's passphrase, or a host to trust |
 | **git** | Signing in to a remote over HTTPS | User name and password |
 | **gpg** | Signing or decrypting with a protected key | The key's passphrase |
 
-Under **Asked by**, the card lists the processes behind the request, the one asking last. Run by an agent, a push reads `claude › git push origin master › ssh git@github.com …`. `Return` answers and `Esc` cancels; the command then fails as if you had typed nothing. While the card is up, it takes the keyboard and the mouse.
+`su` and `sudo` ask in the terminal.
 
-No key is kept in memory, so every push asks again. That way nothing pushes without you. ssh and git use the card from the terminal too (`SSH_ASKPASS`, set in [`hyprland.lua`](../../config/hyprland/hypr/hyprland.lua)). gpg uses it unless `gpg-agent.conf` already sets a `pinentry-program`; on a text console, gpg falls back to its usual pinentry.
+## Answer
 
-`qs -c bar ipc call bar sesameDemo polkit` shows the card with a made-up request (`ssh`, `polkit`, `gpg`, `retry` or `confirm`), so you can look at it. Answering it sends nothing.
+| Key | Does |
+|---|---|
+| `Return` | Answers |
+| `Esc` | Cancels. The command fails |
 
-The service behind it runs as `systemd --user` (`sesame.service`). It's built from [`sesame-src`](../../config/hyprland/sesame-src/) on edge and installed as a package on stable, like Manette.
+While the card is up, it takes the keyboard and the mouse.
+
+Under **Asked by**, the card lists the commands behind the request, the one asking last: `claude › git push origin master › ssh git@github.com …`.
+
+Each `git push` asks again.
+
+## gpg
+
+gpg uses the card unless your `gpg-agent.conf` sets a `pinentry-program`.
+
+## Try it
+
+```bash
+qs -c bar ipc call bar sesameDemo polkit    # or ssh, gpg, retry, confirm
+```
+
+The request is made up: what you type goes nowhere.

@@ -12,4 +12,4 @@ Click a chip to open its drawer:
 | Quit app | Closes every window of the app |
 | Force quit | Ends an app that no longer answers |
 
-There's nothing to set up. To start an app, use the [launcher](../tools/launcher.md).
+To start an app, use the [launcher](../tools/launcher.md).

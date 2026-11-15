@@ -1,9 +1,9 @@
 # Audio
 
-PipeWire, the equalizer's filter chains and the Bluetooth audio policy. Levels and devices are in the [mixer](../bar/mixer.md).
+The equalizer's bands. Levels and devices are in the [mixer](../bar/mixer.md).
 
-The `audio` unit links [`50-equalizer.conf`](../../config/pipewire/50-equalizer.conf), which holds the four five-band filter chains (60, 250, 1k, 4k and 12k Hz) behind the mixer's equalizer. It also links the WirePlumber Bluetooth policy and runs `bt-audio-switch` as a `systemd --user` service.
+The five bands (60 Hz, 250 Hz, 1 kHz, 4 kHz and 12 kHz) and the four equalizers that can run at once are in [`config/pipewire/50-equalizer.conf`](../../config/pipewire/50-equalizer.conf).
 
-When this configuration changes, **the audio stack is restarted**, so the sound cuts out for a moment.
+After an edit, run `cc-pkg-mng install audio`. The sound cuts out for a moment.
 
-If you add a node to the equalizer file, keep the `eq_slot_` or `eq_out_` prefix in its name. Otherwise the bar will think it's a real output device.
+Name a node you add `eq_slot_…` or `eq_out_…`. With another name, it shows in the mixer as an output device.

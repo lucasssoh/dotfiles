@@ -25,15 +25,15 @@ The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar
 |---|---|---|
 | `position` | `top` or `bottom` | `top` |
 
-The bar moves as soon as you save. This file is yours: an upgrade never replaces it.
+The bar moves as soon as you save.
 
 ## Zen mode
 
-`Super + Z` hides the bar, and brings it back. Programme's reminders wait while it's hidden, and so does Veille unless you [set it otherwise](veille.md).
+`Super + Z` hides the bar, and brings it back.
 
 ## From a key or a script
 
-Every drawer opens with a command, so you can bind it to a key in [`private.lua`](../session/hyprland.md#your-own-rules-and-keys) or call it from a script:
+Each drawer opens with a command. Bind it to a key in [`private.lua`](../session/hyprland.md#your-own-rules-and-keys), or call it from a script:
 
 ```bash
 qs -c bar ipc call bar toggleBalise
@@ -54,7 +54,7 @@ qs -c bar ipc call bar toggleBalise
 
 ## Screen corners
 
-The bar rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them, and they show in screenshots.
+The bar rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them.
 
 ## Screenshots of your own setup
 

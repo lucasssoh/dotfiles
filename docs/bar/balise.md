@@ -25,7 +25,7 @@ qs -c bar ipc call bar toggleBalise
 | Dark mode | Switches the shell, GTK apps and browsers between light and dark. A light and dark [wallpaper](../session/wallpapers.md) follows |
 | Screenshot | Takes one. See [Screenshot](../tools/screenshot.md) |
 
-A setting that needs administrator rights asks for your password through [Sésame](../tools/sesame.md).
+A setting that needs administrator rights asks for your password, on [Sésame](../tools/sesame.md)'s card.
 
 ## Share a Wi-Fi network
 
@@ -38,7 +38,3 @@ balise wifi-share <ssid>
 ## Limits
 
 Balise doesn't manage VPNs.
-
-## The service
-
-Balise runs as `systemd --user` (`balise.service`). There's nothing to set up. On the stable channel it's installed as a package; on edge it's built from [`balise-src`](../../config/hyprland/balise-src/).

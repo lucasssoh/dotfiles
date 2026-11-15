@@ -26,12 +26,12 @@ Each app has its own. Click the chevron on an app's row:
 
 Four apps can have an equalizer at the same time.
 
-Your curves are saved by app name in `~/.local/state/bar-equalizer.json`. The mixer writes this file; delete it to start again from flat.
+Each app keeps its curve. To start again from flat everywhere, delete `~/.local/state/bar-equalizer.json`.
 
 ## Volume keys
 
 The volume keys move in 5 % steps and stop at 100 %. A dial shows the level: see [indicators](indicators.md).
 
-## The equalizer's chains
+## Change the bands
 
-The bands live in [`config/pipewire/50-equalizer.conf`](../../config/pipewire/50-equalizer.conf), installed by the `audio` unit. See [audio](../session/audio.md) before editing it.
+See [audio](../session/audio.md).

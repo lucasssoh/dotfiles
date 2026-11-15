@@ -13,14 +13,12 @@ The Screenshot tile in [Balise](../bar/balise.md) takes one too. The shot opens 
 
 | Key | Does |
 |---|---|
-| `Ctrl + C`, `Enter` | Copies the result. The copy stays after Screenshot closes |
+| `Ctrl + C`, `Enter` | Copies the result |
 | `q`, `Esc` | Closes |
 
 In [swayimg](../apps/swayimg.md), `e` opens the image in Screenshot.
 
 ## Settings
-
-Screenshot is coucou-shell's build of satty, installed with the bar.
 
 | File | Sets |
 |---|---|

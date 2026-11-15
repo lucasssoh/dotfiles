@@ -4,13 +4,13 @@ Which screens are on, where they sit, their scale, HDR and night mode.
 
 After your first login, every screen is on at its preferred mode. With two screens, workspaces 1 to 5 are on the main one and 6 to 10 on the other.
 
-The settings below are files in `~/.config/hypr/`. They're yours: none is committed, and an upgrade never replaces them. A missing file means the defaults.
+The files below are in `~/.config/hypr/`. A missing file means the defaults.
 
 ## Which screens are on
 
 Press `Super + O` and pick on the wheel: both screens, the laptop's only, or the external one only. See [Roue](../tools/roue.md).
 
-Your choice is kept in `display-layout.json`:
+The wheel writes `display-layout.json`, which you can edit too:
 
 ```json
 { "mode": "both", "main": "internal" }
@@ -67,7 +67,7 @@ Edit `scale.json`:
 
 Turn HDR on or off from the HDR tile in [Balise](../bar/balise.md), for the screen the drawer is on. `hdr` shows in the bar while it's on.
 
-Your choice is remembered for each screen, and comes back when you plug it in again.
+Each screen keeps its own setting.
 
 ```bash
 ~/.config/hypr/scripts/hdr.sh debug    # what the screen and Hyprland agreed on

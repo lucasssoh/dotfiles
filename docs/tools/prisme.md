@@ -18,7 +18,7 @@ The wallpaper you land on shows as a live preview, in the middle of the blurred 
 | `↓`, `j` | In a slideshow, adds the wallpaper |
 | `↑`, `k` | In a slideshow, removes it |
 
-To change them, edit [`prisme/keymap.conf`](../../config/hyprland/prisme/keymap.conf): one line per action, several keys separated by commas. Prisme reads it each time it opens.
+To change them, edit `~/.config/prisme/keymap.conf`: one line per action, several keys separated by commas.
 
 ## Light and dark pairs
 
@@ -26,11 +26,11 @@ A wallpaper that comes in light and dark is one card. It shows the version for t
 
 ## Settings
 
-All in [`config/hyprland/prisme/`](../../config/hyprland/prisme/), linked at `~/.config/prisme/`:
+In `~/.config/prisme/`:
 
 | File | Sets |
 |---|---|
-| `wallpapers.conf` | The folder Prisme shows. One path. `~/Images/Wallpapers` when empty, which is rebuilt from the folders below |
+| `wallpapers.conf` | The folder Prisme shows. One path. `~/Images/Wallpapers` when empty |
 | `wallpapers-extra.conf` | Folders of your own to add to it. See [wallpapers](../session/wallpapers.md#add-your-own) |
 | `wallpaper-safe-mode.conf` | The wallpapers never to crop. See [wallpapers](../session/wallpapers.md#fitting-to-the-screen) |
 | `keymap.conf` | The keys |

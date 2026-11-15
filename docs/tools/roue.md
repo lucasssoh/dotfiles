@@ -26,7 +26,7 @@ Sleep, hibernate, log out, restart and shut down ask you to confirm. A dot marks
 
 ## Change a wheel, or make your own
 
-A wheel is a file in [`config/hyprland/roue/wheels/`](../../config/hyprland/roue/wheels/), linked at `~/.config/roue/wheels/`. `roue <name>` opens `<name>.toml`.
+A wheel is a file in `~/.config/roue/wheels/`. `roue <name>` opens `<name>.toml`.
 
 ```toml
 title = "Power"
@@ -47,15 +47,13 @@ confirm_accent = "red"
 | Key | Use | Default |
 |---|---|---|
 | `title` | The name shown in the middle | required |
-| `icon` | An SVG file from [`roue/icons/`](../../config/hyprland/roue/icons/) | required |
+| `icon` | An SVG file from `~/.config/roue/icons/` | required |
 | `label` | The action's name | required |
 | `action` | The command to run | required |
 | `confirm` | `true` asks to confirm before running | `false` |
 | `confirm_accent` | `"red"` turns the Confirm button red | none |
 
-To add an icon, drop an SVG in `roue/icons/`.
-
-`power.toml` and `actions.toml` are yours to edit. `powerprofile.toml` and `display.toml` are written again each time their wheel opens, from the machine's profiles and screens: an edit there is lost.
+Edit `power.toml` and `actions.toml`, or add a file of your own. `powerprofile.toml` and `display.toml` are rewritten each time their wheel opens.
 
 Bind your own wheel to a key in [`private.lua`](../session/hyprland.md#your-own-rules-and-keys):
 
@@ -65,4 +63,4 @@ hl.bind("SUPER + G", hl.dsp.exec_cmd("$HOME/.local/bin/roue games"))
 
 ## Its look
 
-Colours and sizes are in [`roue/style.css`](../../config/hyprland/roue/style.css). The wheel follows light or dark mode.
+Colours and sizes are in `~/.config/roue/style.css`. The wheel follows light or dark mode.

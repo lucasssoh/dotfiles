@@ -19,8 +19,6 @@ They show on the left, in the middle of the screen.
 
 Click the bell, or press `Super + I`. The centre is a panel along the right edge of the screen: notifications grouped by app, under Today and Earlier, media controls, and Clear all.
 
-Only one of the right-hand drawers is open at a time.
-
 ## Do not disturb
 
 Right-click the bell, or use the switch in the centre. Pop-ups stop; notifications still go to the centre.

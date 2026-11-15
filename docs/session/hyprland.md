@@ -15,14 +15,13 @@ They're all in [`config/hyprland/hypr/`](../../config/hyprland/hypr/), linked at
 | `colors.lua` | The shared colour palette |
 | `hypridle.conf` | What happens [when you're idle](#idle) |
 | `hyprlock.conf` | The [lock screen](lock.md) |
-| `hyprsunset.conf` | hyprsunset's own settings. [Night mode](displays.md#night-mode) has its own |
 | `hosts/*.env` | [Per-machine behaviour](#per-machine-profiles) |
 
 The keyboard layout is French (`kb_layout` in `hyprland.lua`).
 
 ## Your own rules and keys
 
-Create `~/.config/hypr/private.lua` for what belongs to this machine only: a rule for one game, a key of your own. It's loaded last, so it can override anything above. It's never committed, and an upgrade never touches it.
+Create `~/.config/hypr/private.lua` for what belongs to this machine: a rule for one game, a key of your own. It's loaded last.
 
 ```lua
 -- ~/.config/hypr/private.lua
@@ -30,9 +29,9 @@ hl.bind("SUPER + G", hl.dsp.exec_cmd("steam"))
 hl.window_rule({ match = { class = "^(mygame)$" }, fullscreen = true })
 ```
 
-Hyprland ignores a rule property it doesn't know, without an error: check the names against Hyprland's documentation.
+Hyprland skips a rule property it doesn't know, without an error: check the names.
 
-The other files that are yours alone are listed in [your settings](../configuration.md#files-that-are-yours).
+Your other files are listed in [your settings](../configuration.md#your-own-files).
 
 ## Per-machine profiles
 
