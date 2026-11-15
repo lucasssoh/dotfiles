@@ -1312,27 +1312,17 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
-                // "Ombre seule" (2026-11-15): no dark slab any more. The
-                // island sits on the band like every other block -- the
-                // band's own veil under it, the bar's ink on it -- and a
-                // hairline in that ink and a soft shadow outside it draw
-                // its shape.
-                //
-                // Blurred behind (the blur region above), with a veil that
-                // follows the ink. The blur halves what it shows
-                // (blur.brightness 0.50), so under dark text a cream veil
-                // brings the glass back to the wallpaper's brightness
-                // instead of a grey patch. Under light text a dark one:
-                // the blur also draws in the bright windows a few pixels
-                // above the island, which lifted it to ~107 over a ~50
-                // wallpaper and washed out its grey text.
-                rowIslandColor: Qt.rgba(0.047 + (0.961 - 0.047) * barInk.t,
-                                        0.047 + (0.953 - 0.047) * barInk.t,
-                                        0.055 + (0.933 - 0.055) * barInk.t,
-                                        0.45 + (0.62 - 0.45) * barInk.t)
-                rowIslandRim: Qt.rgba(barInk.primary.r, barInk.primary.g, barInk.primary.b, barInk.lightText ? 0.10 : 0.08)
-                rowIslandHighlight: false
-                rowIslandShadow: Qt.rgba(0, 0, 0, barInk.lightText ? 0.40 : 0.16)
+                // The drawers' glass (2026-11-15): the bar's blur behind it
+                // and the same colour, rim and shadow as Balise and every
+                // other drawer, dark or light with the system, its text in
+                // the drawers' inks. A blur with no colour at all came out
+                // mid-grey (~128) over a light wallpaper, where neither ink
+                // reads; the old dark slab was this glass at 72 % in light
+                // mode, far darker than the rest of the bar.
+                rowIslandColor: DrawerTheme.paneTop
+                rowIslandRim: DrawerTheme.paneRim
+                rowIslandHighlight: true
+                rowIslandShadow: DrawerTheme.paneShadow
                 flushTop: !BarPosition.bottom
                 splitDrawer: true
                 // The drawers hanging from it wear the same glass as every
@@ -1412,13 +1402,13 @@ ShellRoot {
                 Modules.ActiveWindow {
                     opacity: 0.9
                     monitor: shell.hyprMonitorFor(bar.screen)
-                    ink: barInk
+                    ink: DrawerTheme
                 }
-                Modules.Workspaces { monitor: shell.hyprMonitorFor(bar.screen); ink: barInk }
+                Modules.Workspaces { monitor: shell.hyprMonitorFor(bar.screen); ink: DrawerTheme }
                 // Media (mpris) -- no Launchers inside any more (asked
                 // for, a while back: pulled out into its own separate
                 // floating island, see below).
-                Modules.Media { ink: barInk }
+                Modules.Media { ink: DrawerTheme }
             }
 
             // ── CLOCK (far left) ──────────────────────────────
