@@ -8,7 +8,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
 
 ### Changed
-- **Bar, centre island:** no more dark slab: the island sits on the bar like the other blocks, in the same text colour, drawn by a hairline and a soft shadow.
+- **Bar, centre island:** no more dark slab: the island is frosted glass on the bar, light under dark text and dark under light text, in the same text colour as the other blocks, with a hairline and a soft shadow.
 - **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
 - **Bar:** the text takes one colour along the whole bar, and the veil under it follows the wallpaper: denser only where it is busy, light under dark text, and fading out past the bar instead of ending on a line.
 

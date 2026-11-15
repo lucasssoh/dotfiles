@@ -998,9 +998,9 @@ ShellRoot {
             // blurred, and nothing is computed, while the bar is idle.
             // The weakest fading pane on this bar sets the blur, unless a
             // pane that does not fade (Boussole's, the notification
-            // centre's) is up and needs it whole.
+            // centre's, the central island's row) is up and needs it whole.
             readonly property real glassFade: (ProgrammeState.panelOpen
-                || NotificationState.centerOpen) ? 1
+                || NotificationState.centerOpen || centerIsland.rowIsland) ? 1
                 : Math.min(clockIsland.glassFade, launchers.glassFade, toolsIsland.glassFade)
             onGlassFadeChanged: shell.glassLevel = bar.glassFade
 
@@ -1008,6 +1008,17 @@ ShellRoot {
                 // Every rounded blur region in this file is a SmoothRegion,
                 // not a plain Region: see there for the halo a plain one
                 // left on the corners.
+                //
+                // The central island's row first: the one glass on this bar
+                // that is up while the bar is idle, always whole, so it is
+                // on `glassFade`'s forces-1 list below.
+                Modules.SmoothRegion {
+                    x: centerIsland.x + centerIsland.rowPaneX
+                    y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
+                    width: DrawerTheme.glass && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
+                    height: centerIsland.rowPaneH
+                    radius: centerIsland.rowPaneR
+                }
                 Modules.SmoothRegion {
                     x: centerIsland.x + centerIsland.paneX
                     y: centerIsland.y + centerIsland.paneY
@@ -1301,11 +1312,24 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
-                // "Ombre seule" (2026-11-15): no slab any more. The island
-                // sits on the band like every other block -- the band's own
-                // veil under it, the bar's ink on it -- and only a hairline
-                // in that ink and a soft shadow outside it draw its shape.
-                rowIslandColor: "transparent"
+                // "Ombre seule" (2026-11-15): no dark slab any more. The
+                // island sits on the band like every other block -- the
+                // band's own veil under it, the bar's ink on it -- and a
+                // hairline in that ink and a soft shadow outside it draw
+                // its shape.
+                //
+                // Blurred behind (the blur region above), with a veil that
+                // follows the ink. The blur halves what it shows
+                // (blur.brightness 0.50), so under dark text a cream veil
+                // brings the glass back to the wallpaper's brightness
+                // instead of a grey patch. Under light text a dark one:
+                // the blur also draws in the bright windows a few pixels
+                // above the island, which lifted it to ~107 over a ~50
+                // wallpaper and washed out its grey text.
+                rowIslandColor: Qt.rgba(0.047 + (0.961 - 0.047) * barInk.t,
+                                        0.047 + (0.953 - 0.047) * barInk.t,
+                                        0.055 + (0.933 - 0.055) * barInk.t,
+                                        0.45 + (0.62 - 0.45) * barInk.t)
                 rowIslandRim: Qt.rgba(barInk.primary.r, barInk.primary.g, barInk.primary.b, barInk.lightText ? 0.10 : 0.08)
                 rowIslandHighlight: false
                 rowIslandShadow: Qt.rgba(0, 0, 0, barInk.lightText ? 0.40 : 0.16)
