@@ -1,14 +1,11 @@
 import QtQuick
 import "../services"
 
-// The central island's glass and inks: always the drawers' DARK glass and
-// its light inks, whatever the system's scheme or the wallpaper. Only the
-// glass's density moves, after the wallpaper behind the island (bar-tint's
-// profile): the normal translucent glass over a calm stretch, a denser one
-// over a busy or very bright one, where light text needs more under it.
-//
-// A light glass for light wallpapers was tried and dropped: switching
-// between the two never kept step with the wallpaper's fade.
+// The central island's fill and inks: Graphite (#2c2c2e) at 20 %, no blur,
+// chosen from a mockup ("graphite 20%"). The fill never changes; the TEXT
+// does: light or dark, whichever holds best against the fill over what is
+// behind the island (bar-tint's profile), judged on the worst case -- the
+// wallpaper's 10th and 90th percentile there as well as its mean.
 QtObject {
     id: glass
 
@@ -16,12 +13,14 @@ QtObject {
     property real rectX: 0
     property real rectW: 0
 
-    // Busy or bright behind the island: the same texture threshold as the
-    // band's (BandTint.textureStart), with a margin on the way back so a
-    // wallpaper on the line does not flip it back and forth.
-    property bool dense: false
-    readonly property real brightLimit: 0.35
-    property real t: glass.dense ? 1 : 0
+    readonly property color fill: Qt.rgba(0x2c / 255, 0x2c / 255, 0x2e / 255, 0.20)
+    readonly property color shadow: "transparent"
+
+    // Dark text over a light stretch, light text otherwise, with a margin
+    // so a wallpaper on the line does not flip it back and forth.
+    property bool darkText: false
+    readonly property real switchMargin: 1.0
+    property real t: glass.darkText ? 1 : 0
     Behavior on t {
         NumberAnimation {
             duration: BandTint.transition
@@ -30,15 +29,19 @@ QtObject {
         }
     }
 
+    readonly property color _light: "#f2f2f7"
+    readonly property color _dark: "#1c1c1e"
+
     function reevaluate(): void {
         if (!glass.monitor || glass.rectW <= 0 || !BandTint.ready) return;
         const r = BandTint.rangeAt(glass.monitor, glass.rectX, glass.rectW);
-        if (!r) return;
-        const bright = BandTint.luminance(r.hi);
-        if (glass.dense)
-            glass.dense = r.texture >= BandTint.textureStart - 3 || bright > glass.brightLimit - 0.05;
-        else
-            glass.dense = r.texture >= BandTint.textureStart || bright > glass.brightLimit;
+        const mean = BandTint.backgroundAt(glass.monitor, glass.rectX, glass.rectW);
+        if (!r || !mean) return;
+        const over = [r.lo, r.hi, mean].map(c => BandTint.composite(glass.fill, c));
+        const worst = ink => Math.min.apply(null, over.map(o => BandTint.contrast(ink, o)));
+        const light = worst(glass._light), dark = worst(glass._dark);
+        if (glass.darkText && light > dark + glass.switchMargin) glass.darkText = false;
+        else if (!glass.darkText && dark > light + glass.switchMargin) glass.darkText = true;
     }
     onMonitorChanged: glass.reevaluate()
     onRectXChanged: glass.reevaluate()
@@ -47,15 +50,22 @@ QtObject {
     readonly property int profileSeq: BandTint.seq
     onProfileSeqChanged: glass.reevaluate()
 
-    // The glass: DrawerTheme's dark glassPane (26 %), up to 55 % when dense.
-    readonly property color fill: Qt.rgba(0.078, 0.078, 0.094, 0.26 + (0.55 - 0.26) * glass.t)
-    readonly property color shadow: Qt.rgba(0, 0, 0, 0.30)
+    function mix(a, b) {
+        return Qt.rgba(a.r + (b.r - a.r) * glass.t, a.g + (b.g - a.g) * glass.t,
+                       a.b + (b.b - a.b) * glass.t, a.a + (b.a - a.a) * glass.t);
+    }
+    readonly property color _secondaryLight: "#c7c7cc"
+    readonly property color _secondaryDark: "#3a3a3e"
+    readonly property color _faintLight: "#8e8e93"
+    readonly property color _faintDark: "#6e6e73"
+    readonly property color _positiveLight: "#a3d9a5"
+    readonly property color _positiveDark: "#24692a"
 
-    // The inks on it: DrawerTheme's dark glass tiers.
-    readonly property color primary: "#f2f2f7"
-    readonly property color secondary: "#a1a1a6"
-    readonly property color muted: "#7c7c80"
-    readonly property color faint: "#5a5a5e"
-    readonly property color positive: "#a3d9a5"
+    // The inks, as the modules read them.
+    readonly property color primary: glass.mix(glass._light, glass._dark)
+    readonly property color secondary: glass.mix(glass._secondaryLight, glass._secondaryDark)
+    readonly property color muted: glass.secondary
+    readonly property color faint: glass.mix(glass._faintLight, glass._faintDark)
+    readonly property color positive: glass.mix(glass._positiveLight, glass._positiveDark)
     readonly property color play: "#237823"
 }

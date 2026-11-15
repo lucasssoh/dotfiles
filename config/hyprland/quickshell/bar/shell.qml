@@ -1005,9 +1005,9 @@ ShellRoot {
             // blurred, and nothing is computed, while the bar is idle.
             // The weakest fading pane on this bar sets the blur, unless a
             // pane that does not fade (Boussole's, the notification
-            // centre's, the central island's row) is up and needs it whole.
+            // centre's) is up and needs it whole.
             readonly property real glassFade: (ProgrammeState.panelOpen
-                || NotificationState.centerOpen || centerIsland.rowIsland) ? 1
+                || NotificationState.centerOpen) ? 1
                 : Math.min(clockIsland.glassFade, launchers.glassFade, toolsIsland.glassFade)
             onGlassFadeChanged: shell.glassLevel = bar.glassFade
 
@@ -1015,17 +1015,8 @@ ShellRoot {
                 // Every rounded blur region in this file is a SmoothRegion,
                 // not a plain Region: see there for the halo a plain one
                 // left on the corners.
-                //
-                // The central island's row first: the one glass on this bar
-                // that is up while the bar is idle, always whole, so it is
-                // on `glassFade`'s forces-1 list below.
-                Modules.SmoothRegion {
-                    x: centerIsland.x + centerIsland.rowPaneX
-                    y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
-                    width: DrawerTheme.glass && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
-                    height: centerIsland.rowPaneH
-                    radius: centerIsland.rowPaneR
-                }
+                // (The central island's row has no blur: Graphite at 20 %,
+                // see theme/IslandGlass.qml.)
                 Modules.SmoothRegion {
                     x: centerIsland.x + centerIsland.paneX
                     y: centerIsland.y + centerIsland.paneY
@@ -1319,10 +1310,9 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
-                // The drawers' glass over the bar's blur, but dark or light
-                // after the wallpaper behind the island rather than after
-                // the system: see theme/IslandGlass.qml. Its text takes the
-                // same glass's inks.
+                // Graphite at 20 %, no blur, no border, no shadow; its text
+                // light or dark after the wallpaper behind the island -- see
+                // theme/IslandGlass.qml.
                 rowIslandColor: islandGlass.fill
                 // No border: neither the rim nor the top light ("enlève la
                 // bordure"); the glass and its shadow draw the island.

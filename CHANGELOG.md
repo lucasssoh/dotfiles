@@ -10,7 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
 
 ### Changed
-- **Bar, centre island:** the island wears the drawers' dark glass with light text, denser over a busy or bright wallpaper, instead of a slab that turned dark grey in light mode.
+- **Bar, centre island:** no more dark slab: a light graphite tint, its text light or dark to suit the wallpaper behind it.
 - **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
 - **Bar:** the text takes one colour along the whole bar, and the veil under it follows the wallpaper: only under the text and denser only where the wallpaper is busy, light under dark text, and fading out past the bar instead of ending on a line.
 
