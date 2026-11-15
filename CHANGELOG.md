@@ -7,6 +7,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Fixed
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
 
+### Changed
+- **Bar:** the text takes one colour along the whole bar, and the veil under it follows the wallpaper: denser only where it is busy, light under dark text, and fading out past the bar instead of ending on a line.
+
 ## 2.5.0 (November 15 2026)
 
 ### Fixed

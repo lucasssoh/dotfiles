@@ -279,6 +279,104 @@ Singleton {
     }
 
     // Kept for callers that only want the ink.
+    // ---- one ink for the whole bar, a veil per slice -------------------
+    // `decide` above judges each island alone, on the 10th/90th
+    // percentiles of what it covers. Over a wallpaper that changes across
+    // the width (country-road: autumn leaves on the left, a calm sky on
+    // the right) that gave a bar in two inks, and a small busy patch
+    // inside an island -- branches behind the battery -- fell under the
+    // percentile and got no veil at all.
+    //
+    // `decideBar` picks ONE ink for every block, the one that needs the
+    // least veil where there is text, and then gives each of the
+    // profile's slices exactly the veil that ink needs there. The veil is
+    // dark under light text and light under dark text: a dark veil only
+    // lowers dark text's contrast, which is why the white band of an
+    // earlier pass is back, but only as a local haze over a busy patch,
+    // never as the bar's surface.
+    readonly property color lightBand: "#73f5f3ee"
+    function lightBandFor(veil) {
+        const k = Math.max(0, Math.min(1, veil));
+        return Qt.rgba(root.lightBand.r, root.lightBand.g, root.lightBand.b, root.lightBand.a * k);
+    }
+
+    // Per slice and per ink, the least veil that holds `target`, from the
+    // same busy-wallpaper floor as `decide`. Pure function of the profile,
+    // so it is computed once per profile and per monitor and kept:
+    // islands resize far more often than the wallpaper changes.
+    property var _needs: ({})
+    function sliceNeeds(monitor, inkDark, inkLight) {
+        if (!root.profile || !root.profile[monitor]) return null;
+        const m = root.profile[monitor];
+        if (!m.lo || !m.hi || !m.cells || !m.cells.length) return null;
+        const cached = root._needs[monitor];
+        if (cached && cached.seq === root.seq) return cached;
+        const light = [], dark = [];
+        for (let i = 0; i < m.cells.length; i++) {
+            const lo = Qt.rgba(m.lo[i] / 255, m.lo[i] / 255, m.lo[i] / 255, 1);
+            const hi = Qt.rgba(m.hi[i] / 255, m.hi[i] / 255, m.hi[i] / 255, 1);
+            const texture = root.lstar(m.hi[i]) - root.lstar(m.lo[i]);
+            const floor = texture >= root.textureStart
+                ? 0.35 + 0.65 * Math.min(1, (texture - root.textureStart) / (root.textureFull - root.textureStart))
+                : 0;
+            light.push(root._least(floor, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
+            dark.push(root._least(floor, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
+        }
+        const entry = { seq: root.seq, light: light, dark: dark };
+        const all = Object.assign({}, root._needs);
+        all[monitor] = entry;
+        root._needs = all;
+        return entry;
+    }
+    function _least(floor, contrastAt) {
+        for (let v = floor; v <= 1.0001; v += 0.05)
+            if (contrastAt(Math.min(1, v)) >= root.target) return { v: Math.min(1, v), ok: true };
+        return { v: 1, ok: false };
+    }
+
+    // rects: [{x, w}] in the monitor's coordinates, the blocks that carry
+    // text. currentLight: the ink in use, for the hysteresis. Returns
+    // { lightText, veils } with one veil per slice, eased across slices
+    // so it never ends on a slice edge, or null without a profile.
+    readonly property real inkSwitchMargin: 1.0
+    function decideBar(monitor, rects, currentLight, inkDark, inkLight) {
+        const n = root.sliceNeeds(monitor, inkDark, inkLight);
+        if (!n) return null;
+        const m = root.profile[monitor];
+        const count = n.light.length;
+        const text = {};
+        for (let r = 0; r < rects.length; r++) {
+            if (!(rects[r].w > 0)) continue;
+            const a = Math.max(0, Math.floor(rects[r].x / m.width * count));
+            const b = Math.min(count - 1, Math.floor((rects[r].x + rects[r].w - 1) / m.width * count));
+            for (let i = a; i <= b; i++) text[i] = true;
+        }
+        const cost = side => {
+            let c = 0;
+            for (const i in text) c += side[i].v + (side[i].ok ? 0 : 10);
+            return c;
+        };
+        const cl = cost(n.light), cd = cost(n.dark);
+        let lightText = currentLight;
+        if (currentLight && cd + root.inkSwitchMargin < cl) lightText = false;
+        else if (!currentLight && cl + root.inkSwitchMargin < cd) lightText = true;
+        const raw = (lightText ? n.light : n.dark).map(e => e.v);
+        const wide = raw.map((v, i) => Math.max(v, i > 0 ? raw[i - 1] : 0, i < count - 1 ? raw[i + 1] : 0));
+        const veils = wide.map((v, i) => {
+            let s = 0, k = 0;
+            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += wide[j]; k++; }
+            return s / k;
+        });
+        return { lightText: lightText, veils: veils };
+    }
+    function describeBar(monitor, rects, inkDark, inkLight) {
+        const d = root.decideBar(monitor, rects, true, inkDark, inkLight);
+        if (!d) return "pas de profil";
+        const vs = d.veils.map(v => Math.round(v * 100));
+        return "texte " + (d.lightText ? "clair" : "sombre") + ", voile " + (d.lightText ? "sombre" : "clair")
+             + " " + Math.min.apply(null, vs) + ".." + Math.max.apply(null, vs) + "%";
+    }
+
     function recommend(monitor, x, w, current, inkDark, inkLight) {
         return root.decide(monitor, x, w, current, inkDark, inkLight).ink;
     }
