@@ -86,7 +86,10 @@ if [ "$instant" = 1 ]; then
 else
     transition=(--transition-type fade --transition-bezier .4,0,.2,1
                 --transition-fps 60 --transition-duration 1.5)
-    transition_ms=1500
+    # What the bar eases over: not the 1.5 s asked for, but what awww's
+    # fade visibly takes with these settings -- measured frame by frame on
+    # screen, the image changes in ~0.4 s on a symmetric S-curve.
+    transition_ms=450
 fi
 
 # name<TAB>WxH per screen, rotated screens swapped to their real shape.

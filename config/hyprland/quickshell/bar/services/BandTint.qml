@@ -60,12 +60,13 @@ Singleton {
 
     // ---- the profile -------------------------------------------------
     property var profile: null
-    // How long the wallpaper's transition lasts, in ms (bar-tint.py
+    // How long the wallpaper's visible change lasts, in ms (bar-tint.py
     // --transition, from wallpaper-set), and its curve: the ink and the
-    // veil ease over the same time, on the same bezier as awww's fade, so
-    // the band changes with the image rather than after it. 0 is a cut.
-    property int transition: 900
-    readonly property var transitionCurve: [0.4, 0, 0.2, 1, 1, 1]
+    // veil ease over the same time, on the curve measured on awww's fade
+    // (a symmetric S, half-way at half-time), so the band changes with
+    // the image rather than after it. 0 is a cut.
+    property int transition: 450
+    readonly property var transitionCurve: [0.45, 0, 0.55, 1, 1, 1]
     readonly property bool ready: profile !== null
     property int seq: -1
 
@@ -93,7 +94,7 @@ Singleton {
             // restait claire sur un profil sombre.
             // `transition` avant les deux: ce qui reagit au profil anime
             // sur cette duree.
-            root.transition = d.transition !== undefined ? d.transition : 900;
+            root.transition = d.transition !== undefined ? d.transition : 450;
             root.profile = d.monitors;
             root.seq = d.seq;
         } catch (e) {

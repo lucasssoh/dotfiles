@@ -55,7 +55,9 @@ QtObject {
     readonly property color fill: glass.mix(Qt.rgba(0.078, 0.078, 0.094, 0.26), Qt.rgba(0.839, 0.827, 0.800, 0.42))
     readonly property color rim: glass.mix(Qt.rgba(1, 1, 1, 0.14), Qt.rgba(1, 1, 1, 0.65))
     readonly property color highlight: glass.mix(Qt.rgba(1, 1, 1, 0.10), Qt.rgba(1, 1, 1, 0.80))
-    readonly property color shadow: glass.mix(Qt.rgba(0, 0, 0, 0.30), Qt.rgba(0, 0, 0, 0.16))
+    // A step, not eased: the shadow is a masked layer, and easing it
+    // re-rendered that layer on every frame of the wallpaper's fade.
+    readonly property color shadow: glass.light ? Qt.rgba(0, 0, 0, 0.16) : Qt.rgba(0, 0, 0, 0.30)
 
     // The inks on it (DrawerTheme's glass tiers), as the modules read them.
     // Ends as colour properties: mix() reads .r/.g/.b, which a string has not.
