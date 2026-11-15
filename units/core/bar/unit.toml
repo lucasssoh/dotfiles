@@ -23,6 +23,12 @@ repos = ["https://lucasssoh.github.io/dotfiles/coucou-shell.repo"]
 "config/hyprland/quickshell/fontview/fontview" = "~/.local/bin/fontview"
 
 [[hooks]]
+name   = "bar-island"
+run_as = "user"
+does   = "set a default look for the central island"
+run    = "units/core/bar/hooks/bar-island.sh"
+
+[[hooks]]
 name   = "fontview-mime"
 run_as = "user"
 does   = "write fontview.desktop and make fontview the handler of font files"
