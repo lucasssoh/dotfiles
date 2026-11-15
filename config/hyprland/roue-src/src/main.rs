@@ -17,9 +17,9 @@
 //! release (`bind ... { release = true }`) wiring.
 
 mod actions;
-mod color;
 mod config;
 mod icons;
+mod palette;
 mod theme;
 mod wheel;
 
@@ -32,7 +32,22 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use palette::Palette;
 use wheel::RoueWheel;
+
+/// The desktop's colour scheme, as the bar's light/dark toggle writes it
+/// (quickshell's AppearanceState.qml) -- same reading as Prisme: dark for
+/// prefer-dark, light otherwise, and dark when the schema isn't installed
+/// rather than GSettings aborting the process. Read once at opening: a
+/// wheel stays on screen for seconds.
+fn prefers_dark() -> bool {
+    const SCHEMA: &str = "org.gnome.desktop.interface";
+    let Some(source) = gio::SettingsSchemaSource::default() else { return true };
+    if source.lookup(SCHEMA, true).is_none() {
+        return true;
+    }
+    gio::Settings::new(SCHEMA).string("color-scheme") == "prefer-dark"
+}
 
 /// Wheel keyboard actions -- fixed keyset (no separate keymap.conf file
 /// like in Prisme: a single wheel, a deliberately simple interaction, no
@@ -327,65 +342,17 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
         theme::load(&display, wheel_name);
     }
 
-    // Wheel + side panel block centered as a whole on screen -- horizontal
-    // Box WITHOUT hexpand/vexpand (unlike the old vertical layout): as the
-    // sole child of a fullscreen window, it gets the full rectangle
-    // regardless (standard GtkWindow "bin" behavior), it's its own
-    // halign/valign=Center that positions it at ITS natural size (520px
-    // wheel + spacing + panel width) in the middle of that rectangle,
-    // rather than stretching it.
-    let root = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
-        .spacing(28)
-        .halign(gtk4::Align::Center)
-        .valign(gtk4::Align::Center)
-        .build();
+    // The wheel alone in the middle of the screen: it says its own name
+    // while nothing is aimed, so there is no side panel any more.
+    let dark = prefers_dark();
+    if !dark {
+        window.add_css_class("light");
+    }
+    let wheel = RoueWheel::new(&cfg.title, cfg.segments, Palette::new(dark));
+    wheel.set_halign(gtk4::Align::Center);
+    wheel.set_valign(gtk4::Align::Center);
 
-    // Invisible counterweight, SAME width as the panel (see size_group
-    // below) -- without it, it's the [wheel+panel] block AS A WHOLE that
-    // gets centered, so the wheel itself ends up shifted left of screen
-    // center by exactly half the panel's width. With this counterweight on
-    // the opposite side, the wheel becomes the root's geometric middle
-    // again, whatever the panel's width (so whatever the text -- "Power"
-    // vs "Power profile" don't have the same natural width).
-    let counterweight = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-    root.append(&counterweight);
-
-    let wheel = RoueWheel::new(&cfg.title, cfg.segments);
-    root.append(&wheel);
-
-    // Side panel -- title + command reminder, aligned on the wheel's
-    // vertical center (valign=Center) rather than as a footer.
-    let sidebar = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Vertical)
-        .spacing(10)
-        .valign(gtk4::Align::Center)
-        .css_classes(["roue-sidebar"])
-        .build();
-    let title = gtk4::Label::builder()
-        .label(&cfg.title)
-        .css_classes(["roue-title"])
-        .halign(gtk4::Align::Start)
-        .build();
-    sidebar.append(&title);
-    let hint = gtk4::Label::builder()
-        .label("Mouse / ←→  aim\nEnter / click  confirm\nEsc / right-click  cancel")
-        .css_classes(["roue-hint"])
-        .halign(gtk4::Align::Start)
-        .justify(gtk4::Justification::Left)
-        .build();
-    sidebar.append(&hint);
-    root.append(&sidebar);
-
-    // Forces the counterweight to always report the same natural width as
-    // the panel (whatever its content) -- this is what makes the wheel's
-    // centering exact instead of a hardcoded value that would drift out of
-    // sync at the slightest title/font change.
-    let width_group = gtk4::SizeGroup::new(gtk4::SizeGroupMode::Horizontal);
-    width_group.add_widget(&counterweight);
-    width_group.add_widget(&sidebar);
-
-    window.set_child(Some(&root));
+    window.set_child(Some(&wheel));
 
     // Clears the shared state the moment the window actually closes
     // (whatever closed it -- Escape, right-click, a confirmed selection,

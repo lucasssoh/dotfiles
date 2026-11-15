@@ -23,24 +23,15 @@ pub struct Segment {
     /// right away (see wheel.rs). Absent from the TOML = false.
     #[serde(default)]
     pub confirm: bool,
-    /// Tint shown when hovering this sector (fill, icon, text) -- a named
-    /// color (see color.rs) or a `#rrggbb` hex code. Absent from the TOML =
-    /// the white ink. (Per-sector tints -- powerprofile.toml still names
-    /// green/yellow -- resolve to white since the HyperOS pass.)
-    #[serde(default)]
-    pub accent: Option<String>,
-    /// Tint of the "Confirm" sector in the sub-menu shown when `confirm` is
-    /// true (see `RoueWheel::enter_confirm`) -- independent from `accent`
-    /// above (which only concerns THIS sector in the root wheel): a sector
-    /// can have a neutral `accent` but a red confirmation sub-menu (e.g.
-    /// wheels/power.toml), or the reverse. Absent from the TOML = white by
-    /// default, like `accent` -- only genuinely destructive sectors need to
-    /// force it to "red".
+    /// Destructive sector: its confirmation's Confirm turns red (the
+    /// palette's danger ink) instead of the plain inversion. Any value
+    /// counts -- `"red"` by convention, see wheels/power.toml. An `accent`
+    /// key left over in an older TOML is ignored.
     #[serde(default)]
     pub confirm_accent: Option<String>,
     /// This sector represents the system's currently applied state (e.g.
-    /// the active power profile, see wheel.rs for the rendering -- a white
-    /// band on the sector's outer edge). At most ONE sector should have
+    /// the active power profile, see wheel.rs for the rendering -- a dot
+    /// beside its pastille). At most ONE sector should have
     /// this; if several do, the first one found wins (see
     /// `RoueWheel::new`). Not relevant for a wheel with no notion of state
     /// (e.g. wheels/power.toml: lock/shut down aren't "states") -- leave it

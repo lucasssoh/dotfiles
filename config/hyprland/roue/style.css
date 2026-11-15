@@ -1,5 +1,6 @@
-/* Roue — theme, same palette as waybar/style.css, balise/style.css, and
-   prisme/style.css. Reload: relaunch the wheel (no daemon). */
+/* Roue -- theme. Inks from quickshell/bar/theme/DrawerTheme.qml; the
+   wheel itself is drawn in roue-src/src/wheel.rs, from palette.rs.
+   Reload: relaunch the wheel (no daemon). */
 
 @import url("../theme/fonts.css");
 
@@ -8,30 +9,19 @@
     outline: none;
 }
 
+/* The desktop blurred under a light veil, like Prisme (the blur is
+   Hyprland's, see windowrules.lua). */
 window,
 .background {
-    /* Neutral, not the blue-tinted rgba(16,20,24) it was: the shell's
-       greys carry no hue since the HyperOS pass. */
-    background-color: rgba(10, 10, 12, 0.95);
+    background-color: rgba(18, 18, 22, 0.42);
+    /* GTK 4.24 hands this to the compositor as the surface's blur region.
+       Without it, GTK still declares an empty one, and Hyprland then
+       skips the layer rule's blur. */
+    backdrop-filter: blur(20px);
 }
 
-.roue-sidebar {
-    /* Flat since the HyperOS pass, like the wheel it sits next to: the
-       drawers' black panel with a faint rim, no glass gradient. */
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 22px;
-    background: #000000;
-    padding: 16px 22px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-}
-
-.roue-title {
-    font-weight: bold;
-    font-size: 1.1em;
-    color: #f2f2f7;
-}
-
-.roue-hint {
-    color: #8e8e93;
-    font-size: 0.9em;
+/* Light desktop: a cream veil, under the dark inks of palette.rs. */
+window.light,
+.background.light {
+    background-color: rgba(245, 243, 238, 0.32);
 }

@@ -437,14 +437,11 @@ hl.window_rule({
 -- instead of that oversized surface, so its layer is already sized to
 -- its real visible bounds and never needed this hack.
 --
--- Roue: anchored to all 4 edges (see roue-src/src/main.rs), so it's in
--- the same "oversized surface" situation swaync's control-center used to
--- be in (see above), unlike Balise (an anchored corner panel) -- same
--- xray + ignore_alpha treatment, needed for the exact same reason
--- (confirmed live: without it the whole screen blurs, not just the wheel
--- + sidebar). On-demand, shown for seconds at a time -- see
--- hyprland.lua's decoration.blur.enabled comment.
-hl.layer_rule({ match = { namespace = "roue" },                 blur = true, xray = true, ignore_alpha = 0.5 })
+-- Roue the same way as Prisme below: it covers the whole screen and
+-- blurs the desktop behind its pastilles under a light veil (roue/
+-- style.css), fading in and out rather than sliding from an edge. Open
+-- for seconds at a time, and a still desktop is blurred once and cached.
+hl.layer_rule({ match = { namespace = "^roue$" },               animation = "fade", blur = true })
 
 -- ============================================================
 -- LAYER FADE — awww wallpaper

@@ -164,10 +164,9 @@ bind(mod .. "+ O", hl.dsp.exec_cmd("~/.config/hypr/scripts/display-layout.sh rou
 -- forced by the capture rather than a preference: F23 comes back UP after
 -- ~58ms no matter how long the key is physically held down, so there is no
 -- hold to aim during and no meaningful release edge to confirm on. The
--- wheel therefore opens and STAYS open; confirming is click / Enter /
--- arrows, which roue already supports on equal footing with the release
--- gesture (see roue-src/src/main.rs, the GestureClick and the
--- "Mouse / <-> aim, Enter / click confirm" hint it draws).
+-- wheel therefore opens and STAYS open; aiming is the mouse or the
+-- arrows and confirming a click or Enter, which roue supports on equal
+-- footing with the release gesture (see roue-src/src/main.rs).
 --
 -- `--toggle` is what closes it again with the same key. It is a roue flag,
 -- not a shell trick around it: a second `roue actions` while the first is

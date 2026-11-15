@@ -18,6 +18,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Wallpapers:** Nuit, the folds of coucou's Plis under a cold blue light, light and dark.
 
 ### Changed
+- **Roue:** each action is a round glass button on the blurred desktop, the one you aim at inverted; the name shows in the middle. The wheel follows light or dark mode, the side panel with the key reminder is gone, and the applied profile or display is marked by a dot.
 - **Bar, battery:** an outlined battery with the charge inside it, instead of a filled pill; when the charge stops at 60 %, a dotted line marks where.
 - **Install:** Fedora's crash reporter (abrt) is turned off, which frees about 90 MB. Crashes are still kept: `coredumpctl list` shows them.
 - **Files:** Nemo has a lighter layout in the shell's colours. The current folder shows in full ink with its parent folders quietly beside it, files sit straight on the window without frames, a hairline parts them from the sidebar, and the status shows in a small floating label. A selected name is inverted like the active workspace; a selected row or place is shaded. In light mode it is cream instead of white and blue.

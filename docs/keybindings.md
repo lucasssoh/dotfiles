@@ -35,7 +35,7 @@ The terminal, file manager and browser are whatever the machine's defaults are. 
 
 ## Roue, the radial wheels
 
-Press the keys, aim while you hold them, and let go to confirm.
+Press the keys, aim while you hold them, and let go to confirm. You can also click an action, or pick one with `←` `→` and press `Enter`. `Escape` or a right-click closes the wheel.
 
 | Binding | Wheel |
 |---|---|

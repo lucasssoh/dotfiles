@@ -30,9 +30,7 @@
 # Only power.toml is static, hence the bare call in its sector.
 #
 # No sector is destructive -- the confirmations live one level down, inside
-# power.toml -- so nothing here carries `confirm` or `accent`, and the
-# default cyan applies throughout. No actions.css either: the per-wheel CSS
-# layer is optional (theme.rs) and display.css/powerprofile.css are empty.
+# power.toml -- so nothing here carries `confirm`.
 title = "Actions"
 
 [[segment]]

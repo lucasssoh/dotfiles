@@ -2,9 +2,8 @@
 //! the user file if present. Same mechanism as prisme-src/src/theme.rs
 //! (see its doc for the full reasoning).
 
-/// Fallback palette, identical to waybar/style.css, balise/style.css, and
-/// prisme/style.css -- copied here as a hardcoded string for the same
-/// reason as in Prisme: `config/hyprland/roue/style.css` lives outside
+/// Fallback theme, identical to roue/style.css -- copied here for the
+/// same reason as in Prisme: `config/hyprland/roue/style.css` lives outside
 /// `roue-src/`, which install.sh copies alone into `~/.cache/roue-build/`
 /// before `cargo build`.
 const FALLBACK_CSS: &str = r#"
@@ -19,29 +18,13 @@ const FALLBACK_CSS: &str = r#"
 
 window,
 .background {
-    background-color: rgba(20, 20, 20, 0.95);
+    background-color: rgba(18, 18, 22, 0.42);
+    backdrop-filter: blur(20px);
 }
 
-/* rgba(20, 20, 22, 0.88) exactly matches the hub's fill color (see the HUB
-   fill in roue-src/src/wheel.rs), #505050 the waybar modules' border
-   (@overlay2, see waybar/style.css) -- a panel rather than a full-screen
-   blur (permanent GPU cost at rest, see discussion). */
-.roue-sidebar {
-    background-color: rgba(20, 20, 22, 0.88);
-    border: 1px solid #505050;
-    border-radius: 8px;
-    padding: 16px 22px;
-}
-
-.roue-title {
-    font-weight: bold;
-    font-size: 1.1em;
-    color: #f2f2f7;
-}
-
-.roue-hint {
-    color: #8e8e93;
-    font-size: 0.9em;
+window.light,
+.background.light {
+    background-color: rgba(245, 243, 238, 0.32);
 }
 "#;
 
@@ -54,8 +37,7 @@ window,
 ///   2. `roue/style.css` -- general rule, shared by all wheels (symlinked
 ///      by install.sh into ~/.config/roue/).
 ///   3. `roue/wheels/<wheel_name>.css`, optional -- override specific to
-///      THIS wheel (e.g. a different background color for power vs
-///      powerprofile), absent = the general rule applies as-is.
+///      THIS wheel, absent = the general rule applies as-is.
 pub fn load(display: &gtk4::gdk::Display, wheel_name: &str) {
     let fallback = gtk4::CssProvider::new();
     fallback.load_from_string(FALLBACK_CSS);

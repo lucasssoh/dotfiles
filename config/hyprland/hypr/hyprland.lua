@@ -294,9 +294,9 @@ hl.config({
         -- alone doesn't blur anything by default though (no window/layer
         -- opts in just because this is true) -- actual blur only happens
         -- where explicitly requested:
-        --   - layerrule blur for Roue (see windowrules.lua) -- a small,
-        --     on-demand panel, visible for seconds at a time, not the
-        --     whole session, so nowhere near the bar's cost profile. The
+        --   - layerrule blur for Roue and Prisme (see windowrules.lua) --
+        --     on-demand, visible for seconds at a time, not the whole
+        --     session, so nowhere near the bar's cost profile. The
         --     notification center used to be in this bullet too
         --     (swaync-control-center) -- gone along with swaync itself,
         --     its quickshell replacement closes via HyprlandFocusGrab

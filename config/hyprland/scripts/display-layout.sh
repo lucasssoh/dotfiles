@@ -227,8 +227,7 @@ cmd_roue_gen() {
     # move/cut off the active window from one edge to another, not just
     # refresh a display: better to confirm than undo by accident. No
     # confirm_accent (see config.rs): unlike power.toml, nothing here is
-    # destructive -- the cyan default is enough, still with the hub border
-    # on Confirm hover (handled by wheel.rs independently of the color).
+    # destructive, so Confirm is the plain inversion, not red.
     cat > "$dir/display.toml" <<EOF
 title = "Displays"
 

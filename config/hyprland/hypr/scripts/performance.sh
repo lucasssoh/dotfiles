@@ -31,7 +31,6 @@ title = "Power profile"
 icon = "zap.svg"
 label = "Performance"
 action = "powerprofilesctl set performance"
-accent = "yellow"
 $active_performance
 
 [[segment]]
@@ -44,7 +43,6 @@ $active_balanced
 icon = "leaf.svg"
 label = "Power saver"
 action = "powerprofilesctl set power-saver"
-accent = "green"
 $active_power_saver
 EOF
 }
