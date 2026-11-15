@@ -94,7 +94,7 @@ starlight-theme-select select { border-radius: 999px; }
 /* Inline code and keys. */
 .sl-markdown-content code:not(:where(.not-content *)) {
   background: var(--c-code); border: 1px solid var(--c-line-soft);
-  border-radius: 7px; padding: 0.1rem 0.35rem;
+  border-radius: 4px; padding: 0.1rem 0.35rem;
 }
 
 /* Previous and next, as two outlined tiles. */
@@ -102,7 +102,7 @@ starlight-theme-select select { border-radius: 999px; }
 .pagination-links a:hover { border-color: var(--sl-color-gray-3); }
 
 /* On this page. */
-starlight-toc a { border-radius: 8px; }
+starlight-toc a { border-radius: 0; }
 starlight-toc a[aria-current='true'] { color: var(--sl-color-white); font-weight: 500; }
 
 /* Code blocks: outlined, on the page's ground. */

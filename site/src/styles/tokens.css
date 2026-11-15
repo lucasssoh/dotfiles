@@ -14,9 +14,10 @@
   --c-on-ink: #f4f4f6;
   --c-code: rgb(28 28 30 / 0.06);
 
-  --r-tile: 28px;
-  --r-card: 18px;
-  --r-ctl: 12px;
+  /* Blocks are square; buttons and chips keep their curve. */
+  --r-tile: 0;
+  --r-card: 0;
+  --r-ctl: 0;
 
   --font-ui: 'MiSans Latin', 'MiSans', 'Inter Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
