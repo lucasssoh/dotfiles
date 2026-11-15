@@ -165,6 +165,14 @@ crop = [480, 300, 960, 600]
 steps = ["run ~/.local/bin/roue power", "wait 1.5"]
 
 [[scene]]
+name = "sesame"
+doc = "docs/tools/sesame.md"
+crop = [480, 240, 960, 720]
+# A made-up request: answering it sends nothing.
+steps = ["ipc bar sesameDemo polkit", "wait 1.5"]
+after = ["ipc bar sesameCancel", "wait 0.8"]
+
+[[scene]]
 name = "prisme"
 doc = "docs/tools/prisme.md"
 crop = "full"

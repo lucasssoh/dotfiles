@@ -20,6 +20,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Documentation:** every tool has its own guide: each part of the bar, Roue, Prisme, Manette, Sésame, Liseuse, the launcher, Screenshot, the session and the applications. New pages cover displays, wallpapers, the lock screen, and how to write an agenda event or a wheel of your own.
 - **Documentation:** *Your settings* lists the files that are yours alone, which no upgrade touches, and says what an upgrade does to an edit elsewhere.
 - **Website:** a new look in the shell's neutral greys, light and dark, with coucou's Aube wallpapers. The home page opens on the boot splash, then shows the film, the three install commands and every tool; the guides follow the same shapes, on phones too.
+- **Website:** a new film on the home page, about a minute through Roue, the drawers, notifications, the key sheet, the controller menu, tiling and Prisme, with its music behind a Sound on button.
 - **README:** rewritten around the tools, with still images instead of the video, the tested machines, and the licences in a table: what you may do, what you may not, and what belongs to others.
 
 ### Changed

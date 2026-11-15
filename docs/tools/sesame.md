@@ -2,6 +2,8 @@
 
 Sésame brings every password asked for outside a terminal to one card in the middle of the screen. It shows what asks and which command asked for it, then waits for you. `su` and `sudo` keep asking in the terminal.
 
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/sesame-dark.webp"><img src="../screenshots/sesame.webp" alt="The Sésame card, asking for a password"></picture>
+
 | Who asks | When | The card |
 |---|---|---|
 | **The system** (polkit) | An app or a command needs administrator rights: `pkexec`, a service to start, a setting in Balise | Your password |
