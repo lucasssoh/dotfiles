@@ -4,5 +4,6 @@ singleton Ink 1.0 Ink.qml
 singleton InkLight 1.0 InkLight.qml
 InkBlend 1.0 InkBlend.qml
 BarInk 1.0 BarInk.qml
+BlockInk 1.0 BlockInk.qml
 IslandGlass 1.0 IslandGlass.qml
 singleton DrawerTheme 1.0 DrawerTheme.qml

@@ -1,15 +1,16 @@
 import QtQuick
 import "../services"
 
-// The bar's one ink, and the veil under it, decided from the wallpaper
-// behind the whole band (BandTint.decideBar): every block on the band --
-// the clock, the metrics, the launchers, the tools and the central island
-// -- reads the same text colour, and the band gives each slice of the
-// screen exactly the veil that colour needs there.
+// The band's inks and veil, decided from the wallpaper behind it
+// (BandTint.decideBlocks): each block -- the clock, Programme, the
+// metrics, the launchers, the tools -- picks its own ink, light or dark,
+// and the band gives each slice of the screen the veil its block's ink
+// needs there. The blocks read their ink through a BlockInk each.
 //
-// Replaces one IslandInk per island, which decided each island alone and
-// left a varied wallpaper with a bar in two inks.
-InkBlend {
+// One ink for the whole bar was tried first: over a wallpaper dark on one
+// side and pale on the other, it laid a dark veil under light text where
+// black text would simply have read.
+QtObject {
     id: bar
 
     property string monitor: ""
@@ -17,29 +18,26 @@ InkBlend {
     // Bound live: a block that grows re-decides against what it covers.
     property var rects: []
 
-    property bool lightText: true
-    t: bar.lightText ? 0 : 1
-    Behavior on t {
-        NumberAnimation {
-            duration: BandTint.transition
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: BandTint.transitionCurve
-        }
-    }
-
-    // One veil per profile slice, 0..1, already eased across slices.
+    // Per block, true = light text.
+    property var lights: []
+    // Per slice: the veil, 0..1, eased across slices, and whether it sits
+    // under light text (so is the dark veil) or under dark text (light).
     property var veils: []
+    property var veilLights: []
 
     function reevaluate(): void {
         if (!bar.monitor || !BandTint.ready) return;
-        const d = BandTint.decideBar(bar.monitor, bar.rects, bar.lightText, Ink.primary, InkLight.primary);
+        const d = BandTint.decideBlocks(bar.monitor, bar.rects, bar.lights, Ink.primary, InkLight.primary);
         if (!d) return;
-        bar.lightText = d.lightText;
-        // Only a real change: the band repaints on it.
+        if (JSON.stringify(d.lights) !== JSON.stringify(bar.lights)) bar.lights = d.lights;
         const old = bar.veils;
-        let same = old.length === d.veils.length;
+        let same = old.length === d.veils.length
+            && JSON.stringify(d.veilLights) === JSON.stringify(bar.veilLights);
         for (let i = 0; same && i < old.length; i++) same = Math.abs(old[i] - d.veils[i]) < 0.005;
-        if (!same) bar.veils = d.veils;
+        if (!same) {
+            bar.veilLights = d.veilLights;
+            bar.veils = d.veils;
+        }
     }
 
     onMonitorChanged: bar.reevaluate()

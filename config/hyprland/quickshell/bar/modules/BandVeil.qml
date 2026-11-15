@@ -19,7 +19,8 @@ import "../services"
 Item {
     id: band
 
-    // BarInk: its `veils` and its `lightText`.
+    // BarInk: its `veils` and, per slice, `veilLights` (true where the
+    // veil sits under light text, so is the dark one).
     property QtObject ink: null
     // Which screen edge the band hangs from.
     property bool fromBottom: false
@@ -42,7 +43,7 @@ Item {
         }
         const target = band.back;
         target.veils = band.ink.veils ? band.ink.veils.slice() : [];
-        target.lightText = band.ink.lightText;
+        target.tones = band.ink.veilLights ? band.ink.veilLights.slice() : [];
         target.pending = true;
         target.requestPaint();
     }
@@ -75,14 +76,13 @@ Item {
     Connections {
         target: band.ink
         function onVeilsChanged() { band.adopt(); }
-        function onLightTextChanged() { band.adopt(); }
     }
     Component.onCompleted: {
         canvasA.opacity = 1;
         canvasB.opacity = 0;
         if (band.ink) {
             canvasA.veils = band.ink.veils.slice();
-            canvasA.lightText = band.ink.lightText;
+            canvasA.tones = band.ink.veilLights.slice();
         }
         canvasA.requestPaint();
     }
@@ -94,7 +94,8 @@ Item {
         id: canvas
         anchors.fill: parent
         property var veils: []
-        property bool lightText: true
+        // Per slice: true = dark veil (under light text), false = light.
+        property var tones: []
         // Set when a new state is painted here, to swap once it is drawn.
         property bool pending: false
 
@@ -111,11 +112,12 @@ Item {
             const n = veils.length;
             if (!n || canvas.width <= 0 || canvas.height <= 0) return;
 
-            const c = canvas.lightText ? BandTint.band : BandTint.lightBand;
-            const r = Math.round(255 * c.r), g = Math.round(255 * c.g), b = Math.round(255 * c.b);
             const across = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            for (let i = 0; i < n; i++)
+            for (let i = 0; i < n; i++) {
+                const c = canvas.tones[i] === false ? BandTint.lightBand : BandTint.band;
+                const r = Math.round(255 * c.r), g = Math.round(255 * c.g), b = Math.round(255 * c.b);
                 across.addColorStop((i + 0.5) / n, "rgba(" + r + "," + g + "," + b + "," + (c.a * veils[i]).toFixed(4) + ")");
+            }
             ctx.fillStyle = across;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 

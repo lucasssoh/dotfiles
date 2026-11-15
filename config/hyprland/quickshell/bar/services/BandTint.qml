@@ -389,6 +389,64 @@ Singleton {
         });
         return { lightText: lightText, veils: veils };
     }
+    // One ink PER BLOCK (2026-11-15, after a bar dark on the left and a
+    // uniform pale pink on the right: one ink for the whole bar put a
+    // dark veil under the right's light text, where black text would
+    // simply have read). Each block picks the ink that needs the least
+    // veil over the slices it covers, with the same hysteresis as the
+    // bar-wide choice; each slice gets the veil its block's ink needs,
+    // dark under light text and light under dark text.
+    //
+    // current: the blocks' inks in use (true = light text), for the
+    // hysteresis. Returns { lights: [per block], veils: [per slice],
+    // veilLights: [per slice, true where the veil sits under light text,
+    // so is dark] }, or null without a profile.
+    function decideBlocks(monitor, rects, current, inkDark, inkLight) {
+        const n = root.sliceNeeds(monitor, inkDark, inkLight);
+        if (!n) return null;
+        const m = root.profile[monitor];
+        const count = n.light.length;
+        const lights = [];
+        const raw = new Array(count).fill(0);
+        const tone = new Array(count).fill(null);
+        for (let bi = 0; bi < rects.length; bi++) {
+            const r = rects[bi];
+            let lt = current && current[bi] !== undefined ? current[bi] : true;
+            if (!(r.w > 0)) { lights.push(lt); continue; }
+            const a = Math.max(0, Math.floor(r.x / m.width * count));
+            const b = Math.min(count - 1, Math.floor((r.x + r.w - 1) / m.width * count));
+            let cl = 0, cd = 0;
+            for (let i = a; i <= b; i++) {
+                cl += n.light[i].v + (n.light[i].ok ? 0 : 10);
+                cd += n.dark[i].v + (n.dark[i].ok ? 0 : 10);
+            }
+            if (lt && cd + root.inkSwitchMargin < cl) lt = false;
+            else if (!lt && cl + root.inkSwitchMargin < cd) lt = true;
+            lights.push(lt);
+            for (let i = a; i <= b; i++) {
+                raw[i] = Math.max(raw[i], (lt ? n.light : n.dark)[i].v);
+                tone[i] = lt;
+            }
+        }
+        // Slices no block covers take the tone of the nearest one that is,
+        // for the easing to blend into.
+        for (let i = 0; i < count; i++) {
+            if (tone[i] !== null) continue;
+            let d = 1;
+            while (d < count) {
+                if (i - d >= 0 && tone[i - d] !== null) { tone[i] = tone[i - d]; break; }
+                if (i + d < count && tone[i + d] !== null) { tone[i] = tone[i + d]; break; }
+                d++;
+            }
+            if (tone[i] === null) tone[i] = true;
+        }
+        const veils = raw.map((v, i) => {
+            let s = 0, k = 0;
+            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += raw[j]; k++; }
+            return s / k;
+        });
+        return { lights: lights, veils: veils, veilLights: tone };
+    }
     function describeBar(monitor, rects, inkDark, inkLight) {
         const d = root.decideBar(monitor, rects, true, inkDark, inkLight);
         if (!d) return "pas de profil";

@@ -784,8 +784,6 @@ ShellRoot {
                 }
             }
 
-            // One ink for every block on the band, and a veil per slice of
-            // the screen under it -- see theme/BarInk.qml.
             // The central island's own glass, after the wallpaper behind it.
             IslandGlass {
                 id: islandGlass
@@ -805,6 +803,13 @@ ShellRoot {
                     { x: toolsIsland.x, w: toolsIsland.width }
                 ]
             }
+            // Each block's ink, light or dark after what is behind it, and
+            // the band's veil per slice -- see theme/BarInk.qml.
+            BlockInk { id: clockInk; bar: barInk; index: 0 }
+            BlockInk { id: programmeInk; bar: barInk; index: 1 }
+            BlockInk { id: metricsInk; bar: barInk; index: 2 }
+            BlockInk { id: launchersInk; bar: barInk; index: 3 }
+            BlockInk { id: toolsInk; bar: barInk; index: 4 }
 
             // Normally false, and emphatically so: a bar that accepts
             // keyboard focus takes it away from whatever the user is
@@ -1478,7 +1483,7 @@ ShellRoot {
                     }
                 ]
 
-                Modules.Clock { id: clockChip; ink: barInk; screen: bar.screen }
+                Modules.Clock { id: clockChip; ink: clockInk; screen: bar.screen }
             }
 
             // ── METRICS (right-hand cluster, before Launchers) ─
@@ -1541,7 +1546,7 @@ ShellRoot {
                 // screen's left edge (the LazyLoader after the bars).
                 drawerItems: []
 
-                ProgrammeIndicator { id: programmeIndicator; ink: barInk; screen: bar.screen }
+                ProgrammeIndicator { id: programmeIndicator; ink: programmeInk; screen: bar.screen }
             }
 
             Modules.Block {
@@ -1609,11 +1614,11 @@ ShellRoot {
                 // readings.
                 Item { width: 10; height: 1 }
 
-                Modules.Cpu { ink: barInk }
-                Modules.Temperature { ink: barInk }
-                Modules.Fan { ink: barInk }
-                Modules.Memory { ink: barInk }
-                Modules.Watts { ink: barInk }
+                Modules.Cpu { ink: metricsInk }
+                Modules.Temperature { ink: metricsInk }
+                Modules.Fan { ink: metricsInk }
+                Modules.Memory { ink: metricsInk }
+                Modules.Watts { ink: metricsInk }
                 // Traffic (the network rate) used to close this group; it
                 // moved back to TOOLS, next to the wifi it measures.
             }
@@ -1803,7 +1808,7 @@ ShellRoot {
 
                 Modules.Launchers {
                     id: launcherChips
-                    ink: barInk
+                    ink: launchersInk
                     opacity: 0.8
                     screen: bar.screen
                 }
@@ -2136,12 +2141,12 @@ ShellRoot {
                     // HdrLabel.qml. It carries its own trailing gap, so
                     // when HDR is off the whole thing leaves the row
                     // without stranding a spacer behind it.
-                    Modules.HdrLabel { monitor: shell.hyprMonitorFor(bar.screen); ink: barInk }
+                    Modules.HdrLabel { monitor: shell.hyprMonitorFor(bar.screen); ink: toolsInk }
 
                     // A controller glyph while one is connected, same
                     // indicator contract as "hdr" just above: see
                     // ControllerIndicator.qml.
-                    Modules.ControllerIndicator { ink: barInk }
+                    Modules.ControllerIndicator { ink: toolsInk }
 
                     // The Hdr badge used to open this row (before the
                     // display-layout status, asked for at the time). It
@@ -2155,7 +2160,7 @@ ShellRoot {
                     // still a group, and dropping it would glue the chip
                     // to the audio pair.
                     Modules.ScriptModule {
-                        ink: barInk
+                        ink: toolsInk
                         command: ["bash", "-c", "$HOME/.config/hypr/scripts/display-layout.sh status"]
                         // No polling: it used to run every 5 s, about 13
                         // processes each time (bash, hyprctl, jq x4, sed...),
@@ -2333,8 +2338,8 @@ ShellRoot {
                     // `screen` is what tells the mixer drawer which bar was
                     // clicked -- same hand-down Battery/BaliseButton/
                     // NotificationBell already take.
-                    Modules.AudioOutput { id: audioChip; leadingPad: 5; trailingPad: 2; ink: barInk; screen: bar.screen }
-                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: barInk; screen: bar.screen }
+                    Modules.AudioOutput { id: audioChip; leadingPad: 5; trailingPad: 2; ink: toolsInk; screen: bar.screen }
+                    Modules.AudioInput { leadingPad: 2; trailingPad: 5; ink: toolsInk; screen: bar.screen }
 
                     // ---- son | reseau ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -2343,8 +2348,8 @@ ShellRoot {
                     // capsule it belongs with (asked for: moved from the
                     // left-hand metrics to the right). No padding change:
                     // Traffic carries its own 6px a side like the metrics.
-                    Modules.Traffic { ink: barInk }
-                    Modules.BaliseButton { id: baliseChip; screen: bar.screen; ink: barInk }
+                    Modules.Traffic { ink: toolsInk }
+                    Modules.BaliseButton { id: baliseChip; screen: bar.screen; ink: toolsInk }
 
                     // ---- reseau | energie ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -2353,7 +2358,7 @@ ShellRoot {
                     // Performance profile + power, moved here from the main
                     // bar (were next to notif/clock/workspaces), asked for:
                     // now sit right of connectivity in this pill instead.
-                    Modules.Performance { ink: barInk }
+                    Modules.Performance { ink: toolsInk }
 
                     // Moved here from METRICS (asked for): sits between
                     // power-profile and the clock now, grouped with the
@@ -2362,7 +2367,7 @@ ShellRoot {
                     // drawer on THIS bar's monitor -- see Battery.qml's
                     // own MouseArea, and BaliseButton/NotificationBell
                     // for the same contract.
-                    Modules.Battery { id: batteryChip; ink: barInk; screen: bar.screen }
+                    Modules.Battery { id: batteryChip; ink: toolsInk; screen: bar.screen }
 
                     // ---- energie | notifications ----
                     Item { width: toolsIsland.groupGap; height: 1 }
@@ -2375,7 +2380,7 @@ ShellRoot {
                     // below, not the power-PROFILE icon it sat next to
                     // before) -- was leftmost, then next to Hdr, then
                     // between Battery and Clock, before landing here.
-                    Modules.NotificationBell { screen: bar.screen; ink: barInk }
+                    Modules.NotificationBell { screen: bar.screen; ink: toolsInk }
 
                     Item {
                         // 28 -> 20 -> 16: same space-saving pass as the
@@ -2404,7 +2409,7 @@ ShellRoot {
                             // lieu de vivre dans un module, donc il ne
                             // reçoit pas la rampe par une propriete `ink`
                             // et doit la lire ici.
-                            color: barInk.danger
+                            color: toolsInk.danger
                         }
 
                         MouseArea {
