@@ -302,7 +302,7 @@ Item {
             visible: !root.active
             anchors.centerIn: parent
             text: root.placeholderText
-            color: root.ink.muted
+            color: root.ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 13
         }

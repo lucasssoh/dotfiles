@@ -222,7 +222,7 @@ Item {
         visible: !root.hasWindow
         anchors.centerIn: parent
         text: root.placeholderText
-        color: root.ink.muted
+        color: root.ink.secondary
         font.family: Fonts.ui
         font.pixelSize: 13
     }
@@ -242,7 +242,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             visible: root.parts.ctx !== ""
             text: root.parts.ctx
-            color: root.ink.muted
+            color: root.ink.secondary
             font.family: Fonts.ui
             font.pixelSize: 14
         }
