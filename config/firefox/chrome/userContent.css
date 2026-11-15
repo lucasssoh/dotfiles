@@ -197,6 +197,81 @@
         color: var(--cc-secondary) !important;
     }
 
+    /* The policy turns the hand-off to the address bar off, so the search
+       is typed here: the same glass, as a real field. background-color
+       only, the shorthand carries the engine's icon. */
+    #newtab-search-text {
+        height: 50px !important;
+        border: 0 !important;
+        border-radius: 25px !important;
+        background-color: color-mix(in srgb, var(--cc-glass-fill-top) 70%, var(--cc-glass-fill-bottom)) !important;
+        backdrop-filter: blur(28px) saturate(160%);
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 1px var(--cc-glass-inner),
+            inset 0 0 0 1px var(--cc-glass-rim-soft) !important;
+        color: var(--cc-primary) !important;
+        font-family: var(--cc-font) !important;
+        font-size: 14px !important;
+        outline: none !important;
+        transition: box-shadow 0.15s ease;
+    }
+
+    #newtab-search-text::placeholder {
+        color: var(--cc-secondary) !important;
+        opacity: 1 !important;
+    }
+
+    #newtab-search-text:is(:hover, :focus) {
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 1px 1px var(--cc-glass-inner),
+            inset 0 0 0 1px var(--cc-hair-2) !important;
+    }
+
+    .non-handoff-container .search-button {
+        border: 0 !important;
+        border-radius: 0 25px 25px 0 !important;
+        fill: var(--cc-secondary) !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .non-handoff-container .search-button:is(:hover, :focus, :active) {
+        background-color: var(--cc-glass-hover) !important;
+        fill: var(--cc-primary) !important;
+    }
+
+    /* the suggestions, a card under the field */
+    .contentSearchSuggestionTable {
+        --newtab-background-color: var(--cc-card) !important;
+        --newtab-background-color-secondary: var(--cc-card) !important;
+        --newtab-text-secondary-color: var(--cc-secondary) !important;
+        --newtab-border-color: var(--cc-hair) !important;
+        --newtab-element-hover-color: var(--cc-hover) !important;
+        --newtab-element-active-color: var(--cc-raised) !important;
+        --text-color: var(--cc-primary) !important;
+        transform: translateY(8px) !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        box-shadow:
+            var(--cc-glass-shadow),
+            inset 0 0 0 1px var(--cc-hair) !important;
+        color: var(--cc-primary) !important;
+        font-family: var(--cc-font) !important;
+    }
+
+    .contentSearchSettingsButton {
+        background: transparent !important;
+        color: var(--cc-secondary) !important;
+        font-family: var(--cc-font) !important;
+    }
+
+    .contentSearchSettingsButton:is(:hover, .selected) {
+        background: var(--cc-hover) !important;
+        color: var(--cc-primary) !important;
+    }
+
     /* The pane: liquid glass painted on pseudo-elements of the section, so
        its blur stays under the tiles. */
     section.top-sites {

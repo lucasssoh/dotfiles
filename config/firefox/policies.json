@@ -35,6 +35,10 @@
         "Value": false,
         "Status": "default"
       },
+      "browser.newtabpage.activity-stream.improvesearch.handoffToAwesomebar": {
+        "Value": false,
+        "Status": "default"
+      },
       "browser.newtabpage.activity-stream.feeds.topsites": {
         "Value": true,
         "Status": "default"
