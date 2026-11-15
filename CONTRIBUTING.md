@@ -90,6 +90,7 @@ Versions follow `MAJOR.MINOR.PATCH`.
 - **Colours** come from [`DrawerTheme.qml`](config/hyprland/quickshell/bar/theme/DrawerTheme.qml). Prefer outlines to large white areas.
 - **A new application** is a replaceable unit in `units/apps/<name>/`, with a hook that makes it the default for its file types. Anything downloaded from outside a package is pinned to a version and checked by sha256.
 - **Documentation** lives in [`docs/`](docs/). It describes the components and how to configure them, not their design or the inner workings of scripts. The website is generated from `docs/`: never edit `site/src/content/docs/docs/`.
+- **Docs follow the code.** A change a user can see or act on updates its page in `docs/`, and its screenshot scene, with the change. [`.claude/skills/doc-a-jour/SKILL.md`](.claude/skills/doc-a-jour/SKILL.md) lists which page and which checks; it applies to people and agents alike.
 - **Test on a real session before committing**: a screenshot for anything visual, `hyprctl configerrors` after touching the Hyprland config.
 
 ## AI agents

@@ -27,7 +27,10 @@ __pycache__/
 
 # Portfolio content staging: drafted here, copied into my-portfolio by hand
 portfolio-content/
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/doc-a-jour/
 
 # MathJax for the markdown renderers (config/liseuse/tex2svg.js), pinned by
 # package-lock.json and installed by config/liseuse/install.sh.
