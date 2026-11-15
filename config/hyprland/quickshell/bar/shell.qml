@@ -994,21 +994,25 @@ ShellRoot {
                 // never fades, so it is on `glassFade`'s forces-1 list
                 // below like Boussole's and the notification centre's,
                 // not on the fading drawers' min().
-                Region {
+                //
+                // Every rounded blur region in this file is a SmoothRegion,
+                // not a plain Region: see there for the halo a plain one
+                // left on the corners.
+                Modules.SmoothRegion {
                     x: centerIsland.x + centerIsland.rowPaneX
                     y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
                     width: DrawerTheme.glass && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
                     height: centerIsland.rowPaneH
                     radius: centerIsland.rowPaneR
                 }
-                Region {
+                Modules.SmoothRegion {
                     x: centerIsland.x + centerIsland.paneX
                     y: centerIsland.y + centerIsland.paneY
                     width: DrawerTheme.glass && centerIsland.paneShown ? centerIsland.paneWidth : 0
                     height: centerIsland.paneHeight
                     radius: centerIsland.paneRadius
                 }
-                Region {
+                Modules.SmoothRegion {
                     x: clockIsland.x + clockIsland.paneX
                     y: clockIsland.y + clockIsland.paneY
                     width: DrawerTheme.glass && clockIsland.paneShown
@@ -1017,14 +1021,14 @@ ShellRoot {
                     height: clockIsland.paneHeight
                     radius: clockIsland.paneRadius
                 }
-                Region {
+                Modules.SmoothRegion {
                     x: programmeIsland.x + programmeIsland.paneX
                     y: programmeIsland.y + programmeIsland.paneY
                     width: DrawerTheme.glass && programmeIsland.paneShown ? programmeIsland.paneWidth : 0
                     height: programmeIsland.paneHeight
                     radius: programmeIsland.drawerRadius
                 }
-                Region {
+                Modules.SmoothRegion {
                     x: launchers.x + launchers.paneX
                     y: launchers.y + launchers.paneY
                     width: DrawerTheme.glass && launchers.paneShown
@@ -1033,7 +1037,7 @@ ShellRoot {
                     height: launchers.paneHeight
                     radius: launchers.paneRadius
                 }
-                Region {
+                Modules.SmoothRegion {
                     x: toolsIsland.x + toolsIsland.paneX
                     y: toolsIsland.y + toolsIsland.paneY
                     width: DrawerTheme.glass && toolsIsland.paneShown
@@ -2539,7 +2543,7 @@ ShellRoot {
             // itself, and Hyprland's layer animation on top replayed the
             // blur after the window had gone.
             WlrLayershell.namespace: "quickshell-popup"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: osd.blurX
                 y: osd.blurY
                 width: DrawerTheme.glass && osd.blurShown ? osd.blurSize : 0
@@ -2614,7 +2618,7 @@ ShellRoot {
 
             // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: batteryAlert.blurX
                 y: batteryAlert.blurY
                 width: DrawerTheme.glass && batteryAlert.blurShown ? batteryAlert.blurWidth : 0
@@ -2772,7 +2776,7 @@ ShellRoot {
                 // the whole stack now moves when it recentres -- the blur
                 // stayed behind, a pane of frosted nothing over the gap.
                 // Dropped halfway through a fade, for the same reason.
-                delegate: Region {
+                delegate: Modules.SmoothRegion {
                     required property var modelData
                     x: modelData ? toastStack.x + toastStack.contentItem.x + modelData.x : 0
                     y: modelData ? toastStack.y + toastStack.contentItem.y + modelData.y : 0
@@ -2784,7 +2788,7 @@ ShellRoot {
                 onObjectRemoved: (index, object) => notifToastWindow.toastBlurs = notifToastWindow.toastBlurs.filter((r) => r !== object)
             }
             // The deck's two strips, in window coordinates for the same reason.
-            Region {
+            Modules.SmoothRegion {
                 id: deckFrontBlur
                 x: toastDeck.x + toastDeck.frontBlur.x
                 y: toastDeck.y + toastDeck.frontBlur.y
@@ -2792,7 +2796,7 @@ ShellRoot {
                 height: toastDeck.frontBlur.height
                 radius: 16
             }
-            Region {
+            Modules.SmoothRegion {
                 id: deckBackBlur
                 x: toastDeck.x + toastDeck.backBlur.x
                 y: toastDeck.y + toastDeck.backBlur.y
@@ -2843,7 +2847,7 @@ ShellRoot {
 
             // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: controllerPopup.blurX
                 y: controllerPopup.blurY
                 width: DrawerTheme.glass && controllerPopup.blurShown ? controllerPopup.blurWidth : 0
@@ -2883,7 +2887,7 @@ ShellRoot {
 
             // Glass, like the OSD above (the namespace is in windowrules.lua's
             // no_anim rule).
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: sesameCard.blurX
                 y: sesameCard.blurY
                 width: DrawerTheme.glass && sesameCard.blurShown ? sesameCard.blurWidth : 0
@@ -2915,7 +2919,7 @@ ShellRoot {
 
             // Glass, like the OSD above (the namespace is in windowrules.lua's
             // no_anim rule).
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: libraryCard.blurX
                 y: libraryCard.blurY
                 width: DrawerTheme.glass && libraryCard.blurShown ? libraryCard.blurWidth : 0
@@ -2977,7 +2981,7 @@ ShellRoot {
             // sheet slides itself, and Hyprland's layer animation on top
             // replayed the glass after the window had gone.
             WlrLayershell.namespace: "quickshell-sheet"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: programmeSheet.x
                 width: DrawerTheme.glass && -programmeSheet.x < programmeSheet.width * 0.8 ? programmeSheet.width : 0
                 height: programmeSheet.height
@@ -3075,7 +3079,7 @@ ShellRoot {
             // sheet slides itself, and Hyprland's layer animation on top
             // replayed the glass after the window had gone.
             WlrLayershell.namespace: "quickshell-sheet"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: notificationsSheet.x
                 width: DrawerTheme.glass && notificationsSheet.x < notificationsSheet.width * 0.8 ? notificationsSheet.width : 0
                 height: notificationsSheet.height
@@ -3162,7 +3166,7 @@ ShellRoot {
 
             // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
-            BackgroundEffect.blurRegion: Region {
+            BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: controllerBanner.blurX
                 y: controllerBanner.blurY
                 width: DrawerTheme.glass && controllerBanner.blurShown ? controllerBanner.blurWidth : 0

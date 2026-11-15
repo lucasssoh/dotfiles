@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
+
 ## 2.5.0 (November 15 2026)
 
 ### Fixed
