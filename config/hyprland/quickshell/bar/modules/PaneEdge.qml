@@ -21,6 +21,7 @@ Item {
     property real bottomLeftRadius: edge.radius
     property real bottomRightRadius: edge.radius
     property bool highlight: true
+    property bool sideHighlight: true
     property bool fade: false
     // The rim and the top light, overridable: the island panes are dark
     // in both modes, so they keep the dark rim -- the light-mode white
@@ -111,7 +112,7 @@ Item {
     // plain to see on the light glass. The corner's arc is vertical by the
     // band's bottom, so the line takes over from it seamlessly.
     Repeater {
-        model: edge.highlight ? [1, edge.width - 2] : []
+        model: edge.highlight && edge.sideHighlight ? [1, edge.width - 2] : []
 
         Rectangle {
             required property real modelData

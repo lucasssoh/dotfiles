@@ -19,11 +19,15 @@ Rectangle {
     // Thickness of the curved edge. The drawers' 14 suits anything from a
     // dial up; a 48px pill takes a thinner one.
     property real band: 14
+    property bool sideHighlight: true
 
     color: DrawerTheme.paneTop
 
     // Flat glass with a hairline edge (PaneEdge), no convex lens any
     // more. No shadow here: these popups' windows are sized to the pane,
     // and a shadow cut off at the window edge reads worse than none.
-    PaneEdge { radius: pane.radius }
+    PaneEdge {
+        radius: pane.radius
+        sideHighlight: pane.sideHighlight
+    }
 }

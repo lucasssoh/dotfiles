@@ -81,6 +81,7 @@ Item {
         width: 144
         height: 144
         radius: width / 2
+        sideHighlight: false
     }
 
     // Where the disc shows, in the window's coordinates, for its blur

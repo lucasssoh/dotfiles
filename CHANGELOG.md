@@ -5,7 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## 2.6.0 (November 15 2026)
 
 ### Fixed
-- **Bar, OSD:** the volume, microphone and brightness dials now sit centred at the bottom, above the island's drawers, with a round blur that follows their edge.
+- **Bar, OSD:** the volume, microphone and brightness dials now sit centred at the bottom, above the island's drawers, with a round blur that follows their edge and no straight side highlights.
 - **Apps, OPL IDE:** CPLEX Studio's launcher appears when you install the extra configs.
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
 - **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
