@@ -427,8 +427,10 @@
  * ========================================================================== */
 
 /* ---- tabs: equal widths, rounded rectangles, the title centred --------- */
+/* a little wider than Firefox's 225px, for the centred title; a lone tab
+   stays a tab instead of stretching across the strip */
 #tabbrowser-tabs:not([orient="vertical"]) .tabbrowser-tab:not([pinned]) {
-    max-width: none !important;
+    max-width: 260px !important;
 }
 
 .tabbrowser-tab .tab-background {
