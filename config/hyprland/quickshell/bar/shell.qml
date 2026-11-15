@@ -755,6 +755,35 @@ ShellRoot {
             // bord comme avant").
             readonly property int bandHeight: 31
 
+            // The veil under the band, in a surface of its own on the
+            // BOTTOM layer: above the wallpaper, under every window. It fades
+            // out over 74 px past the band, and drawn in the bar's own
+            // surface (the top layer) that fade lay over the bottom of the
+            // windows above the bar. Down here a window simply covers it,
+            // and it only ever shows on the desktop. No input: clicks go
+            // through to the desktop.
+            PanelWindow {
+                id: veilWindow
+                screen: bar.screen
+                visible: bar.visible
+                color: "transparent"
+                exclusionMode: ExclusionMode.Ignore
+                WlrLayershell.layer: WlrLayer.Bottom
+                WlrLayershell.namespace: "quickshell-bar-veil"
+                anchors { top: !BarPosition.bottom; bottom: BarPosition.bottom; left: true; right: true }
+                implicitHeight: 100
+                mask: Region { width: 0; height: 0 }
+
+                Modules.BandVeil {
+                    anchors.fill: parent
+                    ink: barInk
+                    fromBottom: BarPosition.bottom
+                    // Slides with the band when the bar comes and goes.
+                    transform: Translate { y: bar.slideOffset }
+                    opacity: 1 - bar.slide
+                }
+            }
+
             // One ink for every block on the band, and a veil per slice of
             // the screen under it -- see theme/BarInk.qml.
             BarInk {
@@ -1204,18 +1233,6 @@ ShellRoot {
                 // only carries the band's geometry for everything aligned
                 // on it.
                 color: "transparent"
-            }
-
-            // The veil: a density per slice of the screen, full behind the
-            // text and fading out past the band instead of a hard line.
-            Modules.BandVeil {
-                ink: barInk
-                fromBottom: BarPosition.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: BarPosition.bottom ? undefined : parent.top
-                anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
-                height: 100
             }
 
             // ── ONE BAR ───────────────────────────────────────

@@ -461,10 +461,10 @@ hl.layer_rule({ match = { namespace = "^awww-daemon$" },        animation = "fad
 -- seconds at a time, and a still desktop is blurred once and cached.
 hl.layer_rule({ match = { namespace = "^prisme$" },             animation = "fade", blur = true })
 
--- The bar slides in and out on its own (quickshell/bar/shell.qml), the
+-- The bar (and the veil under it) slides in and out on its own (quickshell/bar/shell.qml), the
 -- same way at either edge. no_anim skips Hyprland's snapshot on exit; its
 -- entrance is a plain fade, played while the bar's content is still hidden.
-hl.layer_rule({ match = { namespace = "^quickshell-bar-(top|bottom)$" }, animation = "fade", no_anim = true })
+hl.layer_rule({ match = { namespace = "^quickshell-bar-(top|bottom|veil)$" }, animation = "fade", no_anim = true })
 
 -- ============================================================
 -- LAYER NO-ANIM — the bar's side sheets (Programme, notifications)
