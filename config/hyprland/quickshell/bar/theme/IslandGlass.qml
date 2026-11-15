@@ -1,11 +1,13 @@
 import QtQuick
 import "../services"
 
-// The central island's fill and inks: Graphite (#2c2c2e) at 20 %, no blur,
-// chosen from a mockup ("graphite 20%"). The fill never changes; the TEXT
-// does: light or dark, whichever holds best against the fill over what is
-// behind the island (bar-tint's profile), judged on the worst case -- the
-// wallpaper's 10th and 90th percentile there as well as its mean.
+// The central island's fill and inks, from IslandStyle (the user's
+// ~/.config/hypr/bar-island.json; by default Graphite #2c2c2e at 20 %, no
+// blur, dynamic text). In dynamic mode the TEXT turns light or dark,
+// whichever holds best against the fill over what is behind it (bar-tint's
+// profile), judged on the worst case -- the wallpaper's 10th and 90th
+// percentile there as well as its mean. In static mode it is the file's
+// `text` colour, always.
 QtObject {
     id: glass
 
@@ -13,7 +15,8 @@ QtObject {
     property real rectX: 0
     property real rectW: 0
 
-    readonly property color fill: Qt.rgba(0x2c / 255, 0x2c / 255, 0x2e / 255, 0.20)
+    readonly property color fill: Qt.rgba(IslandStyle.background.r, IslandStyle.background.g,
+                                          IslandStyle.background.b, IslandStyle.alpha)
     readonly property color shadow: "transparent"
 
     // Dark text over a light stretch, light text otherwise, with a margin
@@ -63,6 +66,7 @@ QtObject {
 
     function at(item) {
         glass.revision;
+        if (!IslandStyle.dynamic) return glass._staticSet;
         if (!item || !glass.monitor || !BandTint.ready) return glass._lightSet;
         const p = item.mapToItem(null, 0, 0);
         return glass._darkAt(p.x, Math.max(1, item.width)) ? glass._darkSet : glass._lightSet;
@@ -74,6 +78,7 @@ QtObject {
     function runs(item) {
         glass.revision;
         const w = item ? item.width : 0;
+        if (!IslandStyle.dynamic) return [{ x0: 0, x1: Math.max(0, w), dark: false, fixed: true }];
         if (!item || w <= 0 || !glass.monitor || !BandTint.ready || !BandTint.profile[glass.monitor])
             return [{ x0: 0, x1: Math.max(0, w), dark: false }];
         const m = BandTint.profile[glass.monitor];
@@ -125,4 +130,11 @@ QtObject {
     readonly property var _darkSet: ({ primary: glass._dark, secondary: glass._secondaryDark,
                                        muted: glass._secondaryDark, faint: glass._faintDark,
                                        positive: glass._positiveDark, play: glass.play })
+    // Static mode: the file's text colour, its tiers as that colour fading.
+    readonly property color _t: IslandStyle.textColour
+    readonly property var _staticSet: ({ primary: glass._t,
+                                         secondary: Qt.rgba(glass._t.r, glass._t.g, glass._t.b, 0.72),
+                                         muted: Qt.rgba(glass._t.r, glass._t.g, glass._t.b, 0.72),
+                                         faint: Qt.rgba(glass._t.r, glass._t.g, glass._t.b, 0.45),
+                                         positive: glass._t, play: glass.play })
 }

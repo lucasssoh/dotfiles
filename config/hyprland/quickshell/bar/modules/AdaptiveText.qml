@@ -43,9 +43,9 @@ Item {
                 font: probe.font
                 elide: root.elide
                 renderType: Text.NativeRendering
-                color: root.glass && root.glass.runs
-                    ? (parent.modelData.dark ? root.glass._darkSet[root.tier] : root.glass._lightSet[root.tier])
-                    : root.fallback
+                color: !(root.glass && root.glass.runs) ? root.fallback
+                    : parent.modelData.fixed ? root.glass._staticSet[root.tier]
+                    : (parent.modelData.dark ? root.glass._darkSet[root.tier] : root.glass._lightSet[root.tier])
             }
         }
     }

@@ -114,6 +114,28 @@ The bar is built with Quickshell, in [`config/hyprland/quickshell/bar/`](../conf
 
 The bar also rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them, and they show in screenshots.
 
+#### Centre island
+
+The island's look is set in `~/.config/hypr/bar-island.json`. Every key is optional, and saving the file changes the island at once.
+
+```json
+{
+  "mode": "dynamic",
+  "background": "#2c2c2e",
+  "opacity": 0.2,
+  "blur": false,
+  "text": "#f2f2f7"
+}
+```
+
+| Key | Values | Default |
+|---|---|---|
+| `mode` | `dynamic`: the text turns light or dark to suit the wallpaper behind each part of it. `static`: the text is always `text` | `dynamic` |
+| `background` | The island's colour, `#rrggbb` | `#2c2c2e` |
+| `opacity` | From `0` (none) to `1` (opaque) | `0.2` |
+| `blur` | Blur what is behind the island | `false` |
+| `text` | The text's colour, in `static` mode only | `#f2f2f7` |
+
 To take screenshots of your own setup, `qs -c bar ipc call demo on` shows made-up figures instead of yours: the time, the battery, the system figures, the next event, the Wi-Fi name and what's playing. Notifications received meanwhile are closed when you turn it off with `demo off`.
 
 #### Drawers

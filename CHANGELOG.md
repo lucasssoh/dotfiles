@@ -9,6 +9,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
 - **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
 
+### Added
+- **Bar, centre island:** you can set its colour, opacity and blur, and choose between text that adapts to the wallpaper and a colour of your own, in a settings file described in the docs.
+
 ### Changed
 - **Bar, centre island:** no more dark slab: a light graphite tint. The window's name, its title, each workspace mark and the music turn light or dark to suit what is right behind them, a title across two grounds even part by part.
 - **Bar, centre island:** empty workspaces are hollow dots, like the hollow bar of an empty current workspace.

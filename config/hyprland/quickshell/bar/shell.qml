@@ -1007,7 +1007,7 @@ ShellRoot {
             // pane that does not fade (Boussole's, the notification
             // centre's) is up and needs it whole.
             readonly property real glassFade: (ProgrammeState.panelOpen
-                || NotificationState.centerOpen) ? 1
+                || NotificationState.centerOpen || IslandStyle.blur) ? 1
                 : Math.min(clockIsland.glassFade, launchers.glassFade, toolsIsland.glassFade)
             onGlassFadeChanged: shell.glassLevel = bar.glassFade
 
@@ -1015,8 +1015,16 @@ ShellRoot {
                 // Every rounded blur region in this file is a SmoothRegion,
                 // not a plain Region: see there for the halo a plain one
                 // left on the corners.
-                // (The central island's row has no blur: Graphite at 20 %,
-                // see theme/IslandGlass.qml.)
+                // The central island's row, when bar-island.json asks for
+                // blur (services/IslandStyle.qml): up whenever the bar is,
+                // whole, so it is on `glassFade`'s forces-1 list below.
+                Modules.SmoothRegion {
+                    x: centerIsland.x + centerIsland.rowPaneX
+                    y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
+                    width: IslandStyle.blur && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
+                    height: centerIsland.rowPaneH
+                    radius: centerIsland.rowPaneR
+                }
                 Modules.SmoothRegion {
                     x: centerIsland.x + centerIsland.paneX
                     y: centerIsland.y + centerIsland.paneY
@@ -1310,9 +1318,9 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
-                // Graphite at 20 %, no blur, no border, no shadow; its text
-                // light or dark after the wallpaper behind the island -- see
-                // theme/IslandGlass.qml.
+                // As bar-island.json says (by default Graphite at 20 %, no
+                // blur, dynamic text), no border, no shadow -- see
+                // services/IslandStyle.qml and theme/IslandGlass.qml.
                 rowIslandColor: islandGlass.fill
                 // No border: neither the rim nor the top light ("enlève la
                 // bordure"); the glass and its shadow draw the island.
