@@ -160,6 +160,15 @@ sudo systemctl enable --now NetworkManager
 sudo systemctl enable --now bluetooth
 sudo systemctl enable --now dbus-broker
 
+# abrt reads the journal around the clock (~90 MB across its readers) to
+# offer crash reports for Fedora's Bugzilla. systemd-coredump already keeps
+# every core dump for coredumpctl, so abrt only doubles it. One unit at a
+# time: a missing one (addon not installed) must not stop the others.
+info "Disabling abrt..."
+for unit in abrtd abrt-journal-core abrt-oops abrt-xorg abrt-vmcore abrt-pstoreoops; do
+    sudo systemctl disable --now "$unit.service" &>/dev/null || true
+done
+
 sudo loginctl enable-linger "$USER"
 ok "Base Fedora system ready."
 
