@@ -536,15 +536,20 @@ Item {
     // corner it hangs from, diagonally, on a spring with a hint of
     // bounce. The pane is a plain scale of itself, so the blur region
     // scales with it and never pops (no blur ramp needed).
+    // "grow": the pane is born at the island's own size (`dropOriginX` and
+    // `dropOriginWidth` set to the island) and widens and lengthens at
+    // once on one ease-in-out, no bounce; the content fades in after.
+    // The island itself does not move. Chosen for the central island.
     property string dropStyle: "drop"
     readonly property bool breath: root.dropStyle === "breath"
     readonly property bool corner: root.dropStyle === "corner"
+    readonly property bool grow: root.dropStyle === "grow"
     // Which corner the pane zooms from: "left" or "right" (the band's
     // own outer edge), or "" for the chip (`dropOriginX`), for a pane
     // that does not sit in a corner.
     property string dropCorner: ""
-    property int dropOpenDuration: root.breath ? 380 : root.corner ? 550 : 720
-    property int dropCloseDuration: root.corner ? 230 : 200
+    property int dropOpenDuration: root.breath ? 380 : root.corner ? 550 : root.grow ? 320 : 720
+    property int dropCloseDuration: root.corner ? 230 : root.grow ? 260 : 200
     // Close only: the drawer's cards burst first (BaliseReveal.burst, the
     // entrance cascade run backwards), and the pane folds away behind
     // them once they are gone. Off for a drawer with no cascade in it.
@@ -579,6 +584,10 @@ Item {
         return 1 + overshoot * Math.exp(-k * u) * (Math.cos(w * u) + (k / w) * Math.sin(w * u));
     }
     function easeInCubic(t) { const c = Math.max(0, Math.min(1, t)); return c * c * c; }
+    function easeInOutCubic(t) {
+        const c = Math.max(0, Math.min(1, t));
+        return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+    }
 
     // Close timeline in ms: content gone by 70, shape moves 30..200,
     // height leading and width following.
@@ -590,6 +599,7 @@ Item {
     // little past 1 on the way out: that is the bounce.
     readonly property real dropW: {
         if (root.breath || root.corner) return 1;
+        if (root.grow) return root.growX;
         if (root.dropClosing)
             return root.dropFromW * (1 - root.easeInCubic((root.dropCloseT - 0.35) / 0.65));
         if (root.dropT >= 1) return 1;
@@ -597,10 +607,17 @@ Item {
     }
     readonly property real dropH: {
         if (root.breath || root.corner) return 1;
+        if (root.grow) return root.growX;
         if (root.dropClosing)
             return root.dropFromH * (1 - root.easeInCubic(root.dropCloseT / 0.7));
         if (root.dropT >= 1) return 1;
         return root.dropFromH + (1 - root.dropFromH) * root.bounceAt(root.dropOpenSec - 0.03, 0.18, 0.035);
+    }
+    // Grow's one progress, both axes together: 0 = the island, 1 = the pane.
+    readonly property real growX: {
+        if (root.dropClosing) return root.dropFromW * (1 - root.easeInOutCubic(root.dropCloseT));
+        if (root.dropT >= 1) return 1;
+        return root.dropFromW + (1 - root.dropFromW) * root.easeInOutCubic(root.dropT);
     }
     // Souffle's one progress, 0 = gone, 1 = in place. Opening is a
     // critically damped spring (fast, no overshoot), closing a plain
@@ -691,7 +708,7 @@ Item {
     // most of the way out, gone before the shape starts back.
     SequentialAnimation {
         id: dropContentIn
-        PauseAnimation { duration: root.breath || root.corner ? 60 : 110 }
+        PauseAnimation { duration: root.breath || root.corner ? 60 : root.grow ? 280 : 110 }
         NumberAnimation {
             target: root; property: "contentProgress"; to: 1
             duration: root.breath ? 200 : root.corner ? 160 : 180; easing.type: Easing.OutCubic

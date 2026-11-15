@@ -1294,17 +1294,28 @@ ShellRoot {
                 rowIslandShadow: Qt.rgba(0, 0, 0, barInk.lightText ? 0.40 : 0.16)
                 flushTop: !BarPosition.bottom
                 splitDrawer: true
-                drawerFillTop: DrawerTheme.islandPane
-                drawerFillBottom: DrawerTheme.islandPane
+                // The drawers hanging from it wear the same glass as every
+                // other drawer, light or dark with the system.
+                drawerFillTop: DrawerTheme.paneTop
+                drawerFillBottom: DrawerTheme.paneBottom
                 drawerRadius: 28
                 paneEdge: true
-                paneShadow: false
-                paneRim: DrawerTheme.islandPaneRim
-                paneHighlight: DrawerTheme.islandPaneHighlight
                 drawerGap: 0
                 drawerEdge: bar.bandHeight + 6
-                fixedDrawerWidth: Math.round(Math.max(centerIsland.maxRowWidth, centerIsland.entryWidthWanted))
-                drawerAnchorX: centerIsland.margin + centerIsland.effectiveWidth / 2
+                // The island keeps the width of what it holds: the drawer
+                // is born at the island's size and grows out of it to its
+                // own fixed width (Veille, Programme and the keybinds
+                // sheet all share the sheet's), instead of the island
+                // stretching first.
+                twoPhase: false
+                widenOnOpen: false
+                fixedDrawerWidth: keybindsDrawer.drawerWidth
+                drawerAnchorX: centerIsland.width / 2
+                dropReveal: true
+                dropStyle: "grow"
+                dropOriginX: centerIsland.width / 2
+                dropOriginWidth: centerIsland.width
+                dropBurst: false
                 anchors.top: BarPosition.bottom ? undefined : parent.top
                 anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -1345,6 +1356,7 @@ ShellRoot {
                     // happen to show (Veille is quiet during a session).
                     ProgrammeAlert {
                         id: programmeAlert
+                        drawerWidth: keybindsDrawer.drawerWidth
                         drawerOpen: ProgrammeState.alertShown && bar.screen === shell.veille.activeScreen
                     },
                     Modules.KeybindsDrawerContent {

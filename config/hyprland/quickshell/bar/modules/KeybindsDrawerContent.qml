@@ -170,7 +170,7 @@ Item {
             height: root.shortHeight
             verticalAlignment: Text.AlignVCenter
             text: root.shiftHeld ? root.numberLabelShift : root.numberLabelSuper
-            color: DrawerTheme.islandMuted
+            color: DrawerTheme.muted
             font.family: Fonts.ui
             font.pixelSize: 11
             renderType: Text.NativeRendering
@@ -216,17 +216,17 @@ Item {
                     // outline; the held Shift inverts, the one small
                     // light area on the sheet. Everything else is a
                     // hairline.
-                    color: cap.held ? DrawerTheme.cream
-                        : cap.lit ? DrawerTheme.islandKey : DrawerTheme.clear(DrawerTheme.cream)
+                    color: cap.held ? DrawerTheme.on
+                        : cap.lit ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card)
                     border.width: cap.lit || cap.held ? 0 : 1
-                    border.color: DrawerTheme.creamInk(0.12)
+                    border.color: DrawerTheme.ink(0.12)
                     opacity: cap.elsewhere ? 0.5 : 1
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
 
-                    readonly property color ink: cap.held ? "#0c0c0e"
-                        : cap.lit ? DrawerTheme.cream
-                        : cap.isShift ? DrawerTheme.cream2 : DrawerTheme.islandFaint
+                    readonly property color ink: cap.held ? DrawerTheme.onInk
+                        : cap.lit ? DrawerTheme.primary
+                        : cap.isShift ? DrawerTheme.secondary : DrawerTheme.faint
 
                     // What the key prints: its name for the fixed keys,
                     // the layout's glyph otherwise -- letters upper-cased

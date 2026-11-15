@@ -95,7 +95,7 @@ Item {
         anchors.top: BarPosition.bottom ? undefined : parent.top
         anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         width: 120
-        tint: DrawerTheme.islandAccent
+        tint: DrawerTheme.accent
         onCloseRequested: if (root.veille) root.veille.dismiss()
     }
 
@@ -127,7 +127,7 @@ Item {
             Text {
                 id: hourText
                 text: root.veille ? root.veille.hourString : ""
-                color: DrawerTheme.cream
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 104
                 font.weight: Font.ExtraLight
@@ -140,7 +140,7 @@ Item {
                 visible: root.showSeconds
                 anchors.baseline: hourText.baseline
                 text: root.veille ? root.veille.secondsString : ""
-                color: DrawerTheme.creamInk(0.45)
+                color: DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 36
                 font.weight: Font.Light
@@ -156,7 +156,7 @@ Item {
             width: parent.width
             readonly property bool hasMessage: root.veille !== null && root.veille.messageString !== ""
             text: hasMessage ? root.veille.messageString : (root.veille ? root.veille.dateString : "")
-            color: hasMessage ? DrawerTheme.cream : DrawerTheme.cream2
+            color: hasMessage ? DrawerTheme.primary : DrawerTheme.secondary
             wrapMode: Text.WordWrap
             lineHeight: 1.1
             font.family: Fonts.ui

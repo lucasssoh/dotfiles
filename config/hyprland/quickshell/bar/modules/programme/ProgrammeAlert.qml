@@ -27,7 +27,8 @@ Item {
     // Answered: what was done, in place of the buttons.
     readonly property bool answered: ProgrammeState.acked !== null
     readonly property int hPad: 24
-    readonly property int drawerWidth: 840
+    // Bound to the keybinds sheet's width in shell.qml, like Veille.
+    property int drawerWidth: 840
     readonly property real textWidth: Math.max(0, Math.min(root.width, root.drawerWidth) - root.hPad * 2)
     readonly property real contentInset: root.hPad + Math.max(0, (root.width - root.textWidth - root.hPad * 2) / 2)
 
@@ -44,7 +45,7 @@ Item {
         anchors.top: BarPosition.bottom ? undefined : parent.top
         anchors.bottom: BarPosition.bottom ? parent.bottom : undefined
         width: 120
-        tint: DrawerTheme.islandAccent
+        tint: DrawerTheme.accent
         onCloseRequested: ProgrammeState.answer("dismiss")
     }
 
@@ -61,7 +62,7 @@ Item {
             Text {
                 id: hour
                 text: root.a ? root.a.time : ""
-                color: DrawerTheme.cream
+                color: DrawerTheme.primary
                 font.family: Fonts.ui
                 font.pixelSize: 104
                 font.weight: Font.ExtraLight
@@ -74,7 +75,7 @@ Item {
                 visible: root.a !== null && root.a.until !== undefined
                 anchors.baseline: hour.baseline
                 text: root.a && root.a.until ? "→ " + root.a.until : ""
-                color: DrawerTheme.creamInk(0.45)
+                color: DrawerTheme.muted
                 font.family: Fonts.ui
                 font.pixelSize: 30
                 font.weight: Font.Light
@@ -87,7 +88,7 @@ Item {
         Text {
             width: parent.width
             text: root.a ? root.a.title : ""
-            color: DrawerTheme.cream
+            color: DrawerTheme.primary
             wrapMode: Text.WordWrap
             font.family: Fonts.ui
             font.pixelSize: 30
@@ -100,7 +101,7 @@ Item {
             width: parent.width
             visible: text !== ""
             text: root.a && root.a.body ? root.a.body : ""
-            color: DrawerTheme.cream2
+            color: DrawerTheme.secondary
             wrapMode: Text.WordWrap
             lineHeight: 1.15
             font.family: Fonts.ui
@@ -113,7 +114,7 @@ Item {
             width: parent.width
             visible: text !== ""
             text: root.a && root.a.hint ? root.a.hint : ""
-            color: DrawerTheme.islandMuted
+            color: DrawerTheme.muted
             wrapMode: Text.WordWrap
             font.family: Fonts.ui
             font.pixelSize: 15
@@ -130,7 +131,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\ue06c"
-                color: DrawerTheme.cream
+                color: DrawerTheme.primary
                 font.family: Fonts.iconLucide
                 font.pixelSize: 20
             }
@@ -138,7 +139,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: content.width - 40
                 text: ProgrammeState.ackText !== "" ? ProgrammeState.ackText : "…"
-                color: DrawerTheme.cream
+                color: DrawerTheme.primary
                 wrapMode: Text.WordWrap
                 font.family: Fonts.ui
                 font.pixelSize: 18
@@ -161,14 +162,14 @@ Item {
                     height: 44
                     width: label.implicitWidth + 36
                     radius: height / 2
-                    color: btn.primary ? (hit.containsMouse ? DrawerTheme.cream2 : DrawerTheme.cream) : (hit.containsMouse ? DrawerTheme.islandCard : "transparent")
+                    color: btn.primary ? (hit.containsMouse ? DrawerTheme.secondary : DrawerTheme.on) : (hit.containsMouse ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card))
                     border.width: btn.primary ? 0 : 1
-                    border.color: DrawerTheme.islandCardRaised
+                    border.color: DrawerTheme.ink(0.16)
                     Text {
                         id: label
                         anchors.centerIn: parent
                         text: btn.modelData.label
-                        color: btn.primary ? "#0c0c0e" : DrawerTheme.cream
+                        color: btn.primary ? DrawerTheme.onInk : DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
                         font.weight: Font.DemiBold
