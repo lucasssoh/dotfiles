@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade and without a stutter mid-way, instead of catching up afterwards.
 - **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
 - **Wallpapers:** a light and dark wallpaper keeps following light or dark mode after its background helper restarts.
+- **Firefox:** closing a tab no longer leaves a gap in the tab strip: the tabs after it move up to fill its place.
 
 ### Added
 - **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.

@@ -428,9 +428,12 @@
 
 /* ---- tabs: equal widths, rounded rectangles, the title centred --------- */
 /* a little wider than Firefox's 225px, for the centred title; a lone tab
-   stays a tab instead of stretching across the strip */
-#tabbrowser-tabs:not([orient="vertical"]) .tabbrowser-tab:not([pinned]) {
-    max-width: 260px !important;
+   stays a tab instead of stretching across the strip. Set through Firefox's
+   own variable, not max-width on the tab: a closing tab must still shrink to
+   0.1px, since Firefox only removes it once that transition ends, and the
+   width it locks inline after a close must still apply. */
+#tabbrowser-tabs[orient="horizontal"] {
+    --tab-max-width: 260px !important;
 }
 
 .tabbrowser-tab .tab-background {
