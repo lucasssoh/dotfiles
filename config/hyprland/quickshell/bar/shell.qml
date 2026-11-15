@@ -2443,14 +2443,8 @@ ShellRoot {
 
     // Volume/mic/brightness OSD -- see services/OsdState.qml for the
     // trigger logic (Pipewire push for volume/mic, IPC-poked sysfs read
-    // for brightness). Per-screen like the bar itself (not single-
-    // instance like Veille above): there's no one obvious "the" screen
-    // to pop it on without a focused-monitor lookup this codebase
-    // doesn't have wired up yet, and showing it on every connected
-    // screen is the harmless default while there's usually just one
-    // anyway. Window stays mapped at all times (unlike the main bar's
-    // `visible: !shell.zenMode` hard unmap) so Osd.qml's own opacity/
-    // scale Behavior can actually fade it, not just pop.
+    // for brightness). Per-screen like the bar itself; each display
+    // gets its own horizontally centred OSD at the bottom.
     //
     // exclusionMode: Ignore is load-bearing, not decorative -- leaving
     // exclusiveZone unset was WRONG (found live, tiled windows visibly
@@ -2471,72 +2465,27 @@ ShellRoot {
             focusable: false
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
-            // Missed on the first pass -- only the main bar had this.
-            // Found live: a maximized/fullscreen window covered the OSD
-            // entirely, since without it the popup wasn't necessarily on
-            // top of regular application windows.
-            aboveWindows: true
+            // Keep the OSD above the bar and its open drawers.
+            WlrLayershell.layer: WlrLayer.Overlay
 
-            // Unmap the surface while nothing is showing, instead of
-            // leaving a permanent transparent 280x92 pane on the screen.
-            // `opacity: 0` (Osd.qml:104) hides the CONTENT; the layer
-            // surface underneath stayed mapped for the session, and a
-            // mapped wlr-layer-shell surface keeps taking frame callbacks
-            // whether or not it paints anything. Measured on this laptop:
-            // quickshell's two WaylandEventThreads together woke 686
-            // times/s with these popups mapped, against ~1099 wakeups/s
-            // for the whole system -- which is what pins the SoC in
-            // package C0 84% of the time (pmc_core: C10 only 6.1%).
-            //
-            // The `|| opacity > 0` half is what keeps the 120ms fade
-            // intact. Binding to `osdVisible` alone would yank the
-            // surface out on the first frame of the hide, cutting the
-            // Behavior; opacity only reaches 0 once that animation has
-            // finished, so the window outlives it and leaves silently.
-            // The `osdVisible` half drives the SHOW, and deliberately
-            // does not wait on the animation: it flips the surface back
-            // the instant state changes, so nothing depends on Qt
-            // ticking a Behavior for an unmapped window.
-            //
-            // Cost of the trade: showing now needs a Wayland map
-            // round-trip, so the OSD can land a frame or two late. Judged
-            // worth it -- one wakeup to display beats polling forever.
+            // The full-width surface exists only while the OSD is
+            // visible or fading out. Its empty input region below leaves
+            // the rest of the screen interactive.
             visible: OsdState.osdVisible || osd.opacity > 0
 
-            // The OSD sits on the edge opposite the bar.
+            // Centre the OSD horizontally along the bottom edge.
             anchors {
-                top: BarPosition.bottom
-                bottom: !BarPosition.bottom
+                bottom: true
                 left: true
+                right: true
             }
             margins {
-                top: BarPosition.bottom ? 48 : 0
-                bottom: BarPosition.bottom ? 0 : 48
-                left: 20
+                bottom: 48
             }
-            implicitWidth: osd.width
             implicitHeight: osd.height
 
-            // Input region, not paint state -- the same fix
-            // batteryAlertWindow above already carries, missed here on
-            // that pass and reported live for the volume/brightness
-            // popup ("même soucis d'invisibilité superficielle sur les
-            // retour scroll de luminosité et de volume en bas au
-            // milieu"). Osd.qml hides with `opacity: 0`, which leaves
-            // the card at its full 280x92, and `implicitWidth/Height`
-            // above read that size whether or not anything is showing --
-            // so an unmasked layer surface was taking input across a
-            // permanent invisible rectangle.
-            //
-            // ALWAYS empty here, where the battery alert's own mask is
-            // merely empty-while-hidden: that card is click-to-dismiss
-            // and so needs input while it shows, but the OSD is a pure
-            // readout -- no MouseArea, no handler anywhere in Osd.qml,
-            // it auto-hides on OsdState's own timer. And a popup that
-            // appears BECAUSE you are scrolling a volume/brightness key
-            // is the worst possible thing to have swallow the next
-            // click. It keeps its size either way, so the show/hide
-            // fade+scale is untouched.
+            // The OSD is a readout, not an interactive popup. Keep its
+            // input region empty so it never swallows the next click.
             mask: Region { width: 0; height: 0 }
 
             // Glass like the drawers (modules/GlassPane.qml): Hyprland blurs
@@ -2547,14 +2496,19 @@ ShellRoot {
             // blur after the window had gone.
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
-                x: osd.blurX
-                y: osd.blurY
+                x: osd.x + osd.blurX
+                y: osd.y + osd.blurY
                 width: DrawerTheme.glass && osd.blurShown ? osd.blurSize : 0
                 height: osd.blurSize
                 radius: osd.blurSize / 2
+                maxRows: Math.ceil(osd.blurSize / 2)
             }
 
-            Modules.Osd { id: osd; monitor: shell.hyprMonitorFor(osdWindow.screen) }
+            Modules.Osd {
+                id: osd
+                anchors.horizontalCenter: parent.horizontalCenter
+                monitor: shell.hyprMonitorFor(osdWindow.screen)
+            }
         }
     }
 

@@ -25,7 +25,7 @@ import Quickshell
 Region {
     id: root
 
-    readonly property int _maxRows: 40
+    property int maxRows: 40
 
     function _inset(r, i) {
         if (i >= r)
@@ -41,7 +41,7 @@ Region {
         if (w <= 0 || h <= 0)
             return [];
         const half = Math.floor(Math.min(w, h) / 2);
-        const clamp = (r) => Math.max(0, Math.min(root._maxRows, half, r));
+        const clamp = (r) => Math.max(0, Math.min(root.maxRows, half, r));
         const tl = clamp(root.topLeftRadius), tr = clamp(root.topRightRadius);
         const bl = clamp(root.bottomLeftRadius), br = clamp(root.bottomRightRadius);
         const rects = [];
