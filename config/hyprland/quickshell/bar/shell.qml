@@ -1324,9 +1324,10 @@ ShellRoot {
                 // the system: see theme/IslandGlass.qml. Its text takes the
                 // same glass's inks.
                 rowIslandColor: islandGlass.fill
-                rowIslandRim: islandGlass.rim
-                rowIslandHighlight: true
-                rowIslandHighlightColor: islandGlass.highlight
+                // No border: neither the rim nor the top light ("enlève la
+                // bordure"); the glass and its shadow draw the island.
+                rowIslandRim: "transparent"
+                rowIslandHighlight: false
                 rowIslandShadow: islandGlass.shadow
                 flushTop: !BarPosition.bottom
                 splitDrawer: true
