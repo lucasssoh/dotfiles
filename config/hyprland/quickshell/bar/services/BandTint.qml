@@ -54,7 +54,7 @@ Singleton {
 
     // The band at `veil` (0..1) of its full density.
     function bandFor(veil) {
-        const k = Math.max(0, Math.min(root.veilMax, veil));
+        const k = Math.max(0, Math.min(1, veil));
         return Qt.rgba(root.band.r, root.band.g, root.band.b, root.band.a * k);
     }
 
@@ -305,15 +305,6 @@ Singleton {
     // earlier pass is back, but only as a local haze over a busy patch,
     // never as the bar's surface.
     readonly property color lightBand: "#73f5f3ee"
-
-    // Dark only (2026-11-15, after the light veil and light glass): the
-    // text on the band is always light and the veil always dark. Under a
-    // calm stretch the veil is the band's normal density (1, the 0x73
-    // alpha); under a busy one, denser (`denseVeil`); and wherever the
-    // light text still needs more to reach `target`, more again, up to
-    // `veilMax`.
-    readonly property real denseVeil: 1.45
-    readonly property real veilMax: 1.75
     function lightBandFor(veil) {
         const k = Math.max(0, Math.min(1, veil));
         return Qt.rgba(root.lightBand.r, root.lightBand.g, root.lightBand.b, root.lightBand.a * k);
@@ -335,19 +326,26 @@ Singleton {
             const lo = Qt.rgba(m.lo[i] / 255, m.lo[i] / 255, m.lo[i] / 255, 1);
             const hi = Qt.rgba(m.hi[i] / 255, m.hi[i] / 255, m.hi[i] / 255, 1);
             const texture = root.lstar(m.hi[i]) - root.lstar(m.lo[i]);
-            const base = texture >= root.textureStart ? root.denseVeil : 1;
-            light.push(root._least(base, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
+            const floor = texture >= root.textureStart
+                ? 0.35 + 0.65 * Math.min(1, (texture - root.textureStart) / (root.textureFull - root.textureStart))
+                : 0;
+            light.push(root._least(floor, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
+            // Half the floor under dark text: over a bright, grainy
+            // stretch (snow) the full floor put a light haze along the
+            // whole bar where dark text already read at 10:1; the 10th
+            // percentile in `lo` is what guards the dark patches.
+            dark.push(root._least(floor * 0.5, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
         }
-        const entry = { seq: root.seq, light: light, dark: light };
+        const entry = { seq: root.seq, light: light, dark: dark };
         const all = Object.assign({}, root._needs);
         all[monitor] = entry;
         root._needs = all;
         return entry;
     }
     function _least(floor, contrastAt) {
-        for (let v = floor; v <= root.veilMax + 0.0001; v += 0.05)
-            if (contrastAt(Math.min(root.veilMax, v)) >= root.target) return { v: Math.min(root.veilMax, v), ok: true };
-        return { v: root.veilMax, ok: false };
+        for (let v = floor; v <= 1.0001; v += 0.05)
+            if (contrastAt(Math.min(1, v)) >= root.target) return { v: Math.min(1, v), ok: true };
+        return { v: 1, ok: false };
     }
 
     // rects: [{x, w}] in the monitor's coordinates, the blocks that carry
@@ -367,8 +365,15 @@ Singleton {
             const b = Math.min(count - 1, Math.floor((rects[r].x + rects[r].w - 1) / m.width * count));
             for (let i = a; i <= b; i++) text[i] = true;
         }
-        // Always light text over a dark veil (see `denseVeil`).
-        const lightText = true;
+        const cost = side => {
+            let c = 0;
+            for (const i in text) c += side[i].v + (side[i].ok ? 0 : 10);
+            return c;
+        };
+        const cl = cost(n.light), cd = cost(n.dark);
+        let lightText = currentLight;
+        if (currentLight && cd + root.inkSwitchMargin < cl) lightText = false;
+        else if (!currentLight && cl + root.inkSwitchMargin < cd) lightText = true;
         // Only under text: a slice no block covers gets no veil of its
         // own, and only the easing below reaches into it -- a veil along
         // the whole width spoiled wide empty stretches of the wallpaper.
