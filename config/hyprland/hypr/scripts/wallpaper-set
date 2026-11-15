@@ -22,7 +22,7 @@
 #
 # The one place that talks to awww for a wallpaper: Prisme, the slideshow,
 # the login restore and wallpaper-follow-scheme all go through here. Also
-# refreshes the bar's tint.
+# refreshes the bar's tint, just before the image so the bar changes with it.
 set -uo pipefail
 
 instant=0 resolve=0
@@ -82,9 +82,11 @@ fi
 
 if [ "$instant" = 1 ]; then
     transition=(--transition-type none)
+    transition_ms=0
 else
     transition=(--transition-type fade --transition-bezier .4,0,.2,1
                 --transition-fps 60 --transition-duration 1.5)
+    transition_ms=1500
 fi
 
 # name<TAB>WxH per screen, rotated screens swapped to their real shape.
@@ -92,22 +94,34 @@ screens="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] |
     (if (.transform % 2) == 1 then "\(.height)x\(.width)" else "\(.width)x\(.height)" end) as $res |
     "\(.name)\t\($res)"' 2>/dev/null)"
 
+# Each screen's file first, so the tint can go out before the image does.
+# The bar sits on every screen but reads one tint: the internal panel's
+# image when there is one, else the first screen's.
 tint_source="$source"
-if [ -z "$screens" ]; then
-    # Outside a Hyprland session: one image for whatever awww drives.
-    awww img "$source" "${transition[@]}"
-else
+plan=()
+if [ -n "$screens" ]; then
     first=1
     while IFS=$'\t' read -r output res; do
         file="$CACHE_DIR/$res/$name"
         [ -f "$file" ] || file="$source"
-        awww img -o "$output" "$file" "${transition[@]}"
-        # The bar sits on every screen but reads one tint: the internal
-        # panel's image when there is one, else the first screen's.
+        plan+=("$output" "$file")
         if [ "$first" = 1 ] || [[ "$output" == eDP* || "$output" == LVDS* || "$output" == DSI* ]]; then
             tint_source="$file"; first=0
         fi
     done <<< "$screens"
 fi
 
-"$HOME/.config/hypr/scripts/bar-tint.py" "$tint_source" >/dev/null 2>"$HOME/.cache/bar-tint.log" &
+# The tint BEFORE the image (~0.25 s): the bar starts easing its ink and
+# veil, over the transition's own length, as the wallpaper starts fading,
+# instead of a quarter of a second behind it.
+"$HOME/.config/hypr/scripts/bar-tint.py" --transition "$transition_ms" "$tint_source" \
+    >/dev/null 2>"$HOME/.cache/bar-tint.log"
+
+if [ ${#plan[@]} -eq 0 ]; then
+    # Outside a Hyprland session: one image for whatever awww drives.
+    awww img "$source" "${transition[@]}"
+else
+    for ((i = 0; i < ${#plan[@]}; i += 2)); do
+        awww img -o "${plan[i]}" "${plan[i+1]}" "${transition[@]}"
+    done
+fi

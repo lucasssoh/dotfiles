@@ -68,6 +68,12 @@ listens for nothing, and there is no protocol to get the path to it --
 the setter passes it as an argument, because the setter is the only thing
 that actually knows.
 
+The setter (wallpaper-set) runs this BEFORE it hands the image to awww,
+and passes the length of awww's transition: the bar then eases its ink and
+veil over the same time, starting with the wallpaper's fade instead of a
+quarter of a second into it, which left the old band ghosting over the new
+image.
+
 The first draft of this file WAS a daemon woken by SIGUSR1, with a
 pidfile and a state file. All of that existed only to carry the path from
 whoever changed the wallpaper to a process that was already running, and
@@ -317,7 +323,7 @@ def awww_paths():
 # Output
 # ---------------------------------------------------------------------------
 
-def emit(profiles):
+def emit(profiles, transition=None):
     """Write the profile file quickshell watches.
 
     Written in ONE os.write to a pre-serialised buffer rather than
@@ -332,9 +338,13 @@ def emit(profiles):
     # ignore un `seq` deja vu -- n'appliquerait plus jamais rien apres le
     # tout premier profil.
     seq = int(time.time() * 1000)
-    blob = json.dumps({"seq": seq, "bandHeight": BAND_H,
-                       "buckets": BUCKETS, "monitors": profiles},
-                      separators=(",", ":")).encode()
+    payload = {"seq": seq, "bandHeight": BAND_H,
+               "buckets": BUCKETS, "monitors": profiles}
+    # How long the wallpaper's own transition lasts, in ms, so the bar
+    # eases its ink and veil over the same time (0: a cut).
+    if transition is not None:
+        payload["transition"] = transition
+    blob = json.dumps(payload, separators=(",", ":")).encode()
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     fd = os.open(OUT_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
     try:
@@ -343,7 +353,7 @@ def emit(profiles):
         os.close(fd)
 
 
-def sample(explicit_path=None, verbose=False):
+def sample(explicit_path=None, verbose=False, transition=None):
     startup_paths = {} if explicit_path else awww_paths()
     position = bar_position()
     profiles = {}
@@ -366,7 +376,7 @@ def sample(explicit_path=None, verbose=False):
             print(f"{mon['name']}: {src}, {len(cells)} buckets, "
                   f"moyenne {cells.mean():.0f}/255", file=sys.stderr)
     if profiles:
-        emit(profiles)
+        emit(profiles, transition)
     return bool(profiles)
 
 
@@ -380,6 +390,9 @@ def main():
                     help="le wallpaper qui vient d'etre applique. Omis: "
                          "demande a `awww query` (moins fiable, voir l'en-tete)")
     ap.add_argument("-v", "--verbose", action="store_true")
+    ap.add_argument("--transition", type=int, metavar="MS",
+                    help="duree de la transition du wallpaper, que la barre "
+                         "reprend pour son encre et son voile (0: coupe)")
     args = ap.parse_args()
 
     path = None
@@ -391,7 +404,8 @@ def main():
             print(f"bar-tint: {path} introuvable", file=sys.stderr)
             path = None
     try:
-        return 0 if sample(explicit_path=path, verbose=args.verbose) else 1
+        return 0 if sample(explicit_path=path, verbose=args.verbose,
+                           transition=args.transition) else 1
     except Exception as e:      # jamais faire echouer le setter qui nous appelle
         print(f"bar-tint: {e}", file=sys.stderr)
         return 1

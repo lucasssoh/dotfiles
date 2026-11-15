@@ -19,7 +19,13 @@ InkBlend {
 
     property bool lightText: true
     t: bar.lightText ? 0 : 1
-    Behavior on t { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
+    Behavior on t {
+        NumberAnimation {
+            duration: BandTint.transition
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: BandTint.transitionCurve
+        }
+    }
 
     // One veil per profile slice, 0..1, already eased across slices.
     property var veils: []

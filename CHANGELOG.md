@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
+- **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
 
 ### Changed
 - **Bar, centre island:** no more dark slab: the island is frosted glass on the bar, light under dark text and dark under light text, in the same text colour as the other blocks, with a hairline and a soft shadow.

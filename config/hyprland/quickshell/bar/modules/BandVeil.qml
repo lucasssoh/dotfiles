@@ -32,7 +32,9 @@ Canvas {
         id: ease
         target: band; property: "progress"
         from: 0; to: 1
-        duration: 900; easing.type: Easing.InOutQuad
+        duration: BandTint.transition
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: BandTint.transitionCurve
     }
 
     function shown() {
