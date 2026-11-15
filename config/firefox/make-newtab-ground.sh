@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Writes the new tab's ground at the end of userContent.css: coucou's
-# Flamme pair as data: URIs, between two marker lines. about:newtab refuses
+# Nuit pair as data: URIs, between two marker lines. about:newtab refuses
 # file:// images, even from userContent.css, and the sheet can't @import
 # another file, so the pictures have to live in it.
-# Rerun after changing wallpapers/coucou-flamme-plis*.
+# Rerun after changing wallpapers/coucou-nuit-plis*.
 #
 #     config/firefox/make-newtab-ground.sh        (needs ImageMagick)
 set -euo pipefail
@@ -21,11 +21,11 @@ begin="/* ---- the ground picture: written by make-newtab-ground.sh, do not edit
     echo "$begin"
     echo '@-moz-document url-prefix("about:newtab"), url-prefix("about:home") {'
     echo '    html:not(:has(> body:is(.lightWallpaper, .darkWallpaper))) {'
-    echo "        background-image: url(\"$(uri coucou-flamme-plis-dark)\") !important;"
+    echo "        background-image: url(\"$(uri coucou-nuit-plis-dark)\") !important;"
     echo '    }'
     echo '    @media (prefers-color-scheme: light) {'
     echo '        html:not(:has(> body:is(.lightWallpaper, .darkWallpaper))) {'
-    echo "            background-image: url(\"$(uri coucou-flamme-plis)\") !important;"
+    echo "            background-image: url(\"$(uri coucou-nuit-plis)\") !important;"
     echo '        }'
     echo '    }'
     echo '}'

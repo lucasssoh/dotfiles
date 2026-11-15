@@ -13,7 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Prisme:** a light and dark wallpaper opens on the version matching your desktop, without showing the other one for an instant.
 
 ### Added
-- **Wallpapers:** Flamme, the folds of coucou's Plis lit in Firefox's colours, light and dark.
+- **Wallpapers:** Nuit, the folds of coucou's Plis under a cold blue light, light and dark.
 
 ### Changed
 - **Install:** Fedora's crash reporter (abrt) is turned off, which frees about 90 MB. Crashes are still kept: `coredumpctl list` shows them.
@@ -22,7 +22,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Files:** the menu bar and status bar are hidden; press Alt to show the menu bar. Nemo is no longer slightly see-through.
 - **Files:** the link, lock and read-only badges on icons are sharp, white with a dark mark, instead of blurred grey squares.
 - **Firefox:** along the top, tabs are rounded rectangles of equal width with their title centred. The address reads centred until you click in it, in an outlined field. The page sits as a rounded card in the window.
-- **Firefox, new tab:** the search field and, right under it, one glass pane with your pinned shortcuts as icons and your frequent sites as a list. The ground is the new Flamme wallpaper, light or dark, instead of the grid.
+- **Firefox, new tab:** the search field and, right under it, one glass pane with your pinned shortcuts as icons and your frequent sites as a list. The ground is the new Nuit wallpaper, light or dark, instead of the grid.
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.
 - **Bar:** an app chip opens its drawer on a click, like the other drawers, and no longer on hover; Focus is the drawer's first row.
 - **Bar:** drawers start right at the bar's edge, without the 4px gap.
