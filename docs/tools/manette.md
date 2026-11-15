@@ -47,7 +47,7 @@ The menu shows your controller's own buttons: letters in their colours on an Xbo
 | Triggers (`LT` `RT`, `L2` `R2`, `ZL` `ZR`) | In the grid, previous and next tab |
 | Guide | Close |
 
-The keyboard and the mouse work in the menu too: arrows, `Return`, `Esc`. While it's open, the controller drives the menu, not the game behind it.
+The keyboard and the mouse work in the menu too: arrows, `Return`, `Esc`.
 
 ## Over a game
 

@@ -36,4 +36,4 @@ gpg uses the card unless your `gpg-agent.conf` sets a `pinentry-program`.
 qs -c bar ipc call bar sesameDemo polkit    # or ssh, gpg, retry, confirm
 ```
 
-The request is made up: what you type goes nowhere.
+The request is made up.

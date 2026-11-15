@@ -8,7 +8,7 @@ The middle of the bar: the active window, your workspaces and what's playing.
 | Workspaces | A mark for each one. Click a mark to go there. Empty workspaces are hollow |
 | Music | The track and its spectrum. Click to play or pause |
 
-The island also opens [Veille](veille.md), the [key sheet](key-sheet.md) and [Programme](programme.md)'s reminders, which grow out of it.
+The island also opens [Veille](veille.md), the [key sheet](key-sheet.md) and [Programme](programme.md)'s reminders.
 
 ## Its look
 

@@ -83,9 +83,8 @@ cc-pkg-mng dev --off      # back to the release's apps
 
 - Your shortcuts and the bar use the new build at once.
 - Run `dev` again after each change. The first build takes a minute or two, the next ones a few seconds.
-- An `install` or `upgrade` that touches the unit puts the release's version back. Its plan says so.
+- An `install` or `upgrade` that touches the unit puts the release's version back.
 - `status` lists the dev builds that are running.
-- The first `dev` installs the Rust toolchain.
 
 On edge, `cc-pkg-mng install roue` rebuilds what changed.
 

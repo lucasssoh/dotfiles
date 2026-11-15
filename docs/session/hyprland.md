@@ -76,7 +76,7 @@ To add a machine, create `hosts/<id>.env` with only the values that differ from 
 
 Change the times in [`hypridle.conf`](../../config/hyprland/hypr/hypridle.conf): each `timeout` is in seconds. To turn an action off on one machine, use its [profile](#per-machine-profiles).
 
-While a book is visible in [Liseuse](../tools/liseuse.md), the screen doesn't dim, lock or turn off. A book left open on another workspace doesn't count.
+While a book is visible in [Liseuse](../tools/liseuse.md), the screen doesn't dim, lock or turn off.
 
 ## Touchpad
 

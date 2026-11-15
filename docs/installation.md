@@ -68,7 +68,7 @@ What's left to do by hand for your hardware is listed at the end of the run. See
 
 ## Moving to Fedora 45
 
-coucou-shell's packages exist for both releases, and dnf moves them to Fedora 45 along with the rest. Upgrade coucou-shell first, while still on Fedora 44:
+Upgrade coucou-shell first, on Fedora 44:
 
 ```bash
 cc-pkg-mng upgrade
@@ -81,7 +81,7 @@ After the reboot, `cc-pkg-mng status` checks that everything is still in place.
 
 ## Coming from an earlier setup
 
-If this machine already has a checkout of these dotfiles, point `init` at it. It picks up the checkout and whatever the old manager had installed, then only does what's missing.
+If this machine already has a checkout of these dotfiles, point `init` at it. It installs what's missing.
 
 ```bash
 cc-pkg-mng init --dir ~/code/dotfiles

@@ -1,6 +1,6 @@
 # Hardware detection
 
-The `hardware` unit looks at your CPU and GPU and installs only the drivers and tools your machine actually needs. The profiles and package lists are in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
+The `hardware` unit installs the drivers and tools for your CPU and GPU. The profiles and package lists are in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
 
 You can see what it finds without installing anything:
 
@@ -22,7 +22,7 @@ You can see what it finds without installing anything:
 
 ## Codec swaps
 
-Fedora's own media packages can't decode H.264 or HEVC in hardware. So the unit turns on RPM Fusion (free and nonfree) and swaps them for the RPM Fusion versions:
+For H.264 and HEVC decoding in hardware, the unit turns on RPM Fusion (free and nonfree) and swaps three packages:
 
 | Fedora package | Replaced by |
 |---|---|
@@ -30,14 +30,14 @@ Fedora's own media packages can't decode H.264 or HEVC in hardware. So the unit 
 | `libva-intel-media-driver` | `intel-media-driver` |
 | `mesa-va-drivers` | `mesa-va-drivers-freeworld` |
 
-This list is `hw_codec_swaps` in `hardware.sh`. If `vainfo` still shows no H.264 decoding afterwards, you'll get a warning. Restart Firefox and mpv so they pick up the new driver.
+Restart Firefox and mpv afterwards. A warning tells you if `vainfo` still shows no H.264 decoding. The list is `hw_codec_swaps` in `hardware.sh`.
 
 ## Things to do by hand
 
 Listed at the end of the install, for you to do:
 
 - Lenovo's battery conservation mode. The bar's [power drawer](bar/power.md) switches it too;
-- the NVIDIA proprietary driver (it needs a third-party repo, a kernel module, and care with Secure Boot);
+- the NVIDIA proprietary driver;
 - `i915.enable_dpcd_backlight`, to make the brightness keys work on OLED screens.
 
 ## Measuring power

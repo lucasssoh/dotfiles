@@ -21,5 +21,3 @@ GTK3 apps (Nemo, file dialogs) take the shell's colours, light or dark. The icon
 |---|---|
 | MiSans Latin | The interface: the shell, GTK and Qt apps, and web pages that ask for a plain sans-serif |
 | JetBrains Mono, Iosevka, Cascadia Code (Nerd Fonts) | Terminals and code |
-
-They're installed in `~/.local/share/fonts/`.
