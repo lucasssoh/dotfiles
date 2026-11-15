@@ -1,6 +1,6 @@
 # Indicators
 
-What shows when something changes: a level, HDR, a controller, a low battery.
+Level dials, the HDR mark, the controller mark and the battery alert.
 
 ## Volume, microphone and brightness
 

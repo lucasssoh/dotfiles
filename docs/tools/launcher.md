@@ -1,6 +1,6 @@
 # Launcher and clipboard
 
-fuzzel, the list you type in.
+The app launcher and the clipboard history, in fuzzel.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/launcher-dark.webp"><img src="../screenshots/launcher.webp" alt="The launcher"></picture>
 

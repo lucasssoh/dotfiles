@@ -4,7 +4,7 @@ Where each setting lives, and how to keep a change through an upgrade.
 
 ## Your own files
 
-These files exist on your machine only. An upgrade leaves them as they are. A missing file means the defaults.
+Local to your machine. Ignored by upgrades. A missing file means the defaults.
 
 | File | Sets | Guide |
 |---|---|---|
@@ -16,7 +16,7 @@ These files exist on your machine only. An upgrade leaves them as they are. A mi
 | `~/.config/hypr/display-layout.json` | Which screens are on, and which is the main one | [Displays](session/displays.md#which-screens-are-on) |
 | `~/.config/xdg-terminals.list` | The terminal `Super + Enter` opens | [Hyprland](session/hyprland.md#default-applications) |
 
-Prefer these to the files below when both can do it: a key of your own goes in `private.lua`, not in `keybinds.lua`.
+For a key or a rule of your own, use `private.lua`, not `keybinds.lua`.
 
 ## coucou-shell's files
 

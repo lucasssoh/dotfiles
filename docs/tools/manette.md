@@ -1,6 +1,6 @@
 # Manette
 
-Game controllers, and a menu to start your games from the couch.
+Game controllers, and a menu to start your games.
 
 ## Connect a controller
 
