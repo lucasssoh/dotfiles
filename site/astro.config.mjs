@@ -1,16 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { BASE, REPO, SITE } from './site.config.mjs';
 
-// Written by scripts/sync-docs.mjs, which runs before every dev/build.
-const sidebarFile = fileURLToPath(new URL('./.generated/sidebar.json', import.meta.url));
-const moduleGroups = JSON.parse(readFileSync(sidebarFile, 'utf8'));
-
-// In `astro dev`, re-run the sync whenever ../docs changes; restart when the
-// list of modules (and so the sidebar) changed.
+// In `astro dev`, re-run the sync whenever ../docs changes.
 const docsDir = fileURLToPath(new URL('../docs', import.meta.url));
 const watchDocs = {
   name: 'watch-docs',
@@ -19,9 +13,7 @@ const watchDocs = {
       server.watcher.add(docsDir);
       server.watcher.on('all', (_event, file) => {
         if (!file.startsWith(docsDir)) return;
-        const before = readFileSync(sidebarFile, 'utf8');
         execFileSync(process.execPath, [fileURLToPath(new URL('./scripts/sync-docs.mjs', import.meta.url))], { stdio: 'inherit' });
-        if (readFileSync(sidebarFile, 'utf8') !== before) server.restart();
       });
     },
   },
@@ -40,18 +32,42 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Getting started',
-          items: ['docs/installation', 'docs/cc-pkg-mng', 'docs/configuration'],
+          items: ['docs/installation', 'docs/cc-pkg-mng', 'docs/configuration', 'docs/keybindings'],
+        },
+        {
+          label: 'The bar',
+          items: [
+            { label: 'Overview', slug: 'docs/bar' },
+            'docs/bar/clock-agenda', 'docs/bar/metrics', 'docs/bar/island', 'docs/bar/launchers',
+            'docs/bar/balise', 'docs/bar/mixer', 'docs/bar/power', 'docs/bar/notifications',
+            'docs/bar/indicators', 'docs/bar/key-sheet', 'docs/bar/veille', 'docs/bar/programme',
+          ],
+        },
+        {
+          label: 'Tools',
+          items: [
+            'docs/tools/roue', 'docs/tools/prisme', 'docs/tools/manette', 'docs/tools/sesame',
+            'docs/tools/liseuse', 'docs/tools/launcher', 'docs/tools/screenshot', 'docs/tools/fontview',
+          ],
+        },
+        {
+          label: 'Session',
+          items: [
+            'docs/session/hyprland', 'docs/session/displays', 'docs/session/wallpapers',
+            'docs/session/theme', 'docs/session/audio', 'docs/session/lock',
+            'docs/session/boot-splash', 'docs/session/login',
+          ],
+        },
+        {
+          label: 'Applications',
+          items: [
+            'docs/apps/wezterm', 'docs/apps/firefox', 'docs/apps/nemo', 'docs/apps/neovim',
+            'docs/apps/mpv', 'docs/apps/swayimg', 'docs/apps/games', 'docs/apps/extras',
+          ],
         },
         {
           label: 'Reference',
-          items: ['docs/hardware', 'docs/keybindings'],
-        },
-        {
-          label: 'Units',
-          items: [
-            { label: 'Overview', slug: 'docs/modules' },
-            ...moduleGroups.map((g) => ({ ...g, collapsed: false })),
-          ],
+          items: ['docs/units', 'docs/hardware', 'docs/writing-a-unit'],
         },
       ],
     }),

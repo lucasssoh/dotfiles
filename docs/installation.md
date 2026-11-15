@@ -26,13 +26,14 @@ All the questions come first. Once you've answered them, the install runs to the
 | Channel | **stable**, which follows releases. **edge** follows every commit (see [channels](cc-pkg-mng.md#channels)) |
 | The login screen (greetd + tuigreet) | no |
 | The boot splash | no |
-| Applications | WezTerm, Firefox, Nemo, Neovim and mpv. Brave, MangoHud, fastfetch, ccnote and ccslide are also on offer |
+| Programme, the study agenda | no |
+| Applications | WezTerm, Firefox, Nemo, Neovim, mpv and swayimg. Steam and Lutris, Brave, MangoHud, fastfetch, ccnote and ccslide are also on offer |
 | WezTerm build | `stable`, the packaged one. `smear` builds it from source with a cursor smear effect |
 | Each personal setup (shell, WezTerm, Neovim, extras) | keep your own. If you take one, every file it replaces is backed up first |
 
 Before touching anything, `init` shows you the full plan: packages, links, services, and what each step does. Nothing happens until you say yes.
 
-The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Manette, Liseuse, the fonts and the theme. The [units](modules.md) page describes each part.
+The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Manette, Sésame, Liseuse, the fonts and the theme. The [units](units.md) page lists every part, with its guide.
 
 ## Unattended install
 
@@ -57,11 +58,9 @@ Anything you leave out gets its default. If you're happy with every default, `cc
 
 ## After the install
 
-Check your screens' names, and edit [`monitors.lua`](../config/hyprland/hypr/monitors.lua) if they don't match. `hyprctl reload` (or `Super + Shift + R`) applies the change.
+Every screen comes on at its preferred mode. To place them, scale them or turn one off, see [displays](session/displays.md).
 
-```bash
-hyprctl monitors
-```
+Hold `Super` to see the [key bindings](keybindings.md). Your own settings and the files an upgrade never touches are in [your settings](configuration.md).
 
 Drivers for your CPU and GPU are installed along with everything else. If something has to be done by hand, you'll see it listed at the end of the run. [hardware.md](hardware.md) has the details.
 

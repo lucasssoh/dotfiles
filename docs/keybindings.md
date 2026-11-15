@@ -20,10 +20,10 @@ You don't have to remember any of this: hold `Super` and the bar shows every bin
 | `Super + F` | Liseuse: picks up the book you were reading, or opens the library to search one. Press `F1` inside a book for its manual |
 | `Super + V` | Clipboard history (cliphist, through fuzzel) |
 | `Super + A` | Agenda: add or delete an event (khal, through fuzzel) |
-| `Super + D` | Programme's drawer, with the [`programme`](modules.md#programme) unit |
+| `Super + D` | Programme's drawer, with the [Programme](bar/programme.md) |
 | `Super + Shift + D` | Programme's quick add: an exam, a hand-in, a task or a busy slot in one line |
 
-The terminal, file manager and browser are whatever the machine's defaults are. See [default applications](modules.md#default-applications) to change them.
+The terminal, file manager and browser are whatever the machine's defaults are. See [default applications](session/hyprland.md#default-applications) to change them.
 
 ## Screenshots
 

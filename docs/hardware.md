@@ -38,8 +38,8 @@ This list is `hw_codec_swaps` in `hardware.sh`. If `vainfo` still shows no H.264
 
 These are printed for you, never run automatically:
 
+- Lenovo's battery conservation mode, which the bar's [power drawer](bar/power.md) switches too;
 - the NVIDIA proprietary driver (it needs a third-party repo, a kernel module, and care with Secure Boot);
-- Lenovo's battery conservation mode;
 - `i915.enable_dpcd_backlight`, to make the brightness keys work on OLED screens.
 
 ## Measuring power

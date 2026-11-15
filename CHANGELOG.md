@@ -17,6 +17,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.
 - **Bar, centre island:** you can set its colour, opacity and blur, and choose between text that adapts to the wallpaper and a colour of your own, in a settings file described in the docs.
+- **Documentation:** every tool has its own guide: each part of the bar, Roue, Prisme, Manette, Sésame, Liseuse, the launcher, Screenshot, the session and the applications. New pages cover displays, wallpapers, the lock screen, and how to write an agenda event or a wheel of your own.
+- **Documentation:** *Your settings* lists the files that are yours alone, which no upgrade touches, and says what an upgrade does to an edit elsewhere.
 
 ### Changed
 - **Bar, centre island:** long window titles leave more room for workspaces and music.

@@ -1,14 +1,84 @@
-# Configuration
+# Your settings
 
-This page covers what you can change around the manager, and how to write a unit of your own. The commands themselves are in [cc-pkg-mng.md](cc-pkg-mng.md), and what each unit installs (and where its settings live) is in [modules.md](modules.md).
+Where every setting lives, which files are yours alone, and what an upgrade does to your changes.
 
-## Editing coucou-shell
+There are two kinds of files:
 
-Configuration files are **linked** from the checkout into place, never copied. So you edit the file in the checkout, and the change takes effect as soon as the program reloads it.
+- **Files that are yours.** They exist on your machine only. coucou-shell creates some of them with defaults, then never replaces them.
+- **Files of coucou-shell.** They live in the checkout (`~/coucou-shell` by default) and are linked into place. You can edit them; an upgrade then has to deal with your edits.
 
-After an edit, `cc-pkg-mng status` shows the unit as *changed since installed*. Some changes need more than a reload, like a new package or a hook. For those, run `cc-pkg-mng install <unit>` to apply it again.
+## Files that are yours
 
-On the stable channel, commit or stash your edits before you `upgrade`. It won't move over uncommitted changes.
+Nothing here is committed, and no upgrade, install or rollback touches these files. A missing file means the defaults.
+
+| File | Sets | Written by | Guide |
+|---|---|---|---|
+| `~/.config/hypr/private.lua` | Your own window rules and keys, loaded last | you | [Hyprland](session/hyprland.md#your-own-rules-and-keys) |
+| `~/.config/hypr/bar-position.json` | The bar at the top or at the bottom | you | [The bar](bar/index.md#position) |
+| `~/.config/hypr/bar-island.json` | The centre island's colour, opacity, blur and text | you | [Centre island](bar/island.md#its-look) |
+| `~/.config/hypr/monitor-layout.json` | Where your screens sit | you | [Displays](session/displays.md#where-they-sit) |
+| `~/.config/hypr/scale.json` | The scale of each screen | you | [Displays](session/displays.md#scale) |
+| `~/.config/hypr/display-layout.json` | Which screens are on | the display wheel | [Displays](session/displays.md#which-screens-are-on) |
+| `~/.config/hypr/hdr-state.json` | HDR or SDR, for each screen | Balise | [Displays](session/displays.md#hdr) |
+| `~/.config/hypr/wallpaper-playlist.json` | Your wallpaper, or your slideshow | Prisme | [Wallpapers](session/wallpapers.md) |
+| `~/.config/xdg-terminals.list` | The terminal `Super + Enter` opens | you | [Hyprland](session/hyprland.md#default-applications) |
+| `~/.config/programme/settings.json` | Programme's settings | Programme | [Programme](bar/programme.md) |
+| `~/.local/state/bar-equalizer.json` | Your equalizer curves, by app | the mixer | [Mixer](bar/mixer.md#equalizer) |
+| A wallpaper folder of your own | Your wallpapers, once listed in `wallpapers-extra.conf` | you | [Wallpapers](session/wallpapers.md#add-your-own) |
+| `~/Livres/` | Your books | you | [Liseuse](tools/liseuse.md) |
+
+Edit the files written by "you" in any text editor. The others are written by the tool named: change the setting there, not in the file.
+
+`~/Images/Wallpapers` is not yours: it's rebuilt from the wallpaper folders, and a file placed there by hand is deleted.
+
+`~/.config/hypr/` is a link into the checkout, so these files sit in `config/hyprland/hypr/` too. Git ignores them.
+
+## Files of coucou-shell
+
+Everything else is a file of the checkout, linked into place: `~/.config/hypr/keybinds.lua` is `config/hyprland/hypr/keybinds.lua`. Edit either, it's the same file. The change takes effect as soon as the program reloads it.
+
+| To change | Edit | Guide |
+|---|---|---|
+| Key bindings | `config/hyprland/hypr/keybinds.lua` | [Key bindings](keybindings.md) |
+| Window rules, input, animations | `config/hyprland/hypr/windowrules.lua`, `hyprland.lua` | [Hyprland](session/hyprland.md) |
+| Idle times | `config/hyprland/hypr/hypridle.conf` | [Hyprland](session/hyprland.md#idle) |
+| What a machine may do when idle | `config/hyprland/hypr/hosts/<id>.env` | [Hyprland](session/hyprland.md#per-machine-profiles) |
+| The lock screen | `config/hyprland/hypr/hyprlock.conf` | [Lock screen](session/lock.md) |
+| Veille | `config/hyprland/quickshell/bar/veille.json` | [Veille](bar/veille.md) |
+| Roue's wheels | `config/hyprland/roue/wheels/*.toml` | [Roue](tools/roue.md#change-a-wheel-or-make-your-own) |
+| Prisme's keys, and your wallpaper folders | `config/hyprland/prisme/*.conf` | [Prisme](tools/prisme.md#settings), [wallpapers](session/wallpapers.md#add-your-own) |
+| The launcher | `config/fuzzel/fuzzel.ini` | [Launcher](tools/launcher.md) |
+| Screenshot | `config/satty/config.toml` | [Screenshot](tools/screenshot.md#settings) |
+| Liseuse's folders, keys and pages | `config/liseuse/sources.conf`, `zathurarc`, `markdown.css` | [Liseuse](tools/liseuse.md) |
+| Calendars | `config/hyprland/khal/config` | [Clock and agenda](bar/clock-agenda.md#calendars) |
+| GTK colours and shapes | `config/nemo/theme/` | [Theme](session/theme.md#colours) |
+| The equalizer's bands | `config/pipewire/50-equalizer.conf` | [Audio](session/audio.md) |
+
+### What an upgrade does to your edits
+
+After an edit, `cc-pkg-mng status` shows the unit as *changed since installed*.
+
+`upgrade` and `rollback` stop when the checkout has uncommitted changes, and tell you which files. Put your edits aside, upgrade, then bring them back:
+
+```bash
+cd ~/coucou-shell
+git stash
+cc-pkg-mng upgrade
+git stash pop
+```
+
+If the new version changed the same lines, git asks you to choose.
+
+- **On stable**, don't commit your edits: each release is checked out on its own, and a commit of yours stays behind on the previous one.
+- **On edge**, you can commit them instead. `upgrade` then stops when the branch has moved on without them: run `git pull --rebase` first.
+
+To keep a setting through every upgrade without thinking about it, prefer a file that is yours: a key or a rule goes in `private.lua` rather than in `keybinds.lua`.
+
+Some changes need more than a reload, like a new package or a hook. For those, run `cc-pkg-mng install <unit>`.
+
+## Files a unit replaced
+
+If a unit replaces a file you already had (your own `~/.zshrc`, say), your file goes to `~/.local/state/coucou-shell/backups/` first. `cc-pkg-mng remove <unit>` puts it back.
 
 ## Environment variables
 
@@ -16,73 +86,9 @@ On the stable channel, commit or stash your edits before you `upgrade`. It won't
 |---|---|---|
 | `COUCOU_SHELL_URL` | `https://github.com/lucasssoh/dotfiles.git` | What `init` clones |
 | `CCPKG_STATE_DIR` | `~/.local/state/coucou-shell` | Where the manager keeps its state, backups and logs |
-| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Where Roue, Prisme, Balise and Manette are built on edge |
-| `HOST_PROFILE` | taken from the machine's DMI product name | Forces a machine profile. See [per-machine profiles](modules.md#per-machine-profiles) |
+| `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Where coucou-shell's own apps are built on edge |
+| `HOST_PROFILE` | taken from the machine's DMI product name | Forces a machine profile. See [per-machine profiles](session/hyprland.md#per-machine-profiles) |
 
-## Adding a unit
+## A unit of your own
 
-A unit is a folder, `units/<layer>/<name>/`, with a `unit.toml` inside. Once it's there, `cc-pkg-mng list` shows it and `cc-pkg-mng install <name>` installs it.
-
-```toml
-name     = "tmux"
-layer    = "apps"                 # core, apps or configs
-summary  = "tmux, with the clipboard wired to Wayland"
-requires = ["base"]               # installed first
-default  = true                   # apps: ticked in init's list
-
-[packages]
-dnf   = ["tmux", "wl-clipboard"]
-copr  = []                        # COPRs to enable first
-repos = []                        # .repo URLs to add first
-
-[links]                           # checkout path → destination
-"config/tmux/.tmux.conf" = "~/.tmux.conf"
-
-[services]
-user   = []                       # systemd --user units to enable
-system = []                       # system units to enable
-
-[[questions]]                     # asked once, changed later with `set`
-id      = "variant"
-ask     = "Which build?"
-choices = ["stable", "smear"]
-default = "stable"
-
-[[hooks]]                         # a script for what a declaration cannot say
-name   = "plugins"
-run_as = "user"                   # or "root"
-does   = "clone the plugin manager into ~/.tmux/plugins"
-run    = "units/apps/tmux/hooks/plugins.sh"
-watch  = ["config/tmux"]          # re-run when any of these changes
-```
-
-A few more keys, for less common cases:
-
-| Key | Use |
-|---|---|
-| `optional`, `ask` | Core units only. The unit isn't installed unless `init` asks the `ask` question and you say yes |
-| `[links_if]` | `unit = ["path", …]`: links that are only made when that other unit is installed |
-| `[files]` | Checkout path → system path, copied as root |
-| `[binaries]` | For a Rust app: `rpm` (its package), `source` (its crate), `bins` (what it builds) |
-| `[verify] commands` | Commands that must succeed for the unit to count as working |
-
-A hook runs the first time the unit is installed, and again whenever the unit's files or its `watch` paths change. Start it with:
-
-```bash
-#!/usr/bin/env bash
-. "$(dirname "$(readlink -f "$0")")/../../../lib/hook.sh"
-```
-
-That gives your script a few helpers:
-- `REPO`, the path to the checkout;
-- `as_root`, for steps that need root;
-- `once NAME`, for steps that should only ever run once;
-- `info`, `ok` and `warn`, to print messages;
-- your answers, as `CCPKG_ANSWER_<ID>`.
-
-You can check your manifests before installing anything:
-
-```bash
-scripts/check-units.py              # keys, paths, requirements
-scripts/check-units.py --packages   # also checks that every package exists in dnf
-```
+See [writing a unit](writing-a-unit.md).
