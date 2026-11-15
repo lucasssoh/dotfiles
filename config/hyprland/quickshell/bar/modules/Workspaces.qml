@@ -19,6 +19,10 @@ Item {
     // nothing was passed in (shouldn't happen in practice).
     property var monitor: Hyprland.focusedMonitor
 
+    // The bar's ink (BarInk in shell.qml): the island sits on the band
+    // like every other block now, so its text follows the wallpaper.
+    property QtObject ink: Ink
+
     // Row's own implicitHeight is read-only (positioner-computed from
     // children, can't be assigned) -- so the 24px floor lives on this
     // wrapping Item instead, with the Row centered inside it. Without
@@ -57,7 +61,7 @@ Item {
 
             // The page-indicator layout (2026-09-29): no digits, like a
             // phone's home-screen dots. The active workspace is a long
-            // cream bar, every other one a dot, cream if occupied, grey if
+            // full-ink bar, every other one a dot, ink if occupied, grey if
             // empty -- you read your place in the row, not a number. The digits and
             // the filled active pill before it were one more thing to read
             // on the island; a solid capsule had already been judged too
@@ -92,7 +96,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     // Two sizes only -- the active one's bar, everyone
                     // else's dot. Occupied vs empty is already the colour
-                    // (cream / grey); a third, mid-length bar for occupied
+                    // (ink / grey); a third, mid-length bar for occupied
                     // said it twice.
                     width: pill.modelData.active ? 22 : 5
                     height: 5
@@ -100,11 +104,11 @@ Item {
                     // The active workspace with nothing in it is the same
                     // long bar, hollow: you are here, and here is empty.
                     readonly property bool hollow: pill.modelData.active && !pill.hasWindows
-                    color: mark.hollow ? DrawerTheme.clear(DrawerTheme.cream)
-                        : (pill.modelData.active ? DrawerTheme.cream
-                        : (pill.occupied ? DrawerTheme.cream2 : DrawerTheme.islandFaint))
+                    color: mark.hollow ? DrawerTheme.clear(root.ink.primary)
+                        : (pill.modelData.active ? root.ink.primary
+                        : (pill.occupied ? root.ink.secondary : root.ink.faint))
                     border.width: mark.hollow ? 1.2 : 0
-                    border.color: DrawerTheme.cream
+                    border.color: root.ink.primary
                     // The bar stretching into place on a workspace switch.
                     // Rare (workspace changes only): a one-off burst, not a
                     // recurring cost.

@@ -287,6 +287,14 @@ Item {
     property bool rowIsland: false
     property real rowIslandInset: 2
     property real rowIslandRadius: 10
+    // The slab's own material, overridable: centerIsland wears none
+    // ("ombre seule"), only a hairline in the bar's ink and a shadow kept
+    // OUTSIDE the slab -- a plain RectangularShadow under a clear fill
+    // would darken the inside too.
+    property color rowIslandColor: DrawerTheme.islandPane
+    property color rowIslandRim: root.paneRim
+    property bool rowIslandHighlight: true
+    property color rowIslandShadow: "transparent"
 
     // The drawer block's own fill. Overridable per consumer because the
     // two islands want opposite things: TOOLS' drawers (Balise, the
@@ -1377,6 +1385,51 @@ Item {
     // band's own bottom line and the window ends with the band, so a
     // shadow below it would be guillotined at the surface's edge -- the
     // hairline is what carries a pane lying ON a strip, not elevation.
+    Item {
+        id: rowShadow
+        readonly property int room: 16
+        visible: root.rowIsland && root.rowIslandShadow.a > 0
+        x: -room
+        y: root.rowPaneY - room
+        width: root.rowPaneW + room * 2
+        height: root.rowPaneH + room * 2
+        layer.enabled: visible
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskInverted: true
+            maskSource: rowShadowHole
+            maskThresholdMin: 0
+            maskSpreadAtMin: 1
+        }
+
+        RectangularShadow {
+            x: rowShadow.room
+            y: rowShadow.room
+            width: root.rowPaneW
+            height: root.rowPaneH
+            radius: root.rowPaneR
+            blur: 12
+            color: root.rowIslandShadow
+        }
+    }
+    // The slab's own shape, cut out of the shadow above.
+    Item {
+        id: rowShadowHole
+        visible: false
+        width: rowShadow.width
+        height: rowShadow.height
+        layer.enabled: rowShadow.visible
+
+        Rectangle {
+            x: rowShadow.room
+            y: rowShadow.room
+            width: root.rowPaneW
+            height: root.rowPaneH
+            radius: root.rowPaneR
+            color: "black"
+        }
+    }
+
     Rectangle {
         visible: root.rowIsland
         x: 0
@@ -1384,11 +1437,12 @@ Item {
         width: root.rowPaneW
         height: root.rowPaneH
         radius: root.rowPaneR
-        color: DrawerTheme.islandPane
+        color: root.rowIslandColor
 
         PaneEdge {
             radius: root.rowPaneR
-            rimColor: root.paneRim
+            rimColor: root.rowIslandRim
+            highlight: root.rowIslandHighlight
             highlightColor: root.paneHighlight
         }
     }

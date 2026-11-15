@@ -54,6 +54,10 @@ Item {
     // fallback that blip read as two new tracks ("Firefox", then the title
     // again), so resuming re-opened the pill. An empty title now just
     // leaves the last key in place.
+    // The bar's ink (BarInk in shell.qml): the island sits on the band
+    // like every other block now, so its text follows the wallpaper.
+    property QtObject ink: Ink
+
     property bool announcing: false
     property string announcedKey: ""
     readonly property string trackKey: root.player && root.player.trackTitle
@@ -75,7 +79,7 @@ Item {
     // Dusk spectrum: one colour per bar while playing, from the indigo of
     // the high sky to the amber of the horizon, each anchor pulled a third
     // of the way toward the cover's hue -- a blue cover gives a cold dusk,
-    // an orange one a burning dusk. Paused, the bars go back to the cream
+    // an orange one a burning dusk. Paused, the bars go back to the ink
     // of the rest of the bar. Anchors are [hue°, saturation, lightness],
     // kept light and soft so they read on the island's black.
     readonly property var duskAnchors: [
@@ -298,7 +302,7 @@ Item {
             visible: !root.active
             anchors.centerIn: parent
             text: root.placeholderText
-            color: DrawerTheme.islandMuted   // the island's glass-muted, same tier as ActiveWindow's ctx above
+            color: root.ink.muted
             font.family: Fonts.ui
             font.pixelSize: 13
         }
@@ -349,10 +353,10 @@ Item {
 
                 readonly property real minBar: 3
                 readonly property real maxBar: 14
-                // Paused: the island's cream, like the window title and
+                // Paused: the bar's ink, like the window title and
                 // the workspace marks beside it. Playing: each bar takes
                 // its own colour from root.spectrum (dusk, see above).
-                readonly property color barColor: DrawerTheme.cream2
+                readonly property color barColor: root.ink.secondary
 
                 Row {
                     id: waveRow
@@ -409,7 +413,7 @@ Item {
                 width: root.announceTextWidth
                 text: root.announceText
                 elide: Text.ElideRight
-                color: DrawerTheme.cream
+                color: root.ink.primary
                 font.family: Fonts.ui
                 font.pixelSize: 13
                 renderType: Text.NativeRendering
@@ -479,7 +483,7 @@ Item {
                                 // which faded the element, not just this
                                 // color) -- an opacity here too would double
                                 // it up.
-                                color: root.playing ? Ink.play : "#ffffff"
+                                color: root.playing ? root.ink.play : root.ink.primary
                                 font.family: Fonts.ui
                                 font.pixelSize: 14
                                 rightPadding: viewport.gap  // each copy carries its own trailing gap

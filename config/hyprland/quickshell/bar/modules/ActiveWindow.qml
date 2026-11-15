@@ -12,7 +12,7 @@ import "../theme"
 // re-verified here.
 //
 // The "Net" layout (2026-09-29): where the window lives, in grey, then
-// what it is about, in cream -- "nvim  keybinds.lua",
+// what it is about, in the full ink -- "nvim  keybinds.lua",
 // "Discord  Amis", "12 / 293  Platon-sophiste". The raw title led with
 // noise more often than not ("— Mozilla Firefox", "~/code/dotfiles/..."),
 // and the app name in front of it said again what the title's tail
@@ -33,6 +33,10 @@ Item {
     // check still showed a stale title here. `monitor.activeWorkspace` is
     // the correct, per-monitor "what's shown right here" property.
     property var monitor: Hyprland.focusedMonitor
+
+    // The bar's ink (BarInk in shell.qml): the island sits on the band
+    // like every other block now, so its text follows the wallpaper.
+    property QtObject ink: Ink
 
     // Hyprland.activeToplevel doesn't reset to null just because you
     // switched to an empty workspace -- it's the last-activated window
@@ -218,7 +222,7 @@ Item {
         visible: !root.hasWindow
         anchors.centerIn: parent
         text: root.placeholderText
-        color: Ink.muted   // colors.lua "muted" -- same token Hdr.qml uses for its own greyed-out state
+        color: root.ink.muted
         font.family: Fonts.ui
         font.pixelSize: 13
     }
@@ -230,7 +234,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8
 
-        // Where first, in grey, then what, in cream -- the order the bar
+        // Where first, in grey, then what, in the full ink -- the order the bar
         // always had (app, then title); swapped for a day and swapped
         // back ("je me suis un peu habitué à l'avant").
         Text {
@@ -238,7 +242,7 @@ Item {
             font.hintingPreference: Font.PreferNoHinting
             visible: root.parts.ctx !== ""
             text: root.parts.ctx
-            color: DrawerTheme.islandMuted
+            color: root.ink.muted
             font.family: Fonts.ui
             font.pixelSize: 14
         }
@@ -249,7 +253,7 @@ Item {
             // or page before it stays readable however long the title runs.
             width: Math.max(0, Math.min(objMeasure.implicitWidth, root.width - 20 - root.ctxSpan))
             text: root.parts.obj
-            color: DrawerTheme.cream
+            color: root.ink.primary
             font.family: Fonts.ui
             font.pixelSize: 14
             font.weight: Font.Medium
