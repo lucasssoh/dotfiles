@@ -73,6 +73,7 @@ starlight-theme-select select { border-radius: 999px; }
 .sl-markdown-content table:not(:where(.not-content *)) {
   border: 1px solid var(--c-line); border-radius: var(--r-card);
   border-collapse: separate; border-spacing: 0;
+  display: table; width: 100%;
 }
 .sl-markdown-content :is(th, td):not(:where(.not-content *)) {
   border-bottom: 1px solid var(--c-line-soft); padding: 0.7rem 1rem;
