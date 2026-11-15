@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.5.0 (November 15 2026)
 
 ### Fixed
 - **Roue:** the top action of a wheel runs with a click or `Enter` right after the wheel opens, without having to aim elsewhere first. Nothing shows as selected until you aim.
