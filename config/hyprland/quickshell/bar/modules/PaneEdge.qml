@@ -86,6 +86,7 @@ Item {
     // The top light: a second ring one pixel in, kept to the top band so
     // it fades out down the corners instead of tracing the whole pane.
     Item {
+        id: topLight
         visible: edge.highlight
         x: 1
         y: 1
@@ -103,6 +104,25 @@ Item {
             bottomRightRadius: Math.max(0, edge.bottomRightRadius - 1)
             border.width: 1
             border.color: edge.highlightColor
+        }
+    }
+    // ...and on down the sides as a 1 px line easing out to nothing: the
+    // band alone stopped on a hard cut where each corner meets its side,
+    // plain to see on the light glass. The corner's arc is vertical by the
+    // band's bottom, so the line takes over from it seamlessly.
+    Repeater {
+        model: edge.highlight ? [1, edge.width - 2] : []
+
+        Rectangle {
+            required property real modelData
+            x: modelData
+            y: 1 + topLight.height
+            width: 1
+            height: Math.max(0, Math.min(edge.height - 2 - topLight.height, Math.max(24, edge.height * 0.35)))
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: edge.highlightColor }
+                GradientStop { position: 1.0; color: DrawerTheme.clear(edge.highlightColor) }
+            }
         }
     }
 }
