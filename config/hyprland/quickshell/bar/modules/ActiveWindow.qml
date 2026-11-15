@@ -156,13 +156,8 @@ Item {
         return { obj: t, ctx: app };
     }
 
-    // 258 -> 420. 258 matched Media's widest back when it scrolled its
-    // title; it is only the 34px wave now, and the workspace marks went
-    // from ~200px of digits to ~130px of dots, so the room they freed
-    // goes to the title, which elided far too early ("pas ... trop tôt").
-    // At its widest the row is still well under the 840px Veille opens
-    // the island to.
-    readonly property int maxWidth: 420
+    // Keep a long window title from taking over the center island.
+    readonly property int maxWidth: 320
 
     // objMeasure/ctxMeasure, not the visible labels, drive the width: the
     // labels are width-limited (and elided) by root's own width, so
