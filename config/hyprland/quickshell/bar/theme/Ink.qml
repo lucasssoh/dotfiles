@@ -57,6 +57,10 @@ QtObject {
     // a STATE colour like the two above and belongs with them rather than
     // alone in one module.
     readonly property color hdr: "#6be3e8"
+    // The battery's other two states: low while saving power (amber) and
+    // charging under conservation mode, stopping at 60% (blue).
+    readonly property color warning: "#ffb454"
+    readonly property color conserve: "#8ecae6"
 
     // ---- MATERIAL: the light twin ------------------------------------
     // InkLight.qml is that twin and it is live: the band's three exposed

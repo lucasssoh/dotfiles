@@ -52,6 +52,8 @@ QtObject {
     readonly property color positive: blend.mix(Ink.positive, InkLight.positive)
     readonly property color play: blend.mix(Ink.play, InkLight.play)
     readonly property color hdr: blend.mix(Ink.hdr, InkLight.hdr)
+    readonly property color warning: blend.mix(Ink.warning, InkLight.warning)
+    readonly property color conserve: blend.mix(Ink.conserve, InkLight.conserve)
     readonly property color onLight: blend.mix(Ink.onLight, InkLight.onLight)
 
 }

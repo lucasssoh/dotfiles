@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Fixed
+- **Bar, battery:** on a light bar, the amber (low while saving power) and blue (charging up to 60 %) are dark enough to read.
 - **Neovim:** :bd moves to the next open file, or to the file tree when it was the last one.
 - **Bar:** at the bottom edge, it no longer shows too high for an instant when it starts or changes edge.
 - **Bar:** at the top edge, the clock, launcher and tools drawers open under the bar again instead of over it.

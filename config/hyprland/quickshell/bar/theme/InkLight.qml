@@ -68,6 +68,8 @@ QtObject {
     readonly property color positive: "#163417"
     readonly property color play: Ink.play
     readonly property color hdr: "#082f31"
+    readonly property color warning: "#5c3500"
+    readonly property color conserve: "#0f4560"
 
     // Symmetric counterpart to Ink.onLight: the ink the OTHER material
     // would use. Unused here for the same reason it is unused there --

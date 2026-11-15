@@ -112,12 +112,12 @@ Item {
     // Charging state on its own, isCharging goes false, and the color
     // returns to the normal idle white with no special case needed here.
     // Same lightness as the green it replaces (~74%), so the module's
-    // visual weight in the pill doesn't shift; well clear of the
+    // visual weight in the gauge doesn't shift; well clear of the
     // theme's desaturated blue-grey accent (#a8b4c4) so it still reads
     // as blue rather than as a greyed-out green.
     readonly property color batteryColor: {
-        if (root.isCharging) return root.conservationActive ? "#8ecae6" : root.ink.positive;
-        if (root.lowBattery) return root.ecoActive ? "#ffb454" : root.ink.danger;
+        if (root.isCharging) return root.conservationActive ? root.ink.conserve : root.ink.positive;
+        if (root.lowBattery) return root.ecoActive ? root.ink.warning : root.ink.danger;
         return root.ink.primary;
     }
 
