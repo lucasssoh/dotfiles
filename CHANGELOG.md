@@ -2,17 +2,21 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.6.0 (November 15 2026)
 
 ### Fixed
+- **Bar, OSD:** the volume, microphone and brightness dials now sit centred at the bottom, above the island's drawers, with a round blur that follows their edge.
+- **Apps, OPL IDE:** CPLEX Studio's launcher appears when you install the extra configs.
 - **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
 - **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
 - **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
 
 ### Added
+- **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.
 - **Bar, centre island:** you can set its colour, opacity and blur, and choose between text that adapts to the wallpaper and a colour of your own, in a settings file described in the docs.
 
 ### Changed
+- **Bar, centre island:** long window titles leave more room for workspaces and music.
 - **Bar, centre island:** no more dark slab: a light graphite tint. The window's name, its title, each workspace mark and the music turn light or dark to suit what is right behind them, a title across two grounds even part by part.
 - **Bar, centre island:** empty workspaces are hollow dots, like the hollow bar of an empty current workspace.
 - **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
