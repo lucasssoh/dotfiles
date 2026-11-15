@@ -23,14 +23,5 @@ gsettings monitor org.gnome.desktop.interface color-scheme | while read -r _; do
     current="$(on_screen)"
     [ -n "$current" ] || continue
     wanted="$("$SET" --resolve "$current" 2>/dev/null)" || continue
-    [ "${wanted##*/}" = "${current##*/}" ] && continue
-    # The bar hears the same change and re-colours its whole shell, ~0.5 s
-    # of work on its main thread. A fade started meanwhile froze for a few
-    # frames mid-way and jumped when the bar's new palette landed (seen
-    # frame by frame going dark). An IPC call is only answered once that
-    # thread is free again: a cheap barrier. The short sleep lets the bar
-    # read the change before the question reaches it.
-    sleep 0.15
-    timeout 2 qs -c bar ipc call bar focusState >/dev/null 2>&1
-    "$SET" "$wanted"
+    [ "${wanted##*/}" = "${current##*/}" ] || "$SET" "$wanted"
 done
