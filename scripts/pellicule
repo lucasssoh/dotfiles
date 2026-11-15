@@ -5,7 +5,7 @@
     scripts/pellicule balise mixer     only these scenes
     scripts/pellicule --mode dark      only one mode
     scripts/pellicule --out DIR        write elsewhere than docs/screenshots
-    scripts/pellicule --video hero     records a [[video]] instead (WebM + animated WebP)
+    scripts/pellicule --video hero     records a [[video]] instead: the site's WebM, and the exports
     scripts/pellicule --video hero --encode   encodes its last recording again
     scripts/pellicule showcase         puts the [[showcase]] pictures together again
     scripts/pellicule check            check the scenes against the running shell
@@ -330,6 +330,9 @@ def check(settings, scenes, surface=None):
         for mode in s.get("modes", ["light", "dark"]):
             if mode not in SCHEMES:
                 problems.append(f"{where}: unknown mode {mode!r}")
+        audio = s.get("audio")
+        if audio and not Path(audio).expanduser().is_file():
+            problems.append(f"{where}: no audio file at {audio}")
         doc = s.get("doc")
         if doc and not (REPO / doc).exists():
             problems.append(f"{where}: {doc} does not exist")
@@ -709,27 +712,89 @@ def record(video, take):
     take.end_scene()
 
 
+def duration(path):
+    """How long the picture lasts: the container's own duration can run past it,
+    and the first frame is not always at 0."""
+    out = sh("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+             "-of", "csv=p=0", str(path))
+    stamps = [float(x.split(",")[0]) for x in out.split() if x.strip(",") not in ("", "N/A")]
+    return max(stamps) - min(stamps)
+
+
 def encode(video, out):
-    """NAME.webm (the site) and NAME.webp, animated (the README: GitHub
-    shows an animated image from the repository, not a video)."""
+    """NAME.webm for the site, next to the scenes, and the exports for
+    elsewhere in `exports` (default ~/Videos/coucou-shell), which is not in
+    the repository: the master, a version without music, and 16:9, square
+    and vertical cuts for social networks.
+
+    The music is the source file, mixed in here, never a recording of the
+    speakers: `audio` starts `audio_delay` seconds after the first frame
+    (the step that starts the player comes first), and picture and sound
+    fade out together over `fade`."""
     raw = raw_path(video)
     if not raw.exists():
         fail(f"no recording of {video['name']} yet: scripts/pellicule --video {video['name']}")
-    # The recorder's first second, before the steps start, is cut.
-    trim = ["-ss", "0.8"]
+    name = video["name"]
+    lead = 0.8                      # the recorder's first second, before the steps start
+    length = duration(raw) - lead
     fps = video.get("fps", 60)
-    scale = f"fps={fps}" + (f",scale={video['width']}:-2:flags=lanczos" if "width" in video else "")
-    webm = out / f"{video['name']}.webm"
-    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", scale + ",format=yuv420p",
-       "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 20)),
-       "-deadline", "good", "-cpu-used", "1", "-row-mt", "1", "-tile-columns", "2",
-       "-g", str(fps * 5), "-an", str(webm))
-    webp = out / f"{video['name']}.webp"
-    wscale = f"fps={video.get('webp_fps', 25)},scale={video.get('webp_width', 1280)}:-2:flags=lanczos"
-    sh("ffmpeg", "-y", "-loglevel", "error", *trim, "-i", str(raw), "-vf", wscale,
-       "-c:v", "libwebp_anim", "-lossless", "0", "-quality", str(video.get("webp_quality", 85)),
-       "-compression_level", "6", "-loop", "0", "-an", str(webp))
-    return webm, webp
+    fade = video.get("fade", 2.5)
+    fade_v = f"fade=t=out:st={length - fade:.3f}:d={fade}"
+    audio = Path(video["audio"]).expanduser() if video.get("audio") else None
+    if audio and not audio.is_file():
+        fail(f"{name}: no audio file at {audio}")
+
+    src = ["-i", str(raw)]
+    # Constant frame rate first (the recorder only writes a frame when the
+    # screen changes), then the cut: the first frame is held, not lost.
+    head = f"[0:v]fps={fps},trim=start={lead},setpts=PTS-STARTPTS,{fade_v}"
+    snd, snd_map = [], ["-an"]
+    if audio:
+        delay = int(video.get("audio_delay", 0.4) * 1000)
+        snd = ["-i", str(audio)]
+        snd_filter = (f"[1:a]atrim=0:{length:.3f},adelay={delay}:all=1,"
+                      f"afade=t=out:st={length - fade:.3f}:d={fade},apad=whole_dur={length:.3f}[a]")
+        snd_map = ["-map", "[a]"]
+
+    def run(target, picture, video_codec, audio_codec, music=True):
+        """`picture` is a filter chain from [0:v] to [v]."""
+        graph = picture + (";" + snd_filter if audio and music else "")
+        sh("ffmpeg", "-y", "-loglevel", "error", *src, *(snd if audio and music else []),
+           "-filter_complex", graph, "-map", "[v]", *(snd_map if audio and music else ["-an"]),
+           *video_codec, *(audio_codec if audio and music else []),
+           "-t", f"{length:.3f}", str(target))
+
+    def framed(w, h):
+        """The screen whole, on a blurred, darkened copy of itself."""
+        return (f"{head},split[x][y];"
+                f"[x]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},boxblur=40:2,eq=brightness=-0.18[bg];"
+                f"[y]scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos[fg];"
+                f"[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]")
+
+    plain = f"{head},format=yuv420p[v]"
+    h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", str(video.get("master_crf", 15)),
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+    aac = ["-c:a", "aac", "-b:a", "256k"]
+
+    # The site: smaller, same picture; the page starts it without sound.
+    webm = out / f"{name}.webm"
+    site = plain if "width" not in video else plain.replace(
+        ",format=yuv420p", f",scale={video['width']}:-2:flags=lanczos,format=yuv420p")
+    run(webm, site, ["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 30)),
+                     "-deadline", "good", "-cpu-used", "1", "-row-mt", "1", "-tile-columns", "2",
+                     "-g", str(fps * 5)], ["-c:a", "libopus", "-b:a", "112k"])
+
+    exports = Path(video.get("exports", "~/Videos/coucou-shell")).expanduser()
+    exports.mkdir(parents=True, exist_ok=True)
+    made = [webm]
+    for suffix, picture, music in (("master", plain, True), ("silent", plain, False),
+                                   ("16x9", framed(1920, 1080), True),
+                                   ("square", framed(1080, 1080), True),
+                                   ("vertical", framed(1080, 1920), True)):
+        target = exports / f"{name}-{suffix}.mp4"
+        run(target, picture, h264, aac, music)
+        made.append(target)
+    return made
 
 
 def main():

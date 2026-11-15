@@ -295,22 +295,47 @@ blank = "bar"
 
 # ---- videos -----------------------------------------------------------------
 # scripts/pellicule --video NAME films the steps with wf-recorder, then
-# writes NAME.webm (the site) and NAME.webp, animated (the README).
+# writes NAME.webm here (the site) and, in `exports`, outside the repository:
+# NAME-master.mp4, NAME-silent.mp4 (no music), NAME-16x9.mp4,
+# NAME-square.mp4 and NAME-vertical.mp4 (social networks).
+#
+# `audio` is mixed in from the file itself, `audio_delay` seconds after the
+# first frame; picture and sound fade out together over `fade` seconds.
 
 [[video]]
 name = "hero"
-doc = "README.md"
+doc = "site/src/pages/index.astro"
 mode = "dark"
-# Full size; the README image is scaled to 1280 (webp_width).
+audio = "~/Musique/December Dream.mp3"
+audio_delay = 0.4
+fade = 2.5
+exports = "~/Videos/coucou-shell"
 steps = [
-    "wait 1.5",
-    "ipc bar toggleBalise", "wait 2.2",
-    "ipc bar toggleBalise", "wait 0.9",
-    "ipc bar toggleCalendar", "wait 2",
-    "ipc bar toggleCalendar", "wait 0.9",
-    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200", "wait 2.8",
-    "ipc bar keybindsPress", "wait 2.4",
-    "ipc bar keybindsRelease", "wait 1",
+    # The music first: the island shows the track and its spectrum from
+    # the first second to the last.
+    "run mpv --no-video --really-quiet '~/Musique/December Dream.mp3'",
+    "wait 4",
+    # Roue: the power wheel, then away.
+    "run ~/.local/bin/roue power", "wait 2.6",
+    "key Escape", "wait 0.9",
+    # The drawers on the right, then the calendar.
+    "ipc bar toggleBalise", "wait 2.4",
+    "ipc bar toggleBalise", "wait 0.8",
+    "ipc bar toggleMixer", "wait 2.4",
+    "ipc bar toggleMixer", "wait 0.8",
+    "ipc bar toggleCalendar", "wait 2.2",
+    "ipc bar toggleCalendar", "wait 0.8",
+    # Two notifications arrive, then the centre.
+    "notify Liseuse | Resuming | Plus courts chemins, page 12 of 48",
+    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200", "wait 2.2",
+    "ipc bar toggleNotificationCenter", "wait 2.6",
+    "ipc bar closeNotificationCenter", "wait 0.9",
+    # Super held: the key sheet, then its Shift layer.
+    "ipc bar keybindsPress", "wait 2.2",
+    "ipc bar keybindsShift true", "wait 1.4",
+    "ipc bar keybindsShift false",
+    "ipc bar keybindsRelease", "wait 0.9",
+    # A controller arrives, its menu opens.
     "ipc controller library {library}",
     "ipc controller pad xbox 80 false", "wait 2.2",
     "ipc bar controllerMenu", "wait 1.4",
@@ -356,9 +381,8 @@ steps = [
     "key c", "wait 1.2",
     "key Return", "wait 2.5",
     "scheme light", "wait 3",
-    # In light: the battery, then the mixer.
-    "ipc bar togglePower", "wait 2.2",
+    # In light: the battery, then the desktop alone for the fade.
+    "ipc bar togglePower", "wait 2.4",
     "ipc bar togglePower", "wait 0.9",
-    "ipc bar toggleMixer", "wait 2.2",
-    "ipc bar toggleMixer", "wait 1.2",
+    "wait 3.5",
 ]
