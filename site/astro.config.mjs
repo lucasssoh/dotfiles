@@ -29,6 +29,7 @@ export default defineConfig({
       description: 'A Fedora + Hyprland desktop, installed and kept up to date by its own manager.',
       social: [{ icon: 'github', label: 'GitHub', href: REPO }],
       customCss: ['./src/styles/custom.css'],
+      expressiveCode: { styleOverrides: { borderRadius: '14px' } },
       sidebar: [
         {
           label: 'Getting started',

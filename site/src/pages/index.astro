@@ -1,0 +1,259 @@
+---
+// The home page, outside Starlight: its own layout, the guides' colours.
+import '@fontsource-variable/inter';
+import '@fontsource/jetbrains-mono/latin-300.css';
+import '@fontsource/jetbrains-mono/latin-400.css';
+import '../styles/home.css';
+import { BASE, REPO } from '../../site.config.mjs';
+
+const doc = (page) => `${BASE}/docs/${page}/`;
+const shot = (name) => `${BASE}/screenshots/${name}`;
+const img = (name) => `${BASE}/img/${name}`;
+
+const commands = [
+  'sudo dnf config-manager addrepo --from-repofile=https://lucasssoh.github.io/dotfiles/coucou-shell.repo',
+  'sudo dnf install cc-pkg-mng',
+  'cc-pkg-mng init',
+];
+
+const numbers = [
+  { n: '19', label: 'core units: the shell itself' },
+  { n: '12', label: 'applications to pick from' },
+  { n: '4', label: 'personal setups to adopt or skip' },
+];
+
+// The bento: `size` is the tile's width on a 6-column grid.
+const tools = [
+  { name: 'The bar', line: 'The time, the machine, your workspaces, and a drawer for what you set often.', href: doc('bar'), shot: 'notifications', alt: 'The bar, with the notification centre open', size: 'wide', fit: 'top right' },
+  { name: 'Roue', line: 'A radial wheel: press, aim, let go.', href: doc('tools/roue'), shot: 'roue', alt: 'Roue, the power wheel', size: 'small', fit: 'center' },
+  { name: 'Prisme', line: 'The wallpaper picker, with light and dark pairs.', href: doc('tools/prisme'), shot: 'prisme', alt: 'Prisme, previewing a wallpaper', size: 'half', fit: 'center' },
+  { name: 'Manette', line: "Your games, on the controller's Guide button.", href: doc('tools/manette'), shot: 'controller-menu', alt: 'The controller menu', size: 'half', fit: 'center' },
+  { name: 'Balise', line: 'Wi-Fi, Bluetooth and screens, from the bar.', href: doc('bar/balise'), shot: 'balise', alt: 'The Balise drawer', size: 'small', fit: 'top right' },
+  { name: 'Mixer', line: 'A volume and an equalizer for each app.', href: doc('bar/mixer'), shot: 'mixer', alt: 'The mixer drawer', size: 'small', fit: 'top right' },
+  { name: 'Key sheet', line: 'Hold Super to see every key.', href: doc('bar/key-sheet'), shot: 'keybinds', alt: 'The key sheet', size: 'small', fit: 'top' },
+];
+
+const guides = [
+  { name: 'The bar', line: 'One guide for each part.', href: doc('bar'), links: [['Clock and agenda', 'bar/clock-agenda'], ['Centre island', 'bar/island'], ['Power', 'bar/power'], ['Notifications', 'bar/notifications'], ['Veille', 'bar/veille'], ['Programme', 'bar/programme']] },
+  { name: 'Tools', line: 'Made for coucou-shell.', href: doc('tools/roue'), links: [['Roue', 'tools/roue'], ['Prisme', 'tools/prisme'], ['Manette', 'tools/manette'], ['Sésame', 'tools/sesame'], ['Liseuse', 'tools/liseuse'], ['Screenshot', 'tools/screenshot']] },
+  { name: 'Session', line: 'Screens, wallpapers, lock, boot.', href: doc('session/hyprland'), links: [['Hyprland', 'session/hyprland'], ['Displays', 'session/displays'], ['Wallpapers', 'session/wallpapers'], ['Lock screen', 'session/lock'], ['Boot splash', 'session/boot-splash']] },
+  { name: 'Applications', line: 'Swap any of them for your own.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv']] },
+  { name: 'cc-pkg-mng', line: 'Install, upgrade, roll back.', href: doc('cc-pkg-mng'), links: [['Installation', 'installation'], ['Commands', 'cc-pkg-mng'], ['Units', 'units'], ['Write a unit', 'writing-a-unit']] },
+  { name: 'Your settings', line: 'The files no upgrade touches.', href: doc('configuration'), links: [['Files that are yours', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
+];
+
+const boot = ['Reached target Basic System', 'Started Network Manager', 'Started PipeWire Multimedia Service', 'Reached target Graphical Interface', 'Starting Hyprland'];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>coucou-shell</title>
+    <meta name="description" content="A Fedora desktop on Hyprland, installed and kept up to date by its own manager." />
+    <link rel="icon" href={`${BASE}/favicon.svg`} type="image/svg+xml" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      // Same key as the guides (Starlight), so both follow one choice.
+      (() => {
+        const root = document.documentElement;
+        let stored = '';
+        try { stored = localStorage.getItem('starlight-theme') || ''; } catch {}
+        const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        root.dataset.theme = dark ? 'dark' : 'light';
+        let seen = false;
+        try { seen = sessionStorage.getItem('coucou-boot') === '1'; } catch {}
+        if (seen || matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('booted');
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="boot" id="boot" aria-hidden="true">
+      <div class="boot-word">coucou</div>
+      <div class="boot-bar"><span></span></div>
+      <div class="boot-log" id="boot-log" data-lines={JSON.stringify(boot)}></div>
+    </div>
+
+    <header class="nav">
+      <a class="brand" href={`${BASE}/`}>coucou-shell</a>
+      <nav aria-label="Main">
+        <a href={doc('bar')}>Guides</a>
+        <a class="wide" href={doc('keybindings')}>Key bindings</a>
+        <a class="wide" href={doc('configuration')}>Your settings</a>
+        <a class="wide" href={`${REPO}/blob/master/CHANGELOG.md`}>Changelog</a>
+        <a class="wide" href={REPO}>GitHub</a>
+      </nav>
+      <a class="pill on" href="#install">Install</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <img class="ground only-light" src={img('aube-relief.webp')} alt="" aria-hidden="true" />
+        <img class="ground only-dark" src={img('aube-relief-dark.webp')} alt="" aria-hidden="true" />
+        <div class="wrap">
+          <h1>coucou-shell</h1>
+          <p class="lead">A Fedora desktop on Hyprland. One manager installs it and keeps it up to date.</p>
+          <div class="actions">
+            <a class="pill on big" href="#install">Install</a>
+            <a class="pill big" href={doc('bar')}>Browse the guides</a>
+          </div>
+          <figure class="screen">
+            <video
+              id="film"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              poster={shot('showcase-dark.webp')}
+              aria-label="coucou-shell in use: the bar's drawers, the controller menu, tiling, Prisme"
+            >
+              <source src={shot('hero.webm')} type="video/webm" />
+            </video>
+            <button class="pill glass sound" id="sound" type="button" hidden aria-pressed="false">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"></path><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"></path></svg>
+              <span>Sound on</span>
+            </button>
+          </figure>
+        </div>
+      </section>
+
+      <section class="wrap install" id="install">
+        <div class="tile install-tile">
+          <div class="install-text">
+            <h2>Three commands</h2>
+            <p>On Fedora 44 or 45, x86_64. A minimal netinstall is enough.</p>
+            <a class="more" href={doc('installation')}>What init asks</a>
+          </div>
+          <ol class="commands">
+            {commands.map((c, i) => (
+              <li>
+                <span class="n" aria-hidden="true">{i + 1}</span>
+                <code>{c}</code>
+                <button class="copy" type="button" data-copy={c} aria-label={`Copy command ${i + 1}`}>Copy</button>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class="numbers">
+          {numbers.map((x) => (
+            <div class="tile number">
+              <strong>{x.n}</strong>
+              <span>{x.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="wrap">
+        <h2 class="title">Made for coucou-shell</h2>
+        <div class="bento">
+          {tools.map((t) => (
+            <a class={`tile tool ${t.size}`} href={t.href}>
+              <span class="tool-text">
+                <span class="tool-name">{t.name}</span>
+                <span class="tool-line">{t.line}</span>
+              </span>
+              <img class="only-light" src={shot(`${t.shot}.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
+              <img class="only-dark" src={shot(`${t.shot}-dark.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="band">
+        <img class="ground only-light" src={img('aube-plis.webp')} alt="" aria-hidden="true" loading="lazy" />
+        <img class="ground only-dark" src={img('aube-plis-dark.webp')} alt="" aria-hidden="true" loading="lazy" />
+        <div class="wrap">
+          <h2 class="title">Guides</h2>
+          <p class="sub">One page per tool: what it does, how to use it, where it is set.</p>
+          <div class="guides">
+            {guides.map((g) => (
+              <div class="tile glass guide">
+                <a class="guide-head" href={g.href}>
+                  <span class="guide-name">{g.name}</span>
+                  <span class="guide-line">{g.line}</span>
+                </a>
+                <div class="chips">
+                  {g.links.map(([label, page]) => (
+                    <a class="chip" href={doc(page)}>{label}</a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section class="band foot">
+        <img class="ground only-light" src={img('aube-soie.webp')} alt="" aria-hidden="true" loading="lazy" />
+        <img class="ground only-dark" src={img('aube-soie-dark.webp')} alt="" aria-hidden="true" loading="lazy" />
+        <div class="wrap">
+          <div class="tile glass licence">
+            <h2>For personal use</h2>
+            <p>Install it, use it and change it on your own machines. Redistributing it needs written permission.</p>
+            <div class="chips">
+              <a class="chip" href={`${REPO}/blob/master/LICENSE.md`}>Licence</a>
+              <a class="chip" href={`${REPO}/blob/master/THIRD-PARTY.md`}>Third-party parts</a>
+              <a class="chip" href={`${REPO}/blob/master/wallpapers/CREDITS.md`}>Wallpaper credits</a>
+            </div>
+          </div>
+          <footer>
+            <span>coucou-shell</span>
+            <span class="foot-links">
+              <a href={`${REPO}/blob/master/CHANGELOG.md`}>Changelog</a>
+              <a href={REPO}>GitHub</a>
+            </span>
+          </footer>
+        </div>
+      </section>
+    </main>
+
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+
+        // The boot splash, once per visit: the word, the bar, one log line at a time.
+        const boot = document.getElementById('boot');
+        const end = () => {
+          if (root.classList.contains('booted')) return;
+          root.classList.add('booting-out');
+          try { sessionStorage.setItem('coucou-boot', '1'); } catch {}
+          setTimeout(() => root.classList.add('booted'), 600);
+        };
+        if (!root.classList.contains('booted')) {
+          const log = document.getElementById('boot-log');
+          const lines = JSON.parse(log.dataset.lines);
+          lines.forEach((line, i) => setTimeout(() => { log.textContent = line; }, 250 + i * 420));
+          setTimeout(end, 2600);
+          addEventListener('pointerdown', end, { once: true });
+          addEventListener('keydown', end, { once: true });
+        }
+
+        for (const b of document.querySelectorAll('.copy')) {
+          b.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(b.dataset.copy);
+              b.textContent = 'Copied';
+              setTimeout(() => { b.textContent = 'Copy'; }, 1600);
+            } catch {}
+          });
+        }
+
+        // The sound button shows only when the film has a soundtrack.
+        const film = document.getElementById('film');
+        const sound = document.getElementById('sound');
+        const hasAudio = () => film.mozHasAudio || Boolean(film.webkitAudioDecodedByteCount) || Boolean(film.audioTracks && film.audioTracks.length);
+        const reveal = () => { if (hasAudio()) sound.hidden = false; };
+        film.addEventListener('loadeddata', reveal);
+        film.addEventListener('timeupdate', reveal, { once: true });
+        sound.addEventListener('click', () => {
+          film.muted = !film.muted;
+          sound.setAttribute('aria-pressed', String(!film.muted));
+          sound.querySelector('span').textContent = film.muted ? 'Sound on' : 'Sound off';
+        });
+      })();
+    </script>
+  </body>
+</html>
