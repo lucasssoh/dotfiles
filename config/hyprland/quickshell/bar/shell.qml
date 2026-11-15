@@ -1397,10 +1397,9 @@ ShellRoot {
                     }
                 ]
 
-                // opacity 0.9 matches waybar/style.css's old #window
-                // rule (the whole element, not just its text).
+                // In the drawers' inks, at full strength like theirs (the
+                // 0.9 opacity of waybar's old #window rule is gone).
                 Modules.ActiveWindow {
-                    opacity: 0.9
                     monitor: shell.hyprMonitorFor(bar.screen)
                     ink: DrawerTheme
                 }

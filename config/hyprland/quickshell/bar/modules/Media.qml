@@ -81,7 +81,8 @@ Item {
     // of the way toward the cover's hue -- a blue cover gives a cold dusk,
     // an orange one a burning dusk. Paused, the bars go back to the ink
     // of the rest of the bar. Anchors are [hue°, saturation, lightness],
-    // kept light and soft so they read on the island's black.
+    // kept light and soft so they read on dark glass; under a dark ink
+    // (the drawers' light glass) each one drops 0.30 in lightness.
     readonly property var duskAnchors: [
         [248, 0.42, 0.66], [282, 0.44, 0.68], [328, 0.52, 0.72],
         [8, 0.62, 0.73], [32, 0.70, 0.75]
@@ -139,6 +140,7 @@ Item {
     readonly property var spectrum: {
         const tint = root.coverTint;
         const pull = tint.a > 0;
+        const onLight = root.ink.primary.hslLightness < 0.5;
         return root.duskAnchors.map(a => {
             let h = a[0], s = a[1];
             if (pull) {
@@ -154,7 +156,7 @@ Item {
                 h = to;
                 s = s * 0.75 + tint.hslSaturation * 0.25;
             }
-            return Qt.hsla(h / 360, s, a[2], 1);
+            return Qt.hsla(h / 360, s, onLight ? a[2] - 0.30 : a[2], 1);
         });
     }
 
