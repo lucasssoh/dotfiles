@@ -23,6 +23,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Files:** Nemo's dialogs and the file chooser of other apps take the same colours: separate rounded buttons, Delete in a calm red.
 - **Files:** the menu bar and status bar are hidden; press Alt to show the menu bar. Nemo is no longer slightly see-through.
 - **Files:** the link, lock and read-only badges on icons are sharp, white with a dark mark, instead of blurred grey squares.
+- **Files:** the active view is outlined instead of a filled square, the same whether the window has focus or not.
 - **Firefox:** along the top, tabs are rounded rectangles of equal width with their title centred. The address reads centred until you click in it, in an outlined field. The page sits as a rounded card in the window.
 - **Firefox, new tab:** the search field and, right under it, one glass pane with your pinned shortcuts as icons and your frequent sites as a list. The ground is the new Nuit wallpaper, light or dark, instead of the grid.
 - **Neovim:** colour names light up only in stylesheets, where they mean a colour; hex and rgb()/hsl() codes still light up everywhere.

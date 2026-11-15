@@ -376,8 +376,17 @@ window.background.nemo-window:not(.popup):not(.tooltip),
     min-width: 28px;
 }
 .nemo-window toolbar button:hover { background-color: @c_hover; color: @c_ink; }
+/* The active view (and any toggle that is on): an outline, nothing
+   filled, the same with or without focus -- Adwaita's own backdrop rule
+   turned it dark grey otherwise. */
 .nemo-window toolbar button:checked,
-.nemo-window toolbar button:checked:hover { background-color: @c_on; color: @c_onink; }
+.nemo-window toolbar button:checked:hover,
+.nemo-window toolbar button:checked:backdrop {
+    background-color: transparent;
+    background-image: none;
+    border-color: @c_actedge;
+    color: @c_ink;
+}
 .nemo-window toolbar button:disabled { color: @c_faint; }
 
 /* Parent folders: quiet, left of the current one. */
