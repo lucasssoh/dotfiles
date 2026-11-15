@@ -6,6 +6,12 @@ default  = true
 [packages]
 dnf = ["nemo", "nemo-fileroller"]
 
+# Adwaita ships these only as 16 px PNGs, blurred when Nemo draws them
+# larger. Its index.theme already lists scalable/emblems, and GTK reads
+# that folder from every icon path, so this one joins the system theme.
+[links]
+"config/nemo/emblems" = "~/.local/share/icons/Adwaita/scalable/emblems"
+
 [[hooks]]
 name   = "file-manager"
 run_as = "user"

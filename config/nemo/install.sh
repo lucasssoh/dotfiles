@@ -98,6 +98,14 @@ mkdir -p "$HOME/.config/gtk-3.0"
 safe_link "$SCRIPT_DIR/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/settings.ini"
 safe_link "$SCRIPT_DIR/gtk-3.0/gtk.css"      "$HOME/.config/gtk-3.0/gtk.css"
 
+# Emblems (link arrow, lock, read-only cross). Adwaita ships them only as
+# 16 px PNGs, which Nemo scales up to ~32 px in the icon view: blurred.
+# Its index.theme already lists scalable/emblems, and GTK3 looks for each
+# listed folder under every icon path, so these SVGs join the system
+# Adwaita without a theme of our own and win at every size but 16.
+mkdir -p "$HOME/.local/share/icons/Adwaita/scalable"
+safe_link "$SCRIPT_DIR/emblems" "$HOME/.local/share/icons/Adwaita/scalable/emblems"
+
 # The dconf half. With xdg-desktop-portal-gtk running, GTK3 reads gtk-theme
 # through the portal and that outranks settings.ini, so the two keys have
 # to agree HERE:
