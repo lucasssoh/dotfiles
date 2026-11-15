@@ -60,10 +60,8 @@ const HUB_LABEL_FONT_PX: f64 = 15.0;
 /// center -- the hub circle (radius ~132px) is still ~227px wide there,
 /// well clear of this 190px wrap width.
 const HUB_LABEL_MAX_WIDTH_PX: f64 = 190.0;
-/// Indices of the confirmation sub-menu's synthetic sectors (see
-/// `enter_confirm`) -- Cancel first (default position, see its doc),
-/// Confirm second.
-const CANCEL_INDEX: usize = 0;
+/// Index of Confirm among the confirmation sub-menu's two synthetic
+/// sectors (see `enter_confirm`): Cancel on top, Confirm below.
 const CONFIRM_INDEX: usize = 1;
 const HUB_BORDER_WIDTH_PX: f32 = 3.0;
 /// White band marking the "current system state" sector (see the TOML
@@ -111,13 +109,22 @@ mod imp {
         /// confirmation (`confirming`): the displayed sectors are then
         /// Confirm/Cancel, not the root sectors.
         pub active_index: Cell<Option<usize>>,
-        pub hovered: Cell<usize>,
-        /// Has aiming happened at least once (mouse outside the dead zone,
-        /// arrow key, digit) since this wheel level opened (root or
-        /// confirmation sub-menu) -- see `activate_hovered`: without
-        /// movement, confirming NEVER runs the default sector (index 0),
-        /// it cancels instead.
-        pub moved: Cell<bool>,
+        /// The aimed sector, None until something aims (the mouse past the
+        /// dead zone, a click, an arrow, a digit) on this level of the
+        /// wheel (root or confirmation sub-menu). Nothing is drawn as
+        /// selected before that, so what is lit is always what Enter or a
+        /// click would run.
+        pub hovered: Cell<Option<usize>>,
+        /// The wheel's name, shown in the hub while nothing is aimed.
+        pub title: RefCell<String>,
+        /// Last pointer position seen, in the widget's frame.
+        pub last_pointer: Cell<Option<(f64, f64)>>,
+        /// Where the pointer was when the confirmation sub-menu opened. A
+        /// click there does not aim: it is the second click of a double
+        /// click on a destructive sector, which would otherwise land on
+        /// Confirm whenever that sector sits in the lower half. Cleared
+        /// once the pointer moves away.
+        pub confirm_anchor: Cell<Option<(f64, f64)>>,
         /// 0 = closed, 1 = fully open -- animates BOTH the radius and the
         /// alpha of everything drawn (fan-out effect on opening).
         pub open_progress: Cell<f64>,
@@ -213,7 +220,7 @@ mod imp {
             snapshot.pop();
 
             for (i, seg) in segments.iter().enumerate() {
-                let t = if i == hovered { hover_t } else { 0.0 };
+                let t = if Some(i) == hovered { hover_t } else { 0.0 };
                 let accent = color::resolve(seg.accent.as_deref()).rgb;
                 let angle_left = base + i as f64 * angle_per;
                 let angle_right = base + (i + 1) as f64 * angle_per;
@@ -287,9 +294,9 @@ mod imp {
                     snapshot.pop();
                 }
 
-                if let Some(seg) = segments.get(hovered) {
+                if let Some(seg) = hovered.and_then(|h| segments.get(h)) {
                     let seg_accent = color::resolve(seg.accent.as_deref()).rgb;
-                    let danger = confirming && hovered == CONFIRM_INDEX;
+                    let danger = confirming && hovered == Some(CONFIRM_INDEX);
 
                     // What the hub says. On a confirmation ("C2") it asks
                     // the question about the pending action; otherwise just
@@ -356,6 +363,28 @@ mod imp {
                         snapshot.append_layout(&l, &gdk::RGBA::new(0.557, 0.557, 0.576, open as f32));
                         snapshot.restore();
                     }
+                } else {
+                    // Nothing aimed: the wheel's name, or the pending
+                    // question on a confirmation.
+                    let text = match self.pending.borrow().as_ref() {
+                        Some(p) if confirming => format!("{}?", p.label),
+                        _ => self.title.borrow().clone(),
+                    };
+                    let mut font = pango::FontDescription::new();
+                    font.set_absolute_size(HUB_LABEL_FONT_PX * pango::SCALE as f64);
+                    let l = widget.create_pango_layout(Some(&text));
+                    l.set_font_description(Some(&font));
+                    l.set_width((HUB_LABEL_MAX_WIDTH_PX * pango::SCALE as f64) as i32);
+                    l.set_wrap(pango::WrapMode::WordChar);
+                    l.set_alignment(pango::Alignment::Center);
+                    let (_, th) = l.pixel_size();
+                    snapshot.save();
+                    snapshot.translate(&graphene::Point::new(
+                        (cx - HUB_LABEL_MAX_WIDTH_PX / 2.0) as f32,
+                        (cy - th as f64 / 2.0) as f32,
+                    ));
+                    snapshot.append_layout(&l, &gdk::RGBA::new(0.557, 0.557, 0.576, open as f32));
+                    snapshot.restore();
                 }
             }
         }
@@ -549,8 +578,9 @@ glib::wrapper! {
 impl RoueWheel {
     /// Builds the wheel with its root sectors and starts the animation
     /// loop (fan-out on opening + hover highlight).
-    pub fn new(segments: Vec<Segment>) -> Self {
+    pub fn new(title: &str, segments: Vec<Segment>) -> Self {
         let wheel: Self = glib::Object::builder().build();
+        *wheel.imp().title.borrow_mut() = title.to_string();
         // No hexpand/vexpand/halign/valign here -- centering the
         // wheel+sidebar block on screen is handled by the root Box in
         // main.rs (halign/valign=Center on it, the wheel just keeps its
@@ -580,12 +610,40 @@ impl RoueWheel {
         wheel
     }
 
-    /// Changes the hovered sector to the one pointed at by `(x, y)`
-    /// (coordinates relative to the widget, e.g. from an
-    /// EventControllerMotion) -- computes the point's angle relative to
-    /// the center, like an analog stick. Ignored if the point is too close
-    /// to the center (see HOVER_DEADZONE_PX).
+    /// Aims at the sector under `(x, y)` (the widget's frame), from a
+    /// pointer motion -- only the angle from the centre counts, like an
+    /// analog stick. Ignored inside the dead zone (see HOVER_DEADZONE_PX),
+    /// and on a confirmation until the pointer leaves where it was when
+    /// the sub-menu opened (see `confirm_anchor`).
     pub fn hover_from_point(&self, x: f64, y: f64) {
+        self.imp().last_pointer.set(Some((x, y)));
+        if self.still_on_anchor(x, y) {
+            return;
+        }
+        self.imp().confirm_anchor.set(None);
+        self.aim_at(x, y);
+    }
+
+    /// Aims at the sector under a click, before `activate_hovered` --
+    /// without it a click validated whatever the last MOTION had aimed
+    /// at, and nothing at all when the pointer had not moved since the
+    /// wheel opened.
+    pub fn aim_at_click(&self, x: f64, y: f64) {
+        if self.still_on_anchor(x, y) {
+            return;
+        }
+        self.aim_at(x, y);
+    }
+
+    fn still_on_anchor(&self, x: f64, y: f64) -> bool {
+        const SLOP_PX: f64 = 6.0;
+        self.imp()
+            .confirm_anchor
+            .get()
+            .is_some_and(|(ax, ay)| (x - ax).hypot(y - ay) < SLOP_PX)
+    }
+
+    fn aim_at(&self, x: f64, y: f64) {
         let w = self.width() as f64;
         let h = self.height() as f64;
         if w <= 0.0 || h <= 0.0 {
@@ -593,7 +651,7 @@ impl RoueWheel {
         }
         let dx = x - w / 2.0;
         let dy = y - h / 2.0;
-        if (dx * dx + dy * dy).sqrt() < HOVER_DEADZONE_PX {
+        if dx.hypot(dy) < HOVER_DEADZONE_PX {
             return;
         }
         let n = self.imp().segments.borrow().len();
@@ -608,55 +666,54 @@ impl RoueWheel {
         self.set_hover_index(index);
     }
 
-    /// Moves the hover by `delta` sectors (keyboard navigation).
+    /// Moves the aim by `delta` sectors (keyboard). The first press, with
+    /// nothing aimed yet, lands on the top sector whatever its direction.
     pub fn move_hover(&self, delta: i32) {
         let n = self.imp().segments.borrow().len();
         if n == 0 {
             return;
         }
-        let cur = self.imp().hovered.get() as i32;
-        let next = (cur + delta).rem_euclid(n as i32) as usize;
+        let next = match self.imp().hovered.get() {
+            None => 0,
+            Some(cur) => (cur as i32 + delta).rem_euclid(n as i32) as usize,
+        };
         self.set_hover_index(next);
     }
 
-    /// Hovers sector `index` directly (direct keyboard access by digit, or
-    /// angle computed from the mouse).
+    /// Aims at sector `index` directly (a digit, or the pointer's angle).
     pub fn set_hover_index(&self, index: usize) {
         let n = self.imp().segments.borrow().len();
         if n == 0 || index >= n {
             return;
         }
-        // Marked even if `index` already equals the current hover (e.g.
-        // deliberately aiming at sector 0, which is also the default
-        // value) -- see `activate_hovered`: this is a real aiming gesture
-        // that must count, not just an index CHANGE.
-        self.imp().moved.set(true);
-        if self.imp().hovered.get() != index {
-            self.imp().hovered.set(index);
+        if self.imp().hovered.get() != Some(index) {
+            self.imp().hovered.set(Some(index));
             self.imp().hover_anim.set(0.0);
             self.queue_draw();
         }
     }
 
-    /// Confirms the currently hovered sector. Returns `true` if the caller
-    /// should close the window now (action launched, or cancellation),
-    /// `false` if the wheel should stay open (switching to/from the
-    /// Confirm/Cancel sub-menu).
+    /// Whether something is aimed on this level of the wheel.
+    pub fn is_aimed(&self) -> bool {
+        self.imp().hovered.get().is_some()
+    }
+
+    /// Runs the aimed sector. Returns `true` if the caller should close
+    /// the window now (an action ran), `false` if the wheel stays open
+    /// (nothing aimed, or switching to/from the Confirm/Cancel sub-menu).
     ///
-    /// If no aiming has happened since this level opened (root or
-    /// sub-menu -- see `moved`), confirming is equivalent to canceling
-    /// rather than picking the default sector (index 0): without this
-    /// guard, a simple tap of the key that opens the wheel (near-immediate
-    /// press+release, mouse not yet repositioned) would ALWAYS run the
-    /// first sector -- Lock for the power wheel, so a screen lock on every
-    /// brief tap instead of simply showing the wheel.
+    /// With nothing aimed, Enter or a click does nothing: the wheel stays
+    /// open. The key-release path (`--commit`) checks `is_aimed` first and
+    /// closes instead, so a quick tap of the key that opens the wheel
+    /// still just dismisses it (see main.rs).
     pub fn activate_hovered(&self) -> bool {
         let imp = self.imp();
-        let moved = imp.moved.get();
+        let Some(idx) = imp.hovered.get() else {
+            return false;
+        };
 
         if imp.confirming.get() {
-            let confirmed = moved && imp.hovered.get() == CONFIRM_INDEX;
-            if confirmed {
+            if idx == CONFIRM_INDEX {
                 let pending = imp.pending.borrow().clone();
                 self.exit_confirm();
                 if let Some(seg) = pending {
@@ -666,16 +723,10 @@ impl RoueWheel {
                 }
                 true
             } else {
-                // Explicit Cancel, OR no movement in the sub-menu -- in
-                // both cases return to the root wheel without acting,
-                // never a default confirmation.
                 self.exit_confirm();
                 false
             }
-        } else if !moved {
-            true
         } else {
-            let idx = imp.hovered.get();
             let Some(seg) = imp.segments.borrow().get(idx).cloned() else {
                 return true;
             };
@@ -719,15 +770,8 @@ impl RoueWheel {
         let confirm_accent = seg.confirm_accent.clone();
         imp.confirming.set(true);
         *imp.pending.borrow_mut() = Some(seg);
-        // Cancel at CANCEL_INDEX (0), Confirm at CONFIRM_INDEX (1) -- the
-        // vec's order IS the index, so Cancel must stay the first element:
-        // it's the sub-menu's default selection (sector 0), the least
-        // destructive option if the user has no mouse. Confirm picks up
-        // `confirm_accent` from the root sector (white by default if
-        // absent, like `accent` -- see color.rs): this is NO LONGER a
-        // hardcoded red, only genuinely destructive sectors
-        // (wheels/power.toml) force it explicitly. Cancel keeps `None`
-        // (white), never the confirmed sector's tint.
+        // Cancel first (top half), Confirm second (bottom half). Confirm
+        // picks up `confirm_accent` from the root sector, Cancel never does.
         *imp.segments.borrow_mut() = vec![
             Segment {
                 icon: "✗".into(),
@@ -748,12 +792,10 @@ impl RoueWheel {
                 active: false,
             },
         ];
-        imp.hovered.set(CANCEL_INDEX);
-        imp.hover_anim.set(1.0);
-        // Il faut viser À NOUVEAU dans ce sous-menu avant de pouvoir le
-        // valider (cf. `activate_hovered`) -- le mouvement fait pour
-        // atteindre le secteur `confirm` racine ne compte pas ici.
-        imp.moved.set(false);
+        // Nothing aimed: the sub-menu has to be aimed at again, the
+        // gesture that reached the root sector does not count here.
+        imp.hovered.set(None);
+        imp.confirm_anchor.set(imp.last_pointer.get());
         self.queue_draw();
     }
 
@@ -762,9 +804,8 @@ impl RoueWheel {
         imp.confirming.set(false);
         *imp.pending.borrow_mut() = None;
         *imp.segments.borrow_mut() = imp.root_segments.borrow().clone();
-        imp.hovered.set(0);
-        imp.hover_anim.set(1.0);
-        imp.moved.set(false);
+        imp.hovered.set(None);
+        imp.confirm_anchor.set(None);
         self.queue_draw();
     }
 }

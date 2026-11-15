@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Fixed
+- **Roue:** the top action of a wheel runs with a click or `Enter` right after the wheel opens, without having to aim elsewhere first. Nothing shows as selected until you aim.
 - **Bar, battery:** on a light bar, the amber (low while saving power) and blue (charging up to 60 %) are dark enough to read.
 - **Neovim:** :bd moves to the next open file, or to the file tree when it was the last one.
 - **Bar:** at the bottom edge, it no longer shows too high for an instant when it starts or changes edge.

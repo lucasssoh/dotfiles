@@ -241,8 +241,14 @@ fn main() -> glib::ExitCode {
                     // wheel.rs::activate_hovered). If it was a `confirm`
                     // sector, this just switches to Confirm/Cancel (the
                     // window stays open, activate_hovered returns false).
+                    //
+                    // Released with nothing aimed: a quick tap, which
+                    // dismisses the wheel rather than leaving it open
+                    // (Enter or a click with nothing aimed does nothing).
                     Some(true) => {
-                        if wheel.activate_hovered() {
+                        if !wheel.is_aimed() && !wheel.is_confirming() {
+                            window.close();
+                        } else if wheel.activate_hovered() {
                             window.close();
                         }
                     }
@@ -345,7 +351,7 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     let counterweight = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     root.append(&counterweight);
 
-    let wheel = RoueWheel::new(cfg.segments);
+    let wheel = RoueWheel::new(&cfg.title, cfg.segments);
     root.append(&wheel);
 
     // Side panel -- title + command reminder, aligned on the wheel's
@@ -437,7 +443,14 @@ fn build_ui(app: &Application, wheel_name: &str, state: &State) {
     click.set_button(gdk::BUTTON_PRIMARY);
     let wheel_for_click = wheel.clone();
     let window_for_click = window.clone();
-    click.connect_pressed(move |_, _, _, _| {
+    // The click aims at its own point first: before, it validated what the
+    // last motion had aimed at, so with the pointer still since the wheel
+    // opened it had nothing to run.
+    click.connect_pressed(move |_, _, x, y| {
+        let point = graphene::Point::new(x as f32, y as f32);
+        if let Some(p) = window_for_click.compute_point(&wheel_for_click, &point) {
+            wheel_for_click.aim_at_click(p.x() as f64, p.y() as f64);
+        }
         if wheel_for_click.activate_hovered() {
             window_for_click.close();
         }
