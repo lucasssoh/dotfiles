@@ -4,7 +4,7 @@ import "../services"
 
 // The band's veil: one density per profile slice across the screen
 // (BarInk.veils), full behind the text, then fading out over the next
-// 74 px instead of stopping on a hard line ("la coupure nette n'est pas
+// 44 px instead of stopping on a hard line ("la coupure nette n'est pas
 // forcément très élégante").
 //
 // A Canvas rather than a Rectangle gradient: a QML Gradient takes a fixed
@@ -88,9 +88,10 @@ Canvas {
         // The fade, eased: kept where the mask is opaque, gone where clear.
         const h = band.height;
         const down = ctx.createLinearGradient(0, band.fromBottom ? h : 0, 0, band.fromBottom ? 0 : h);
-        const s = band.solid / h;
-        const stops = [[0, 1], [s, 1], [s + 0.08, 0.9], [s + 0.20, 0.7], [s + 0.34, 0.45],
-                       [s + 0.50, 0.22], [s + 0.64, 0.07], [1, 0]];
+        // Eased over whatever is left past the solid part.
+        const s = band.solid / h, k = 1 - s;
+        const stops = [[0, 1], [s, 1], [s + 0.11 * k, 0.9], [s + 0.27 * k, 0.7], [s + 0.46 * k, 0.45],
+                       [s + 0.68 * k, 0.22], [s + 0.86 * k, 0.07], [1, 0]];
         for (const st of stops)
             down.addColorStop(Math.min(1, st[0]), "rgba(0,0,0," + st[1] + ")");
         ctx.globalCompositeOperation = "destination-in";

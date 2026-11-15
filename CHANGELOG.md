@@ -9,9 +9,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade, instead of catching up afterwards.
 
 ### Changed
-- **Bar, centre island:** the island wears the drawers' glass, light or dark with your system, instead of a dark slab in light mode, with their rim and a soft shadow.
+- **Bar, centre island:** the island wears the drawers' glass, dark over a dark wallpaper and light over a light one, instead of a dark slab, with its text to match.
 - **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
-- **Bar:** the text takes one colour along the whole bar, and the veil under it follows the wallpaper: denser only where it is busy, light under dark text, and fading out past the bar instead of ending on a line.
+- **Bar:** the text takes one colour along the whole bar, and the veil under it follows the wallpaper: only under the text and denser only where the wallpaper is busy, light under dark text, and fading out past the bar instead of ending on a line.
 
 ## 2.5.0 (November 15 2026)
 

@@ -294,6 +294,7 @@ Item {
     property color rowIslandColor: DrawerTheme.islandPane
     property color rowIslandRim: root.paneRim
     property bool rowIslandHighlight: true
+    property color rowIslandHighlightColor: root.paneHighlight
     property color rowIslandShadow: "transparent"
 
     // The drawer block's own fill. Overridable per consumer because the
@@ -1460,7 +1461,7 @@ Item {
             radius: root.rowPaneR
             rimColor: root.rowIslandRim
             highlight: root.rowIslandHighlight
-            highlightColor: root.paneHighlight
+            highlightColor: root.rowIslandHighlightColor
         }
     }
 

@@ -329,7 +329,11 @@ Singleton {
                 ? 0.35 + 0.65 * Math.min(1, (texture - root.textureStart) / (root.textureFull - root.textureStart))
                 : 0;
             light.push(root._least(floor, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
-            dark.push(root._least(floor, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
+            // Half the floor under dark text: over a bright, grainy
+            // stretch (snow) the full floor put a light haze along the
+            // whole bar where dark text already read at 10:1; the 10th
+            // percentile in `lo` is what guards the dark patches.
+            dark.push(root._least(floor * 0.5, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
         }
         const entry = { seq: root.seq, light: light, dark: dark };
         const all = Object.assign({}, root._needs);
@@ -369,7 +373,10 @@ Singleton {
         let lightText = currentLight;
         if (currentLight && cd + root.inkSwitchMargin < cl) lightText = false;
         else if (!currentLight && cl + root.inkSwitchMargin < cd) lightText = true;
-        const raw = (lightText ? n.light : n.dark).map(e => e.v);
+        // Only under text: a slice no block covers gets no veil of its
+        // own, and only the easing below reaches into it -- a veil along
+        // the whole width spoiled wide empty stretches of the wallpaper.
+        const raw = (lightText ? n.light : n.dark).map((e, i) => text[i] ? e.v : 0);
         const wide = raw.map((v, i) => Math.max(v, i > 0 ? raw[i - 1] : 0, i < count - 1 ? raw[i + 1] : 0));
         const veils = wide.map((v, i) => {
             let s = 0, k = 0;

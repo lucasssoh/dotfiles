@@ -757,7 +757,7 @@ ShellRoot {
 
             // The veil under the band, in a surface of its own on the
             // BOTTOM layer: above the wallpaper, under every window. It fades
-            // out over 74 px past the band, and drawn in the bar's own
+            // out over 44 px past the band, and drawn in the bar's own
             // surface (the top layer) that fade lay over the bottom of the
             // windows above the bar. Down here a window simply covers it,
             // and it only ever shows on the desktop. No input: clicks go
@@ -771,7 +771,7 @@ ShellRoot {
                 WlrLayershell.layer: WlrLayer.Bottom
                 WlrLayershell.namespace: "quickshell-bar-veil"
                 anchors { top: !BarPosition.bottom; bottom: BarPosition.bottom; left: true; right: true }
-                implicitHeight: 100
+                implicitHeight: 70
                 mask: Region { width: 0; height: 0 }
 
                 Modules.BandVeil {
@@ -786,6 +786,14 @@ ShellRoot {
 
             // One ink for every block on the band, and a veil per slice of
             // the screen under it -- see theme/BarInk.qml.
+            // The central island's own glass, after the wallpaper behind it.
+            IslandGlass {
+                id: islandGlass
+                monitor: bar.tintMonitor
+                rectX: centerIsland.x
+                rectW: centerIsland.width
+            }
+
             BarInk {
                 id: barInk
                 monitor: bar.tintMonitor
@@ -794,7 +802,6 @@ ShellRoot {
                     { x: programmeIsland.x, w: programmeIsland.visible ? programmeIsland.width : 0 },
                     { x: metrics.x, w: metrics.width },
                     { x: launchers.x, w: launchers.width },
-                    { x: centerIsland.x, w: centerIsland.width },
                     { x: toolsIsland.x, w: toolsIsland.width }
                 ]
             }
@@ -1312,17 +1319,15 @@ ShellRoot {
                 rowIsland: true
                 rowIslandInset: 2
                 rowIslandRadius: 10
-                // The drawers' glass (2026-11-15): the bar's blur behind it
-                // and the same colour, rim and shadow as Balise and every
-                // other drawer, dark or light with the system, its text in
-                // the drawers' inks. A blur with no colour at all came out
-                // mid-grey (~128) over a light wallpaper, where neither ink
-                // reads; the old dark slab was this glass at 72 % in light
-                // mode, far darker than the rest of the bar.
-                rowIslandColor: DrawerTheme.paneTop
-                rowIslandRim: DrawerTheme.paneRim
+                // The drawers' glass over the bar's blur, but dark or light
+                // after the wallpaper behind the island rather than after
+                // the system: see theme/IslandGlass.qml. Its text takes the
+                // same glass's inks.
+                rowIslandColor: islandGlass.fill
+                rowIslandRim: islandGlass.rim
                 rowIslandHighlight: true
-                rowIslandShadow: DrawerTheme.paneShadow
+                rowIslandHighlightColor: islandGlass.highlight
+                rowIslandShadow: islandGlass.shadow
                 flushTop: !BarPosition.bottom
                 splitDrawer: true
                 // The drawers hanging from it wear the same glass as every
@@ -1401,13 +1406,13 @@ ShellRoot {
                 // 0.9 opacity of waybar's old #window rule is gone).
                 Modules.ActiveWindow {
                     monitor: shell.hyprMonitorFor(bar.screen)
-                    ink: DrawerTheme
+                    ink: islandGlass
                 }
-                Modules.Workspaces { monitor: shell.hyprMonitorFor(bar.screen); ink: DrawerTheme }
+                Modules.Workspaces { monitor: shell.hyprMonitorFor(bar.screen); ink: islandGlass }
                 // Media (mpris) -- no Launchers inside any more (asked
                 // for, a while back: pulled out into its own separate
                 // floating island, see below).
-                Modules.Media { ink: DrawerTheme }
+                Modules.Media { ink: islandGlass }
             }
 
             // ── CLOCK (far left) ──────────────────────────────
