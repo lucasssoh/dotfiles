@@ -330,11 +330,12 @@ Singleton {
                 ? 0.35 + 0.65 * Math.min(1, (texture - root.textureStart) / (root.textureFull - root.textureStart))
                 : 0;
             light.push(root._least(floor, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
-            // Half the floor under dark text: over a bright, grainy
-            // stretch (snow) the full floor put a light haze along the
-            // whole bar where dark text already read at 10:1; the 10th
+            // No floor under dark text: the texture measure is a spread of
+            // lightness within the slice, which a smooth gradient has too
+            // (macos-abstract-shapes' orange folds), and the floor laid a
+            // light haze where dark text already read. The 10th
             // percentile in `lo` is what guards the dark patches.
-            dark.push(root._least(floor * 0.5, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
+            dark.push(root._least(0, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
         }
         const entry = { seq: root.seq, light: light, dark: dark };
         const all = Object.assign({}, root._needs);
@@ -378,10 +379,12 @@ Singleton {
         // own, and only the easing below reaches into it -- a veil along
         // the whole width spoiled wide empty stretches of the wallpaper.
         const raw = (lightText ? n.light : n.dark).map((e, i) => text[i] ? e.v : 0);
-        const wide = raw.map((v, i) => Math.max(v, i > 0 ? raw[i - 1] : 0, i < count - 1 ? raw[i + 1] : 0));
-        const veils = wide.map((v, i) => {
+        // Eased over two slices each side (30 px at 128 slices), not
+        // widened first: one dark corner slice spread its veil ~90 px
+        // under the text beside it.
+        const veils = raw.map((v, i) => {
             let s = 0, k = 0;
-            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += wide[j]; k++; }
+            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += raw[j]; k++; }
             return s / k;
         });
         return { lightText: lightText, veils: veils };
