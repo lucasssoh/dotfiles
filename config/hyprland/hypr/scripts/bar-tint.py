@@ -122,10 +122,12 @@ from PIL import Image
 # and the extra rows barely move a mean.
 BAND_H = 32
 
-# Buckets across the monitor's width. 64 over 2560 is a 40px bucket, and
-# the narrowest island (launchers) is ~80px, so even it averages two.
-# Raising this does not cost a re-sample, only a slightly longer JSON.
-BUCKETS = 64
+# Buckets across the monitor's width. 128 over 1920 is a 15 px bucket:
+# fine enough for the veil to stop where a dark patch stops and for the
+# centre island to split a title near a trunk's edge, where 64 (30 px)
+# was visibly coarse. Raising this does not cost a re-sample, only a
+# slightly longer JSON.
+BUCKETS = 128
 
 # Read by quickshell through a FileView with watchChanges (inotify). NOT
 # under /sys -- OsdState.qml documents why that would not have worked:
