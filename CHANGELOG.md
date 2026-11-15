@@ -12,6 +12,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Prisme:** the cards of light and dark wallpapers no longer show a light rim at their corners.
 - **Prisme:** a light and dark wallpaper opens on the version matching your desktop, without showing the other one for an instant.
 
+### Added
+- **Wallpapers:** Flamme, the folds of coucou's Plis lit in Firefox's colours, light and dark.
+
 ### Changed
 - **Install:** Fedora's crash reporter (abrt) is turned off, which frees about 90 MB. Crashes are still kept: `coredumpctl list` shows them.
 - **Files:** Nemo has a lighter layout in the shell's colours. The current folder shows in full ink with its parent folders quietly beside it, files sit straight on the window without frames, a hairline parts them from the sidebar, and the status shows in a small floating label. A selected name is inverted like the active workspace; a selected row or place is shaded. In light mode it is cream instead of white and blue.

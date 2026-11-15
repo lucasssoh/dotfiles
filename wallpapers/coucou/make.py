@@ -2,9 +2,11 @@
 """The coucou wallpapers: one cream light rising from the lower left, on
 three surfaces (folds, draped silk, contour lines), each in a light and a
 dark version -- `coucou-aube-relief.jxl` and `coucou-aube-relief-dark.jxl`,
-the pair that follows the desktop's light/dark mode.
+the pair that follows the desktop's light/dark mode. Plus Flamme, the
+folds of Plis lit by Firefox's colours instead of cream, also the ground
+of Firefox's new tab.
 
-    python3 wallpapers/coucou/make.py [--size 5120x3200] [--out wallpapers] [--format jxl|png|jpg]
+    python3 wallpapers/coucou/make.py [--size 5120x3200] [--out wallpapers] [--format jxl|png|jpg] [--only NAME,...]
 
 JPEG XL by default (needs `cjxl`, package libjxl-utils: only to make the
 files, never at install): Plis and Soie at distance 1.0, Relief at 0.5 --
@@ -34,12 +36,19 @@ DAWN = np.array([243, 236, 222], np.float32)
 SUN = np.array([250, 238, 212], np.float32)
 TAN = np.array([150, 128, 96], np.float32)
 
+# Flamme: Firefox's flame, read outward from the light -- yellow and orange
+# at the source, raspberry, then violet far from it -- on a violet-black.
+FIRE_INK = np.array([12, 10, 16], np.float32)
+FIRE_STOPS = [(0.00, (255, 200, 90)), (0.22, (255, 128, 60)), (0.45, (255, 62, 104)),
+              (0.68, (214, 34, 140)), (0.86, (144, 89, 255)), (1.00, (90, 50, 200))]
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--size', default='5120x3200')
     ap.add_argument('--out', default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ap.add_argument('--format', default='jxl', choices=['jxl', 'png', 'jpg'])
+    ap.add_argument('--only', default='', help='comma-separated names to write, e.g. coucou-flamme-plis')
     args = ap.parse_args()
     w, h = (int(v) for v in args.size.split('x'))
 
@@ -58,7 +67,11 @@ def main():
 
     distance = {'coucou-aube-relief': '0.5', 'coucou-aube-relief-dark': '0.5'}   # others: 1.0
 
+    only = {n for n in args.only.split(',') if n}
+
     def save(img, name):
+        if only and name not in only:
+            return
         im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), 'RGB')
         path = os.path.join(args.out, f'{name}.{args.format}')
         if args.format == 'jpg':
@@ -98,6 +111,35 @@ def main():
     lite = lite * (1 - 0.30 * L) + SUN * 0.30 * L
     save(grain(lite, 1, 1.6), 'coucou-aube-plis')
     save(grain(dark, 1), 'coucou-aube-plis-dark')
+
+    # ── Flamme: the same folds, their light in Firefox's colours ─────────
+    dist = np.sqrt(((nx - 0.12) * aspect) ** 2 + (ny - 1.05) ** 2) / 1.55
+    fire = np.zeros((h, w, 3), np.float32)
+    for (a0, c0), (a1, c1) in zip(FIRE_STOPS, FIRE_STOPS[1:]):
+        k = np.clip((dist - a0) / (a1 - a0), 0, 1)[..., None]
+        inside = ((dist >= a0) & (dist <= a1))[..., None]
+        fire = np.where(inside, np.array(c0, np.float32) * (1 - k) + np.array(c1, np.float32) * k, fire)
+    fire = np.where((dist > 1)[..., None], np.array(FIRE_STOPS[-1][1], np.float32), fire)
+    pastel = fire * 0.62 + 255 * 0.38          # the light version's glow
+    deep = fire * 0.62 + np.array([40, 20, 50], np.float32) * 0.38   # its rims
+    dark, lite = np.broadcast_to(FIRE_INK, (h, w, 3)).copy(), ground.copy()
+    for n, (base, amp, freq, phase, shade) in enumerate(folds):
+        edge = base + amp * np.sin(2 * np.pi * freq * nx + phase) + 0.02 * np.sin(9 * nx + phase)
+        below = (ny > edge)[..., None]
+        depth = np.clip((ny - edge) / 0.30, 0, 1)[..., None]
+        rim = np.exp(-((ny - edge) * h / (4.2 * px_scale)) ** 2)[..., None]
+        fill = (shade + 14 * (1 - depth) ** 2) * np.array([1.0, 0.92, 1.12], np.float32)
+        dark = np.where(below, fill, dark)
+        a = rim * (0.18 + 0.70 * L)
+        dark = dark * (1 - a) + fire * a
+        fill = ground - 6 * (n + 1) - 14 * np.exp(-depth * 9) + 6 * depth
+        lite = np.where(below, fill, lite)
+        a = rim * (0.25 + 0.55 * L)
+        lite = lite * (1 - a) + deep * a
+    dark = dark * (1 - 0.32 * L) + fire * 0.32 * L
+    lite = lite * (1 - 0.50 * L) + pastel * 0.50 * L
+    save(grain(lite, 2, 1.4), 'coucou-flamme-plis')
+    save(grain(dark, 2), 'coucou-flamme-plis-dark')
 
     # ── Soie: long diagonal drapery folds, shaded, satin on the crests ──
     lx, ly = nx * aspect, ny

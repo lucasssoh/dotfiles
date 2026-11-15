@@ -20,6 +20,9 @@
   5120x3200 and encoded to JPEG XL with `cjxl`. The Relief pair is the
   default wallpaper on a new install. They're part of coucou-shell, under
   the project's licence.
+- `coucou-flamme-plis`: the folds of Plis lit in Firefox's colours, a
+  pair made by the same `coucou/make.py`, also the ground of Firefox's new
+  tab. Same licence.
 - A file named `<name>-dark.<ext>` next to `<name>.<ext>` makes a pair:
   Prisme shows it as one wallpaper, and the desktop shows the half that
   matches light or dark mode. The GNOME and coucou sets are all pairs.
