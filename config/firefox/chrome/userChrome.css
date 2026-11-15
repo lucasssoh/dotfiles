@@ -437,6 +437,12 @@
     border-radius: 6px !important;
 }
 
+/* room round the strip: the first tab clear of the window's corner */
+#TabsToolbar {
+    padding-top: 4px !important;
+    padding-inline-start: 8px !important;
+}
+
 #tabbrowser-tabs:not([orient="vertical"]) .tabbrowser-tab:not([pinned]) .tab-content {
     position: relative;
     justify-content: center;
