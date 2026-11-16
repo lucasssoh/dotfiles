@@ -105,7 +105,7 @@ html:not(.booted) body { overflow: hidden; }
 
 .title {
   font-size: clamp(30px, 4.2vw, 52px); line-height: 1.06;
-  font-weight: 600; letter-spacing: -0.03em;
+  font-weight: 300; letter-spacing: -0.03em;
 }
 .sub { margin-top: 14px; max-width: 520px; color: var(--c-ink-2); }
 
@@ -141,13 +141,19 @@ html:not(.booted) body { overflow: hidden; }
 .hero .wrap { padding: clamp(120px, 17vw, 200px) 0 clamp(40px, 6vw, 80px); text-align: center; }
 h1 {
   font-size: clamp(46px, 9vw, 112px); line-height: 1;
-  font-weight: 600; letter-spacing: -0.045em;
+  font-weight: 300; letter-spacing: -0.045em;
 }
 .lead {
   margin: 24px auto 0; max-width: 560px;
   font-size: clamp(18px, 2.1vw, 23px); line-height: 1.4; color: var(--c-ink-2);
 }
 .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+.tech {
+  list-style: none; padding: 0; margin: 28px auto 0; max-width: 640px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  font-size: 13px; color: var(--c-ink-2);
+}
+.tech li { padding: 4px 12px; border: 1px solid var(--c-line); border-radius: 999px; }
 
 .screen {
   position: relative; margin-top: clamp(40px, 6vw, 72px);
@@ -167,7 +173,7 @@ section.wrap { padding: clamp(40px, 6vw, 88px) 0; }
   padding: clamp(24px, 4vw, 44px);
 }
 .install-text { flex: 1 1 260px; }
-.install-text h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; font-weight: 600; letter-spacing: -0.025em; }
+.install-text h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; font-weight: 300; letter-spacing: -0.025em; }
 .install-text p { margin-top: 14px; color: var(--c-ink-2); }
 .more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 6px; font-weight: 500; text-decoration: underline; text-underline-offset: 5px; }
 
@@ -197,7 +203,7 @@ section.wrap { padding: clamp(40px, 6vw, 88px) 0; }
 .number { padding: 26px 28px; }
 .number strong {
   display: block; font-size: clamp(48px, 6vw, 72px); line-height: 1;
-  font-weight: 600; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+  font-weight: 300; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
 }
 .number span { display: block; margin-top: 10px; font-size: 15px; color: var(--c-ink-2); }
 
@@ -212,7 +218,7 @@ section.wrap { padding: clamp(40px, 6vw, 88px) 0; }
 .tool.half { grid-column: span 3; }
 .tool:hover { border-color: var(--c-ink-3); transform: translateY(-3px); }
 .tool-text { display: block; padding: 26px 28px 20px; }
-.tool-name { display: block; font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+.tool-name { display: block; font-size: 24px; line-height: 1.2; font-weight: 400; letter-spacing: -0.02em; }
 .tool-line { display: block; margin-top: 6px; font-size: 16px; color: var(--c-ink-2); }
 .tool img {
   flex: 1 1 0; min-height: 200px;
@@ -234,14 +240,14 @@ section.wrap { padding: clamp(40px, 6vw, 88px) 0; }
 .guides { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 32px; }
 .guide { padding: 24px 24px 22px; display: flex; flex-direction: column; gap: 18px; }
 .guide-head { display: block; }
-.guide-name { display: block; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+.guide-name { display: block; font-size: 22px; line-height: 1.2; font-weight: 400; letter-spacing: -0.02em; }
 .guide-line { display: block; margin-top: 4px; font-size: 15px; color: var(--c-ink-2); }
 .guide-head:hover .guide-name { text-decoration: underline; text-underline-offset: 5px; }
 
 /* ── Licence and footer ───────────────────────────────────────────────── */
 .band.foot .wrap { padding: clamp(72px, 10vw, 136px) 0 24px; }
 .licence { max-width: 560px; padding: 28px; }
-.licence h2 { font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+.licence h2 { font-size: 24px; line-height: 1.2; font-weight: 400; letter-spacing: -0.02em; }
 .licence p { margin: 12px 0 18px; color: var(--c-ink-2); }
 footer {
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 24px;

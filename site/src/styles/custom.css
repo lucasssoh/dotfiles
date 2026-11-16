@@ -65,8 +65,8 @@ starlight-theme-select select { border-radius: 999px; }
 .sidebar-content .large { font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sl-color-gray-3); }
 
 /* Page title. */
-.content-panel h1 { font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; }
-.sl-markdown-content :is(h2, h3) { font-weight: 600; letter-spacing: -0.02em; }
+.content-panel h1 { font-weight: 300; letter-spacing: -0.03em; line-height: 1.05; }
+.sl-markdown-content :is(h2, h3, h4) { font-weight: 400; letter-spacing: -0.02em; }
 .sl-markdown-content > p:first-child { font-size: 1.1875rem; line-height: 1.5; color: var(--sl-color-gray-2); }
 
 /* Tables in an outlined, rounded box. */

@@ -42,6 +42,8 @@ const guides = [
   { name: 'Your settings', line: 'Where each setting lives.', href: doc('configuration'), links: [['Your own files', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
 ];
 
+const tech = ['Fedora', 'Hyprland', 'Quickshell', 'Rust', 'GTK 4', 'PipeWire', 'WezTerm', 'Neovim', 'Firefox', 'Nemo', 'mpv'];
+
 const boot = ['Reached target Basic System', 'Started Network Manager', 'Started PipeWire Multimedia Service', 'Reached target Graphical Interface', 'Starting Hyprland'];
 ---
 
@@ -98,6 +100,9 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
             <a class="pill on big" href="#install">Install</a>
             <a class="pill big" href={doc('bar')}>Browse the guides</a>
           </div>
+          <ul class="tech" aria-label="Built with">
+            {tech.map((t) => <li>{t}</li>)}
+          </ul>
           <figure class="screen">
             <video
               id="film"
