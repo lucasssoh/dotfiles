@@ -6,7 +6,7 @@ The battery, in the right-hand group of the bar, and its drawer.
 
 ## The battery in the bar
 
-An outlined battery with the charge inside. When the charge is limited, a dotted line marks where it stops.
+A filled pill shows the charge. When conservation mode limits charging, the part beyond the limit is dimmer.
 
 ## The drawer
 

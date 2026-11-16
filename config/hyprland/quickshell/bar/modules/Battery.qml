@@ -207,10 +207,9 @@ Item {
             y: Math.floor((parent.height - height) / 2)
             percent: root.present ? root.pct : 100
             color: root.batteryColor
-            // Where conservation mode will stop the charge -- shown only
-            // while the machine is on AC, where it answers "how far will
-            // this go". On battery the cap is irrelevant and the tick
-            // would just be noise.
+            // Where conservation mode will stop the charge. The pill dims
+            // the unused part beyond this point. On battery the cap is
+            // irrelevant.
             capAt: root.conservationActive && (root.isCharging || root.atRestOnAC) ? 60 : -1
         }
 
