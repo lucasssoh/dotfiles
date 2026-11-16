@@ -36,7 +36,7 @@ const tools = [
 
 const guides = [
   { name: 'The bar', line: 'One guide for each part.', href: doc('bar'), links: [['Clock and agenda', 'bar/clock-agenda'], ['Centre island', 'bar/island'], ['Power', 'bar/power'], ['Notifications', 'bar/notifications'], ['Veille', 'bar/veille'], ['Programme', 'bar/programme']] },
-  { name: 'Tools', line: 'Made for coucou-shell.', href: doc('tools/roue'), links: [['Roue', 'tools/roue'], ['Prisme', 'tools/prisme'], ['Manette', 'tools/manette'], ['Sésame', 'tools/sesame'], ['Liseuse', 'tools/liseuse'], ['Screenshot', 'tools/screenshot']] },
+  { name: 'Tools', line: 'Made for coucou-shell.', href: doc('tools/roue'), links: [['Roue', 'tools/roue'], ['Prisme', 'tools/prisme'], ['Manette', 'tools/manette'], ['Sésame', 'tools/sesame'], ['Liseuse', 'tools/liseuse'], ['Launcher', 'tools/launcher'], ['Screenshot', 'tools/screenshot']] },
   { name: 'Session', line: 'Screens, wallpapers, lock, boot.', href: doc('session/hyprland'), links: [['Hyprland', 'session/hyprland'], ['Displays', 'session/displays'], ['Wallpapers', 'session/wallpapers'], ['Lock screen', 'session/lock'], ['Boot splash', 'session/boot-splash']] },
   { name: 'Applications', line: 'Each one can be swapped.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv']] },
   { name: 'cc-pkg-mng', line: 'Install, upgrade, roll back.', href: doc('cc-pkg-mng'), links: [['Installation', 'installation'], ['Commands', 'cc-pkg-mng'], ['Units', 'units'], ['Write a unit', 'writing-a-unit']] },
@@ -66,7 +66,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>coucou-shell</title>
-    <meta name="description" content="A Fedora desktop on Hyprland, installed and kept up to date by its own manager." />
+    <meta name="description" content="A desktop shell for Fedora, built around Hyprland." />
     <link rel="icon" href={`${BASE}/favicon.svg`} type="image/svg+xml" />
     <meta name="color-scheme" content="light dark" />
     <script is:inline>
@@ -109,7 +109,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
         <div class="wrap">
           <svg class="mark" aria-hidden="true" viewBox="0 0 48 48" fill="currentColor"><path fill-rule="evenodd" d="M6 24a14 14 0 1 0 28 0a14 14 0 1 0 -28 0Z M23.5 18.5a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0 -5.2 0Z"/><path d="M32 18.5L42 23L32 27.5Z"/></svg>
           <h1>coucou</h1>
-          <p class="lead">A Fedora desktop on Hyprland. One manager installs it and keeps it up to date.</p>
+          <p class="lead">A desktop shell for Fedora, built around Hyprland.</p>
           <div class="actions">
             <a class="pill on big" href="#install">Install</a>
             <a class="pill big" href={doc('bar')}>Browse the guides</a>
@@ -120,8 +120,10 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
                 <a href={t.href} aria-label={t.name} title={t.name}>
                   {t.si ? (
                     <svg class={t.lift ? 'lift' : undefined} aria-hidden="true" viewBox="0 0 24 24" fill={t.ink ? 'currentColor' : `#${t.si.hex}`}><path d={t.si.path} /></svg>
-                  ) : (
+                  ) : t.file ? (
                     <img src={img(`logos/${t.file}`)} alt="" />
+                  ) : (
+                    <span class="tech-text">{t.text || t.name}</span>
                   )}
                 </a>
               </li>
@@ -156,7 +158,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
       <section class="wrap install" id="install">
         <div class="tile install-tile">
           <div class="install-text">
-            <h2>Three commands</h2>
+            <h2>Quick start</h2>
             <p>On Fedora 44 or 45, x86_64. A minimal netinstall is enough.</p>
             <a class="more" href={doc('installation')}>What init asks</a>
           </div>

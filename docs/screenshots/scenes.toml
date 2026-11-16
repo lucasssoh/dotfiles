@@ -313,7 +313,7 @@ blank = "bar"
 [[video]]
 name = "hero"
 doc = "site/src/pages/index.astro"
-mode = "dark"
+mode = "light"
 audio = "~/Musique/December Dream.mp3"
 audio_delay = 0.4
 fade = 2.5
@@ -388,8 +388,9 @@ steps = [
     "key c", "wait 1.4",
     "key c", "wait 1.2",
     "key Return", "wait 2.5",
-    "scheme light", "wait 3",
-    # In light: the battery, then the desktop alone for the fade.
+    # Switch to dark for the end.
+    "scheme dark", "wait 2.5",
+    # In dark: the battery, then the desktop alone for the fade.
     "ipc bar togglePower", "wait 2.4",
     "ipc bar togglePower", "wait 0.9",
     "wait 3.5",

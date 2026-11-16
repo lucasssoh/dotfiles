@@ -3096,8 +3096,8 @@ ShellRoot {
         }
     }
 
-    // The pill announcing a controller that just arrived. Opposite the
-    // bar edge, like the other OSDs, and never taking input.
+    // The pill announcing a controller that just arrived. Bottom center,
+    // above the bar area, never taking input.
     Variants {
         model: Quickshell.screens
 
@@ -3113,20 +3113,15 @@ ShellRoot {
             exclusionMode: ExclusionMode.Ignore
             aboveWindows: true
             anchors {
-                top: BarPosition.bottom
-                bottom: !BarPosition.bottom
-                left: true
+                bottom: true
             }
             margins {
-                top: BarPosition.bottom ? 48 : 0
-                bottom: BarPosition.bottom ? 0 : 48
-                left: 20
+                bottom: BarPosition.bottom ? 48 : 20
             }
             implicitWidth: controllerBanner.implicitWidth
             implicitHeight: controllerBanner.implicitHeight
             mask: Region { width: 0; height: 0 }
 
-            // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
                 x: controllerBanner.blurX
@@ -3136,7 +3131,9 @@ ShellRoot {
                 radius: controllerBanner.blurRadius
             }
 
-            ControllerBanner { id: controllerBanner }
+            ControllerBanner {
+                id: controllerBanner
+            }
         }
     }
 

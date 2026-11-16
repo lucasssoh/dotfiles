@@ -28,7 +28,7 @@ export default defineConfig({
       title: 'coucou-shell',
       logo: { light: './src/assets/coucou-light.svg', dark: './src/assets/coucou-dark.svg' },
       favicon: '/favicon.svg',
-      description: 'A Fedora + Hyprland desktop, installed and kept up to date by its own manager.',
+      description: 'A desktop shell for Fedora, built around Hyprland.',
       social: [{ icon: 'github', label: 'GitHub', href: REPO }],
       customCss: ['./src/styles/custom.css'],
       expressiveCode: { styleOverrides: { borderRadius: '0' } },
