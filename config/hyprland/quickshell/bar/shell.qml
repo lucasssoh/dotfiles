@@ -737,9 +737,9 @@ ShellRoot {
             screen: modelData
 
             // ── INK ───────────────────────────────────────────────────
-            // One ink for the whole band, decided from the wallpaper behind
-            // all of it, and a veil per slice of the screen -- see
-            // theme/BarInk.qml and BandVeil below.
+            // Each block chooses its ink from the wallpaper behind it; the
+            // dark veil varies by screen slice -- see theme/BarInk.qml and
+            // BandVeil below.
             //
             // The rects are bound live, so a block that grows (metrics
             // with the CPU digits, tools with its modules, launchers with
@@ -755,13 +755,9 @@ ShellRoot {
             // bord comme avant").
             readonly property int bandHeight: 31
 
-            // The veil under the band, in a surface of its own on the
-            // BOTTOM layer: above the wallpaper, under every window. It fades
-            // out over 20 px past the band, and drawn in the bar's own
-            // surface (the top layer) that fade lay over the bottom of the
-            // windows above the bar. Down here a window simply covers it,
-            // and it only ever shows on the desktop. No input: clicks go
-            // through to the desktop.
+            // The veil sits under every window and fades to clear two-thirds
+            // through the band. It only shows on the desktop. No input:
+            // clicks go through to the desktop.
             PanelWindow {
                 id: veilWindow
                 screen: bar.screen
@@ -771,7 +767,7 @@ ShellRoot {
                 WlrLayershell.layer: WlrLayer.Bottom
                 WlrLayershell.namespace: "quickshell-bar-veil"
                 anchors { top: !BarPosition.bottom; bottom: BarPosition.bottom; left: true; right: true }
-                implicitHeight: 46
+                implicitHeight: Math.ceil(bar.bandHeight * 2 / 3)
                 mask: Region { width: 0; height: 0 }
 
                 Modules.BandVeil {
@@ -784,6 +780,8 @@ ShellRoot {
                 }
             }
 
+            // Each block's ink and the per-slice dark veil -- see
+            // theme/BarInk.qml and BandVeil below.
             // The central island's own glass, after the wallpaper behind it.
             IslandGlass {
                 id: islandGlass
@@ -803,8 +801,6 @@ ShellRoot {
                     { x: toolsIsland.x, w: toolsIsland.width }
                 ]
             }
-            // Each block's ink, light or dark after what is behind it, and
-            // the band's veil per slice -- see theme/BarInk.qml.
             BlockInk { id: clockInk; bar: barInk; index: 0 }
             BlockInk { id: programmeInk; bar: barInk; index: 1 }
             BlockInk { id: metricsInk; bar: barInk; index: 2 }

@@ -3,13 +3,11 @@ import "../theme"
 import "../services"
 
 // The band's veil: one density per profile slice across the screen
-// (BarInk.veils), full behind the text, then fading out over the next
-// 20 px instead of stopping on a hard line ("la coupure nette n'est pas
-// forcément très élégante").
+// (BarInk.veils), full at the screen edge, then fading to clear two-thirds
+// through the bar.
 //
-// Canvases rather than a Rectangle gradient: a QML Gradient takes a fixed
-// list of stops, and this one has a stop per slice (64), dark or light
-// with the ink.
+// Canvases rather than a Rectangle gradient: this one has a stop per
+// sampled wallpaper slice.
 //
 // Each state is painted ONCE, in its final colour, and a new one replaces
 // the old by a cross-fade of two canvases -- opacity only, done by the
@@ -19,13 +17,12 @@ import "../services"
 Item {
     id: band
 
-    // BarInk: its `veils` and, per slice, `veilLights` (true where the
-    // veil sits under light text, so is the dark one).
+    // BarInk's per-slice dark veil densities.
     property QtObject ink: null
     // Which screen edge the band hangs from.
     property bool fromBottom: false
-    // Full veil from the edge over this much, then the fade.
-    property int solid: 26
+    // Keep the veil solid for the first half, then fade out.
+    property int solid: Math.round(height / 2)
 
     // Which canvas holds the current state.
     property bool frontIsA: true
@@ -43,7 +40,6 @@ Item {
         }
         const target = band.back;
         target.veils = band.ink.veils ? band.ink.veils.slice() : [];
-        target.tones = band.ink.veilLights ? band.ink.veilLights.slice() : [];
         target.pending = true;
         target.requestPaint();
     }
@@ -82,7 +78,6 @@ Item {
         canvasB.opacity = 0;
         if (band.ink) {
             canvasA.veils = band.ink.veils.slice();
-            canvasA.tones = band.ink.veilLights.slice();
         }
         canvasA.requestPaint();
     }
@@ -94,8 +89,6 @@ Item {
         id: canvas
         anchors.fill: parent
         property var veils: []
-        // Per slice: true = dark veil (under light text), false = light.
-        property var tones: []
         // Set when a new state is painted here, to swap once it is drawn.
         property bool pending: false
 
@@ -112,12 +105,11 @@ Item {
             const n = veils.length;
             if (!n || canvas.width <= 0 || canvas.height <= 0) return;
 
+            const c = BandTint.band;
+            const r = Math.round(255 * c.r), g = Math.round(255 * c.g), b = Math.round(255 * c.b);
             const across = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            for (let i = 0; i < n; i++) {
-                const c = canvas.tones[i] === false ? BandTint.lightBand : BandTint.band;
-                const r = Math.round(255 * c.r), g = Math.round(255 * c.g), b = Math.round(255 * c.b);
+            for (let i = 0; i < n; i++)
                 across.addColorStop((i + 0.5) / n, "rgba(" + r + "," + g + "," + b + "," + (c.a * veils[i]).toFixed(4) + ")");
-            }
             ctx.fillStyle = across;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 

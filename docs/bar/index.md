@@ -1,6 +1,7 @@
 # The bar
 
 The bar shows the time, the machine's figures, the workspaces and the open apps, and opens a drawer for each frequent setting.
+Each block chooses the ink with better contrast against its wallpaper; any dark veil fades to clear two-thirds through the bar.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/bar-dark.webp"><img src="../screenshots/bar.webp" alt="The bar"></picture>
 

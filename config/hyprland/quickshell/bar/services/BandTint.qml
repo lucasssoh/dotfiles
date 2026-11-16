@@ -231,8 +231,8 @@ Singleton {
     // Texture thresholds, in L*, calibrated on the 87 cached wallpapers:
     // calm ones (flat, gradients, smooth photos) sit at 0-6; busy ones at
     // 15-75 (country-road's foliage at 46). Below `textureStart` texture
-    // is ignored and the contrast rule alone decides; from there the band
-    // comes in with WHITE text, at a minimum density that reaches full at
+    // is ignored; above it, a dark veil can calm a busy stretch when white
+    // text wins the contrast decision. Its density reaches full at
     // `textureFull`.
     readonly property real textureStart: 15
     readonly property real textureFull: 35
@@ -241,17 +241,14 @@ Singleton {
     // { ink: "dark" | "light", veil: 0..1 }. ("dark" is the dark MATERIAL,
     // i.e. white text; "light" is dark text -- the names Ink/InkLight use.)
     //
-    //   1. Without any veil, score dark text against the brightest-but-
-    //      darkest pixel (`lo`) and white text against the brightest
-    //      (`hi`). Whichever clears `target` wins with veil 0; if both do,
-    //      the better one, with the old hysteresis so a crossfade cannot
-    //      flip-flop the ink.
-    //   2. If neither does, white text takes the SMALLEST veil (in 5%
-    //      steps) that lifts its worst case over `target` -- the veil
-    //      darkens the bright spots under it, which is the only thing a
-    //      dark veil can do for text.
-    //   3. If even the full band is not enough, whichever of "white on the
-    //      full band" and "dark on nothing" scores higher.
+    // Contrast picks the ink before texture is considered. A dark veil can
+    // calm a busy stretch and help white text, but it only hurts dark text;
+    // texture must not force white text over a bright background.
+    //
+    // If both inks clear `target`, keep the better one with hysteresis. A
+    // busy texture adds a veil only when white text wins. If neither ink
+    // clears `target`, white text takes the smallest veil (in 5% steps)
+    // that lifts its worst case over `target`.
     //
     // `current` is the caller's previous ink, where the hysteresis state
     // lives (a singleton cannot hold it for several islands).
@@ -259,200 +256,31 @@ Singleton {
         const r = root.rangeAt(monitor, x, w);
         if (!r) return { ink: current || "dark", veil: 1 };
         const whiteAt = v => root.contrast(root.composite(root.bandFor(v), r.hi), inkDark);
-        // 0. A busy wallpaper gets the band whatever the contrast says --
-        //    added after country-road's foliage passed the contrast rule
-        //    with dark text at 4.54:1 and was still hard to read: contrast
-        //    against the worst pixel says nothing about visual noise, and
-        //    only the band calms it. White text on it, the veil at least
-        //    as dense as the texture asks and at least as dense as white
-        //    text's contrast needs.
-        if (r.texture >= root.textureStart) {
-            const k = Math.min(1, (r.texture - root.textureStart) / (root.textureFull - root.textureStart));
-            let v = 0.35 + 0.65 * k;
-            while (v < 1 && whiteAt(v) < root.target) v = Math.min(1, v + 0.05);
-            return { ink: "dark", veil: v };
-        }
         const darkBare = root.contrast(r.lo, inkLight);
         const whiteBare = whiteAt(0);
         const okDark = darkBare >= root.target, okWhite = whiteBare >= root.target;
+        const textureVeil = r.texture >= root.textureStart
+            ? 0.35 + 0.65 * Math.min(1, (r.texture - root.textureStart) / (root.textureFull - root.textureStart))
+            : 0;
+        const whiteVeil = floor => {
+            let v = floor;
+            while (v < 1 && whiteAt(v) < root.target) v = Math.min(1, v + 0.05);
+            return v;
+        };
         if (okDark && okWhite) {
             if (current === "light")
-                return { ink: whiteBare > darkBare + root.switchMargin ? "dark" : "light", veil: 0 };
-            return { ink: darkBare > whiteBare + root.switchMargin ? "light" : "dark", veil: 0 };
+                return whiteBare > darkBare + root.switchMargin
+                    ? { ink: "dark", veil: whiteVeil(textureVeil) }
+                    : { ink: "light", veil: 0 };
+            return darkBare > whiteBare + root.switchMargin
+                ? { ink: "light", veil: 0 }
+                : { ink: "dark", veil: whiteVeil(textureVeil) };
         }
         if (okDark) return { ink: "light", veil: 0 };
-        if (okWhite) return { ink: "dark", veil: 0 };
-        for (let v = 0.05; v <= 1.0001; v += 0.05) {
-            if (whiteAt(v) >= root.target) return { ink: "dark", veil: Math.min(1, v) };
-        }
+        if (okWhite) return { ink: "dark", veil: whiteVeil(textureVeil) };
+        const veil = whiteVeil(Math.max(0.05, textureVeil));
+        if (whiteAt(veil) >= root.target) return { ink: "dark", veil: veil };
         return whiteAt(1) >= darkBare ? { ink: "dark", veil: 1 } : { ink: "light", veil: 0 };
-    }
-
-    // Kept for callers that only want the ink.
-    // ---- one ink for the whole bar, a veil per slice -------------------
-    // `decide` above judges each island alone, on the 10th/90th
-    // percentiles of what it covers. Over a wallpaper that changes across
-    // the width (country-road: autumn leaves on the left, a calm sky on
-    // the right) that gave a bar in two inks, and a small busy patch
-    // inside an island -- branches behind the battery -- fell under the
-    // percentile and got no veil at all.
-    //
-    // `decideBar` picks ONE ink for every block, the one that needs the
-    // least veil where there is text, and then gives each of the
-    // profile's slices exactly the veil that ink needs there. The veil is
-    // dark under light text and light under dark text: a dark veil only
-    // lowers dark text's contrast, which is why the white band of an
-    // earlier pass is back, but only as a local haze over a busy patch,
-    // never as the bar's surface.
-    readonly property color lightBand: "#73f5f3ee"
-    function lightBandFor(veil) {
-        const k = Math.max(0, Math.min(1, veil));
-        return Qt.rgba(root.lightBand.r, root.lightBand.g, root.lightBand.b, root.lightBand.a * k);
-    }
-
-    // Per slice and per ink, the least veil that holds `target`, from the
-    // same busy-wallpaper floor as `decide`. Pure function of the profile,
-    // so it is computed once per profile and per monitor and kept:
-    // islands resize far more often than the wallpaper changes.
-    property var _needs: ({})
-    function sliceNeeds(monitor, inkDark, inkLight) {
-        if (!root.profile || !root.profile[monitor]) return null;
-        const m = root.profile[monitor];
-        if (!m.lo || !m.hi || !m.cells || !m.cells.length) return null;
-        const cached = root._needs[monitor];
-        if (cached && cached.seq === root.seq) return cached;
-        const light = [], dark = [];
-        for (let i = 0; i < m.cells.length; i++) {
-            const lo = Qt.rgba(m.lo[i] / 255, m.lo[i] / 255, m.lo[i] / 255, 1);
-            const hi = Qt.rgba(m.hi[i] / 255, m.hi[i] / 255, m.hi[i] / 255, 1);
-            const texture = root.lstar(m.hi[i]) - root.lstar(m.lo[i]);
-            const floor = texture >= root.textureStart
-                ? 0.35 + 0.65 * Math.min(1, (texture - root.textureStart) / (root.textureFull - root.textureStart))
-                : 0;
-            light.push(root._least(floor, v => root.contrast(root.composite(root.bandFor(v), hi), inkDark)));
-            // No floor under dark text: the texture measure is a spread of
-            // lightness within the slice, which a smooth gradient has too
-            // (macos-abstract-shapes' orange folds), and the floor laid a
-            // light haze where dark text already read. The 10th
-            // percentile in `lo` is what guards the dark patches.
-            dark.push(root._least(0, v => root.contrast(root.composite(root.lightBandFor(v), lo), inkLight)));
-        }
-        const entry = { seq: root.seq, light: light, dark: dark };
-        const all = Object.assign({}, root._needs);
-        all[monitor] = entry;
-        root._needs = all;
-        return entry;
-    }
-    function _least(floor, contrastAt) {
-        for (let v = floor; v <= 1.0001; v += 0.05)
-            if (contrastAt(Math.min(1, v)) >= root.target) return { v: Math.min(1, v), ok: true };
-        return { v: 1, ok: false };
-    }
-
-    // rects: [{x, w}] in the monitor's coordinates, the blocks that carry
-    // text. currentLight: the ink in use, for the hysteresis. Returns
-    // { lightText, veils } with one veil per slice, eased across slices
-    // so it never ends on a slice edge, or null without a profile.
-    readonly property real inkSwitchMargin: 1.0
-    function decideBar(monitor, rects, currentLight, inkDark, inkLight) {
-        const n = root.sliceNeeds(monitor, inkDark, inkLight);
-        if (!n) return null;
-        const m = root.profile[monitor];
-        const count = n.light.length;
-        const text = {};
-        for (let r = 0; r < rects.length; r++) {
-            if (!(rects[r].w > 0)) continue;
-            const a = Math.max(0, Math.floor(rects[r].x / m.width * count));
-            const b = Math.min(count - 1, Math.floor((rects[r].x + rects[r].w - 1) / m.width * count));
-            for (let i = a; i <= b; i++) text[i] = true;
-        }
-        const cost = side => {
-            let c = 0;
-            for (const i in text) c += side[i].v + (side[i].ok ? 0 : 10);
-            return c;
-        };
-        const cl = cost(n.light), cd = cost(n.dark);
-        let lightText = currentLight;
-        if (currentLight && cd + root.inkSwitchMargin < cl) lightText = false;
-        else if (!currentLight && cl + root.inkSwitchMargin < cd) lightText = true;
-        // Only under text: a slice no block covers gets no veil of its
-        // own, and only the easing below reaches into it -- a veil along
-        // the whole width spoiled wide empty stretches of the wallpaper.
-        const raw = (lightText ? n.light : n.dark).map((e, i) => text[i] ? e.v : 0);
-        // Eased over two slices each side (30 px at 128 slices), not
-        // widened first: one dark corner slice spread its veil ~90 px
-        // under the text beside it.
-        const veils = raw.map((v, i) => {
-            let s = 0, k = 0;
-            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += raw[j]; k++; }
-            return s / k;
-        });
-        return { lightText: lightText, veils: veils };
-    }
-    // One ink PER BLOCK (2026-11-15, after a bar dark on the left and a
-    // uniform pale pink on the right: one ink for the whole bar put a
-    // dark veil under the right's light text, where black text would
-    // simply have read). Each block picks the ink that needs the least
-    // veil over the slices it covers, with the same hysteresis as the
-    // bar-wide choice; each slice gets the veil its block's ink needs,
-    // dark under light text and light under dark text.
-    //
-    // current: the blocks' inks in use (true = light text), for the
-    // hysteresis. Returns { lights: [per block], veils: [per slice],
-    // veilLights: [per slice, true where the veil sits under light text,
-    // so is dark] }, or null without a profile.
-    function decideBlocks(monitor, rects, current, inkDark, inkLight) {
-        const n = root.sliceNeeds(monitor, inkDark, inkLight);
-        if (!n) return null;
-        const m = root.profile[monitor];
-        const count = n.light.length;
-        const lights = [];
-        const raw = new Array(count).fill(0);
-        const tone = new Array(count).fill(null);
-        for (let bi = 0; bi < rects.length; bi++) {
-            const r = rects[bi];
-            let lt = current && current[bi] !== undefined ? current[bi] : true;
-            if (!(r.w > 0)) { lights.push(lt); continue; }
-            const a = Math.max(0, Math.floor(r.x / m.width * count));
-            const b = Math.min(count - 1, Math.floor((r.x + r.w - 1) / m.width * count));
-            let cl = 0, cd = 0;
-            for (let i = a; i <= b; i++) {
-                cl += n.light[i].v + (n.light[i].ok ? 0 : 10);
-                cd += n.dark[i].v + (n.dark[i].ok ? 0 : 10);
-            }
-            if (lt && cd + root.inkSwitchMargin < cl) lt = false;
-            else if (!lt && cl + root.inkSwitchMargin < cd) lt = true;
-            lights.push(lt);
-            for (let i = a; i <= b; i++) {
-                raw[i] = Math.max(raw[i], (lt ? n.light : n.dark)[i].v);
-                tone[i] = lt;
-            }
-        }
-        // Slices no block covers take the tone of the nearest one that is,
-        // for the easing to blend into.
-        for (let i = 0; i < count; i++) {
-            if (tone[i] !== null) continue;
-            let d = 1;
-            while (d < count) {
-                if (i - d >= 0 && tone[i - d] !== null) { tone[i] = tone[i - d]; break; }
-                if (i + d < count && tone[i + d] !== null) { tone[i] = tone[i + d]; break; }
-                d++;
-            }
-            if (tone[i] === null) tone[i] = true;
-        }
-        const veils = raw.map((v, i) => {
-            let s = 0, k = 0;
-            for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < count) { s += raw[j]; k++; }
-            return s / k;
-        });
-        return { lights: lights, veils: veils, veilLights: tone };
-    }
-    function describeBar(monitor, rects, inkDark, inkLight) {
-        const d = root.decideBar(monitor, rects, true, inkDark, inkLight);
-        if (!d) return "pas de profil";
-        const vs = d.veils.map(v => Math.round(v * 100));
-        return "texte " + (d.lightText ? "clair" : "sombre") + ", voile " + (d.lightText ? "sombre" : "clair")
-             + " " + Math.min.apply(null, vs) + ".." + Math.max.apply(null, vs) + "%";
     }
 
     function recommend(monitor, x, w, current, inkDark, inkLight) {
