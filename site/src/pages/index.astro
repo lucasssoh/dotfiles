@@ -45,17 +45,19 @@ const guides = [
 
 // Each with its logo: from Simple Icons, or the project's own file in public/img/logos.
 const tech = [
-  { name: 'Fedora', si: siFedora },
-  { name: 'Hyprland', si: siHyprland },
-  { name: 'Quickshell', file: 'quickshell.svg' },
-  { name: 'Rust', si: siRust, ink: true },
-  { name: 'GTK 4', si: siGtk },
-  { name: 'PipeWire', file: 'pipewire.svg' },
-  { name: 'WezTerm', si: siWezterm },
-  { name: 'Neovim', si: siNeovim },
-  { name: 'Firefox', si: siFirefoxbrowser },
-  { name: 'mpv', si: siMpv, lift: true },
+  { name: 'Fedora', href: 'https://fedoraproject.org/', si: siFedora },
+  { name: 'Hyprland', href: 'https://hypr.land/', si: siHyprland },
+  { name: 'Quickshell', href: 'https://quickshell.org/', file: 'quickshell.svg' },
+  { name: 'Rust', href: 'https://www.rust-lang.org/', si: siRust, ink: true },
+  { name: 'GTK', href: 'https://www.gtk.org/', si: siGtk },
+  { name: 'PipeWire', href: 'https://pipewire.org/', file: 'pipewire.svg' },
+  { name: 'WezTerm', href: 'https://wezterm.org/', si: siWezterm },
+  { name: 'Neovim', href: 'https://neovim.io/', si: siNeovim },
+  { name: 'Firefox', href: 'https://www.firefox.com/', si: siFirefoxbrowser },
+  { name: 'mpv', href: 'https://mpv.io/', si: siMpv, lift: true },
 ];
+
+const wallpapers = ['plis', 'relief', 'soie'];
 
 const boot = ['Reached target Basic System', 'Started Network Manager', 'Started PipeWire Multimedia Service', 'Reached target Graphical Interface', 'Starting Hyprland'];
 ---
@@ -91,7 +93,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
     </div>
 
     <header class="nav">
-      <a class="brand" href={`${BASE}/`}>coucou-shell</a>
+      <a class="brand" href={`${BASE}/`}><svg class="bird" aria-hidden="true" viewBox="0 0 48 48" fill="currentColor"><path fill-rule="evenodd" d="M6 24a14 14 0 1 0 28 0a14 14 0 1 0 -28 0Z M23.5 18.5a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0 -5.2 0Z"/><path d="M32 18.5L42 23L32 27.5Z"/></svg>coucou-shell</a>
       <nav aria-label="Main">
         <a href={doc('bar')}>Guides</a>
         <a class="wide" href={doc('keybindings')}>Key bindings</a>
@@ -116,12 +118,13 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
           <ul class="tech" aria-label="Built with">
             {tech.map((t) => (
               <li>
-                {t.si ? (
-                  <svg class={t.lift ? 'lift' : undefined} aria-hidden="true" viewBox="0 0 24 24" fill={t.ink ? 'currentColor' : `#${t.si.hex}`}><path d={t.si.path} /></svg>
-                ) : (
-                  <img src={img(`logos/${t.file}`)} alt="" />
-                )}
-                {t.name}
+                <a href={t.href} aria-label={t.name} title={t.name}>
+                  {t.si ? (
+                    <svg class={t.lift ? 'lift' : undefined} aria-hidden="true" viewBox="0 0 24 24" fill={t.ink ? 'currentColor' : `#${t.si.hex}`}><path d={t.si.path} /></svg>
+                  ) : (
+                    <img src={img(`logos/${t.file}`)} alt="" />
+                  )}
+                </a>
               </li>
             ))}
           </ul>
@@ -138,10 +141,15 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
             >
               <source src={shot('hero.webm')} type="video/webm" />
             </video>
-            <button class="pill glass sound" id="sound" type="button" hidden aria-pressed="false">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"></path><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"></path></svg>
-              <span>Sound on</span>
-            </button>
+            <div class="player">
+              <button id="play" type="button" aria-label="Pause">
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path class="i-pause" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path><path class="i-play" d="M8 5l11 7-11 7z"></path></svg>
+              </button>
+              <button id="sound" type="button" aria-label="Sound on" hidden>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"></path><path class="i-on" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"></path><path class="i-off" d="M16 9.5l5 5M21 9.5l-5 5"></path></svg>
+              </button>
+              <input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Position in the film" />
+            </div>
           </figure>
         </div>
       </section>
@@ -186,18 +194,29 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
               <img class="only-dark" src={shot(`${t.shot}-dark.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
             </a>
           ))}
+          <a class="tile tool full" href={doc('session/wallpapers')}>
+            <span class="tool-text">
+              <span class="tool-name">Wallpapers</span>
+              <span class="tool-line">Aube: Plis, Relief and Soie, each light and dark.</span>
+            </span>
+            <span class="strip">
+              {wallpapers.map((w) => (
+                <>
+                  <img class="only-light" src={img(`aube-${w}.webp`)} alt={`Aube ${w}, light`} loading="lazy" />
+                  <img class="only-dark" src={img(`aube-${w}-dark.webp`)} alt={`Aube ${w}, dark`} loading="lazy" />
+                </>
+              ))}
+            </span>
+          </a>
         </div>
       </section>
 
-      <section class="band">
-        <img class="ground only-light" src={img('aube-plis.webp')} alt="" aria-hidden="true" loading="lazy" />
-        <img class="ground only-dark" src={img('aube-plis-dark.webp')} alt="" aria-hidden="true" loading="lazy" />
-        <div class="wrap">
+      <section class="wrap">
           <h2 class="title">Guides</h2>
           <p class="sub">One page per tool: what it does, how to use it, where it is set.</p>
           <div class="guides">
             {guides.map((g) => (
-              <div class="tile glass guide">
+              <div class="tile guide">
                 <a class="guide-head" href={g.href}>
                   <span class="guide-name">{g.name}</span>
                   <span class="guide-line">{g.line}</span>
@@ -210,14 +229,10 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
               </div>
             ))}
           </div>
-        </div>
       </section>
 
-      <section class="band foot">
-        <img class="ground only-light" src={img('aube-soie.webp')} alt="" aria-hidden="true" loading="lazy" />
-        <img class="ground only-dark" src={img('aube-soie-dark.webp')} alt="" aria-hidden="true" loading="lazy" />
-        <div class="wrap">
-          <div class="tile glass licence">
+      <section class="wrap foot">
+          <div class="tile licence">
             <h2>For personal use</h2>
             <p>Install it, use it and change it on your own machines. Redistributing it needs written permission.</p>
             <div class="chips">
@@ -233,7 +248,6 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
               <a href={REPO}>GitHub</a>
             </span>
           </footer>
-        </div>
       </section>
     </main>
 
@@ -270,16 +284,39 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
 
         // The sound button shows only when the film has a soundtrack.
         const film = document.getElementById('film');
+        const play = document.getElementById('play');
         const sound = document.getElementById('sound');
+        const seek = document.getElementById('seek');
         const hasAudio = () => film.mozHasAudio || Boolean(film.webkitAudioDecodedByteCount) || Boolean(film.audioTracks && film.audioTracks.length);
         const reveal = () => { if (hasAudio()) sound.hidden = false; };
         film.addEventListener('loadeddata', reveal);
         film.addEventListener('timeupdate', reveal, { once: true });
-        sound.addEventListener('click', () => {
-          film.muted = !film.muted;
-          sound.setAttribute('aria-pressed', String(!film.muted));
-          sound.querySelector('span').textContent = film.muted ? 'Sound on' : 'Sound off';
+
+        const showPlay = () => {
+          play.classList.toggle('paused', film.paused);
+          play.setAttribute('aria-label', film.paused ? 'Play' : 'Pause');
+        };
+        play.addEventListener('click', () => { film.paused ? film.play() : film.pause(); });
+        film.addEventListener('play', showPlay);
+        film.addEventListener('pause', showPlay);
+        showPlay();
+
+        const showSound = () => {
+          sound.classList.toggle('on', !film.muted);
+          sound.setAttribute('aria-label', film.muted ? 'Sound on' : 'Sound off');
+        };
+        sound.addEventListener('click', () => { film.muted = !film.muted; showSound(); });
+        showSound();
+
+        let dragging = false;
+        film.addEventListener('timeupdate', () => {
+          if (!dragging && film.duration) seek.value = String(Math.round((film.currentTime / film.duration) * 1000));
         });
+        seek.addEventListener('input', () => {
+          dragging = true;
+          if (film.duration) film.currentTime = (Number(seek.value) / 1000) * film.duration;
+        });
+        seek.addEventListener('change', () => { dragging = false; });
       })();
     </script>
   </body>

@@ -26,6 +26,8 @@ export default defineConfig({
     watchDocs,
     starlight({
       title: 'coucou-shell',
+      logo: { light: './src/assets/coucou-light.svg', dark: './src/assets/coucou-dark.svg' },
+      favicon: '/favicon.svg',
       description: 'A Fedora + Hyprland desktop, installed and kept up to date by its own manager.',
       social: [{ icon: 'github', label: 'GitHub', href: REPO }],
       customCss: ['./src/styles/custom.css'],
