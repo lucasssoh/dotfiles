@@ -16,9 +16,9 @@ cc-pkg-mng set wezterm variant smear
 cc-pkg-mng install wezterm
 ```
 
-## My setup
+## Author's setup
 
-The `config-wezterm` unit, if you adopt it: [`config/wezterm/wezterm.lua`](../../config/wezterm/wezterm.lua). It turns light or dark with the desktop.
+The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../config/wezterm/wezterm.lua). It turns light or dark with the desktop.
 
 | Key | Does |
 |---|---|

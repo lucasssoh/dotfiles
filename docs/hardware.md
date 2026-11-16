@@ -1,8 +1,8 @@
 # Hardware detection
 
-The `hardware` unit installs the drivers and tools for your CPU and GPU. The profiles and package lists are in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
+The `hardware` unit installs the drivers and tools for the CPU and GPU. The profiles and package lists are in [`scripts/lib/hardware.sh`](../scripts/lib/hardware.sh).
 
-You can see what it finds without installing anything:
+To see what it finds without installing anything:
 
 ```bash
 ./scripts/hardware-detect.sh             # full report: packages, codec swaps, things to do by hand
@@ -30,11 +30,11 @@ For H.264 and HEVC decoding in hardware, the unit turns on RPM Fusion (free and 
 | `libva-intel-media-driver` | `intel-media-driver` |
 | `mesa-va-drivers` | `mesa-va-drivers-freeworld` |
 
-Restart Firefox and mpv afterwards. A warning tells you if `vainfo` still shows no H.264 decoding. The list is `hw_codec_swaps` in `hardware.sh`.
+Restart Firefox and mpv afterwards. A warning shows if `vainfo` still reports no H.264 decoding. The list is `hw_codec_swaps` in `hardware.sh`.
 
 ## Things to do by hand
 
-Listed at the end of the install, for you to do:
+Listed at the end of the install, to do by hand:
 
 - Lenovo's battery conservation mode. The bar's [power drawer](bar/power.md) switches it too;
 - the NVIDIA proprietary driver;
@@ -46,7 +46,7 @@ Run `powertop` or `turbostat` as root. On Meteor Lake, trust `turbostat` over `p
 
 ## When it runs
 
-It runs with every install, and again after an `upgrade` or an edit that changes the profiles in `hardware.sh`. You can also run it yourself:
+It runs with every install, and again after an `upgrade` or an edit that changes the profiles in `hardware.sh`. To run it by hand:
 
 ```bash
 cc-pkg-mng install hardware

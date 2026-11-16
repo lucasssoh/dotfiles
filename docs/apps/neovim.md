@@ -2,9 +2,9 @@
 
 The editor. The `neovim` unit installs it without a configuration.
 
-## My setup
+## Author's setup
 
-The `config-nvim` unit, if you adopt it: `init.lua`, `lua/`, `ftplugin/`, `colors/` and `bin/`, linked into `~/.config/nvim/`.
+The `config-nvim` unit, when adopted: `init.lua`, `lua/`, `ftplugin/`, `colors/` and `bin/`, linked into `~/.config/nvim/`.
 
 | Feature | How to use it |
 |---|---|

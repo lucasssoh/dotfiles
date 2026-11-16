@@ -17,7 +17,7 @@ qs -c bar ipc call bar toggleBalise
 | Tile | Does |
 |---|---|
 | Wi-Fi | Lists the networks in range. Pick one to join it |
-| Bluetooth | Lists your devices and the ones nearby |
+| Bluetooth | Lists the paired devices and the ones nearby |
 | Ethernet | Shows the wired connection |
 | Brightness | The slider on the right |
 | Night mode | Warms the colours. Also on `Super + N`. See [displays](../session/displays.md#night-mode) |
@@ -25,7 +25,7 @@ qs -c bar ipc call bar toggleBalise
 | Dark mode | Switches the shell, GTK apps and browsers between light and dark. A light and dark [wallpaper](../session/wallpapers.md) follows |
 | Screenshot | Takes one. See [Screenshot](../tools/screenshot.md) |
 
-A setting that needs administrator rights asks for your password, on [Sésame](../tools/sesame.md)'s card.
+A setting that needs administrator rights asks for the password, on [Sésame](../tools/sesame.md)'s card.
 
 ## Share a Wi-Fi network
 

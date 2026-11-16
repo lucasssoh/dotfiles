@@ -10,15 +10,15 @@ coucou-shell comes with its own wallpapers and GNOME's, each in a light and a da
 
 Credits and licences are in [`wallpapers/CREDITS.md`](../../wallpapers/CREDITS.md).
 
-## Add your own
+## Add wallpapers
 
-Keep them in a folder of your own, `~/Images/Mine` for example. List that folder in [`prisme/wallpapers-extra.conf`](../../config/hyprland/prisme/wallpapers-extra.conf), one path per line, then run once:
+Keep them in a separate folder, `~/Images/Collection` for example. List that folder in [`prisme/wallpapers-extra.conf`](../../config/hyprland/prisme/wallpapers-extra.conf), one path per line, then run once:
 
 ```bash
 bash ~/coucou-shell/config/hyprland/set_wallpapers.sh
 ```
 
-After that, an image you add to your folder shows in Prisme.
+After that, an image added to the folder shows in Prisme.
 
 **Don't put files in `~/Images/Wallpapers`**: they are deleted the next time the folder is rebuilt.
 
@@ -32,7 +32,7 @@ A pair is one card in Prisme. The desktop shows the version that matches light o
 
 ## Fitting to the screen
 
-Each wallpaper is fitted to the resolution of every connected screen, at install and when you plug in a new one.
+Each wallpaper is fitted to the resolution of every connected screen, at install and when a new one is plugged in.
 
 A wallpaper is cropped to fill the screen. For one that must stay whole, a portrait for example, add its file name to [`prisme/wallpaper-safe-mode.conf`](../../config/hyprland/prisme/wallpaper-safe-mode.conf), one per line (`*` stands for any text). Its sides are then filled with a blur of itself.
 

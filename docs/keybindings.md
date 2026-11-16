@@ -1,6 +1,6 @@
 # Key bindings
 
-These are for an AZERTY keyboard. The bindings themselves are defined in [`config/hyprland/hypr/keybinds.lua`](../config/hyprland/hypr/keybinds.lua). If you read that file, the key names there (`ampersand`, `eacute`, …) are the characters the AZERTY number row types, not physical keys 1 to 10.
+These are for an AZERTY keyboard. The bindings themselves are defined in [`config/hyprland/hypr/keybinds.lua`](../config/hyprland/hypr/keybinds.lua). In that file, the key names (`ampersand`, `eacute`, …) are the characters the AZERTY number row types, not physical keys 1 to 10.
 
 Hold `Super` and the bar shows the bindings on a keyboard. Add `Shift` for the second layer.
 
@@ -17,7 +17,7 @@ Hold `Super` and the bar shows the bindings on a keyboard. Add `Shift` for the s
 | `Super + E` | File manager (Nemo by default) |
 | `Super + B` | Web browser (Firefox by default) |
 | `Super + W` | Prisme, the wallpaper picker |
-| `Super + F` | Liseuse: picks up the book you were reading, or opens the library to search one. Press `F1` inside a book for its manual |
+| `Super + F` | Liseuse: picks up the book being read, or opens the library to search one. Press `F1` inside a book for its manual |
 | `Super + V` | Clipboard history |
 | `Super + A` | [Agenda](bar/clock-agenda.md): add or delete an event |
 | `Super + D` | Programme's drawer, with the [Programme](bar/programme.md) |
@@ -30,12 +30,12 @@ To open another terminal, file manager or browser, see [default applications](se
 | Binding | Action |
 |---|---|
 | `Super + S` | The whole screen, opened in [Screenshot](tools/screenshot.md). `Ctrl + C` or `Enter` copies it |
-| `Super + Shift + S` | A region you drag, same keys |
+| `Super + Shift + S` | A dragged region, same keys |
 | `q` / `Esc` in Screenshot | Close it |
 
 ## Roue, the radial wheels
 
-Press the keys, aim while you hold them, and let go to confirm. You can also click an action, or pick one with `←` `→` and press `Enter`. `Escape` or a right-click closes the wheel.
+Press the keys, aim while holding them, and let go to confirm. Or click an action, or pick one with `←` `→` and press `Enter`. `Escape` or a right-click closes the wheel.
 
 | Binding | Wheel |
 |---|---|

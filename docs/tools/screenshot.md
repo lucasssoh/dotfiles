@@ -7,9 +7,9 @@ Take the screen or a region, annotate it, copy it.
 | Binding | Takes |
 |---|---|
 | `Super + S` | The whole screen |
-| `Super + Shift + S` | A region you drag |
+| `Super + Shift + S` | A dragged region |
 
-The Screenshot tile in [Balise](../bar/balise.md) takes one too. The shot opens in Screenshot, where you crop, draw arrows, write and blur.
+The Screenshot tile in [Balise](../bar/balise.md) takes one too. The shot opens in Screenshot, to crop, draw arrows, write and blur.
 
 | Key | Does |
 |---|---|

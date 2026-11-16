@@ -1,6 +1,6 @@
 # Mixer and equalizer
 
-Output and input levels, your audio devices, and a volume and an equalizer for each app.
+Output and input levels, the audio devices, and a volume and an equalizer for each app.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/mixer-dark.webp"><img src="../screenshots/mixer.webp" alt="The mixer drawer"></picture>
 
@@ -14,7 +14,7 @@ Click the speaker or the microphone icon, in the right-hand group of the bar.
 | Scroll | Changes the level |
 | Right-click | Opens pavucontrol, for card profiles and moving a stream to another device |
 
-When you plug in a new output or input, it becomes the default.
+A newly plugged output or input becomes the default.
 
 ## Equalizer
 

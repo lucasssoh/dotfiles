@@ -12,7 +12,7 @@ It's optional: `init` asks, and `cc-pkg-mng install plymouth` adds it later.
 
 | Tool | Use |
 |---|---|
-| [`make-assets.py`](../../config/boot/plymouth/make-assets.py) | Regenerates the images. Use `--width` if your screen isn't 1920 px wide |
+| [`make-assets.py`](../../config/boot/plymouth/make-assets.py) | Regenerates the images. Use `--width` for a screen that isn't 1920 px wide |
 | [`simulate.py`](../../config/boot/plymouth/simulate.py) | Renders the animation to a video. Takes `--width/--height`, or `--heads 1920x1200,3840x2160` for several screens |
 | [`preview.sh`](../../config/boot/plymouth/preview.sh) | Shows the real splash on a spare console. Takes `--sweep`, `--password` and `--status` |
 

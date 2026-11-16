@@ -1,22 +1,22 @@
-# Your settings
+# Settings
 
 Where each setting lives, and how to keep a change through an upgrade.
 
-## Your own files
+## User files
 
-Local to your machine. Ignored by upgrades. A missing file means the defaults.
+Local to the machine. Ignored by upgrades. A missing file means the defaults.
 
 | File | Sets | Guide |
 |---|---|---|
-| `~/.config/hypr/private.lua` | Your own window rules and keys | [Hyprland](session/hyprland.md#your-own-rules-and-keys) |
+| `~/.config/hypr/private.lua` | User window rules and keys | [Hyprland](session/hyprland.md#user-rules-and-keys) |
 | `~/.config/hypr/bar-position.json` | The bar at the top or at the bottom | [The bar](bar/index.md#position) |
 | `~/.config/hypr/bar-island.json` | The centre island's colour, opacity, blur and text | [Centre island](bar/island.md#its-look) |
-| `~/.config/hypr/monitor-layout.json` | Where your screens sit | [Displays](session/displays.md#where-they-sit) |
+| `~/.config/hypr/monitor-layout.json` | Where the screens sit | [Displays](session/displays.md#where-they-sit) |
 | `~/.config/hypr/scale.json` | The scale of each screen | [Displays](session/displays.md#scale) |
 | `~/.config/hypr/display-layout.json` | Which screens are on, and which is the main one | [Displays](session/displays.md#which-screens-are-on) |
 | `~/.config/xdg-terminals.list` | The terminal `Super + Enter` opens | [Hyprland](session/hyprland.md#default-applications) |
 
-For a key or a rule of your own, use `private.lua`, not `keybinds.lua`.
+A user key or rule goes in `private.lua`, not in `keybinds.lua`.
 
 ## coucou-shell's files
 
@@ -30,9 +30,9 @@ The other settings are files of the checkout (`~/coucou-shell` by default), link
 | What a machine does when idle | `config/hyprland/hypr/hosts/<id>.env` | [Hyprland](session/hyprland.md#per-machine-profiles) |
 | The lock screen | `config/hyprland/hypr/hyprlock.conf` | [Lock screen](session/lock.md) |
 | Veille | `config/hyprland/quickshell/bar/veille.json` | [Veille](bar/veille.md) |
-| Roue's wheels | `config/hyprland/roue/wheels/*.toml` | [Roue](tools/roue.md#change-a-wheel-or-make-your-own) |
+| Roue's wheels | `config/hyprland/roue/wheels/*.toml` | [Roue](tools/roue.md#change-or-add-a-wheel) |
 | Prisme's keys | `config/hyprland/prisme/keymap.conf` | [Prisme](tools/prisme.md#settings) |
-| Your wallpaper folders | `config/hyprland/prisme/wallpapers-extra.conf` | [Wallpapers](session/wallpapers.md#add-your-own) |
+| User wallpaper folders | `config/hyprland/prisme/wallpapers-extra.conf` | [Wallpapers](session/wallpapers.md#add-wallpapers) |
 | The launcher | `config/fuzzel/fuzzel.ini` | [Launcher](tools/launcher.md) |
 | Screenshot | `config/satty/config.toml` | [Screenshot](tools/screenshot.md#settings) |
 | Liseuse's folders, keys and pages | `config/liseuse/sources.conf`, `zathurarc`, `markdown.css` | [Liseuse](tools/liseuse.md#settings) |
@@ -44,7 +44,7 @@ A change that adds a package or runs a script needs `cc-pkg-mng install <unit>`.
 
 ## Keep a change through an upgrade
 
-`upgrade` and `rollback` stop when a file of the checkout has changed, and list the files. Put your changes aside, upgrade, then bring them back:
+`upgrade` and `rollback` stop when a file of the checkout has changed, and list the files. Put the changes aside, upgrade, then bring them back:
 
 ```bash
 cd ~/coucou-shell
@@ -53,13 +53,13 @@ cc-pkg-mng upgrade
 git stash pop
 ```
 
-If the new version changed the same lines, git asks you to choose.
+If the new version changed the same lines, git asks which to keep.
 
-On the edge channel, you can commit your changes instead. Run `git pull --rebase` before `upgrade`.
+On the edge channel, the changes can be committed instead. Run `git pull --rebase` before `upgrade`.
 
 ## Files a unit replaced
 
-A unit that replaces one of your files (your `~/.zshrc`, say) moves it to `~/.local/state/coucou-shell/backups/`. `cc-pkg-mng remove <unit>` puts it back.
+A unit that replaces a user file (`~/.zshrc`, say) moves it to `~/.local/state/coucou-shell/backups/`. `cc-pkg-mng remove <unit>` puts it back.
 
 ## Environment variables
 
@@ -70,6 +70,6 @@ A unit that replaces one of your files (your `~/.zshrc`, say) moves it to `~/.lo
 | `CARGO_TARGET_ROOT` | `~/.cache/dotfiles/cargo-target` | Where coucou-shell's own apps are built on edge |
 | `HOST_PROFILE` | the machine's DMI product name | The [machine profile](session/hyprland.md#per-machine-profiles) to use |
 
-## A unit of your own
+## A new unit
 
 See [writing a unit](writing-a-unit.md).

@@ -1,12 +1,12 @@
 # Clock and agenda
 
-The clock sits at the left of the bar. Click it for the calendar: the month, your agenda and your reminders.
+The clock sits at the left of the bar. Click it for the calendar: the month, the agenda and the reminders.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/calendar-dark.webp"><img src="../screenshots/calendar.webp" alt="The calendar drawer"></picture>
 
 ## Add or delete an event
 
-Press `Super + A`. A list of your coming events opens.
+Press `Super + A`. A list of the coming events opens.
 
 - **To add one**, type it on one line and press `Enter`, then tick its reminders.
 - **To delete one**, pick it in the list and confirm.
@@ -21,7 +21,7 @@ ven 9h-10h Réunion !1j
 | Part | Write |
 |---|---|
 | Date | `auj`, `demain`, `après-demain`, a day (`lun` to `dim`), `3/10`, `3/10/27`, `3 oct`, `le 3`, `dans 2h`, `dans 30min`, `dans 3j` |
-| Time | `14h`, `14h30`, `14:30`, or a span, `14h-15h30`. One hour when you give no end; the whole day when you give no time |
+| Time | `14h`, `14h30`, `14:30`, or a span, `14h-15h30`. One hour with no end given; the whole day with no time given |
 | Reminder | `!15m`, `!1h`, `!1j`, `!3j`, `!1s` before, `!0` at the start. With one on the line, the reminder list is skipped |
 
 Reminders ring in the bar, and the next event shows right of the clock.
@@ -32,9 +32,9 @@ There are three calendars:
 
 | Calendar | Holds |
 |---|---|
-| `personal` | The events you add with `Super + A` |
+| `personal` | The events added with `Super + A` |
 | `etude` | [Programme](programme.md)'s study sessions |
-| `cours` | Your courses, from Programme's timetable |
+| `cours` | The courses, from Programme's timetable |
 
 To add a calendar or change the date format, edit khal's [`config`](../../config/hyprland/khal/config).
 

@@ -1,6 +1,6 @@
 # Login screen
 
-A login screen on the first console, with greetd and tuigreet, in JetBrains Mono. After you log in, the word **coucou** stays until the desktop shows.
+A login screen on the first console, with greetd and tuigreet, in JetBrains Mono. After login, the word **coucou** stays until the desktop shows.
 
 It's optional: `init` asks, and this adds it later:
 
@@ -8,7 +8,7 @@ It's optional: `init` asks, and this adds it later:
 cc-pkg-mng install greeter
 ```
 
-It replaces the display manager you had.
+It replaces the display manager in place.
 
 | To change | Edit |
 |---|---|

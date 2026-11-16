@@ -3,7 +3,7 @@
 The video and music player. It opens video and audio files by default.
 
 - [uosc](https://github.com/tomasklaen/uosc) gives it its interface, in the shell's colours.
-- [thumbfast](https://github.com/po5/thumbfast) shows a thumbnail when you hover the timeline.
+- [thumbfast](https://github.com/po5/thumbfast) shows a thumbnail on hovering the timeline.
 - What's playing shows in the bar's [island](../bar/island.md).
 
 | File | Sets |

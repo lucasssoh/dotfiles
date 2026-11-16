@@ -27,4 +27,4 @@ Right-click the bell, or use the switch in the centre. Pop-ups stop; notificatio
 qs -c bar ipc call bar setDnd true
 ```
 
-Pop-ups also keep quiet while you read in [Liseuse](../tools/liseuse.md) and during a [Programme](programme.md) session.
+Pop-ups also keep quiet while a book is open in [Liseuse](../tools/liseuse.md) and during a [Programme](programme.md) session.

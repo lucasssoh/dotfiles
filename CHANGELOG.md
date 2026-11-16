@@ -18,7 +18,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.
 - **Bar, centre island:** you can set its colour, opacity and blur, and choose between text that adapts to the wallpaper and a colour of your own, in a settings file described in the docs.
 - **Documentation:** every tool has its own guide: each part of the bar, Roue, Prisme, Manette, Sésame, Liseuse, the launcher, Screenshot, the session and the applications. New pages cover displays, wallpapers, the lock screen, and how to write an agenda event or a wheel of your own.
-- **Documentation:** *Your settings* shows where each setting lives, and how to keep a change through an upgrade.
+- **Documentation:** *Settings* shows where each setting lives, and how to keep a change through an upgrade.
 - **Website:** a new look in the shell's neutral greys, light and dark, with coucou's Aube wallpapers. The home page opens on the boot splash, then shows the film, the three install commands and every tool; the guides follow the same shapes, on phones too.
 - **Website:** a new film on the home page, about a minute through Roue, the drawers, notifications, the key sheet, the controller menu, tiling and Prisme, with its music behind a Sound on button.
 - **README:** rewritten around the tools, with still images instead of the video, the tested machines, and the licences in a table: what you may do, what you may not, and what belongs to others.

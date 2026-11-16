@@ -1,6 +1,6 @@
 # Manette
 
-Game controllers, and a menu to start your games.
+Game controllers, and a menu to start games.
 
 ## Connect a controller
 
@@ -16,8 +16,8 @@ Press the **Guide button** (the Xbox, PS or Home logo).
 
 | Row | What it holds |
 |---|---|
-| **Continue** | The game you played last, with its artwork |
-| **Library** | Your other games, Steam and Lutris together, and the games another launcher (Heroic, Bottles, itch…) put in the applications menu |
+| **Continue** | The game played last, with its artwork |
+| **Library** | The other games, Steam and Lutris together, and the games another launcher (Heroic, Bottles, itch…) put in the applications menu |
 | **Launchers** | Steam (in Big Picture), Lutris, Heroic, Bottles, itch: the ones installed |
 | **System** | Apps, Sleep, and Turn off for a Bluetooth controller |
 
@@ -34,7 +34,7 @@ Steam and Lutris come with the [`games`](../apps/games.md) unit.
 
 ## Buttons
 
-The menu shows your controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, dots on a pad it doesn't know.
+The menu shows the controller's own buttons: letters in their colours on an Xbox pad, the four shapes on a PlayStation one, dots on a pad it doesn't know.
 
 | Button | In the menu |
 |---|---|
@@ -74,7 +74,7 @@ To open the menu from a key or a script:
 qs -c bar ipc call bar controllerMenu
 ```
 
-To see it with a controller you don't have:
+To see it without owning that controller:
 
 ```bash
 qs -c bar ipc call controller pad xbox 80 false    # or playstation; then its battery, and whether it charges

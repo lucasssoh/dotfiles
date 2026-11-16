@@ -6,4 +6,4 @@ The five bands (60 Hz, 250 Hz, 1 kHz, 4 kHz and 12 kHz) and the four equalizers 
 
 After an edit, run `cc-pkg-mng install audio`. The sound cuts out for a moment.
 
-Name a node you add `eq_slot_…` or `eq_out_…`.
+Name an added node `eq_slot_…` or `eq_out_…`.

@@ -6,7 +6,7 @@ One card, in the middle of the screen, for every password asked outside a termin
 
 | Who asks | When | The card asks for |
 |---|---|---|
-| **The system** | An app or a command needs administrator rights: `pkexec`, a service to start, a setting in Balise | Your password |
+| **The system** | An app or a command needs administrator rights: `pkexec`, a service to start, a setting in Balise | The user's password |
 | **ssh** | A `git push`, `git pull` or `ssh` to a server, with a passphrase-protected key | The key's passphrase, or a host to trust |
 | **git** | Signing in to a remote over HTTPS | User name and password |
 | **gpg** | Signing or decrypting with a protected key | The key's passphrase |
@@ -28,7 +28,7 @@ Each `git push` asks again.
 
 ## gpg
 
-gpg uses the card unless your `gpg-agent.conf` sets a `pinentry-program`.
+gpg uses the card unless `gpg-agent.conf` sets a `pinentry-program`.
 
 ## Try it
 

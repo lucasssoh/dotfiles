@@ -32,4 +32,4 @@ On battery, an alert shows at 20 %, 10 % and 5 %. Switch to the power saver prof
 
 ## When idle
 
-What the machine does when you leave it, and after how long, is in [Hyprland](../session/hyprland.md#idle).
+What the machine does when left idle, and after how long, is in [Hyprland](../session/hyprland.md#idle).
