@@ -74,7 +74,7 @@ Item {
             id: sun
             anchors.verticalCenter: parent.verticalCenter
             x: (parent.height - width) / 2
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: ""   // mgc sun
             // Dark while the fill covers it, light on the bare track.
@@ -88,7 +88,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
             anchors.rightMargin: 13
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.hdrActive ? "HDR" : Math.round(row.level * 100)
             // On the dark track, or on the white fill once it reaches it.
@@ -130,7 +130,7 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: btn.glyph !== "" ? btn.glyph : btn.label
             color: btn.on ? DrawerTheme.onInk : DrawerTheme.primary

@@ -28,9 +28,8 @@ SequentialAnimation {
     // which no purely vertical rule can express.
     property int index: 0
     // 1.0 opts out of the zoom while keeping the slot in the cascade --
-    // what the small caps labels use. They are NativeRendering text, and
-    // scaling native-rendered glyphs makes them crawl for the length of
-    // the animation, so they fade and everything else zooms.
+    // what the small caps labels use, so they fade while everything else
+    // zooms.
     property real fromScale: BaliseReveal.fromScale
 
     // The drawer this element belongs to, read at the moment it matters:

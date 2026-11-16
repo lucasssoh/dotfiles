@@ -88,7 +88,7 @@ Rectangle {
         selectedTextColor: DrawerTheme.primary
         font.family: Fonts.ui
         font.pixelSize: 13
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
 
         echoMode: field.masked ? TextInput.Password : TextInput.Normal
@@ -116,7 +116,7 @@ Rectangle {
             // label anywhere saying it wanted a username.
             visible: input.text === ""
             verticalAlignment: Text.AlignVCenter
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: field.placeholder
             color: DrawerTheme.secondary
@@ -136,7 +136,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 13
         anchors.verticalCenter: parent.verticalCenter
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: field.showSecret ? "Hide" : "Show"
         color: revealArea.containsMouse ? DrawerTheme.primary : DrawerTheme.accent

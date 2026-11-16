@@ -1472,6 +1472,7 @@ ShellRoot {
                 dropCorner: "left"
                 dropOriginX: clockIsland.rowContentX + clockChip.x + clockChip.width / 2
                 dropOriginWidth: Math.max(24, clockChip.width)
+                dropBurst: false
 
                 drawerItems: [
                     CalendarHome {
@@ -2052,6 +2053,7 @@ ShellRoot {
                 dropReveal: true
                 dropStyle: shell.drawerStyle
                 dropCorner: "right"
+                dropBurst: false
                 readonly property Item dropChipNow: BaliseState.panelOpen ? baliseChip
                     : PowerState.panelOpen ? batteryChip
                     : MixerState.panelOpen ? audioChip : null

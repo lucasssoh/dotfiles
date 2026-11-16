@@ -65,7 +65,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    renderType: Text.NativeRendering
+                    renderType: Text.QtRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
                     color: pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary

@@ -64,7 +64,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             // ph-plugs-connected / ph-plugs, both already verified in
             // Ethernet.qml.
@@ -85,7 +85,7 @@ Rectangle {
 
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || row.modelData.device_name || ""
             color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
@@ -96,7 +96,7 @@ Rectangle {
         }
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.connected
                 ? ("Connected" + (row.modelData.ip4_address ? " · " + row.modelData.ip4_address : ""))
@@ -113,7 +113,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "›"
         color: row.connected
