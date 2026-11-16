@@ -57,8 +57,6 @@ const tech = [
   { name: 'mpv', href: 'https://mpv.io/', si: siMpv, lift: true },
 ];
 
-const wallpapers = ['plis', 'relief', 'soie'];
-
 const boot = ['Reached target Basic System', 'Started Network Manager', 'Started PipeWire Multimedia Service', 'Reached target Graphical Interface', 'Starting Hyprland'];
 ---
 
@@ -194,20 +192,6 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
               <img class="only-dark" src={shot(`${t.shot}-dark.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
             </a>
           ))}
-          <a class="tile tool full" href={doc('session/wallpapers')}>
-            <span class="tool-text">
-              <span class="tool-name">Wallpapers</span>
-              <span class="tool-line">Aube: Plis, Relief and Soie, each light and dark.</span>
-            </span>
-            <span class="strip">
-              {wallpapers.map((w) => (
-                <>
-                  <img class="only-light" src={img(`aube-${w}.webp`)} alt={`Aube ${w}, light`} loading="lazy" />
-                  <img class="only-dark" src={img(`aube-${w}-dark.webp`)} alt={`Aube ${w}, dark`} loading="lazy" />
-                </>
-              ))}
-            </span>
-          </a>
         </div>
       </section>
 
