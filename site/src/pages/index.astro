@@ -4,6 +4,7 @@ import '@fontsource-variable/inter';
 import '@fontsource/jetbrains-mono/latin-300.css';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '../styles/home.css';
+import { siFedora, siFirefoxbrowser, siGtk, siHyprland, siMpv, siNeovim, siRust, siWezterm } from 'simple-icons';
 import { BASE, REPO } from '../../site.config.mjs';
 
 const doc = (page) => `${BASE}/docs/${page}/`;
@@ -42,7 +43,19 @@ const guides = [
   { name: 'Your settings', line: 'Where each setting lives.', href: doc('configuration'), links: [['Your own files', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
 ];
 
-const tech = ['Fedora', 'Hyprland', 'Quickshell', 'Rust', 'GTK 4', 'PipeWire', 'WezTerm', 'Neovim', 'Firefox', 'Nemo', 'mpv'];
+// Each with its logo: from Simple Icons, or the project's own file in public/img/logos.
+const tech = [
+  { name: 'Fedora', si: siFedora },
+  { name: 'Hyprland', si: siHyprland },
+  { name: 'Quickshell', file: 'quickshell.svg' },
+  { name: 'Rust', si: siRust, ink: true },
+  { name: 'GTK 4', si: siGtk },
+  { name: 'PipeWire', file: 'pipewire.svg' },
+  { name: 'WezTerm', si: siWezterm },
+  { name: 'Neovim', si: siNeovim },
+  { name: 'Firefox', si: siFirefoxbrowser },
+  { name: 'mpv', si: siMpv, lift: true },
+];
 
 const boot = ['Reached target Basic System', 'Started Network Manager', 'Started PipeWire Multimedia Service', 'Reached target Graphical Interface', 'Starting Hyprland'];
 ---
@@ -101,7 +114,16 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
             <a class="pill big" href={doc('bar')}>Browse the guides</a>
           </div>
           <ul class="tech" aria-label="Built with">
-            {tech.map((t) => <li>{t}</li>)}
+            {tech.map((t) => (
+              <li>
+                {t.si ? (
+                  <svg class={t.lift ? 'lift' : undefined} aria-hidden="true" viewBox="0 0 24 24" fill={t.ink ? 'currentColor' : `#${t.si.hex}`}><path d={t.si.path} /></svg>
+                ) : (
+                  <img src={img(`logos/${t.file}`)} alt="" />
+                )}
+                {t.name}
+              </li>
+            ))}
           </ul>
           <figure class="screen">
             <video

@@ -153,7 +153,9 @@ h1 {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
   font-size: 13px; color: var(--c-ink-2);
 }
-.tech li { padding: 4px 12px; border: 1px solid var(--c-line); border-radius: 999px; }
+.tech li { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 9px; border: 1px solid var(--c-line); border-radius: 999px; }
+.tech :is(svg, img) { width: 15px; height: 15px; flex: none; object-fit: contain; }
+:root[data-theme='dark'] .tech .lift { filter: brightness(2.2); }
 
 .screen {
   position: relative; margin-top: clamp(40px, 6vw, 72px);
