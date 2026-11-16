@@ -2,26 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
-
-### Fixed
-- **Balise:** text stays sharp at fractional display scales.
-- **Bar:** drawers no longer wait for an exit cascade before closing.
-
-### Changed
-- **Bar:** each block prefers the ink with better contrast against its wallpaper; any dark veil fades out two-thirds down the bar.
-
-## 2.6.0 (November 15 2026)
-
-### Fixed
-- **Bar, OSD:** the volume, microphone and brightness dials now sit centred at the bottom, above the island's drawers, with a round blur that follows their edge and no straight side highlights.
-- **Apps, OPL IDE:** CPLEX Studio's launcher appears when you install the extra configs.
-- **Bar:** the rounded corners of the central island and of every glass drawer no longer show a light, jagged edge, including while a drawer opens or closes.
-- **Bar:** when the wallpaper changes, the bar's text and veil change with it, over the same fade and without a stutter mid-way, instead of catching up afterwards.
-- **Bar, drawers:** the light inner edge along the top of the glass panes fades out down the sides instead of stopping on a hard cut.
-- **Wallpapers:** a light and dark wallpaper keeps following light or dark mode after its background helper restarts.
-- **Firefox:** closing a tab no longer leaves a gap in the tab strip: the tabs after it move up to fill its place.
-- **Firefox, new tab:** you type your search in the field in the middle of the page, with its suggestions under it, instead of being sent to the address bar.
+## 2.6.0 (November 16 2026)
 
 ### Added
 - **Install, bar:** the central island gets default look settings when you install the bar, unless you already have your own.
@@ -33,11 +14,19 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **README:** rewritten around the tools, with still images instead of the video, the tested machines, and the licences in a table: what you may do, what you may not, and what belongs to others.
 
 ### Changed
-- **Bar, centre island:** long window titles leave more room for workspaces and music.
-- **Bar, centre island:** no more dark slab: a light graphite tint, without a border. The window's name, its title, each workspace mark and the music turn light or dark to suit what is right behind them, a title across two grounds even part by part.
-- **Bar, centre island:** empty workspaces are hollow dots, like the hollow bar of an empty current workspace.
-- **Bar, centre island:** Veille, the keybinds sheet and Programme's reminders open in the same glass as the other drawers, light or dark with your system, and grow out of the island, which keeps its size. Programme's reminder is as wide as the other two.
-- **Bar:** each block's text turns light or dark to suit the wallpaper behind it, and the veil under it follows the wallpaper: only where the text needs it, light under dark text, and fading out past the bar instead of ending on a line, never over your windows.
+- **Bar:** each block prefers the ink with better contrast against its wallpaper; any dark veil fades out two-thirds down the bar. Text and veil follow wallpaper changes over the same fade.
+- **Bar, centre island:** long window titles leave more room for workspaces and music. No more dark slab: a light graphite tint, without a border. Window names, titles, workspace marks and music turn light or dark to suit what is behind them (even across mixed backgrounds). Empty workspaces are hollow dots. Veille, the keybinds sheet and Programme reminders open in the same glass as other drawers, light or dark with the system, growing from the island.
+- **Bar, battery:** the filled battery gauge replaces the outlined one.
+- **Bar, Programme:** on a switch to dark mode, light text replaces the pale veil when it gives better contrast.
+
+### Fixed
+- **Balise:** text stays sharp at fractional display scales.
+- **Bar:** drawers no longer wait for an exit cascade before closing. Rounded corners on the central island and glass drawers no longer show a light jagged edge while opening or closing. Drawers start and behave correctly at the top or bottom edge.
+- **Bar, OSD:** volume, microphone and brightness dials sit centred at the bottom above drawers, with a round blur that follows their edge and no straight side highlights.
+- **Bar, drawers:** the light inner edge along the top of glass panes fades out down the sides instead of stopping on a hard cut.
+- **Apps, OPL IDE:** CPLEX Studio's launcher appears when you install the extra configs.
+- **Wallpapers:** a light and dark wallpaper keeps following light or dark mode after its background helper restarts.
+- **Firefox:** closing a tab no longer leaves a gap in the tab strip; searching from the new tab page uses the middle field with suggestions instead of jumping to the address bar.
 
 ## 2.5.0 (November 15 2026)
 

@@ -353,33 +353,19 @@ steps = [
     "ipc bar controllerMenu", "wait 0.6",
     "ipc controller reset", "wait 0.8",
     # The tiling: five terminals stacked then closed last first, then five
-    # file windows the same way. Each terminal its own process: a WezTerm
-    # already open (the one running Pellicule, say) would otherwise be
-    # handed the window, or drop it.
-    "run wezterm start --always-new-process", "wait 0.35",
-    "run wezterm start --always-new-process", "wait 0.35",
-    "run wezterm start --always-new-process", "wait 0.35",
-    "run wezterm start --always-new-process", "wait 0.35",
-    "run wezterm start --always-new-process", "wait 0.35",
-    "wait 1.2",   # the full stack, a moment
-    "close org.wezfurlong.wezterm last", "wait 0.3",
-    "close org.wezfurlong.wezterm last", "wait 0.3",
-    "close org.wezfurlong.wezterm last", "wait 0.3",
-    "close org.wezfurlong.wezterm last", "wait 0.3",
-    "close org.wezfurlong.wezterm last", "wait 0.3",
-    "wait 0.6",
-    "run ~/.config/hypr/scripts/coucou-open files", "wait 0.35",
-    "run ~/.config/hypr/scripts/coucou-open files", "wait 0.35",
-    "run ~/.config/hypr/scripts/coucou-open files", "wait 0.35",
-    "run ~/.config/hypr/scripts/coucou-open files", "wait 0.35",
-    "run ~/.config/hypr/scripts/coucou-open files", "wait 0.35",
-    "wait 1.2",   # the full stack, a moment
-    "close nemo last", "wait 0.3",
-    "close nemo last", "wait 0.3",
-    "close nemo last", "wait 0.3",
-    "close nemo last", "wait 0.3",
-    "close nemo last", "wait 0.3",
-    "wait 0.6",
+    # file windows the same way. Each terminal its own process.
+    "run wezterm start --always-new-process", "wait 1.0",
+    "run wezterm start --always-new-process", "wait 1.0",
+    "run wezterm start --always-new-process", "wait 1.0",
+    "run wezterm start --always-new-process", "wait 1.0",
+    "run wezterm start --always-new-process", "wait 1.2",
+    "wait 2.0",
+    "close org.wezfurlong.wezterm last", "wait 0.8",
+    "close org.wezfurlong.wezterm last", "wait 0.8",
+    "close org.wezfurlong.wezterm last", "wait 0.8",
+    "close org.wezfurlong.wezterm last", "wait 0.8",
+    "close org.wezfurlong.wezterm last", "wait 1.0",
+    "wait 1.0",
     # Prisme, from Plis to Soie: its light half, back to dark, applied;
     # then the light scheme brings Soie's light half.
     "run ~/.local/bin/prisme", "wait 2",

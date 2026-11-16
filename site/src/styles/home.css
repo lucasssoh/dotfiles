@@ -163,7 +163,7 @@ h1 {
   border: 1px solid var(--c-line);
   overflow: hidden; background: #000;
 }
-.screen video { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.screen video { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
 .player {
   display: flex; align-items: center; gap: 4px; padding: 0 14px 0 4px;
   border-top: 1px solid var(--c-line); background: var(--c-bg); color: var(--c-ink);
@@ -246,7 +246,7 @@ section.wrap { padding: clamp(40px, 6vw, 88px) 0; }
 @media (max-width: 600px) {
   .tool, .tool.half, .tool.wide { grid-column: span 6; }
   .bento { grid-auto-rows: auto; }
-  .tool img { flex: none; aspect-ratio: 16 / 10; min-height: 0; }
+  .tool img { flex: none; aspect-ratio: 16 / 9; min-height: 0; }
 }
 
 /* ── Guides ───────────────────────────────────────────────────────────── */

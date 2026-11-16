@@ -62,17 +62,11 @@ Singleton {
         NotificationState.close();
         BaliseState.close();
         MixerState.close();
-        // ...and the Launchers panel, which lives on its own island
-        // but whose drawer band overlaps this one's -- see
-        // LauncherActionsState.toggleFor.
         LauncherActionsState.close();
         CalendarState.close();
         ProgrammeState.close();
         root.activeScreen = screen;
         root.panelOpen = true;
-        // Same "just opened" refresh BaliseState.togglePanel does, and for
-        // the same reason: waiting out a 30s tick before the curve appears
-        // would make the drawer look broken on open.
         root.refresh();
     }
 
@@ -83,22 +77,12 @@ Singleton {
     // ---------------------------------------------------------------
     // live device state
     // ---------------------------------------------------------------
-    //
-    // Deliberately re-derived here rather than imported from Battery.qml:
-    // that module is instantiated once PER MONITOR and carries its own
-    // preview-override plumbing, while this is one singleton feeding one
-    // drawer. Same UPower object underneath either way, no extra cost.
-
     readonly property var device: UPower.displayDevice
-    readonly property bool present: device && device.isLaptopBattery && device.ready
-    // *100: percentage is a 0..1 double, not an already-scaled percent --
-    // the same trap documented at length in Battery.qml.
-    readonly property real pct: root.present ? root.device.percentage * 100 : 0
-    readonly property bool charging: root.present && root.device.state === UPowerDeviceState.Charging
-    readonly property bool discharging: root.present && root.device.state === UPowerDeviceState.Discharging
-    // Absolute: UPower reports changeRate unsigned, but be defensive --
-    // a negative here would flip the whole curve below the axis.
-    readonly property real watts: root.present ? Math.abs(root.device.changeRate) : 0
+    readonly property bool present: DemoState.active ? true : (device && device.isLaptopBattery && device.ready)
+    readonly property real pct: DemoState.active ? DemoState.battery : (root.present ? root.device.percentage * 100 : 0)
+    readonly property bool charging: DemoState.active ? false : (root.present && root.device.state === UPowerDeviceState.Charging)
+    readonly property bool discharging: DemoState.active ? true : (root.present && root.device.state === UPowerDeviceState.Discharging)
+    readonly property real watts: DemoState.active ? DemoState.watts : (root.present ? Math.abs(root.device.changeRate) : 0)
     readonly property real energy: root.present ? root.device.energy : 0
     readonly property real energyFull: root.present ? root.device.energyCapacity : 0
 
@@ -209,10 +193,31 @@ Singleton {
     // ---------------------------------------------------------------
 
     function refresh() {
-        // Re-entrancy guard: the 30s timer and a span change can land on
-        // the same frame, and a second start would orphan the first
-        // collector's output.
         if (!root.present || historyProc.running) return;
+        if (DemoState.active) {
+            // Fake a simple discharge curve around demo battery.
+            const now = Date.now() / 1000;
+            const span = root.spanSeconds || 86400;
+            const start = now - span;
+            const end = now;
+            const pct = DemoState.battery;
+            const npts = 120;
+            const pts = [];
+            for (let i = 0; i < npts; i++) {
+                const t = start + (end - start) * (i / (npts - 1));
+                const p = Math.max(1, Math.min(100, pct + (Math.random() - 0.5) * 2));
+                pts.push({ t: t, pct: p, s: 2, up: false });
+            }
+            pts[0].pct = Math.min(100, pct + 8);
+            pts[pts.length - 1].pct = pct;
+            for (let i = 1; i < pts.length; i++) pts[i].up = pts[i].pct > pts[i - 1].pct;
+            root.samples = pts;
+            root.axisStart = start;
+            root.axisEnd = end;
+            root.medianWatts = DemoState.watts || 4.8;
+            root.loaded = true;
+            return;
+        }
         historyProc.command = ["sh", "-c", root._script];
         historyProc.running = true;
     }
