@@ -39,7 +39,7 @@ A few more keys, for less common cases:
 
 | Key | Use |
 |---|---|
-| `optional`, `ask` | Core units only. The unit isn't installed unless `init` asks the `ask` question and you say yes |
+| `optional`, `ask` | Core units only. The unit isn't installed unless `init` asks the `ask` question and the answer is yes |
 | `[links_if]` | `unit = ["path", …]`: links that are only made when that other unit is installed |
 | `[files]` | Checkout path → system path, copied as root |
 | `[binaries]` | For a Rust app: `rpm` (its package), `source` (its crate), `bins` (what it builds) |
@@ -52,14 +52,14 @@ A hook runs the first time the unit is installed, and again whenever the unit's 
 . "$(dirname "$(readlink -f "$0")")/../../../lib/hook.sh"
 ```
 
-That gives your script a few helpers:
+That gives the script a few helpers:
 - `REPO`, the path to the checkout;
 - `as_root`, for steps that need root;
 - `once NAME`, for steps that should only ever run once;
 - `info`, `ok` and `warn`, to print messages;
-- your answers, as `CCPKG_ANSWER_<ID>`.
+- the answers, as `CCPKG_ANSWER_<ID>`.
 
-You can check your manifests before installing anything:
+To check the manifests before installing anything:
 
 ```bash
 scripts/check-units.py              # keys, paths, requirements

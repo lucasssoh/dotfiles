@@ -4,7 +4,7 @@ Level dials, the HDR mark, the controller mark and the battery alert.
 
 ## Volume, microphone and brightness
 
-When you change one of them, a dial shows the level at the bottom of the screen.
+On a change, a dial shows the level at the bottom of the screen.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/osd-dark.webp"><img src="../screenshots/osd.webp" alt="The brightness dial"></picture>
 

@@ -1,6 +1,6 @@
 # Extras
 
-Smaller applications, and my personal setups. `init` asks whether you want each one; `cc-pkg-mng install <unit>` adds it later.
+Smaller applications, and the author's setups. `init` asks about each one; `cc-pkg-mng install <unit>` adds it later.
 
 ## Applications
 
@@ -16,11 +16,11 @@ None is installed by default.
 
 ## Personal setups
 
-A setup replaces your own files: they go to the backups, and `cc-pkg-mng remove <unit>` puts them back.
+A setup replaces user files: they go to the backups, and `cc-pkg-mng remove <unit>` puts them back.
 
 ### `config-shell`
 
-zsh and bash with my prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux. It makes zsh your login shell, with zsh-autosuggestions and zsh-syntax-highlighting.
+zsh and bash with the author's prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux. It makes zsh the login shell, with zsh-autosuggestions and zsh-syntax-highlighting.
 
 | To change | Edit |
 |---|---|
@@ -30,7 +30,7 @@ zsh and bash with my prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux.
 
 ### `config-wezterm` and `config-nvim`
 
-See [WezTerm](wezterm.md#my-setup) and [Neovim](neovim.md#my-setup).
+See [WezTerm](wezterm.md#authors-setup) and [Neovim](neovim.md#authors-setup).
 
 ### `config-extras`
 

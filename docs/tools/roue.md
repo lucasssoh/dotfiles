@@ -1,6 +1,6 @@
 # Roue
 
-A radial wheel: press the keys, aim while you hold them, let go to confirm.
+A radial wheel: press the keys, aim while holding them, let go to confirm.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/roue-dark.webp"><img src="../screenshots/roue.webp" alt="Roue, the power wheel"></picture>
 
@@ -22,9 +22,9 @@ The power profile wheel also opens from its icon in the bar.
 - Or pick one with `←` `→` and press `Enter`.
 - `Escape` or a right-click closes the wheel.
 
-Sleep, hibernate, log out, restart and shut down ask you to confirm. A dot marks the profile or the display layout in use.
+Sleep, hibernate, log out, restart and shut down ask to confirm. A dot marks the profile or the display layout in use.
 
-## Change a wheel, or make your own
+## Change or add a wheel
 
 A wheel is a file in `~/.config/roue/wheels/`. `roue <name>` opens `<name>.toml`.
 
@@ -53,9 +53,9 @@ confirm_accent = "red"
 | `confirm` | `true` asks to confirm before running | `false` |
 | `confirm_accent` | `"red"` turns the Confirm button red | none |
 
-Edit `power.toml` and `actions.toml`, or add a file of your own. `powerprofile.toml` and `display.toml` are rewritten each time their wheel opens.
+Edit `power.toml` and `actions.toml`, or add a file. `powerprofile.toml` and `display.toml` are rewritten each time their wheel opens.
 
-Bind your own wheel to a key in [`private.lua`](../session/hyprland.md#your-own-rules-and-keys):
+Bind a new wheel to a key in [`private.lua`](../session/hyprland.md#user-rules-and-keys):
 
 ```lua
 hl.bind("SUPER + G", hl.dsp.exec_cmd("$HOME/.local/bin/roue games"))

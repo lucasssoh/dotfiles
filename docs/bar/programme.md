@@ -1,6 +1,6 @@
 # Programme
 
-A study agenda in the bar. It reads your timetable, plans study sessions around your courses and your evenings, rings them, and opens each subject's course when its session starts.
+A study agenda in the bar. It reads the timetable, plans study sessions around the courses and the evenings, rings them, and opens each subject's course when its session starts.
 
 Programme is optional: `init` asks, and `cc-pkg-mng install programme` adds it later.
 
@@ -8,7 +8,7 @@ Programme is optional: `init` asks, and `cc-pkg-mng install programme` adds it l
 
 Right of the clock:
 
-| You see | It means |
+| Shown | Meaning |
 |---|---|
 | `A&C · 20:30` | The next session and its subject |
 | The same, outlined, with a countdown | It starts within 15 minutes |
@@ -22,11 +22,11 @@ Click it, or press `Super + D`, for the drawer.
 
 A session's start opens in the bar's island, with a chime: `Tonight · A&C`, `20:30 – 22:00 · 1 h 30`, and three buttons, `Start`, `In 30 min` and `Tomorrow`.
 
-The alert stays until you answer. If nothing started, it comes back 15 minutes later. It waits for the end of a fullscreen game or of zen mode.
+The alert stays until answered. If nothing started, it comes back 15 minutes later. It waits for the end of a fullscreen game or of zen mode.
 
 At the session's end, `A&C · done?` asks for `Done`.
 
-You also get a notification:
+A notification also comes:
 
 - the evening before, with tomorrow's sessions;
 - when a course of today or tomorrow is cancelled or moved.
@@ -43,8 +43,8 @@ A panel along the left edge of the screen.
 
 ## How sessions are planned
 
-- A slot first takes the tutorials to prepare and the tasks you typed. The rest goes to one subject.
-- Subjects take turns. Each gets time by the level you gave it and by how close its exam is.
+- A slot first takes the tutorials to prepare and the typed tasks. The rest goes to one subject.
+- Subjects take turns. Each gets time by its level and by how close its exam is.
 - Projects and hand-ins are spread up to 3 days before they are due.
 - A subject gets no session after its last exam and its last course.
 
@@ -72,18 +72,18 @@ In More › Subjects, each subject has a level and a command.
 | *Shaky*, *Fine* | Its share |
 | *Tutorials only* | No session of its own: its tutorials to prepare, its projects and its exams |
 
-A subject's sessions open nothing, [Boussole](https://github.com/lucasssoh/Boussole) on the subject's folder, or a command you type. `{folder}` stands for the subject's folder.
+A subject's sessions open nothing, [Boussole](https://github.com/lucasssoh/Boussole) on the subject's folder, or a typed command. `{folder}` stands for the subject's folder.
 
 ```bash
 programme subject level A&C behind
 programme subject launch A&C on                                # Boussole
-programme subject launch L&MC liseuse {folder}/00_Index.md     # a command of yours
+programme subject launch L&MC liseuse {folder}/00_Index.md     # any command
 programme subject launch L&MC off
 ```
 
 ## Later
 
-`Later` asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a time or a day you type (`21:30`, `sun`). Until then nothing is planned or rung, and what was planned moves after it. `Back now`, under Today, ends the pause.
+`Later` asks until when: in 30 minutes, in an hour, tomorrow, the day after, or a typed time or day (`21:30`, `sun`). Until then nothing is planned or rung, and what was planned moves after it. `Back now`, under Today, ends the pause.
 
 ```bash
 programme later 1h
@@ -106,7 +106,7 @@ Holidays, study weeks and pauses are set in More › Rhythm.
 
 ## First run
 
-Under Today, five steps: your language and course folder (one folder per subject), the timetable's iCal link and your groups, which courses go with which folder, your rhythm, ready.
+Under Today, five steps: the language and the course folder (one folder per subject), the timetable's iCal link and the groups, which courses go with which folder, the rhythm, ready.
 
 Every setting is in **More** afterwards. `programme help` lists the same from a terminal.
 
@@ -126,8 +126,8 @@ Every setting is in **More** afterwards. `programme help` lists the same from a 
 
 ## Calendars
 
-Sessions and courses show in the [calendar drawer](clock-agenda.md). Your own events (`Super + A`) count as busy.
+Sessions and courses show in the [calendar drawer](clock-agenda.md). Events added with `Super + A` count as busy.
 
 ## Coming from Boussole's planner
 
-`cc-pkg-mng install programme` moves your settings and history over, and removes the old service and its `boussole` command. Your old files are kept in `~/.local/share/programme/from-boussole/`.
+`cc-pkg-mng install programme` moves the settings and history over, and removes the old service and its `boussole` command. The old files are kept in `~/.local/share/programme/from-boussole/`.

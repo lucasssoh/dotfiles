@@ -4,7 +4,7 @@ The wallpaper picker, on `Super + W`.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/prisme-dark.webp"><img src="../screenshots/prisme.webp" alt="Prisme"></picture>
 
-The wallpaper you land on shows as a live preview, in the middle of the blurred desktop.
+The selected wallpaper shows as a live preview, in the middle of the blurred desktop.
 
 ## Keys
 
@@ -22,7 +22,7 @@ To change them, edit `~/.config/prisme/keymap.conf`: one line per action, severa
 
 ## Light and dark pairs
 
-A wallpaper that comes in light and dark is one card. It shows the version for the current mode, and the desktop switches version when you switch mode. To pair your own, see [wallpapers](../session/wallpapers.md#light-and-dark-pairs).
+A wallpaper that comes in light and dark is one card. It shows the version for the current mode, and the desktop switches version with the mode. To make a pair, see [wallpapers](../session/wallpapers.md#light-and-dark-pairs).
 
 ## Settings
 
@@ -31,7 +31,7 @@ In `~/.config/prisme/`:
 | File | Sets |
 |---|---|
 | `wallpapers.conf` | The folder Prisme shows. One path. `~/Images/Wallpapers` when empty |
-| `wallpapers-extra.conf` | Folders of your own to add to it. See [wallpapers](../session/wallpapers.md#add-your-own) |
+| `wallpapers-extra.conf` | User folders to add to it. See [wallpapers](../session/wallpapers.md#add-wallpapers) |
 | `wallpaper-safe-mode.conf` | The wallpapers never to crop. See [wallpapers](../session/wallpapers.md#fitting-to-the-screen) |
 | `keymap.conf` | The keys |
 | `style.css` | Colours and sizes |

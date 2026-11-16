@@ -1,6 +1,6 @@
 # Installation
 
-coucou-shell runs on **Fedora 44 or 45, x86_64**. A netinstall ("Fedora Everything") with nothing selected is plenty. You'll also need a user account that can use `sudo`.
+coucou-shell runs on **Fedora 44 or 45, x86_64**. A netinstall ("Fedora Everything") with nothing selected is plenty. The user account needs `sudo`.
 
 ## Install
 
@@ -10,11 +10,11 @@ sudo dnf install cc-pkg-mng
 cc-pkg-mng init
 ```
 
-The first line adds coucou-shell's package repository. dnf will ask you once whether to trust its signing key.
+The first line adds coucou-shell's package repository. dnf asks once whether to trust its signing key.
 
-Run `init` as yourself, not as root. It asks for your password once.
+Run `init` as the user, not as root. It asks for the password once.
 
-When it's done, log out, log back in and pick the Hyprland session. If you installed the login screen, reboot.
+When it's done, log out, log back in and pick the Hyprland session. With the login screen installed, reboot.
 
 ## What `init` asks
 
@@ -29,15 +29,15 @@ The questions come first, then the install runs to the end.
 | Programme, the study agenda | no |
 | Applications | WezTerm, Firefox, Nemo, Neovim, mpv and swayimg. Steam and Lutris, Brave, MangoHud, fastfetch, ccnote and ccslide are also on offer |
 | WezTerm build | `stable`, the packaged one. `smear` builds it from source with a cursor smear effect |
-| Each personal setup (shell, WezTerm, Neovim, extras) | keep your own. If you take one, every file it replaces is backed up first |
+| Each personal setup (shell, WezTerm, Neovim, extras) | not adopted. A file an adopted setup replaces is backed up first |
 
-`init` then shows its plan (packages, links, services) and waits for your yes.
+`init` then shows its plan (packages, links, services) and waits for a yes.
 
 The core of coucou-shell is always installed: Hyprland, the bar, Roue, Prisme, Balise, Manette, Sésame, Liseuse, the fonts and the theme. The [units](units.md) page lists every part, with its guide.
 
 ## Unattended install
 
-You can give `init` all its answers in a file:
+`init` can read its answers from a file:
 
 ```bash
 cc-pkg-mng init --answers answers.toml
@@ -54,17 +54,17 @@ units   = ["plymouth", "wezterm", "firefox", "nemo", "neovim", "mpv", "config-sh
 variant = "stable"
 ```
 
-Anything you leave out gets its default. If you're happy with every default, `cc-pkg-mng init --yes` skips the file altogether.
+An answer left out gets its default. `cc-pkg-mng init --yes` takes every default, without a file.
 
 ## After the install
 
 Every screen comes on at its preferred mode. To place them, scale them or turn one off, see [displays](session/displays.md).
 
-Hold `Super` to see the [key bindings](keybindings.md). To change something, see [your settings](configuration.md).
+Hold `Super` to see the [key bindings](keybindings.md). To change something, see [settings](configuration.md).
 
-What's left to do by hand for your hardware is listed at the end of the run. See [hardware](hardware.md).
+What's left to do by hand for the hardware is listed at the end of the run. See [hardware](hardware.md).
 
-`cc-pkg-mng status` tells you what's installed and whether it's all in place. For keeping things up to date, see [cc-pkg-mng.md](cc-pkg-mng.md).
+`cc-pkg-mng status` shows what's installed and whether it's all in place. For keeping things up to date, see [cc-pkg-mng.md](cc-pkg-mng.md).
 
 ## Moving to Fedora 45
 

@@ -2,7 +2,7 @@
 
 Which screens are on, where they sit, their scale, HDR and night mode.
 
-After your first login, every screen is on at its preferred mode. With two screens, workspaces 1 to 5 are on the main one and 6 to 10 on the other.
+After the first login, every screen is on at its preferred mode. With two screens, workspaces 1 to 5 are on the main one and 6 to 10 on the other.
 
 The files below are in `~/.config/hypr/`. A missing file means the defaults.
 
@@ -10,7 +10,7 @@ The files below are in `~/.config/hypr/`. A missing file means the defaults.
 
 Press `Super + O` and pick on the wheel: both screens, the laptop's only, or the external one only. See [Roue](../tools/roue.md).
 
-The wheel writes `display-layout.json`, which you can edit too:
+The wheel writes `display-layout.json`, which can be edited too:
 
 ```json
 { "mode": "both", "main": "internal" }
@@ -75,7 +75,7 @@ Each screen keeps its own setting.
 
 ## Night mode
 
-`Super + N`, or the Night mode tile in Balise, warms the colours until you turn it off.
+`Super + N`, or the Night mode tile in Balise, warms the colours until turned off.
 
 The warmth is 4900 K. To change it, edit the `--temperature` value in [`toggle-night-mode.sh`](../../config/hyprland/scripts/toggle-night-mode.sh): lower is warmer.
 

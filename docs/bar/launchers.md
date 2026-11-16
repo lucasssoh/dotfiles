@@ -1,6 +1,6 @@
 # Launchers
 
-Your open apps, as chips in the bar.
+The open apps, as chips in the bar.
 
 Click a chip to open its drawer:
 

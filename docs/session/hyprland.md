@@ -13,15 +13,15 @@ They're all in [`config/hyprland/hypr/`](../../config/hyprland/hypr/), linked at
 | `windowrules.lua` | Window rules |
 | `monitors.lua` | Turns on every screen at its preferred mode. Where screens sit is in [displays](displays.md) |
 | `colors.lua` | The shared colour palette |
-| `hypridle.conf` | What happens [when you're idle](#idle) |
+| `hypridle.conf` | What happens [when idle](#idle) |
 | `hyprlock.conf` | The [lock screen](lock.md) |
 | `hosts/*.env` | [Per-machine behaviour](#per-machine-profiles) |
 
 The keyboard layout is French (`kb_layout` in `hyprland.lua`).
 
-## Your own rules and keys
+## User rules and keys
 
-Create `~/.config/hypr/private.lua` for what belongs to this machine: a rule for one game, a key of your own. It's loaded last.
+Create `~/.config/hypr/private.lua` for what belongs to this machine: a rule for one game, an extra key. It's loaded last.
 
 ```lua
 -- ~/.config/hypr/private.lua
@@ -31,11 +31,11 @@ hl.window_rule({ match = { class = "^(mygame)$" }, fullscreen = true })
 
 Hyprland skips a rule property it doesn't know, without an error: check the names.
 
-Your other files are listed in [your settings](../configuration.md#your-own-files).
+The other user files are listed in [settings](../configuration.md#user-files).
 
 ## Per-machine profiles
 
-`hosts/default.env` is loaded on every machine. Then, if there's a `hosts/<id>.env` for this machine, it's loaded on top. The id comes from the DMI product name, or from `HOST_PROFILE` if you set it.
+`hosts/default.env` is loaded on every machine. Then, if there's a `hosts/<id>.env` for this machine, it's loaded on top. The id comes from the DMI product name, or from `HOST_PROFILE` when set.
 
 | Variable | Default | Effect |
 |---|---|---|

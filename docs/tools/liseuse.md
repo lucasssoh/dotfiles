@@ -4,9 +4,9 @@ A reading library, on `Super + F`.
 
 ## Open a book
 
-`Super + F` brings back the book open on this workspace. With none, it opens the library, where you left off first.
+`Super + F` brings back the book open on this workspace. With none, it opens the library, the last book first.
 
-Type to search titles, file names and folders: `md` and `dotfiles keybind` both find something. `Enter` opens the book where you left it.
+Type to search titles, file names and folders: `md` and `dotfiles keybind` both find something. `Enter` opens the book at the last page read.
 
 Liseuse lists the books in `~/Livres` and in the folders of [`sources.conf`](../../config/liseuse/sources.conf).
 

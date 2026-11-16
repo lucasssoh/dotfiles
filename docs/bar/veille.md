@@ -1,10 +1,10 @@
 # Veille
 
-A big clock that appears when you're up late, with the occasional message.
+A big clock that appears late at night, with the occasional message.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/veille-dark.webp"><img src="../screenshots/veille.webp" alt="Veille at 2 a.m."></picture>
 
-Its settings are in [`quickshell/bar/veille.json`](../../config/hyprland/quickshell/bar/veille.json), and changes apply as soon as you save:
+Its settings are in [`quickshell/bar/veille.json`](../../config/hyprland/quickshell/bar/veille.json), and changes apply on save:
 
 | Key | Controls |
 |---|---|

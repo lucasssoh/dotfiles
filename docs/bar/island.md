@@ -1,6 +1,6 @@
 # Centre island
 
-The middle of the bar: the active window, your workspaces and what's playing.
+The middle of the bar: the active window, the workspaces and what's playing.
 
 | Part | Use |
 |---|---|
@@ -12,7 +12,7 @@ The island also opens [Veille](veille.md), the [key sheet](key-sheet.md) and [Pr
 
 ## Its look
 
-Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island changes as soon as you save.
+Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island changes on save.
 
 ```json
 {

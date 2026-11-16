@@ -25,10 +25,10 @@ const numbers = [
 
 // The bento: `size` is the tile's width on a 6-column grid.
 const tools = [
-  { name: 'The bar', line: 'The time, the machine, your workspaces, and a drawer for what you set often.', href: doc('bar'), shot: 'notifications', alt: 'The bar, with the notification centre open', size: 'wide', fit: 'top right' },
+  { name: 'The bar', line: 'The time, the machine, the workspaces, and a drawer for each frequent setting.', href: doc('bar'), shot: 'notifications', alt: 'The bar, with the notification centre open', size: 'wide', fit: 'top right' },
   { name: 'Roue', line: 'A radial wheel: press, aim, let go.', href: doc('tools/roue'), shot: 'roue', alt: 'Roue, the power wheel', size: 'small', fit: 'center' },
   { name: 'Prisme', line: 'The wallpaper picker, with light and dark pairs.', href: doc('tools/prisme'), shot: 'prisme', alt: 'Prisme, previewing a wallpaper', size: 'half', fit: 'center' },
-  { name: 'Manette', line: "Your games, on the controller's Guide button.", href: doc('tools/manette'), shot: 'controller-menu', alt: 'The controller menu', size: 'half', fit: 'center' },
+  { name: 'Manette', line: "Games, on the controller's Guide button.", href: doc('tools/manette'), shot: 'controller-menu', alt: 'The controller menu', size: 'half', fit: 'center' },
   { name: 'Balise', line: 'Wi-Fi, Bluetooth and screens, from the bar.', href: doc('bar/balise'), shot: 'balise', alt: 'The Balise drawer', size: 'small', fit: 'top right' },
   { name: 'Mixer', line: 'A volume and an equalizer for each app.', href: doc('bar/mixer'), shot: 'mixer', alt: 'The mixer drawer', size: 'small', fit: 'top right' },
   { name: 'Key sheet', line: 'Hold Super to see every key.', href: doc('bar/key-sheet'), shot: 'keybinds', alt: 'The key sheet', size: 'small', fit: 'top' },
@@ -38,9 +38,9 @@ const guides = [
   { name: 'The bar', line: 'One guide for each part.', href: doc('bar'), links: [['Clock and agenda', 'bar/clock-agenda'], ['Centre island', 'bar/island'], ['Power', 'bar/power'], ['Notifications', 'bar/notifications'], ['Veille', 'bar/veille'], ['Programme', 'bar/programme']] },
   { name: 'Tools', line: 'Made for coucou-shell.', href: doc('tools/roue'), links: [['Roue', 'tools/roue'], ['Prisme', 'tools/prisme'], ['Manette', 'tools/manette'], ['Sésame', 'tools/sesame'], ['Liseuse', 'tools/liseuse'], ['Screenshot', 'tools/screenshot']] },
   { name: 'Session', line: 'Screens, wallpapers, lock, boot.', href: doc('session/hyprland'), links: [['Hyprland', 'session/hyprland'], ['Displays', 'session/displays'], ['Wallpapers', 'session/wallpapers'], ['Lock screen', 'session/lock'], ['Boot splash', 'session/boot-splash']] },
-  { name: 'Applications', line: 'Swap any of them for your own.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv']] },
+  { name: 'Applications', line: 'Each one can be swapped.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv']] },
   { name: 'cc-pkg-mng', line: 'Install, upgrade, roll back.', href: doc('cc-pkg-mng'), links: [['Installation', 'installation'], ['Commands', 'cc-pkg-mng'], ['Units', 'units'], ['Write a unit', 'writing-a-unit']] },
-  { name: 'Your settings', line: 'Where each setting lives.', href: doc('configuration'), links: [['Your own files', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
+  { name: 'Settings', line: 'Where each setting lives.', href: doc('configuration'), links: [['User files', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
 ];
 
 // Each with its logo: from Simple Icons, or the project's own file in public/img/logos.
@@ -95,7 +95,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
       <nav aria-label="Main">
         <a href={doc('bar')}>Guides</a>
         <a class="wide" href={doc('keybindings')}>Key bindings</a>
-        <a class="wide" href={doc('configuration')}>Your settings</a>
+        <a class="wide" href={doc('configuration')}>Settings</a>
         <a class="wide" href={`${REPO}/blob/master/CHANGELOG.md`}>Changelog</a>
         <a class="wide" href={REPO}>GitHub</a>
       </nav>
@@ -219,7 +219,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
       <section class="wrap foot">
           <div class="tile licence">
             <h2>For personal use</h2>
-            <p>Install it, use it and change it on your own machines. Redistributing it needs written permission.</p>
+            <p>Installing, using and changing it on personal machines is allowed. Redistributing it needs written permission.</p>
             <div class="chips">
               <a class="chip" href={`${REPO}/blob/master/LICENSE.md`}>Licence</a>
               <a class="chip" href={`${REPO}/blob/master/THIRD-PARTY.md`}>Third-party parts</a>

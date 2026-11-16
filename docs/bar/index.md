@@ -1,14 +1,14 @@
 # The bar
 
-The bar shows the time, the machine's figures, your workspaces and your open apps, and opens a drawer for everything you set often.
+The bar shows the time, the machine's figures, the workspaces and the open apps, and opens a drawer for each frequent setting.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/bar-dark.webp"><img src="../screenshots/bar.webp" alt="The bar"></picture>
 
 | Area | What's there |
 |---|---|
 | Left | The [clock](clock-agenda.md), then the [metrics](metrics.md): CPU, temperature, fan, memory, power draw. [Programme](programme.md) sits right of the clock when it's installed |
-| Centre | The [island](island.md): the active window, your workspaces and what's playing |
-| Launchers | Your [open apps](launchers.md) |
+| Centre | The [island](island.md): the active window, the workspaces and what's playing |
+| Launchers | The [open apps](launchers.md) |
 | Right | A [controller](../tools/manette.md) when one is connected, HDR, [audio](mixer.md) output and input, network rate, [Balise](balise.md), power profile, [battery](power.md), [notifications](notifications.md) |
 
 Hold `Super` and the [key sheet](key-sheet.md) opens under the island. [Veille](veille.md) appears there late at night.
@@ -25,7 +25,7 @@ The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar
 |---|---|---|
 | `position` | `top` or `bottom` | `top` |
 
-The bar moves as soon as you save.
+The bar moves on save.
 
 ## Zen mode
 
@@ -33,7 +33,7 @@ The bar moves as soon as you save.
 
 ## From a key or a script
 
-Each drawer opens with a command. Bind it to a key in [`private.lua`](../session/hyprland.md#your-own-rules-and-keys), or call it from a script:
+Each drawer opens with a command. Bind it to a key in [`private.lua`](../session/hyprland.md#user-rules-and-keys), or call it from a script:
 
 ```bash
 qs -c bar ipc call bar toggleBalise
@@ -56,6 +56,6 @@ qs -c bar ipc call bar toggleBalise
 
 The bar rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them.
 
-## Screenshots of your own setup
+## Demo mode
 
-`qs -c bar ipc call demo on` shows made-up figures instead of yours: the time, the battery, the system figures, the next event, the Wi-Fi name and what's playing. `demo off` brings yours back, and closes the notifications received meanwhile.
+`qs -c bar ipc call demo on` shows made-up figures instead of the real ones: the time, the battery, the system figures, the next event, the Wi-Fi name and what's playing. `demo off` brings the real ones back, and closes the notifications received meanwhile.

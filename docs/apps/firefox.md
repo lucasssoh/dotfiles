@@ -10,7 +10,7 @@ The colours apply with Firefox's default, Light and Dark themes. Pick another th
 
 ## Tabs
 
-Along the top, tabs have the same width, with their title centred. The address reads centred until you click in it. The page sits as a rounded card in the window, edge to edge in full screen.
+Along the top, tabs have the same width, with their title centred. The address reads centred until clicked. The page sits as a rounded card in the window, edge to edge in full screen.
 
 To put the tabs down the side, right-click them and choose *Turn on vertical tabs*. `Ctrl + Alt + Z` opens or closes the sidebar.
 
@@ -20,8 +20,8 @@ To put the tabs down the side, right-click them and choose *Turn on vertical tab
 
 | Part | Holds |
 |---|---|
-| **Pinned** | Your first six pinned shortcuts, as icons, and a **+** to add one |
-| **Frequent** | The six sites you visit most |
+| **Pinned** | The first six pinned shortcuts, as icons, and a **+** to add one |
+| **Frequent** | The six most visited sites |
 
 - Right-click a site to pin it, edit it or remove it.
 - Drag pinned shortcuts to change their order.
@@ -33,7 +33,7 @@ A new profile starts with GitHub, YouTube, ChatGPT, Gemini, Claude and Wikipedia
 
 ## After a crash
 
-Your last session is in History → Restore Previous Session.
+The last session is in History → Restore Previous Session.
 
 ## Settings
 
