@@ -502,7 +502,7 @@ Item {
 
             Text {
                 width: parent.width
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
@@ -523,7 +523,7 @@ Item {
             Text {
                 width: parent.width
                 visible: trow.subtitle !== ""
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
                 color: trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary
@@ -584,7 +584,7 @@ Item {
             anchors.left: arow.glyph !== "" ? arowBadge.right : parent.left
             anchors.leftMargin: arow.glyph !== "" ? 12 : 16
             anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: arow.title
             color: DrawerTheme.primary
@@ -624,12 +624,9 @@ Item {
             flickDeceleration: 3000
             clip: true
 
-            // Soft edges rather than a hard cut, same as the section
-            // lists' and the notification history's. The grid usually
-            // fits, and ScrollFadeMask draws nothing at an end it cannot
-            // scroll toward, so on a tall island this costs a layer and
-            // shows no fade at all.
-            layer.enabled: true
+            // The mask needs an offscreen layer only when the page can
+            // scroll. Avoid resampling the grid when it fits.
+            layer.enabled: homeFlick.contentHeight > homeFlick.height
             layer.effect: OpacityMask { maskSource: homeMask }
 
             // Declared as a CHILD of the Flickable (so it lands in its

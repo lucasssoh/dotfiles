@@ -64,7 +64,7 @@ Rectangle {
         id: sun
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height - 14 - height
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: ""   // mgc sun
         // Dark while the fill covers it, light on the bare track below it.
@@ -78,7 +78,7 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 12
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: tile.hdrActive ? "HDR" : Math.round(tile.level * 100)
         // On the dark track, or on the white fill once it reaches the top.

@@ -74,7 +74,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             // ph-wifi-low/medium/high, same 3 tiers + thresholds as
             // Network.qml's own icon() (Phosphor ships no more than 3).
@@ -99,7 +99,7 @@ Rectangle {
 
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             // "·" marks a secured network rather than a padlock glyph --
             // Phosphor's own lock codepoint isn't verified anywhere in
@@ -114,7 +114,7 @@ Rectangle {
         }
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: {
                 // Was `.toUpperCase()` on the raw token, which shipped
@@ -138,7 +138,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "›"
         color: row.connected

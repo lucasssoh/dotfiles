@@ -69,7 +69,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             // ph-bluetooth-connected / ph-bluetooth, both already verified
             // in Bluetooth.qml.
@@ -92,7 +92,7 @@ Rectangle {
 
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || ""
             color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
@@ -103,7 +103,7 @@ Rectangle {
         }
         Text {
             width: parent.width
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: {
                 if (row.connected) {
@@ -124,7 +124,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        renderType: Text.NativeRendering
+        renderType: Text.QtRendering
         font.hintingPreference: Font.PreferNoHinting
         text: "›"
         color: row.connected

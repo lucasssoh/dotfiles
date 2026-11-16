@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ## Unreleased
 
+### Fixed
+- **Balise:** text stays sharp at fractional display scales.
+- **Bar:** drawers no longer wait for an exit cascade before closing.
+
 ### Changed
 - **Bar:** each block prefers the ink with better contrast against its wallpaper; any dark veil fades out two-thirds down the bar.
 

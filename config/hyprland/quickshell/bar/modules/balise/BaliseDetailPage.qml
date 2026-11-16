@@ -412,7 +412,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 anchors.horizontalCenterOffset: -1
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
                 color: DrawerTheme.primary
@@ -434,7 +434,7 @@ Item {
             anchors.leftMargin: 12
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.pageTitle
             color: DrawerTheme.primary
@@ -462,7 +462,7 @@ Item {
         clip: true
 
         // Soft edges rather than a hard cut -- see ScrollFadeMask.qml.
-        layer.enabled: true
+        layer.enabled: body.contentHeight > body.height
         layer.effect: OpacityMask { maskSource: bodyMask }
 
         // A child of the Flickable for the same reason as BaliseHome's --
@@ -502,7 +502,7 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.statusText
                 color: root.statusConnected ? DrawerTheme.activeInk : DrawerTheme.primary
@@ -531,7 +531,7 @@ Item {
             visible: root.showCredentials
 
             Text {
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.wifiEnterprise ? "SIGN IN" : "PASSWORD"
                 color: DrawerTheme.ink(0.4)
@@ -593,7 +593,7 @@ Item {
                             id: advancedLabel
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
-                            renderType: Text.NativeRendering
+                            renderType: Text.QtRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: (root.credAdvancedOpen ? "▾  " : "▸  ") + "EAP settings"
                             color: advancedArea.containsMouse ? DrawerTheme.primary : DrawerTheme.secondary
@@ -620,7 +620,7 @@ Item {
                         spacing: 8
 
                         Text {
-                            renderType: Text.NativeRendering
+                            renderType: Text.QtRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Method"
                             color: DrawerTheme.secondary
@@ -643,7 +643,7 @@ Item {
                             // a profile carrying both), so offering the
                             // picker would be offering a no-op.
                             visible: root.credEap !== "pwd"
-                            renderType: Text.NativeRendering
+                            renderType: Text.QtRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: "Phase 2"
                             color: DrawerTheme.secondary
@@ -677,7 +677,7 @@ Item {
                     Text {
                         visible: root.connectError !== ""
                         width: parent.width
-                        renderType: Text.NativeRendering
+                        renderType: Text.QtRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.connectError
                         color: root.destructive
@@ -707,7 +707,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            renderType: Text.NativeRendering
+                            renderType: Text.QtRendering
                             font.hintingPreference: Font.PreferNoHinting
                             text: root.connecting ? "Connecting…" : "Connect"
                             color: root.canSubmit ? DrawerTheme.onInk : DrawerTheme.secondary
@@ -735,7 +735,7 @@ Item {
             visible: root.metaRows.length > 0
 
             Text {
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.metaSectionLabel
                 color: DrawerTheme.ink(0.4)
@@ -772,7 +772,7 @@ Item {
                             Text {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                renderType: Text.NativeRendering
+                                renderType: Text.QtRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.label
                                 color: DrawerTheme.secondary
@@ -785,7 +785,7 @@ Item {
                                 anchors.leftMargin: 90
                                 anchors.verticalCenter: parent.verticalCenter
                                 horizontalAlignment: Text.AlignRight
-                                renderType: Text.NativeRendering
+                                renderType: Text.QtRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 text: modelData.value
                                 color: DrawerTheme.primary
@@ -806,7 +806,7 @@ Item {
             visible: root.hasOptions
 
             Text {
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "OPTIONS"
                 color: DrawerTheme.ink(0.4)
@@ -842,7 +842,7 @@ Item {
 
                     Text {
                         width: parent.width
-                        renderType: Text.NativeRendering
+                        renderType: Text.QtRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsLabel
                         color: DrawerTheme.primary
@@ -854,7 +854,7 @@ Item {
                     Text {
                         width: parent.width
                         visible: text !== ""
-                        renderType: Text.NativeRendering
+                        renderType: Text.QtRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: root.optionsSubtitle
                         color: DrawerTheme.secondary
@@ -905,7 +905,7 @@ Item {
             visible: root.shareOpen
 
             Text {
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "SHARE"
                 color: DrawerTheme.ink(0.4)
@@ -988,7 +988,7 @@ Item {
                     Text {
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter
-                        renderType: Text.NativeRendering
+                        renderType: Text.QtRendering
                         font.hintingPreference: Font.PreferNoHinting
                         // Three states in one label: the code is on its
                         // way, the daemon said why there isn't one, or
@@ -1011,7 +1011,7 @@ Item {
             visible: root.actions.length > 0
 
             Text {
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "ACTIONS"
                 color: DrawerTheme.ink(0.4)
@@ -1052,7 +1052,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        renderType: Text.NativeRendering
+                        renderType: Text.QtRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: actionBtn.modelData.label
                         color: actionBtn.tint

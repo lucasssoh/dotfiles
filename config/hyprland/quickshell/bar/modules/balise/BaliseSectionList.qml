@@ -93,7 +93,7 @@ Item {
                 // Nudged up-left by the glyph's own bearing so it reads
                 // optically centred in the square.
                 anchors.horizontalCenterOffset: -1
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: "‹"
                 color: DrawerTheme.primary
@@ -116,7 +116,7 @@ Item {
             anchors.right: scanLabel.left
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.title
             color: DrawerTheme.primary
@@ -161,7 +161,7 @@ Item {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.scanning ? "Scanning" : "Scan"
                 color: root.scanning ? DrawerTheme.secondary
@@ -217,7 +217,7 @@ Item {
 
             Text {
                 width: parent.width
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterTitle
                 color: DrawerTheme.primary
@@ -229,7 +229,7 @@ Item {
             Text {
                 width: parent.width
                 visible: root.masterSubtitle !== ""
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: root.masterSubtitle
                 color: DrawerTheme.secondary
@@ -288,7 +288,7 @@ Item {
         // balise aussi, puisqu'on a scroll, il ne faut pas couper les
         // elements brutement"). A saturated WiFi scan is the longest list
         // in this drawer, so this is the one that shows it most.
-        layer.enabled: true
+        layer.enabled: listView.contentHeight > listView.height
         layer.effect: OpacityMask { maskSource: listMask }
 
         section.property: root.grouped ? "_group" : ""
@@ -313,7 +313,7 @@ Item {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 8
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: sectionHeader.section.toUpperCase()
                 color: DrawerTheme.ink(0.4)
@@ -331,7 +331,7 @@ Item {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 8
-                renderType: Text.NativeRendering
+                renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: {
                     const items = root.model;
@@ -349,7 +349,7 @@ Item {
         Text {
             anchors.centerIn: parent
             visible: listView.count === 0
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.emptyText
             color: DrawerTheme.ink(0.4)
