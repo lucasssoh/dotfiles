@@ -1,43 +1,51 @@
 import QtQuick
 import "../services"
 
-// The band's inks and veil, decided from the wallpaper behind it
-// (BandTint.decideBlocks): each block -- the clock, Programme, the
-// metrics, the launchers, the tools -- picks its own ink, light or dark,
-// and the band gives each slice of the screen the veil its block's ink
-// needs there. The blocks read their ink through a BlockInk each.
-//
-// One ink for the whole bar was tried first: over a wallpaper dark on one
-// side and pale on the other, it laid a dark veil under light text where
-// black text would simply have read.
+// Each block chooses its own ink and dark veil from the wallpaper behind it.
 QtObject {
     id: bar
 
     property string monitor: ""
-    // The blocks that carry text, as [{x, w}] in the bar's coordinates.
-    // Bound live: a block that grows re-decides against what it covers.
     property var rects: []
-
-    // Per block, true = light text.
     property var lights: []
-    // Per slice: the veil, 0..1, eased across slices, and whether it sits
-    // under light text (so is the dark veil) or under dark text (light).
     property var veils: []
-    property var veilLights: []
 
     function reevaluate(): void {
         if (!bar.monitor || !BandTint.ready) return;
-        const d = BandTint.decideBlocks(bar.monitor, bar.rects, bar.lights, Ink.primary, InkLight.primary);
-        if (!d) return;
-        if (JSON.stringify(d.lights) !== JSON.stringify(bar.lights)) bar.lights = d.lights;
-        const old = bar.veils;
-        let same = old.length === d.veils.length
-            && JSON.stringify(d.veilLights) === JSON.stringify(bar.veilLights);
-        for (let i = 0; same && i < old.length; i++) same = Math.abs(old[i] - d.veils[i]) < 0.005;
-        if (!same) {
-            bar.veilLights = d.veilLights;
-            bar.veils = d.veils;
+        const m = BandTint.profile[bar.monitor];
+        if (!m || m.width <= 0 || !m.cells || !m.cells.length) return;
+        const count = m.cells.length;
+        const lights = [];
+        const raw = new Array(count).fill(0);
+
+        for (let bi = 0; bi < bar.rects.length; bi++) {
+            const r = bar.rects[bi];
+            let light = bar.lights[bi] !== false;
+            if (!(r.w > 0)) { lights.push(light); continue; }
+
+            const a = Math.max(0, Math.floor(r.x / m.width * count));
+            const b = Math.min(count - 1, Math.floor((r.x + r.w - 1) / m.width * count));
+            if (b < a) { lights.push(light); continue; }
+
+            const current = light ? "dark" : "light";
+            const d = BandTint.decide(bar.monitor, r.x, r.w, current, Ink.primary, InkLight.primary);
+            light = d.ink === "dark";
+            lights.push(light);
+            for (let i = a; i <= b; i++) raw[i] = Math.max(raw[i], d.veil);
         }
+
+        const veils = raw.map((v, i) => {
+            let sum = 0, samples = 0;
+            for (let j = i - 2; j <= i + 2; j++) {
+                if (j >= 0 && j < count) { sum += raw[j]; samples++; }
+            }
+            return sum / samples;
+        });
+
+        if (JSON.stringify(lights) !== JSON.stringify(bar.lights)) bar.lights = lights;
+        let same = veils.length === bar.veils.length;
+        for (let i = 0; same && i < veils.length; i++) same = Math.abs(veils[i] - bar.veils[i]) < 0.005;
+        if (!same) bar.veils = veils;
     }
 
     onMonitorChanged: bar.reevaluate()

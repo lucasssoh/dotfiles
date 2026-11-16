@@ -1,8 +1,7 @@
 import QtQuick
 import "../services"
 
-// One block's ink on the band: light or dark as BarInk decided for block
-// `index`, eased over the wallpaper's own transition.
+// One block's light or dark ink, eased over the wallpaper transition.
 InkBlend {
     id: block
 
