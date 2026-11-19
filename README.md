@@ -31,23 +31,23 @@ cc-pkg-mng status     # check that everything is in place
 | [**Roue**](docs/tools/roue.md) | A radial wheel: press, aim, let go |
 | [**Prisme**](docs/tools/prisme.md) | The wallpaper picker, with light and dark pairs |
 | [**Balise**](docs/bar/balise.md) | Wi-Fi, Bluetooth, Ethernet and screen settings, from the bar |
-| [**Manette**](docs/tools/manette.md) | Games, on the controller's Guide button |
+| [**Manette**](docs/tools/manette.md) | Your games, on the controller's Guide button |
 | [**Sésame**](docs/tools/sesame.md) | One card for every password asked outside a terminal |
 | [**Liseuse**](docs/tools/liseuse.md) | A reading library on one key |
-| [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Installs the picked parts, and moves between releases |
+| [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Installs the parts you pick, and moves between releases |
 
 ![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/work-dark.webp)
 
 ## Documentation
 
-| Page | Contents |
+| Page | What you'll find |
 |---|---|
 | [**Installation**](docs/installation.md) | Installing with dnf, the questions `init` asks, unattended installs |
 | [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Commands, channels, upgrading and rolling back |
-| [**Settings**](docs/configuration.md) | Where each setting lives, and how to keep a change through an upgrade |
+| [**Your settings**](docs/configuration.md) | Where each setting lives, and how to keep a change through an upgrade |
 | [**Key bindings**](docs/keybindings.md) | Every shortcut, on an AZERTY keyboard |
 | [**Units**](docs/units.md) | Every part of coucou-shell, with its guide |
-| [**Hardware**](docs/hardware.md) | CPU and GPU profiles, codecs, what's left to do by hand |
+| [**Hardware**](docs/hardware.md) | CPU and GPU profiles, codecs, what's left for you to do by hand |
 | [**Changelog**](CHANGELOG.md) | What changed in each release |
 
 ## Tested on
@@ -63,15 +63,15 @@ Other machines get their drivers from the same [detection](docs/hardware.md).
 
 coucou-shell is under a [personal use licence](LICENSE.md). All rights reserved.
 
-| ✓ Allowed | ✗ Not allowed without written permission |
+| ✓ You may | ✗ You may not, without written permission |
 |---|---|
-| Installing and using coucou-shell on personal machines | Redistributing it, modified or not |
-| Changing it for personal use | Selling it, or building a product or service on it |
-| Sharing screenshots, writing about it, linking to it | Naming another project after it |
+| Install and use coucou-shell on your own machines | Redistribute it, modified or not |
+| Change it for your own use | Sell it, or build a product or service on it |
+| Share screenshots, write about it, link to it | Name another project after it |
 
 This table is a summary: [LICENSE.md](LICENSE.md) is what applies.
 
-Third-party material keeps its own licence:
+What isn't mine keeps its own licence:
 
 | Material | Licence | Details |
 |---|---|---|
