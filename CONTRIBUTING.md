@@ -1,6 +1,6 @@
 # Contributing
 
-How commits, versions, the changelog and releases work in coucou-shell. These rules apply to everyone, people and AI agents alike.
+How commits, versions, the changelog and releases work in coucou-shell.
 
 ## Commits
 
@@ -89,20 +89,6 @@ Versions follow `MAJOR.MINOR.PATCH`.
 - **Interface text is as short as it can be.** Say each thing once, from what the person sees or does: no explaining how it works, no selling, no help line that repeats its label, no "successfully". A condition or a way out goes where it's needed, usually in the error.
 - **Colours** come from [`DrawerTheme.qml`](config/hyprland/quickshell/bar/theme/DrawerTheme.qml). Prefer outlines to large white areas.
 - **A new application** is a replaceable unit in `units/apps/<name>/`, with a hook that makes it the default for its file types. Anything downloaded from outside a package is pinned to a version and checked by sha256.
-- **Documentation** lives in [`docs/`](docs/). It describes the components and how to configure them, not their design or the inner workings of scripts. The website is generated from `docs/`: never edit `site/src/content/docs/docs/`.
-- **Docs follow the code.** A change a user can see or act on updates its page in `docs/`, and its screenshot scene, with the change. [`.claude/skills/doc-a-jour/SKILL.md`](.claude/skills/doc-a-jour/SKILL.md) lists which page and which checks; it applies to people and agents alike.
+- **Documentation** lives in [`docs/`](docs/). The website is generated from `docs/`: never edit `site/src/content/docs/docs/`.
+- **Docs follow the code.** A change a user can see or act on updates its page in `docs/`, and its screenshot scene, with the change.
 - **Test on a real session before committing**: a screenshot for anything visual, `hyprctl configerrors` after touching the Hyprland config.
-
-## AI agents
-
-If you're an agent, everything above applies to you too. Also:
-
-- Don't push, tag or publish a release unless you're asked to.
-- **Every commit you write ends with your `Co-Authored-By:` line**, as its last paragraph. No exception.
-
-  ```
-  git commit -m "swayimg : the image viewer in the shell's colours" \
-             -m "e opens the image in satty; the edit is saved next to the original, which is never touched." \
-             -m "Co-Authored-By: <agent name> <its address>"
-  ```
-- Report what you verified and what you couldn't. Don't call something tested when it wasn't.
