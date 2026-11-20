@@ -114,6 +114,79 @@ _prompt_detect_project() {
 add-zsh-hook chpwd _prompt_detect_project
 _prompt_detect_project
 
+_prompt_env_label=""
+_prompt_env_color=""
+_prompt_py_version=""
+
+_prompt_read_py_version() {
+  _prompt_py_version=""
+  local cfg line
+  [[ -r "$1/pyvenv.cfg" ]] || return 0
+  cfg=$(< "$1/pyvenv.cfg")
+  for line in ${(f)cfg}; do
+    if [[ "$line" =~ '^version(_info)?[[:space:]]*=[[:space:]]*([0-9]+\.[0-9]+)' ]]; then
+      _prompt_py_version=$match[2]
+      break
+    fi
+  done
+  return 0
+}
+
+_prompt_detect_env() {
+  local label="" color="" name=""
+  _prompt_env_label=""
+  _prompt_env_color=""
+
+  if [[ -n "${CONDA_PREFIX:-}" ]]; then
+    name="${CONDA_DEFAULT_ENV:-${CONDA_PREFIX:t}}"
+    label="py ${name}·conda"
+    color="$_prompt_green"
+  elif [[ -n "${VIRTUAL_ENV:-}" ]]; then
+    name="${VIRTUAL_ENV:t}"
+    [[ "$name" == "bin" ]] && name="${VIRTUAL_ENV:h:t}"
+    _prompt_read_py_version "$VIRTUAL_ENV"
+    label="py"
+    [[ -n "$_prompt_py_version" ]] && label+=" $_prompt_py_version"
+    if [[ -n "${POETRY_ACTIVE:-}" ]]; then
+      name="poetry"
+    elif [[ -n "${UV_PROJECT_ENVIRONMENT:-}" ]]; then
+      name="uv"
+    fi
+    label+="·${name}"
+    color="$_prompt_green"
+  elif [[ -n "${PYENV_VERSION:-}" ]]; then
+    label="py ${PYENV_VERSION}·pyenv"
+    color="$_prompt_blue"
+  elif [[ -n "${NVM_BIN:-}" ]]; then
+    name="${${NVM_BIN:h}:t}"
+    label="node ${name#v}·nvm"
+    color="$_prompt_blue"
+  elif [[ -n "${FNM_MULTISHELL_PATH:-}" ]]; then
+    name="${${FNM_MULTISHELL_PATH:A}:h:t}"
+    label="node ${name#v}·fnm"
+    color="$_prompt_blue"
+  elif [[ -n "${RUSTUP_TOOLCHAIN:-}" ]]; then
+    label="rs ${RUSTUP_TOOLCHAIN}·rustup"
+    color="$_prompt_blue"
+  elif [[ -n "${RBENV_VERSION:-}" ]]; then
+    label="rb ${RBENV_VERSION}·rbenv"
+    color="$_prompt_blue"
+  elif [[ -n "${GEM_HOME:-}" && "$GEM_HOME" == *rvm* ]]; then
+    label="rb ${GEM_HOME:t}·rvm"
+    color="$_prompt_blue"
+  elif [[ -n "${JAVA_HOME:-}" && -n "${SDKMAN_CANDIDATES_DIR:-}" && "$JAVA_HOME" == "${SDKMAN_CANDIDATES_DIR}/java/"* ]]; then
+    label="java ${JAVA_HOME:t}·sdk"
+    color="$_prompt_blue"
+  elif [[ -n "${MISE_ENV:-}" ]]; then
+    label="mise ${MISE_ENV}"
+    color="$_prompt_blue"
+  fi
+
+  label=${label//\%/%%}
+  _prompt_env_label="$label"
+  _prompt_env_color="$color"
+}
+
 # --- Durée de commande (affichée si >= 2s, comme cmd_duration.min_time) ---
 _prompt_cmd_start=0
 _prompt_cmd_duration=""
@@ -148,6 +221,7 @@ _prompt_precmd() {
   local exit=$?
 
   vcs_info
+  _prompt_detect_env
 
   _prompt_cmd_duration=""
   if (( _prompt_cmd_start > 0 )); then
@@ -172,7 +246,11 @@ _prompt_precmd() {
   _prompt_had_cmd=1
 
   local project_seg=""
-  [[ -n "$_prompt_project_label" ]] && project_seg="%F{$_prompt_grey}${_prompt_project_label} %f"
+  if [[ -n "$_prompt_env_label" ]]; then
+    project_seg="%F{$_prompt_env_color}${_prompt_env_label}%f "
+  elif [[ -n "$_prompt_project_label" ]]; then
+    project_seg="%F{$_prompt_grey}${_prompt_project_label} %f"
+  fi
 
   PROMPT="
 ${sep}%F{$ctx_color}${ctx}%f ${project_seg}%B%3~%b\${vcs_info_msg_0_}%F{$_prompt_orange}\${_prompt_cmd_duration}%f

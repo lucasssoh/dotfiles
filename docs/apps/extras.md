@@ -22,6 +22,8 @@ A setup replaces user files: they go to the backups, and `cc-pkg-mng remove <uni
 
 zsh and bash with the author's prompt and aliases, plus zoxide, fzf, ripgrep, fd and tmux. It makes zsh the login shell, with zsh-autosuggestions and zsh-syntax-highlighting.
 
+Before the path, the prompt shows the active environment: a Python virtual environment in green (`py 3.12·.venv`, also conda, Poetry and uv), a version chosen by a manager in blue (nvm, fnm, pyenv, rbenv, rustup, SDKMAN, mise), or the project's language in grey when none is active.
+
 | To change | Edit |
 |---|---|
 | Aliases | [`config/bash/.bash_aliases`](../../config/bash/.bash_aliases) |
