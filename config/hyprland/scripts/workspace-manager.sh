@@ -438,8 +438,42 @@ done
 # the classic default-(0,0)-vs-default-(0,0) solo swap.
 outgoing_folded_json="{}"
 declare -A monitor_rule
+# Rules this script applied last time (see the snapshot section near the
+# end), one line per screen.
+snapshot_file="${XDG_RUNTIME_DIR:-/tmp}/coucou-monitors.lua"
+old_snapshot="$(cat "$snapshot_file" 2>/dev/null || true)"
+
+# The outgoing screens' rule, moved past the right edge of every current
+# and target spot. With survivors, they stay on until the migration below,
+# and the target spot is often exactly theirs: plugging a screen in with
+# display-layout set to external puts it at 0x0, where the laptop panel
+# sits until it is turned off. Moved first, in the same call, they never
+# overlap anything. Their last rule is reused with only the position
+# changed, so no modeset on a screen about to go off.
+park_outgoing() {
+    local n far line w h rr s
+    # Right of every screen now, plus every width: no target spot (a grid
+    # of these same screens) reaches that far.
+    far="$(jq '([.[] | .x + .width] | max // 0) + ([.[] | .width] | add // 0) + 1' <<<"$mons_json")"
+    for n in "$internal" "${externals[@]}"; do
+        [[ "${was_enabled[$n]:-false}" == true && "${active[$n]:-false}" != true ]] || continue
+        line="$(grep -F "output = \"$n\", disabled = false" <<<"$old_snapshot" | head -n1 || true)"
+        if [[ -n "$line" ]]; then
+            sed -E "s/position = \"[^\"]*\"/position = \"${far}x0\"/" <<<"$line"
+        else
+            read -r w h rr s < <(jq -r --arg m "$n" '.[] | select(.name==$m) | "\(.width) \(.height) \(.refreshRate) \(.scale)"' <<<"$mons_json")
+            echo "hl.monitor({ output = \"$n\", disabled = false, mode = \"${w}x${h}@${rr}\", position = \"${far}x0\", scale = $s })"
+        fi
+    done
+}
+
 apply_targets() {
-    local n scale extra w h best_rr mode x y stmts="" desc want
+    local n scale extra w h best_rr mode x y stmts="" desc want line
+    if [[ "$survivors" -gt 0 ]]; then
+        while IFS= read -r line; do
+            [[ -n "$line" ]] && stmts+="$line; "
+        done < <(park_outgoing)
+    fi
     for n in "$internal" "${externals[@]}"; do
         [[ "${active[$n]:-false}" == true ]] || continue
         if [[ "$n" == "$internal" ]]; then
@@ -543,7 +577,6 @@ done
 # already in place and Hyprland skips them ("already applied", no modeset).
 # Runtime dir: gone at reboot, where the generic rule is the right start.
 # Rewritten only when it changes.
-snapshot_file="${XDG_RUNTIME_DIR:-/tmp}/coucou-monitors.lua"
 snapshot="-- Written by workspace-manager.sh, loaded by monitors.lua."
 for n in "$internal" "${externals[@]}"; do
     if [[ "${active[$n]:-false}" == true && -n "${monitor_rule[$n]:-}" ]]; then
@@ -552,6 +585,24 @@ for n in "$internal" "${externals[@]}"; do
         snapshot+=$'\n'"hl.monitor({ output = \"$n\", disabled = true })"
     fi
 done
+
+# A screen unplugged keeps its last rule in Hyprland, which applies it
+# again when the screen comes back, before this script runs. If that rule
+# was external-only's 0x0, the screen lands on the laptop panel: overlap
+# warning. Its position becomes "auto" (beside the others), the rest of
+# the rule (mode, scale, HDR) stays, and this script then puts it where
+# the layout says. A screen that was off stays off.
+unplugged_stmts=""
+while IFS= read -r line; do
+    n="$(sed -nE 's/.*output = "([^"]+)".*/\1/p' <<<"$line")"
+    [[ -z "$n" ]] && continue
+    jq -e --arg n "$n" 'any(.[]; .name == $n)' <<<"$mons_json" >/dev/null && continue
+    [[ "$line" == *"disabled = false"* ]] && \
+        line="$(sed -E 's/position = "[^"]*"/position = "auto"/' <<<"$line")"
+    snapshot+=$'\n'"$line"
+    unplugged_stmts+="$line; "
+done < <(grep -F 'hl.monitor(' <<<"$old_snapshot" || true)
+[[ -n "$unplugged_stmts" ]] && hyprctl eval "$unplugged_stmts" >/dev/null
 if [[ "$(cat "$snapshot_file" 2>/dev/null)" != "$snapshot" ]]; then
     printf '%s\n' "$snapshot" > "$snapshot_file.tmp" && mv -f "$snapshot_file.tmp" "$snapshot_file"
 fi

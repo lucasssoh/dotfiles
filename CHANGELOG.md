@@ -10,6 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Displays:** saving a Hyprland setting no longer blanks the screens for a moment, and an HDR screen stays in HDR.
+- **Displays:** plugging in or unplugging the external screen no longer warns that the screens overlap.
 
 ## 2.6.0 (November 16 2026)
 
