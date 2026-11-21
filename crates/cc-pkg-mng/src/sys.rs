@@ -17,6 +17,58 @@ pub fn entry_point(bin: &str) -> PathBuf {
     home().join(".local/bin").join(bin)
 }
 
+/// Is this process the RPM's /usr/bin/cc-pkg-mng (as opposed to a build
+/// from a checkout)?
+pub fn running_from_rpm() -> bool {
+    std::env::current_exe().is_ok_and(|e| e == Path::new("/usr/bin/cc-pkg-mng"))
+}
+
+/// Several packages' versions in one rpm call, None where not installed.
+pub fn rpm_versions(names: &[&str]) -> Vec<Option<String>> {
+    let out = Command::new("rpm")
+        .args(["-q", "--qf", "%{VERSION}\\n"])
+        .args(names)
+        .env("LC_ALL", "C")
+        .stderr(Stdio::null())
+        .output();
+    let text = out.map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap_or_default();
+    // One line per name, in order: a version, or "package X is not installed".
+    let mut lines = text.lines();
+    names
+        .iter()
+        .map(|_| lines.next().filter(|l| !l.contains(' ')).map(str::to_string))
+        .collect()
+}
+
+/// Fedora's release number ("45").
+pub fn fedora() -> Option<String> {
+    let text = std::fs::read_to_string("/etc/os-release").ok()?;
+    text.lines().find_map(|l| l.strip_prefix("VERSION_ID=")).map(|v| v.trim_matches('"').to_string())
+}
+
+/// The version of the Hyprland this session runs, when there is one.
+pub fn hyprland_running() -> Option<String> {
+    std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
+    let out = Command::new("hyprctl").args(["version", "-j"]).stderr(Stdio::null()).output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let i = text.find("\"version\"")?;
+    let rest = &text[i + 9..];
+    let start = rest.find('"')? + 1;
+    let len = rest[start..].find('"')?;
+    Some(rest[start..start + len].to_string())
+}
+
+/// The local time, HH:MM.
+pub fn local_hm() -> String {
+    // SAFETY: localtime_r writes into the struct we pass.
+    unsafe {
+        let t = libc::time(std::ptr::null_mut());
+        let mut tm: libc::tm = std::mem::zeroed();
+        libc::localtime_r(&t, &mut tm);
+        format!("{:02}:{:02}", tm.tm_hour, tm.tm_min)
+    }
+}
+
 /// A real file, not a symlink (an edge build, as opposed to a link).
 pub fn is_regular_file(p: &Path) -> bool {
     std::fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_file())

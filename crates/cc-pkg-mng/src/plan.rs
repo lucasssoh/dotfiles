@@ -87,8 +87,23 @@ impl UnitPlan {
     }
 }
 
+/// One package the plan installs or moves, for the plan's display.
+#[derive(Debug, Clone)]
+pub struct PkgChange {
+    pub name: String,
+    /// Installed version, if any.
+    pub from: Option<String>,
+    /// The version asked for, when the plan names one.
+    pub to: Option<String>,
+}
+
 #[derive(Debug, Default)]
 pub struct Plan {
+    /// Every package the transactions touch, in display order.
+    pub changes: Vec<PkgChange>,
+    /// cc-pkg-mng's own RPM, at the release's version: installed in a
+    /// transaction of its own, before the rest, then the new one carries on.
+    pub manager: Option<String>,
     pub units: Vec<UnitPlan>,
     pub coprs: Vec<String>,
     pub repos: Vec<String>,
@@ -105,8 +120,19 @@ pub struct Plan {
 }
 
 impl Plan {
+    /// Anything for dnf to do.
+    pub fn has_packages(&self) -> bool {
+        self.manager.is_some()
+            || !self.coprs.is_empty()
+            || !self.repos.is_empty()
+            || !self.packages.is_empty()
+            || !self.downgrades.is_empty()
+            || !self.upgrades.is_empty()
+    }
+
     pub fn needs_root(&self) -> bool {
-        !self.coprs.is_empty()
+        self.manager.is_some()
+            || !self.coprs.is_empty()
             || !self.repos.is_empty()
             || !self.packages.is_empty()
             || !self.downgrades.is_empty()
@@ -146,22 +172,31 @@ pub fn with_answers(files: String, answers: &BTreeMap<String, String>) -> String
     format!("{files}+{}", joined.join(","))
 }
 
-/// `order`: the units to install, dependencies first (resolve::closure).
-/// `answers`: every question of those units, already answered.
+/// The release a stable checkout is on ("2.6.0"), whose Rust apps come as
+/// RPMs of the same version. None on edge.
+pub fn release_of(repo: &Path, state: &State) -> Option<String> {
+    (state.channel.as_deref() == Some("stable"))
+        .then(|| git::exact_tag(repo))
+        .flatten()
+        .and_then(|t| t.strip_prefix('v').map(str::to_string))
+}
+
+/// `repo`: the tree to plan from (the checkout, or the target version
+/// extracted beside it); `live`: the checkout links point into, which is
+/// `repo` itself unless planning a move. `order`: the units to install, dependencies first
+/// (resolve::closure). `answers`: every question of those units, already
+/// answered. `release`: see release_of.
 pub fn build(
     repo: &Path,
+    live: &Path,
     units: &Units,
     state: &State,
     order: &[String],
     answers: &BTreeMap<String, BTreeMap<String, String>>,
+    release: Option<&str>,
 ) -> Result<Plan> {
     let mut plan = Plan::default();
-    // On stable, the release checked out: its Rust apps come as RPMs of the
-    // same version.
-    let release = (state.channel.as_deref() == Some("stable"))
-        .then(|| git::exact_tag(repo))
-        .flatten()
-        .and_then(|t| t.strip_prefix('v').map(str::to_string));
+    let release = release.map(str::to_string);
     let mut needs_repo = false;
     let installing: BTreeSet<&str> = order.iter().map(String::as_str).collect();
 
@@ -213,12 +248,11 @@ pub fn build(
             if missing.contains(p) || plan.upgrades.contains(p) {
                 continue;
             }
-            if let (Some(have), Some(want)) = (sys::rpm_evr(p), sys::spec_evr(&spec)) {
-                if sys::evr_older(&have, &want) {
+            if let (Some(have), Some(want)) = (sys::rpm_evr(p), sys::spec_evr(&spec))
+                && sys::evr_older(&have, &want) {
                     plan.upgrades.push(p.clone());
                     needs_repo = true;
                 }
-            }
         }
         if u.packages.dnf.iter().any(|p| missing.contains(p)) {
             coprs.extend(u.packages.copr.iter().filter(|c| !sys::copr_enabled(c)).cloned());
@@ -260,7 +294,7 @@ pub fn build(
                     bin_links.push(LinkPlan { src, dst, state });
                 }
             } else if new || changed || b.bins.iter().any(|bin| !sys::is_regular_file(&local_bin(bin))) {
-                build = Some(BinPlan { source: repo.join(&b.source), bins: b.bins.clone() });
+                build = Some(BinPlan { source: live.join(&b.source), bins: b.bins.clone() });
                 let build_deps = sys::rpm_missing(&u.packages.build)?;
                 for p in &u.packages.build {
                     if build_deps.contains(p) && !packages.contains(p) {
@@ -272,11 +306,10 @@ pub fn build(
 
         let links = bin_links
             .into_iter()
-            .chain(u.links.iter().map(|(src, dst)| {
-                let src = repo.join(src);
+            .chain(u.links.iter().map(|(rel, dst)| {
+                let src = live.join(rel);
                 let dst = sys::expand(dst);
-                let rel = src.strip_prefix(repo).unwrap().to_string_lossy().into_owned();
-                let state = match u.link_condition(&rel) {
+                let state = match u.link_condition(rel) {
                     Some(cond) if !present(cond) => LinkState::Unmet(cond.to_string()),
                     _ => link_state(&src, &dst),
                 };
@@ -304,7 +337,7 @@ pub fn build(
             .map(|h| match &h.run {
                 None => HookPlan::Pending(h.clone()),
                 Some(_) if !(new || changed) => HookPlan::Skip,
-                Some(script) => HookPlan::Run(h.clone(), repo.join(script)),
+                Some(script) => HookPlan::Run(h.clone(), live.join(script)),
             })
             .collect();
 
@@ -322,6 +355,29 @@ pub fn build(
             build,
             drop_local,
         });
+    }
+    // The manager itself, when it runs from its RPM: at the release's
+    // version too, before anything else.
+    if let Some(v) = &release
+        && sys::running_from_rpm()
+            && let Some(have) = sys::rpm_version("cc-pkg-mng")
+                && sys::newer(v, &have) {
+                    plan.manager = Some(format!("cc-pkg-mng-{v}"));
+                    plan.changes.push(PkgChange { name: "cc-pkg-mng".into(), from: Some(have), to: Some(v.clone()) });
+                    needs_repo = true;
+                }
+    for spec in packages.iter().chain(&plan.downgrades) {
+        let (name, to) = match &release {
+            Some(v) if spec.ends_with(&format!("-{v}")) => (spec[..spec.len() - v.len() - 1].to_string(), Some(v.clone())),
+            _ => (spec.clone(), None),
+        };
+        plan.changes.push(PkgChange { from: sys::rpm_version(&name), name, to });
+    }
+    for p in &plan.upgrades {
+        let to = sys::spec_evr(&repo.join("packaging").join(p).join(format!("{p}.spec")))
+            .map(|e| e.split_once(':').map(|(_, vr)| vr.to_string()).unwrap_or(e));
+        let from = sys::rpm_evr(p).map(|e| e.split_once(':').map(|(_, vr)| vr.to_string()).unwrap_or(e));
+        plan.changes.push(PkgChange { name: p.clone(), from, to });
     }
     if needs_repo && !sys::repo_added(RPM_REPO) {
         repos.insert(RPM_REPO.to_string());

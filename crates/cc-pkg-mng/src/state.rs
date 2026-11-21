@@ -27,8 +27,24 @@ pub struct State {
     /// The version before the last upgrade, for `rollback`.
     #[serde(default)]
     pub previous: Option<String>,
+    /// A move between versions under way: set before its packages, cleared
+    /// once every unit is in place. Still there at the next run means the
+    /// last one stopped half-way, and where.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrading: Option<Upgrading>,
     #[serde(default)]
     pub units: BTreeMap<String, UnitState>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Upgrading {
+    /// "upgrade" or "rollback".
+    pub kind: String,
+    pub from: String,
+    pub to: String,
+    /// "packages" until the checkout moves, then "units".
+    pub phase: String,
+    pub started: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -85,5 +101,49 @@ impl State {
 
     pub fn installed(&self, name: &str) -> bool {
         self.units.contains_key(name)
+    }
+}
+
+/// One cc-pkg-mng changing the machine at a time: an exclusive lock on
+/// `<state>/lock`, held until the process ends (or execs: the file is
+/// close-on-exec). The file says who holds it.
+pub struct Lock(std::fs::File);
+
+impl Drop for Lock {
+    fn drop(&mut self) {
+        // Who held it no longer matters.
+        let _ = self.0.set_len(0);
+    }
+}
+
+impl Lock {
+    pub fn take(what: &str) -> Result<Lock> {
+        use std::io::{Read, Seek, Write};
+        use std::os::fd::AsRawFd;
+        let dir = state_dir();
+        std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+        let path = dir.join("lock");
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&path)
+            .with_context(|| format!("opening {}", path.display()))?;
+        // SAFETY: flock on a descriptor this File owns.
+        if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+            let mut holder = String::new();
+            let _ = file.read_to_string(&mut holder);
+            let holder = holder.trim();
+            let mut stop = crate::ui::Stop::new("cc-pkg-mng is already running.");
+            if !holder.is_empty() {
+                stop = stop.detail(holder.to_string());
+            }
+            return Err(stop.into());
+        }
+        file.set_len(0)?;
+        file.rewind()?;
+        let _ = write!(file, "{what}, pid {}, since {}", std::process::id(), crate::sys::local_hm());
+        Ok(Lock(file))
     }
 }

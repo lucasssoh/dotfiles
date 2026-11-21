@@ -8,9 +8,9 @@ use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 
 use crate::manifest::{self, Layer, Units};
-use crate::state::{self, State};
-use crate::ui::Ui;
-use crate::{git, ops, plan, resolve, sys};
+use crate::state::State;
+use crate::ui::{Shown, Stop, Ui};
+use crate::{git, ops, pipeline, sys};
 
 /// unit → question id → answer
 pub type Answers = BTreeMap<String, BTreeMap<String, String>>;
@@ -18,6 +18,10 @@ pub type Answers = BTreeMap<String, BTreeMap<String, String>>;
 pub struct Flags {
     pub dry_run: bool,
     pub yes: bool,
+    /// Let dnf remove or replace packages in the way (--allowerasing).
+    pub allow_erasing: bool,
+    /// A second go after the user said yes: the plan is not shown again.
+    pub again: bool,
 }
 
 impl Flags {
@@ -26,58 +30,55 @@ impl Flags {
     }
 }
 
-/// Every question's look: a green `?`, `❯` on the choice, ◉/◯ boxes.
-fn theme() -> dialoguer::theme::ColorfulTheme {
-    dialoguer::theme::ColorfulTheme::default()
-}
-
 // ───────────────────────────── installing ─────────────────────────────
 
-/// Resolve, ask, plan, confirm, apply. Every command that changes the
-/// machine ends here.
+/// Resolve, ask, plan, confirm, apply: `install`, and `init`'s last step.
 pub fn install_units(
     ui: &mut Ui,
     flags: &Flags,
     repo: &Path,
-    units: &Units,
     state: &mut State,
     names: &[String],
     preset: &Answers,
 ) -> Result<()> {
-    let order = resolve::closure(units, names)?;
-    let answers = ask(ui, flags, units, state, &order, preset)?;
-    let plan = plan::build(repo, units, state, &order, &answers)?;
-    ops::show_plan(ui, &plan);
-    if flags.dry_run {
-        return Ok(());
-    }
-    if !plan.has_work() && order.iter().all(|n| state.installed(n)) {
-        ui.line("\nNothing to do.");
-        return Ok(());
-    }
-    if flags.interactive(ui) {
-        println!();
-        if !dialoguer::Confirm::with_theme(&theme()).with_prompt("Proceed?").default(true).interact()? {
-            bail!("cancelled");
+    let job = || pipeline::Job {
+        title: "install".into(),
+        mv: None,
+        names: Some(names.to_vec()),
+        preset: preset.clone(),
+        confirm: "Install?".into(),
+        done: None,
+    };
+    with_erasing_offer(ui, flags, |ui, flags| pipeline::run(ui, flags, repo, state, job()))
+}
+
+/// Run `f`; when packages block it and dnf could get past by replacing
+/// some, say which and offer to (on a terminal), then run it again.
+fn with_erasing_offer(ui: &mut Ui, flags: &Flags, mut f: impl FnMut(&mut Ui, &Flags) -> Result<()>) -> Result<()> {
+    match f(ui, flags) {
+        Err(e) if e.downcast_ref::<pipeline::Blocked>().is_some() && flags.interactive(ui) => {
+            let blocked = e.downcast::<pipeline::Blocked>().unwrap();
+            let gone = pipeline::would_remove(&blocked.transactions);
+            let what = if gone.is_empty() { "the packages in the way".to_string() } else { gone.join(", ") };
+            println!();
+            let yes = dialoguer::Confirm::with_theme(&ui.theme())
+                .with_prompt(format!("Let dnf remove {what}?"))
+                .default(false)
+                .interact()?;
+            if !yes {
+                return Err(Shown.into());
+            }
+            let again = Flags { dry_run: flags.dry_run, yes: true, allow_erasing: true, again: true };
+            f(ui, &again)
         }
+        Err(e) if e.downcast_ref::<pipeline::Blocked>().is_some() => Err(Shown.into()),
+        other => other,
     }
-    ui.open_log(&state::state_dir().join("logs"), "install")?;
-    let start = std::time::Instant::now();
-    ops::apply(ui, repo, units, state, &plan)?;
-    let secs = start.elapsed().as_secs();
-    ui.line(&format!(
-        "\n{} {} unit(s) in place in {}:{:02}.",
-        ui.green("Done."),
-        plan.units.len(),
-        secs / 60,
-        secs % 60
-    ));
-    Ok(())
 }
 
 /// Answers for every question of `order`: given, then remembered, then
 /// asked (or the default without a terminal or with --yes).
-fn ask(ui: &mut Ui, flags: &Flags, units: &Units, state: &State, order: &[String], preset: &Answers) -> Result<Answers> {
+pub fn ask(ui: &mut Ui, flags: &Flags, units: &Units, state: &State, order: &[String], preset: &Answers) -> Result<Answers> {
     let interactive = flags.interactive(ui);
     let mut all = Answers::new();
     for name in order {
@@ -91,7 +92,7 @@ fn ask(ui: &mut Ui, flags: &Flags, units: &Units, state: &State, order: &[String
             }
             let value = if interactive {
                 let default = q.choices.iter().position(|c| *c == q.default).unwrap_or(0);
-                let i = dialoguer::Select::with_theme(&theme())
+                let i = dialoguer::Select::with_theme(&ui.theme())
                     .with_prompt(format!("{name}: {}", q.ask))
                     .items(&q.choices)
                     .default(default)
@@ -131,10 +132,12 @@ pub fn init(
 ) -> Result<()> {
     let mut state = State::load()?;
     if state.channel.is_some() && !state.units.is_empty() {
-        bail!(
-            "this machine is already set up ({}) — use `upgrade`, `install` or `remove`",
+        bail!(Stop::new(format!(
+            "This machine is already set up, in {}.",
             state.repo.as_deref().map(sys::tilde).unwrap_or_default()
-        );
+        ))
+        .hint("move to the latest release", "cc-pkg-mng upgrade")
+        .hint("add or remove units", "cc-pkg-mng install | remove"));
     }
     let file: AnswersFile = match answers_file {
         Some(p) => toml::from_str(&std::fs::read_to_string(p).with_context(|| format!("reading {}", p.display()))?)
@@ -144,7 +147,8 @@ pub fn init(
     let interactive = flags.interactive(ui) && answers_file.is_none();
     if interactive {
         ui.welcome();
-        ui.step(1, 4, "Where");
+        ui.rail = true;
+        ui.step(1, 3, "Where");
     }
 
     // 1. Where.
@@ -154,7 +158,7 @@ pub fn init(
         (None, Some(d), _) => sys::expand(d),
         (None, None, Some(d)) => d.clone(),
         (None, None, None) if interactive => {
-            let answer: String = dialoguer::Input::with_theme(&theme())
+            let answer: String = dialoguer::Input::with_theme(&ui.theme())
                 .with_prompt("Install coucou-shell in")
                 .default(sys::tilde(&default_dir))
                 .interact_text()?;
@@ -163,12 +167,11 @@ pub fn init(
         _ => default_dir,
     };
 
-    ui.heading("Checkout");
     let adopted = dir.join("units").is_dir();
     if adopted {
-        ui.ok(&format!("using the existing checkout in {}", sys::tilde(&dir)));
+        ui.ok(&format!("checkout in {}", sys::tilde(&dir)));
     } else if dir.exists() && std::fs::read_dir(&dir).map(|mut d| d.next().is_some()).unwrap_or(false) {
-        bail!("{} exists and is not a coucou-shell checkout — pick another directory", dir.display());
+        bail!(Stop::new(format!("{} is not empty and not a coucou-shell checkout.", sys::tilde(&dir))).hint("pick another", "cc-pkg-mng init --dir PATH"));
     } else if flags.dry_run {
         ui.line(&format!("  would clone {} into {}", git::url(), sys::tilde(&dir)));
         return Ok(());
@@ -179,30 +182,27 @@ pub fn init(
 
     // 2. Which channel.
     if interactive {
-        ui.step(2, 4, "Channel");
+        ui.step(2, 3, "Channel");
     }
     let tags = git::release_tags(&repo)?;
     let channel = match (channel_flag, file.channel.as_deref()) {
         (Some(c), _) | (None, Some(c)) => c.to_string(),
         _ if interactive && !tags.is_empty() => {
             let items = [
-                format!("stable — releases (latest {})", tags[0]),
-                "edge — every commit on the default branch".to_string(),
+                format!("stable · releases, latest {}", tags[0]),
+                "edge · every commit on the default branch".to_string(),
             ];
-            let i = dialoguer::Select::with_theme(&theme()).with_prompt("Channel").items(&items).default(0).interact()?;
+            let i = dialoguer::Select::with_theme(&ui.theme()).with_prompt("Channel").items(&items).default(0).interact()?;
             if i == 0 { "stable".into() } else { "edge".into() }
         }
         _ if tags.is_empty() => "edge".into(),
         _ => "stable".into(),
     };
     match channel.as_str() {
-        "stable" if tags.is_empty() => bail!("no release has been published yet — use --channel edge"),
+        "stable" if tags.is_empty() => bail!(Stop::new("No release published yet.").hint("follow every commit", "cc-pkg-mng init --channel edge")),
         "stable" => {
             if git::exact_tag(&repo).as_deref() != Some(tags[0].as_str()) {
-                let dirty = git::dirty(&repo)?;
-                if !dirty.is_empty() {
-                    bail!("uncommitted changes in {}:\n  {}\ncommit or stash them first", repo.display(), dirty.join("\n  "));
-                }
+                require_clean(&repo)?;
                 if flags.dry_run {
                     ui.line(&format!("  would check out {}", tags[0]));
                 } else {
@@ -217,7 +217,7 @@ pub fn init(
             }
             ui.ok(&format!("following {}", git::branch(&repo).unwrap_or_else(|| git::default_branch(&repo))));
         }
-        other => bail!("unknown channel \"{other}\" (stable or edge)"),
+        other => bail!(Stop::new(format!("No channel named {other}.")).detail("stable or edge")),
     }
     if !flags.dry_run {
         state.repo = Some(repo.clone());
@@ -228,12 +228,12 @@ pub fn init(
 
     // 3. What.
     if interactive {
-        ui.step(3, 4, "Applications");
+        ui.step(3, 3, "Applications");
     }
     let units = manifest::load_all(&repo)?;
     let (migrated, mut preset) = match migrate(&repo)? {
         Some((u, a)) if state.units.is_empty() => {
-            ui.ok(&format!("found the previous manager's state: {} unit(s) carried over", u.len()));
+            ui.ok(&format!("{} carried over from the previous manager", ops::plural(u.len(), "unit", "units")));
             (u, a)
         }
         _ => (BTreeSet::new(), Answers::new()),
@@ -245,7 +245,7 @@ pub fn init(
         Some(list) => {
             for n in list {
                 if !units.contains_key(n) {
-                    bail!("answers file: no unit named \"{n}\"");
+                    bail!(Stop::new(format!("Answers file: no unit named {n}.")).hint("every unit", "cc-pkg-mng list"));
                 }
             }
             list.iter().cloned().collect()
@@ -265,15 +265,12 @@ pub fn init(
 
     // 4. The summary: install_units shows the plan and asks before anything.
     if interactive {
-        ui.step(4, 4, "Summary");
+        ui.rail = false;
     }
-    install_units(ui, flags, &repo, &units, &mut state, &names, &preset)?;
+    let _ = &units;
+    install_units(ui, flags, &repo, &mut state, &names, &preset)?;
     if !flags.dry_run {
-        ui.line(&format!(
-            "\ncoucou-shell {} ({channel}) in {}. Log out and back in to start the session.",
-            git::describe(&repo),
-            sys::tilde(&repo)
-        ));
+        ui.line(&format!("    Log in to a Hyprland session to start coucou-shell {}.", git::describe(&repo)));
     }
     Ok(())
 }
@@ -286,7 +283,7 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
     for u in units.values().filter(|u| u.layer == Layer::Core && u.optional) {
         let default = had(&u.name);
         let yes = if interactive {
-            dialoguer::Confirm::with_theme(&theme())
+            dialoguer::Confirm::with_theme(&ui.theme())
                 .with_prompt(u.ask.clone().unwrap_or_else(|| format!("Install {}?", u.name)))
                 .default(default)
                 .interact()?
@@ -302,8 +299,8 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
     let defaults: Vec<bool> = apps.iter().map(|u| had(&u.name) || u.default.unwrap_or(true)).collect();
     let picked: Vec<usize> = if interactive {
         let items: Vec<String> = apps.iter().map(|u| format!("{:<10} {}", u.name, u.summary)).collect();
-        dialoguer::MultiSelect::with_theme(&theme())
-            .with_prompt("Applications (space to toggle, enter to confirm)")
+        dialoguer::MultiSelect::with_theme(&ui.theme())
+            .with_prompt("Applications (space toggles, enter confirms)")
             .items(&items)
             .defaults(&defaults)
             .interact()?
@@ -325,12 +322,12 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
             let hint = if existing.is_empty() {
                 String::new()
             } else {
-                format!(" (you have {})", existing.iter().take(2).cloned().collect::<Vec<_>>().join(", "))
+                format!(" (found {})", existing.iter().take(2).cloned().collect::<Vec<_>>().join(", "))
             };
-            let items = ["keep mine", "use this one — replaced files are backed up"];
-            dialoguer::Select::with_theme(&theme())
+            let items = ["keep mine", "use this one, mine backed up"];
+            dialoguer::Select::with_theme(&ui.theme())
                 .with_prompt(format!("{}: {}{hint}", u.name, u.summary))
-                .items(&items)
+                .items(items)
                 .default(if default { 1 } else { 0 })
                 .interact()?
                 == 1
@@ -342,7 +339,7 @@ fn choose(ui: &mut Ui, interactive: bool, units: &Units, state: &State, migrated
         }
     }
     if !interactive {
-        ui.line(&format!("  {}", ui.dim(&format!("taking: {}", chosen.iter().cloned().collect::<Vec<_>>().join(", ")))));
+        ui.line(&format!(" {}  {}", ui.dim("│"), ui.dim(&format!("taking {}", chosen.iter().cloned().collect::<Vec<_>>().join(", ")))));
     }
     Ok(chosen)
 }
@@ -382,28 +379,36 @@ pub fn migrate(repo: &Path) -> Result<Option<(BTreeSet<String>, Answers)>> {
 
 // ───────────────────────── channels and versions ───────────────────────
 
-fn short(repo: &Path) -> Result<String> {
-    Ok(git::exact_tag(repo).unwrap_or(git::head(repo)?[..12].to_string()))
+/// A version as it reads: the tag on stable, `git describe` otherwise.
+pub fn label(repo: &Path, rev: &str) -> String {
+    git::git(repo, &["describe", "--tags", "--exact-match", rev])
+        .or_else(|_| git::git(repo, &["describe", "--tags", "--always", rev]))
+        .unwrap_or_else(|_| rev.chars().take(12).collect())
 }
 
-fn require_clean(repo: &Path) -> Result<()> {
+pub fn require_clean(repo: &Path) -> Result<()> {
     let dirty = git::dirty(repo)?;
     if !dirty.is_empty() {
-        bail!(
-            "uncommitted changes in {}:\n  {}\ncommit or stash them first",
-            repo.display(),
-            dirty.join("\n  ")
-        );
+        let mut stop = Stop::new(format!("Uncommitted changes in {}.", sys::tilde(repo)));
+        for d in dirty.iter().take(6) {
+            stop = stop.detail(d.trim().to_string());
+        }
+        if dirty.len() > 6 {
+            stop = stop.detail(format!("and {} more", dirty.len() - 6));
+        }
+        return Err(stop
+            .hint("put them aside", format!("git -C {} stash", sys::tilde(repo)))
+            .into());
     }
     Ok(())
 }
 
 pub fn channel(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, new: Option<&str>) -> Result<()> {
     let Some(new) = new else {
-        ui.line(&format!("channel  {}", state.channel.as_deref().unwrap_or("none (run init)")));
-        ui.line(&format!("version  {}", git::describe(repo)));
         let tags = git::release_tags(repo)?;
-        ui.line(&format!("latest   {}", tags.first().map(String::as_str).unwrap_or("no release yet")));
+        ui.line(&format!("{}  {}", ui.dim("channel"), state.channel.as_deref().unwrap_or("not set up")));
+        ui.line(&format!("{}  {}", ui.dim("version"), git::describe(repo)));
+        ui.line(&format!("{}  {}", ui.dim("latest "), tags.first().map(String::as_str).unwrap_or("no release yet")));
         return Ok(());
     };
     match new {
@@ -415,10 +420,10 @@ pub fn channel(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, new: 
                     git::checkout(repo, &git::default_branch(repo))?;
                 }
             }
-            ui.ok("channel: edge — `upgrade` follows the default branch");
+            ui.ok("edge: upgrade follows every commit");
         }
-        "stable" => ui.ok("channel: stable — `upgrade` moves to the latest release"),
-        other => bail!("unknown channel \"{other}\" (stable or edge)"),
+        "stable" => ui.ok("stable: upgrade moves to the latest release"),
+        other => bail!(Stop::new(format!("No channel named {other}.")).detail("stable or edge")),
     }
     if !flags.dry_run {
         state.channel = Some(new.to_string());
@@ -427,119 +432,152 @@ pub fn channel(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, new: 
     Ok(())
 }
 
+fn fetch(repo: &Path) -> Result<()> {
+    git::git(repo, &["fetch", "--quiet", "--tags", "--force"]).map(|_| ()).map_err(|e| {
+        Stop::new("The coucou-shell repository can't be reached.")
+            .detail(format!("{e:#}"))
+            .hint("retry", "cc-pkg-mng upgrade")
+            .into()
+    })
+}
+
+/// A run that stopped half-way: said before going on.
+fn interrupted(ui: &mut Ui, state: &State) {
+    if let Some(u) = &state.upgrading {
+        ui.warn(&format!("{} {} → {} unfinished: carrying on", u.kind, u.from, u.to));
+    }
+}
+
 pub fn upgrade(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, to: Option<&str>) -> Result<()> {
     let Some(channel) = state.channel.clone() else {
-        bail!("no channel chosen yet — run `cc-pkg-mng init`");
+        bail!(Stop::new("This machine isn't set up yet.").hint("set it up", "cc-pkg-mng init"));
     };
     require_clean(repo)?;
-    ui.run("fetch", std::process::Command::new("git").arg("-C").arg(repo).args(["fetch", "--quiet", "--tags", "--force"]))?;
-    let before = short(repo)?;
+    fetch(repo)?;
+    interrupted(ui, state);
+    let head = git::head(repo)?;
+    let from = label(repo, &head);
 
-    match channel.as_str() {
+    let how = match channel.as_str() {
         "stable" => {
             let tags = git::release_tags(repo)?;
             let target = match to {
                 Some(t) if tags.iter().any(|x| x == t) => t.to_string(),
-                Some(t) => bail!("no release named {t} (known: {})", tags.join(", ")),
-                None => tags.first().cloned().context("no release has been published yet")?,
+                Some(t) => bail!(Stop::new(format!("No release named {t}.")).detail(format!("known: {}", tags.iter().take(6).cloned().collect::<Vec<_>>().join(", ")))),
+                None => tags.first().cloned().context("no release published yet")?,
             };
-            if git::exact_tag(repo).as_deref() == Some(target.as_str()) {
-                ui.ok(&format!("already on {target}"));
-                // Still re-applied: a package rebuilt for this release
-                // (satty) may not be installed yet.
-                return reapply(ui, flags, repo, state);
-            }
-            if flags.dry_run {
-                ui.line(&format!("  would move {before} → {target}"));
-                return Ok(());
-            }
-            git::checkout_detached(repo, &target)?;
+            pipeline::How::Detach(target)
         }
         "edge" => {
             if to.is_some() {
-                bail!("--to picks a release: it only applies to the stable channel");
+                bail!(Stop::new("--to picks a release, on the stable channel."));
             }
-            if flags.dry_run {
-                ui.line("  would fast-forward the default branch");
-                return Ok(());
-            }
-            if git::branch(repo).is_none() {
+            if git::branch(repo).is_none() && !flags.dry_run {
                 git::checkout(repo, &git::default_branch(repo))?;
             }
-            git::fast_forward(repo)?;
-            if short(repo)? == before {
-                ui.ok("already up to date");
-                return reapply(ui, flags, repo, state);
+            let upstream = git::git(repo, &["rev-parse", "@{u}"]).map_err(|_| Stop::new("The checkout's branch follows no upstream."))?;
+            let head = git::head(repo)?;
+            if git::git(repo, &["merge-base", "--is-ancestor", &head, &upstream]).is_err() {
+                bail!(Stop::new("The checkout's branch has diverged from its upstream.")
+                    .hint("bring it back in line", format!("git -C {} pull --rebase", sys::tilde(repo))));
             }
+            pipeline::How::FastForward(upstream)
         }
-        other => bail!("unknown channel \"{other}\" in the state"),
+        other => bail!(Stop::new(format!("Unknown channel {other} in the state.")).hint("pick one", "cc-pkg-mng channel stable")),
+    };
+    let target_rev = git::git(repo, &["rev-parse", &format!("{}^{{commit}}", match &how {
+        pipeline::How::Detach(t) => t.as_str(),
+        pipeline::How::FastForward(r) => r.as_str(),
+    })])?;
+    let to_label = label(repo, &target_rev);
+
+    if target_rev == head {
+        // Already there: still re-applied, for what a stopped run left
+        // undone, or a package rebuilt for this release.
+        let title = match &state.upgrading {
+            Some(u) if u.to == to_label => format!("finish {} → {}", u.from, u.to),
+            _ => format!("repair {to_label}"),
+        };
+        let resuming = state.upgrading.clone();
+        let job = || pipeline::Job {
+            title: title.clone(),
+            mv: None,
+            names: None,
+            preset: Answers::new(),
+            confirm: format!("Finish {to_label}?"),
+            done: Some(format!("coucou-shell {to_label}")),
+        };
+        let result = with_erasing_offer(ui, flags, |ui, flags| pipeline::run(ui, flags, repo, state, job()));
+        if result.is_ok() {
+            if let Some(u) = resuming {
+                state.previous = Some(u.from);
+            }
+            state.version = Some(to_label.clone());
+            state.upgrading = None;
+            state.save()?;
+        }
+        return result;
     }
-    let after = short(repo)?;
-    ui.ok(&format!("{before} → {after}"));
-    ui.set_title(&format!("upgrade {before} → {after}"));
-    state.previous = Some(before);
-    state.version = Some(after);
-    state.save()?;
-    reapply(ui, flags, repo, state)
+
+    let kind = "upgrade";
+    let title = format!("{kind} {from} → {to_label}");
+    let confirm = format!("Upgrade to {to_label}?");
+    let make = |how: &pipeline::How| pipeline::Job {
+        title: title.clone(),
+        mv: Some(pipeline::Move { kind, from: from.clone(), to: to_label.clone(), how: clone_how(how) }),
+        names: None,
+        preset: Answers::new(),
+        confirm: confirm.clone(),
+        done: None,
+    };
+    with_erasing_offer(ui, flags, |ui, flags| pipeline::run(ui, flags, repo, state, make(&how)))
+}
+
+fn clone_how(h: &pipeline::How) -> pipeline::How {
+    match h {
+        pipeline::How::Detach(t) => pipeline::How::Detach(t.clone()),
+        pipeline::How::FastForward(r) => pipeline::How::FastForward(r.clone()),
+    }
 }
 
 pub fn rollback(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State) -> Result<()> {
     if state.channel.as_deref() != Some("stable") {
-        bail!("rollback moves between releases (stable channel); on edge, check out a commit with git");
+        bail!(Stop::new("rollback moves between releases, on the stable channel.").detail("On edge, check out a commit with git."));
     }
     let Some(previous) = state.previous.clone() else {
-        bail!("no previous release recorded on this machine");
+        bail!(Stop::new("No previous release recorded on this machine."));
     };
     require_clean(repo)?;
-    let current = short(repo)?;
-    if flags.dry_run {
-        ui.line(&format!("  would move {current} → {previous}"));
-        return Ok(());
-    }
-    git::checkout_detached(repo, &previous)?;
-    ui.ok(&format!("{current} → {previous}"));
-    ui.set_title(&format!("rollback {current} → {previous}"));
-    state.previous = Some(current);
-    state.version = Some(previous);
-    state.save()?;
-    reapply(ui, flags, repo, state)
-}
-
-/// After the checkout moved: everything installed, plus core units the new
-/// version introduced.
-fn reapply(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State) -> Result<()> {
-    let units = manifest::load_all(repo)?;
-    let gone: Vec<String> = state.units.keys().filter(|n| !units.contains_key(*n)).cloned().collect();
-    for n in &gone {
-        ui.warn(&format!("{n} no longer exists in this version; its links are left as they are"));
-        state.units.remove(n);
-    }
-    let mut names: Vec<String> = state.units.keys().cloned().collect();
-    for u in units.values().filter(|u| u.layer == Layer::Core && !u.optional) {
-        if !names.contains(&u.name) {
-            ui.line(&format!("  new in this version: {}", u.name));
-            names.push(u.name.clone());
-        }
-    }
-    install_units(ui, flags, repo, &units, state, &names, &Answers::new())
+    let from = label(repo, &git::head(repo)?);
+    let title = format!("rollback {from} → {previous}");
+    let confirm = format!("Go back to {previous}?");
+    let make = || pipeline::Job {
+        title: title.clone(),
+        mv: Some(pipeline::Move { kind: "rollback", from: from.clone(), to: previous.clone(), how: pipeline::How::Detach(previous.clone()) }),
+        names: None,
+        preset: Answers::new(),
+        confirm: confirm.clone(),
+        done: None,
+    };
+    with_erasing_offer(ui, flags, |ui, flags| pipeline::run(ui, flags, repo, state, make()))
 }
 
 /// Change a remembered answer; `install <unit>` then applies it.
 pub fn set(ui: &mut Ui, units: &Units, state: &mut State, unit: &str, question: &str, value: &str) -> Result<()> {
-    let u = units.get(unit).with_context(|| format!("no unit named \"{unit}\""))?;
-    let q = u.questions.iter().find(|q| q.id == question).with_context(|| {
-        let ids: Vec<&str> = u.questions.iter().map(|q| q.id.as_str()).collect();
-        format!("{unit} has no question \"{question}\" (it has: {})", if ids.is_empty() { "none".into() } else { ids.join(", ") })
+    let u = units.get(unit).ok_or_else(|| Stop::new(format!("No unit named {unit}.")).hint("every unit", "cc-pkg-mng list"))?;
+    let ids: Vec<&str> = u.questions.iter().map(|q| q.id.as_str()).collect();
+    let q = u.questions.iter().find(|q| q.id == question).ok_or_else(|| {
+        Stop::new(format!("{unit} has no question {question}.")).detail(if ids.is_empty() { "It asks none.".to_string() } else { format!("Its questions: {}", ids.join(", ")) })
     })?;
     if !q.choices.iter().any(|c| c == value) {
-        bail!("{unit}.{question} must be one of: {}", q.choices.join(", "));
+        bail!(Stop::new(format!("{unit} {question} takes {}.", q.choices.join(", "))));
     }
     let Some(rec) = state.units.get_mut(unit) else {
-        bail!("{unit} is not installed — `cc-pkg-mng install {unit}` asks this question");
+        bail!(Stop::new(format!("{unit} is not installed.")).hint("install it", format!("cc-pkg-mng install {unit}")));
     };
     rec.answers.insert(question.to_string(), value.to_string());
     state.save()?;
-    ui.ok(&format!("{unit}: {} = {value}", q.ask));
-    ui.line(&format!("  apply it with: cc-pkg-mng install {unit}"));
+    ui.ok(&format!("{unit}: {} {value}", q.ask));
+    ui.line(&format!("  {}  {}", ui.dim("apply it"), ui.bold(&format!("cc-pkg-mng install {unit}"))));
     Ok(())
 }

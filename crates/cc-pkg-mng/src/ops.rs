@@ -10,83 +10,107 @@ use anyhow::{Context, Result, bail};
 
 use crate::manifest::{RunAs, Units};
 use crate::plan::{HookPlan, LinkState, Plan};
-use crate::state::{LinkRecord, State, UnitState, state_dir};
+use crate::state::{LinkRecord, State, state_dir};
 use crate::sys::{self, tilde};
-use crate::ui::Ui;
+use crate::ui::{Stop, Ui};
 
-pub fn show_plan(ui: &mut Ui, plan: &Plan) {
-    ui.heading("Plan");
-    if !plan.coprs.is_empty() {
-        ui.line(&format!("  COPRs to enable   {}", plan.coprs.join(" ")));
+/// What a unit's plan does, in a few words: `2 links · hook island look`.
+pub fn unit_work(u: &crate::plan::UnitPlan) -> String {
+    let mut parts = Vec::new();
+    let links = u.links.iter().filter(|l| !matches!(l.state, LinkState::Ok | LinkState::Unmet(_))).count();
+    let backups = u.links.iter().filter(|l| l.state == LinkState::Backup).count();
+    let back_from_dev = u.links.iter().any(|l| matches!(&l.state, LinkState::Replace(old) if old.starts_with(crate::dev::dir())));
+    if back_from_dev {
+        parts.push("ends the dev build".to_string());
     }
-    for r in &plan.repos {
-        ui.line(&format!("  repo to add       {r}"));
+    if links > 0 {
+        parts.push(plural(links, "link", "links"));
     }
-    if plan.packages.is_empty() {
-        ui.line(&format!("  {}", ui.dim("packages          all present")));
-    } else {
-        ui.line(&format!("  packages          {} to install: {}", plan.packages.len(), plan.packages.join(" ")));
+    if backups > 0 {
+        parts.push(format!("{backups} backed up"));
     }
-    if !plan.downgrades.is_empty() {
-        ui.line(&format!("  downgrade         {}", plan.downgrades.join(" ")));
+    let copies = u.files.iter().filter(|f| f.copy).count();
+    if copies > 0 {
+        parts.push(plural(copies, "system file", "system files"));
     }
-    if !plan.upgrades.is_empty() {
-        ui.line(&format!("  upgrade           {}", plan.upgrades.join(" ")));
+    let services = u.user_services.iter().chain(&u.system_services).filter(|(_, on)| !on).count();
+    if services > 0 {
+        parts.push(plural(services, "service", "services"));
     }
-    for u in &plan.units {
-        let tag = if u.new {
-            ui.green("new")
-        } else if u.changed {
-            ui.yellow("changed")
-        } else if u.has_work() {
-            ui.yellow("repair")
-        } else {
-            ui.dim("up to date")
-        };
-        ui.line(&format!("\n  {} {}", ui.bold(&u.name), tag));
-        for p in &u.drop_local {
-            ui.line(&format!("    {} {}  {}", ui.dim("·"), tilde(p), ui.dim("remove the local build (a link to the RPM's replaces it)")));
+    if let Some(b) = &u.build {
+        parts.push(format!("build {}", b.bins.join(", ")));
+    }
+    if !u.drop_local.is_empty() {
+        parts.push("local build replaced by the release's".to_string());
+    }
+    for h in &u.hooks {
+        if let HookPlan::Run(h, _) = h {
+            parts.push(format!("hook: {}", h.does));
         }
-        for l in &u.links {
-            let what = match &l.state {
-                LinkState::Ok => continue,
-                LinkState::Create => "link".to_string(),
-                LinkState::Replace(old) if old.starts_with(crate::dev::dir()) => {
-                    "back to the release's binary (ends the dev build)".to_string()
-                }
-                LinkState::Replace(old) => format!("relink (was → {})", old.display()),
-                LinkState::Backup => "back up the existing file, then link".to_string(),
-                LinkState::Unmet(cond) => format!("skip (needs {cond})"),
+    }
+    if parts.is_empty() {
+        parts.push(if u.new { "recorded".into() } else { "files changed".into() });
+    }
+    parts.join(" · ")
+}
+
+pub fn plural(n: usize, one: &str, many: &str) -> String {
+    format!("{n} {}", if n == 1 { one } else { many })
+}
+
+/// The plan, on the rail: packages with their versions, then the units
+/// that change. The question comes after it, from the caller.
+pub fn show_plan(ui: &mut Ui, plan: &Plan, title: &str, aside: &str) {
+    ui.rail_top(title, aside);
+    if plan.has_packages() {
+        ui.rail_gap();
+        let n = plan.changes.len();
+        ui.rail_section(&plural(n, "package", "packages"), "");
+        let w = plan.changes.iter().map(|c| c.name.chars().count()).max().unwrap_or(0).max(10);
+        for c in &plan.changes {
+            let what = match (&c.from, &c.to) {
+                (Some(a), Some(b)) => format!("{a} → {b}"),
+                (None, Some(b)) => format!("{b} {}", ui.dim("new")),
+                (Some(a), None) => a.clone(),
+                (None, None) => ui.dim("new"),
             };
-            ui.line(&format!("    {} {}  {}", ui.dim("·"), tilde(&l.dst), ui.dim(&what)));
+            let first = if plan.manager.is_some() && c.name == "cc-pkg-mng" { format!("   {}", ui.dim("updated first")) } else { String::new() };
+            ui.rail_row(&format!("{:<w$}   {what}{first}", c.name));
         }
-        for f in u.files.iter().filter(|f| f.copy) {
-            ui.line(&format!("    {} {}  {}", ui.dim("·"), f.dst.display(), ui.dim("copy (root)")));
+        for copr in &plan.coprs {
+            ui.rail_row(&ui.dim(&format!("+ COPR {copr}")));
         }
-        for (s, _) in u.user_services.iter().filter(|(_, on)| !on) {
-            ui.line(&format!("    {} {s}  {}", ui.dim("·"), ui.dim("enable and start (user)")));
+        for r in &plan.repos {
+            ui.rail_row(&ui.dim(&format!("+ repository {}", r.rsplit('/').next().unwrap_or(r))));
         }
-        for (s, _) in u.system_services.iter().filter(|(_, on)| !on) {
-            ui.line(&format!("    {} {s}  {}", ui.dim("·"), ui.dim("enable (system, next boot)")));
+    }
+    let changing: Vec<_> = plan.units.iter().filter(|u| u.has_work()).collect();
+    let unchanged = plan.units.len() - changing.len();
+    ui.rail_gap();
+    if changing.is_empty() {
+        ui.rail_section("units", &format!("{unchanged} up to date"));
+    } else {
+        let note = if unchanged > 0 { format!("{unchanged} unchanged") } else { String::new() };
+        let what = if changing.iter().all(|u| u.new) { "new" } else { "changed" };
+        ui.rail_section(&format!("{} {what}", plural(changing.len(), "unit", "units")), &note);
+        let w = changing.iter().map(|u| u.name.chars().count()).max().unwrap_or(0).max(10);
+        for u in &changing {
+            let tag = if u.new && what != "new" { format!("{} ", ui.green("new")) } else { String::new() };
+            ui.rail_row(&format!("{:<w$}   {tag}{}", u.name, ui.dim(&unit_work(u))));
         }
-        if let Some(b) = &u.build {
-            ui.line(&format!("    {} build {}  {}", ui.dim("·"), b.bins.join(", "), ui.dim("(local cargo build)")));
-        }
-        for h in &u.hooks {
-            match h {
-                HookPlan::Run(h, _) => ui.line(&format!("    {} hook {}  {}", ui.dim("·"), h.name, ui.dim(&h.does))),
-                HookPlan::Skip => {}
-                HookPlan::Pending(h) => ui.line(&format!(
-                    "    {} hook {}  {}",
-                    ui.dim("○"),
-                    h.name,
-                    ui.dim("not extracted yet — still done by the current modules")
-                )),
-            }
+        let pending: Vec<&str> = plan
+            .units
+            .iter()
+            .flat_map(|u| u.hooks.iter())
+            .filter_map(|h| if let HookPlan::Pending(h) = h { Some(h.name.as_str()) } else { None })
+            .collect();
+        if !pending.is_empty() {
+            ui.rail_row(&ui.dim(&format!("not automated yet: {}", pending.join(", "))));
         }
     }
     if plan.needs_root() {
-        ui.line(&format!("\n  {}", ui.yellow("Needs root: you will be asked for your password once.")));
+        ui.rail_gap();
+        ui.line(&format!(" {}  {}", ui.dim("│"), ui.dim("sudo password asked once")));
     }
 }
 
@@ -103,7 +127,7 @@ impl SudoSession {
         if !matches!(ready, Ok(s) if s.success()) {
             let status = Command::new("sudo").arg("-v").status().context("running sudo")?;
             if !status.success() {
-                bail!("sudo authentication failed");
+                bail!(Stop::new("sudo refused the password."));
             }
         }
         let stop = Arc::new(AtomicBool::new(false));
@@ -130,106 +154,7 @@ pub fn sudo(args: &[&str]) -> Command {
     c
 }
 
-pub fn apply(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
-    let _sudo = if plan.needs_root() { Some(SudoSession::start()?) } else { None };
-
-    // Everything there is to do, listed up front for the progress board.
-    let mut work = Vec::new();
-    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() || !plan.upgrades.is_empty() {
-        let n = plan.packages.len() + plan.downgrades.len() + plan.upgrades.len();
-        work.push(("Packages".to_string(), format!("{n} to install")));
-    }
-    for u in &plan.units {
-        if !u.has_work() && state.installed(&u.name) {
-            continue;
-        }
-        let note = if u.new { "new" } else if u.changed { "changed" } else if u.has_work() { "repair" } else { "record" };
-        work.push((u.name.clone(), note.to_string()));
-    }
-    ui.board_begin(work);
-    let result = apply_work(ui, repo, units, state, plan);
-    ui.board_end();
-    result
-}
-
-fn apply_work(ui: &mut Ui, repo: &Path, units: &Units, state: &mut State, plan: &Plan) -> Result<()> {
-
-    if !plan.coprs.is_empty() || !plan.repos.is_empty() || !plan.packages.is_empty() || !plan.downgrades.is_empty() || !plan.upgrades.is_empty() {
-        ui.heading("Packages");
-        for copr in &plan.coprs {
-            ui.run(&format!("enable COPR {copr}"), &mut sudo(&["dnf", "copr", "enable", "-y", copr]))?;
-        }
-        for r in &plan.repos {
-            let from = format!("--from-repofile={r}");
-            ui.run(&format!("add repo {r}"), &mut sudo(&["dnf", "config-manager", "addrepo", "--overwrite", &from]))?;
-        }
-        if plan.refresh_repo {
-            ui.run(
-                "refresh coucou-shell's repository",
-                &mut sudo(&["dnf", "makecache", "--refresh", "--repo=coucou-shell"]),
-            )?;
-        }
-        if !plan.packages.is_empty() {
-            let mut args = vec!["dnf", "install", "-y"];
-            args.extend(plan.packages.iter().map(String::as_str));
-            ui.run(&format!("dnf install ({} packages)", plan.packages.len()), &mut sudo(&args))?;
-        }
-        if !plan.downgrades.is_empty() {
-            let mut args = vec!["dnf", "downgrade", "-y"];
-            args.extend(plan.downgrades.iter().map(String::as_str));
-            ui.run(&format!("dnf downgrade ({} packages)", plan.downgrades.len()), &mut sudo(&args))?;
-        }
-        if !plan.upgrades.is_empty() {
-            let mut args = vec!["dnf", "upgrade", "-y"];
-            args.extend(plan.upgrades.iter().map(String::as_str));
-            ui.run(&format!("dnf upgrade ({} packages)", plan.upgrades.len()), &mut sudo(&args))?;
-        }
-    }
-
-    let backup_root = state_dir().join("backups");
-    let stamp = sys::now().replace(':', "");
-    let mut failed = Vec::new();
-
-    for u in &plan.units {
-        if !u.has_work() && state.installed(&u.name) {
-            continue;
-        }
-        let blocked: Vec<&String> = units[&u.name].requires.iter().filter(|d| failed.contains(*d)).collect();
-        if !blocked.is_empty() {
-            ui.heading(&u.name);
-            ui.fail(&format!("skipped: {} failed", blocked.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")));
-            failed.push(u.name.clone());
-            continue;
-        }
-        ui.heading(&u.name);
-        match apply_unit(ui, repo, units, u, &backup_root.join(&u.name).join(&stamp)) {
-            Ok((links, files)) => {
-                state.units.insert(
-                    u.name.clone(),
-                    UnitState {
-                        installed_at: sys::now(),
-                        fingerprint: u.fingerprint.clone(),
-                        answers: u.answers.clone(),
-                        links,
-                        files,
-                    },
-                );
-                state.save()?;
-            }
-            Err(e) => {
-                ui.fail(&format!("{}: {e:#}", u.name));
-                failed.push(u.name.clone());
-            }
-        }
-    }
-    crate::dev::prune();
-    if !failed.is_empty() {
-        bail!("{} unit(s) failed: {} — re-run to retry", failed.len(), failed.join(", "));
-    }
-    Ok(())
-}
-
-fn apply_unit(
+pub fn apply_unit(
     ui: &mut Ui,
     repo: &Path,
     units: &Units,
@@ -238,11 +163,11 @@ fn apply_unit(
 ) -> Result<(Vec<LinkRecord>, Vec<String>)> {
     if let Some(b) = &u.build {
         build_bins(ui, &b.source, &b.bins, &sys::home().join(".local/bin"), false)?;
-        ui.ok(&format!("installed {} in ~/.local/bin", b.bins.join(", ")));
+        ui.ok(&format!("{} built", b.bins.join(", ")));
     }
     for p in &u.drop_local {
         std::fs::remove_file(p).with_context(|| format!("removing {}", p.display()))?;
-        ui.ok(&format!("removed the local build {}", tilde(p)));
+        ui.ok(&format!("{} now the release's", tilde(p)));
     }
 
     let mut files = Vec::new();
@@ -291,7 +216,7 @@ fn apply_unit(
                 std::fs::rename(&l.dst, &to)
                     .with_context(|| format!("moving {} to the backups", l.dst.display()))?;
                 make_link(&l.src, &l.dst)?;
-                ui.ok(&format!("linked {} (previous one kept in {})", tilde(&l.dst), tilde(&to)));
+                ui.ok(&format!("linked {}, previous one in {}", tilde(&l.dst), tilde(&to)));
                 backup = Some(to);
             }
         }
@@ -340,7 +265,7 @@ fn apply_unit(
             for (k, v) in &u.answers {
                 cmd.env(format!("CCPKG_ANSWER_{}", k.to_uppercase()), v);
             }
-            ui.run(&format!("hook {}", hook.name), &mut cmd)?;
+            ui.run(&format!("hook {}", hook.does), &mut cmd)?;
         }
     }
     let acted = u.build.is_some()
@@ -350,7 +275,7 @@ fn apply_unit(
         || u.links.iter().any(|l| !matches!(l.state, LinkState::Ok))
         || u.hooks.iter().any(|h| matches!(h, HookPlan::Run(..)));
     if !acted {
-        ui.ok("already in place — recorded");
+        ui.ok("in place");
     }
     Ok((links, files))
 }
@@ -391,23 +316,23 @@ pub fn remove(ui: &mut Ui, units: &Units, state: &mut State, names: &[String], d
     let installed: BTreeSet<String> = state.units.keys().cloned().collect();
     for n in names {
         if !installed.contains(n) {
-            bail!("\"{n}\" is not installed");
+            bail!(Stop::new(format!("{n} is not installed.")));
         }
         let blockers: Vec<String> = crate::resolve::dependents(units, &installed, n)
             .into_iter()
             .filter(|d| !names.contains(d))
             .collect();
         if !blockers.is_empty() {
-            bail!("{n} is required by {} — remove them too, or keep {n}", blockers.join(", "));
+            bail!(Stop::new(format!("{n} is needed by {}.", blockers.join(", "))).hint("remove them too", format!("cc-pkg-mng remove {n} {}", blockers.join(" "))));
         }
     }
     for n in names {
         let rec = state.units[n].clone();
-        ui.heading(&format!("remove {n}"));
+        ui.heading(n);
         for l in &rec.links {
             let ours = std::fs::read_link(&l.dst).is_ok_and(|t| t == l.src);
             if !ours {
-                ui.skip(&format!("{} (not our link any more, left alone)", tilde(&l.dst)));
+                ui.skip(&format!("{} left alone: no longer our link", tilde(&l.dst)));
                 continue;
             }
             if dry {
@@ -433,10 +358,10 @@ pub fn remove(ui: &mut Ui, units: &Units, state: &mut State, names: &[String], d
             }
             let kept: Vec<String> = u.packages.dnf.clone();
             if !kept.is_empty() {
-                ui.line(&format!("    {}", ui.dim(&format!("packages kept (other software may use them): {}", kept.join(" ")))));
+                ui.line(&format!("  {}", ui.dim(&format!("packages kept: {}", kept.join(" ")))));
             }
             if !rec.files.is_empty() || !u.services.system.is_empty() {
-                ui.line(&format!("    {}", ui.dim("system files and services kept")));
+                ui.line(&format!("  {}", ui.dim("system files and services kept")));
             }
         }
         if !dry {

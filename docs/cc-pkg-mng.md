@@ -9,13 +9,32 @@ cc-pkg-mng upgrade    # move to the latest release (or the latest commit, on edg
 cc-pkg-mng status     # what's installed, and whether it's in place
 ```
 
-An install or an upgrade shows as a live list: the step in progress unfolds, finished steps fold to one line. A step that fails stays open, with its last lines and the path of the full log.
+An install or an upgrade shows its plan, waits for an OK, then works through four phases on a rail:
+
+| Phase | What happens |
+|---|---|
+| **check** | The repositories are ready, and the release's packages are published |
+| **download** | Every package is resolved and downloaded |
+| **packages** | cc-pkg-mng itself first, when the release has a newer one, then the rest |
+| **units** | The checkout moves to the new version, then each unit is applied |
+
+Nothing a session runs changes before the units phase. A failure up to there leaves the machine on the release it had. A unit that fails in the units phase is named on the closing line, and the next `upgrade` finishes it.
+
+After an upgrade, the services of the apps whose package changed restart. A new Quickshell restarts the bar. A new Hyprland runs from the next login, and the closing line says so.
 
 ![An upgrade in progress](screenshots/v1.3.0/cc-pkg-mng-upgrade.webp)
 
 ![The same upgrade, done](screenshots/v1.3.0/cc-pkg-mng-done.webp)
 
 In a pipe, with `--verbose` or with `-q`, the output is one line per step. The full log is in `~/.local/state/coucou-shell/logs/`.
+
+### When packages are in the way
+
+| Closing line | Meaning |
+|---|---|
+| *vX.Y.Z is tagged but not published yet* | The release's packages aren't in the repository yet. Run `upgrade` again later |
+| *Packages block vX.Y.Z* | dnf can't install the release next to a package already there. Its reasons are listed. On a terminal, cc-pkg-mng names the packages dnf would remove and asks first. `--allow-erasing` lets dnf remove them without asking |
+| *The repositories can't be reached* | No network, or a repository is down |
 
 `cc-pkg-mng` alone, or `--help`, lists the commands by what they are for:
 
@@ -42,8 +61,8 @@ coucou-shell is split into **units**, grouped in three layers:
 | `info <unit>` | Shows what a unit installs, links and runs, and which units it needs |
 | `install <unit>…` | Installs units, along with any units they need |
 | `remove <unit>…` | Removes units: unlinks their files, restores what they replaced, and turns their services off. Their packages stay installed |
-| `status` | Shows the checkout, the channel, and the state of each installed unit: up to date, changed since it was installed, or with broken links |
-| `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies whatever changed. `--to vX.Y.Z` picks a specific release |
+| `status` | Shows the release, the channel and the checkout. When something is off: packages behind the release, an upgrade that stopped half-way, units not applied or with broken links, and the command that fixes it |
+| `upgrade` | Moves to the latest release (stable) or the latest commit (edge), then applies whatever changed. `--to vX.Y.Z` picks a specific release. Already there, it finishes what a stopped upgrade left |
 | `rollback` | Goes back to the release in place before the last upgrade (stable only) |
 | `channel [stable\|edge]` | Shows the current channel, or switches to another one. The next `upgrade` follows it |
 | `dev [<unit>…]` | Runs one of coucou-shell's [own apps](#channels) built from the current checkout (stable only). With no unit, shows what is running. `--off` goes back to the release's, `--from <path>` builds from another checkout. See [testing your changes](#testing-changes-on-stable) |
@@ -58,8 +77,9 @@ coucou-shell is split into **units**, grouped in three layers:
 | `--dir <path>` | Use this coucou-shell checkout. It's remembered for next time |
 | `-q`, `--quiet` | Only print warnings and errors |
 | `--verbose` | Show the output of every command as it runs |
+| `--allow-erasing` | Let dnf remove or replace packages that block the transaction |
 | `--no-color` | Plain output, no colours |
-| `--version` | The manager's version, the release this machine runs, its channel, whether a newer release is out, and the apps running from a checkout |
+| `--version` | The release this machine runs, its channel and checkout, the manager's version, the packages and units, the apps running from a checkout, and the latest release |
 | `-V` | The manager's version alone, on one line |
 
 ## Channels
@@ -93,10 +113,11 @@ What each release changed is in the [changelog](../CHANGELOG.md).
 ## What to expect
 
 - A command that changes the machine shows its plan and waits for an OK. The password is asked once.
+- One command changes the machine at a time. A second one stops and says which one is running.
 - A unit whose files haven't changed is skipped.
 - A user file that a unit replaces goes to the backups. `remove` puts it back.
 - `upgrade` and `rollback` stop when a file of the checkout has changed, and list the files. See [keep a change through an upgrade](configuration.md#keep-a-change-through-an-upgrade).
-- A program that is running keeps its old version until it's restarted. The bar reloads itself, and the sound cuts out for a moment when the audio configuration changes.
+- The bar reloads itself, and the sound cuts out for a moment when the audio configuration changes. Other running programs keep their old version until they restart.
 - `sudo dnf upgrade` updates coucou-shell's own apps too. Run `cc-pkg-mng upgrade` afterwards to bring the rest to the same release.
 
 ## Files
@@ -105,11 +126,12 @@ Everything the manager keeps track of is in `~/.local/state/coucou-shell/`:
 
 | Path | Contents |
 |---|---|
-| `state.toml` | The checkout, the channel, the version, and each installed unit with its answers |
+| `state.toml` | The checkout, the channel, the version, an upgrade under way, and each installed unit with its answers |
+| `lock` | Held while a command changes the machine |
 | `dev/` | The dev builds running in place of the release's, and where each came from |
 | `backups/` | Files that units replaced, sorted by date |
 | `logs/` | The full output of every run |
 
 ## Exit codes
 
-`0` when everything went fine. `1` for any error, such as a step that failed, a cancelled plan, a unit that doesn't exist, or uncommitted changes in the way.
+`0` when everything went fine. `1` for any error, such as a step that failed, a cancelled plan, a unit that doesn't exist, uncommitted changes in the way, or another cc-pkg-mng running.

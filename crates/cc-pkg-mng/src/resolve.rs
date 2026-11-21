@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use anyhow::{Result, bail};
 
 use crate::manifest::Units;
+use crate::ui::Stop;
 
 /// `requested` plus everything they require, dependencies first.
 pub fn closure(units: &Units, requested: &[String]) -> Result<Vec<String>> {
@@ -28,12 +29,12 @@ fn visit(
         return Ok(());
     }
     if active.iter().any(|a| a == name) {
-        bail!("dependency cycle: {} -> {name}", active.join(" -> "));
+        bail!(Stop::new("Units require each other in a loop.").detail(format!("{} → {name}", active.join(" → "))));
     }
     let Some(unit) = units.get(name) else {
         match active.last() {
-            Some(parent) => bail!("{parent} requires \"{name}\", which is not a unit"),
-            None => bail!("no unit named \"{name}\" (see `cc-pkg-mng list`)"),
+            Some(parent) => bail!(Stop::new(format!("{parent} requires {name}, which is not a unit."))),
+            None => bail!(Stop::new(format!("No unit named {name}.")).hint("every unit", "cc-pkg-mng list")),
         }
     };
     active.push(name.to_string());
@@ -86,7 +87,7 @@ mod tests {
     #[test]
     fn cycles_and_unknowns_are_errors() {
         let u = units(&[("a", &["b"]), ("b", &["a"])]);
-        assert!(closure(&u, &["a".into()]).unwrap_err().to_string().contains("cycle"));
+        assert!(closure(&u, &["a".into()]).unwrap_err().to_string().contains("a → b → a"));
         let u = units(&[("a", &["ghost"])]);
         assert!(closure(&u, &["a".into()]).unwrap_err().to_string().contains("ghost"));
     }

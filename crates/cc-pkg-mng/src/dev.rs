@@ -18,7 +18,7 @@ use crate::manifest::Units;
 use crate::ops::{self, SudoSession};
 use crate::state::{State, state_dir};
 use crate::sys::{self, tilde};
-use crate::ui::Ui;
+use crate::ui::{Stop, Ui};
 use crate::{git, manifest};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,7 +119,7 @@ fn checkout(from: Option<&Path>, managed: &Path) -> Result<PathBuf> {
     let dir = match from {
         Some(p) => top(p)
             .filter(|t| t.join("units").is_dir())
-            .with_context(|| format!("{} is not a coucou-shell checkout", p.display()))?,
+            .ok_or_else(|| Stop::new(format!("{} is not a coucou-shell checkout.", tilde(p))))?,
         None => std::env::current_dir()
             .ok()
             .and_then(|d| top(&d))
@@ -146,19 +146,16 @@ pub fn run(
     }
     match state.channel.as_deref() {
         Some("stable") => {}
-        Some("edge") => bail!(
-            "on edge, the checkout already is what runs: `cc-pkg-mng install {}` rebuilds what changed",
-            names.join(" ")
-        ),
-        _ => bail!("no channel chosen yet — run `cc-pkg-mng init`"),
+        Some("edge") => bail!(Stop::new("On edge, the checkout already is what runs.").hint("rebuild what changed", format!("cc-pkg-mng install {}", names.join(" ")))),
+        _ => bail!(Stop::new("This machine isn't set up yet.").hint("set it up", "cc-pkg-mng init")),
     }
     let src = checkout(from, managed)?;
     let units: Units = manifest::load_all(&src)?;
     let mut builds = Vec::new();
     let mut deps = std::collections::BTreeSet::new();
     for n in names {
-        let u = units.get(n).with_context(|| format!("no unit named \"{n}\" in {}", tilde(&src)))?;
-        let b = u.binaries.as_ref().with_context(|| format!("{n} has no Rust app to build"))?;
+        let u = units.get(n).ok_or_else(|| Stop::new(format!("No unit named {n} in {}.", tilde(&src))))?;
+        let b = u.binaries.as_ref().ok_or_else(|| Stop::new(format!("{n} has no app to build.")))?;
         deps.extend(u.packages.build.iter().cloned());
         builds.push((u, b));
     }
@@ -166,14 +163,16 @@ pub fn run(
     let missing: Vec<String> = sys::rpm_missing(&deps)?.into_iter().collect();
     let revision = git::describe(&src);
 
-    ui.heading("Dev build");
-    ui.line(&format!("  from              {} {}", tilde(&src), ui.dim(&revision)));
+    ui.rail_top("dev", &format!("{} {}", tilde(&src), revision));
+    ui.rail_gap();
     if !missing.is_empty() {
-        ui.line(&format!("  build deps        {}", missing.join(" ")));
+        ui.rail_section("build dependencies", "");
+        ui.rail_row(&missing.join(" "));
     }
     for (u, b) in &builds {
-        ui.line(&format!("  {:<17} {} replace the release's", u.name, b.bins.join(", ")));
+        ui.rail_section(&u.name, &format!("{} built here, in place of the release's", b.bins.join(", ")));
     }
+    ui.rail_bottom();
     if flags.dry_run {
         return Ok(());
     }
@@ -201,19 +200,19 @@ pub fn run(
             point(&sys::entry_point(bin), &dir().join(bin))?;
         }
         restart(ui, &rec.services)?;
-        ui.ok(&format!("{} now run{} this build", b.bins.join(", "), if b.bins.len() == 1 { "s" } else { "" }));
+        ui.ok(&format!("{} now runs this build", b.bins.join(", ")));
     }
-    ui.line(&format!("\n  {}", ui.dim("Back to the release: cc-pkg-mng dev --off")));
+    ui.line(&format!("\n  {}  {}", ui.dim("back to the release"), ui.bold("cc-pkg-mng dev --off")));
     Ok(())
 }
 
 fn list(ui: &mut Ui) -> Result<()> {
     let running = active();
     if running.is_empty() {
-        ui.line("No dev build running: Roue, Prisme and Balise are the release's.");
+        ui.line("No dev build running.");
         return Ok(());
     }
-    ui.heading("Dev builds");
+    ui.line("");
     for (unit, rec) in &running {
         ui.line(&format!(
             "  {:<16} from {} {}  {}",
@@ -223,7 +222,7 @@ fn list(ui: &mut Ui) -> Result<()> {
             ui.dim(&format!("built {}", rec.built_at))
         ));
     }
-    ui.line(&format!("\n  {}", ui.dim("Back to the release: cc-pkg-mng dev --off")));
+    ui.line(&format!("\n  {}  {}", ui.dim("back to the release"), ui.bold("cc-pkg-mng dev --off")));
     Ok(())
 }
 
@@ -233,18 +232,18 @@ fn stop(ui: &mut Ui, flags: &Flags, names: &[String]) -> Result<()> {
     let running = active();
     for n in names {
         if !running.iter().any(|(u, _)| u == n) {
-            bail!("no dev build of \"{n}\" is running");
+            bail!(Stop::new(format!("No dev build of {n} is running.")));
         }
     }
     let chosen: Vec<&(String, Record)> =
         running.iter().filter(|(u, _)| names.is_empty() || names.contains(u)).collect();
     if chosen.is_empty() {
-        ui.line("No dev build running: nothing to undo.");
+        ui.line("No dev build running.");
         return Ok(());
     }
     if flags.dry_run {
         for (unit, rec) in &chosen {
-            ui.line(&format!("  would put {} back on the release's {}", unit, rec.bins.join(", ")));
+            ui.line(&format!("  {unit}: back to the release's {}", rec.bins.join(", ")));
         }
         return Ok(());
     }
@@ -261,7 +260,7 @@ fn stop(ui: &mut Ui, flags: &Flags, names: &[String]) -> Result<()> {
                 point(&entry, &rpm)?;
             } else {
                 std::fs::remove_file(&entry)?;
-                ui.warn(&format!("{bin}: no RPM binary in /usr/bin — `cc-pkg-mng install {unit}` puts it back"));
+                ui.warn(&format!("{bin}: not in /usr/bin, cc-pkg-mng install {unit} puts it back"));
             }
         }
         forget(unit, rec);

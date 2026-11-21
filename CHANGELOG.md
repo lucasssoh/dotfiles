@@ -7,10 +7,21 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Displays:** saving the scale, where the screens sit or which ones are on applies it at once.
 - **Shell:** the prompt now shows the active virtual environment or language version before the path, in green for an isolated environment and blue for a version manager.
+- **cc-pkg-mng:** a package conflict is named package by package, with the way out. On a terminal, cc-pkg-mng offers to let dnf replace the packages in the way; `--allow-erasing` does the same without asking.
+- **cc-pkg-mng:** an upgrade updates cc-pkg-mng itself first, then carries on with the new one.
+- **cc-pkg-mng:** after an upgrade, the services of the apps that changed restart, the bar restarts on a new Quickshell, and a new Hyprland is announced for the next login.
+- **cc-pkg-mng:** `--version`, `status` and the help show the coucou bird. `--version` and a healthy `status` list the channel, the packages, the units, the dev builds and the latest release.
+
+### Changed
+- **cc-pkg-mng:** plans and upgrades read as one rail: check, download, packages, units, then one closing line with what to do next.
+- **cc-pkg-mng:** errors say what happened and give the command that gets out of it.
 
 ### Fixed
 - **Displays:** saving a Hyprland setting no longer blanks the screens for a moment, and an HDR screen stays in HDR.
 - **Displays:** plugging in or unplugging the external screen no longer warns that the screens overlap.
+- **cc-pkg-mng:** a failed upgrade no longer leaves the configs on the new release and the apps on the old one. Packages are checked and downloaded before anything moves: if they fail, you stay on the release you had. A unit that fails afterwards is named, and the next `upgrade` finishes it.
+- **cc-pkg-mng:** `status` shows packages left behind the release, and an upgrade that stopped half-way.
+- **cc-pkg-mng:** two runs at once no longer step on each other: the second one stops and says which one is running.
 
 ## 2.6.0 (November 16 2026)
 

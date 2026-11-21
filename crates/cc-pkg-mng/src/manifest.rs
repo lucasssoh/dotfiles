@@ -152,7 +152,7 @@ pub type Units = BTreeMap<String, Unit>;
 pub fn load_all(repo: &Path) -> Result<Units> {
     let root = repo.join("units");
     if !root.is_dir() {
-        bail!("{} has no units/ directory — is it a coucou-shell checkout?", repo.display());
+        bail!("{} is not a coucou-shell checkout: no units/", repo.display());
     }
     let mut units = Units::new();
     for layer_dir in sorted_dirs(&root)? {
