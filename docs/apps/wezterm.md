@@ -32,3 +32,5 @@ The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../co
 | `Ctrl + Escape` | Copy mode: move with `h` `j` `k` `l`, select with `v`, copy with `y`, search with `/` |
 | `Ctrl + 0` | Resets the font size |
 | `Ctrl + Shift + F5` | Reloads the configuration |
+
+On the desktop, `AltGr` works in place of `Alt + Shift`: `AltGr + N` goes to the next tab.

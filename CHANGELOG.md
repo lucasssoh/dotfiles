@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Added
 - **WezTerm:** `Alt + Shift + B` also goes to the previous tab, next to `Alt + Shift + N` for the next one.
+- **WezTerm:** `AltGr` works in place of `Alt + Shift` for panes and tabs: `AltGr + N` goes to the next tab, `AltGr + H` to the pane on the left.
 
 ## 2.6.1
 

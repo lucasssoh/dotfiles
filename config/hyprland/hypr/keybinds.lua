@@ -431,6 +431,29 @@ hl.on("input.keyboard.key", function(code, _, state)
 end)
 
 -- ============================================================
+-- WEZTERM: ALTGR AS ALT+SHIFT
+-- ============================================================
+-- AltGr + a pane or tab key does what Alt+Shift + that key does in
+-- WezTerm (wezterm.lua's SHORTCUTS). WezTerm can't bind it itself: AltGr
+-- is xkb's level 3 (Mod5), which it doesn't report as a modifier, and
+-- fr(azerty) has no level 3 on letters, so AltGr+N reaches it as a bare
+-- "n". Here Hyprland sees Mod5 and replays the key as Alt+Shift.
+--
+-- Bound everywhere, so in another window the key is replayed bare: what
+-- AltGr + these keys already typed there. Only keys with nothing on level
+-- 3 are listed (not E, which is €, nor the number row).
+local WEZTERM_ALTGR = { "H", "J", "K", "L", "V", "S", "X", "T", "W", "N", "P", "B",
+                        "Left", "Right", "Up", "Down" }
+
+for _, key in ipairs(WEZTERM_ALTGR) do
+    bind("MOD5+ " .. key, function()
+        local w = hl.get_active_window()
+        local mods = (w and w.class == "org.wezfurlong.wezterm") and "ALT SHIFT" or ""
+        hl.dispatch(hl.dsp.send_shortcut({ mods = mods, key = key }))
+    end)
+end
+
+-- ============================================================
 -- SHEET EXPORT
 -- ============================================================
 -- Every described bind above, as JSON, rewritten on each config load --
