@@ -125,6 +125,9 @@ hl.on("hyprland.start", function()
     -- alone (or 1 and 6 on two screens) until each one was visited.
     -- `;`, not `&&`: a failing script still gets a bar.
     hl.exec_cmd("bash -c 'bash ~/.config/hypr/scripts/workspace-manager.sh; exec bash ~/.config/hypr/scripts/restart-quickshell-bar.sh'")
+    -- Applies scale.json, monitor-layout.json, display-layout.json and
+    -- hdr-state.json as soon as one is saved (inotify, no polling).
+    hl.exec_cmd("bash ~/.config/hypr/scripts/display-watch.sh")
 
     -- Balise BACKEND only. The Rust crate in balise-src/ (built by
     -- install.sh) is now two separable things, and this starts just the

@@ -5,7 +5,11 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Displays:** saving the scale, where the screens sit or which ones are on applies it at once.
 - **Shell:** the prompt now shows the active virtual environment or language version before the path, in green for an isolated environment and blue for a version manager.
+
+### Fixed
+- **Displays:** saving a Hyprland setting no longer blanks the screens for a moment, and an HDR screen stays in HDR.
 
 ## 2.6.0 (November 16 2026)
 

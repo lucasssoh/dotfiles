@@ -437,6 +437,7 @@ done
 # the overlap warning for exactly the case that prompted this section --
 # the classic default-(0,0)-vs-default-(0,0) solo swap.
 outgoing_folded_json="{}"
+declare -A monitor_rule
 apply_targets() {
     local n scale extra w h best_rr mode x y stmts="" desc want
     for n in "$internal" "${externals[@]}"; do
@@ -455,7 +456,8 @@ apply_targets() {
         mode="preferred"
         [[ -n "$best_rr" ]] && mode="${w}x${h}@${best_rr}"
         x="$(monitor_pos "$n" x)"; y="$(monitor_pos "$n" y)"
-        stmts+="hl.monitor({ output = \"$n\", disabled = false, mode = \"$mode\", position = \"${x}x${y}\", scale = $scale$extra }); "
+        monitor_rule["$n"]="hl.monitor({ output = \"$n\", disabled = false, mode = \"$mode\", position = \"${x}x${y}\", scale = $scale$extra })"
+        stmts+="${monitor_rule[$n]}; "
     done
     if [[ "$survivors" -eq 0 ]]; then
         for n in "$internal" "${externals[@]}"; do
@@ -531,6 +533,28 @@ for n in "$internal" "${externals[@]}"; do
     fi
 done
 [[ -n "$disable_stmts" ]] && hyprctl eval "$disable_stmts" >/dev/null
+
+# ---- Snapshot of the screens as just applied ----------------------------
+# A reload (any Lua file saved) re-runs monitors.lua, whose generic rule
+# alone would put every screen back to preferred / scale 1 / SDR: a modeset,
+# then a second one when config.reloaded runs this script again -- the
+# black flash of an HDR screen on every keybinds.lua save. monitors.lua
+# loads this file on top of its generic rule, so a reload finds the rules
+# already in place and Hyprland skips them ("already applied", no modeset).
+# Runtime dir: gone at reboot, where the generic rule is the right start.
+# Rewritten only when it changes.
+snapshot_file="${XDG_RUNTIME_DIR:-/tmp}/coucou-monitors.lua"
+snapshot="-- Written by workspace-manager.sh, loaded by monitors.lua."
+for n in "$internal" "${externals[@]}"; do
+    if [[ "${active[$n]:-false}" == true && -n "${monitor_rule[$n]:-}" ]]; then
+        snapshot+=$'\n'"${monitor_rule[$n]}"
+    else
+        snapshot+=$'\n'"hl.monitor({ output = \"$n\", disabled = true })"
+    fi
+done
+if [[ "$(cat "$snapshot_file" 2>/dev/null)" != "$snapshot" ]]; then
+    printf '%s\n' "$snapshot" > "$snapshot_file.tmp" && mv -f "$snapshot_file.tmp" "$snapshot_file"
+fi
 
 # ---- Workspace assignment (1-5 / 6-10) -- range15_target/range610_target
 #      were already resolved near the top (see comment there).

@@ -4,7 +4,7 @@ Which screens are on, where they sit, their scale, HDR and night mode.
 
 After the first login, every screen is on at its preferred mode. With two screens, workspaces 1 to 5 are on the main one and 6 to 10 on the other.
 
-The files below are in `~/.config/hypr/`. A missing file means the defaults.
+The files below are in `~/.config/hypr/`. A missing file means the defaults. A change applies on save.
 
 ## Which screens are on
 
@@ -47,8 +47,6 @@ To swap the laptop and the external screen:
 ```bash
 ~/.config/scripts/display-layout.sh swap
 ```
-
-`hyprctl reload` applies an edit.
 
 ## Scale
 

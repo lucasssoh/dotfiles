@@ -4,7 +4,7 @@ The compositor and the session around it: Hyprland, the lock screen, idle, night
 
 ## Configuration files
 
-They're all in [`config/hyprland/hypr/`](../../config/hyprland/hypr/), linked at `~/.config/hypr/`. `hyprctl reload` (`Super + Shift + R`) applies the Lua files. After an edit, `hyprctl configerrors` lists what Hyprland didn't understand.
+They're all in [`config/hyprland/hypr/`](../../config/hyprland/hypr/), linked at `~/.config/hypr/`. Hyprland applies the Lua files on save, without touching the screens; `hyprctl reload` (`Super + Shift + R`) does it by hand. After an edit, `hyprctl configerrors` lists what Hyprland didn't understand.
 
 | File | What's in it |
 |---|---|
