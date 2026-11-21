@@ -2,15 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
-
-### Added
-- **Displays:** saving the scale, where the screens sit or which ones are on applies it at once.
-- **Shell:** the prompt now shows the active virtual environment or language version before the path, in green for an isolated environment and blue for a version manager.
+## 2.6.1
 
 ### Fixed
+- **Displays:** saving the scale, where the screens sit or which ones are on no longer waits for a reload: it applies at once.
 - **Displays:** saving a Hyprland setting no longer blanks the screens for a moment, and an HDR screen stays in HDR.
 - **Displays:** plugging in or unplugging the external screen no longer warns that the screens overlap.
+- **Shell:** the prompt no longer hides which virtual environment or language version is active: it shows it before the path, in green for an isolated environment and blue for a version manager.
 - **cc-pkg-mng:** a failed upgrade no longer leaves the configs on the new release and the apps on the old one. Packages are checked and downloaded before anything moves: if they fail, you stay on the release you had. A unit that fails afterwards is named, and the next `upgrade` finishes it.
 - **cc-pkg-mng:** a package conflict is named package by package, with the way out, instead of a bare dnf failure. On a terminal, cc-pkg-mng offers to let dnf replace the packages in the way; `--allow-erasing` does the same without asking.
 - **cc-pkg-mng:** an upgrade no longer runs the previous cc-pkg-mng on the new release: it updates cc-pkg-mng first, then carries on with the new one.
