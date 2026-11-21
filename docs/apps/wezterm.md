@@ -27,7 +27,7 @@ The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../co
 | `Alt + Shift + ←` `↓` `↑` `→` | Resizes the pane |
 | `Alt + Shift + X` | Closes the pane |
 | `Alt + Shift + T` / `W` | Opens / closes a tab |
-| `Alt + Shift + N` / `P` | Next / previous tab |
+| `Alt + Shift + N` / `P` or `B` | Next / previous tab |
 | `Ctrl + Shift + C` / `V` | Copies / pastes |
 | `Ctrl + Escape` | Copy mode: move with `h` `j` `k` `l`, select with `v`, copy with `y`, search with `/` |
 | `Ctrl + 0` | Resets the font size |

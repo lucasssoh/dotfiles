@@ -174,6 +174,7 @@ config.keys = {
   { key = 'w', mods = 'ALT|SHIFT', action = act.CloseCurrentTab { confirm = false } },
   { key = 'n', mods = 'ALT|SHIFT', action = act.ActivateTabRelative(1) },
   { key = 'p', mods = 'ALT|SHIFT', action = act.ActivateTabRelative(-1) },
+  { key = 'b', mods = 'ALT|SHIFT', action = act.ActivateTabRelative(-1) },
 
   -- =========================
   -- Wezterm copy
