@@ -16,6 +16,10 @@
 //!             {"event":"library","games":[…]}   in answer to "library"
 //!   accepted: {"cmd":"grab"}     the popup is open: pads navigate it, games see nothing
 //!             {"cmd":"release"}  (also implied when the grabbing client goes away)
+//!             {"cmd":"app-grab"} an app in front wants the pads (Antenne): it
+//!                                gets them whenever the popup does not have
+//!                                them, and Guide still opens the popup
+//!             {"cmd":"app-release"}
 //!             {"cmd":"refresh"}  push "pads" again, batteries re-read
 //!             {"cmd":"library"}  the installed Steam and Lutris games (library.rs)
 
@@ -49,6 +53,9 @@ struct Daemon {
     /// keyboard does not get it reopened. Forgotten when the node is recreated.
     not_pads: HashSet<String>,
     grab_owner: Option<u64>,
+    /// The app in front that asked for the pads; it gets them back when
+    /// the popup lets go.
+    app_owner: Option<u64>,
 }
 
 fn socket_path() -> PathBuf {
@@ -101,6 +108,7 @@ fn run() -> io::Result<()> {
         pads: Vec::new(),
         not_pads: HashSet::new(),
         grab_owner: None,
+            app_owner: None,
     };
     for entry in std::fs::read_dir("/dev/input")?.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
@@ -243,6 +251,10 @@ impl Daemon {
             };
             match o {
                 // Navigation belongs to whoever opened the popup.
+                // Guide pressed while an app holds the pads: the popup's, as ever
+                Out::Nav("guide") if self.grab_owner.is_some() && self.grab_owner == self.app_owner => {
+                    self.broadcast(&json!({ "event": "guide", "long": false }));
+                }
                 Out::Nav(_) => {
                     if let Some(owner) = self.grab_owner {
                         self.send_to(owner, &msg);
@@ -301,7 +313,19 @@ impl Daemon {
             let Ok(cmd) = serde_json::from_slice::<Value>(&line) else { continue };
             match cmd.get("cmd").and_then(Value::as_str) {
                 Some("grab") => self.set_grab(Some(id)),
-                Some("release") if self.grab_owner == Some(id) => self.set_grab(None),
+                Some("release") if self.grab_owner == Some(id) => self.set_grab(self.app_owner.filter(|a| *a != id)),
+                Some("app-grab") => {
+                    self.app_owner = Some(id);
+                    if self.grab_owner.is_none() {
+                        self.set_grab(Some(id));
+                    }
+                }
+                Some("app-release") if self.app_owner == Some(id) => {
+                    self.app_owner = None;
+                    if self.grab_owner == Some(id) {
+                        self.set_grab(None);
+                    }
+                }
                 Some("refresh") => {
                     let msg = self.pads_msg();
                     self.send_to(id, &msg);
@@ -324,8 +348,11 @@ impl Daemon {
         self.clients.retain(|c| c.id != id);
         // The bar crashed or restarted with the popup open: never leave the
         // pads grabbed with nobody to give them back.
+        if self.app_owner == Some(id) {
+            self.app_owner = None;
+        }
         if self.grab_owner == Some(id) {
-            self.set_grab(None);
+            self.set_grab(self.app_owner);
         }
     }
 

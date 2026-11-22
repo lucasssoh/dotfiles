@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Manette:** an app in front, such as Antenne, can take the controller. The Guide button still opens the menu.
 - **WezTerm:** `Alt + Shift + B` also goes to the previous tab, next to `Alt + Shift + N` for the next one.
 - **WezTerm:** `AltGr` works in place of `Alt + Shift` for panes and tabs: `AltGr + N` goes to the next tab, `AltGr + H` to the pane on the left.
 - **config-extras:** lazygit no longer fetches on its own, so no passphrase prompt comes up while you work: `f` fetches.
