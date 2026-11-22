@@ -44,5 +44,6 @@ Settings for a few apps, each one only if that app is installed:
 | MangoHud | [`config/mangohud/MangoHud.conf`](../../config/mangohud/MangoHud.conf) |
 | fastfetch | [`config/fastfetch/config.jsonc`](../../config/fastfetch/config.jsonc) |
 | Brave | Its flags, in [`config/brave/brave-flags.conf`](../../config/brave/brave-flags.conf) |
+| lazygit | [`config/lazygit/config.yml`](../../config/lazygit/config.yml): no automatic fetch, `f` fetches |
 
 It also adds a launcher for CPLEX Studio's OPL IDE, shown once the IDE is installed in `/opt`.

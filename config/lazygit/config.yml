@@ -1,0 +1,3 @@
+# Fetching asks for the SSH passphrase: f fetches when you want it.
+git:
+  autoFetch: false

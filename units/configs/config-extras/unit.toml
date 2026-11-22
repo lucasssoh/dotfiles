@@ -1,6 +1,6 @@
 name     = "config-extras"
 layer    = "configs"
-summary  = "Lucas's configs for mpv, MangoHud, fastfetch and Brave, each file only when its app is installed; a launcher for CPLEX Studio's OPL IDE, hidden while it is not in /opt"
+summary  = "Lucas's configs for mpv, MangoHud, fastfetch, Brave and lazygit, each file only when its app is installed; a launcher for CPLEX Studio's OPL IDE, hidden while it is not in /opt"
 
 [links]
 "config/mpv/mpv.conf"             = "~/.config/mpv/mpv.conf"
@@ -8,6 +8,7 @@ summary  = "Lucas's configs for mpv, MangoHud, fastfetch and Brave, each file on
 "config/fastfetch/config.jsonc"   = "~/.config/fastfetch/config.jsonc"
 "config/fastfetch/rayponce.jpg"   = "~/.config/fastfetch/rayponce.jpg"
 "config/oplide/oplide.desktop"    = "~/.local/share/applications/oplide.desktop"
+"config/lazygit/config.yml"       = "~/.config/lazygit/config.yml"
 
 [links_if]
 mpv       = ["config/mpv/mpv.conf"]
