@@ -2,7 +2,8 @@
 #
 # Each scene runs its steps on an empty workspace, in demo mode, then takes
 # the screen, crops it to `crop` ([x, y, width, height] on the 1920x1200
-# screen, or "full") and saves NAME.webp (light) and NAME-dark.webp here.
+# frame, or "full"; on another screen or scale the crop follows the edges it
+# touches, see scripts/pellicule) and saves NAME.webp (light) and NAME-dark.webp here.
 # `after` steps run once the screenshot is taken. The windows and programs
 # a scene opens are closed before the next one.
 #

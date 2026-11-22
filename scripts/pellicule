@@ -13,7 +13,21 @@
 
 A scene is a list of steps run on an empty workspace, then a screenshot,
 cropped and saved as NAME.webp (light) and NAME-dark.webp; the whole
-screen is kept in the cache for the showcase pictures. The shell runs
+screen is kept in the cache for the showcase pictures.
+
+Any screen and any scale will do. The crops are written in the shell's
+pixels on the `size` frame of scenes.toml (F = 1920 x 1200). On a screen of
+M physical pixels at scale k, the shell's pixels are S = M / k, and a crop
+[x, y, w, h] of the frame lands, along each axis, at
+
+    x' = 0,  w' = S            if it touches both edges (a band across)
+    x' = x                     if it touches the frame's start edge (x <= 0)
+    x' = S - w                 if it touches the far edge (x + w >= F)
+    x' = x + (S - F) / 2       otherwise (it stays where it was, centred)
+
+clamped to [0, S - w], with w' = min(w, S) but for a band; then everything is multiplied
+by k, so the picture keeps the screen's full resolution. A drawer on the
+right stays on the right, a card in the middle stays in the middle. The shell runs
 in demo mode the whole time (made-up time, battery, figures), and
 everything is put back at the end, Ctrl+C included: the colour scheme, the
 wallpaper, the workspace, demo mode, the windows a scene opened.
@@ -282,10 +296,58 @@ def clients():
     return json.loads(sh("hyprctl", "-j", "clients"))
 
 
-def monitor_size():
+def monitor():
+    """The focused screen: its name, its size in the shell's pixels, its scale."""
     import json
-    m = json.loads(sh("hyprctl", "-j", "monitors"))[0]
-    return m["width"], m["height"]
+    ms = json.loads(sh("hyprctl", "-j", "monitors"))
+    m = next((m for m in ms if m.get("focused")), ms[0])
+    scale = float(m.get("scale", 1)) or 1.0
+    # a rotated screen is taller than wide
+    w, h = (m["height"], m["width"]) if m.get("transform", 0) % 2 else (m["width"], m["height"])
+    return {"name": m["name"], "x": m["x"], "y": m["y"], "size": (round(w / scale), round(h / scale)), "scale": scale}
+
+
+# Set once the run starts: where the frame's crops land on this screen.
+SCREEN = {"frame": (1920, 1200), "size": (1920, 1200), "scale": 1.0, "x": 0, "y": 0, "name": ""}
+
+
+def screen_set(settings):
+    """Reads the focused screen once, before the first take."""
+    m = monitor()
+    SCREEN.update(m, frame=tuple(settings.get("size", [1920, 1200])))
+    # the showcase lays its crops on these captures later, on this screen's terms
+    SCREEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCREEN_FILE.write_text(json.dumps({k: SCREEN[k] for k in ("size", "scale", "frame")}))
+    if SCREEN["size"] != SCREEN["frame"] or SCREEN["scale"] != 1:
+        w, h = SCREEN["size"]
+        say(f"{m['name']}, {w}x{h} at scale {SCREEN['scale']:g}: the crops follow the screen")
+
+
+def place(crop):
+    """A crop of the frame, on the screen: the same size, along the edges it
+    touches (in the middle when it touches neither), in the picture's pixels."""
+    fw, fh = SCREEN["frame"]
+    sw, sh_ = SCREEN["size"]
+    k = SCREEN["scale"]
+    x, y, w, h = crop
+    def along(pos, size, frame, screen):
+        if pos <= 0 and pos + size >= frame:
+            return 0, screen
+        size = min(size, screen)
+        if pos <= 0:
+            return 0, size
+        if pos + size >= frame:
+            return screen - size, size
+        return max(0, min(screen - size, pos + (screen - frame) // 2)), size
+    (x, w), (y, h) = along(x, w, fw, sw), along(y, h, fh, sh_)
+    return [round(v * k) for v in (x, y, w, h)]
+
+
+def place_point(x, y):
+    """A point of the frame (the parked pointer), on the screen, in its own coordinates."""
+    fw, fh = SCREEN["frame"]
+    sw, sh_ = SCREEN["size"]
+    return SCREEN["x"] + x + (sw - fw) // 2, SCREEN["y"] + y + (sh_ - fh)
 
 
 # ---- scenes -----------------------------------------------------------------
@@ -370,7 +432,7 @@ def check_step(step, surface):
     if verb == "run":
         if not args:
             return [f"{step!r}: run COMMAND..."]
-        cmd = os.path.expanduser(args[0])
+        cmd = os.path.expanduser(args[0].replace("{repo}", str(REPO)))
         found = os.access(cmd, os.X_OK) if "/" in cmd else subprocess.run(
             ["sh", "-c", f"command -v {shlex.quote(cmd)}"], capture_output=True).returncode == 0
         return [] if found else [f"{step!r}: {args[0]} is not installed"]
@@ -453,7 +515,7 @@ class Take:
         self.saved_cursor_hidden = cursor_hidden_get()
 
     def park(self):
-        pointer_go(*self.pointer)
+        pointer_go(*place_point(*self.pointer))
 
     def start(self):
         busy = [c for c in clients() if str(c["workspace"]["id"]) == self.ws]
@@ -582,7 +644,7 @@ def shoot(scene, mode, take, out, settings):
     for step in scene.get("steps", []):
         take.step(step)
     with tempfile.NamedTemporaryFile(suffix=".png") as raw:
-        sh("grim", raw.name)
+        sh("grim", "-o", SCREEN["name"], raw.name)
         img = Image.open(raw.name).convert("RGB")
     # The whole screen too, for the showcase pictures.
     full = full_path(scene["name"], mode)
@@ -593,7 +655,7 @@ def shoot(scene, mode, take, out, settings):
     take.end_scene()
     crop = scene.get("crop", "full")
     if crop != "full":
-        x, y, w, h = crop
+        x, y, w, h = place(crop)
         img = img.crop((x, y, x + w, y + h))
     width = scene.get("width", settings.get("width"))
     if width and img.width > width:
@@ -609,6 +671,8 @@ def full_path(name, mode):
 
 
 SHOWCASE = REPO / "docs" / "screenshots" / "showcase.html"
+# The screen the full captures were taken on.
+SCREEN_FILE = CACHE / "full" / "screen.json"
 
 
 def check_showcases(showcases, scenes):
@@ -640,7 +704,7 @@ def screen(names, mode, blank, crops):
     from PIL import Image, ImageChops
     img = Image.open(full_path(names[0], mode)).convert("RGB")
     for n in names[1:]:
-        x, y, w, h = crops[n]
+        x, y, w, h = place(crops[n])
         box = (x, y, x + w, y + h)
         part = Image.open(full_path(n, mode)).convert("RGB")
         if blank:
@@ -648,7 +712,7 @@ def screen(names, mode, blank, crops):
             bb = ImageChops.difference(part.crop(box), base.crop(box)).convert("L") \
                 .point(lambda v: 255 if v > 18 else 0).getbbox()
             if bb:
-                pad = 40
+                pad = round(40 * SCREEN["scale"])
                 box = (max(x, x + bb[0] - pad), max(y, y + bb[1] - pad),
                        min(x + w, x + bb[2] + pad), min(y + h, y + bb[3] + pad))
         img.paste(part.crop(box), box[:2])
@@ -699,7 +763,7 @@ def record(video, take):
     raw = raw_path(video)
     raw.parent.mkdir(parents=True, exist_ok=True)
     take.park()
-    rec = subprocess.Popen(["wf-recorder", "-y", "-f", str(raw), "-c", "libx264",
+    rec = subprocess.Popen(["wf-recorder", "-y", "-o", SCREEN["name"], "-f", str(raw), "-c", "libx264",
                             "-x", "yuv444p", "-p", "preset=ultrafast", "-p", "qp=0"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
@@ -832,6 +896,9 @@ def main():
 
     if a.scenes[:1] == ["showcase"]:
         # Recomposed from the last full-screen captures, without taking any.
+        if SCREEN_FILE.exists():
+            SCREEN.update({k: tuple(v) if isinstance(v, list) else v
+                           for k, v in json.loads(SCREEN_FILE.read_text()).items()})
         out = a.out or a.scenes_file.parent
         for sc in showcases:
             for path in compose(sc, out, settings, all_scenes):
@@ -856,6 +923,7 @@ def main():
             for p in problems:
                 print(p, file=sys.stderr)
             fail("the video is out of step with the shell; nothing recorded")
+        screen_set(settings)
         take = Take(settings)
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
         try:
@@ -884,10 +952,8 @@ def main():
         for p in problems:
             print(p, file=sys.stderr)
         fail("scenes.toml is out of step with the shell; nothing taken")
-    size = tuple(settings.get("size", [1920, 1200]))
-    if monitor_size() != size:
-        fail(f"the screen is {monitor_size()}, the scenes are framed for {size}")
 
+    screen_set(settings)
     out = a.out or a.scenes_file.parent
     out.mkdir(parents=True, exist_ok=True)
     modes = [a.mode] if a.mode else list(SCHEMES)
