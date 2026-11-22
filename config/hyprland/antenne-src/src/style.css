@@ -1,0 +1,330 @@
+/* Antenne. {{n}} is n units of about 1/72 of the screen height (see css()
+   in main.rs). The inks are DrawerTheme's central island: a dark glass
+   world in both modes, since it always sits over video. GTK cannot blur
+   what is behind a widget, so the glass is a thicker veil instead. */
+
+window.antenne { background: #000; }
+.antenne * { font-family: "MiSans Latin", "MiSans", sans-serif; color: #f2f2f7; }
+
+.glass {
+  background-color: rgba(20, 20, 24, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: {{1.7}};
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.10), 0 {{1}} {{3}} rgba(0, 0, 0, 0.35);
+}
+
+.shade { background: #000; opacity: 0; transition: opacity 300ms ease; }
+.shade.on { opacity: 0.84; }
+
+.digits { font-size: {{4.4}}; font-weight: 500; margin: {{2}} {{2.6}}; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 200ms ease; }
+.digits.show { opacity: 1; }
+
+/* the guide: the upper half for the programme and the picture, the
+   lower half for the grid (drawn: guide.rs, Theme) */
+.guide { padding: {{1.6}} {{2}} 0 {{1.4}}; opacity: 0; transition: opacity 220ms ease; }
+.guide.show { opacity: 1; }
+.ghead { margin-bottom: {{0.8}}; }
+.ginfo { margin-left: {{0.6}}; margin-right: {{2.4}}; }
+.gch { color: #a1a1a6; font-size: {{1.05}}; }
+.gclock { color: #7c7c80; font-size: {{1}}; }
+.gtitle { font-size: {{2.4}}; font-weight: 500; margin: {{0.35}} 0 {{0.3}}; }
+.gtime { color: #a1a1a6; font-size: {{1.05}}; margin-right: {{1.2}}; }
+.gdesc { color: #a1a1a6; font-size: {{1.02}}; margin-top: {{0.8}}; }
+.gnext { color: #7c7c80; font-size: {{0.95}}; margin-top: {{0.9}}; }
+.pipslot { border-radius: {{0.4}}; border: 1px solid rgba(255, 255, 255, 0.14); }
+/* the channel above the programme: its logo on a plate */
+.gline { margin-bottom: {{0.5}}; }
+.hplate { border-radius: {{0.6}}; background: rgba(242, 242, 247, 0.07); padding: {{0.3}}; margin-right: {{0.8}}; }
+.hplate.light { background: #e9e6df; }
+.hini { color: #a1a1a6; font-size: {{0.95}}; font-weight: 600; }
+.piplabel {
+  margin: {{0.7}}; padding: {{0.25}} {{0.75}}; border-radius: 999px;
+  background: rgba(10, 10, 12, 0.72); color: #f2f2f7; font-size: {{0.82}};
+}
+.gremind { color: #a1a1a6; font-size: {{0.95}}; margin-left: {{1.2}}; }
+
+/* the reminder that rings, top right */
+.alarm { margin: {{2.2}}; padding: {{1}} {{1.1}} 0; min-width: {{24}}; opacity: 0; transition: opacity 250ms ease; }
+.alarm.show { opacity: 1; }
+.akick { color: #7c7c80; font-size: {{0.8}}; letter-spacing: 1px; }
+.atitle { font-size: {{1.3}}; font-weight: 500; margin-top: {{0.15}}; }
+.ach { color: #a1a1a6; font-size: {{0.9}}; }
+.aacts { color: #a1a1a6; font-size: {{0.9}}; margin: {{0.7}} 0 {{0.8}}; }
+progressbar.abar trough { min-height: {{0.18}}; border-radius: 0; }
+progressbar.abar progress { min-height: {{0.18}}; border-radius: 0; }
+
+/* a weak connection: top right inside the picture, then just the bars */
+.weak { margin: {{2.2}}; padding: {{0.5}} {{0.95}} {{0.5}} {{0.8}}; border-radius: 999px; opacity: 0; transition: opacity 400ms ease; }
+.weak.show { opacity: 1; }
+.weak.compact { padding: {{0.5}} {{0.7}}; }
+.bars > box { margin-right: {{0.12}}; }
+.bar { min-width: {{0.22}}; border-radius: {{0.06}}; background: #f2f2f7; }
+.bar.dim { background: rgba(242, 242, 247, 0.22); }
+.b1 { min-height: {{0.3}}; }
+.b2 { min-height: {{0.55}}; }
+.b3 { min-height: {{0.8}}; }
+.wtext { color: #a1a1a6; font-size: {{0.92}}; margin-left: {{0.6}}; }
+
+/* a reminder set or removed */
+.toast { margin-bottom: {{2}}; padding: {{0.5}} {{1.1}}; border-radius: 999px; color: #a1a1a6; opacity: 0; transition: opacity 200ms ease; }
+.toast.show { opacity: 1; }
+
+/* progress: the programme on now */
+progressbar.gbar { min-height: 0; min-width: {{12}}; }
+progressbar trough { min-height: {{0.22}}; border-radius: 999px; background: rgba(242, 242, 247, 0.14); border: none; }
+progressbar progress { min-height: {{0.22}}; border-radius: 999px; background: #f2f2f7; border: none; }
+
+/* the list of keys: three columns of blocks, the one in use stands out */
+.help { padding: {{1.4}} {{1.7}} {{1.2}}; opacity: 0; transition: opacity 250ms ease; }
+.help.show { opacity: 1; }
+.hhead { font-size: {{1.25}}; font-weight: 500; margin-bottom: {{1.1}}; }
+.hcol { margin-right: {{2.6}}; }
+.hcol:last-child { margin-right: 0; }
+.hblock { margin-bottom: {{1.2}}; }
+.htitle { font-size: {{0.78}}; letter-spacing: 1px; color: #7c7c80; font-weight: 500; margin-bottom: {{0.55}}; }
+.hblock.now .htitle { color: #f2f2f7; }
+.hblock.now .act { color: #d1d1d6; }
+.hrow { margin-bottom: {{0.42}}; }
+.kbd {
+  min-width: {{2.4}}; padding: {{0.12}} {{0.5}}; margin-right: {{0.9}};
+  background: rgba(242, 242, 247, 0.11); border: 1px solid rgba(242, 242, 247, 0.12); border-radius: {{0.45}};
+  font-size: {{0.88}}; font-weight: 500;
+}
+.act { color: #8e8e93; font-size: {{0.92}}; }
+
+/* which key lists them, after a key that does nothing */
+.khint {
+  margin: {{1.6}}; padding: {{0.45}} {{0.9}} {{0.45}} {{0.5}}; border-radius: 999px;
+  opacity: 0; transition: opacity 220ms ease;
+}
+.khint.show { opacity: 1; }
+.khint.up { margin-bottom: {{14}}; }
+.khint .kbd { min-width: {{1.9}}; margin-right: {{0.6}}; }
+
+/* the pages of the guide's column (search.rs, settings.rs): a row as tall
+   as the guide's tabs, then the panel, the colour the column's picked
+   entry runs into */
+.ptabs { min-height: {{2.4}}; }
+.stab { background: #161619; border-radius: {{0.8}} {{0.8}} 0 0; padding: 0 {{1.1}}; margin-top: {{0.35}}; }
+.sicon { color: #a1a1a6; margin-right: {{0.55}}; }
+entry.sfield { background: none; border: none; box-shadow: none; outline: none; min-height: 0; padding: 0; font-size: {{0.95}}; }
+entry.sfield > text > placeholder { color: #6e6e73; }
+.tfoot { min-width: {{0.8}}; min-height: {{0.8}}; background-image: radial-gradient(circle {{0.8}} at right top, transparent 98%, #161619 100%); }
+.spanel { background: #161619; border-radius: 0 {{0.8}} 0 0; }
+.ppanel { background: #161619; border-radius: {{0.8}} {{0.8}} 0 0; }
+
+/* Search: a plain list */
+.slist { padding: {{0.9}} {{1.6}} {{1.2}}; min-width: {{50}}; }
+.sgroup { color: #6e6e73; font-size: {{0.68}}; letter-spacing: 1px; font-weight: 500; margin: {{1}} {{0.6}} {{0.4}}; }
+.srow { padding: {{0.55}} {{0.6}}; border-radius: {{0.6}}; border: 1.5px solid transparent; transition: background-color 120ms ease; }
+.srow:hover { background: rgba(242, 242, 247, 0.05); }
+.srow.sel { border-color: rgba(242, 242, 247, 0.28); }
+.spage.f .srow.sel { border-color: rgba(242, 242, 247, 0.92); }
+.srow.dead .sname, .srow.dead .splate { opacity: 0.45; }
+.splate { min-width: {{4.2}}; min-height: {{2.1}}; border-radius: {{0.45}}; background: rgba(242, 242, 247, 0.06); padding: {{0.25}}; margin-right: {{0.9}}; }
+.splate.light, .iplate.light { background: #ecebe6; }
+.sini { color: #a1a1a6; font-size: {{0.7}}; font-weight: 600; }
+.sname { font-size: {{0.95}}; }
+.ssub { color: #a1a1a6; font-size: {{0.8}}; }
+progressbar.sbar { min-width: {{7}}; margin-top: {{0.3}}; }
+progressbar.sbar trough, progressbar.sbar progress { min-height: 2px; }
+.snum { color: #6e6e73; font-size: {{0.8}}; min-width: {{1.8}}; margin-left: {{0.8}}; }
+.sempty { color: #a1a1a6; padding: {{0.6}}; }
+
+/* a settings page: lines with a hairline between them, no blocks */
+.pbody { padding: {{1.8}} {{2.4}} {{1.6}}; min-width: {{36}}; }
+.ptitle { font-size: {{1.6}}; font-weight: 500; }
+.pdesc { color: #a1a1a6; font-size: {{0.92}}; margin: {{0.35}} 0 {{0.9}}; }
+.prow { padding: {{0.62}} {{0.7}}; border-radius: {{0.6}}; min-height: {{2.9}}; transition: background-color 120ms ease; }
+.prow + .prow { box-shadow: inset 0 1px rgba(242, 242, 247, 0.08); }
+.prow.click:hover { background: rgba(242, 242, 247, 0.05); box-shadow: none; }
+.prow.click:active { background: rgba(242, 242, 247, 0.11); }
+.ptext { font-size: {{0.92}}; }
+.pdetail { color: #a1a1a6; font-size: {{0.76}}; }
+.phint { color: #6e6e73; font-size: {{0.78}}; margin: {{0.7}} 0 0 {{0.7}}; }
+.paddrow { margin: {{0.6}} {{0.7}} 0; }
+.paddrow > button { margin-left: {{0.8}}; }
+button.pafter { margin: {{0.4}} 0 0 {{0.15}}; }
+.pgap { margin-top: {{1.4}}; }
+.picon { color: #a1a1a6; margin-right: {{0.6}}; }
+entry.pfield {
+  background: none; border: none; border-bottom: 1px solid rgba(242, 242, 247, 0.18); border-radius: 0;
+  box-shadow: none; outline: none; padding: {{0.35}} 0; min-height: 0; font-size: {{0.92}};
+  transition: border-color 150ms ease;
+}
+entry.pfield:focus-within { border-bottom-color: rgba(242, 242, 247, 0.92); }
+entry.pfield > text > placeholder { color: #6e6e73; }
+.psugg { margin: {{0.3}} 0 0; }
+button.psug { background: none; border: none; box-shadow: none; border-radius: {{0.6}}; padding: {{0.45}} {{0.7}}; min-height: 0; transition: background-color 120ms ease; }
+button.psug:hover, button.psug:focus-visible { background: rgba(242, 242, 247, 0.05); }
+button.psug:active { background: rgba(242, 242, 247, 0.11); }
+.padd { color: #a1a1a6; font-size: {{0.84}}; }
+
+/* buttons: hover, pressed, keyboard */
+button.pbtn {
+  background: none; border: 1px solid rgba(242, 242, 247, 0.18); border-radius: 999px; padding: {{0.3}} {{1}};
+  min-height: 0; box-shadow: none; transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+button.pbtn label { font-size: {{0.86}}; }
+button.pbtn:hover { background: rgba(242, 242, 247, 0.05); border-color: rgba(242, 242, 247, 0.3); }
+button.pbtn:active { background: rgba(242, 242, 247, 0.11); transform: scale(0.97); }
+button.pbtn:disabled { opacity: 0.4; }
+button.plink { background: none; border: none; box-shadow: none; border-radius: {{0.5}}; padding: {{0.3}} {{0.55}}; min-height: 0; transition: background-color 120ms ease, transform 80ms ease; }
+button.plink label { color: #a1a1a6; font-size: {{0.86}}; }
+button.plink:hover { background: rgba(242, 242, 247, 0.05); }
+button.plink:hover label { color: #f2f2f7; }
+button.plink:active { background: rgba(242, 242, 247, 0.11); transform: scale(0.97); }
+.spage button:focus-visible, .spage switch:focus-visible { outline: 2px solid rgba(242, 242, 247, 0.92); outline-offset: 2px; }
+.spage switch { background: rgba(242, 242, 247, 0.16); border: none; border-radius: 999px; min-width: {{2.5}}; min-height: {{1.4}}; transition: background-color 180ms ease; }
+.prow.click:hover switch:not(:checked) { background: rgba(242, 242, 247, 0.24); }
+.spage switch:checked { background: #f2f2f7; }
+.spage switch slider { background: #a1a1a6; border: none; box-shadow: none; border-radius: 999px; min-width: {{1.04}}; min-height: {{1.04}}; margin: {{0.18}}; }
+.spage switch:checked slider { background: #0c0c0e; }
+.seg { border: 1px solid rgba(242, 242, 247, 0.18); border-radius: 999px; padding: {{0.18}}; }
+button.segb { background: none; border: none; box-shadow: none; border-radius: 999px; padding: {{0.25}} {{0.9}}; min-height: 0; transition: background-color 120ms ease, transform 80ms ease; }
+button.segb label { color: #a1a1a6; font-size: {{0.84}}; }
+button.segb:hover { background: rgba(242, 242, 247, 0.05); }
+button.segb:hover label { color: #f2f2f7; }
+button.segb:active { background: rgba(242, 242, 247, 0.11); transform: scale(0.96); }
+button.segb:checked { background: #f2f2f7; }
+button.segb:checked label { color: #0c0c0e; }
+
+/* "i": a dark fade from the bottom left corner, the text straight on it */
+.ifade {
+  background-image: radial-gradient(ellipse {{78}} {{83}} at left bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.74) 34%, rgba(0, 0, 0, 0.34) 62%, rgba(0, 0, 0, 0) 82%);
+  opacity: 0; transition: opacity 320ms ease;
+}
+.ifade.show { opacity: 1; }
+/* the glance: a smaller, lighter fade */
+.ifade.light {
+  background-image: radial-gradient(ellipse {{55}} {{58}} at left bottom, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.6) 36%, rgba(0, 0, 0, 0.22) 64%, rgba(0, 0, 0, 0) 84%);
+}
+.istatus { color: #a1a1a6; font-size: {{1}}; margin-top: {{0.9}}; }
+.icard { opacity: 0; transform: translateY({{0.8}}); transition: opacity 320ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.icard.show { opacity: 1; transform: none; }
+/* a recording: the time bar takes a click, the controls are small round buttons */
+progressbar.ibar.seek { min-width: {{14}}; margin-right: {{0.8}}; }
+progressbar.ibar.seek trough, progressbar.ibar.seek progress { min-height: {{0.28}}; }
+.ictls { margin-top: {{0.7}}; }
+button.ictl { background: none; border: none; box-shadow: none; border-radius: 999px; min-width: {{2.2}}; min-height: {{2.2}}; padding: 0; margin-right: {{0.3}}; transition: background-color 120ms ease, transform 80ms ease; -gtk-icon-size: {{1}}; }
+button.ictl:hover { background: rgba(242, 242, 247, 0.12); }
+button.ictl:active { background: rgba(242, 242, 247, 0.2); transform: scale(0.94); }
+button.ictl.main { background: rgba(242, 242, 247, 0.92); }
+button.ictl.main image { color: #0c0c0e; }
+button.ictl.main:hover { background: #f2f2f7; }
+.icard label { text-shadow: 0 1px {{0.7}} rgba(0, 0, 0, 0.45); }
+.iplate { min-width: {{5.2}}; min-height: {{2.6}}; border-radius: {{0.45}}; background: rgba(242, 242, 247, 0.08); padding: {{0.3}}; margin-bottom: {{0.6}}; }
+.inum { color: #a1a1a6; font-size: {{1.7}}; margin-right: {{0.5}}; }
+.iname { font-size: {{1.7}}; font-weight: 500; }
+.istar { font-size: {{1}}; margin-left: {{0.5}}; }
+.ifacts { color: #a1a1a6; font-size: {{0.84}}; margin-top: {{0.3}}; }
+.inow { margin-top: {{1.1}}; }
+.ititle { font-size: {{1.15}}; font-weight: 500; margin-bottom: {{0.25}}; }
+.itime { color: #a1a1a6; font-size: {{0.84}}; margin-right: {{0.8}}; }
+progressbar.ibar { min-width: {{12}}; }
+.inext { margin-top: {{0.9}}; }
+.inext > box { margin-bottom: {{0.25}}; }
+.int { color: #6e6e73; font-size: {{0.86}}; min-width: {{3}}; margin-right: {{0.8}}; }
+.intl { color: #a1a1a6; font-size: {{0.86}}; }
+.isrcs { margin-top: {{1.1}}; }
+.isec { color: #6e6e73; font-size: {{0.68}}; letter-spacing: 1px; font-weight: 500; margin-bottom: {{0.25}}; }
+.isrc { padding: {{0.42}} 0; box-shadow: inset 0 1px rgba(242, 242, 247, 0.10); }
+.isrc.dead label { color: #6e6e73; }
+.iorigin { font-size: {{0.86}}; }
+.iq { color: #6e6e73; font-size: {{0.78}}; margin-left: {{0.8}}; }
+.ipill { border: 1px solid rgba(242, 242, 247, 0.22); border-radius: 999px; padding: 0 {{0.6}}; font-size: {{0.72}}; margin-left: {{0.8}}; }
+.it { color: #a1a1a6; font-size: {{0.82}}; margin-left: {{0.8}}; }
+.ifoot { margin-top: {{1.1}}; }
+.ikey { color: #a1a1a6; font-size: {{0.74}}; border: 1px solid rgba(242, 242, 247, 0.18); border-radius: {{0.35}}; padding: 0 {{0.4}}; margin-right: {{0.45}}; }
+.ikv { color: #6e6e73; font-size: {{0.78}}; margin-right: {{1.2}}; }
+
+/* Streaming: cards (Continue watching, Shows), and a show's episodes
+   under its seasons or arcs in tabs */
+.ppanel.flush { border-top-left-radius: 0; }
+.lcontent { padding: {{1}} {{1.4}} {{1}}; }
+.lfield { padding: {{1}} {{2.1}} 0; }
+flowbox.lgrid > flowboxchild { padding: {{0.15}} {{0.2}}; }
+.lcard { padding: {{0.4}}; border-radius: {{0.7}}; border: 1.5px solid transparent; transition: background-color 120ms ease; }
+.lcard:hover { background: rgba(242, 242, 247, 0.05); }
+.lcard.sel { border-color: rgba(242, 242, 247, 0.28); }
+.spage.f .lcard.sel { border-color: rgba(242, 242, 247, 0.92); }
+.lcover { border-radius: {{0.45}}; background: rgba(242, 242, 247, 0.06); }
+.lini { color: #a1a1a6; font-size: {{1.2}}; font-weight: 600; }
+progressbar.lbar trough { min-height: 3px; border-radius: 0; background: rgba(0, 0, 0, 0.45); }
+progressbar.lbar progress { min-height: 3px; border-radius: 0; background: #f2f2f7; }
+.ltitle { font-size: {{0.82}}; margin-top: {{0.35}}; }
+.lsub { color: #a1a1a6; font-size: {{0.7}}; }
+.lrow { padding: {{0.4}} {{0.6}}; border-radius: {{0.6}}; border: 1.5px solid transparent; transition: background-color 120ms ease; }
+.lrow:hover { background: rgba(242, 242, 247, 0.05); }
+.lrow.sel { border-color: rgba(242, 242, 247, 0.28); }
+.spage.f .lrow.sel { border-color: rgba(242, 242, 247, 0.92); }
+.lrow .lcover { margin-right: {{0.9}}; }
+.lrow .ltitle { margin-top: 0; font-size: {{0.86}}; }
+.lrow.done .ltitle { color: #a1a1a6; }
+.lnum { color: #6e6e73; font-size: {{0.86}}; margin-right: {{0.5}}; }
+.lok { color: #6e6e73; margin-left: {{0.8}}; }
+button.ltab { background: none; border: none; box-shadow: none; border-radius: {{0.8}} {{0.8}} 0 0; padding: 0 {{1}}; margin-top: {{0.35}}; min-height: 0; transition: background-color 120ms ease; }
+button.ltab:hover { background: rgba(242, 242, 247, 0.03); }
+button.ltab.on { background: #161619; }
+.ltabname { font-size: {{0.9}}; color: #a1a1a6; }
+button.ltab.on .ltabname { color: #f2f2f7; }
+.ltabn { color: #6e6e73; font-size: {{0.75}}; margin-left: {{0.55}}; }
+.lfoot { min-width: {{0.8}}; min-height: {{0.8}}; background-image: radial-gradient(circle {{0.8}} at left top, transparent 98%, #161619 100%); }
+.antenne .gaction { background: #f2f2f7; border-radius: 999px; padding: {{0.3}} {{0.4}} {{0.3}} {{1}}; margin-top: {{0.7}}; }
+.antenne .gaction .gactext { color: #0c0c0e; font-size: {{0.9}}; font-weight: 500; }
+.antenne .gaction2 .gactext { font-size: {{0.9}}; }
+button.lback { background: none; border: none; box-shadow: none; border-radius: 999px; padding: 0 {{0.9}}; margin: {{0.55}} {{0.6}} {{0.2}} 0; min-height: 0; transition: background-color 120ms ease; }
+button.lback:hover { background: rgba(242, 242, 247, 0.06); }
+.lbackname { font-size: {{0.86}}; color: #a1a1a6; }
+button.lback:hover .lbackname { color: #f2f2f7; }
+.lkey { color: #6e6e73; font-size: {{0.7}}; border: 1px solid rgba(242, 242, 247, 0.16); border-radius: {{0.3}}; padding: 0 {{0.35}}; margin-left: {{0.6}}; }
+
+/* the middle of the screen while nothing plays */
+.loading { opacity: 0; transition: opacity 200ms ease; }
+.loading.show { opacity: 1; }
+.loading label { text-shadow: 0 1px {{0.6}} rgba(0, 0, 0, 0.5); }
+.ldtitle { font-size: {{1.25}}; font-weight: 500; margin-top: {{0.9}}; }
+.ldsub { color: #a1a1a6; font-size: {{0.9}}; margin-top: {{0.3}}; }
+.ldbuttons { margin-top: {{1.2}}; }
+button.ldbtn {
+  background: none; border: 1px solid rgba(242, 242, 247, 0.22); border-radius: 999px; padding: {{0.4}} {{1.1}};
+  margin: 0 {{0.3}}; min-height: 0; box-shadow: none; transition: background-color 120ms ease, transform 80ms ease;
+}
+button.ldbtn:hover { background: rgba(242, 242, 247, 0.08); }
+button.ldbtn:active { background: rgba(242, 242, 247, 0.16); transform: scale(0.97); }
+button.ldbtn.main { background: #f2f2f7; border-color: #f2f2f7; }
+.ldbtext { font-size: {{0.9}}; }
+button.ldbtn.main .ldbtext { color: #0c0c0e; font-weight: 500; }
+.ldkey { font-size: {{0.7}}; color: #a1a1a6; border: 1px solid rgba(242, 242, 247, 0.2); border-radius: {{0.3}}; padding: 0 {{0.35}}; margin-left: {{0.6}}; }
+button.ldbtn.main .ldkey { color: #3a3a3e; border-color: rgba(0, 0, 0, 0.25); text-shadow: none; }
+button.ldbtn.main label { text-shadow: none; }
+.lhint { color: #6e6e73; font-size: {{0.74}}; margin-top: {{0.4}}; }
+
+/* a second, quieter action beside the first */
+.antenne .gaction2 { border: 1px solid rgba(242, 242, 247, 0.28); border-radius: 999px; padding: {{0.3}} {{0.4}} {{0.3}} {{1}}; margin: {{0.7}} 0 0 {{0.6}}; }
+
+/* the next episode, bottom right, during the credits */
+.nextcard {
+  background: rgba(22, 22, 25, 0.94); border: 1px solid rgba(242, 242, 247, 0.1); border-radius: {{1}};
+  padding: {{0.8}}; opacity: 0; transition: opacity 260ms ease;
+}
+.nextcard.show { opacity: 1; }
+.ncover { border-radius: {{0.5}}; background: rgba(242, 242, 247, 0.06); margin-right: {{1}}; }
+.nkick { color: #6e6e73; font-size: {{0.66}}; letter-spacing: 1px; font-weight: 500; }
+.ntitle { font-size: {{0.95}}; font-weight: 500; margin-top: {{0.15}}; }
+.nwhen { color: #a1a1a6; font-size: {{0.8}}; margin-top: {{0.1}}; }
+.nbuttons { margin-top: {{0.6}}; }
+.nbuttons button.ldbtn { margin: 0 {{0.4}} 0 0; padding: {{0.3}} {{0.9}}; }
+
+/* a show's or an episode's actions */
+.lmenu { background: #1d1d21; border: 1px solid rgba(242, 242, 247, 0.12); border-radius: {{1}}; padding: {{0.8}} {{0.6}}; min-width: {{20}}; box-shadow: 0 {{1}} {{3}} rgba(0, 0, 0, 0.5); }
+.lmtitle { color: #a1a1a6; font-size: {{0.8}}; margin: 0 {{0.7}} {{0.5}}; }
+button.lmitem { background: none; border: 1.5px solid transparent; box-shadow: none; border-radius: {{0.6}}; padding: {{0.45}} {{0.7}}; min-height: 0; transition: background-color 120ms ease; }
+button.lmitem label { font-size: {{0.92}}; }
+button.lmitem:hover { background: rgba(242, 242, 247, 0.06); }
+button.lmitem.sel { border-color: rgba(242, 242, 247, 0.92); }
+.hrow { margin-bottom: {{0.42}}; }
+.ifoot > box { margin-right: {{1.2}}; }
+.lcode { font-family: monospace; font-size: {{0.74}}; color: #a1a1a6; background: rgba(242, 242, 247, 0.05); border-radius: {{0.4}}; padding: {{0.5}} {{0.7}}; margin-top: {{0.3}}; }
+.gremkey { margin-left: {{1.2}}; }
+.aacts > box { margin-right: {{1.4}}; }

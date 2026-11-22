@@ -56,6 +56,7 @@ The keyboard and the mouse work in the menu too: arrows, `Return`, `Esc`.
 | Over Steam or a fullscreen game | **Hold Guide** to open the menu. A short press goes to the game |
 | A controller without a Guide button | Hold `Select` + `Start` |
 | Steam reacts to Guide outside a game | Turn off *Guide button focuses Steam* in Steam's controller settings |
+| In [Antenne](../apps/antenne.md) | The controller drives Antenne while it's in front. Guide still opens the menu |
 
 ## In the bar
 

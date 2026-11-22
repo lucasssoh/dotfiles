@@ -179,6 +179,38 @@ doc = "docs/tools/prisme.md"
 crop = "full"
 steps = ["run ~/.local/bin/prisme", "wait 4"]
 
+# ---- Antenne ----------------------------------------------------------------
+# Antenne is dark in both colour schemes, so only the dark take is kept. Each
+# scene starts it in a sandbox of its own (antenne-sandbox: free films, no
+# broadcast, none of your files) and gives it time to tune in.
+# The first time, run docs/screenshots/antenne-sandbox --prepare before them:
+# it takes the shows' pictures from the films.
+
+[[scene]]
+name = "antenne-guide"
+doc = "docs/apps/antenne.md"
+crop = "full"
+modes = ["dark"]
+# Page Up to the top of the guide, where the channels have programmes.
+steps = ["run {repo}/docs/screenshots/antenne-sandbox", "wait 14", "key g", "wait 2",
+         "key Prior", "key Prior", "key Prior", "key Prior", "key Prior", "key Prior",
+         "key Prior", "key Prior", "key Prior", "key Prior", "wait 2"]
+
+[[scene]]
+name = "antenne-info"
+doc = "docs/apps/antenne.md"
+crop = "full"
+modes = ["dark"]
+steps = ["run {repo}/docs/screenshots/antenne-sandbox", "wait 14", "key space", "wait 1.5"]
+
+[[scene]]
+name = "antenne-shows"
+doc = "docs/apps/antenne.md"
+crop = "full"
+modes = ["dark"]
+# s opens the menu on Countries; Shows is the entry above it.
+steps = ["run {repo}/docs/screenshots/antenne-sandbox", "wait 14", "key s", "wait 1", "key Up", "wait 0.4", "key Right", "wait 3"]
+
 # ---- the controller ---------------------------------------------------------
 # Manette ignores uinput pads, so the pad is made up in the bar (`ipc
 # controller pad FAMILY BATTERY CHARGING`), with these games as its library.

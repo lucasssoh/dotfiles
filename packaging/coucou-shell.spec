@@ -24,6 +24,7 @@ BuildRequires:  rust
 BuildRequires:  gcc
 BuildRequires:  pkgconfig(gtk4)
 BuildRequires:  pkgconfig(gtk4-layer-shell-0)
+BuildRequires:  pkgconfig(mpv)
 
 %description
 coucou-shell's binaries. Install cc-pkg-mng, then run `cc-pkg-mng init`.
@@ -94,11 +95,20 @@ The daemon behind coucou-shell's password card: the session's polkit agent,
 and the askpass and pinentry that bring ssh, git and gpg prompts to the bar,
 with the command that asks.
 
+%package -n antenne
+Summary:        TV player for coucou-shell
+Requires:       yt-dlp
+
+%description -n antenne
+Free TV channels from many countries with a programme guide, your own
+playlists and streams, and shows from YouTube, the Internet Archive or your
+own files, played full screen by mpv.
+
 %prep
 %autosetup
 
 %build
-for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/pouls-src config/hyprland/programme-src config/hyprland/sesame-src; do
+for crate in crates/cc-pkg-mng config/hyprland/roue-src config/hyprland/prisme-src config/hyprland/balise-src config/hyprland/manette-src config/hyprland/pouls-src config/hyprland/programme-src config/hyprland/sesame-src config/hyprland/antenne-src; do
     cargo build --release --locked --manifest-path "$crate/Cargo.toml" --target-dir target
 done
 
@@ -112,6 +122,7 @@ install -Dm755 target/release/manette          %{buildroot}%{_bindir}/manette
 install -Dm755 target/release/pouls            %{buildroot}%{_bindir}/pouls
 install -Dm755 target/release/programme        %{buildroot}%{_bindir}/programme
 install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
+install -Dm755 target/release/antenne          %{buildroot}%{_bindir}/antenne
 
 %files -n cc-pkg-mng
 %license LICENSE.md
@@ -145,3 +156,7 @@ install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 %files -n sesame
 %license LICENSE.md
 %{_bindir}/sesame
+
+%files -n antenne
+%license LICENSE.md
+%{_bindir}/antenne

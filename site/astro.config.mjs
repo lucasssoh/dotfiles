@@ -65,7 +65,7 @@ export default defineConfig({
           label: 'Applications',
           items: [
             'docs/apps/wezterm', 'docs/apps/firefox', 'docs/apps/nemo', 'docs/apps/neovim',
-            'docs/apps/mpv', 'docs/apps/swayimg', 'docs/apps/games', 'docs/apps/extras',
+            'docs/apps/mpv', 'docs/apps/antenne', 'docs/apps/swayimg', 'docs/apps/games', 'docs/apps/extras',
           ],
         },
         {

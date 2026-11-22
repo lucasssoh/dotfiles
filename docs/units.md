@@ -44,6 +44,7 @@ Each is the application alone. To use another instead, install it, then make it 
 | `neovim` | The editor | yes | [Neovim](apps/neovim.md) |
 | `mpv` | The video and music player | yes | [mpv](apps/mpv.md) |
 | `swayimg` | The image viewer | yes | [swayimg](apps/swayimg.md) |
+| `antenne` | The TV: free channels, a programme guide, shows | no | [Antenne](apps/antenne.md) |
 | `games` | Steam and Lutris | no | [Games](apps/games.md) |
 | `brave`, `mangohud`, `fastfetch`, `ccnote`, `ccslide` | Smaller extras | no | [Extras](apps/extras.md#applications) |
 

@@ -1,0 +1,105 @@
+#!/bin/sh
+# Antenne for Pellicule's scenes, in a sandbox of its own: your channels,
+# shows and history stay out of the pictures, and so does any broadcast.
+# What plays is free: the Blender Foundation's films (CC BY), streamed
+# from the Internet Archive, as a channel and as two shows. Each link is
+# the best copy there that streams without stalling (the Archive's "720p"
+# ones are often 360p, and its 4K stalls).
+#
+#   docs/screenshots/antenne-sandbox             Antenne, in ~/.cache/pellicule/antenne
+#   docs/screenshots/antenne-sandbox --prepare   only the files: the first time takes
+#                                                a minute, longer than a scene waits
+set -e
+
+if pgrep -x antenne >/dev/null; then
+    echo "antenne-sandbox: Antenne is already open; close it first" >&2
+    exit 1
+fi
+
+box=${XDG_CACHE_HOME:-$HOME/.cache}/pellicule/antenne
+ia=https://archive.org/download
+mkdir -p "$box/config/antenne/playlists" "$box/state/antenne" "$box/cache" "$box/stills" "$box/shows"
+
+# The channel lists and programme times of your own cache, when there is
+# one, rather than downloaded again.
+if [ ! -d "$box/cache/antenne" ] && [ -d "$HOME/.cache/antenne" ]; then
+    cp -r "$HOME/.cache/antenne" "$box/cache/"
+fi
+
+# One picture per episode, taken from the film once.
+still() { # NAME SECONDS URL
+    [ -s "$box/stills/$1.jpg" ] || ffmpeg -nostdin -loglevel error -y -ss "$2" -i "$3" -frames:v 1 \
+        -vf "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720" "$box/stills/$1.jpg" || true
+}
+cam1=$ia/Caminandes1LlamaDrama/01_llama_drama_1080p.mp4
+cam2=$ia/Caminandes2GranDillama/02_gran_dillama_1080p.mp4
+cam3=$ia/CaminandesLlamigos/Caminandes_%20Llamigos-1080p.mp4
+ed=$ia/ElephantsDream_628/ElephantsDream_720p_DivXPlus.mkv
+bbb=$ia/big-buck-bunny-2008-1080p-60fps/bbb_sunflower_1080p_60fps_normal.mp4
+sintel=$ia/Sintel/sintel-2048-stereo.mp4
+tos=$ia/tearsofsteelblendervfxopenmovie800p/Tears%20of%20Steel%20-%20Blender%20VFX%20Open%20Movie%20800p.mp4
+cosmos=$ia/CosmosLaundromatFirstCycle/Cosmos%20Laundromat%20-%20First%20Cycle%20%281080p%29.mp4
+spring=$ia/spring_blenderopenmovie/Spring%20-%20Blender%20Open%20Movie%20-%20YouTube.mkv
+still cam1 40 "$cam1" & still cam2 62 "$cam2" & still cam3 55 "$cam3" &
+still ed 180 "$ed" & still bbb 75 "$bbb" & still sintel 330 "$sintel" &
+still tos 230 "$tos" & still cosmos 320 "$cosmos" & still spring 200 "$spring" &
+wait
+s=$box/stills
+
+cat > "$box/shows/Caminandes.m3u" <<EOF
+#EXTM3U
+#PLAYLIST:Caminandes
+#EXTINF:90 group-title="Season 1" tvg-logo="$s/cam1.jpg",Llama Drama
+$cam1
+#EXTINF:146 group-title="Season 1" tvg-logo="$s/cam2.jpg",Gran Dillama
+$cam2
+#EXTINF:150 group-title="Season 1" tvg-logo="$s/cam3.jpg",Llamigos
+$cam3
+EOF
+
+cat > "$box/shows/Blender.m3u" <<EOF
+#EXTM3U
+#PLAYLIST:Blender open movies
+#EXTINF:654 group-title="Films" tvg-logo="$s/ed.jpg",Elephants Dream
+$ed
+#EXTINF:596 group-title="Films" tvg-logo="$s/bbb.jpg",Big Buck Bunny
+$bbb
+#EXTINF:888 group-title="Films" tvg-logo="$s/sintel.jpg",Sintel
+$sintel
+#EXTINF:734 group-title="Films" tvg-logo="$s/tos.jpg",Tears of Steel
+$tos
+#EXTINF:730 group-title="Films" tvg-logo="$s/cosmos.jpg",Cosmos Laundromat
+$cosmos
+#EXTINF:464 group-title="Films" tvg-logo="$s/spring.jpg",Spring
+$spring
+EOF
+
+# France's channels in the guide; Big Buck Bunny, one of My sources, on screen.
+cat > "$box/config/antenne/settings.json" <<EOF
+{"countries": ["fr"], "playlists": [], "check_every_hours": 6, "logos": true,
+ "lower_on_weak": true, "open_last": true, "autonext": true}
+EOF
+cat > "$box/config/antenne/playlists/my-sources.m3u" <<EOF
+#EXTM3U
+#EXTINF:-1 tvg-id="my.bigbuckbunny" group-title="My sources",Big Buck Bunny
+$bbb
+EOF
+# Listed again at start (fetched 0), from the files above.
+cat > "$box/config/antenne/library.json" <<EOF
+{"shows": [
+ {"name": "Caminandes", "url": "$box/shows/Caminandes.m3u", "origin": "Playlist", "fetched": 0, "version": 0},
+ {"name": "Blender open movies", "url": "$box/shows/Blender.m3u", "origin": "Playlist", "fetched": 0, "version": 0}
+]}
+EOF
+# Halfway through Gran Dillama: Continue watching has an episode.
+now=$(date +%s)
+cat > "$box/state/antenne/state.json" <<EOF
+{"last": "my.bigbuckbunny", "favourites": [], "reminders": [], "hidden_continue": [],
+ "progress": {"$cam1": {"pos": 90, "dur": 90, "done": true, "at": $((now - 7200))},
+              "$cam2": {"pos": 64, "dur": 146, "done": false, "at": $((now - 3600))}}}
+EOF
+
+[ "$1" = --prepare ] && exit 0
+
+XDG_CONFIG_HOME=$box/config XDG_STATE_HOME=$box/state XDG_CACHE_HOME=$box/cache \
+    exec "$HOME/.local/bin/antenne"

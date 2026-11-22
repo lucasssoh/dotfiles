@@ -217,6 +217,9 @@ end, { description = "Close" })
 -- Absolute path, same reason as Prisme and Roue above (commit bbb8f61):
 -- Hyprland-launched processes don't inherit ~/.local/bin in their PATH.
 bind(mod .. "+ F",           hl.dsp.exec_cmd("$HOME/.local/bin/liseuse"), { description = "Liseuse" })
+-- Antenne, the TV. One instance: pressed again it brings the TV to this
+-- workspace, back in front, or opens the channel band when it already is.
+bind(mod .. "+ G",           hl.dsp.exec_cmd("$HOME/.local/bin/antenne"), { description = "TV" })
 bind(mod .. "+ SHIFT+ F",    hl.dsp.window.fullscreen({ mode = 0 }), { description = "Fullscreen" })
 bind(mod .. "+ CTRL+ F",     hl.dsp.window.fullscreen({ mode = 1 }), { description = "Maximize" })
 bind(mod .. "+ P",           hl.dsp.window.pseudo(), { description = "Pseudo" })

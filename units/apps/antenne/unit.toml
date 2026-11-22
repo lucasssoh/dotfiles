@@ -1,0 +1,16 @@
+name     = "antenne"
+layer    = "apps"
+summary  = "Antenne: free TV channels with a programme guide, your own playlists, and shows"
+default  = false
+
+# stable: the RPM from the coucou-shell repo, same version as the release.
+# edge:   built locally from config/hyprland/antenne-src with the build deps.
+[binaries]
+rpm    = "antenne"
+source = "config/hyprland/antenne-src"
+bins   = ["antenne"]
+
+[packages]
+# yt-dlp: shows and web pages; mpv-libs: playback, built in.
+dnf   = ["mpv-libs", "yt-dlp"]
+build = ["rust", "cargo", "gtk4-devel", "mpv-devel"]

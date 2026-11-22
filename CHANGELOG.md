@@ -5,6 +5,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
+- **Antenne:** a new app, the TV. `Super + G` opens free channels from the countries you pick, with a programme guide, your own playlists and streams, and shows from YouTube, the Internet Archive or your own files. It works with the keyboard, the mouse or a controller. Install it with `cc-pkg-mng install antenne`.
 - **Manette:** an app in front, such as Antenne, can take the controller. The Guide button still opens the menu.
 - **WezTerm:** `Alt + Shift + B` also goes to the previous tab, next to `Alt + Shift + N` for the next one.
 - **WezTerm:** `AltGr` works in place of `Alt + Shift` for panes and tabs: `AltGr + N` goes to the next tab, `AltGr + H` to the pane on the left.

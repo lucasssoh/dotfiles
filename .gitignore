@@ -15,6 +15,7 @@ config/hyprland/programme-src/target/
 config/hyprland/pouls-src/target/
 config/hyprland/sesame-src/target/
 config/hyprland/manette-src/target/
+config/hyprland/antenne-src/target/
 crates/*/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml

@@ -27,9 +27,13 @@
 -- Every zathura window, not just Liseuse's: a PDF opened from nemo and
 -- left on screen is being read just the same, and Liseuse already treats
 -- every zathura window as its own (ZATHURA_CLASS).
+--
+-- Antenne (the TV) is held the same way, for the same reason: watching
+-- produces no input either, and a TV left on another workspace must not
+-- keep the laptop lit (Antenne stops decoding the picture there too).
 -- ============================================================
 
-local CLASS = "org.pwmt.zathura"
+local CLASSES = { ["org.pwmt.zathura"] = true, ["io.github.lucasssoh.Antenne"] = true }
 local TAG = "reading-on"
 
 hl.window_rule({ match = { tag = TAG }, idle_inhibit = "always" })
@@ -42,7 +46,7 @@ end
 
 local function sync()
     for _, w in ipairs(hl.get_windows()) do
-        if w.class == CLASS then
+        if CLASSES[w.class] then
             local ws = w.workspace
             local want = ws ~= nil and ws.visible == true and w.hidden ~= true
             if want ~= has_tag(w, TAG) then
