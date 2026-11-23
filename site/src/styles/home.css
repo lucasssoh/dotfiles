@@ -130,7 +130,14 @@ html:not(.booted) body { overflow: hidden; }
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
 .hero { position: relative; overflow: hidden; }
-.ground { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* As wide as the screen, from the top: the gradient below takes it into the
+   page's grey before the hero ends. Scaled to the height of the hero, which
+   holds the video, it was cropped and shrunk by an odd factor. */
+.ground {
+  position: absolute; top: 0; left: 0; width: 100%; height: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
 .hero::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(to bottom, var(--c-bg-0) 55%, var(--c-bg) 100%);
