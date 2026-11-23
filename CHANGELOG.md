@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Power:** a profile you pick by hand stays until the cable is plugged or unplugged. While charging, it went back to Balanced within a minute.
+- **Bar:** with the bar at the top, the network, battery and volume drawers no longer sit lower than with the bar at the bottom.
 
 ## 2.7.2
 

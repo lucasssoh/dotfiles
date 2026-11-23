@@ -137,7 +137,7 @@ Item {
         anchors.top: BarPosition.bottom ? parent.top : handle.bottom
         anchors.leftMargin: 10
         anchors.rightMargin: 10
-        anchors.topMargin: 14
+        anchors.topMargin: BarPosition.bottom ? 14 : 10
         sourceComponent: root.currentPage === "app" ? appPage : homePage
     }
 

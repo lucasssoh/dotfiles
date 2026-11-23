@@ -945,8 +945,8 @@ Item {
         anchors.bottom: parent.bottom
         anchors.leftMargin: 10
         anchors.rightMargin: 10
-        anchors.topMargin: 14
-        anchors.bottomMargin: 10
+        anchors.topMargin: BarPosition.bottom ? 14 : 10
+        anchors.bottomMargin: BarPosition.bottom ? 10 : 14
         clip: true
 
         // No `Behavior on x` on either Loader any more -- the sideways

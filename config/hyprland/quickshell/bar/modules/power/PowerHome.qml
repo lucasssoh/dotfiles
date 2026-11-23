@@ -194,7 +194,7 @@ Item {
         // baseline and so drew their ink above the box entirely. With
         // that fixed this measures 36px, five MORE than Balise, which is
         // the right amount of air under a 28px display number.
-        anchors.topMargin: 14
+        anchors.topMargin: BarPosition.bottom ? 14 : 10
         spacing: 10
 
         // ---- headline: time left, level, live draw ------------------
