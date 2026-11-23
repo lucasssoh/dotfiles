@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question
+    url: https://github.com/lucasssoh/dotfiles/discussions
+    about: Ask in Discussions.
+  - name: Vulnerability
+    url: https://github.com/lucasssoh/dotfiles/security/advisories/new
+    about: Report it privately.
