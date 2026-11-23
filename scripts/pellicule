@@ -62,7 +62,8 @@ Steps, one string each:
 A [[video]] may set its own `wallpaper`, and `repeat = [RATE, DELAY]`:
 the key repeat for the run (keys a second, ms before it starts), so a
 held key runs through a known number of cards; yours comes back at the
-end.
+end. `wallpapers = ["coucou-*", "gnome-*"]` keeps Prisme to the
+wallpapers that match for the run.
 
 In a video, the keys typed show at the bottom right, white on dark grey
 squares, put on the picture when it is encoded ([[video]] `keys = false`
@@ -293,6 +294,21 @@ WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
 # Prisme opens on the playlist's `last_static`, your own choice.
 PLAYLIST = Path.home() / ".config/hypr/wallpaper-playlist.json"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "pellicule"
+# The wallpaper folder Prisme and wallpaper-set read, one line.
+PRISME_DIR_CONF = Path.home() / ".config/prisme/wallpapers.conf"
+
+
+def wallpapers_dir():
+    """The wallpaper folder, as Prisme reads it: the first line of its
+    wallpapers.conf that isn't a comment, ~/Images/Wallpapers otherwise."""
+    try:
+        for line in PRISME_DIR_CONF.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return Path(os.path.expanduser(line))
+    except OSError:
+        pass
+    return Path.home() / "Images/Wallpapers"
 STEAM_ART = "https://cdn.cloudflare.steamstatic.com/steam/apps/{id}/{file}"
 
 
@@ -617,6 +633,11 @@ class Take:
         self.wallpaper = settings.get("wallpaper")
         self.saved_wallpaper = wallpaper_get() if self.wallpaper else None
         self.saved_playlist = PLAYLIST.read_bytes() if self.wallpaper and PLAYLIST.exists() else None
+        # Only these wallpapers in Prisme for the run (patterns, `gnome-*`):
+        # its cards show their neighbours, and yours may not be free to film.
+        self.wallpapers = settings.get("wallpapers")
+        self.saved_dir_conf = None
+        self.dir_conf_changed = False
         self.procs = []
         self.notes = []
         self.pointer = tuple(settings.get("pointer", [960, 1100]))
@@ -644,6 +665,8 @@ class Take:
         ipc("demo", "on")
         # Out of every picture and video; still parked, for what it hovers.
         cursor_hide(True)
+        if self.wallpapers:
+            self.narrow_wallpapers()
         if self.wallpaper:
             # One file of a light/dark pair stands for both: the scheme
             # changes below bring the other half.
@@ -657,6 +680,27 @@ class Take:
             PLAYLIST.write_text(json.dumps(playlist))
         workspace_go(self.ws)
         time.sleep(0.8)
+
+    def narrow_wallpapers(self):
+        """A folder of links to the wallpapers the run may show, named as
+        the originals so Prisme finds its thumbnails, set as the folder."""
+        src = wallpapers_dir()
+        box = CACHE / "wallpapers"
+        if box.exists():
+            for f in box.iterdir():
+                f.unlink()
+        box.mkdir(parents=True, exist_ok=True)
+        for pattern in self.wallpapers:
+            for f in sorted(src.glob(pattern)):
+                (box / f.name).symlink_to(f.resolve())
+        if PRISME_DIR_CONF.is_symlink():
+            self.saved_dir_conf = Path(os.readlink(PRISME_DIR_CONF))
+        elif PRISME_DIR_CONF.exists():
+            self.saved_dir_conf = PRISME_DIR_CONF.read_bytes()
+        PRISME_DIR_CONF.parent.mkdir(parents=True, exist_ok=True)
+        PRISME_DIR_CONF.unlink(missing_ok=True)   # a link to the repo stays untouched
+        PRISME_DIR_CONF.write_text(f"{box}\n")
+        self.dir_conf_changed = True
 
     def step(self, step):
         words = shlex.split(step)
@@ -764,6 +808,13 @@ class Take:
                 PLAYLIST.write_bytes(self.saved_playlist)
             elif self.wallpaper:
                 PLAYLIST.unlink(missing_ok=True)
+            if self.dir_conf_changed:
+                # Before your wallpaper comes back: it may be one the run left out.
+                PRISME_DIR_CONF.unlink(missing_ok=True)
+                if isinstance(self.saved_dir_conf, Path):
+                    PRISME_DIR_CONF.symlink_to(self.saved_dir_conf)
+                elif self.saved_dir_conf is not None:
+                    PRISME_DIR_CONF.write_bytes(self.saved_dir_conf)
             if self.saved_wallpaper:
                 time.sleep(1)   # after the scheme's own swap, not raced by it
                 wallpaper_set(self.saved_wallpaper)
@@ -900,11 +951,12 @@ def keys_path(video):
     return CACHE / f"{video['name']}.keys.json"
 
 
-def key_spans(log, length, offset, linger=1.2):
-    """[(start, end, labels)]: what the squares show, in the video's time. A
-    shortcut shows for `linger` seconds, with the keys held under it; a key
-    held shows until it is let go."""
-    held, flash, change = [], None, []
+def key_spans(log, length, offset, linger=1.2, tap=0.18):
+    """[(start, end, labels, pressed)]: what the keys show, in the video's
+    time, and which of them are down. A shortcut shows for `linger` seconds,
+    pressed for the first `tap` of them, with the keys held under it; a key
+    held shows, pressed, until it is let go."""
+    held, flash = [], None
     points = []
     for t, verb, labels in log:
         t += offset
@@ -920,50 +972,118 @@ def key_spans(log, length, offset, linger=1.2):
     spans = []
     for i, (t, held_now, fl) in enumerate(points):
         nxt = points[i + 1][0] if i + 1 < len(points) else length
-        if fl and fl[1] < nxt:
-            spans.append((t, fl[1], fl[0]))
-            if held_now:
-                spans.append((fl[1], nxt, held_now))
-        elif fl:
-            spans.append((t, nxt, fl[0]))
+        if fl:
+            end = min(fl[1], nxt)
+            spans.append((t, min(t + tap, end), fl[0], fl[0]))
+            spans.append((min(t + tap, end), end, fl[0], held_now))
+            if fl[1] < nxt and held_now:
+                spans.append((fl[1], nxt, held_now, held_now))
         elif held_now:
-            spans.append((t, nxt, held_now))
+            spans.append((t, nxt, held_now, held_now))
     out = []
-    for a, b, labels in spans:
+    for a, b, labels, down in spans:
         a, b = max(0.0, a), min(length, b)
-        if b - a < 0.15:
+        if b - a < 0.04:
             continue
-        if out and out[-1][2] == labels and abs(out[-1][1] - a) < 0.01:
-            out[-1] = (out[-1][0], b, labels)
+        if out and out[-1][2:] == (labels, down) and abs(out[-1][1] - a) < 0.01:
+            out[-1] = (out[-1][0], b, labels, down)
         else:
-            out.append((a, b, labels))
+            out.append((a, b, labels, down))
     return out
 
 
-def key_picture(labels, height, path):
-    """White on dark grey squares, one per key; a word widens its square."""
-    from PIL import Image, ImageDraw, ImageFont
+# How each key is drawn: (kind, symbol). Graphite for the modifiers and the
+# keys around them, cream for letters, digits and Space, as coucou's two inks.
+KEYCAPS = {"Super": ("mod", "❖"), "Shift": ("mod", "⇧"), "Ctrl": ("mod", "⌃"), "Alt": ("mod", "⎇"),
+           "Tab": ("mod", "⇥"), "Enter": ("mod", "↵"), "⌫": ("sym", "⌫"), "Space": ("space", "␣"),
+           "←": ("sym", "←"), "→": ("sym", "→"), "↑": ("sym", "↑"), "↓": ("sym", "↓")}
+CREAM = ((0xe6, 0xe0, 0xd2), (0xc9, 0xc1, 0xae), (0xfb, 0xf8, 0xf0), (0xee, 0xe8, 0xda), (0x2a, 0x28, 0x24))
+GRAPHITE = ((0x2a, 0x2a, 0x2e), (0x14, 0x14, 0x16), (0x4a, 0x4a, 0x50), (0x33, 0x33, 0x38), (0xec, 0xec, 0xf0))
+
+
+def key_picture(labels, height, path, pressed=()):
+    """Keycaps, one per key, as a keyboard's: the walls, a dished top, the
+    legend where a keyboard puts it. A key in `pressed` sits lower."""
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
     k = height / 1440
-    side, pad, gap, radius = round(76 * k), round(22 * k), round(10 * k), round(14 * k)
-    def font(size, text):
-        mi = Path.home() / ".local/share/fonts/MiSansLatin/MiSansLatin-Semibold.ttf"
-        plain = all(c.isascii() for c in text)
-        name = str(mi) if plain and mi.exists() else "DejaVuSans-Bold.ttf"
-        try:
-            return ImageFont.truetype(name, size)
-        except OSError:
-            return ImageFont.truetype("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf", size)
+    u = 92 * k                       # a unit key
+    gap, pad, travel = round(10 * k), round(22 * k), round(6 * k)
+    mi = Path.home() / ".local/share/fonts/MiSansLatin/MiSansLatin-Semibold.ttf"
+    dejavu = "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf"
+    def font(size, symbol=False):
+        for name in ([dejavu, "DejaVuSans.ttf"] if symbol else [str(mi), dejavu, "DejaVuSans.ttf"]):
+            try:
+                return ImageFont.truetype(name, round(size))
+            except OSError:
+                pass
+        return ImageFont.load_default()
+
+    def gradient(size, top, bottom):
+        g = Image.linear_gradient("L").resize(size)
+        return ImageOps.colorize(g, top, bottom).convert("RGBA")
+
+    def dish(size, centre, edge):
+        w, h = size
+        g = Image.radial_gradient("L").resize((round(w * 1.7), round(h * 2.2)))
+        g = g.crop((round(w * 0.35), round(h * 0.55), round(w * 0.35) + w, round(h * 0.55) + h))
+        g = g.point(lambda v: min(255, int(v * 1.39)))   # the edge colour at 72 %
+        return ImageOps.colorize(g, centre, edge).convert("RGBA")
+
+    def rounded(im, r):
+        m = Image.new("L", im.size, 0)
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, im.width - 1, im.height - 1), radius=r, fill=255)
+        im.putalpha(m)
+        return im
+
     caps = []
     for text in labels:
-        f = font(round((36 if len(text) == 1 else 28) * k), text)
-        w = f.getbbox(text)[2] - f.getbbox(text)[0]
-        caps.append((text, f, max(side, w + 2 * pad)))
-    img = Image.new("RGBA", (sum(c[2] for c in caps) + gap * (len(caps) - 1), side), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    x = 0
-    for text, f, w in caps:
-        d.rounded_rectangle((x, 0, x + w - 1, side - 1), radius=radius, fill=(38, 38, 42, 236))
-        d.text((x + w / 2, side / 2), text, font=f, fill=(255, 255, 255, 255), anchor="mm")
+        kind, sym = KEYCAPS.get(text, ("letter" if len(text) == 1 else "word", None))
+        units = {"mod": 1.5, "space": 3.25, "word": 1.25}.get(kind, 1)
+        caps.append((text, kind, sym, round(u * units)))
+    width = sum(c[3] for c in caps) + gap * (len(caps) - 1) + 2 * pad
+    img = Image.new("RGBA", (width, round(u) + 2 * pad + travel), (0, 0, 0, 0))
+    x = pad
+    for text, kind, sym, w in caps:
+        h = round(u)
+        down = text in pressed
+        y = pad + (travel if down else 0)
+        wall_t, wall_b, face_c, face_e, ink = GRAPHITE if kind in ("mod", "sym", "word") else CREAM
+        # the shadow on the screen, shorter when the key is down
+        sh_im = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        drop = round((4 if down else 12) * k)
+        ImageDraw.Draw(sh_im).rounded_rectangle((x, y + drop, x + w, y + h + drop), radius=round(0.17 * u),
+                                                fill=(0, 0, 0, 90))
+        img.alpha_composite(sh_im.filter(ImageFilter.GaussianBlur(round(12 * k))))
+        line = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(line).rounded_rectangle((x, y + round(2 * k), x + w - 1, y + h - 1 + round(2 * k)),
+                                               radius=round(0.17 * u), fill=(0, 0, 0, 80))
+        img.alpha_composite(line)
+        # the walls, then the top set inside them
+        img.alpha_composite(rounded(gradient((w, h), wall_t, wall_b), round(0.17 * u)), (x, y))
+        fx, fy = round(0.087 * u), round(0.064 * u)
+        fw, fh = w - 2 * fx, h - fy - round(0.157 * u)
+        face = rounded(dish((fw, fh), face_c, face_e), round(0.128 * u))
+        rim = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
+        ImageDraw.Draw(rim).rounded_rectangle((0, 0, fw - 1, fh - 1), radius=round(0.128 * u),
+                                              outline=(255, 255, 255, 70 if kind in ("mod", "sym", "word") else 150),
+                                              width=max(1, round(1.5 * k)))
+        rim.putalpha(Image.composite(rim.getchannel("A"), Image.new("L", rim.size, 0),
+                                     Image.linear_gradient("L").rotate(180).resize(rim.size)))
+        face.alpha_composite(rim)
+        img.alpha_composite(face, (x + fx, y + fy))
+        d = ImageDraw.Draw(img)
+        left, top, bottom = x + fx + 0.12 * u, y + fy + 0.10 * u, y + fy + fh - 0.10 * u
+        if kind == "mod":
+            d.text((left, top), sym, font=font(0.27 * u, True), fill=ink, anchor="lt")
+            d.text((left, bottom), text, font=font(0.19 * u), fill=ink, anchor="ls")
+        elif kind == "space":
+            # ␣ sits on the baseline: drawn larger, and raised to the middle
+            d.text((x + w / 2, y + fy + fh / 2 - 0.05 * u), sym, font=font(0.5 * u, True), fill=ink + (215,), anchor="mm")
+        elif kind == "sym":
+            d.text((x + w / 2, y + fy + fh / 2), sym, font=font(0.34 * u, True), fill=ink, anchor="mm")
+        else:
+            size = 0.36 * u if kind == "letter" else 0.22 * u
+            d.text((x + w / 2, y + fy + fh / 2), text, font=font(size), fill=ink, anchor="mm")
         x += w + gap
     img.save(path)
     return img.size
@@ -1041,11 +1161,12 @@ def encode(video, out):
         pics = CACHE / "keys"
         pics.mkdir(parents=True, exist_ok=True)
         head += "[k0]"
-        for i, (a, b, labels) in enumerate(spans):
+        for i, (a, b, labels, down) in enumerate(spans):
             png = pics / f"{name}-{i}.png"
-            w, h = key_picture(labels, H, png)
+            w, h = key_picture(labels, H, png, down)
             src += ["-i", str(png)]
-            x, y = W - w - round(32 * k), H - h - round(96 * k)
+            # the picture holds a margin for the shadow and the travel
+            x, y = W - w - round(10 * k), H - h - round(68 * k)
             head += f";[k{i}][{i + 1}:v]overlay={x}:{y}:enable='between(t,{a:.3f},{b:.3f})'[k{i + 1}]"
         head += f";[k{len(spans)}]null"
     head += f",{fade_v}"
@@ -1162,7 +1283,7 @@ def main():
                 print(p, file=sys.stderr)
             fail("the video is out of step with the shell; nothing recorded")
         # the video's own wallpaper and key repeat, for this run
-        take = Take({**settings, **{k: video[k] for k in ("wallpaper", "repeat") if k in video},
+        take = Take({**settings, **{k: video[k] for k in ("wallpaper", "wallpapers", "repeat") if k in video},
                      "_scale": a.scale})
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
         # its terminal closing under it: put everything back all the same

@@ -354,10 +354,11 @@ audio = "~/Musique/Scott Buckley - Sunday Smooth.mp3"
 audio_delay = 0.4
 fade = 2.5
 exports = "~/Videos/coucou-shell"
-# In the middle of the GNOME pairs (gnome-adwaita to gnome-tubes, 21
-# cards in a row in Prisme): wherever Prisme stops among them, the
-# wallpaper has a dark half for the switch to dark at the end.
-wallpaper = "gnome-fold.jxl"
+# Coucou Relief, light then dark. Prisme only shows the coucou and
+# GNOME pairs for the run: every card is free to film, and each has a
+# dark half for the switch at the end.
+wallpaper = "coucou-aube-relief.jxl"
+wallpapers = ["coucou-*", "gnome-*"]
 # 6 keys a second after 250 ms: a key held 2 s moves 11 cards.
 repeat = [6, 250]
 steps = [
@@ -396,33 +397,32 @@ steps = [
     "ipc bar controllerNav right", "wait 0.9",
     "ipc bar controllerMenu", "wait 0.4",
     "ipc controller reset", "wait 0.6",
-    # The tiling: five terminals stacked, then closed one by one.
-    "key super+Return", "wait 0.5",
-    "key super+Return", "wait 0.5",
-    "key super+Return", "wait 0.5",
-    "key super+Return", "wait 0.5",
-    "key super+Return", "wait 1.6",
-    "key super+q", "wait 0.4",
-    "key super+q", "wait 0.4",
-    "key super+q", "wait 0.4",
-    "key super+q", "wait 0.4",
-    "key super+q", "wait 0.8",
-    # Prisme opens on gnome-fold: held l then h, 11 cards each way and
-    # back, three steps, applied. The light scheme comes with it; the
-    # switch to dark brings its other half.
+    # Prisme opens on Relief: held l then h, 11 cards each way, back on
+    # Relief, its preview, applied. The switch to dark brings its other half.
     "key super+w", "wait 1.2",
     "down l", "wait 2", "up l", "wait 0.4",
-    "down h", "wait 2", "up h", "wait 0.5",
-    "key h", "wait 0.25",
-    "key h", "wait 0.25",
-    "key h", "wait 0.8",
+    "down h", "wait 2", "up h", "wait 0.8",
     "key c", "wait 1.0",
     "key c", "wait 0.8",
     "key Return", "wait 1.8",
     # Switch to dark for the end.
     "scheme dark", "wait 2.2",
-    # In dark: the battery, then the desktop alone for the fade.
+    # In dark: the battery.
     "ipc bar togglePower", "wait 1.6",
     "ipc bar togglePower", "wait 0.6",
-    "wait 3",
+    # The TV, on PokerGO: the guide, j then k held down the channels and
+    # back, through the categories and back. Nothing is chosen: the channel
+    # stays the same, and the film fades out with the guide open (Antenne
+    # closes once the camera has stopped).
+    # Super + G opens it on the channel watched last: the ring, then the picture.
+    "key super+g", "wait 6",
+    "key space", "wait 1.2",
+    "key space", "wait 1.6",
+    "down j", "wait 1.8", "up j", "wait 0.5",
+    "down k", "wait 1.5", "up k", "wait 0.8",
+    "key Tab", "wait 0.35", "key Tab", "wait 0.35", "key Tab", "wait 0.35",
+    "key Tab", "wait 0.35", "key Tab", "wait 0.35", "key Tab", "wait 0.8",
+    "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35",
+    "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 1.8",
+    "wait 2.5",
 ]
