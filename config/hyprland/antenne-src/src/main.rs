@@ -3746,6 +3746,13 @@ mod tests {
 }
 
 fn main() -> glib::ExitCode {
+    // GTK 4.24 picks Vulkan here. Its frame submit waited on a sync point
+    // that Hyprland does not signal while the window is on a hidden
+    // workspace: back on it, the picture froze for seconds, or for good.
+    // The picture is GL anyway (mpv into a GLArea).
+    if std::env::var_os("GSK_RENDERER").is_none() {
+        std::env::set_var("GSK_RENDERER", "opengl");
+    }
     let app = gtk::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
     let slot: Rc<RefCell<Option<Rc<App>>>> = Rc::new(RefCell::new(None));
     app.connect_activate(move |app| {
