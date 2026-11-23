@@ -722,6 +722,16 @@ ShellRoot {
     }
     onGlassToneLuaChanged: glassPump.start()
     Component.onCompleted: glassPump.start()
+    // A config reload puts hyprland.lua's dark pair back, whatever the mode:
+    // send the tone again.
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (event.name !== "configreloaded") return;
+            shell.glassSent = "";
+            glassPump.start();
+        }
+    }
 
     Veille {
         id: veilleInstance

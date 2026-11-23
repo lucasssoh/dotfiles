@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Antenne:** with the guide open, a channel that doesn't answer says so over its picture, at the top right, instead of in the middle of the guide.
+- **Bar:** the drawers' glass keeps the light mode's tone after Hyprland reloads its configuration.
 
 ### Changed
 - **Antenne:** opens with a fade instead of growing from the middle of the screen, and the picture rises out of the black.
