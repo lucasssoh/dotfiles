@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.7.0 (November 23 2026)
 
 ### Added
 - **Antenne:** a new app, the TV. `Super + G` opens free channels from the countries you pick, with a programme guide, your own playlists and streams, and shows from YouTube, the Internet Archive or your own files. It works with the keyboard, the mouse or a controller. Install it with `cc-pkg-mng install antenne`.
