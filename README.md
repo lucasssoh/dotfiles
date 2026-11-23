@@ -1,5 +1,21 @@
 # coucou-shell
 
+<p align="center">
+  <a href="#install"><img alt="Install: 3 commands" src="https://img.shields.io/badge/Install-3%20commands-0A84FF?style=for-the-badge&labelColor=555555&color=0A84FF"></a>
+  <a href="https://fedoraproject.org/"><img alt="Fedora: 44 · 45" src="https://img.shields.io/badge/Fedora-44%20%C2%B7%2045-51A2DA?style=for-the-badge&labelColor=555555&color=51A2DA"></a>
+  <a href="https://github.com/lucasssoh/dotfiles/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/lucasssoh/dotfiles?style=for-the-badge&amp;label=release&amp;labelColor=555555&amp;color=30A46C"></a>
+  <a href="https://lucasssoh.github.io/dotfiles/"><img alt="Docs: website" src="https://img.shields.io/badge/Docs-website-E5484D?style=for-the-badge&labelColor=555555&color=E5484D"></a>
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-D4A017?style=for-the-badge&labelColor=555555&color=D4A017"></a>
+</p>
+<p align="center">
+  <a href="https://hypr.land/"><img alt="Hyprland: 0.57" src="https://img.shields.io/badge/Hyprland-0.57-00A8C6?style=flat&labelColor=555555&color=00A8C6&logo=hyprland&logoColor=white"></a>
+  <a href="https://www.rust-lang.org/"><img alt="Rust: 9 crates" src="https://img.shields.io/badge/Rust-9%20crates-CE422B?style=flat&labelColor=555555&color=CE422B&logo=rust&logoColor=white"></a>
+  <a href="https://quickshell.org/"><img alt="Quickshell: the bar" src="https://img.shields.io/badge/Quickshell-the%20bar-8E4EC6?style=flat&labelColor=555555&color=8E4EC6"></a>
+  <a href="https://www.gtk.org/"><img alt="GTK: 4" src="https://img.shields.io/badge/GTK-4-4E9A06?style=flat&labelColor=555555&color=4E9A06&logo=gtk&logoColor=white"></a>
+  <a href="https://mpv.io/"><img alt="mpv: Antenne" src="https://img.shields.io/badge/mpv-Antenne-691F69?style=flat&labelColor=555555&color=691F69&logo=mpv&logoColor=white"></a>
+  <a href="https://pipewire.org/"><img alt="PipeWire: EQ per app" src="https://img.shields.io/badge/PipeWire-EQ%20per%20app-3A6EA5?style=flat&labelColor=555555&color=3A6EA5"></a>
+</p>
+
 A Fedora desktop built on [Hyprland](https://hyprland.org/), with its own bar, its own tools, and a manager that installs it and keeps it up to date.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/showcase-dark.webp"><img src="docs/screenshots/showcase.webp" alt="Two screens: the controller menu, and the calendar with Balise"></picture>
