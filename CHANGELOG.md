@@ -11,6 +11,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **WezTerm:** `AltGr` works in place of `Alt + Shift` for panes and tabs: `AltGr + N` goes to the next tab, `AltGr + H` to the pane on the left.
 - **config-extras:** lazygit no longer fetches on its own, so no passphrase prompt comes up while you work: `f` fetches.
 
+### Changed
+- **config-extras:** fastfetch shows Rapunzel as a grey photo instead of coloured ASCII, next to the summary in the terminal's own colours, without frames or colour dots. The summary starts with Coucou Shell and ends with the cc-pkg-mng version.
+
 ## 2.6.1
 
 ### Fixed

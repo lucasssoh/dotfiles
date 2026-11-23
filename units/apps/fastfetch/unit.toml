@@ -4,4 +4,4 @@ summary  = "fastfetch system summary"
 default  = false
 
 [packages]
-dnf = ["fastfetch", "chafa"]
+dnf = ["fastfetch"]

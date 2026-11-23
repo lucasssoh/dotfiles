@@ -17,7 +17,7 @@ RESET="\e[0m"
 ok() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 
 # 1. Install fastfetch
-pkg_ensure fastfetch chafa
+pkg_ensure fastfetch
 
 # 2. Symlinks
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -26,6 +26,6 @@ mkdir -p ~/.config/fastfetch
 
 # Link the JSONC config and the image
 safe_link "$DOTFILES_DIR/config/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
-safe_link "$DOTFILES_DIR/config/fastfetch/rayponce.jpg" ~/.config/fastfetch/rayponce.jpg
+safe_link "$DOTFILES_DIR/config/fastfetch/rayponce.png" ~/.config/fastfetch/rayponce.png
 
 ok "Fastfetch configured."

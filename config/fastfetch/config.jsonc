@@ -1,106 +1,45 @@
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    // The photo is drawn by the terminal (WezTerm reads the iTerm image
+    // protocol), not turned into characters. In grey, like the shell.
     "logo": {
-        "source": "~/.config/fastfetch/rayponce.jpg",
-        "width": 35,
-        "type":"chafa",
-        "chafa": {
-            "symbols": "ascii" // Force the use of classic ASCII characters
-        },
-        "height": 15,
-        "padding": {
-            "left": 1,
-            "right": 2,
-            "bottom": 1
-        }
+        "source": "~/.config/fastfetch/rayponce.png",
+        "type": "iterm",
+        "width": 24,
+        "height": 14,
+        "padding": { "left": 1, "right": 4 }
     },
-
+    // The terminal's own inks: keys dim, values plain, so it follows light
+    // and dark mode without a colour of its own.
     "display": {
         "separator": "",
-        "constants": [
-            "──────────────" // {$1}, used in Custom module
-        ],
-        "key": {
-            "width": 10
-        }
+        "brightColor": false,
+        "key": { "width": 12 },
+        "color": { "keys": "2", "title": "1" },
+        "percent": { "color": { "green": "default", "yellow": "default", "red": "default" }, "spaceBeforeUnit": "always" },
+        "size": { "ndigits": 0, "binaryPrefix": "jedec", "spaceBeforeUnit": "always" },
+        "duration": { "abbreviation": true, "spaceBeforeUnit": "always" }
     },
     "modules": [
+        "break",
+        "break",
+        { "type": "custom", "format": "{#1}Coucou Shell{#}" },
+        "break",
+        { "type": "cpu", "key": "Processor", "format": "{name}" },
+        { "type": "gpu", "key": "Graphics", "format": "{name}" },
+        { "type": "memory", "key": "Memory", "format": "{used} of {total}" },
+        "break",
+        { "type": "os", "key": "System", "format": "{name} {version-id}" },
+        { "type": "kernel", "key": "Kernel", "format": "{release}" },
+        { "type": "wm", "key": "Desktop", "format": "{pretty-name} {version}" },
+        { "type": "battery", "key": "Battery", "format": "{capacity}" },
+        "break",
+        // The package's version where it is installed (the release), the
+        // checkout's otherwise.
         {
-            "type": "colors",
-            "paddingLeft": 16,
-            "symbol": "circle"
-        },
-        {
-            "type": "custom", // HardwareStart
-            // {#1} is equivalent to `\u001b[1m`. {#} is equivalent to `\u001b[m`
-            "format": "{#90}┌{$1} Hardware {$1}{$1}┐{#}"
-        },
-        {
-            "key": "CPU",
-            "type": "cpu",
-            "showPeCoreCount": true,
-            "keyColor": "33"
-        },
-        {
-            "key": "GPU",
-            "type": "gpu",
-            "keyColor": "32"
-        },
-        
-        {
-            "key": "Memory",
-            "type": "memory",
-            "keyColor": "31"
-        },
-        
-        {
-            "type": "custom", // InformationEnd
-            "format": "{#90}└{$1}────────────────────────{$1}┘{#}"
-        },
-        {
-            "type": "custom", // SoftwareStart
-            // {#1} is equivalent to `\u001b[1m`. {#} is equivalent to `\u001b[m`
-            "format": "{#90}┌{$1} Software {$1}{$1}┐{#}"
-        },
-        {
-            "key": "OS",
-            "type": "os",
-            "keyColor": "33"
-        },
-        {
-            "key": "Kernel",
-            "type": "kernel",
-            "keyColor": "93"
-        },
-        {
-            "key": "DM",
-            "type": "lm",
-            "keyColor": "35"
-        },
-        {
-            "key": "DE",
-            "type": "de",
-            "keyColor": "91"
-        },
-        {
-            "key": "WM",
-            "type": "wm",
-            "keyColor": "32"
-        },
-        {
-            "key": "Terminal",
-            "type": "terminal",
-            "keyColor": "94"
-        },
-                {
-            "type": "custom", // InformationEnd
-            "format": "{#90}└{$1}────────────────────────{$1}┘{#}"
-        },
-        {
-            "type": "colors",
-            "paddingLeft": 16,
-            "symbol": "circle"
+            "type": "command",
+            "key": "cc-pkg-mng",
+            "text": "v=$(rpm -q --qf '%{VERSION}' cc-pkg-mng 2>/dev/null) || v=$(cc-pkg-mng -V 2>/dev/null | grep -oE '[0-9]+[.][0-9]+[.][0-9]+' | head -n1); echo \"$v\""
         }
     ]
 }
-

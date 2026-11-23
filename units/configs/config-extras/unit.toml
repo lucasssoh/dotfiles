@@ -6,14 +6,14 @@ summary  = "Lucas's configs for mpv, MangoHud, fastfetch, Brave and lazygit, eac
 "config/mpv/mpv.conf"             = "~/.config/mpv/mpv.conf"
 "config/mangohud/MangoHud.conf"   = "~/.config/MangoHud/MangoHud.conf"
 "config/fastfetch/config.jsonc"   = "~/.config/fastfetch/config.jsonc"
-"config/fastfetch/rayponce.jpg"   = "~/.config/fastfetch/rayponce.jpg"
+"config/fastfetch/rayponce.png"   = "~/.config/fastfetch/rayponce.png"
 "config/oplide/oplide.desktop"    = "~/.local/share/applications/oplide.desktop"
 "config/lazygit/config.yml"       = "~/.config/lazygit/config.yml"
 
 [links_if]
 mpv       = ["config/mpv/mpv.conf"]
 mangohud  = ["config/mangohud/MangoHud.conf"]
-fastfetch = ["config/fastfetch/config.jsonc", "config/fastfetch/rayponce.jpg"]
+fastfetch = ["config/fastfetch/config.jsonc", "config/fastfetch/rayponce.png"]
 
 [[hooks]]
 name   = "brave-flags"
