@@ -110,16 +110,20 @@ Item {
     // ...and on down the sides as a 1 px line easing out to nothing: the
     // band alone stopped on a hard cut where each corner meets its side,
     // plain to see on the light glass. The corner's arc is vertical by the
-    // band's bottom, so the line takes over from it seamlessly.
+    // band's bottom, so the line takes over from it seamlessly. It stops
+    // where the bottom corner starts to curve in: on a pill (radius half
+    // the height) there is no straight side at all, and a line run on
+    // down stood out past the curve, a stray stroke beside the pane.
     Repeater {
         model: edge.highlight && edge.sideHighlight ? [1, edge.width - 2] : []
 
         Rectangle {
             required property real modelData
+            readonly property real bottomRadius: Math.max(1, modelData < edge.width / 2 ? edge.bottomLeftRadius : edge.bottomRightRadius)
             x: modelData
             y: 1 + topLight.height
             width: 1
-            height: Math.max(0, Math.min(edge.height - 2 - topLight.height, Math.max(24, edge.height * 0.35)))
+            height: Math.max(0, Math.min(edge.height - bottomRadius - y, Math.max(24, edge.height * 0.35)))
             gradient: Gradient {
                 GradientStop { position: 0.0; color: edge.highlightColor }
                 GradientStop { position: 1.0; color: DrawerTheme.clear(edge.highlightColor) }

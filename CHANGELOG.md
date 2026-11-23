@@ -17,6 +17,8 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Fixed
 - **Prisme:** thumbnails show with the first frame, even on a busy machine.
 - **WezTerm:** at a fractional scale such as 125 %, opening a second terminal no longer closes every WezTerm window.
+- **Bar, glass popups:** at a fractional scale such as 125 %, the blur behind the volume and brightness dial, the controller pill and the other glass panes no longer shows past their edges as dark stairs.
+- **Bar, controller pill:** no more stray line beside the pill's rounded ends.
 
 ## 2.6.1
 

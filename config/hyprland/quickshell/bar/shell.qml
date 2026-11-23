@@ -1020,6 +1020,7 @@ ShellRoot {
                 // blur (services/IslandStyle.qml): up whenever the bar is,
                 // whole, so it is on `glassFade`'s forces-1 list below.
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: centerIsland.x + centerIsland.rowPaneX
                     y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
                     width: IslandStyle.blur && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
@@ -1027,6 +1028,7 @@ ShellRoot {
                     radius: centerIsland.rowPaneR
                 }
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: centerIsland.x + centerIsland.paneX
                     y: centerIsland.y + centerIsland.paneY
                     width: DrawerTheme.glass && centerIsland.paneShown ? centerIsland.paneWidth : 0
@@ -1034,6 +1036,7 @@ ShellRoot {
                     radius: centerIsland.paneRadius
                 }
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: clockIsland.x + clockIsland.paneX
                     y: clockIsland.y + clockIsland.paneY
                     width: DrawerTheme.glass && clockIsland.paneShown
@@ -1043,6 +1046,7 @@ ShellRoot {
                     radius: clockIsland.paneRadius
                 }
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: programmeIsland.x + programmeIsland.paneX
                     y: programmeIsland.y + programmeIsland.paneY
                     width: DrawerTheme.glass && programmeIsland.paneShown ? programmeIsland.paneWidth : 0
@@ -1050,6 +1054,7 @@ ShellRoot {
                     radius: programmeIsland.drawerRadius
                 }
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: launchers.x + launchers.paneX
                     y: launchers.y + launchers.paneY
                     width: DrawerTheme.glass && launchers.paneShown
@@ -1059,6 +1064,7 @@ ShellRoot {
                     radius: launchers.paneRadius
                 }
                 Modules.SmoothRegion {
+                    pixelRatio: bar.devicePixelRatio
                     x: toolsIsland.x + toolsIsland.paneX
                     y: toolsIsland.y + toolsIsland.paneY
                     width: DrawerTheme.glass && toolsIsland.paneShown
@@ -2499,6 +2505,7 @@ ShellRoot {
             // blur after the window had gone.
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: osdWindow.devicePixelRatio
                 x: osd.x + osd.blurX
                 y: osd.y + osd.blurY
                 width: DrawerTheme.glass && osd.blurShown ? osd.blurSize : 0
@@ -2579,6 +2586,7 @@ ShellRoot {
             // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: batteryAlertWindow.devicePixelRatio
                 x: batteryAlert.blurX
                 y: batteryAlert.blurY
                 width: DrawerTheme.glass && batteryAlert.blurShown ? batteryAlert.blurWidth : 0
@@ -2737,6 +2745,7 @@ ShellRoot {
                 // stayed behind, a pane of frosted nothing over the gap.
                 // Dropped halfway through a fade, for the same reason.
                 delegate: Modules.SmoothRegion {
+                    pixelRatio: notifToastWindow.devicePixelRatio
                     required property var modelData
                     x: modelData ? toastStack.x + toastStack.contentItem.x + modelData.x : 0
                     y: modelData ? toastStack.y + toastStack.contentItem.y + modelData.y : 0
@@ -2749,6 +2758,7 @@ ShellRoot {
             }
             // The deck's two strips, in window coordinates for the same reason.
             Modules.SmoothRegion {
+                pixelRatio: notifToastWindow.devicePixelRatio
                 id: deckFrontBlur
                 x: toastDeck.x + toastDeck.frontBlur.x
                 y: toastDeck.y + toastDeck.frontBlur.y
@@ -2757,6 +2767,7 @@ ShellRoot {
                 radius: 16
             }
             Modules.SmoothRegion {
+                pixelRatio: notifToastWindow.devicePixelRatio
                 id: deckBackBlur
                 x: toastDeck.x + toastDeck.backBlur.x
                 y: toastDeck.y + toastDeck.backBlur.y
@@ -2808,6 +2819,7 @@ ShellRoot {
             // Glass, like the OSD above.
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: controllerWindow.devicePixelRatio
                 x: controllerPopup.blurX
                 y: controllerPopup.blurY
                 width: DrawerTheme.glass && controllerPopup.blurShown ? controllerPopup.blurWidth : 0
@@ -2827,6 +2839,7 @@ ShellRoot {
         active: SesameState.shown
 
         PanelWindow {
+            id: sesameWindow
             screen: Quickshell.screens.find(s => s.name === SesameState.screenName) || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -2848,6 +2861,7 @@ ShellRoot {
             // Glass, like the OSD above (the namespace is in windowrules.lua's
             // no_anim rule).
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: sesameWindow.devicePixelRatio
                 x: sesameCard.blurX
                 y: sesameCard.blurY
                 width: DrawerTheme.glass && sesameCard.blurShown ? sesameCard.blurWidth : 0
@@ -2865,6 +2879,7 @@ ShellRoot {
         active: LibraryState.shown
 
         PanelWindow {
+            id: libraryWindow
             screen: Quickshell.screens.find(s => s.name === LibraryState.screenName) || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -2880,6 +2895,7 @@ ShellRoot {
             // Glass, like the OSD above (the namespace is in windowrules.lua's
             // no_anim rule).
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: libraryWindow.devicePixelRatio
                 x: libraryCard.blurX
                 y: libraryCard.blurY
                 width: DrawerTheme.glass && libraryCard.blurShown ? libraryCard.blurWidth : 0
@@ -2915,6 +2931,7 @@ ShellRoot {
         active: shell.programmeMapped
 
         PanelWindow {
+            id: programmeSheetWindow
             screen: ProgrammeState.activeScreen || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -2942,6 +2959,7 @@ ShellRoot {
             // replayed the glass after the window had gone.
             WlrLayershell.namespace: "quickshell-sheet"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: programmeSheetWindow.devicePixelRatio
                 x: programmeSheet.x
                 width: DrawerTheme.glass && -programmeSheet.x < programmeSheet.width * 0.8 ? programmeSheet.width : 0
                 height: programmeSheet.height
@@ -3022,6 +3040,7 @@ ShellRoot {
         active: shell.notificationsMapped
 
         PanelWindow {
+            id: notificationsSheetWindow
             screen: NotificationState.activeScreen || Quickshell.screens[0]
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -3040,6 +3059,7 @@ ShellRoot {
             // replayed the glass after the window had gone.
             WlrLayershell.namespace: "quickshell-sheet"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: notificationsSheetWindow.devicePixelRatio
                 x: notificationsSheet.x
                 width: DrawerTheme.glass && notificationsSheet.x < notificationsSheet.width * 0.8 ? notificationsSheet.width : 0
                 height: notificationsSheet.height
@@ -3100,6 +3120,7 @@ ShellRoot {
         model: Quickshell.screens
 
         PanelWindow {
+            id: controllerBannerWindow
             required property var modelData
             screen: modelData
 
@@ -3122,6 +3143,7 @@ ShellRoot {
 
             WlrLayershell.namespace: "quickshell-popup"
             BackgroundEffect.blurRegion: Modules.SmoothRegion {
+                pixelRatio: controllerBannerWindow.devicePixelRatio
                 x: controllerBanner.blurX
                 y: controllerBanner.blurY
                 width: DrawerTheme.glass && controllerBanner.blurShown ? controllerBanner.blurWidth : 0
