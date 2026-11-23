@@ -410,12 +410,15 @@ steps = [
     # In dark: the battery.
     "ipc bar togglePower", "wait 1.6",
     "ipc bar togglePower", "wait 0.6",
-    # The TV, on PokerGO: the guide, j then k held down the channels and
+    # The TV, on Baby Shark TV: the guide, j then k held down the channels and
     # back, through the categories and back. Nothing is chosen: the channel
     # stays the same, and the film fades out with the guide open (Antenne
     # closes once the camera has stopped).
-    # Super + G opens it on the channel watched last: the ring, then the picture.
-    "key super+g", "wait 6",
+    # Super + G opens it on the channel watched last: the ring, then the
+    # picture, however long the channel takes (Antenne says Playing over
+    # MPRIS with its first picture), then its fade.
+    "key super+g", "wait 1",
+    "await 30 sh -c 'playerctl -p antenne status 2>/dev/null | grep -q Playing'", "wait 1.5",
     "key space", "wait 1.2",
     "key space", "wait 1.6",
     "down j", "wait 1.8", "up j", "wait 0.5",

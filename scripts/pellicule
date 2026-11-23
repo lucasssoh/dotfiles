@@ -52,6 +52,7 @@ Steps, one string each:
                                     on a keyboard of its own; a combination with + is a
                                     shortcut, as Hyprland gets it (super+Return, super+shift+s)
     down KEY / up KEY               holds a key, lets it go (down super: the key sheet)
+    await SECONDS COMMAND...        waits until the command succeeds, at most SECONDS
     scheme light|dark               switches the colour scheme, as the bar's toggle
     notify APP | SUMMARY | BODY [| OPTIONS]
                                     a notification (closed when demo mode ends); OPTIONS,
@@ -547,6 +548,12 @@ def check_step(step, surface):
             return []
         except (IndexError, ValueError):
             return [f"{step!r}: wait SECONDS"]
+    if verb == "await":
+        try:
+            float(args[0])
+            return [] if len(args) > 1 else [f"{step!r}: await SECONDS COMMAND..."]
+        except (IndexError, ValueError):
+            return [f"{step!r}: await SECONDS COMMAND..."]
     if verb == "run":
         if not args:
             return [f"{step!r}: run COMMAND..."]
@@ -712,6 +719,12 @@ class Take:
             ipc(*args)
         elif verb == "wait":
             time.sleep(float(args[0]))
+        elif verb == "await":
+            # await SECONDS COMMAND...: until the command succeeds, at most that long
+            end = time.monotonic() + float(args[0])
+            while time.monotonic() < end and subprocess.run(args[1:], stdout=subprocess.DEVNULL,
+                                                            stderr=subprocess.DEVNULL).returncode:
+                time.sleep(0.2)
         elif verb == "run":
             cmd = [os.path.expanduser(a.replace("{repo}", str(REPO))) for a in args]
             self.procs.append(subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
@@ -1095,8 +1108,11 @@ def record(video, take):
     raw = raw_path(video)
     raw.parent.mkdir(parents=True, exist_ok=True)
     take.park()
-    rec = subprocess.Popen(["wf-recorder", "-y", "-o", SCREEN["name"], "-f", str(raw), "-c", "libx264",
-                            "-x", "yuv444p", "-p", "preset=ultrafast", "-p", "qp=0"],
+    # Lossless RGB: the screen's own pixels. Through yuv444p, wf-recorder
+    # wrote limited-range values in a file marked full range, a pixel off
+    # and softer: measured against grim, 17 levels apart on average.
+    rec = subprocess.Popen(["wf-recorder", "-y", "-o", SCREEN["name"], "-f", str(raw), "-c", "libx264rgb",
+                            "-x", "bgr0", "-p", "preset=ultrafast", "-p", "qp=0"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
     take.keylog, take.t0 = [], time.monotonic()
@@ -1147,6 +1163,10 @@ def encode(video, out):
     # Constant frame rate first (the recorder only writes a frame when the
     # screen changes), then the cut: the first frame is held, not lost.
     head = f"[0:v]fps={fps},trim=start={lead},setpts=PTS-STARTPTS"
+    # The recording is RGB; players expect limited-range BT.709, and show an
+    # untagged file washed out or shifted.
+    tv = "scale=out_range=limited:out_color_matrix=bt709:flags=lanczos+accurate_rnd+full_chroma_int,format=yuv420p"
+    tags = ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv"]
     # The keys typed, bottom right, clear of a bar along the bottom; their
     # times count from the first step, which comes 1 s after the recorder
     # starts, `lead` of which is cut.
@@ -1167,7 +1187,7 @@ def encode(video, out):
             src += ["-i", str(png)]
             # the picture holds a margin for the shadow and the travel
             x, y = W - w - round(10 * k), H - h - round(68 * k)
-            head += f";[k{i}][{i + 1}:v]overlay={x}:{y}:enable='between(t,{a:.3f},{b:.3f})'[k{i + 1}]"
+            head += f";[k{i}][{i + 1}:v]overlay={x}:{y}:format=auto:enable='between(t,{a:.3f},{b:.3f})'[k{i + 1}]"
         head += f";[k{len(spans)}]null"
     head += f",{fade_v}"
     snd, snd_map = [], ["-an"]
@@ -1191,18 +1211,18 @@ def encode(video, out):
         return (f"{head},split[x][y];"
                 f"[x]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},boxblur=40:2,eq=brightness=-0.18[bg];"
                 f"[y]scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos[fg];"
-                f"[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]")
+                f"[bg][fg]overlay=(W-w)/2:(H-h)/2,{tv}[v]")
 
-    plain = f"{head},format=yuv420p[v]"
-    h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", str(video.get("master_crf", 15)),
-            "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+    plain = f"{head},{tv}[v]"
+    h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", str(video.get("master_crf", 12)),
+            "-pix_fmt", "yuv420p", *tags, "-movflags", "+faststart"]
     aac = ["-c:a", "aac", "-b:a", "256k"]
 
     # The site: smaller, same picture; the page starts it without sound.
     webm = out / f"{name}.webm"
     site = plain if "width" not in video else plain.replace(
-        ",format=yuv420p", f",scale={video['width']}:-2:flags=lanczos,format=yuv420p")
-    run(webm, site, ["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 30)),
+        f",{tv}", f",scale={video['width']}:-2:flags=lanczos,{tv}")
+    run(webm, site, ["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 24)), *tags,
                      "-deadline", "good", "-cpu-used", "1", "-row-mt", "1", "-tile-columns", "2",
                      "-g", str(fps * 5)], ["-c:a", "libopus", "-b:a", "112k"])
 

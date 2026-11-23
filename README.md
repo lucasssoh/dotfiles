@@ -84,6 +84,6 @@ What isn't mine keeps its own licence:
 | GNOME wallpapers | CC BY-SA 3.0 US | [wallpapers/CREDITS.md](wallpapers/CREDITS.md) |
 | Films in Antenne's screenshots: Big Buck Bunny, Caminandes and the other Blender Foundation open movies | CC BY 3.0 and 4.0, © Blender Foundation | [blender.org](https://studio.blender.org/films/) |
 | Music of the presentation video: "Sunday Smooth", Scott Buckley | CC BY 4.0 | [scottbuckley.com.au](https://www.scottbuckley.com.au/library/sunday-smooth/) |
-| The TV channel at the end of the presentation video: PokerGO, as streamed | © PokerGO | [pokergo.com](https://www.pokergo.com/) |
+| The TV channel at the end of the presentation video: Baby Shark TV, as streamed | © The Pinkfong Company | [pinkfong.com](https://www.pinkfong.com/) |
 
 Fonts, icon fonts and packages are downloaded at install and aren't redistributed here.
