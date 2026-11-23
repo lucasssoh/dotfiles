@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Fixed
+- **Antenne:** with the guide open, a channel that doesn't answer says so over its picture, at the top right, instead of in the middle of the guide.
+
 ## 2.7.1
 
 ### Fixed

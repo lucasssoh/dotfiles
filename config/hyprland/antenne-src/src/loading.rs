@@ -152,11 +152,18 @@ fn label(class: &str) -> gtk::Label {
 
 impl LoadingView {
     pub fn new(u: f64) -> Self {
+        // The root covers the picture, full screen or the guide's corner;
+        // what it shows sits in the middle of it.
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.add_css_class("loading");
         root.set_halign(gtk::Align::Center);
         root.set_valign(gtk::Align::Center);
         root.set_can_target(false);
+        let inner = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        inner.set_halign(gtk::Align::Center);
+        inner.set_valign(gtk::Align::Center);
+        inner.set_vexpand(true);
+        root.append(&inner);
         let mark: Mark = glib::Object::new();
         mark.set_halign(gtk::Align::Center);
         let title = label("ldtitle");
@@ -164,11 +171,33 @@ impl LoadingView {
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         buttons.add_css_class("ldbuttons");
         buttons.set_halign(gtk::Align::Center);
-        root.append(&mark);
-        root.append(&title);
-        root.append(&sub);
-        root.append(&buttons);
+        inner.append(&mark);
+        inner.append(&title);
+        inner.append(&sub);
+        inner.append(&buttons);
         LoadingView { root, mark, title, sub, buttons, state: Cell::new(State::Hidden), u, on_choice: Rc::default() }
+    }
+
+    /// Over the picture where it is: the whole window, or with the guide
+    /// open the corner it shrinks to (`width`, `height`, margins from the
+    /// top and the right).
+    pub fn fit(&self, corner: Option<(i32, i32, i32, i32)>) {
+        match corner {
+            Some((w, h, top, end)) => {
+                self.root.set_halign(gtk::Align::End);
+                self.root.set_valign(gtk::Align::Start);
+                self.root.set_size_request(w, h);
+                self.root.set_margin_top(top);
+                self.root.set_margin_end(end);
+            }
+            None => {
+                self.root.set_halign(gtk::Align::Center);
+                self.root.set_valign(gtk::Align::Center);
+                self.root.set_size_request(-1, -1);
+                self.root.set_margin_top(0);
+                self.root.set_margin_end(0);
+            }
+        }
     }
 
     pub fn state(&self) -> State {

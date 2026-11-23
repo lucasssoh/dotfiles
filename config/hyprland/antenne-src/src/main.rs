@@ -923,6 +923,7 @@ impl App {
             a.set_size_request(pw, ph);
             a.set_margin_top((1.6 * u).round() as i32);
             a.set_margin_end((2.0 * u).round() as i32);
+            self.loading.fit(Some((pw, ph, (1.6 * u).round() as i32, (2.0 * u).round() as i32)));
         } else {
             a.set_hexpand(true);
             a.set_vexpand(true);
@@ -931,6 +932,7 @@ impl App {
             a.set_size_request(-1, -1);
             a.set_margin_top(0);
             a.set_margin_end(0);
+            self.loading.fit(None);
         }
     }
 
