@@ -83,7 +83,10 @@ terminal)
         run xdg-terminal-exec ${1:+--} "$@"
     fi
     case "$bin" in
-        wezterm)   run wezterm start ${class:+--class "$class"} ${1:+--} "$@" ;;
+        # A process of its own for each window: at a fractional scale
+        # (125 %), a second window in the same WezTerm makes it quit with
+        # every window it holds (wezterm#5340).
+        wezterm)   run wezterm start --always-new-process ${class:+--class "$class"} ${1:+--} "$@" ;;
         kitty)     run kitty ${class:+--class "$class"} "$@" ;;
         foot)      run foot ${class:+--app-id "$class"} "$@" ;;
         alacritty) run alacritty ${class:+--class "$class"} ${1:+-e} "$@" ;;

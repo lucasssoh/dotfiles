@@ -16,6 +16,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Fixed
 - **Prisme:** thumbnails show with the first frame, even on a busy machine.
+- **WezTerm:** at a fractional scale such as 125 %, opening a second terminal no longer closes every WezTerm window.
 
 ## 2.6.1
 
