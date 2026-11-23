@@ -16,7 +16,7 @@
   <a href="https://pipewire.org/"><img alt="PipeWire: EQ per app" src="https://img.shields.io/badge/PipeWire-EQ%20per%20app-3A6EA5?style=flat&labelColor=555555&color=3A6EA5"></a>
 </p>
 
-A Fedora desktop built on [Hyprland](https://hyprland.org/), with its own bar, its own tools, and a manager that installs it and keeps it up to date.
+A desktop built on [Hyprland](https://hyprland.org/) and [Quickshell](https://quickshell.org/), with its own bar, its own tools, and a manager that installs it and keeps it up to date.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/showcase-dark.webp"><img src="docs/screenshots/showcase.webp" alt="Two screens: the controller menu, and the calendar with Balise"></picture>
 
@@ -67,18 +67,9 @@ cc-pkg-mng status     # check that everything is in place
 | [**Hardware**](docs/hardware.md) | CPU and GPU profiles, codecs, what's left for you to do by hand |
 | [**Changelog**](CHANGELOG.md) | What changed in each release |
 
-## Tested on
-
-| Machine | |
-|---|---|
-| Lenovo IdeaPad Slim 5 14IMH10 | Intel, OLED panel, with an external screen |
-| Asus TUF A15 | AMD |
-
-Other machines get their drivers from the same [detection](docs/hardware.md).
-
 ## Licences
 
-coucou-shell is free software, under the [GPL-3.0](LICENSE) or any later version. Use it, change it and share it: what you share stays under the same licence, with its credits. The coucou wallpapers and the coucou bird are under [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
+coucou-shell is free software, under the [GPL-3.0](LICENSE) or any later version. You can use, change and share it, as long as what you share stays under the same licence and keeps its credits. The coucou wallpapers and the coucou bird are under [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
 
 Forks are welcome, under a name of their own.
 
