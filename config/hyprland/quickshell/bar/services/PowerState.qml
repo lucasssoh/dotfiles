@@ -195,22 +195,31 @@ Singleton {
     function refresh() {
         if (!root.present || historyProc.running) return;
         if (DemoState.active) {
-            // Fake a simple discharge curve around demo battery.
+            // A made-up day, the same at every take: a morning on battery,
+            // a charge at lunch, an afternoon down, a top-up, then down to
+            // the demo's figure now. Each stretch only falls or only
+            // rises, so the line keeps one colour per stretch.
             const now = Date.now() / 1000;
             const span = root.spanSeconds || 86400;
             const start = now - span;
             const end = now;
-            const pct = DemoState.battery;
+            // [fraction of the span, percent]
+            const keys = [[0, 64], [0.20, 31], [0.33, 94], [0.40, 97],
+                          [0.66, 52], [0.74, 49], [0.82, 88], [1, DemoState.battery]];
             const npts = 120;
             const pts = [];
             for (let i = 0; i < npts; i++) {
-                const t = start + (end - start) * (i / (npts - 1));
-                const p = Math.max(1, Math.min(100, pct + (Math.random() - 0.5) * 2));
-                pts.push({ t: t, pct: p, s: 2, up: false });
+                const f = i / (npts - 1);
+                let k = 1;
+                while (k < keys.length - 1 && keys[k][0] < f) k++;
+                const a = keys[k - 1], b = keys[k];
+                const u = (f - a[0]) / (b[0] - a[0]);
+                // Eased, so a stretch bends a little instead of running straight.
+                const e = u * u * (3 - 2 * u) * 0.35 + u * 0.65;
+                pts.push({ t: start + span * f, pct: a[1] + (b[1] - a[1]) * e, s: b[1] > a[1] ? 1 : 2, up: false });
             }
-            pts[0].pct = Math.min(100, pct + 8);
-            pts[pts.length - 1].pct = pct;
             for (let i = 1; i < pts.length; i++) pts[i].up = pts[i].pct > pts[i - 1].pct;
+            pts[0].up = pts[1].up;
             root.samples = pts;
             root.axisStart = start;
             root.axisEnd = end;
