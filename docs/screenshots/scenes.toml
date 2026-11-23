@@ -354,11 +354,11 @@ audio = "~/Musique/Scott Buckley - Sunday Smooth.mp3"
 audio_delay = 0.4
 fade = 2.5
 exports = "~/Videos/coucou-shell"
-# Coucou Relief, light then dark. Prisme only shows the coucou and
-# GNOME pairs for the run: every card is free to film, and each has a
-# dark half for the switch at the end.
-wallpaper = "coucou-aube-relief.jxl"
-wallpapers = ["coucou-*", "gnome-*"]
+# Pepper&Carrot (David Revoy, CC BY 4.0), light then dark. Prisme only
+# shows it and the coucou and GNOME pairs for the run: every card is free
+# to film, and each has a dark half for the switch at the end.
+wallpaper = "pepper-carrot.jpg"
+wallpapers = ["pepper-carrot*", "coucou-*", "gnome-*"]
 # 6 keys a second after 250 ms: a key held 2 s moves 11 cards.
 repeat = [6, 250]
 steps = [
@@ -384,8 +384,8 @@ steps = [
     "key super+i", "wait 1.8",
     "key super+i", "wait 0.6",
     # Super held: the key sheet, then its Shift layer.
-    "down super", "wait 1.6",
-    "down shift", "wait 1.1",
+    "down super", "wait 3",
+    "down shift", "wait 2.4",
     "up shift", "wait 0.2",
     "up super", "wait 0.6",
     # A controller arrives, its menu opens.
@@ -397,8 +397,8 @@ steps = [
     "ipc bar controllerNav right", "wait 0.9",
     "ipc bar controllerMenu", "wait 0.4",
     "ipc controller reset", "wait 0.6",
-    # Prisme opens on Relief: held l then h, 11 cards each way, back on
-    # Relief, its preview, applied. The switch to dark brings its other half.
+    # Prisme opens on Pepper&Carrot: held l then h, 11 cards each way, back
+    # on it, its preview, applied. The switch to dark brings its other half.
     "key super+w", "wait 1.2",
     "down l", "wait 2", "up l", "wait 0.4",
     "down h", "wait 2", "up h", "wait 0.8",
@@ -410,22 +410,6 @@ steps = [
     # In dark: the battery.
     "ipc bar togglePower", "wait 1.6",
     "ipc bar togglePower", "wait 0.6",
-    # The TV, on Baby Shark TV: the guide, j then k held down the channels and
-    # back, through the categories and back. Nothing is chosen: the channel
-    # stays the same, and the film fades out with the guide open (Antenne
-    # closes once the camera has stopped).
-    # Super + G opens it on the channel watched last: the ring, then the
-    # picture, however long the channel takes (Antenne says Playing over
-    # MPRIS with its first picture), then its fade.
-    "key super+g", "wait 1",
-    "await 30 sh -c 'playerctl -p antenne status 2>/dev/null | grep -q Playing'", "wait 1.5",
-    "key space", "wait 1.2",
-    "key space", "wait 1.6",
-    "down j", "wait 1.8", "up j", "wait 0.5",
-    "down k", "wait 1.5", "up k", "wait 0.8",
-    "key Tab", "wait 0.35", "key Tab", "wait 0.35", "key Tab", "wait 0.35",
-    "key Tab", "wait 0.35", "key Tab", "wait 0.35", "key Tab", "wait 0.8",
-    "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35",
-    "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 0.35", "key shift+Tab", "wait 1.8",
-    "wait 2.5",
+    # The desktop alone for the fade.
+    "wait 3",
 ]
