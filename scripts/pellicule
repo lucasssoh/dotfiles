@@ -1223,18 +1223,30 @@ def encode(video, out):
     site = plain if "width" not in video else plain.replace(
         f",{tv}", f",scale={video['width']}:-2:flags=lanczos,{tv}")
     run(webm, site, ["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(video.get("crf", 24)), *tags,
-                     "-deadline", "good", "-cpu-used", "1", "-row-mt", "1", "-tile-columns", "2",
+                     "-deadline", "good", "-cpu-used", "2", "-row-mt", "1", "-tile-columns", "2",
                      "-g", str(fps * 5)], ["-c:a", "libopus", "-b:a", "112k"])
 
     exports = Path(video.get("exports", "~/Videos/coucou-shell")).expanduser()
     exports.mkdir(parents=True, exist_ok=True)
     made = [webm]
-    for suffix, picture, music in (("master", plain, True), ("silent", plain, False),
-                                   ("16x9", framed(1920, 1080), True),
-                                   ("square", framed(1080, 1080), True),
-                                   ("vertical", framed(1080, 1920), True)):
+    # The master on the CPU, x264 being the finer of the two at a given
+    # size; the same picture without its sound, copied, not encoded again.
+    master = exports / f"{name}-master.mp4"
+    run(master, plain, h264, aac)
+    silent = exports / f"{name}-silent.mp4"
+    sh("ffmpeg", "-y", "-loglevel", "error", "-i", str(master), "-map", "0:v", "-c", "copy",
+       "-movflags", "+faststart", str(silent))
+    made += [master, silent]
+    # The cuts for social networks on the GPU's encoder (Quick Sync), several
+    # times faster; x264 where there is none.
+    qsv = ["-c:v", "h264_qsv", "-preset", "slower", "-global_quality", "20", *tags, "-movflags", "+faststart"]
+    for suffix, (w, h) in (("16x9", (1920, 1080)), ("square", (1080, 1080)), ("vertical", (1080, 1920))):
         target = exports / f"{name}-{suffix}.mp4"
-        run(target, picture, h264, aac, music)
+        try:
+            run(target, framed(w, h).removesuffix("[v]") + ",format=nv12[v]", qsv, aac)
+        except RuntimeError:
+            run(target, framed(w, h), ["-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                                       "-pix_fmt", "yuv420p", *tags, "-movflags", "+faststart"], aac)
         made.append(target)
     return made
 
