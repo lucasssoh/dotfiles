@@ -91,14 +91,17 @@ on_ac() {
     return 1
 }
 
-apply() {
-    local want
-    if on_ac; then want="$PROFILE_ON_AC"; else want="$PROFILE_ON_BATTERY"; fi
+# The source the profile was last set for. udev also fires on every battery
+# capacity change, about once a percent while charging: only a change of
+# source counts, or a profile picked by hand went back within a minute.
+last_source=""
 
-    # Don't fight a profile that is already right: setting it again is
-    # harmless but would stomp a deliberate manual choice every time udev
-    # emits an unrelated power_supply event (they are chatty -- battery
-    # capacity changes fire them too).
+apply() {
+    local want source
+    if on_ac; then source=ac; want="$PROFILE_ON_AC"; else source=battery; want="$PROFILE_ON_BATTERY"; fi
+    [ "$source" = "$last_source" ] && return 0
+    last_source="$source"
+
     local current
     current=$(powerprofilesctl get 2>/dev/null) || return 0
     [ "$current" = "$want" ] && return 0
