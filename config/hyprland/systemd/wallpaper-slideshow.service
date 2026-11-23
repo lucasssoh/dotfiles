@@ -1,6 +1,7 @@
 [Unit]
 Description=Wallpaper Slideshow (OLED burn-in protection)
-After=graphical-session.target
+After=hyprland-session.target
+PartOf=hyprland-session.target
 
 [Service]
 Type=simple
@@ -12,4 +13,4 @@ Restart=always
 RestartSec=5
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=hyprland-session.target

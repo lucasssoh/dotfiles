@@ -1,0 +1,8 @@
+# Blueman's tray icon, kept to Hyprland. Balise installs blueman for its
+# pairing windows; without this, another desktop such as Plasma would
+# start a second Bluetooth icon next to its own.
+[Desktop Entry]
+Type=Application
+Name=Blueman Applet
+Exec=blueman-applet
+OnlyShowIn=Hyprland;

@@ -10,6 +10,8 @@ cc-pkg-mng install greeter
 
 It replaces the display manager in place.
 
+Another desktop installed next to coucou-shell can be picked in the session menu (`F3`). coucou-shell's background services only run in Hyprland.
+
 | To change | Edit |
 |---|---|
 | The greeter | [`greetd/`](../../config/boot/login/greetd/) |

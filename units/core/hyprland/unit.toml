@@ -30,6 +30,13 @@ does   = "create the local Quickshell bar position setting if it is missing"
 run    = "units/core/hyprland/hooks/bar-position.sh"
 
 [[hooks]]
+name   = "session-target"
+run_as = "user"
+does   = "start the session's services with Hyprland only, not with another desktop"
+run    = "units/core/hyprland/hooks/session-target.sh"
+watch  = ["config/hyprland/systemd"]
+
+[[hooks]]
 name   = "sensors-detect"
 run_as = "root"
 does   = "sensors-detect --auto"

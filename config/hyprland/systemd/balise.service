@@ -5,7 +5,8 @@
 # subcommand opens a legacy GTK window that nothing here starts.
 [Unit]
 Description=Balise — démon WiFi/Bluetooth/Ethernet (backend du panneau QML)
-After=graphical-session.target
+After=hyprland-session.target
+PartOf=hyprland-session.target
 
 [Service]
 Type=simple
@@ -16,4 +17,4 @@ RestartSec=3
 PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR HYPRLAND_INSTANCE_SIGNATURE DBUS_SESSION_BUS_ADDRESS
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=hyprland-session.target
