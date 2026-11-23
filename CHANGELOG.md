@@ -8,6 +8,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Power:** a profile you pick by hand stays until the cable is plugged or unplugged. While charging, it went back to Balanced within a minute.
 - **Antenne:** Esc on a channel that doesn't answer, and Backspace to go back to the previous channel, no longer close the app.
 - **Antenne:** coming back to its workspace no longer freezes the app, sometimes for good.
+- **Antenne:** when you come back to its workspace, the sound goes on without a cut and the picture is back right away.
 - **Bar:** with the bar at the top, the network, battery and volume drawers no longer sit lower than with the bar at the bottom.
 
 ## 2.7.2

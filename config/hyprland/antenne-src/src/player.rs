@@ -187,14 +187,6 @@ impl Player {
         (dur > 0.0).then_some((pos, dur))
     }
 
-    /// Off when nobody can see the picture: the sound goes on, the decoder
-    /// stops (about 4 W for a 1080p channel on this laptop).
-    ///
-    /// Turning it back on alone left the picture 5.4 s off the sound on a
-    /// live channel (measured with mpv's avsync), catching up at 0.3 s a
-    /// second: video restarts from the network buffer, which runs ahead,
-    /// and a live stream cannot be seeked back into line. drop-buffers
-    /// restarts both from the live edge: avsync 0 straight away.
     /// Every event waiting in mpv's queue, read with the C API until the
     /// queue is really empty. libmpv2's wait_event answers None both for an
     /// empty queue and for an observed property that has just become
@@ -276,11 +268,17 @@ impl Player {
         let _ = self.mpv.borrow().command("seek", &[&format!("{secs}"), "relative"]);
     }
 
+    /// Off when nobody can see the picture: only keyframes are decoded,
+    /// one every second or two instead of 25 to 50 frames (a full 1080p
+    /// decode is about 4 W on this laptop). The sound is not touched.
+    ///
+    /// The track stays selected, as browsers do with a hidden tab. Taking
+    /// it away (vid=no) left the picture 5.4 s behind the sound on return,
+    /// and the drop-buffers that fixed it restarted the sound too. With
+    /// the track kept, the picture is back in 0.35 s, in sync (avsync
+    /// under 1 ms, measured with mpv on a live channel), clean from the
+    /// first frame.
     pub fn set_video(&self, on: bool) {
-        let mpv = self.mpv.borrow();
-        let _ = mpv.set_property("vid", if on { "auto" } else { "no" });
-        if on {
-            let _ = mpv.command("drop-buffers", &[]);
-        }
+        let _ = self.mpv.borrow().set_property("vd-lavc-skipframe", if on { "default" } else { "nonkey" });
     }
 }
