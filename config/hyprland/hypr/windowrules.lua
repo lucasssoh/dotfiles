@@ -384,6 +384,20 @@ hl.window_rule({
 })
 
 -- ============================================================
+-- ANTENNE — the TV (SUPER+G)
+-- ============================================================
+-- Opens full screen, so the global `popin 0%` grew the whole screen out
+-- of a point in its middle. `popin 100%` starts the window at its full
+-- size: no movement left, only the window fade (`fade`, 200 ms), in and
+-- out. Not `fade`: windows have no such style, and Hyprland reads any
+-- unknown one as `popin 0%`. The picture then rises out of the black on
+-- Antenne's side.
+hl.window_rule({
+    match     = { class = "io.github.lucasssoh.Antenne" },
+    animation = "popin 100%",
+})
+
+-- ============================================================
 -- ZATHURA — Liseuse's reading surface
 -- ============================================================
 -- The renderer behind Liseuse (SUPER+F, see config/liseuse/). Everything

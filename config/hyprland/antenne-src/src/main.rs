@@ -156,6 +156,9 @@ struct App {
     tried: RefCell<Vec<usize>>,
     cur_src: Cell<Option<usize>>,
     started: Cell<bool>,
+    /// A picture has shown since the window opened: until then the shade
+    /// is solid black, and the first one rises out of it.
+    pictured: Cell<bool>,
 
     guide_open: Cell<bool>,
     cat: RefCell<String>,
@@ -405,8 +408,12 @@ impl App {
     fn set_tuning(&self, on: bool) {
         if on {
             self.shade.add_css_class("on");
+            if !self.pictured.get() {
+                self.shade.add_css_class("dark");
+            }
         } else {
             self.shade.remove_css_class("on");
+            self.shade.remove_css_class("dark");
         }
     }
 
@@ -571,6 +578,7 @@ impl App {
                 MpvEv::Restart if self.started.get() => self.fade_volume(100.0, 600),
                 MpvEv::Restart if !self.started.get() && self.cur_src.get().is_some() => {
                     self.started.set(true);
+                    self.pictured.set(true);
                     self.fade_volume(100.0, 600);
                     self.mpris.set_playing(!self.paused.get());
                     if let Some(c) = self.cur.borrow().clone().and_then(|k| self.find(&k)) {
@@ -2717,6 +2725,7 @@ fn build(app: &gtk::Application) -> Rc<App> {
         tried: RefCell::new(vec![]),
         cur_src: Cell::new(None),
         started: Cell::new(false),
+        pictured: Cell::new(false),
         guide_open: Cell::new(false),
         cat: RefCell::new(first_cat.into()),
         osd_gen: Cell::new(0),

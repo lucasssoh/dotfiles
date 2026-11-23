@@ -135,6 +135,11 @@ pub struct LoadingView {
     sub: gtk::Label,
     buttons: gtk::Box,
     state: Cell<State>,
+    /// False for a moment after the window opens: what shows waits, then
+    /// fades in over the black rather than arriving with the window.
+    armed: Rc<Cell<bool>>,
+    /// Something asked to show before then.
+    pending: Rc<Cell<bool>>,
     u: f64,
     pub on_choice: Rc<RefCell<Option<Box<dyn Fn(Choice)>>>>,
 }
@@ -175,7 +180,31 @@ impl LoadingView {
         inner.append(&title);
         inner.append(&sub);
         inner.append(&buttons);
-        LoadingView { root, mark, title, sub, buttons, state: Cell::new(State::Hidden), u, on_choice: Rc::default() }
+        // A class set before the first frame takes effect without its
+        // transition, so the first show waits until the window has drawn
+        // and Hyprland's own fade is under way: 150 ms of frames. Without
+        // animations, nothing waits.
+        let animate = gtk::Settings::default().is_some_and(|s| s.is_gtk_enable_animations());
+        let armed = Rc::new(Cell::new(!animate));
+        let pending = Rc::new(Cell::new(false));
+        if animate {
+            let (armed, pending) = (armed.clone(), pending.clone());
+            let first = Cell::new(None::<i64>);
+            root.add_tick_callback(move |root, clock| {
+                let t = clock.frame_time();
+                let t0 = first.get().unwrap_or(t);
+                first.set(Some(t0));
+                if t - t0 < 150_000 {
+                    return glib::ControlFlow::Continue;
+                }
+                armed.set(true);
+                if pending.replace(false) {
+                    root.add_css_class("show");
+                }
+                glib::ControlFlow::Break
+            });
+        }
+        LoadingView { root, mark, title, sub, buttons, state: Cell::new(State::Hidden), armed, pending, u, on_choice: Rc::default() }
     }
 
     /// Over the picture where it is: the whole window, or with the guide
@@ -206,6 +235,7 @@ impl LoadingView {
 
     pub fn hide(&self) {
         self.state.set(State::Hidden);
+        self.pending.set(false);
         self.root.remove_css_class("show");
         self.root.set_can_target(false);
     }
@@ -214,7 +244,11 @@ impl LoadingView {
         self.state.set(st);
         let px = (size * self.u).round() as i32;
         self.mark.set_size_request(px, px);
-        self.root.add_css_class("show");
+        if self.armed.get() {
+            self.root.add_css_class("show");
+        } else {
+            self.pending.set(true);
+        }
         self.root.set_can_target(matches!(st, State::Failed | State::Asking));
         self.mark.set_glyph(glyph);
     }
