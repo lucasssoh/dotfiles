@@ -1346,11 +1346,8 @@ impl App {
                     }
                 }
             }
-            loading::Choice::Back => match self.prev_key.borrow().clone() {
-                Some(p) => {
-                    self.prev_key.borrow_mut().take();
-                    self.play(&p);
-                }
+            loading::Choice::Back => match self.prev_key.take() {
+                Some(p) => self.play(&p),
                 None => {
                     self.loading.hide();
                     self.set_tuning(false);
@@ -1663,7 +1660,8 @@ impl App {
     fn lib_activate(self: &Rc<Self>, i: usize) {
         match self.guide.page() {
             Page::Continue => {
-                if let Some(at) = self.lib_cont.borrow().get(i).copied() {
+                let at = self.lib_cont.borrow().get(i).copied();
+                if let Some(at) = at {
                     self.play_episode(at);
                 }
             }
@@ -3663,7 +3661,8 @@ fn handle_key(me: &Rc<App>, key: gdk::Key, code: u32, mods: gdk::ModifierType) -
         }
         // the channel before, as a remote's "Last" button
         gdk::Key::BackSpace if !open => {
-            if let Some(p) = me.prev_key.borrow().clone() {
+            let prev = me.prev_key.borrow().clone();
+            if let Some(p) = prev {
                 me.play(&p);
             }
         }

@@ -1,6 +1,6 @@
 [package]
 name = "antenne"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "TV player for free channels: iptv-org catalogue, health checks, libmpv in GTK4"
 license = "GPL-3.0-or-later"
