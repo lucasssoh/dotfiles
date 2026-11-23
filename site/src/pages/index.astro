@@ -23,22 +23,24 @@ const numbers = [
   { n: '4', label: 'personal setups to adopt or skip' },
 ];
 
-// The bento: `size` is the tile's width on a 6-column grid.
+// The bento: `size` is the tile's width on a 6-column grid, each row filled.
+// `dark`: the app has only a dark look, shown in both themes.
 const tools = [
   { name: 'The bar', line: 'The time, the machine, the workspaces, and a drawer for each frequent setting.', href: doc('bar'), shot: 'notifications', alt: 'The bar, with the notification centre open', size: 'wide', fit: 'top right' },
   { name: 'Roue', line: 'A radial wheel: press, aim, let go.', href: doc('tools/roue'), shot: 'roue', alt: 'Roue, the power wheel', size: 'small', fit: 'center' },
+  { name: 'Balise', line: 'Wi-Fi, Bluetooth and screens, from the bar.', href: doc('bar/balise'), shot: 'balise', alt: 'The Balise drawer', size: 'small', fit: 'top right' },
+  { name: 'Antenne', line: 'Free TV channels with a guide, and the shows you follow.', href: doc('apps/antenne'), shot: 'antenne-guide', dark: true, alt: "Antenne's guide", size: 'wide', fit: 'center' },
   { name: 'Prisme', line: 'The wallpaper picker, with light and dark pairs.', href: doc('tools/prisme'), shot: 'prisme', alt: 'Prisme, previewing a wallpaper', size: 'half', fit: 'center' },
   { name: 'Manette', line: "Games, on the controller's Guide button.", href: doc('tools/manette'), shot: 'controller-menu', alt: 'The controller menu', size: 'half', fit: 'center' },
-  { name: 'Balise', line: 'Wi-Fi, Bluetooth and screens, from the bar.', href: doc('bar/balise'), shot: 'balise', alt: 'The Balise drawer', size: 'small', fit: 'top right' },
-  { name: 'Mixer', line: 'A volume and an equalizer for each app.', href: doc('bar/mixer'), shot: 'mixer', alt: 'The mixer drawer', size: 'small', fit: 'top right' },
-  { name: 'Key sheet', line: 'Hold Super to see every key.', href: doc('bar/key-sheet'), shot: 'keybinds', alt: 'The key sheet', size: 'small', fit: 'top' },
+  { name: 'Mixer', line: 'A volume and an equalizer for each app.', href: doc('bar/mixer'), shot: 'mixer', alt: 'The mixer drawer', size: 'half', fit: 'top right' },
+  { name: 'Key sheet', line: 'Hold Super to see every key.', href: doc('bar/key-sheet'), shot: 'keybinds', alt: 'The key sheet', size: 'half', fit: 'top' },
 ];
 
 const guides = [
   { name: 'The bar', line: 'One guide for each part.', href: doc('bar'), links: [['Clock and agenda', 'bar/clock-agenda'], ['Centre island', 'bar/island'], ['Power', 'bar/power'], ['Notifications', 'bar/notifications'], ['Veille', 'bar/veille'], ['Programme', 'bar/programme']] },
   { name: 'Tools', line: 'Made for coucou-shell.', href: doc('tools/roue'), links: [['Roue', 'tools/roue'], ['Prisme', 'tools/prisme'], ['Manette', 'tools/manette'], ['Sésame', 'tools/sesame'], ['Liseuse', 'tools/liseuse'], ['Launcher', 'tools/launcher'], ['Screenshot', 'tools/screenshot']] },
   { name: 'Session', line: 'Screens, wallpapers, lock, boot.', href: doc('session/hyprland'), links: [['Hyprland', 'session/hyprland'], ['Displays', 'session/displays'], ['Wallpapers', 'session/wallpapers'], ['Lock screen', 'session/lock'], ['Boot splash', 'session/boot-splash']] },
-  { name: 'Applications', line: 'Each one can be swapped.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv']] },
+  { name: 'Applications', line: 'Each one can be swapped.', href: doc('apps/wezterm'), links: [['WezTerm', 'apps/wezterm'], ['Firefox', 'apps/firefox'], ['Nemo', 'apps/nemo'], ['Neovim', 'apps/neovim'], ['mpv', 'apps/mpv'], ['Antenne', 'apps/antenne']] },
   { name: 'cc-pkg-mng', line: 'Install, upgrade, roll back.', href: doc('cc-pkg-mng'), links: [['Installation', 'installation'], ['Commands', 'cc-pkg-mng'], ['Units', 'units'], ['Write a unit', 'writing-a-unit']] },
   { name: 'Settings', line: 'Where each setting lives.', href: doc('configuration'), links: [['User files', 'configuration'], ['Key bindings', 'keybindings'], ['Hardware', 'hardware']] },
 ];
@@ -191,7 +193,7 @@ const boot = ['Reached target Basic System', 'Started Network Manager', 'Started
                 <span class="tool-name">{t.name}</span>
                 <span class="tool-line">{t.line}</span>
               </span>
-              <img class="only-light" src={shot(`${t.shot}.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
+              <img class="only-light" src={shot(`${t.shot}${t.dark ? '-dark' : ''}.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
               <img class="only-dark" src={shot(`${t.shot}-dark.webp`)} alt={t.alt} loading="lazy" style={`object-position: ${t.fit}`} />
             </a>
           ))}

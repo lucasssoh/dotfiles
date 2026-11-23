@@ -32,6 +32,7 @@ cc-pkg-mng status     # check that everything is in place
 | [**Prisme**](docs/tools/prisme.md) | The wallpaper picker, with light and dark pairs |
 | [**Balise**](docs/bar/balise.md) | Wi-Fi, Bluetooth, Ethernet and screen settings, from the bar |
 | [**Manette**](docs/tools/manette.md) | Your games, on the controller's Guide button |
+| [**Antenne**](docs/apps/antenne.md) | Free TV channels with a guide, and the shows you follow |
 | [**Sésame**](docs/tools/sesame.md) | One card for every password asked outside a terminal |
 | [**Liseuse**](docs/tools/liseuse.md) | A reading library on one key |
 | [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Installs the parts you pick, and moves between releases |
