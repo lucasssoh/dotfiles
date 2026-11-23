@@ -3,7 +3,7 @@ name = "antenne"
 version = "0.1.0"
 edition = "2021"
 description = "TV player for free channels: iptv-org catalogue, health checks, libmpv in GTK4"
-license-file = "../../../LICENSE.md"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 gtk4 = { version = "0.9", features = ["v4_14"] }

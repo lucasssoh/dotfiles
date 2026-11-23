@@ -3,7 +3,7 @@ name = "manette"
 version = "1.1.0"
 edition = "2021"
 description = "Gamepad daemon behind coucou-shell's controller popup"
-license-file = "../../../LICENSE.md"
+license = "GPL-3.0-or-later"
 
 # No async runtime and no libudev: one thread blocked in poll(2) on the pads,
 # /dev/input (inotify) and the socket. libc for the evdev ioctls, serde_json

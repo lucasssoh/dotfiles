@@ -1,6 +1,6 @@
 # Third-party material
 
-These parts of the repository are not covered by coucou-shell's [LICENSE.md](LICENSE.md). Each stays under its own license, whose full text is in [`LICENSES/`](LICENSES/) or linked below.
+These parts of the repository are not covered by coucou-shell's licences ([GPL-3.0](LICENSE) for the code, [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) for its wallpapers and bird). Each stays under its own license, whose full text is in [`LICENSES/`](LICENSES/) or linked below.
 
 | Material | Where | License | Source |
 |---|---|---|---|

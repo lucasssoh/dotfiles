@@ -3,7 +3,7 @@ name = "sesame"
 version = "1.0.1"
 edition = "2021"
 description = "Password prompts of coucou-shell: polkit agent, SSH askpass and GPG pinentry behind the bar's card"
-license-file = "../../../LICENSE.md"
+license = "GPL-3.0-or-later"
 
 # Same shape as Manette: one thread blocked in poll(2) on the socket and its
 # clients, JSON lines both ways. zbus (blocking API, its own small executor

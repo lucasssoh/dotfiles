@@ -92,3 +92,7 @@ Versions follow `MAJOR.MINOR.PATCH`.
 - **Documentation** lives in [`docs/`](docs/). The website is generated from `docs/`: never edit `site/src/content/docs/docs/`.
 - **Docs follow the code.** A change a user can see or act on updates its page in `docs/`, and its screenshot scene, with the change.
 - **Test on a real session before committing**: a screenshot for anything visual, `hyprctl configerrors` after touching the Hyprland config.
+
+## Licence
+
+A contribution is under the project's licences: the [GPL-3.0](LICENSE) or any later version for code, [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) for wallpapers and drawings. Material from elsewhere keeps its own licence, and gets a line in [`THIRD-PARTY.md`](THIRD-PARTY.md) or [`wallpapers/CREDITS.md`](wallpapers/CREDITS.md).

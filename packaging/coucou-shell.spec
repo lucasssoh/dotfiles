@@ -14,7 +14,7 @@ Name:           coucou-shell
 Version:        %{?cc_version}%{!?cc_version:0.0.0}
 Release:        1%{?dist}
 Summary:        coucou-shell, a Fedora + Hyprland desktop
-License:        LicenseRef-coucou-shell-personal-use
+License:        GPL-3.0-or-later
 URL:            https://github.com/lucasssoh/dotfiles
 Source0:        coucou-shell-%{version}.tar.gz
 ExclusiveArch:  x86_64
@@ -54,6 +54,7 @@ to each screen.
 
 %package -n balise
 Summary:        Network and Bluetooth daemon for coucou-shell
+License:        GPL-3.0-or-later AND MIT
 Requires:       NetworkManager
 Requires:       bluez
 
@@ -125,38 +126,38 @@ install -Dm755 target/release/sesame           %{buildroot}%{_bindir}/sesame
 install -Dm755 target/release/antenne          %{buildroot}%{_bindir}/antenne
 
 %files -n cc-pkg-mng
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/cc-pkg-mng
 
 %files -n roue
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/roue
 
 %files -n prisme
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/prisme
 %{_bindir}/wallpaper-filter
 
 %files -n balise
-%license LICENSE.md LICENSES/MIT-Orbit.txt
+%license LICENSE LICENSES/MIT-Orbit.txt
 %{_bindir}/balise
 
 %files -n manette
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/manette
 
 %files -n pouls
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/pouls
 
 %files -n programme
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/programme
 
 %files -n sesame
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/sesame
 
 %files -n antenne
-%license LICENSE.md
+%license LICENSE
 %{_bindir}/antenne

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
+## Unreleased
+
+### Changed
+- **Licence:** coucou-shell is now free software, under the GPL-3.0 or any later version. The coucou wallpapers and bird are under CC BY-SA 4.0.
+
 ## 2.7.0 (November 23 2026)
 
 ### Added

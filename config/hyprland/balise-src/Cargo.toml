@@ -3,7 +3,7 @@ name = "balise"
 version = "1.0.0"
 edition = "2021"
 description = "Native Wayland WiFi/Bluetooth/Ethernet manager panel (GTK4 + layer-shell), first-party replacement for the vendored Orbit"
-license-file = "../../../LICENSE.md"
+license = "GPL-3.0-or-later AND MIT"
 
 [dependencies]
 gtk4 = { version = "0.9", features = ["v4_14"] }

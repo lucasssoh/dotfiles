@@ -62,15 +62,9 @@ Other machines get their drivers from the same [detection](docs/hardware.md).
 
 ## Licences
 
-coucou-shell is under a [personal use licence](LICENSE.md). All rights reserved.
+coucou-shell is free software, under the [GPL-3.0](LICENSE) or any later version. Use it, change it and share it: what you share stays under the same licence, with its credits. The coucou wallpapers and the coucou bird are under [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
 
-| ✓ You may | ✗ You may not, without written permission |
-|---|---|
-| Install and use coucou-shell on your own machines | Redistribute it, modified or not |
-| Change it for your own use | Sell it, or build a product or service on it |
-| Share screenshots, write about it, link to it | Name another project after it |
-
-This table is a summary: [LICENSE.md](LICENSE.md) is what applies.
+Forks are welcome, under a name of their own.
 
 What isn't mine keeps its own licence:
 
@@ -84,4 +78,4 @@ What isn't mine keeps its own licence:
 | Films in Antenne's screenshots: Big Buck Bunny, Caminandes and the other Blender Foundation open movies | CC BY 3.0 and 4.0, © Blender Foundation | [blender.org](https://studio.blender.org/films/) |
 | Music of the presentation video: "Sunday Smooth", Scott Buckley | CC BY 4.0 | [scottbuckley.com.au](https://www.scottbuckley.com.au/library/sunday-smooth/) |
 
-The Aube and Nuit wallpapers are coucou-shell's own, under its licence. Fonts, icon fonts and packages are downloaded at install and aren't redistributed here.
+Fonts, icon fonts and packages are downloaded at install and aren't redistributed here.

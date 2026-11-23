@@ -3,7 +3,7 @@ name = "programme"
 version = "2.2.0"
 edition = "2021"
 description = "Study agenda behind coucou-shell's Programme drawer"
-license-file = "../../../LICENSE.md"
+license = "GPL-3.0-or-later"
 
 # Built like Manette: no async runtime, no date or iCal crate. Civil dates,
 # the TZif reader and the iCal parser are a few hundred lines each, and the

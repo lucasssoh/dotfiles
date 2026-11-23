@@ -48,7 +48,7 @@ modes = ["dark"]
 steps = [
     "run nemo {repo}",
     "wait 2",
-    "run wezterm start --always-new-process --class pellicule-editor --cwd {repo} -- nvim +blast config/hyprland/hypr/private.lua LICENSE.md CONTRIBUTING.md",
+    "run wezterm start --always-new-process --class pellicule-editor --cwd {repo} -- nvim +blast config/hyprland/hypr/private.lua LICENSE CONTRIBUTING.md",
     "wait 2.5",
     "run hyprctl eval 'hl.dispatch(hl.dsp.focus({ direction = \"left\" }))'",
     "wait 0.3",
