@@ -104,34 +104,34 @@ if [[ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$FILTER_VERSION" ]]; then
         \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
         -delete
     find "$CACHE_DIR" -mindepth 1 -maxdepth 1 -type d -empty -delete
-    find "$THUMB_CACHE_DIR" -maxdepth 1 -type f -iname "*.thumb.jpg" -delete
+    find "$THUMB_CACHE_DIR" -maxdepth 1 -type f \( -iname "*.card.jpg" -o -iname "*.thumb.jpg" \) -delete
     printf '%s\n' "$FILTER_VERSION" > "$VERSION_FILE"
 fi
 
-# One pass: every image, one at a time -- NOT in parallel. Each call holds a
-# full-resolution source decode plus the derived buffers in RAM; with ~80+
-# wallpapers including 8K photos, launching them all at once (the previous
-# `&` + a single trailing `wait`) saturated RAM and froze the machine.
-# wallpaper-filter decodes each image once and derives every screen size
-# from that decode, so several screens cost one decode per image, not one
-# per image and screen. Its freshness check makes an unchanged image a
-# no-op, so a pass is cheap when nothing changed. A lock keeps two passes
+# One pass: every image handed to a single wallpaper-filter run, which takes
+# them one at a time -- NOT in parallel. Each holds a full-resolution source
+# decode plus the derived buffers in RAM; with ~80+ wallpapers including 8K
+# photos, launching them all at once (the previous `&` + a single trailing
+# `wait`) saturated RAM and froze the machine. wallpaper-filter decodes each
+# image once and derives every screen size from that decode, so several
+# screens cost one decode per image, not one per image and screen. Its
+# freshness check makes an unchanged image a no-op, and one run asks
+# Hyprland for the screens once, not once per image: a pass where nothing
+# changed takes ~15 ms instead of ~1 s. A lock keeps two passes
 # (a screen plugged in during an inotify pass) from running at once. One
 # notification sums up the pass instead of one per image.
 run_pass() {
     (
         flock 9
         local fitted=0 line sizes=()
-        while IFS= read -r -d '' img; do
-            while IFS= read -r line; do
-                if [[ "$line" == fitted\ * ]]; then
-                    fitted=$((fitted + 1))
-                    sizes+=("${line##* }")
-                fi
-            done < <("$FILTER_BIN" "$img")
+        while IFS= read -r line; do
+            if [[ "$line" == fitted\ * ]]; then
+                fitted=$((fitted + 1))
+                sizes+=("${line##* }")
+            fi
         done < <(find -L "$WALL_DIR" -maxdepth 1 -type f \
             \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.jxl" \) \
-            -print0)
+            -print0 | xargs -0 -r "$FILTER_BIN")
         if (( fitted > 0 )); then
             local res
             res="$(printf '%s\n' "${sizes[@]}" | sort -u | paste -sd ' ')"
@@ -151,9 +151,9 @@ run_pass
 # nothing should be dropped there directly, it's fully generated) for
 # additions, removals or renames. On any event: resync the merged
 # symlink farm, then rescan it exactly like the initial pass above --
-# wallpaper-filter's own freshness check (cache_is_fresh) makes that a
-# cheap no-op for every image that didn't actually change, so there's no
-# need to figure out which specific file the event was about.
+# wallpaper-filter's own freshness check makes that a cheap no-op for every
+# image that didn't actually change, so there's no need to figure out which
+# specific file the event was about.
 watch_dirs=()
 [[ -d "$DOTFILES_SRC" ]] && watch_dirs+=("$DOTFILES_SRC")
 for src in "${EXTRA_SOURCES[@]}"; do
@@ -163,6 +163,9 @@ done
 if [[ ${#watch_dirs[@]} -gt 0 ]]; then
     inotifywait -m -e close_write,moved_to,delete,moved_from --format '%e' "${watch_dirs[@]}" | \
         while read -r _event; do
+            # A git pull or a folder copied in is a burst of events: one
+            # pass once it has settled, not one per file.
+            while read -r -t 2 _event; do :; done
             sync_merged_dir
             run_pass
         done

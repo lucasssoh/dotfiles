@@ -5,18 +5,19 @@
 //! Reads the screen-fit cache wallpaper-filter already keeps up to date
 //! (~/.cache/filtered_wallpapers/<W>x<H>/NAME, the same file wallpaper-set
 //! hands to awww) -- measured here at 16 ms median for a 1920×1200 one,
-//! against several hundred for an 8K original. The original is only
-//! decoded for a wallpaper the cache watcher hasn't reached yet.
+//! against ~0.8 s for a JPEG XL original. The original is only decoded for a
+//! wallpaper the cache watcher hasn't fitted to this screen yet (a screen
+//! of a new resolution, just plugged in).
 
+use fast_image_resize::FilterType;
 use gtk4::gdk::{self, MemoryFormat, MemoryTexture};
 use gtk4::glib;
 use gtk4::prelude::*;
-use image::imageops::FilterType;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use crate::thumbs;
+use crate::cache;
 
 /// Which picture: a card, and which half of its pair.
 pub type Key = (usize, bool);
@@ -107,25 +108,18 @@ impl PreviewLoader {
     }
 }
 
-/// wallpaper-filter's version of `path` for a `size` screen, when it exists
-/// and is newer than the original.
-fn cached(path: &std::path::Path, size: (u32, u32)) -> Option<PathBuf> {
-    let home = std::env::var("HOME").ok()?;
-    let file = PathBuf::from(home)
-        .join(".cache/filtered_wallpapers")
-        .join(format!("{}x{}", size.0, size.1))
-        .join(path.file_name()?);
-    thumbs::cache_is_fresh(path, &file).then_some(file)
-}
-
 fn decode(path: &std::path::Path, size: (u32, u32)) -> Option<Decoded> {
-    let img = match cached(path, size).and_then(|c| thumbs::decode_any(&c)) {
-        Some(img) => img,
-        // Not fitted yet: cover-crop the original the way the cache would.
-        None => thumbs::decode_any(path)?.resize_to_fill(size.0, size.1, FilterType::Triangle),
-    };
+    let fitted = cache::fit_path(path, size).filter(|f| cache::is_fresh(path, f));
     // Opaque RGB: a quarter less to copy and upload than RGBA.
-    let rgb = img.to_rgb8();
+    let rgb = match fitted.and_then(|f| cache::decode_any(&f)) {
+        Some(img) => img.into_rgb8(),
+        // Not fitted yet: cover-crop the original like wallpaper-filter's
+        // fill mode, with the same resizer.
+        None => {
+            let original = cache::decode_any(path)?.into_rgb8();
+            cache::resize(&original, size.0, size.1, FilterType::Lanczos3, true)
+        }
+    };
     let (width, height) = rgb.dimensions();
     Some(Decoded { rgb: rgb.into_raw(), width: width as i32, height: height as i32 })
 }

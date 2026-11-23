@@ -7,6 +7,7 @@
 
 mod apply;
 mod backdrop;
+mod cache;
 mod card;
 mod carousel;
 mod keymap;
@@ -628,13 +629,24 @@ fn build_ui(app: &Application) {
     // `refresh_thumb_window` decides what to load/unload, called once here
     // for the initial position then on every interactive focus change.
     let (loader, thumb_rx) = thumbs::ThumbLoader::new();
+
+    // Indices currently loaded OR being decoded -- avoids re-requesting a
+    // card already in the window on every recompute, and serves as the
+    // list to walk to unload cards that fall out of it.
+    let loaded_thumbs: Rc<RefCell<HashSet<usize>>> = Rc::new(RefCell::new(HashSet::new()));
     {
         let ui = Rc::downgrade(&ui);
+        let loaded_thumbs = loaded_thumbs.clone();
         glib::MainContext::default().spawn_local(async move {
             while let Ok(result) = thumb_rx.recv().await {
                 let Some(ui) = ui.upgrade() else {
                     continue;
                 };
+                // A card scrolled out of the window while its thumbnail was
+                // queued: dropped, or it would hold a texture nothing frees.
+                if !loaded_thumbs.borrow().contains(&result.index) {
+                    continue;
+                }
                 if let (Some(card), Some(tex)) = (ui.card(result.index), result.texture) {
                     card.set_texture(result.dark, tex, result.orig_width, result.orig_height);
                     ui.thumb_ready(result.index);
@@ -642,11 +654,6 @@ fn build_ui(app: &Application) {
             }
         });
     }
-
-    // Indices currently loaded OR being decoded -- avoids re-requesting a
-    // card already in the window on every recompute, and serves as the
-    // list to walk to unload cards that fall out of it.
-    let loaded_thumbs: Rc<RefCell<HashSet<usize>>> = Rc::new(RefCell::new(HashSet::new()));
 
     let refresh_thumb_window: Rc<dyn Fn(usize)> = {
         let walls = walls.clone();
@@ -674,24 +681,33 @@ fn build_ui(app: &Application) {
             let wanted: HashSet<usize> = wanted_by_distance.iter().copied().collect();
 
             let mut loaded = loaded_thumbs.borrow_mut();
-            for &i in &wanted_by_distance {
-                // `insert` returns true only if the index wasn't already
-                // there -- neither loaded nor already queued.
-                if loaded.insert(i) {
-                    // A pair's half on screen first, the other after it.
-                    let dark_first = carousel.card_at(i).is_some_and(|c| c.dark_scheme());
-                    match &walls[i].dark {
-                        Some(dark) if dark_first => {
-                            loader.request(i, true, dark.clone());
-                            loader.request(i, false, walls[i].path.clone());
-                        }
-                        Some(dark) => {
-                            loader.request(i, false, walls[i].path.clone());
-                            loader.request(i, true, dark.clone());
-                        }
-                        None => loader.request(i, false, walls[i].path.clone()),
+            // `insert` returns true only if the index wasn't already there
+            // -- neither loaded nor already queued.
+            let new: Vec<usize> = wanted_by_distance.iter().copied().filter(|&i| loaded.insert(i)).collect();
+            // The half each card shows at rest, nearest first, then the
+            // other halves of pairs: only the focused card shows both,
+            // either side of its cut, so a resting pair's hidden half never
+            // keeps a card on screen blank.
+            let mut shown = Vec::new();
+            let mut hidden = Vec::new();
+            for &i in &new {
+                let light = (false, walls[i].path.clone());
+                let (first, second) = match &walls[i].dark {
+                    None => (light, None),
+                    Some(dark) if carousel.card_at(i).is_some_and(|c| c.dark_scheme()) => {
+                        ((true, dark.clone()), Some(light))
                     }
+                    Some(dark) => (light, Some((true, dark.clone()))),
+                };
+                shown.push((i, first));
+                match second {
+                    Some(second) if i == focus => shown.push((i, second)),
+                    Some(second) => hidden.push((i, second)),
+                    None => {}
                 }
+            }
+            for (i, (dark, path)) in shown.into_iter().chain(hidden) {
+                loader.request(i, dark, path);
             }
             loaded.retain(|&i| {
                 if wanted.contains(&i) {

@@ -1,7 +1,8 @@
-//! wallpaper-filter [--size WxH]... <image> — recomposes an image to exactly
+//! wallpaper-filter [--size WxH]... <image>... — recomposes images to exactly
 //! fill each screen's resolution: every connected screen by default (see
 //! `screens`), or the sizes given. One decode per image, every size derived
-//! from it (see `resize`). Each result lands in `~/.cache/filtered_wallpapers/<W>x<H>/`,
+//! from it (see `resize`), and none at all when every size is already
+//! fresh. Each result lands in `~/.cache/filtered_wallpapers/<W>x<H>/`,
 //! read by `hypr/scripts/wallpaper-set`. Prints `fitted <name> <W>x<H>` for
 //! every file it writes. Two modes, picked per-file (see `is_safe_mode`):
 //!
@@ -26,56 +27,25 @@
 //! encode/decode round trip at every step -- JPEG XL sources included
 //! (jxl-oxide, pure Rust, no `magick`/`djxl` subprocess).
 //!
-//! Also maintains a second, much smaller cache (~/.cache/wallpaper_thumbs)
-//! read by Prisme's carousel (thumbs.rs) instead of decoding the
-//! full-resolution original on every launch -- see THUMB_HEIGHT.
+//! Also maintains the carousel's thumbnail cache (~/.cache/wallpaper_thumbs,
+//! see cache.rs), from the same decode.
 //!
-//! Called by scripts/wallpaper-cache-watcher.sh for every added/modified
-//! image (that script handles inotify watching, the sequential pass over
-//! all wallpapers, and the FILTER_VERSION marker -- see it for the
-//! version to bump if the algorithm below changes).
+//! Called by scripts/wallpaper-cache-watcher.sh with every wallpaper in one
+//! run (that script handles inotify watching, the pass over all
+//! wallpapers, and the FILTER_VERSION marker -- see it for the version to
+//! bump if the algorithm below changes). The images are processed one at a
+//! time: each holds a full-resolution decode in memory.
 
-use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
-use image::codecs::jpeg::JpegEncoder;
-use image::{DynamicImage, ExtendedColorType, ImageEncoder, Rgb, RgbImage, RgbaImage};
+#[path = "../cache.rs"]
+mod cache;
+
+use cache::{parse_size, resize};
+use fast_image_resize::FilterType;
+use image::{Rgb, RgbImage};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "jxl"];
-/// `image`'s own encoder defaults to 75 (`JpegEncoder::new`) when asked to
-/// save as JPEG without a quality specified (`save_with_format`, what this
-/// used to call) -- visibly soft for a full-screen wallpaper. Applies to
-/// both caches this file writes (screen-fit + thumbnail).
-const JPEG_QUALITY: u8 = 95;
-
-/// Saves `rgb` as a JPEG at JPEG_QUALITY, regardless of `path`'s own
-/// extension (see the call site for why that can be something other than
-/// ".jpg"/".jpeg").
-fn save_jpeg(rgb: &RgbImage, path: &Path) -> bool {
-    let Ok(file) = std::fs::File::create(path) else {
-        return false;
-    };
-    JpegEncoder::new_with_quality(file, JPEG_QUALITY)
-        .write_image(rgb.as_raw(), rgb.width(), rgb.height(), ExtendedColorType::Rgb8)
-        .is_ok()
-}
-/// Resizes with fast_image_resize (SIMD convolution): several times faster
-/// than the `image` crate's scalar filters, whose cost grows with the source
-/// size even for a tiny output -- an 8K photo took ~1.5 s to thumbnail.
-/// `crop_to_fit`: center-crop the source to the destination's aspect ratio
-/// first, in the same pass (cover + crop without an intermediate image).
-fn resize(src: &RgbImage, w: u32, h: u32, filter: FilterType, crop_to_fit: bool) -> RgbImage {
-    let mut dst = RgbImage::new(w.max(1), h.max(1));
-    let mut options = ResizeOptions::new().resize_alg(ResizeAlg::Convolution(filter));
-    if crop_to_fit {
-        options = options.fit_into_destination(Some((0.5, 0.5)));
-    }
-    Resizer::new()
-        .resize(src, &mut dst, &options)
-        .expect("same pixel type on both sides");
-    dst
-}
-
 /// Sigma of the background's Gaussian blur -- bumped from the old
 /// ImageMagick `-blur 0x40` look (18.0) to better disguise the "cover +
 /// crop" background as a duplicate of the sharp subject on portrait
@@ -130,67 +100,11 @@ fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").expect("HOME not set"))
 }
 
-fn cache_dir() -> PathBuf {
-    home().join(".cache/filtered_wallpapers")
-}
-
-/// Thumbnail cache, read by Prisme's carousel (thumbs.rs) instead of
-/// decoding full-resolution originals on every launch -- see THUMB_HEIGHT.
-fn thumb_cache_dir() -> PathBuf {
-    home().join(".cache/wallpaper_thumbs")
-}
-
-/// Thumbnail height -- 2x thumbs.rs's CARD_HEIGHT (460), enough margin for
-/// hidpi/zoom without the source's full resolution (up to 7680x4320 in
-/// this collection). `.thumb.jpg` suffix (never just the original
-/// filename) so a same-stem, different-extension collision between two
-/// merged wallpaper sources can never overwrite the wrong entry.
-const THUMB_HEIGHT: u32 = 920;
-
-fn thumb_cache_path(filename: &std::ffi::OsStr) -> PathBuf {
-    thumb_cache_dir().join(format!("{}.thumb.jpg", filename.to_string_lossy()))
-}
-
 fn has_known_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .map(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
         .unwrap_or(false)
-}
-
-/// Decodes a JPEG XL file into an in-memory `DynamicImage` -- jxl-oxide
-/// only exposes an interleaved-sample stream (`Render::stream`), not an
-/// `image`-crate buffer directly, so this copies through a flat `Vec<u8>`
-/// first. 1/3/4-channel sources (grayscale/RGB/RGBA, covering everything
-/// GNOME's backgrounds ship as) are supported; anything else (e.g. CMYK)
-/// is treated as a decode failure like a corrupt file would be.
-fn decode_jxl(path: &Path) -> Option<DynamicImage> {
-    let image = jxl_oxide::JxlImage::builder().open(path).ok()?;
-    let render = image.render_frame(0).ok()?;
-    let mut stream = render.stream();
-    let (w, h, channels) = (stream.width(), stream.height(), stream.channels());
-    let mut buf = vec![0u8; (w as usize) * (h as usize) * (channels as usize)];
-    stream.write_to_buffer(&mut buf);
-    match channels {
-        1 => image::GrayImage::from_raw(w, h, buf).map(DynamicImage::ImageLuma8),
-        3 => RgbImage::from_raw(w, h, buf).map(DynamicImage::ImageRgb8),
-        4 => RgbaImage::from_raw(w, h, buf).map(DynamicImage::ImageRgba8),
-        _ => None,
-    }
-}
-
-/// Opens any supported image, JPEG XL included -- the `image` crate itself
-/// has no JXL support, so that extension is routed to jxl-oxide instead.
-fn open_image(path: &Path) -> Option<DynamicImage> {
-    let is_jxl = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| e.eq_ignore_ascii_case("jxl"));
-    if is_jxl {
-        decode_jxl(path)
-    } else {
-        image::open(path).ok()
-    }
 }
 
 /// User config file listing filename glob patterns (one per line, `#`
@@ -214,30 +128,18 @@ fn glob_match(pattern: &str, name: &str) -> bool {
     }
 }
 
-/// Whether `filename` should use "safe" mode, per wallpaper-safe-mode.conf.
-/// Missing/empty file -> every image uses the default "fill" mode.
-fn is_safe_mode(filename: &str) -> bool {
+/// wallpaper-safe-mode.conf's patterns, read once per run. Missing/empty
+/// file -> every image uses the default "fill" mode.
+fn safe_mode_patterns() -> Vec<String> {
     let Ok(content) = std::fs::read_to_string(safe_mode_conf_path()) else {
-        return false;
+        return Vec::new();
     };
     content
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .any(|pattern| glob_match(pattern, filename))
-}
-
-/// Cache already up to date (file present, mtime >= the source's) ->
-/// nothing to do. Same contract as the historical bash test.
-fn cache_is_fresh(src: &Path, cached: &Path) -> bool {
-    let (Ok(src_meta), Ok(cached_meta)) = (std::fs::metadata(src), std::fs::metadata(cached))
-    else {
-        return false;
-    };
-    let (Ok(src_time), Ok(cached_time)) = (src_meta.modified(), cached_meta.modified()) else {
-        return false;
-    };
-    cached_time >= src_time
+        .map(String::from)
+        .collect()
 }
 
 /// Every connected screen's resolution: what Hyprland drives
@@ -307,13 +209,6 @@ fn drm_screens() -> Vec<(u32, u32)> {
         .collect();
     found.sort_by_key(|(internal, _)| !internal);
     found.into_iter().map(|(_, s)| s).collect()
-}
-
-/// "1920x1200" (a DRM mode may carry a suffix: "1920x1080i").
-fn parse_size(s: &str) -> Option<(u32, u32)> {
-    let (w, h) = s.trim().split_once('x')?;
-    let h: String = h.chars().take_while(|c| c.is_ascii_digit()).collect();
-    Some((w.parse().ok()?, h.parse().ok()?))
 }
 
 /// Dimensions of the image scaled on the safe axis only -- same integer
@@ -474,7 +369,7 @@ fn fit_safe(img: &RgbImage, target_w: u32, target_h: u32) -> RgbImage {
 
 fn main() {
     let mut sizes = Vec::new();
-    let mut image_arg = None;
+    let mut images = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         if a == "--size" {
@@ -486,54 +381,65 @@ fn main() {
                 }
             }
         } else {
-            image_arg = Some(a);
+            images.push(PathBuf::from(a));
         }
     }
-    let Some(arg) = image_arg else {
-        eprintln!("usage: wallpaper-filter [--size WxH]... <image>");
+    if images.is_empty() {
+        eprintln!("usage: wallpaper-filter [--size WxH]... <image>...");
         std::process::exit(2);
-    };
+    }
     if sizes.is_empty() {
         sizes = screens();
     }
+    let safe_patterns = safe_mode_patterns();
 
-    let img_path = PathBuf::from(arg);
-    if !has_known_extension(&img_path) {
+    for path in &images {
+        // One image that a decoder chokes on must not end the whole pass.
+        let run = std::panic::catch_unwind(|| process(path, &sizes, &safe_patterns));
+        if run.is_err() {
+            eprintln!("wallpaper-filter: {} skipped", path.display());
+        }
+    }
+}
+
+/// Brings one image's thumbnail and screen-fit versions up to date.
+fn process(img_path: &Path, sizes: &[(u32, u32)], safe_patterns: &[String]) {
+    if !has_known_extension(img_path) {
         return;
     }
     let Some(filename) = img_path.file_name() else {
         return;
     };
     let name = filename.to_string_lossy().into_owned();
-    let thumb_cached = thumb_cache_path(filename);
-    let thumb_fresh = cache_is_fresh(&img_path, &thumb_cached);
+    let thumb_fresh = cache::thumb_is_fresh(img_path);
     let stale: Vec<(u32, u32)> = sizes
         .iter()
         .copied()
-        .filter(|&(w, h)| !cache_is_fresh(&img_path, &cache_dir().join(format!("{w}x{h}")).join(filename)))
+        .filter(|&size| !cache::fit_path(img_path, size).is_some_and(|f| cache::is_fresh(img_path, &f)))
         .collect();
-    if stale.is_empty() && thumb_fresh {
-        return;
+    if stale.is_empty() {
+        if thumb_fresh {
+            return;
+        }
+        // Only the thumbnail is missing: from the previous format's, when
+        // there is one, rather than decoding the original.
+        if let Some((img, size)) = cache::legacy_thumb(img_path) {
+            cache::store_thumb(img_path, &img, size);
+            return;
+        }
     }
 
-    let Some(img) = open_image(&img_path) else {
+    let Some(img) = cache::decode_any(img_path) else {
         return;
     };
     let img = img.into_rgb8();
 
     if !thumb_fresh {
         // Reuses this same decode -- no second pass over the original.
-        // Aspect ratio preserved (only the height is set): thumbs.rs needs
-        // it intact to size each card.
-        let (w, h) = img.dimensions();
-        let thumb_h = THUMB_HEIGHT.min(h);
-        let thumb_w = ((w as u64 * thumb_h as u64 + h as u64 / 2) / h as u64) as u32;
-        let thumb = resize(&img, thumb_w, thumb_h, FilterType::Bilinear, false);
-        let _ = std::fs::create_dir_all(thumb_cache_dir());
-        save_jpeg(&thumb, &thumb_cached);
+        cache::store_thumb(img_path, &img, img.dimensions());
     }
 
-    let safe = is_safe_mode(&name);
+    let safe = safe_patterns.iter().any(|pattern| glob_match(pattern, &name));
     for (target_w, target_h) in stale {
         let result = if safe {
             fit_safe(&img, target_w, target_h)
@@ -541,14 +447,12 @@ fn main() {
             // Fill mode: centered cover crop -- see the module doc comment.
             resize(&img, target_w, target_h, FilterType::Lanczos3, true)
         };
-        let dir = cache_dir().join(format!("{target_w}x{target_h}"));
-        let _ = std::fs::create_dir_all(&dir);
-        // Always JPEG-encoded (at JPEG_QUALITY, see save_jpeg) whatever the
-        // file's own extension, which stays the original's -- wallpaper-set
-        // resolves the cache by plain basename. `.save()` would pick an
-        // encoder from the extension and fail for "jxl" (decode-only here);
-        // awww and the `image` crate sniff content, not extensions.
-        if save_jpeg(&result, &dir.join(filename)) {
+        // Always JPEG-encoded whatever the file's own extension, which
+        // stays the original's -- wallpaper-set resolves the cache by plain
+        // basename. awww and the `image` crate sniff content, not
+        // extensions.
+        let saved = cache::fit_path(img_path, (target_w, target_h)).is_some_and(|f| cache::save_jpeg(&result, &f));
+        if saved {
             println!("fitted {name} {target_w}x{target_h}");
         }
     }
