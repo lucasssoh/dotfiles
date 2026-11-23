@@ -26,6 +26,6 @@ mkdir -p ~/.config/fastfetch
 
 # Link the JSONC config and the image
 safe_link "$DOTFILES_DIR/config/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
-safe_link "$DOTFILES_DIR/config/fastfetch/rayponce.png" ~/.config/fastfetch/rayponce.png
+safe_link "$DOTFILES_DIR/config/fastfetch/coucou.png" ~/.config/fastfetch/coucou.png
 
 ok "Fastfetch configured."

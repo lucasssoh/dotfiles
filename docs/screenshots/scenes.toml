@@ -52,7 +52,7 @@ steps = [
     "wait 2.5",
     "run hyprctl eval 'hl.dispatch(hl.dsp.focus({ direction = \"left\" }))'",
     "wait 0.3",
-    "run wezterm start --always-new-process --class pellicule-term --cwd {repo} -- sh -c 'clear; fastfetch; exec $SHELL'",
+    "run wezterm start --always-new-process --class pellicule-term --cwd {repo} -- sh -c 'sleep 1; clear; fastfetch; exec $SHELL'",
     "wait 3",
 ]
 

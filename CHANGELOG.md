@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **Licence:** coucou-shell is now free software, under the GPL-3.0 or any later version. The coucou wallpapers and bird are under CC BY-SA 4.0.
+- **config-extras:** fastfetch shows the coucou bird in place of Rapunzel.
 
 ## 2.7.0 (November 23 2026)
 

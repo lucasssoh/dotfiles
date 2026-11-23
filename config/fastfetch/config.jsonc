@@ -1,9 +1,10 @@
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-    // The photo is drawn by the terminal (WezTerm reads the iTerm image
-    // protocol), not turned into characters. In grey, like the shell.
+    // The coucou bird, drawn by the terminal (WezTerm reads the iTerm image
+    // protocol), not turned into characters. In a grey that reads on light
+    // and dark.
     "logo": {
-        "source": "~/.config/fastfetch/rayponce.png",
+        "source": "~/.config/fastfetch/coucou.png",
         "type": "iterm",
         "width": 24,
         "height": 14,
