@@ -41,17 +41,18 @@ crop = "full"
 # Neovim keeps dark colours on the see-through terminal: in light mode its
 # text can't be read.
 modes = ["dark"]
-# Nemo and Liseuse on the left, Neovim on the right. The key bindings open
-# in zathura as Liseuse shows Markdown (rendered dark, so no recolor), with
-# a data folder of its own: Liseuse itself would log a reading session.
+# Nemo on the repository above WezTerm with fastfetch, Neovim on the right
+# with three files open, CONTRIBUTING.md in front. Each terminal is a
+# process of its own (--always-new-process): closing the scene's windows
+# never touches yours.
 steps = [
-    "run nemo {repo}/wallpapers",
+    "run nemo {repo}",
     "wait 2",
-    "run wezterm start --class pellicule-editor --cwd {repo} -- nvim +250 +'normal! zt' config/hyprland/quickshell/bar/modules/controller/ControllerPopup.qml",
+    "run wezterm start --always-new-process --class pellicule-editor --cwd {repo} -- nvim +blast config/hyprland/hypr/private.lua LICENSE.md CONTRIBUTING.md",
     "wait 2.5",
     "run hyprctl eval 'hl.dispatch(hl.dsp.focus({ direction = \"left\" }))'",
     "wait 0.3",
-    "run sh -c 'c=~/.cache/pellicule/zathura; mkdir -p $c && { cat {repo}/config/liseuse/zathurarc; echo set recolor false; } > $c/zathurarc && exec zathura --config-dir $c --data-dir $c -P 4 \"$(python3 {repo}/config/liseuse/md2pdf.py {repo}/docs/keybindings.md ~/.cache/pellicule/md)\"'",
+    "run wezterm start --always-new-process --class pellicule-term --cwd {repo} -- sh -c 'clear; fastfetch; exec $SHELL'",
     "wait 3",
 ]
 
@@ -347,70 +348,81 @@ blank = "bar"
 name = "hero"
 doc = "site/src/pages/index.astro"
 mode = "light"
-audio = "~/Musique/December Dream.mp3"
+# Sunday Smooth, Scott Buckley, CC BY 4.0 (credited in README.md):
+# scottbuckley.com.au/library/sunday-smooth
+audio = "~/Musique/Scott Buckley - Sunday Smooth.mp3"
 audio_delay = 0.4
 fade = 2.5
 exports = "~/Videos/coucou-shell"
+# In the middle of the GNOME pairs (gnome-adwaita to gnome-tubes, 21
+# cards in a row in Prisme): wherever Prisme stops among them, the
+# wallpaper has a dark half for the switch to dark at the end.
+wallpaper = "gnome-fold.jxl"
+# 6 keys a second after 250 ms: a key held 2 s moves 11 cards.
+repeat = [6, 250]
 steps = [
     # The music first: the island shows the track and its spectrum from
     # the first second to the last.
-    "run mpv --no-video --really-quiet '~/Musique/December Dream.mp3'",
+    "run mpv --no-video --really-quiet '~/Musique/Scott Buckley - Sunday Smooth.mp3'",
     "wait 4",
-    # Roue: the power wheel, then away.
-    "run ~/.local/bin/roue power", "wait 2.6",
-    "key Escape", "wait 0.9",
+    # Roue: the power wheel, then away. From here on the keys are typed
+    # for real, as you would, and show at the bottom right; a key that
+    # follows another comes a quarter of a second later.
+    "key super+Delete", "wait 1.6",
+    "key Escape", "wait 0.6",
     # The drawers on the right, then the calendar.
-    "ipc bar toggleBalise", "wait 2.4",
-    "ipc bar toggleBalise", "wait 0.8",
-    "ipc bar toggleMixer", "wait 2.4",
-    "ipc bar toggleMixer", "wait 0.8",
-    "ipc bar toggleCalendar", "wait 2.2",
-    "ipc bar toggleCalendar", "wait 0.8",
+    "ipc bar toggleBalise", "wait 1.6",
+    "ipc bar toggleBalise", "wait 0.5",
+    "ipc bar toggleMixer", "wait 1.6",
+    "ipc bar toggleMixer", "wait 0.5",
+    "ipc bar toggleCalendar", "wait 1.6",
+    "ipc bar toggleCalendar", "wait 0.5",
     # Two notifications arrive, then the centre.
     "notify Liseuse | Resuming | Plus courts chemins, page 12 of 48",
-    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200", "wait 2.2",
-    "ipc bar toggleNotificationCenter", "wait 2.6",
-    "ipc bar closeNotificationCenter", "wait 0.9",
+    "notify Prisme | Wallpapers ready | 3 fitted for 1920x1200", "wait 1.6",
+    "key super+i", "wait 1.8",
+    "key super+i", "wait 0.6",
     # Super held: the key sheet, then its Shift layer.
-    "ipc bar keybindsPress", "wait 2.2",
-    "ipc bar keybindsShift true", "wait 1.4",
-    "ipc bar keybindsShift false",
-    "ipc bar keybindsRelease", "wait 0.9",
+    "down super", "wait 1.6",
+    "down shift", "wait 1.1",
+    "up shift", "wait 0.2",
+    "up super", "wait 0.6",
     # A controller arrives, its menu opens.
     "ipc controller library {library}",
-    "ipc controller pad xbox 80 false", "wait 2.2",
-    "ipc bar controllerMenu", "wait 1.4",
-    "ipc bar controllerNav down", "wait 0.6",
-    "ipc bar controllerNav right", "wait 0.6",
-    "ipc bar controllerNav right", "wait 1.2",
-    "ipc bar controllerMenu", "wait 0.6",
-    "ipc controller reset", "wait 0.8",
-    # The tiling: five terminals stacked then closed last first, then five
-    # file windows the same way. Each terminal its own process.
-    "run wezterm start --always-new-process", "wait 1.0",
-    "run wezterm start --always-new-process", "wait 1.0",
-    "run wezterm start --always-new-process", "wait 1.0",
-    "run wezterm start --always-new-process", "wait 1.0",
-    "run wezterm start --always-new-process", "wait 1.2",
-    "wait 2.0",
-    "close org.wezfurlong.wezterm last", "wait 0.8",
-    "close org.wezfurlong.wezterm last", "wait 0.8",
-    "close org.wezfurlong.wezterm last", "wait 0.8",
-    "close org.wezfurlong.wezterm last", "wait 0.8",
-    "close org.wezfurlong.wezterm last", "wait 1.0",
-    "wait 1.0",
-    # Prisme, from Plis to Soie: its light half, back to dark, applied;
-    # then the light scheme brings Soie's light half.
-    "run ~/.local/bin/prisme", "wait 2",
-    "key Right", "wait 0.8",
-    "key Right", "wait 1.4",
-    "key c", "wait 1.4",
-    "key c", "wait 1.2",
-    "key Return", "wait 2.5",
+    "ipc controller pad xbox 80 false", "wait 1.6",
+    "ipc bar controllerMenu", "wait 1.0",
+    "ipc bar controllerNav down", "wait 0.25",
+    "ipc bar controllerNav right", "wait 0.25",
+    "ipc bar controllerNav right", "wait 0.9",
+    "ipc bar controllerMenu", "wait 0.4",
+    "ipc controller reset", "wait 0.6",
+    # The tiling: five terminals stacked, then closed one by one.
+    "key super+Return", "wait 0.5",
+    "key super+Return", "wait 0.5",
+    "key super+Return", "wait 0.5",
+    "key super+Return", "wait 0.5",
+    "key super+Return", "wait 1.6",
+    "key super+q", "wait 0.4",
+    "key super+q", "wait 0.4",
+    "key super+q", "wait 0.4",
+    "key super+q", "wait 0.4",
+    "key super+q", "wait 0.8",
+    # Prisme opens on gnome-fold: held l then h, 11 cards each way and
+    # back, three steps, applied. The light scheme comes with it; the
+    # switch to dark brings its other half.
+    "key super+w", "wait 1.2",
+    "down l", "wait 2", "up l", "wait 0.4",
+    "down h", "wait 2", "up h", "wait 0.5",
+    "key h", "wait 0.25",
+    "key h", "wait 0.25",
+    "key h", "wait 0.8",
+    "key c", "wait 1.0",
+    "key c", "wait 0.8",
+    "key Return", "wait 1.8",
     # Switch to dark for the end.
-    "scheme dark", "wait 2.5",
+    "scheme dark", "wait 2.2",
     # In dark: the battery, then the desktop alone for the fade.
-    "ipc bar togglePower", "wait 2.4",
-    "ipc bar togglePower", "wait 0.9",
-    "wait 3.5",
+    "ipc bar togglePower", "wait 1.6",
+    "ipc bar togglePower", "wait 0.6",
+    "wait 3",
 ]

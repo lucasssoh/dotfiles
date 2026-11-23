@@ -4,6 +4,7 @@
     scripts/pellicule                  every scene in docs/screenshots/scenes.toml
     scripts/pellicule balise mixer     only these scenes
     scripts/pellicule --mode dark      only one mode
+    scripts/pellicule --scale 1.25     only if the screen is at that scale
     scripts/pellicule --out DIR        write elsewhere than docs/screenshots
     scripts/pellicule --video hero     records a [[video]] instead: the site's WebM, and the exports
     scripts/pellicule --video hero --encode   encodes its last recording again
@@ -14,6 +15,14 @@
 A scene is a list of steps run on an empty workspace, then a screenshot,
 cropped and saved as NAME.webp (light) and NAME-dark.webp; the whole
 screen is kept in the cache for the showcase pictures.
+
+The scale is yours to set before the run, never changed by it (a scale
+change under WezTerm closes every one of its windows): the scale nearest
+the frame keeps the shell the same size in every picture, at the screen's
+full resolution (2560x1440 at 1.25 shows 2048x1152, 2560x1600 at 1.333
+shows 1920x1200). `--scale 1.25` checks the screen is at it before
+anything is taken; without it, the run says which scale would fit. HDR
+is off for the run, and back at the end.
 
 Any screen and any scale will do. The crops are written in the shell's
 pixels on the `size` frame of scenes.toml (F = 1920 x 1200). On a screen of
@@ -40,13 +49,24 @@ Steps, one string each:
     close CLASS [last]              closes the windows of that class on the workspace, as Super+Q
                                     (last: only the newest)
     key KEY                         types a key into the app in front (Right, c, Return),
-                                    on a keyboard of its own
+                                    on a keyboard of its own; a combination with + is a
+                                    shortcut, as Hyprland gets it (super+Return, super+shift+s)
+    down KEY / up KEY               holds a key, lets it go (down super: the key sheet)
     scheme light|dark               switches the colour scheme, as the bar's toggle
     notify APP | SUMMARY | BODY [| OPTIONS]
                                     a notification (closed when demo mode ends); OPTIONS,
                                     space-separated: entry=DESKTOP_ID (the app's icon),
                                     icon=NAME, image=PATH ({repo}; a .webp is handed over
                                     as PNG), urgency=low|normal|critical
+
+A [[video]] may set its own `wallpaper`, and `repeat = [RATE, DELAY]`:
+the key repeat for the run (keys a second, ms before it starts), so a
+held key runs through a known number of cards; yours comes back at the
+end.
+
+In a video, the keys typed show at the bottom right, white on dark grey
+squares, put on the picture when it is encoded ([[video]] `keys = false`
+leaves them out).
 
 The pointer is hidden for the whole run, and parked out of the way for
 every scene (settings `pointer`), then shown and put back at the end: under it, a pop-up lightens, shows its x and
@@ -232,12 +252,15 @@ class Keyboard:
         # Hyprland has to see the new keyboard before its first key.
         time.sleep(0.6)
 
-    def press(self, code):
+    def send(self, code, value):
         import struct
-        for value in (1, 0):
-            os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_KEY, code, value))
-            os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_SYN, 0, 0))
-            time.sleep(0.04)
+        os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_KEY, code, value))
+        os.write(self.fd, struct.pack("llHHi", 0, 0, self.EV_SYN, 0, 0))
+        time.sleep(0.04)
+
+    def press(self, code):
+        self.send(code, 1)
+        self.send(code, 0)
 
     def close(self):
         import fcntl
@@ -245,6 +268,25 @@ class Keyboard:
             fcntl.ioctl(self.fd, self.UI_DEV_DESTROY)
         finally:
             os.close(self.fd)
+
+
+# Modifiers by their evdev code: the layout does not move them.
+MODIFIERS = {"super": 125, "shift": 42, "ctrl": 29, "alt": 56}
+# What a key's square shows; a letter shows upper case.
+KEY_LABELS = {"super": "Super", "shift": "Shift", "ctrl": "Ctrl", "alt": "Alt",
+              "Return": "Enter", "Escape": "Esc", "Delete": "Del", "BackSpace": "⌫",
+              "Tab": "Tab", "space": "Space", "Left": "←", "Right": "→", "Up": "↑", "Down": "↓",
+              "Prior": "PgUp", "Next": "PgDn", "Home": "Home", "End": "End"}
+
+
+def key_label(name):
+    return KEY_LABELS.get(name, name.upper() if len(name) == 1 else name)
+
+
+def key_parts(spec):
+    """super+shift+s: the modifiers, then the key (a modifier alone is a key too)."""
+    parts = spec.split("+")
+    return parts[:-1], parts[-1]
 
 
 WALLPAPER_SET = Path.home() / ".config/hypr/scripts/wallpaper-set"
@@ -309,6 +351,66 @@ def monitor():
 
 # Set once the run starts: where the frame's crops land on this screen.
 SCREEN = {"frame": (1920, 1200), "size": (1920, 1200), "scale": 1.0, "x": 0, "y": 0, "name": ""}
+
+
+WORKSPACE_MANAGER = Path.home() / ".config/hypr/scripts/workspace-manager.sh"
+
+
+def monitor_raw():
+    ms = json.loads(sh("hyprctl", "-j", "monitors"))
+    return next((m for m in ms if m.get("focused")), ms[0])
+
+
+def take_scale(width, height, frame):
+    """The scale nearest to the one that brings the screen to the frame:
+    a multiple of 1/120 (what Wayland's fractional scaling speaks) that
+    divides the screen into whole pixels, so nothing is resampled."""
+    fw, fh = frame
+    want = max(1.0, min(width / fw, height / fh))
+    fits = [n / 120 for n in range(120, 481)
+            if (width * 120) % n == 0 and (height * 120) % n == 0]
+    return min(fits, key=lambda k: (abs(k - want), -k)) if fits else 1.0
+
+
+def screen_prepare(settings, scale=None):
+    """SDR for the run, the scale as it is. With `scale`, stops before
+    anything changes if the screen is not at it. Returns whether the screen
+    was changed, so the end puts it back."""
+    m = monitor_raw()
+    w, h = (m["height"], m["width"]) if m.get("transform", 0) % 2 else (m["width"], m["height"])
+    now = float(m.get("scale", 1))
+    best = take_scale(w, h, tuple(settings.get("size", [1920, 1200])))
+    if scale is not None and abs(now - scale) > 0.001:
+        fail(f"{m['name']} is at scale {now:g}, not {scale:g}: set it in the display settings, then run again")
+    if scale is None and abs(now - best) > 0.001:
+        say(f"{m['name']} is at scale {now:g}; {best:g} keeps the shell the size of the frame (--scale {best:g})")
+    if "2101010" not in str(m.get("currentFormat", "")):
+        return False
+    rule = (f'hl.monitor({{ output = "{m["name"]}", disabled = false, '
+            f'mode = "{m["width"]}x{m["height"]}@{m["refreshRate"]:.3f}", position = "{m["x"]}x{m["y"]}", '
+            f'scale = {now:.6f}, transform = {m.get("transform", 0)}, bitdepth = 8, cm = "auto" }})')
+    sh("hyprctl", "eval", rule)
+    # the bar, the wallpaper and the windows settle in SDR
+    time.sleep(2)
+    return True
+
+
+def repeat_get():
+    get = lambda o: json.loads(sh("hyprctl", "-j", "getoption", f"input:{o}"))["int"]
+    return get("repeat_rate"), get("repeat_delay")
+
+
+def repeat_set(rate, delay):
+    sh("hyprctl", "eval", f"hl.config({{ input = {{ repeat_rate = {int(rate)}, repeat_delay = {int(delay)} }} }})")
+
+
+def screen_restore():
+    """The screens as their settings say, as on any change of screens."""
+    if WORKSPACE_MANAGER.exists():
+        subprocess.run([str(WORKSPACE_MANAGER)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        sh("hyprctl", "reload", check=False)
+    time.sleep(1.5)
 
 
 def screen_set(settings):
@@ -438,13 +540,21 @@ def check_step(step, surface):
         return [] if found else [f"{step!r}: {args[0]} is not installed"]
     if verb == "close":
         return [] if len(args) == 1 or args[1:] == ["last"] else [f"{step!r}: close CLASS [last]"]
-    if verb == "key":
+    if verb in ("key", "down", "up"):
         if len(args) != 1:
-            return [f"{step!r}: key KEY"]
+            return [f"{step!r}: {verb} KEY"]
+        mods, key = key_parts(args[0])
+        if verb != "key" and mods:
+            return [f"{step!r}: {verb} takes one key"]
+        bad = [m for m in mods if m not in MODIFIERS]
+        if bad:
+            return [f"{step!r}: {bad[0]!r} is not super, shift, ctrl or alt"]
+        if key in MODIFIERS:
+            return []
         codes = KEY_CODES.setdefault("codes", {})
-        if args[0] not in codes:
-            codes.update(keymap_codes([args[0]]))
-        return [] if args[0] in codes else [f"{step!r}: the keyboard layout has no key {args[0]!r}"]
+        if key not in codes:
+            codes.update(keymap_codes([key]))
+        return [] if key in codes else [f"{step!r}: the keyboard layout has no key {key!r}"]
     if verb == "scheme":
         return [] if args in (["light"], ["dark"]) else [f"{step!r}: scheme light|dark"]
     if verb == "notify":
@@ -512,6 +622,10 @@ class Take:
         self.pointer = tuple(settings.get("pointer", [960, 1100]))
         self.saved_pointer = pointer_get()
         self.keyboard = None
+        self.keylog = None
+        self.t0 = 0.0
+        self.screen_changed = False
+        self.saved_repeat = None
         self.saved_cursor_hidden = cursor_hidden_get()
 
     def park(self):
@@ -522,6 +636,11 @@ class Take:
         if busy:
             fail(f"workspace {self.ws} is not empty ({busy[0]['class']}); "
                  "close its windows or set another one in scenes.toml")
+        self.screen_changed = screen_prepare(self.settings, self.settings.get("_scale"))
+        screen_set(self.settings)
+        if self.settings.get("repeat"):
+            self.saved_repeat = repeat_get()
+            repeat_set(*self.settings["repeat"])
         ipc("demo", "on")
         # Out of every picture and video; still parked, for what it hovers.
         cursor_hide(True)
@@ -555,12 +674,27 @@ class Take:
                                                stderr=subprocess.DEVNULL, start_new_session=True))
         elif verb == "close":
             self.close(args[0], last=args[1:] == ["last"])
-        elif verb == "key":
+        elif verb in ("key", "down", "up"):
+            mods, key = key_parts(args[0])
             codes = KEY_CODES.setdefault("codes", {})
-            if args[0] not in codes:
-                codes.update(keymap_codes([args[0]]))
+            if key not in MODIFIERS and key not in codes:
+                codes.update(keymap_codes([key]))
+            code = MODIFIERS.get(key) or codes[key]
             self.keyboard = self.keyboard or Keyboard()
-            self.keyboard.press(codes[args[0]])
+            # in a video, when: for the squares put on it at the end
+            if self.keylog is not None:
+                self.keylog.append([round(time.monotonic() - self.t0, 3), verb,
+                                    [key_label(m) for m in mods] + [key_label(key)]])
+            if verb == "down":
+                self.keyboard.send(code, 1)
+            elif verb == "up":
+                self.keyboard.send(code, 0)
+            else:
+                for m in mods:
+                    self.keyboard.send(MODIFIERS[m], 1)
+                self.keyboard.press(code)
+                for m in reversed(mods):
+                    self.keyboard.send(MODIFIERS[m], 0)
         elif verb == "scheme":
             scheme_set(*SCHEMES[args[0]])
         elif verb == "notify":
@@ -633,6 +767,10 @@ class Take:
             if self.saved_wallpaper:
                 time.sleep(1)   # after the scheme's own swap, not raced by it
                 wallpaper_set(self.saved_wallpaper)
+            if self.saved_repeat:
+                repeat_set(*self.saved_repeat)
+            if self.screen_changed:
+                screen_restore()
             workspace_go(self.saved_ws)
             pointer_go(*self.saved_pointer)
             cursor_hide(self.saved_cursor_hidden)
@@ -757,6 +895,80 @@ def raw_path(video):
     return CACHE / f"{video['name']}.mkv"
 
 
+def keys_path(video):
+    """The keys typed during the recording, with their time from the first step."""
+    return CACHE / f"{video['name']}.keys.json"
+
+
+def key_spans(log, length, offset, linger=1.2):
+    """[(start, end, labels)]: what the squares show, in the video's time. A
+    shortcut shows for `linger` seconds, with the keys held under it; a key
+    held shows until it is let go."""
+    held, flash, change = [], None, []
+    points = []
+    for t, verb, labels in log:
+        t += offset
+        if verb == "down":
+            held = held + [l for l in labels if l not in held]
+            flash = None
+        elif verb == "up":
+            held = [l for l in held if l not in labels]
+            flash = None
+        else:
+            flash = (held + [l for l in labels if l not in held], t + linger)
+        points.append((t, list(held), flash))
+    spans = []
+    for i, (t, held_now, fl) in enumerate(points):
+        nxt = points[i + 1][0] if i + 1 < len(points) else length
+        if fl and fl[1] < nxt:
+            spans.append((t, fl[1], fl[0]))
+            if held_now:
+                spans.append((fl[1], nxt, held_now))
+        elif fl:
+            spans.append((t, nxt, fl[0]))
+        elif held_now:
+            spans.append((t, nxt, held_now))
+    out = []
+    for a, b, labels in spans:
+        a, b = max(0.0, a), min(length, b)
+        if b - a < 0.15:
+            continue
+        if out and out[-1][2] == labels and abs(out[-1][1] - a) < 0.01:
+            out[-1] = (out[-1][0], b, labels)
+        else:
+            out.append((a, b, labels))
+    return out
+
+
+def key_picture(labels, height, path):
+    """White on dark grey squares, one per key; a word widens its square."""
+    from PIL import Image, ImageDraw, ImageFont
+    k = height / 1440
+    side, pad, gap, radius = round(76 * k), round(22 * k), round(10 * k), round(14 * k)
+    def font(size, text):
+        mi = Path.home() / ".local/share/fonts/MiSansLatin/MiSansLatin-Semibold.ttf"
+        plain = all(c.isascii() for c in text)
+        name = str(mi) if plain and mi.exists() else "DejaVuSans-Bold.ttf"
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            return ImageFont.truetype("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf", size)
+    caps = []
+    for text in labels:
+        f = font(round((36 if len(text) == 1 else 28) * k), text)
+        w = f.getbbox(text)[2] - f.getbbox(text)[0]
+        caps.append((text, f, max(side, w + 2 * pad)))
+    img = Image.new("RGBA", (sum(c[2] for c in caps) + gap * (len(caps) - 1), side), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    x = 0
+    for text, f, w in caps:
+        d.rounded_rectangle((x, 0, x + w - 1, side - 1), radius=radius, fill=(38, 38, 42, 236))
+        d.text((x + w / 2, side / 2), text, font=f, fill=(255, 255, 255, 255), anchor="mm")
+        x += w + gap
+    img.save(path)
+    return img.size
+
+
 def record(video, take):
     """Runs the video's steps while wf-recorder films the screen, without
     loss, into the cache: encode() can then be rerun without filming again."""
@@ -767,12 +979,15 @@ def record(video, take):
                             "-x", "yuv444p", "-p", "preset=ultrafast", "-p", "qp=0"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
+    take.keylog, take.t0 = [], time.monotonic()
     try:
         for step in video.get("steps", []):
             take.step(step)
     finally:
         rec.send_signal(signal.SIGINT)
         rec.wait(timeout=60)
+        keys_path(video).write_text(json.dumps(take.keylog))
+        take.keylog = None
     take.end_scene()
 
 
@@ -811,12 +1026,34 @@ def encode(video, out):
     src = ["-i", str(raw)]
     # Constant frame rate first (the recorder only writes a frame when the
     # screen changes), then the cut: the first frame is held, not lost.
-    head = f"[0:v]fps={fps},trim=start={lead},setpts=PTS-STARTPTS,{fade_v}"
+    head = f"[0:v]fps={fps},trim=start={lead},setpts=PTS-STARTPTS"
+    # The keys typed, bottom right, clear of a bar along the bottom; their
+    # times count from the first step, which comes 1 s after the recorder
+    # starts, `lead` of which is cut.
+    spans = []
+    if video.get("keys", True) and keys_path(video).exists():
+        spans = key_spans(json.loads(keys_path(video).read_text()), length,
+                          video.get("keys_offset", 1.0 - lead))
+    if spans:
+        W, H = (int(v) for v in sh("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                   "stream=width,height", "-of", "csv=p=0", str(raw)).strip().split(","))
+        k = H / 1440
+        pics = CACHE / "keys"
+        pics.mkdir(parents=True, exist_ok=True)
+        head += "[k0]"
+        for i, (a, b, labels) in enumerate(spans):
+            png = pics / f"{name}-{i}.png"
+            w, h = key_picture(labels, H, png)
+            src += ["-i", str(png)]
+            x, y = W - w - round(32 * k), H - h - round(96 * k)
+            head += f";[k{i}][{i + 1}:v]overlay={x}:{y}:enable='between(t,{a:.3f},{b:.3f})'[k{i + 1}]"
+        head += f";[k{len(spans)}]null"
+    head += f",{fade_v}"
     snd, snd_map = [], ["-an"]
     if audio:
         delay = int(video.get("audio_delay", 0.4) * 1000)
         snd = ["-i", str(audio)]
-        snd_filter = (f"[1:a]atrim=0:{length:.3f},adelay={delay}:all=1,"
+        snd_filter = (f"[{len(spans) + 1}:a]atrim=0:{length:.3f},adelay={delay}:all=1,"
                       f"afade=t=out:st={length - fade:.3f}:d={fade},apad=whole_dur={length:.3f}[a]")
         snd_map = ["-map", "[a]"]
 
@@ -865,6 +1102,7 @@ def main():
     ap = argparse.ArgumentParser(prog="pellicule", description="Retakes the documentation's screenshots.")
     ap.add_argument("scenes", nargs="*", help="scene names, or check / list")
     ap.add_argument("--mode", choices=list(SCHEMES), help="only this mode")
+    ap.add_argument("--scale", type=float, help="stop unless the screen is at this scale (set it yourself first)")
     ap.add_argument("--out", type=Path, help="where to write (default: next to scenes.toml)")
     ap.add_argument("--video", metavar="NAME", help="record this [[video]] instead of screenshots")
     ap.add_argument("--encode", action="store_true",
@@ -923,9 +1161,12 @@ def main():
             for p in problems:
                 print(p, file=sys.stderr)
             fail("the video is out of step with the shell; nothing recorded")
-        screen_set(settings)
-        take = Take(settings)
+        # the video's own wallpaper and key repeat, for this run
+        take = Take({**settings, **{k: video[k] for k in ("wallpaper", "repeat") if k in video},
+                     "_scale": a.scale})
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+        # its terminal closing under it: put everything back all the same
+        signal.signal(signal.SIGHUP, lambda *_: sys.exit(129))
         try:
             take.start()
             scheme_set(*SCHEMES[video.get("mode", "dark")])
@@ -953,13 +1194,14 @@ def main():
             print(p, file=sys.stderr)
         fail("scenes.toml is out of step with the shell; nothing taken")
 
-    screen_set(settings)
     out = a.out or a.scenes_file.parent
     out.mkdir(parents=True, exist_ok=True)
     modes = [a.mode] if a.mode else list(SCHEMES)
 
-    take = Take(settings)
+    take = Take({**settings, "_scale": a.scale})
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+    # its terminal closing under it: put everything back all the same
+    signal.signal(signal.SIGHUP, lambda *_: sys.exit(129))
     taken = 0
     try:
         take.start()

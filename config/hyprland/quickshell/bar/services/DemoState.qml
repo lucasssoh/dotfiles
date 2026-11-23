@@ -45,8 +45,8 @@ Singleton {
     readonly property QtObject player: QtObject {
         readonly property string dbusName: "demo"
         readonly property string identity: "Music"
-        readonly property string trackTitle: "December Dream"
-        readonly property string trackArtist: "Fourplay"
+        readonly property string trackTitle: "Sunday Smooth"
+        readonly property string trackArtist: "Scott Buckley"
         readonly property string trackArtUrl: ""
         property bool isPlaying: true
         readonly property bool canGoPrevious: true
@@ -55,7 +55,7 @@ Singleton {
         readonly property bool positionSupported: true
         readonly property real position: 107
         readonly property bool lengthSupported: true
-        readonly property real length: 343
+        readonly property real length: 155
         readonly property int uniqueId: 1
         function togglePlaying() { isPlaying = !isPlaying; }
         function next() {}

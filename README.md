@@ -36,7 +36,7 @@ cc-pkg-mng status     # check that everything is in place
 | [**Liseuse**](docs/tools/liseuse.md) | A reading library on one key |
 | [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Installs the parts you pick, and moves between releases |
 
-![At work: WezTerm and Neovim, Nemo, Liseuse](docs/screenshots/work-dark.webp)
+![At work: Nemo, WezTerm with fastfetch, Neovim](docs/screenshots/work-dark.webp)
 
 ## Documentation
 
@@ -81,6 +81,6 @@ What isn't mine keeps its own licence:
 | Heroic and Lutris logos | CC0 1.0; trademarks of their owners | [THIRD-PARTY.md](THIRD-PARTY.md) |
 | GNOME wallpapers | CC BY-SA 3.0 US | [wallpapers/CREDITS.md](wallpapers/CREDITS.md) |
 | Films in Antenne's screenshots: Big Buck Bunny, Caminandes and the other Blender Foundation open movies | CC BY 3.0 and 4.0, © Blender Foundation | [blender.org](https://studio.blender.org/films/) |
-| Music of the presentation video: "December Dream", Fourplay | © its rights holders. Not part of this repository | |
+| Music of the presentation video: "Sunday Smooth", Scott Buckley | CC BY 4.0 | [scottbuckley.com.au](https://www.scottbuckley.com.au/library/sunday-smooth/) |
 
 The Aube and Nuit wallpapers are coucou-shell's own, under its licence. Fonts, icon fonts and packages are downloaded at install and aren't redistributed here.
