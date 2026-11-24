@@ -7,20 +7,7 @@ config="$REPO/config/wezterm/local.lua"
 link="$HOME/.config/wezterm/local.lua"
 
 if [[ ! -e "$config" ]]; then
-    cat > "$config" <<'LUA'
--- Your WezTerm settings, over the author's. Any key from
--- https://wezterm.org/config/lua/config/ ; reloaded on save.
--- Top-level keys apply in both modes; `light` and `dark` only in that one.
-local wezterm = require 'wezterm'
-
-return {
-  -- font = wezterm.font("JetBrains Mono"),
-  -- font_size = 12,
-  -- color_scheme = "Catppuccin Mocha",   -- replaces the author's colours
-  -- light = { colors = { foreground = "#1c1c1e", background = "#f5f3ee" } },
-  -- dark  = { colors = { foreground = "#f8f8f2", background = "#101010" } },
-}
-LUA
+    cp "$REPO/config/wezterm/local.example.lua" "$config"
     ok "local.lua created"
 fi
 

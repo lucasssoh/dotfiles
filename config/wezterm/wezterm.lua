@@ -250,13 +250,26 @@ if f then
     local ok, err = pcall(function() config[k] = v end)
     if not ok then wezterm.log_error("local.lua: " .. tostring(err)) end
   end
+  -- Tables merge key by key (tab_bar keeps what you leave out); lists
+  -- such as ansi replace.
+  local function merge(dst, src)
+    for k, v in pairs(src) do
+      if type(v) == "table" and type(dst[k]) == "table" and #v == 0 then
+        merge(dst[k], v)
+      else
+        dst[k] = v
+      end
+    end
+  end
   local function apply(t)
     if t.color_scheme ~= nil and t.colors == nil then set("colors", nil) end
     for k, v in pairs(t) do
       if k == "light" or k == "dark" then
         -- applied after
       elseif k == "colors" and type(v) == "table" and type(config.colors) == "table" then
-        for ck, cv in pairs(v) do config.colors[ck] = cv end
+        local colors = config.colors
+        merge(colors, v)
+        set("colors", colors)
       else
         set(k, v)
       end
