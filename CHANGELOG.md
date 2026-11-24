@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 2.7.3
 
 ### Added
 - **Bar:** five centre shapes to choose from in `bar.json`: the floating island, a rounded notch, a dome, a pill and a flush square. The notch joins the screen edge with concave fillets.
@@ -14,6 +14,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **WezTerm:** an opaque terminal by default, dark `#101010` or cream. Transparency and blur are a setting in `local.lua`.
+- **Neovim:** Markdown and JSON keep their source visible in the editor; maths stay in the live preview.
+- **Pellicule:** Pepper&Carrot's film and key sheet fit the screen, and the social cuts export faster.
+- **Site:** the home page's background stays sharp at any screen width.
 
 ### Fixed
 - **Bar:** each zone's dynamic text now judges the fill you chose in `bar.json` with its opacity over `bar-tint.py`'s wallpaper profile. A translucent or transparent bar no longer asks for white text on a white wallpaper.
