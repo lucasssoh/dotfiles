@@ -12,55 +12,112 @@ The island also opens [Veille](veille.md), the [key sheet](key-sheet.md) and [Pr
 
 ## Its look
 
-Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island changes on save.
+The bar's position and look live in one file, `~/.config/hypr/bar.json`. Every key is optional. Saving the file restarts the bar, so the new edge and the new look apply together.
+
+There are three independent levels: the **bar** itself at the top level, then the **center** and **sides** zones sitting on it. The top level never becomes a zone's fill — a zone with no `fill` of its own is transparent and shows the bar beneath it.
 
 ```json
 {
-  "shape": {
-    "style": "island",
-    "inset": 2,
-    "innerInset": 2,
-    "edgeRadius": 10,
-    "innerRadius": 10,
-    "fillet": 0
+  "position": "top",
+  "style": "solid",
+  "radius": 18,
+  "fill": { "colour": "#000000", "opacity": 1, "blur": false },
+  "text": { "mode": "dynamic", "colour": "#FFFFFF" },
+  "center": {
+    "style": "flush",
+    "fill": { "colour": "#000000", "opacity": 1, "blur": false },
+    "text": { "mode": "dynamic", "colour": "#FFFFFF" }
   },
-  "fill": { "colour": "#2c2c2e", "opacity": 0.2, "blur": false },
-  "text": { "mode": "dynamic", "colour": "#f2f2f7" }
+  "sides": {
+    "style": "notch",
+    "fill": { "colour": "#000000", "opacity": 1, "blur": false },
+    "text": { "mode": "dynamic", "colour": "#FFFFFF" }
+  }
 }
 ```
 
-| Key | Values | Default |
+| Bar key | Values | Default |
 |---|---|---|
-| `shape.style` | `island`: a pane floating in the band. `notch`: flush with the screen edge, joined to it by concave fillets. `dome`: flush with the screen edge, only the band-facing corners rounded. `pill`: a capsule. `flush`: a square against the edge | `island` |
-| `shape.inset` | Distance from the screen edge, in pixels, from `0` to `15` | From `style` |
-| `shape.innerInset` | Distance from the band-facing edge, in pixels, from `0` to `15` | From `style` |
-| `shape.edgeRadius` | Radius of the corners touching the screen edge, in pixels | From `style` |
-| `shape.innerRadius` | Radius of the corners facing the band, in pixels | From `style` |
-| `shape.fillet` | `notch` only: radius of the concave joint with the screen edge, from `0` to `15` | From `style` |
-| `fill.colour` | The island's colour, `#rrggbb`. | `#2c2c2e` |
-| `fill.opacity` | From `0` (none) to `1` (opaque) | `0.2` |
-| `fill.blur` | Blur what is behind the island | `false` |
-| `text.mode` | `dynamic`: the text turns light or dark to suit the wallpaper behind each part of it. `static`: the text is always `text.colour` | `dynamic` |
-| `text.colour` | The text's colour, in `static` mode only | `#f2f2f7` |
+| `position` | `top` or `bottom` (see [Position](index.md#position)) | `top` |
+| `style` | `solid`: one plain bar with concave corners under it and a gap to the windows. `floating`: a translucent band with detached blocks | `floating` |
+| `radius` | `0`–`32`: the curve shared by window corners, the bar's concave corners and fillets, the convex blocks and the screen corners | `18` |
+| `fill.colour` | The bar's own colour, `#rrggbb` or `#rrggbbaa` | near-black; opaque in `solid`, ~45 % in `floating` |
+| `fill.opacity` | From `0` (none) to `1` (opaque) | `1` in `solid`, `0.45` in `floating` |
+| `fill.blur` | Blur what is behind the bar | `false` |
+| `text.mode` | `dynamic`: text follows the wallpaper through the bar's fill. `static`: always `text.colour` | `dynamic` (`static` for the centre in `solid`) |
+| `text.colour` | The bar's text colour in `static` mode | Light or dark with the system |
+| `light`, `dark` | `fill` and `text` overrides for one mode | The values above |
 
-`style` fills in the other shape keys; give one yourself to override it. On a bottom bar, the edge and inner sides swap. To try each shape, save just one of these:
+| Zone key | Values | Default |
+|---|---|---|
+| `style` | `center`: `island`, `notch`, `dome`, `pill`, `flush`. `sides`: `none`, `island`, `notch`, `pill` | `island` / `none` |
+| `fill.colour` | The zone's own colour, over the bar | Transparent |
+| `fill.opacity` | From `0` (none) to `1` (opaque) | `0` when no colour is set, `1` when one is |
+| `fill.blur` | Blur what is behind the centre island (centre only) | `false` |
+| `text.mode` | `dynamic`: the zone's text follows what it really draws — `fill.colour` at `fill.opacity` over `bar-tint.py`'s wallpaper profile. `static`: always `text.colour` | `dynamic` (`static` for the centre in `solid`) |
+| `text.colour` | The zone's text colour in `static` mode | The bar's text colour |
+| `light`, `dark` | `fill` and `text` overrides for one zone in one mode | The zone's values |
+
+Both zone shapes are honoured in `solid` too: the side shapes are drawn over the bar's surface. `shape` is accepted as an alias of a zone's `style`, and a string shortcut still works (`"center": "notch"`). Old flat configs, with no zone object, still get their fill on both zones as before. The old `bar-island.json` and `bar-position.json` are still read while `bar.json` is missing; installing the bar moves them into it and keeps them as `*.old`.
+
+`radius` is the one curve for the whole shell. Saving it writes `~/.config/hypr/bar-radius` for Hyprland's own config and applies `decoration:rounding` immediately; the bar's concave corners, notch fillets, blocks, drawer rows and [screen corners](index.md#screen-corners) follow the same number. Small shapes clamp it to half their height, so a 24px block becomes a full pill while a drawer stays under its own limit. Drawers that open wider keep their larger 28–32px corners.
+
+## Shapes to try
+
+Change just one key, save, and the bar restarts. The centre:
 
 ```json
-{ "shape": { "style": "island" } }
+{ "center": { "style": "island" } }
 ```
 
 ```json
-{ "shape": { "style": "notch" } }
+{ "center": { "style": "notch" } }
 ```
 
 ```json
-{ "shape": { "style": "dome" } }
+{ "center": { "style": "dome" } }
 ```
 
 ```json
-{ "shape": { "style": "pill" } }
+{ "center": { "style": "pill" } }
 ```
 
 ```json
-{ "shape": { "style": "flush" } }
+{ "center": { "style": "flush" } }
+```
+
+A different colour for the bar, the centre and the sides:
+
+```json
+{
+  "style": "solid",
+  "fill": { "colour": "#101010", "opacity": 1 },
+  "center": {
+    "style": "flush",
+    "fill": { "colour": "#3a2a5a", "opacity": 0.8 },
+    "text": { "mode": "static", "colour": "#ffffff" }
+  },
+  "sides": {
+    "style": "notch",
+    "fill": { "colour": "#006644", "opacity": 0.8 },
+    "text": { "mode": "static", "colour": "#ffffff" }
+  }
+}
+```
+
+Different colours in light and dark mode, per zone:
+
+```json
+{
+  "style": "solid",
+  "fill": { "colour": "#000000" },
+  "center": {
+    "fill": { "colour": "#101010" },
+    "light": { "fill": { "colour": "#f5f3ee" }, "text": { "colour": "#1c1c1e" } }
+  },
+  "sides": {
+    "fill": { "colour": "#3a2a5a" },
+    "dark": { "text": { "mode": "static", "colour": "#00ffcc" } }
+  }
+}
 ```

@@ -1,4 +1,5 @@
 import QtQuick
+import "../services"
 
 // Visual capsule matching waybar/style.css's grouping: several modules
 // glued into one pill (shared background, rounded on the block's own
@@ -35,11 +36,13 @@ Rectangle {
     // Named cornerRadius, not radius, to avoid shadowing Rectangle's own
     // built-in `radius` property (unused here -- this component always
     // sets the 4 per-corner radii individually instead, see below).
-    property real cornerRadius: 10
+    // bar.json's global radius, capped so a 24px-tall block never turns
+    // into a blob the way an unclamped per-corner radius would.
+    property real cornerRadius: Math.min(IslandStyle.radius, height / 2)
 
     implicitWidth: row.implicitWidth
     implicitHeight: 24
-    // 4 -> 10 (still short of a full pill -- 12 at this 24px height).
+    // A full pill at the default 24px height; the cap keeps it that way.
     // Per-corner radius properties need Qt 6.7+ (this machine: Qt 6.11).
     topLeftRadius: flushTop ? 0 : cornerRadius
     topRightRadius: flushTop ? 0 : cornerRadius

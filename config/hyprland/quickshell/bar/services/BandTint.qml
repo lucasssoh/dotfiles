@@ -23,34 +23,19 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // ---- the band's own fill ----------------------------------------
-    // THE definition, read by shell.qml's barBand rather than repeated
-    // there. It has to live wherever the contrast maths lives: every
-    // number below is a function of this alpha, and a band whose colour
-    // drifted from the value the maths assumed would produce confident
-    // and wrong answers.
+    // ---- the bar's own fill -----------------------------------------
+    // THE definition of the surface every contrast number below assumes.
+    // It comes from bar.json's top level (the bar, not a zone): the same
+    // material is drawn by the band in floating style and by the solid
+    // bar, so the maths must read it here instead of a hard-coded value.
+    // The default is the old near-black band at ~45 % -- it blocks less
+    // than half of what is behind it, which is why this machinery exists.
     //
-    // 0x73 is ~45% -- the band blocks less than half of what is behind
-    // it, which is the whole reason this machinery exists.
-    //
-    // ONE band material: flat, translucent, this near-black. A second,
-    // WHITE band was tried and removed -- it worked on the numbers (worst
-    // island 5.57:1 against 4.22:1 here) and was wrong on the design: a
-    // bar whose surface turns white is a different bar.
-    //
-    // What moves since the HyperOS pass is HOW MUCH of it there is, per
-    // island: `veil`, 0 to 1, scales this alpha. Asked for after a test
-    // with no band at all read "parfait" on calm wallpapers: "si le fond
-    // est très irrégulier, alors la bande est plus pertinente, quand le
-    // fond est relativement uniforme, c'est très lisible et très beau".
-    // So an island over a calm wallpaper gets no veil, one over a busy or
+    // What moves per island is HOW MUCH veil goes under it: `veil`, 0 to
+    // 1, scales this alpha. A calm wallpaper gets none; a busy or
     // high-contrast stretch gets exactly as much as its text needs --
-    // see `decide` below for how much that is.
-    //
-    // (A lighter 0x40 veil under dark-ink islands existed for a while; it
-    // is gone -- a dark veil only ever LOWERS dark text's contrast, so
-    // dark text now always sits on the bare wallpaper.)
-    readonly property color band: "#730c0c0e"
+    // see `decide` below.
+    property color band: IslandStyle.barFill
 
     // The band at `veil` (0..1) of its full density.
     function bandFor(veil) {
@@ -285,6 +270,52 @@ Singleton {
 
     function recommend(monitor, x, w, current, inkDark, inkLight) {
         return root.decide(monitor, x, w, current, inkDark, inkLight).ink;
+    }
+
+    // Which ink reads best on the surface the bar actually draws: the
+    // user's fill (colour + opacity from bar.json) over the wallpaper, with
+    // the veil underneath it when one is drawn. A solid bar hides the veil
+    // window: pass 0 there. -1 asks the band for its own veil density.
+    // Judging the fill's colour alone is wrong as soon as it is
+    // translucent: black at 0 % is the wallpaper, not black.
+    function decideOn(monitor, x, w, current, inkDark, inkLight, fill, veil) {
+        const r = root.rangeAt(monitor, x, w);
+        if (!r) return current || "dark";
+        const density = veil < 0
+            ? root.decide(monitor, x, w, current, inkDark, inkLight).veil : veil;
+        const veiled = behind => density > 0
+            ? root.composite(root.bandFor(density), behind) : behind;
+        // White ink's worst case is the lightest pixel, dark ink's the
+        // darkest, both after the fill has been laid over the wallpaper.
+        const white = root.contrast(root.composite(fill, veiled(r.hi)), inkDark);
+        const dark = root.contrast(root.composite(fill, veiled(r.lo)), inkLight);
+        if (white >= root.target && dark >= root.target) {
+            if (current === "light")
+                return white > dark + root.switchMargin ? "dark" : "light";
+            return dark > white + root.switchMargin ? "light" : "dark";
+        }
+        if (white >= root.target) return "dark";
+        if (dark >= root.target) return "light";
+        return white >= dark ? "dark" : "light";
+    }
+
+    // The same probe as `describe`, for the fill the user chose.
+    function describeOn(monitor, x, w, inkDark, inkLight, fill, veil) {
+        const r = root.rangeAt(monitor, x, w);
+        if (!r) return "pas de profil";
+        const density = veil < 0
+            ? root.decide(monitor, x, w, "dark", inkDark, inkLight).veil : veil;
+        const veiled = behind => density > 0
+            ? root.composite(root.bandFor(density), behind) : behind;
+        const hi = root.composite(fill, veiled(r.hi));
+        const lo = root.composite(fill, veiled(r.lo));
+        const f = c => Math.round(c * 255);
+        return "fond " + f(r.lo.r) + ".." + f(r.hi.r)
+             + "  surface " + f(lo.r) + ".." + f(hi.r)
+             + "  texte clair " + root.contrast(hi, inkDark).toFixed(2) + ":1"
+             + "  texte sombre " + root.contrast(lo, inkLight).toFixed(2) + ":1"
+             + "  -> " + (root.decideOn(monitor, x, w, "dark", inkDark, inkLight, fill, veil) === "dark"
+                          ? "texte clair" : "texte sombre");
     }
 
     // Debug: what each island would be told, as one line. Wired to an IPC

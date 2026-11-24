@@ -16,7 +16,7 @@ Hold `Super` and the [key sheet](key-sheet.md) opens under the island. [Veille](
 
 ## Position
 
-The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar-position.json`:
+The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar.json`:
 
 ```json
 { "position": "bottom" }
@@ -26,7 +26,7 @@ The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar
 |---|---|---|
 | `position` | `top` or `bottom` | `top` |
 
-The bar moves on save.
+Saving `bar.json` restarts the bar: the edge is fixed when it first maps, so any change to the file is applied then. The look is set in the [same file](island.md#its-look).
 
 ## Zen mode
 
@@ -55,7 +55,7 @@ qs -c bar ipc call bar toggleBalise
 
 ## Screen corners
 
-The bar rounds the screen's four corners, in the same curve as the windows. A fullscreen window covers them.
+The bar rounds the screen's four corners, concentric with the windows: `bar.json`'s [`radius`](island.md#its-look) plus the gap windows keep from the edge. A fullscreen window covers them.
 
 ## Demo mode
 

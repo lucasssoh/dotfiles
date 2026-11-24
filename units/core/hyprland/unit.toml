@@ -24,12 +24,6 @@ copr = ["lionheartp/Hyprland"]
 user = ["wallpaper-slideshow"]
 
 [[hooks]]
-name   = "bar-position"
-run_as = "user"
-does   = "create the local Quickshell bar position setting if it is missing"
-run    = "units/core/hyprland/hooks/bar-position.sh"
-
-[[hooks]]
 name   = "session-target"
 run_as = "user"
 does   = "start the session's services with Hyprland only, not with another desktop"

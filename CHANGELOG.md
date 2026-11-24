@@ -5,14 +5,18 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
-- **Bar, centre island:** five shapes to choose from in `bar-island.json`: the floating island, a rounded notch, a dome, a pill and a flush square. The notch joins the screen edge with concave fillets. The insets and corner radii can also be set by hand.
-- **Bar, centre island:** `bar-island.json` groups its keys under `shape`, `fill` and `text`. The old flat keys still work.
+- **Bar:** five centre shapes to choose from in `bar.json`: the floating island, a rounded notch, a dome, a pill and a flush square. The notch joins the screen edge with concave fillets.
+- **Bar:** `solid` draws one plain bar with concave corners under it and a gap to the windows. `sides` gives the left and right blocks an island, notch or pill shape.
+- **Bar:** three levels of looks: the bar's own fill and text, then `center` and `sides`, each with its shape, fill, `light`/`dark` overrides and text block. A zone without a fill shows the bar beneath it; flat keys still work as defaults for both.
+- **Bar:** `radius` in `bar.json` is the shared corner curve: Hyprland's window rounding, the bar's concave corners and fillets, the blocks, the drawer rows and the screen corners. Saving it applies the rounding live too.
+- **Bar settings:** the position and the look are now in one `bar.json`. Saving it restarts the bar so the new edge and look apply together. The old files are moved into it at install and kept as `*.old`.
 - **WezTerm:** `~/.config/wezterm/local.lua` overrides any setting: background, font, size…, in both modes or in light or dark only.
 
 ### Changed
 - **WezTerm:** an opaque terminal by default, dark `#101010` or cream. Transparency and blur are a setting in `local.lua`.
 
 ### Fixed
+- **Bar:** each zone's dynamic text now judges the fill you chose in `bar.json` with its opacity over `bar-tint.py`'s wallpaper profile. A translucent or transparent bar no longer asks for white text on a white wallpaper.
 - **Power:** a profile you pick by hand stays until the cable is plugged or unplugged. While charging, it went back to Balanced within a minute.
 - **Antenne:** Esc on a channel that doesn't answer, and Backspace to go back to the previous channel, no longer close the app.
 - **Antenne:** coming back to its workspace no longer freezes the app, sometimes for good.

@@ -41,19 +41,27 @@ QtObject {
                        a.a + (b.a - a.a) * blend.t);
     }
 
+    // Static mode: a zone's own text colour from bar.json, with the quieter
+    // tiers as fades of it. Same ramps as the centre island's static ink.
+    property bool useStatic: false
+    property color staticInk: "#f2f2f7"
+    function shade(a) {
+        return Qt.rgba(blend.staticInk.r, blend.staticInk.g, blend.staticInk.b, a);
+    }
+
     // Same property names as Ink/InkLight -- that is the whole contract:
     // a module's `ink` can hold any of the three and it cannot tell.
-    readonly property color primary: blend.mix(Ink.primary, InkLight.primary)
-    readonly property color secondary: blend.mix(Ink.secondary, InkLight.secondary)
-    readonly property color muted: blend.mix(Ink.muted, InkLight.muted)
-    readonly property color faint: blend.mix(Ink.faint, InkLight.faint)
-    readonly property color danger: blend.mix(Ink.danger, InkLight.danger)
-    readonly property color accent: blend.mix(Ink.accent, InkLight.accent)
-    readonly property color positive: blend.mix(Ink.positive, InkLight.positive)
-    readonly property color play: blend.mix(Ink.play, InkLight.play)
-    readonly property color hdr: blend.mix(Ink.hdr, InkLight.hdr)
-    readonly property color warning: blend.mix(Ink.warning, InkLight.warning)
-    readonly property color conserve: blend.mix(Ink.conserve, InkLight.conserve)
-    readonly property color onLight: blend.mix(Ink.onLight, InkLight.onLight)
+    readonly property color primary: blend.useStatic ? blend.staticInk : blend.mix(Ink.primary, InkLight.primary)
+    readonly property color secondary: blend.useStatic ? blend.shade(0.72) : blend.mix(Ink.secondary, InkLight.secondary)
+    readonly property color muted: blend.useStatic ? blend.shade(0.72) : blend.mix(Ink.muted, InkLight.muted)
+    readonly property color faint: blend.useStatic ? blend.shade(0.45) : blend.mix(Ink.faint, InkLight.faint)
+    readonly property color danger: blend.useStatic ? blend.staticInk : blend.mix(Ink.danger, InkLight.danger)
+    readonly property color accent: blend.useStatic ? blend.staticInk : blend.mix(Ink.accent, InkLight.accent)
+    readonly property color positive: blend.useStatic ? blend.staticInk : blend.mix(Ink.positive, InkLight.positive)
+    readonly property color play: blend.useStatic ? blend.staticInk : blend.mix(Ink.play, InkLight.play)
+    readonly property color hdr: blend.useStatic ? blend.staticInk : blend.mix(Ink.hdr, InkLight.hdr)
+    readonly property color warning: blend.useStatic ? blend.staticInk : blend.mix(Ink.warning, InkLight.warning)
+    readonly property color conserve: blend.useStatic ? blend.staticInk : blend.mix(Ink.conserve, InkLight.conserve)
+    readonly property color onLight: blend.useStatic ? blend.staticInk : blend.mix(Ink.onLight, InkLight.onLight)
 
 }

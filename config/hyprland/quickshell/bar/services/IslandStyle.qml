@@ -3,117 +3,280 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// The central island's look, from ~/.config/hypr/bar-island.json, the same
-// kind of file as bar-position.json. Every key is optional; a missing file
-// or key keeps the default. The old flat keys (style, opacity, text...) are
-// still read.
+// The bar's look, from ~/.config/hypr/bar.json (bar-island.json before it,
+// still read when bar.json is missing). Every key is optional.
+//
+// Three independent levels:
 //
 //   {
-//     "shape": {
-//       "style": "island",      island, notch, dome, pill or flush.
-//                               Sets the other shape keys unless given.
-//       "inset": 2,             px from the screen edge
-//       "innerInset": 2,        px from the band-facing edge
-//       "edgeRadius": 10,       px on the screen-edge corners
-//       "innerRadius": 10,      px on the band-facing corners
-//       "fillet": 0             notch: concave joint with the screen edge
+//     "position": "top",          top or bottom (read by BarPosition)
+//     "style": "solid",           solid: one bar. floating: band + blocks
+//     "fill": {...},              the BAR's own surface
+//     "text": {...},              the BAR's own text defaults
+//     "light": {...}, "dark": {...},
+//     "radius": 18,               one curve for windows, bar and screen
+//     "center": {                 the centre zone, on top of the bar
+//       "style": "flush",         flush, island, notch, dome or pill
+//       "fill": {...}, "text": {...},
+//       "light": {...}, "dark": {...}
 //     },
-//     "fill": {
-//       "colour": "#2c2c2e",    the island's colour
-//       "opacity": 0.2,         0 (none) to 1 (opaque)
-//       "blur": false           blur what is behind the island
-//     },
-//     "text": {
-//       "mode": "dynamic",      dynamic: follows what is behind it.
-//                               static: always `colour`.
-//       "colour": "#f2f2f7"
+//     "sides": {                  the left/right zone, on top of the bar
+//       "style": "notch",         none, island, notch or pill
+//       "fill": {...}, "text": {...},
+//       "light": {...}, "dark": {...}
 //     }
 //   }
 //
-// Read live: saving the file changes the island at once, no restart.
+// The top level never becomes a zone's fill: a zone with no `fill` is
+// transparent and shows the bar beneath it. Old flat configs, with no zone
+// object, still get their fill on both zones as before.
+//
+// Read live by IslandStyle: the look needs no restart, though BarPosition
+// restarts the bar on every save so the edge is re-read too.
 Singleton {
     id: root
 
-    readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/bar-island.json"
+    readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/bar.json"
+    readonly property string legacyPath: Quickshell.env("HOME") + "/.config/hypr/bar-island.json"
 
-    readonly property bool defaultDynamic: true
-    readonly property color defaultBackground: "#2c2c2e"
-    readonly property real defaultOpacity: 0.20
-    readonly property bool defaultBlur: false
-    readonly property color defaultText: "#f2f2f7"
-    readonly property string defaultStyle: "island"
+    // The raw file, kept so a light/dark switch re-resolves without a read.
+    property var config: ({})
+    property bool legacy: false
+    readonly property bool darkMode: !AppearanceState.ready || AppearanceState.dark
 
-    property bool dynamic: root.defaultDynamic
-    property color background: root.defaultBackground
-    property real alpha: root.defaultOpacity
-    property bool blur: root.defaultBlur
-    property color textColour: root.defaultText
-    property string style: root.defaultStyle
+    property bool solid: false
+    // The two zones' own styles. Both are honoured in solid too: the side
+    // shapes are drawn over the bar's surface.
+    property string style: "island"         // the centre's shape
+    property string sides: "none"           // the side blocks' shape
+
+    // Level 1: the bar itself. `barFill` is also the band's material in
+    // floating style (BandTint reads it), so the contrast maths follows
+    // what is actually drawn.
+    property color barBackground: "#000000"
+    property real barAlpha: 1
+    property bool barBlur: false
+    property bool barDynamic: true
+    property color barTextColour: "#f2f2f7"
+    property color barFill: "#000000"
+
+    // Level 2: the centre. The old names stay the centre's so existing
+    // consumers (IslandGlass, the notch strip) keep the right surface.
+    property bool dynamic: true
+    property color background: "#2c2c2e"
+    property real alpha: 0.20
+    property bool blur: false
+    property color textColour: "#f2f2f7"
+    property color fill: "transparent"
+
+    // Level 3: the side blocks. `sideFill` is what they really sit on:
+    // their own shape when drawn, otherwise the bar's surface.
+    property color sideBackground: "#000000"
+    property real sideAlpha: 0
+    property bool sideBlur: false
+    property bool sideDynamic: true
+    property color sideTextColour: "#f2f2f7"
+    property color sideFill: "transparent"
+    property color backdropFill: "transparent"
+    readonly property bool sideVeil: !root.solid
+    property real sideFillet: 18
+    property bool _fillLightText: true
+
+    // One radius for every curve: Hyprland's window rounding, the bar's
+    // concave corners and fillets, the convex blocks and the screen corners
+    // (the latter plus the gap windows keep from the edge). Small shapes
+    // clamp it to half their height where they have to.
+    property real radius: 18
+
     property real inset: 2
     property real innerInset: 2
-    property real edgeRadius: 10
-    property real innerRadius: 10
-    property real fillet: 0
+    property real edgeRadius: 18
+    property real innerRadius: 18
+    property real fillet: 18
+    // Solid style: the gap between the bar and the windows, and the radius
+    // of the concave corners under it (the windows' own rounding).
+    readonly property int gap: root.solid ? 6 : 0
+    readonly property real cornerRadius: root.radius
+
+    onDarkModeChanged: root.resolve()
 
     FileView {
         path: root.configPath
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: root.adopt(text())
-        onLoadFailed: root.adopt("{}")
+        onLoaded: { root.legacy = false; root.adopt(text()); }
+        onLoadFailed: { root.legacy = true; legacyFile.reload(); }
+    }
+    FileView {
+        id: legacyFile
+        path: root.legacyPath
+        watchChanges: true
+        printErrors: false
+        onFileChanged: if (root.legacy) reload()
+        onLoaded: if (root.legacy) root.adopt(text())
+        onLoadFailed: if (root.legacy) root.adopt("{}")
     }
 
     function adopt(raw) {
-        let c = {};
         try {
-            c = JSON.parse(raw) || {};
+            root.config = JSON.parse(raw) || {};
         } catch (e) {
             // Mid-save or a typo: keep what is on screen until it parses.
-            console.warn("[bar-island] " + root.configPath + ": " + e);
+            console.warn("[bar] " + (root.legacy ? root.legacyPath : root.configPath) + ": " + e);
             return;
         }
+        root.resolve();
+    }
+
+    function resolve() {
+        const c = root.config || {};
+        const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : {};
         const isColour = v => typeof v === "string" && /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v);
         const isNumber = v => typeof v === "number" && isFinite(v);
         const between = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const first = (...vs) => vs.find(v => v !== undefined);
+        const modeKey = root.darkMode ? "dark" : "light";
+        const topMode = obj(c[modeKey]);
+
+        root.solid = c.style === "solid";
+
+        const requestedRadius = first(c.radius, obj(c.shape).radius);
+        if (requestedRadius !== undefined && !isNumber(requestedRadius))
+            console.warn("[bar] radius must be a number");
+        root.radius = isNumber(requestedRadius) ? between(requestedRadius, 0, 32) : 18;
+
+        // A string is the old flat shape key; an object is a zone with its
+        // own fill and text. `shape` and `style` are aliases inside a zone.
+        const centerCfg = obj(c.center);
+        const sidesCfg = obj(c.sides);
+        const shape = obj(c.shape);
+        const legacyCentre = first(
+            typeof c.center === "string" ? c.center : undefined,
+            typeof c.centre === "string" ? c.centre : undefined,
+            typeof shape.style === "string" ? shape.style : undefined,
+            typeof c.style === "string" && c.style !== "solid" && c.style !== "floating"
+                ? c.style : undefined);
+
         const shapes = {
-            island: { inset: 2, innerInset: 2, edge: 10, inner: 10, fillet: 0 },
-            notch: { inset: 0, innerInset: 0, edge: 0, inner: 10, fillet: 8 },
-            dome: { inset: 0, innerInset: 0, edge: 0, inner: 18, fillet: 0 },
+            island: { inset: 2, innerInset: 2, edge: root.radius, inner: root.radius, fillet: 0 },
+            notch: { inset: 0, innerInset: 0, edge: 0, inner: root.radius, fillet: root.radius },
+            dome: { inset: 0, innerInset: 0, edge: 0, inner: Math.max(18, root.radius), fillet: 0 },
             pill: { inset: 2, innerInset: 2, edge: 999, inner: 999, fillet: 0 },
             flush: { inset: 0, innerInset: 0, edge: 0, inner: 0, fillet: 0 }
         };
-        const obj = v => v && typeof v === "object" ? v : {};
-        const sh = obj(c.shape), fi = obj(c.fill), tx = obj(c.text);
-        const pick = (o, k, flat) => o[k] !== undefined ? o[k] : c[flat];
-        const flatText = typeof c.text === "string" ? c.text : undefined;
-        c = {
-            style: pick(sh, "style", "style"),
-            inset: pick(sh, "inset", "inset"),
-            innerInset: pick(sh, "innerInset", "innerInset"),
-            edgeRadius: pick(sh, "edgeRadius", "edgeRadius"),
-            innerRadius: pick(sh, "innerRadius", "innerRadius"),
-            fillet: pick(sh, "fillet", "fillet"),
-            background: fi.colour !== undefined ? fi.colour : c.background,
-            opacity: pick(fi, "opacity", "opacity"),
-            blur: pick(fi, "blur", "blur"),
-            mode: tx.mode !== undefined ? tx.mode : c.mode,
-            text: tx.colour !== undefined ? tx.colour : flatText
-        };
         const known = s => Object.prototype.hasOwnProperty.call(shapes, s);
-        const shape = known(c.style) ? shapes[c.style] : shapes[root.defaultStyle];
-        if (c.style !== undefined && !known(c.style))
-            console.warn("[bar-island] " + root.configPath + ": unknown style " + c.style);
-        root.dynamic = c.mode !== undefined ? c.mode !== "static" : root.defaultDynamic;
-        root.background = isColour(c.background) ? c.background : root.defaultBackground;
-        root.alpha = isNumber(c.opacity) ? between(c.opacity, 0, 1) : root.defaultOpacity;
-        root.blur = typeof c.blur === "boolean" ? c.blur : root.defaultBlur;
-        root.textColour = isColour(c.text) ? c.text : root.defaultText;
-        root.style = known(c.style) ? c.style : root.defaultStyle;
-        root.inset = isNumber(c.inset) ? between(c.inset, 0, 15) : shape.inset;
-        root.innerInset = isNumber(c.innerInset) ? between(c.innerInset, 0, 15) : shape.innerInset;
-        root.edgeRadius = isNumber(c.edgeRadius) ? between(c.edgeRadius, 0, 999) : shape.edge;
-        root.innerRadius = isNumber(c.innerRadius) ? between(c.innerRadius, 0, 999) : shape.inner;
-        root.fillet = isNumber(c.fillet) ? between(c.fillet, 0, 15) : shape.fillet;
+        const centreShape = first(centerCfg.shape, centerCfg.style, legacyCentre);
+        if (centreShape !== undefined && !known(centreShape))
+            console.warn("[bar] unknown centre style " + centreShape);
+        root.style = known(centreShape) ? centreShape : "island";
+        const s = shapes[root.style];
+        root.inset = s.inset;
+        root.innerInset = s.innerInset;
+        root.edgeRadius = s.edge;
+        root.innerRadius = s.inner;
+        root.fillet = s.fillet;
+
+        const sideShapes = ["none", "island", "notch", "pill"];
+        const sideShape = first(sidesCfg.shape, sidesCfg.style,
+                                typeof c.sides === "string" ? c.sides : undefined);
+        root.sides = sideShapes.indexOf(sideShape) >= 0 ? sideShape : "none";
+
+        // ---- level 1: the bar ------------------------------------------
+        const bf = Object.assign({}, obj(c.fill), obj(topMode.fill));
+        const barColour = first(bf.colour, c.background);
+        const barOpacity = first(bf.opacity, c.opacity);
+        const barBg = isColour(barColour) ? barColour
+            : root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#0c0c0e";
+        const barA = isNumber(barOpacity) ? between(barOpacity, 0, 1)
+            : root.solid ? 1 : 0.45;
+        const br = Qt.color(barBg);
+        root.barBackground = barBg;
+        root.barAlpha = barA;
+        root.barFill = Qt.rgba(br.r, br.g, br.b, barA);
+        const bBlur = first(bf.blur, c.blur);
+        root.barBlur = typeof bBlur === "boolean" ? bBlur : false;
+        const bt = Object.assign({}, obj(c.text), obj(topMode.text));
+        root.barDynamic = first(bt.mode, c.mode, root.solid ? "static" : "dynamic") !== "static";
+        root.barTextColour = isColour(bt.colour) ? bt.colour
+            : typeof c.text === "string" ? c.text
+            : root.solid ? (root.darkMode ? "#f2f2f7" : "#1c1c1e") : "#f2f2f7";
+
+        // ---- levels 2 and 3: the zones ---------------------------------
+        // A zone with no object is the legacy zone: it still inherits the
+        // flat fill. A real zone is transparent until it asks for a fill.
+        function zone(cfg, defaultMode) {
+            const legacyZone = Object.keys(cfg).length === 0;
+            const zm = obj(cfg[modeKey]);
+            const f = Object.assign({}, legacyZone ? obj(c.fill) : {},
+                                    obj(cfg.fill),
+                                    legacyZone ? obj(topMode.fill) : {},
+                                    obj(zm.fill));
+            const t = Object.assign({}, obj(c.text), obj(cfg.text),
+                                    obj(topMode.text), obj(zm.text));
+            const colour = first(f.colour, legacyZone ? c.background : undefined);
+            const opacity = first(f.opacity, legacyZone ? c.opacity : undefined);
+            const hasFill = isColour(colour);
+            const bg = hasFill ? colour
+                : legacyZone ? (root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#2c2c2e")
+                             : "#000000";
+            const a = isNumber(opacity) ? between(opacity, 0, 1)
+                : !legacyZone ? (hasFill ? 1 : 0)
+                : root.solid ? 1 : 0.20;
+            const rgb = Qt.color(bg);
+            const lum = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
+            // A translucent fill is mostly what is BEHIND it. Blend towards
+            // mid-grey for the static fallback: black at 0 % must not ask
+            // for white text on a white wallpaper.
+            const chosen = first(t.colour, typeof c.text === "string" ? c.text : undefined);
+            const ink = isColour(chosen) ? chosen
+                : root.solid ? ((lum * a + 0.5 * (1 - a)) < 0.5 ? "#f2f2f7" : "#1c1c1e")
+                             : "#f2f2f7";
+            const b = first(f.blur, legacyZone ? c.blur : undefined);
+            return {
+                background: bg, alpha: a,
+                blur: typeof b === "boolean" ? b : false,
+                dynamic: first(t.mode, c.mode, defaultMode) !== "static",
+                textColour: ink,
+                fill: Qt.rgba(rgb.r, rgb.g, rgb.b, a)
+            };
+        }
+
+        // The sides have always been contrast-driven; only the centre of a
+        // solid bar defaults to static text.
+        const centre = zone(centerCfg, root.solid ? "static" : "dynamic");
+        const side = zone(sidesCfg, "dynamic");
+
+        // Source-over of a zone's fill on the bar beneath it. In solid
+        // style the bar is opaque, so a transparent zone still has a real
+        // surface under its text; the ink must judge that, not the wallpaper.
+        function over(top, base) {
+            const a = top.a;
+            return Qt.rgba(a * top.r + (1 - a) * base.r,
+                           a * top.g + (1 - a) * base.g,
+                           a * top.b + (1 - a) * base.b, 1);
+        }
+
+        root.background = centre.background;
+        root.alpha = centre.alpha;
+        root.blur = centre.blur;
+        root.dynamic = centre.dynamic;
+        root.textColour = centre.textColour;
+        root.fill = root.solid ? over(centre.fill, root.barFill) : centre.fill;
+        const cr = Qt.color(centre.background);
+        root._fillLightText = (0.2126 * cr.r + 0.7152 * cr.g + 0.0722 * cr.b) * centre.alpha
+                              + 0.5 * (1 - centre.alpha) < 0.5;
+
+        root.sideBackground = side.background;
+        root.sideAlpha = side.alpha;
+        root.sideBlur = side.blur;
+        root.sideDynamic = side.dynamic;
+        root.sideTextColour = side.textColour;
+        // Side blocks sit on their own shape when one is drawn, otherwise
+        // on the bar's surface (or just the band in a floating bar).
+        root.sideFill = root.sides !== "none" ? side.fill
+            : root.solid ? root.barFill : "transparent";
+        root.backdropFill = root.solid ? root.barFill : root.sideFill;
+        root.sideFillet = isNumber(sidesCfg.fillet) ? between(sidesCfg.fillet, 0, 32) : root.radius;
     }
 }

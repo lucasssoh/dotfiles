@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import "../services"
 
 // A 1px GRADIENT rim traced around another item -- the same "verre
 // métal" edge Hyprland puts on the active window, Roue on its central
@@ -45,8 +46,8 @@ Shape {
     // `rim` must actually BE a child of the item it's tracing.
     property Item target: null
     readonly property Item _traced: target ? target : parent
-    // Match the target's own corner radius (Block defaults to 10).
-    property real cornerRadius: 10
+    // Match the target's own corner radius (Block follows bar.json's).
+    property real cornerRadius: IslandStyle.radius
     property real thickness: 1
 
     // Where the light comes from, expressed as how much of the gradient

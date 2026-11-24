@@ -222,7 +222,7 @@ hl.gesture({
 -- ============================================================
 hl.config({
     general = {
-        gaps_in          = 0,
+        gaps_in          = 1,
         -- 0 on right/left so tiled windows sit flush against the screen's
         -- left/right edges, same as the quickshell bar itself (see
         -- quickshell/bar/shell.qml's PanelWindow margins: 0). Top/bottom
@@ -284,12 +284,26 @@ hl.config({
 -- ============================================================
 -- DECORATION
 -- ============================================================
+-- One radius for the bar and the windows: bar.json's `radius` is mirrored
+-- into bar-radius by scripts/restart-quickshell-bar.sh (which also applies
+-- it live on every save). Read it here so a Hyprland reload keeps it; the
+-- default matches bar.json's before that script has run once.
+local rounding = 18
+local rounding_file = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") or "") .. "/.config")
+    .. "/hypr/bar-radius"
+local rounding_handle = io.open(rounding_file, "r")
+if rounding_handle then
+    local saved = tonumber((rounding_handle:read("*l") or ""):match("^%s*(%d+)%s*$"))
+    rounding_handle:close()
+    if saved and saved >= 0 and saved <= 64 then rounding = saved end
+end
+
 hl.config({
     decoration = {
-        -- 3 -> 10: softer, more premium silhouette -- the glass border
-        -- gradient above needs generous rounding to read as a curved edge
-        -- rather than a thin outline on square corners.
-        rounding = 12,
+        -- The bar's concave corners, the convex blocks and the screen
+        -- corners all take bar.json's radius too: the glass border's
+        -- gradient reads as a curved edge, not a square outline.
+        rounding = rounding,
         -- Enabled, unlike this file's history: the earlier "not worth the
         -- regression risk" reasoning was specifically about the BAR --
         -- always on screen, aboveWindows, composited over fullscreen HDR

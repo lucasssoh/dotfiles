@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --force restarts even when the position is unchanged: the bar's watcher
+# calls it for every settings change, not only a move to another edge.
+force=false
+[[ "${1:-}" == "--force" ]] && force=true
+
 lock_file="${XDG_RUNTIME_DIR:-/tmp}/quickshell-bar-restart-${UID}.lock"
 exec 9>"$lock_file"
 if ! flock -w 10 9; then
@@ -8,27 +13,54 @@ if ! flock -w 10 9; then
     exit 1
 fi
 
-position="$(python3 - "$HOME/.config/hypr/bar-position.json" <<'PY'
+bar_config="$HOME/.config/hypr/bar.json"
+[[ -e "$bar_config" ]] || bar_config="$HOME/.config/hypr/bar-position.json"
+settings="$(python3 - "$bar_config" <<'PY'
 import json
 import sys
 
+radius = 18
 try:
     with open(sys.argv[1], encoding="utf-8") as f:
         config = json.load(f)
 except FileNotFoundError:
-    print("top")
+    config = {}
 except (OSError, json.JSONDecodeError) as error:
-    print(f"Invalid bar position config: {error}; using top", file=sys.stderr)
-    print("top")
-else:
-    value = config.get("position") if isinstance(config, dict) else None
-    if value not in ("top", "bottom"):
-        print("Invalid bar position; using top", file=sys.stderr)
-        value = "top"
-    print(value)
+    print(f"Invalid bar config: {error}; using top/18", file=sys.stderr)
+    config = {}
+
+value = config.get("position", "top") if isinstance(config, dict) else None
+if value not in ("top", "bottom"):
+    print("Invalid bar position; using top", file=sys.stderr)
+    value = "top"
+
+if isinstance(config, dict):
+    candidate = config.get("radius", 18)
+    if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+        radius = max(0, min(32, round(candidate)))
+    elif candidate is not None:
+        print("Invalid bar radius; using 18", file=sys.stderr)
+
+print(value)
+print(radius)
 PY
 )"
+position="$(sed -n 1p <<<"$settings")"
+radius="$(sed -n 2p <<<"$settings")"
 export QUICKSHELL_BAR_POSITION="$position"
+
+# The window rounding is the same knob as the bar's curves. Keep a copy
+# for hyprland.lua's next load and apply it now, so saving bar.json is
+# enough even when the bar itself does not need restarting.
+rounding_file="$HOME/.config/hypr/bar-radius"
+rounding_tmp="${rounding_file}.tmp"
+printf '%s\n' "$radius" > "$rounding_tmp"
+mv -f "$rounding_tmp" "$rounding_file"
+if command -v hyprctl >/dev/null 2>&1; then
+    # This Hyprland uses the Lua config API: `hyprctl keyword` answers
+    # "unknown request", while `hl.config` applies at runtime.
+    hyprctl eval "hl.config({ decoration = { rounding = $radius } })" >/dev/null 2>&1 || true
+fi
 
 mapfile -t pids < <(quickshell list --all | awk '
     /^Instance / { pid = "" }
@@ -83,7 +115,7 @@ wait_for_old_bar_layer_to_unmap() {
     return 1
 }
 
-if (( ${#pids[@]} == 1 )) && [[ "$(bar_position "${pids[0]}")" == "$position" ]]; then
+if ! $force && (( ${#pids[@]} == 1 )) && [[ "$(bar_position "${pids[0]}")" == "$position" ]]; then
     exit 0
 fi
 

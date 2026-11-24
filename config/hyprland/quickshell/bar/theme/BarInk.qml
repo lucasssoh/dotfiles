@@ -28,8 +28,14 @@ QtObject {
             if (b < a) { lights.push(light); continue; }
 
             const current = light ? "dark" : "light";
+            // The veil keeps its own density, measured on the wallpaper.
+            // The ink is then decided on what is REALLY under the block:
+            // the wallpaper, the veil, and the fill from bar.json on top.
             const d = BandTint.decide(bar.monitor, r.x, r.w, current, Ink.primary, InkLight.primary);
-            light = d.ink === "dark";
+            light = BandTint.decideOn(bar.monitor, r.x, r.w, current,
+                                      Ink.primary, InkLight.primary,
+                                      IslandStyle.sideFill,
+                                      IslandStyle.sideVeil ? d.veil : 0) === "dark";
             lights.push(light);
             for (let i = a; i <= b; i++) raw[i] = Math.max(raw[i], d.veil);
         }
@@ -53,4 +59,11 @@ QtObject {
     Component.onCompleted: bar.reevaluate()
     readonly property int profileSeq: BandTint.seq
     onProfileSeqChanged: bar.reevaluate()
+    property Connections styleChanges: Connections {
+        target: IslandStyle
+        function onSideFillChanged() { bar.reevaluate() }
+        function onSideVeilChanged() { bar.reevaluate() }
+        function onSolidChanged() { bar.reevaluate() }
+        function onSidesChanged() { bar.reevaluate() }
+    }
 }

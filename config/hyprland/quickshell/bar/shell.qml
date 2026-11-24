@@ -331,11 +331,50 @@ ShellRoot {
         // without anything on screen having to change first: takes the
         // rect to test rather than reading the islands' own, so it needs
         // no plumbing into them and can probe a region they do not cover.
-        //   quickshell ipc call -c bar bar tintProbe DP-9 13 390
+        //   quickshell ipc -c bar call bar tintProbe DP-9 13 390
         function tintProbe(monitor: string, x: int, w: int): string {
             return BandTint.ready
                 ? BandTint.describe(monitor, x, w, Ink.primary, Ink.onLight)
                 : "profil pas encore lu (" + BandTint.seq + ")";
+        }
+        // The same probe with a zone's fill composited over the wallpaper:
+        // what the side blocks' ink is decided on (fillProbe), and what the
+        // centre island's ink is decided on (centerProbe).
+        //   quickshell ipc -c bar call bar fillProbe DP-2 13 390
+        //   quickshell ipc -c bar call bar centerProbe DP-2 13 390
+        function fillProbe(monitor: string, x: int, w: int): string {
+            return BandTint.ready
+                ? BandTint.describeOn(monitor, x, w, Ink.primary, InkLight.primary,
+                                      IslandStyle.sideFill, IslandStyle.sideVeil ? -1 : 0)
+                : "profil pas encore lu (" + BandTint.seq + ")";
+        }
+        function centerProbe(monitor: string, x: int, w: int): string {
+            return BandTint.ready
+                ? BandTint.describeOn(monitor, x, w, Ink.primary, InkLight.primary,
+                                      IslandStyle.fill, 0)
+                : "profil pas encore lu (" + BandTint.seq + ")";
+        }
+        // What bar.json resolved into for each zone.
+        //   quickshell ipc -c bar call bar zonesProbe
+        function zonesProbe(): string {
+            const zone = (shape, fill, dynamic, text) => ({
+                shape: shape, fill: fill.toString(), dynamic: dynamic,
+                text: text.toString()
+            });
+            return JSON.stringify({
+                solid: IslandStyle.solid,
+                bar: {
+                    radius: IslandStyle.radius,
+                    fill: IslandStyle.barFill.toString(),
+                    dynamic: IslandStyle.barDynamic,
+                    text: IslandStyle.barTextColour.toString()
+                },
+                center: zone(IslandStyle.style, IslandStyle.fill,
+                             IslandStyle.dynamic, IslandStyle.textColour),
+                sides: zone(IslandStyle.sides, IslandStyle.sideFill,
+                            IslandStyle.sideDynamic, IslandStyle.sideTextColour),
+                backdrop: IslandStyle.backdropFill.toString()
+            });
         }
         // Brightness has no DBus/kernel push to react to (see
         // services/OsdState.qml's header) -- keybinds.lua calls this
@@ -785,8 +824,10 @@ ShellRoot {
                     ink: barInk
                     fromBottom: BarPosition.bottom
                     // Slides with the band when the bar comes and goes.
+                    // A solid bar needs no veil.
                     transform: Translate { y: bar.slideOffset }
                     opacity: 1 - bar.slide
+                    visible: !IslandStyle.solid
                 }
             }
 
@@ -850,7 +891,7 @@ ShellRoot {
             //
             // Reserved only while the bar is in place, so windows make
             // room as it slides in and take the room back as it leaves.
-            exclusiveZone: bar.shown ? 24 : 0
+            exclusiveZone: bar.shown ? 24 + IslandStyle.gap : 0
             // The layer spelled out rather than `aboveWindows: true`, which
             // pins it to Top: see `barRaised`, the bar climbs above
             // Programme's and the notifications' sheets while the keybinds
@@ -1026,7 +1067,7 @@ ShellRoot {
                 // Every rounded blur region in this file is a SmoothRegion,
                 // not a plain Region: see there for the halo a plain one
                 // left on the corners.
-                // The central island's row, when bar-island.json asks for
+                // The central island's row, when bar.json asks for
                 // blur (services/IslandStyle.qml): up whenever the bar is,
                 // whole, so it is on `glassFade`'s forces-1 list below.
                 Modules.SmoothRegion {
@@ -1294,7 +1335,27 @@ ShellRoot {
             // Clock used to sit here too -- moved into the tools pill
             // (right before the power dot) and given a date alongside it,
             // asked for.
-            // bar-island.json's notch: the concave fillets joining the
+            // bar.json's solid bar, or the side blocks' shapes.
+            Modules.BarBackdrop {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: bar.bandHeight + IslandStyle.cornerRadius
+                y: BarPosition.bottom ? parent.height - height + bar.slideOffset : bar.slideOffset
+                opacity: 1 - bar.slide
+                fromBottom: BarPosition.bottom
+                solid: IslandStyle.solid
+                sides: IslandStyle.sides
+                band: bar.bandHeight
+                corner: IslandStyle.cornerRadius
+                fillet: IslandStyle.sideFillet
+                radius: IslandStyle.radius
+                barColour: IslandStyle.barFill
+                sideColour: IslandStyle.sideFill
+                leftEnd: metrics.x + metrics.width + 4
+                rightStart: (launchers.width > 0 ? launchers.x : toolsIsland.x) - 4
+            }
+
+            // bar.json's notch: the concave fillets joining the
             // central island to the screen edge.
             Modules.NotchStrip {
                 visible: IslandStyle.style === "notch"
@@ -1338,7 +1399,7 @@ ShellRoot {
                 // after an afternoon bare -- "Nue" -- which left the notch
                 // look behind but the title and marks unanchored on the
                 // band): its inset and corner radii come from
-                // bar-island.json (2 px and 10 by default, "pas en pill...
+                // bar.json (2 px and 10 by default, "pas en pill...
                 // en coin arrondi"), wearing the
                 // same material as the drawers hanging below (Veille, the
                 // keybinds sheet): islandPane, a hairline, the bar's blur
@@ -1361,7 +1422,7 @@ ShellRoot {
                 rowIslandTopRightRadius: BarPosition.bottom ? IslandStyle.innerRadius : IslandStyle.edgeRadius
                 rowIslandBottomLeftRadius: BarPosition.bottom ? IslandStyle.edgeRadius : IslandStyle.innerRadius
                 rowIslandBottomRightRadius: BarPosition.bottom ? IslandStyle.edgeRadius : IslandStyle.innerRadius
-                // As bar-island.json says (by default Graphite at 20 %, no
+                // As bar.json says (by default Graphite at 20 %, no
                 // blur, dynamic text), no border, no shadow -- see
                 // services/IslandStyle.qml and theme/IslandGlass.qml.
                 rowIslandColor: islandGlass.fill
@@ -3021,7 +3082,7 @@ ShellRoot {
                 }
                 color: DrawerTheme.paneTop
                 // Rounded where it meets the desktop, and on the screen's
-                // side with the screen's own corners (ScreenCorner.qml's 18).
+                // side with the screen's own corners (see ScreenCorner.qml).
                 topLeftRadius: 18
                 topRightRadius: 32
                 bottomLeftRadius: 18

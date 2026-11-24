@@ -135,7 +135,9 @@ BUCKETS = 128
 # inotify-only. A regular file in the cache dir is exactly the case
 # inotify does handle.
 OUT_PATH = os.path.expanduser("~/.cache/bar-tint.json")
-POSITION_PATH = os.path.expanduser("~/.config/hypr/bar-position.json")
+POSITION_PATH = os.path.expanduser("~/.config/hypr/bar.json")
+if not os.path.exists(POSITION_PATH):
+    POSITION_PATH = os.path.expanduser("~/.config/hypr/bar-position.json")
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +234,8 @@ def bar_position():
         return "top"
     if isinstance(config, dict) and config.get("position") in ("top", "bottom"):
         return config["position"]
+    if isinstance(config, dict) and "position" not in config:
+        return "top"
     print(f"bar-tint: invalid position in {POSITION_PATH}; using top", file=sys.stderr)
     return "top"
 

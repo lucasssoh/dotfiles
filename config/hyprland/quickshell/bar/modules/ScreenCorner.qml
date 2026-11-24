@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
+import "../services"
 
 // One rounded corner of a screen: a black square with a quarter circle
 // cut out, laid over the desktop so the panel reads with the silhouette
@@ -19,10 +20,11 @@ PanelWindow {
     // "topLeft", "topRight", "bottomLeft" or "bottomRight".
     required property string corner
 
-    // Concentric with the windows: their rounding (12, hyprland.lua) plus
-    // the gap they keep from the side and bottom edges (gaps_out 7 and 6),
-    // so a window's curve and the screen's run parallel.
-    readonly property int radius: 18
+    // Concentric with the windows: bar.json's global radius (mirrored to
+    // Hyprland's decoration.rounding) plus the gap they keep from the side
+    // and bottom edges (gaps_out 7 and 6), so a window's curve and the
+    // screen's run parallel.
+    readonly property int radius: Math.round(IslandStyle.radius + 6)
 
     readonly property bool atTop: corner === "topLeft" || corner === "topRight"
     readonly property bool atLeft: corner === "topLeft" || corner === "bottomLeft"

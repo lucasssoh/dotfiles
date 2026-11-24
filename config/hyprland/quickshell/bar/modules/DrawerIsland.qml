@@ -77,7 +77,9 @@ Item {
     property bool expanded: false
 
     readonly property int margin: 6
-    readonly property int cornerRadius: 18
+    // The bar.json radius; rowRadius/fillRadius below still cap it at half
+    // the height of the small rows it is drawn on.
+    readonly property int cornerRadius: Math.round(IslandStyle.radius)
     // cornerRadius, capped at half the height it is drawn on. A no-op on
     // every island up to now (rows of 24-31px never asked for more than
     // their half), and what makes a floating CAPSULE possible: the
@@ -288,7 +290,7 @@ Item {
     property real rowIslandInset: 2
     property real rowIslandTopInset: root.rowIslandInset
     property real rowIslandBottomInset: root.rowIslandInset
-    property real rowIslandRadius: 10
+    property real rowIslandRadius: IslandStyle.radius
     property real rowIslandTopLeftRadius: root.rowIslandRadius
     property real rowIslandTopRightRadius: root.rowIslandRadius
     property real rowIslandBottomLeftRadius: root.rowIslandRadius

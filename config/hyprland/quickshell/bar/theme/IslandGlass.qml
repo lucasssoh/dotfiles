@@ -2,7 +2,7 @@ import QtQuick
 import "../services"
 
 // The central island's fill and inks, from IslandStyle (the user's
-// ~/.config/hypr/bar-island.json; by default Graphite #2c2c2e at 20 %, no
+// ~/.config/hypr/bar.json; by default Graphite #2c2c2e at 20 %, no
 // blur, dynamic text). In dynamic mode the TEXT turns light or dark,
 // whichever holds best against the fill over what is behind it (bar-tint's
 // profile), judged on the worst case -- the wallpaper's 10th and 90th
@@ -52,6 +52,15 @@ QtObject {
     Component.onCompleted: glass.reevaluate()
     readonly property int profileSeq: BandTint.seq
     onProfileSeqChanged: { glass.reevaluate(); glass.bump(); }
+    // The fill is part of the surface the ink is judged on: a light/dark
+    // switch or a new bar.json must re-decide, not wait for the wallpaper.
+    property Connections styleChanges: Connections {
+        target: IslandStyle
+        function onBackgroundChanged() { glass.reevaluate(); glass.bump(); }
+        function onAlphaChanged() { glass.reevaluate(); glass.bump(); }
+        function onDynamicChanged() { glass.reevaluate(); glass.bump(); }
+        function onTextColourChanged() { glass.reevaluate(); glass.bump(); }
+    }
 
     // ---- per element ---------------------------------------------------
     // One ink for the whole island failed where the wallpaper changes
