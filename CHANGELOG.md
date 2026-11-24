@@ -7,7 +7,10 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Added
 - **Bar, centre island:** five shapes to choose from in `bar-island.json`: the floating island, a rounded notch, a dome, a pill and a flush square. The notch hangs from a thin strip along the screen edge, joined by concave fillets. The insets and corner radii can also be set by hand.
 - **Bar, centre island:** `bar-island.json` groups its keys under `shape`, `fill` and `text`. The old flat keys still work.
-- **WezTerm:** `~/.config/wezterm/local.lua` overrides any setting: background, font, size…
+- **WezTerm:** `~/.config/wezterm/local.lua` overrides any setting: background, font, size…, in both modes or in light or dark only.
+
+### Changed
+- **WezTerm:** an opaque terminal by default, dark `#101010` or cream. Transparency and blur are a setting in `local.lua`.
 
 ### Fixed
 - **Power:** a profile you pick by hand stays until the cable is plugged or unplugged. While charging, it went back to Balanced within a minute.

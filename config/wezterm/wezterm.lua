@@ -32,11 +32,10 @@ config.automatically_reload_config = true
 -- is absent when the config is read outside the GUI (the CLI, the mux).
 local light = wezterm.gui ~= nil and wezterm.gui.get_appearance():find("Light") ~= nil
 
--- In dark, a 40% black veil: the blur behind already darkens the wallpaper.
--- In light, a cream veil can't stay that thin: over a dark wallpaper (one
--- with no light version stays dark in light mode) dark text would sink.
--- 85% holds on every wallpaper and looks the same whatever is behind.
-config.window_background_opacity = light and 0.85 or 0.4
+-- Opaque by default, a plain dark or light terminal. A
+-- window_background_opacity below 1 in local.lua lets the compositor's
+-- blur show through, the tab bar included.
+config.window_background_opacity = 1.0
 config.macos_window_background_blur = 0
 config.window_decorations = "NONE"
 config.window_padding = { left = 4, right = 4, top = 2, bottom = 2 }
@@ -73,28 +72,36 @@ config.inactive_pane_hsb = {
 -- COLORS
 -- =========================
 -- The tab bar is painted with its own colours, not with the window's
--- background and its opacity. Its tones are therefore derived from those two
--- values: the bar is exactly as see-through as the terminal, so the
--- compositor's blur shows through it too, and it follows any change to
--- window_background_opacity. The active tab is a denser veil of the same
--- colour (black in dark, cream in light): a white one over black turns
--- opaque cream, as WezTerm does not blend it.
-local background = light and "#f5f3ee" or "#000000"
-local function veil(extra)
-  local r, g, b = background:match("#(%x%x)(%x%x)(%x%x)")
-  local alpha = math.min(1, config.window_background_opacity + extra)
-  return string.format("rgba(%d, %d, %d, %.2f)",
-    tonumber(r, 16), tonumber(g, 16), tonumber(b, 16), alpha)
+-- background and its opacity. They are derived from those two once
+-- local.lua has had its say (see the end of this file): the bar is as
+-- see-through as the terminal, and the active tab a step toward the ink.
+local background = light and "#f5f3ee" or "#101010"
+local tab_inks = light and { "#1c1c1e", "#86868b", "#3f3f44" }
+                        or { "#e8e8e3", "#7c7c80", "#c8c8c4" }
+
+local function rgb(hex)
+  local r, g, b = tostring(hex):match("^#(%x%x)(%x%x)(%x%x)")
+  if not r then return nil end
+  return { tonumber(r, 16), tonumber(g, 16), tonumber(b, 16) }
 end
 
-local function tab_bar(ink, dim, hover)
+local function tab_bar(bg, alpha)
+  local base = rgb(bg) or rgb(background)
+  local ink = rgb(tab_inks[1])
+  local function tone(f)
+    return string.format("rgba(%d, %d, %d, %.2f)",
+      math.floor(base[1] + (ink[1] - base[1]) * f + 0.5),
+      math.floor(base[2] + (ink[2] - base[2]) * f + 0.5),
+      math.floor(base[3] + (ink[3] - base[3]) * f + 0.5),
+      alpha)
+  end
   return {
-    background = veil(0),
-    active_tab = { bg_color = veil(0.18), fg_color = ink },
-    inactive_tab = { bg_color = veil(0), fg_color = dim },
-    inactive_tab_hover = { bg_color = veil(0.08), fg_color = hover },
-    new_tab = { bg_color = veil(0), fg_color = dim },
-    new_tab_hover = { bg_color = veil(0.08), fg_color = ink },
+    background = tone(0),
+    active_tab = { bg_color = tone(0.12), fg_color = tab_inks[1] },
+    inactive_tab = { bg_color = tone(0), fg_color = tab_inks[2] },
+    inactive_tab_hover = { bg_color = tone(0.06), fg_color = tab_inks[3] },
+    new_tab = { bg_color = tone(0), fg_color = tab_inks[2] },
+    new_tab_hover = { bg_color = tone(0.06), fg_color = tab_inks[1] },
   }
 end
 
@@ -118,14 +125,13 @@ if light then
       "#56565b", "#c4473f", "#2f7d36", "#875000",
       "#1f56b8", "#7d5aa8", "#2b7a82", "#c4c3be",
     },
-    tab_bar = tab_bar("#1c1c1e", "#86868b", "#3f3f44"),
   }
 else
   config.colors = {
-    foreground = "#f8f8f2",
+    foreground = "#e8e8e3",
     background = background,
     cursor_bg = "#ffffff",
-    selection_fg = "#f8f8f2",
+    selection_fg = "#e8e8e3",
     selection_bg = "#484e54",
     split = "#605b51",
     ansi = {
@@ -136,7 +142,6 @@ else
       "#484e54", "#b0151a", "#028902", "#ffb400",
       "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6",
     },
-    tab_bar = tab_bar("#f8f8f2", "#8a8a8a", "#dddddd"),
   }
 end
 
@@ -241,6 +246,7 @@ end
 if wezterm.config_file then watch_real(wezterm.config_file) end
 
 local local_path = os.getenv("HOME") .. "/.config/wezterm/local.lua"
+local user_tab_bar = {}
 local f = io.open(local_path, "r")
 if f then
   f:close()
@@ -262,13 +268,24 @@ if f then
     end
   end
   local function apply(t)
+    if type(t.colors) == "table" and type(t.colors.tab_bar) == "table" then
+      merge(user_tab_bar, t.colors.tab_bar)
+    end
     if t.color_scheme ~= nil and t.colors == nil then set("colors", nil) end
     for k, v in pairs(t) do
       if k == "light" or k == "dark" then
         -- applied after
       elseif k == "colors" and type(v) == "table" and type(config.colors) == "table" then
         local colors = config.colors
-        merge(colors, v)
+        for ck, cv in pairs(v) do
+          if ck ~= "tab_bar" then
+            if type(cv) == "table" and type(colors[ck]) == "table" and #cv == 0 then
+              merge(colors[ck], cv)
+            else
+              colors[ck] = cv
+            end
+          end
+        end
         set("colors", colors)
       else
         set(k, v)
@@ -287,6 +304,21 @@ if f then
     local mode = light and user.light or user.dark
     if type(mode) == "table" then apply(mode) end
   end
+end
+
+-- The tab bar, from the final background and opacity, under what
+-- local.lua gave for it.
+if type(config.colors) == "table" then
+  local colors = config.colors
+  local bar = tab_bar(colors.background, config.window_background_opacity or 1)
+  local function deep(dst, src)
+    for k, v in pairs(src) do
+      if type(v) == "table" and type(dst[k]) == "table" then deep(dst[k], v) else dst[k] = v end
+    end
+  end
+  deep(bar, user_tab_bar)
+  colors.tab_bar = bar
+  config.colors = colors
 end
 
 return config
