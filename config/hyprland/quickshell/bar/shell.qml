@@ -1294,8 +1294,8 @@ ShellRoot {
             // Clock used to sit here too -- moved into the tools pill
             // (right before the power dot) and given a date alongside it,
             // asked for.
-            // bar-island.json's notch: a strip along the edge the central
-            // island hangs from.
+            // bar-island.json's notch: the concave fillets joining the
+            // central island to the screen edge.
             Modules.NotchStrip {
                 visible: IslandStyle.style === "notch"
                 anchors.left: parent.left
@@ -1307,7 +1307,7 @@ ShellRoot {
                 islandX: centerIsland.x + centerIsland.rowPaneX
                 islandWidth: centerIsland.rowPaneW
                 fillet: IslandStyle.fillet
-                strip: IslandStyle.strip
+                strip: 0
                 notchColor: Qt.rgba(IslandStyle.background.r, IslandStyle.background.g,
                                     IslandStyle.background.b, IslandStyle.alpha)
             }

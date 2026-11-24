@@ -22,8 +22,7 @@ Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island ch
     "innerInset": 2,
     "edgeRadius": 10,
     "innerRadius": 10,
-    "fillet": 0,
-    "strip": 10
+    "fillet": 0
   },
   "fill": { "colour": "#2c2c2e", "opacity": 0.2, "blur": false },
   "text": { "mode": "dynamic", "colour": "#f2f2f7" }
@@ -32,14 +31,13 @@ Set it in `~/.config/hypr/bar-island.json`. Every key is optional. The island ch
 
 | Key | Values | Default |
 |---|---|---|
-| `shape.style` | `island`: a pane floating in the band. `notch`: a thin strip along the screen edge, the island hanging from it with concave fillets. `dome`: flush with the screen edge, only the band-facing corners rounded. `pill`: a capsule. `flush`: a square against the edge | `island` |
+| `shape.style` | `island`: a pane floating in the band. `notch`: flush with the screen edge, joined to it by concave fillets. `dome`: flush with the screen edge, only the band-facing corners rounded. `pill`: a capsule. `flush`: a square against the edge | `island` |
 | `shape.inset` | Distance from the screen edge, in pixels, from `0` to `15` | From `style` |
 | `shape.innerInset` | Distance from the band-facing edge, in pixels, from `0` to `15` | From `style` |
 | `shape.edgeRadius` | Radius of the corners touching the screen edge, in pixels | From `style` |
 | `shape.innerRadius` | Radius of the corners facing the band, in pixels | From `style` |
-| `shape.fillet` | `notch` only: radius of the concave joint with the strip, from `0` to `15` | From `style` |
-| `shape.strip` | `notch` only: thickness of the strip, from `0` to `20` | `10` |
-| `fill.colour` | The island's colour, `#rrggbb`. The notch's strip wears it too | `#2c2c2e` |
+| `shape.fillet` | `notch` only: radius of the concave joint with the screen edge, from `0` to `15` | From `style` |
+| `fill.colour` | The island's colour, `#rrggbb`. | `#2c2c2e` |
 | `fill.opacity` | From `0` (none) to `1` (opaque) | `0.2` |
 | `fill.blur` | Blur what is behind the island | `false` |
 | `text.mode` | `dynamic`: the text turns light or dark to suit the wallpaper behind each part of it. `static`: the text is always `text.colour` | `dynamic` |

@@ -16,8 +16,7 @@ import Quickshell.Io
 //       "innerInset": 2,        px from the band-facing edge
 //       "edgeRadius": 10,       px on the screen-edge corners
 //       "innerRadius": 10,      px on the band-facing corners
-//       "fillet": 0,            notch: concave joint with the strip
-//       "strip": 10             notch: thickness of the strip along the edge
+//       "fillet": 0             notch: concave joint with the screen edge
 //     },
 //     "fill": {
 //       "colour": "#2c2c2e",    the island's colour
@@ -55,7 +54,6 @@ Singleton {
     property real edgeRadius: 10
     property real innerRadius: 10
     property real fillet: 0
-    property real strip: 10
 
     FileView {
         path: root.configPath
@@ -96,7 +94,6 @@ Singleton {
             edgeRadius: pick(sh, "edgeRadius", "edgeRadius"),
             innerRadius: pick(sh, "innerRadius", "innerRadius"),
             fillet: pick(sh, "fillet", "fillet"),
-            strip: pick(sh, "strip", "strip"),
             background: fi.colour !== undefined ? fi.colour : c.background,
             opacity: pick(fi, "opacity", "opacity"),
             blur: pick(fi, "blur", "blur"),
@@ -118,6 +115,5 @@ Singleton {
         root.edgeRadius = isNumber(c.edgeRadius) ? between(c.edgeRadius, 0, 999) : shape.edge;
         root.innerRadius = isNumber(c.innerRadius) ? between(c.innerRadius, 0, 999) : shape.inner;
         root.fillet = isNumber(c.fillet) ? between(c.fillet, 0, 15) : shape.fillet;
-        root.strip = isNumber(c.strip) ? between(c.strip, 0, 20) : 10;
     }
 }
