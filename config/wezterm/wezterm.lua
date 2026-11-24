@@ -220,4 +220,31 @@ config.key_tables = {
   }
 }
 
+-- Your own settings, kept out of this file: ~/.config/wezterm/local.lua
+-- returns a table of config keys (see https://wezterm.org/config/lua/config/)
+-- or a function(config, wezterm, light). A table under `colors` is merged
+-- key by key, so { colors = { background = "#101010" } } keeps the rest.
+local local_path = os.getenv("HOME") .. "/.config/wezterm/local.lua"
+local f = io.open(local_path, "r")
+if f then
+  f:close()
+  wezterm.add_to_config_reload_watch_list(local_path)
+  local ok, user = pcall(dofile, local_path)
+  if not ok then
+    wezterm.log_error("local.lua: " .. tostring(user))
+  elseif type(user) == "function" then
+    local ok2, err = pcall(user, config, wezterm, light)
+    if not ok2 then wezterm.log_error("local.lua: " .. tostring(err)) end
+  elseif type(user) == "table" then
+    for k, v in pairs(user) do
+      if k == "colors" and type(v) == "table" and type(config.colors) == "table" then
+        for ck, cv in pairs(v) do config.colors[ck] = cv end
+      else
+        local ok2, err = pcall(function() config[k] = v end)
+        if not ok2 then wezterm.log_error("local.lua: " .. tostring(err)) end
+      end
+    end
+  end
+end
+
 return config

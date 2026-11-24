@@ -34,3 +34,19 @@ The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../co
 | `Ctrl + Shift + F5` | Reloads the configuration |
 
 On the desktop, `AltGr` works in place of `Alt + Shift`: `AltGr + N` goes to the next tab.
+
+## Your own settings
+
+Put them in `~/.config/wezterm/local.lua`, with any key from [WezTerm's configuration](https://wezterm.org/config/lua/config/). They win over the author's and reload on save.
+
+```lua
+local wezterm = require 'wezterm'
+return {
+  font = wezterm.font("JetBrains Mono"),
+  font_size = 12,
+  window_background_opacity = 0.9,
+  colors = { background = "#101010" },
+}
+```
+
+`colors` is merged key by key. For more control, return a `function(config, wezterm, light)` that changes `config`; `light` is `true` when the desktop is light.
