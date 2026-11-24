@@ -44,9 +44,9 @@ local wezterm = require 'wezterm'
 return {
   font = wezterm.font("JetBrains Mono"),
   font_size = 12,
-  window_background_opacity = 0.9,
-  colors = { background = "#101010" },
+  light = { colors = { foreground = "#1c1c1e", background = "#f5f3ee" } },
+  dark  = { colors = { foreground = "#f8f8f2", background = "#101010" } },
 }
 ```
 
-`colors` is merged key by key. For more control, return a `function(config, wezterm, light)` that changes `config`; `light` is `true` when the desktop is light.
+Top-level keys apply in both modes, `light` and `dark` only when the desktop is in that mode. `colors` is merged key by key. A `color_scheme` replaces the author's colours, in one mode or both. For more control, return a `function(config, wezterm, light)` that changes `config`; `light` is `true` when the desktop is light.

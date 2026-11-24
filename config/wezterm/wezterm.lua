@@ -220,15 +220,49 @@ config.key_tables = {
   }
 }
 
--- Your own settings, kept out of this file: ~/.config/wezterm/local.lua
--- returns a table of config keys (see https://wezterm.org/config/lua/config/)
--- or a function(config, wezterm, light). A table under `colors` is merged
--- key by key, so { colors = { background = "#101010" } } keeps the rest.
+-- Your own settings: ~/.config/wezterm/local.lua, a link to
+-- config/wezterm/local.lua in the repo. It returns a table of config keys
+-- (https://wezterm.org/config/lua/config/), for both modes, with optional
+-- `light` and `dark` tables applied over it in that mode only; or a
+-- function(config, wezterm, light). A `colors` table is merged key by key;
+-- a `color_scheme` drops the author's colours.
+-- wezterm.lua and local.lua are links into the repo: an editor saves the
+-- file they point to, and a watch on the link alone never hears it.
+local function watch_real(path)
+  wezterm.add_to_config_reload_watch_list(path)
+  local p = io.popen('readlink -f "' .. path .. '"')
+  if not p then return end
+  local real = p:read("*l")
+  p:close()
+  if real and real ~= "" and real ~= path then
+    wezterm.add_to_config_reload_watch_list(real)
+  end
+end
+if wezterm.config_file then watch_real(wezterm.config_file) end
+
 local local_path = os.getenv("HOME") .. "/.config/wezterm/local.lua"
 local f = io.open(local_path, "r")
 if f then
   f:close()
-  wezterm.add_to_config_reload_watch_list(local_path)
+  watch_real(local_path)
+
+  local function set(k, v)
+    local ok, err = pcall(function() config[k] = v end)
+    if not ok then wezterm.log_error("local.lua: " .. tostring(err)) end
+  end
+  local function apply(t)
+    if t.color_scheme ~= nil and t.colors == nil then set("colors", nil) end
+    for k, v in pairs(t) do
+      if k == "light" or k == "dark" then
+        -- applied after
+      elseif k == "colors" and type(v) == "table" and type(config.colors) == "table" then
+        for ck, cv in pairs(v) do config.colors[ck] = cv end
+      else
+        set(k, v)
+      end
+    end
+  end
+
   local ok, user = pcall(dofile, local_path)
   if not ok then
     wezterm.log_error("local.lua: " .. tostring(user))
@@ -236,14 +270,9 @@ if f then
     local ok2, err = pcall(user, config, wezterm, light)
     if not ok2 then wezterm.log_error("local.lua: " .. tostring(err)) end
   elseif type(user) == "table" then
-    for k, v in pairs(user) do
-      if k == "colors" and type(v) == "table" and type(config.colors) == "table" then
-        for ck, cv in pairs(v) do config.colors[ck] = cv end
-      else
-        local ok2, err = pcall(function() config[k] = v end)
-        if not ok2 then wezterm.log_error("local.lua: " .. tostring(err)) end
-      end
-    end
+    apply(user)
+    local mode = light and user.light or user.dark
+    if type(mode) == "table" then apply(mode) end
   end
 end
 
