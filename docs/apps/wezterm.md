@@ -37,7 +37,7 @@ On the desktop, `AltGr` works in place of `Alt + Shift`: `AltGr + N` goes to the
 
 ## Your own settings
 
-Put them in `~/.config/wezterm/local.lua`, with any key from [WezTerm's configuration](https://wezterm.org/config/lua/config/). They win over the author's and reload on save.
+Put them in `config/wezterm/local.lua` in the dotfiles folder, linked to `~/.config/wezterm/local.lua` and ignored by git, with any key from [WezTerm's configuration](https://wezterm.org/config/lua/config/). They win over the author's and reload on save.
 
 ```lua
 local wezterm = require 'wezterm'

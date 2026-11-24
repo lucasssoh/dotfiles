@@ -14,7 +14,7 @@ Local to the machine. Ignored by upgrades. A missing file means the defaults.
 | `~/.config/hypr/monitor-layout.json` | Where the screens sit | [Displays](session/displays.md#where-they-sit) |
 | `~/.config/hypr/scale.json` | The scale of each screen | [Displays](session/displays.md#scale) |
 | `~/.config/hypr/display-layout.json` | Which screens are on, and which is the main one | [Displays](session/displays.md#which-screens-are-on) |
-| `~/.config/wezterm/local.lua` | Your WezTerm settings: font, colours… | [WezTerm](apps/wezterm.md#your-own-settings) |
+| `~/.config/wezterm/local.lua` | Your WezTerm settings: font, colours… Linked to `config/wezterm/local.lua` | [WezTerm](apps/wezterm.md#your-own-settings) |
 | `~/.config/xdg-terminals.list` | The terminal `Super + Enter` opens | [Hyprland](session/hyprland.md#default-applications) |
 
 A user key or rule goes in `private.lua`, not in `keybinds.lua`.

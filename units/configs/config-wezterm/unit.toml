@@ -6,3 +6,9 @@ requires = ["wezterm"]
 [links]
 "config/wezterm/wezterm.lua" = "~/.config/wezterm/wezterm.lua"
 # review: also linked to ~/.wezterm.lua today, which WezTerm reads first
+
+[[hooks]]
+name   = "local-lua"
+run_as = "user"
+does   = "create config/wezterm/local.lua for your own settings and link it"
+run    = "units/configs/config-wezterm/hooks/local-lua.sh"

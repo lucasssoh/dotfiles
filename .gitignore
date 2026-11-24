@@ -6,6 +6,7 @@ config/hyprland/hypr/bar-position.json
 config/hyprland/hypr/bar-island.json
 config/hyprland/hypr/hdr-state.json
 config/hyprland/hypr/private.lua
+config/wezterm/local.lua
 config/hyprland/.claude/
 config/hyprland/orbit-vendor/target/
 config/hyprland/prisme-src/target/
