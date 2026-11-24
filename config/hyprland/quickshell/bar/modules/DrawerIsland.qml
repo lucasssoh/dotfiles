@@ -286,7 +286,13 @@ Item {
     // DrawerIsland is shared.
     property bool rowIsland: false
     property real rowIslandInset: 2
+    property real rowIslandTopInset: root.rowIslandInset
+    property real rowIslandBottomInset: root.rowIslandInset
     property real rowIslandRadius: 10
+    property real rowIslandTopLeftRadius: root.rowIslandRadius
+    property real rowIslandTopRightRadius: root.rowIslandRadius
+    property real rowIslandBottomLeftRadius: root.rowIslandRadius
+    property real rowIslandBottomRightRadius: root.rowIslandRadius
     // The slab's own material, overridable: centerIsland wears none
     // ("ombre seule"), only a hairline in the bar's ink and a shadow kept
     // OUTSIDE the slab -- a plain RectangularShadow under a clear fill
@@ -820,10 +826,15 @@ Item {
     // like `fill` always did), so this tracks the content reflowing
     // under it with nothing extra to animate.
     readonly property real rowPaneX: 0
-    readonly property real rowPaneY: root.rowY + root.rowIslandInset
+    readonly property real rowPaneY: root.rowY + root.rowIslandTopInset
     readonly property real rowPaneW: root.width
-    readonly property real rowPaneH: Math.max(0, root.rowHeight - 2 * root.rowIslandInset)
-    readonly property real rowPaneR: Math.min(root.rowIslandRadius, root.rowPaneH / 2)
+    readonly property real rowPaneH: Math.max(0, root.rowHeight - root.rowIslandTopInset - root.rowIslandBottomInset)
+    readonly property real rowPaneTLRadius: Math.max(0, Math.min(root.rowIslandTopLeftRadius, root.rowPaneW / 2, root.rowPaneH / 2))
+    readonly property real rowPaneTRRadius: Math.max(0, Math.min(root.rowIslandTopRightRadius, root.rowPaneW / 2, root.rowPaneH / 2))
+    readonly property real rowPaneBLRadius: Math.max(0, Math.min(root.rowIslandBottomLeftRadius, root.rowPaneW / 2, root.rowPaneH / 2))
+    readonly property real rowPaneBRRadius: Math.max(0, Math.min(root.rowIslandBottomRightRadius, root.rowPaneW / 2, root.rowPaneH / 2))
+    readonly property real rowPaneR: Math.max(root.rowPaneTLRadius, root.rowPaneTRRadius,
+                                               root.rowPaneBLRadius, root.rowPaneBRRadius)
     // centerIsland's top row (ActiveWindow/Workspaces/Media) relies on
     // this 6px auto-spacing entirely, no manual spacers between its
     // children. TOOLS' own content instead uses spacing:0 plus hand-tuned
@@ -1399,10 +1410,10 @@ Item {
     // The row's glass slab -- see `rowIsland` for the look. Drawn instead
     // of everything `fill` carries (rowPane stands false): the veil and
     // the hairline are this pane's whole material, no rim, no gloss, no
-    // lens. No RectangularShadow either: the slab sits 2 px above the
-    // band's own bottom line and the window ends with the band, so a
-    // shadow below it would be guillotined at the surface's edge -- the
-    // hairline is what carries a pane lying ON a strip, not elevation.
+    // lens. No RectangularShadow either: the slab can sit flush with the
+    // band's edge and the window ends with the band, so a shadow below it
+    // would be guillotined at the surface's edge -- the hairline is what
+    // carries a pane lying ON a strip, not elevation.
     Item {
         id: rowShadow
         readonly property int room: 16
@@ -1443,7 +1454,10 @@ Item {
             y: rowShadow.room
             width: root.rowPaneW
             height: root.rowPaneH
-            radius: root.rowPaneR
+            topLeftRadius: root.rowPaneTLRadius
+            topRightRadius: root.rowPaneTRRadius
+            bottomLeftRadius: root.rowPaneBLRadius
+            bottomRightRadius: root.rowPaneBRRadius
             color: "black"
         }
     }
@@ -1454,11 +1468,17 @@ Item {
         y: root.rowPaneY
         width: root.rowPaneW
         height: root.rowPaneH
-        radius: root.rowPaneR
+        topLeftRadius: root.rowPaneTLRadius
+        topRightRadius: root.rowPaneTRRadius
+        bottomLeftRadius: root.rowPaneBLRadius
+        bottomRightRadius: root.rowPaneBRRadius
         color: root.rowIslandColor
 
         PaneEdge {
-            radius: root.rowPaneR
+            topLeftRadius: root.rowPaneTLRadius
+            topRightRadius: root.rowPaneTRRadius
+            bottomLeftRadius: root.rowPaneBLRadius
+            bottomRightRadius: root.rowPaneBRRadius
             rimColor: root.rowIslandRim
             highlight: root.rowIslandHighlight
             highlightColor: root.rowIslandHighlightColor

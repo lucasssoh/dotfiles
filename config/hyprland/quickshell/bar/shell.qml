@@ -1035,7 +1035,10 @@ ShellRoot {
                     y: centerIsland.y + centerIsland.rowPaneY + bar.slideOffset
                     width: IslandStyle.blur && centerIsland.rowIsland && bar.settled ? centerIsland.rowPaneW : 0
                     height: centerIsland.rowPaneH
-                    radius: centerIsland.rowPaneR
+                    topLeftRadius: centerIsland.rowPaneTLRadius
+                    topRightRadius: centerIsland.rowPaneTRRadius
+                    bottomLeftRadius: centerIsland.rowPaneBLRadius
+                    bottomRightRadius: centerIsland.rowPaneBRRadius
                 }
                 Modules.SmoothRegion {
                     pixelRatio: bar.devicePixelRatio
@@ -1291,6 +1294,24 @@ ShellRoot {
             // Clock used to sit here too -- moved into the tools pill
             // (right before the power dot) and given a date alongside it,
             // asked for.
+            // bar-island.json's notch: a strip along the edge the central
+            // island hangs from.
+            Modules.NotchStrip {
+                visible: IslandStyle.style === "notch"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                y: BarPosition.bottom ? parent.height - height + bar.slideOffset : bar.slideOffset
+                height: bar.bandHeight
+                opacity: 1 - bar.slide
+                fromBottom: BarPosition.bottom
+                islandX: centerIsland.x + centerIsland.rowPaneX
+                islandWidth: centerIsland.rowPaneW
+                fillet: IslandStyle.fillet
+                strip: IslandStyle.strip
+                notchColor: Qt.rgba(IslandStyle.background.r, IslandStyle.background.g,
+                                    IslandStyle.background.b, IslandStyle.alpha)
+            }
+
             Modules.DrawerIsland {
                 id: centerIsland
                 // Above every other island and its drawer: siblings stack
@@ -1316,8 +1337,9 @@ ShellRoot {
                 // The row as a floating pane ("en îlot", 2026-11-10,
                 // after an afternoon bare -- "Nue" -- which left the notch
                 // look behind but the title and marks unanchored on the
-                // band): inset 2 px from the band's top, four corners rounded at
-                // 10 -- "pas en pill... en coin arrondi" -- wearing the
+                // band): its inset and corner radii come from
+                // bar-island.json (2 px and 10 by default, "pas en pill...
+                // en coin arrondi"), wearing the
                 // same material as the drawers hanging below (Veille, the
                 // keybinds sheet): islandPane, a hairline, the bar's blur
                 // ("change le bg de l'ilot centrale au même que veille et
@@ -1333,8 +1355,12 @@ ShellRoot {
                 // height stretch, then the content fade, in that order.
                 rowPane: false
                 rowIsland: true
-                rowIslandInset: 2
-                rowIslandRadius: 10
+                rowIslandTopInset: BarPosition.bottom ? IslandStyle.innerInset : IslandStyle.inset
+                rowIslandBottomInset: BarPosition.bottom ? IslandStyle.inset : IslandStyle.innerInset
+                rowIslandTopLeftRadius: BarPosition.bottom ? IslandStyle.innerRadius : IslandStyle.edgeRadius
+                rowIslandTopRightRadius: BarPosition.bottom ? IslandStyle.innerRadius : IslandStyle.edgeRadius
+                rowIslandBottomLeftRadius: BarPosition.bottom ? IslandStyle.edgeRadius : IslandStyle.innerRadius
+                rowIslandBottomRightRadius: BarPosition.bottom ? IslandStyle.edgeRadius : IslandStyle.innerRadius
                 // As bar-island.json says (by default Graphite at 20 %, no
                 // blur, dynamic text), no border, no shadow -- see
                 // services/IslandStyle.qml and theme/IslandGlass.qml.

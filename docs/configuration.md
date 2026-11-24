@@ -10,7 +10,7 @@ Local to the machine. Ignored by upgrades. A missing file means the defaults.
 |---|---|---|
 | `~/.config/hypr/private.lua` | User window rules and keys | [Hyprland](session/hyprland.md#user-rules-and-keys) |
 | `~/.config/hypr/bar-position.json` | The bar at the top or at the bottom | [The bar](bar/index.md#position) |
-| `~/.config/hypr/bar-island.json` | The centre island's colour, opacity, blur and text | [Centre island](bar/island.md#its-look) |
+| `~/.config/hypr/bar-island.json` | The centre island's shape, colour, opacity, blur and text | [Centre island](bar/island.md#its-look) |
 | `~/.config/hypr/monitor-layout.json` | Where the screens sit | [Displays](session/displays.md#where-they-sit) |
 | `~/.config/hypr/scale.json` | The scale of each screen | [Displays](session/displays.md#scale) |
 | `~/.config/hypr/display-layout.json` | Which screens are on, and which is the main one | [Displays](session/displays.md#which-screens-are-on) |

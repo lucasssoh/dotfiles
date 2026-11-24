@@ -9,11 +9,9 @@ fi
 
 cat > "$config" <<'JSON'
 {
-  "mode": "dynamic",
-  "background": "#2c2c2e",
-  "opacity": 0.2,
-  "blur": false,
-  "text": "#f2f2f7"
+  "shape": { "style": "island" },
+  "fill": { "colour": "#2c2c2e", "opacity": 0.2, "blur": false },
+  "text": { "mode": "dynamic", "colour": "#f2f2f7" }
 }
 JSON
 ok "default island look set"
