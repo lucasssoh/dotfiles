@@ -490,7 +490,7 @@ def svg_px(svg: str, em_px: float) -> str:
 # est presque toujours plat -- des lettres, des indices, des exposants,
 # des symboles -- et Pango sait tout ça : <sup>, <sub>, <i>. Les symboles
 # viennent de la table d'utftex (`utftex -T`, ~2000 commandes, lue une
-# fois), déjà installé pour render-markdown dans nvim. Une fraction
+# fois), installé par config/nvim/install.sh pour cet aperçu. Une fraction
 # devient a/b, une racine √(…). Ce qui n'a pas d'équivalent sur une ligne
 # (\begin, \matrix, une commande inconnue) garde son source, en mono :
 # lisible, et visiblement « pas rendu » plutôt que faux.

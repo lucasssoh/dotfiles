@@ -8,7 +8,7 @@ dnf = [
   "libtexprintf-tools", "plantuml", "golang",
   "python3-gobject", "python3-cairo", "gtk4", "librsvg2", "imv",
   "python3-markdown", "python3-pymdown-extensions", "python3-pygments",
-  "nodejs", "nodejs-npm", "pipx",
+  "nodejs", "nodejs-npm",
 ]
 
 [links]
@@ -21,6 +21,6 @@ dnf = [
 [[hooks]]
 name   = "tools"
 run_as = "user"
-does   = "pipx install pylatexenc; go install plantuml-lsp into ~/.local/bin; mathjax-full comes from the liseuse unit"
+does   = "go install plantuml-lsp into ~/.local/bin; mathjax-full comes from the liseuse unit"
 from   = "config/nvim/install.sh"
 run    = "units/configs/config-nvim/hooks/tools.sh"

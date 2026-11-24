@@ -13,6 +13,9 @@
 
 local buf = vim.api.nvim_get_current_buf()
 
+vim.wo.conceallevel = 0
+vim.wo.concealcursor = ""
+
 vim.api.nvim_buf_create_user_command(buf, "MdLive", function()
     require("mdlive").toggle()
 end, { desc = "Aperçu markdown en direct" })

@@ -374,37 +374,6 @@ function M.set_plugin_groups(p)
     hl("AlphaShortcut", { fg = p.blue, bold = true })
     hl("AlphaFooter",   { fg = p.muted, italic = true })
 
-    -- render-markdown.nvim (group names already referenced in plugins/markdown.lua)
-    hl("RenderMarkdownH1", { fg = p.cyan, bold = true })
-    hl("RenderMarkdownH2", { fg = p.blue, bold = true })
-    hl("RenderMarkdownH3", { fg = p.cyan_light, bold = true })
-    hl("RenderMarkdownH4", { fg = p.green, bold = true })
-    hl("RenderMarkdownH5", { fg = p.yellow, bold = true })
-    hl("RenderMarkdownH6", { fg = p.subtle, bold = true })
-    hl("RenderMarkdownH1Bg", { bg = p.overlay })
-    hl("RenderMarkdownH2Bg", { bg = p.overlay })
-    hl("RenderMarkdownH3Bg", { bg = p.overlay })
-    hl("RenderMarkdownH4Bg", { bg = p.overlay })
-    hl("RenderMarkdownH5Bg", { bg = p.overlay })
-    hl("RenderMarkdownH6Bg", { bg = p.overlay })
-    hl("RenderMarkdownCode",       { bg = p.surface })
-    -- Math : l'inline reste du texte coloré -- un fond au milieu d'une
-    -- phrase le ferait lire comme du code inline. Le bloc $$, lui, prend
-    -- le fond de RenderMarkdownCode pour se lire comme un conteneur, et
-    -- un bleu distinct du cyan du code pour dire « ce n'est pas du code ».
-    -- MathBlock n'est pas un groupe du plugin : il est posé par
-    -- lua/plugins/markdown.lua sur les lignes du bloc rendu.
-    hl("RenderMarkdownMath",       { fg = p.blue })
-    hl("RenderMarkdownMathBlock",  { fg = p.blue, bg = p.surface })
-    hl("RenderMarkdownCodeInline", { fg = p.cyan_light, bg = p.surface })
-    hl("RenderMarkdownUnchecked",  { fg = p.muted })
-    hl("RenderMarkdownChecked",    { fg = p.green })
-    hl("RenderMarkdownTodo",       { fg = p.yellow })
-    hl("RenderMarkdownInfo",       { fg = p.blue })
-    hl("RenderMarkdownSuccess",    { fg = p.green })
-    hl("RenderMarkdownWarn",       { fg = p.yellow })
-    hl("RenderMarkdownError",      { fg = p.red_soft })
-
     -- leetcode.nvim (dynamic-suffix groups like leetcode_lang_* fall back to Normal)
     hl("leetcode_all",         { fg = p.text })
     hl("leetcode_alt",         { fg = p.subtle })
