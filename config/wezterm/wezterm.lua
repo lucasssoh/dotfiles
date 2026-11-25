@@ -75,7 +75,7 @@ config.inactive_pane_hsb = {
 -- background and its opacity. They are derived from those two once
 -- local.lua has had its say (see the end of this file): the bar is as
 -- see-through as the terminal, and the active tab a step toward the ink.
-local background = light and "#f5f3ee" or "#101010"
+local background = light and "#f5f3ee" or "#0a0a0a"
 local tab_inks = light and { "#1c1c1e", "#86868b", "#3f3f44" }
                         or { "#e8e8e3", "#7c7c80", "#c8c8c4" }
 
@@ -97,11 +97,13 @@ local function tab_bar(bg, alpha)
   end
   return {
     background = tone(0),
-    active_tab = { bg_color = tone(0.12), fg_color = tab_inks[1] },
-    inactive_tab = { bg_color = tone(0), fg_color = tab_inks[2] },
-    inactive_tab_hover = { bg_color = tone(0.06), fg_color = tab_inks[3] },
+    -- Active tab blends with the terminal below (no colour step); inactive
+    -- tabs stay slightly shaded so the active one reads as framed.
+    active_tab = { bg_color = tone(0), fg_color = tab_inks[1] },
+    inactive_tab = { bg_color = tone(0.08), fg_color = tab_inks[2] },
+    inactive_tab_hover = { bg_color = tone(0.04), fg_color = tab_inks[3] },
     new_tab = { bg_color = tone(0), fg_color = tab_inks[2] },
-    new_tab_hover = { bg_color = tone(0.06), fg_color = tab_inks[1] },
+    new_tab_hover = { bg_color = tone(0.04), fg_color = tab_inks[1] },
   }
 end
 
@@ -207,9 +209,15 @@ config.mouse_bindings = {
   },
 }
 
-wezterm.on('format-tab-title', function(tab, panes, tabs, hover, max_width)
+wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_width)
   local pane = tab.active_pane
-  return string.format(' tab %d:%d ', tab.tab_index + 1, pane.pane_id)
+  local num = string.format('%d', pane.pane_id)
+  local title = num
+  -- Aerate the left side of the tab bar: push the first tab a bit right.
+  if tab.tab_index == 0 then
+    title = '      ' .. title
+  end
+  return ' ' .. title .. ' '
 end)
 
 config.key_tables = {
