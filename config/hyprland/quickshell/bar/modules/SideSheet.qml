@@ -61,8 +61,16 @@ PanelWindow {
     // Its own namespace, for hypr/windowrules.lua's no_anim: the sheet
     // moves itself.
     WlrLayershell.namespace: "quickshell-sheet"
-    // Clicks outside the rectangle go through to the desktop.
-    mask: Region { item: panel }
+    // Clicks outside the rectangle go through to the desktop. Plain numbers
+    // and not `item: panel`: a Region follows its item's own geometry, not
+    // its parents', so it stayed where the panel was on creation (off
+    // screen, before the slide) and every click went through the sheet.
+    mask: Region {
+        x: panel.x + slider.x
+        y: sheet.attached ? reveal.y : panel.y
+        width: panel.width
+        height: sheet.attached ? reveal.height : panel.height
+    }
     // The glass over the rectangle, dropped near the end of a close: the
     // region reaches the compositor a frame or two late and left a blurred
     // strip behind.
