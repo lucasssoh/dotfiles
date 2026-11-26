@@ -23,6 +23,12 @@ Item {
     property real rightStart: 0
     property real outline: 0
     property color outlineColour: "black"
+    // A side sheet open under that side (modules/SideSheet.qml): the side
+    // widens to the sheet's width if it is narrower, and runs straight
+    // down into it instead of closing on a rounded corner.
+    property bool extendLeft: false
+    property bool extendRight: false
+    property real sheetMinWidth: 440
 
     readonly property bool active: root.solid || root.sides !== "none"
     visible: root.active
@@ -40,6 +46,8 @@ Item {
     onLeftEndChanged: repaint()
     onRightStartChanged: repaint()
     onOutlineChanged: repaint()
+    onExtendLeftChanged: repaint()
+    onExtendRightChanged: repaint()
     onOutlineColourChanged: repaint()
     onWidthChanged: repaint()
     onHeightChanged: repaint()
@@ -64,7 +72,10 @@ Item {
             }
             const H = root.band;
             const W = width;
-            const L = root.leftEnd, R = root.rightStart;
+            const notch = root.sides === "notch";
+            const xl = root.extendLeft && notch, xr = root.extendRight && notch;
+            const L = xl ? Math.max(root.leftEnd, root.sheetMinWidth) : root.leftEnd;
+            const R = xr ? Math.min(root.rightStart, W - root.sheetMinWidth) : root.rightStart;
             const innerR = Math.max(0, Math.min(root.radius, H / 2));
 
             // A concave corner hanging from (x, y), opening toward +dir.
@@ -109,14 +120,15 @@ Item {
             if (root.sides !== "none") {
                 ctx.fillStyle = rgba(root.sideColour);
                 if (root.sides === "notch") {
-                    rect(0, 0, L, H, 0, 0, innerR, 0);
-                    rect(R, 0, W, H, 0, 0, 0, innerR);
+                    rect(0, 0, L, H, 0, 0, xl ? 0 : innerR, 0);
+                    rect(R, 0, W, H, 0, 0, 0, xr ? 0 : innerR);
                     // On a solid bar the side shapes reach the screen edges,
                     // so they have to carry the same concave descent under
                     // those edges as the bar itself, in the sides' own colour.
+                    // Not over a sheet, which carries the side down instead.
                     if (root.solid) {
-                        fillet(0, H, root.corner, 1);
-                        fillet(W, H, root.corner, -1);
+                        if (!xl) fillet(0, H, root.corner, 1);
+                        if (!xr) fillet(W, H, root.corner, -1);
                     }
                     fillet(L, 0, root.fillet, 1);
                     fillet(R, 0, root.fillet, -1);
@@ -143,8 +155,10 @@ Item {
             const bandShows = root.solid && root.barColour.a > 0.02;
             if (bandShows) {
                 ctx.beginPath();
-                ctx.arc(c, H + c, c + h, Math.PI, 1.5 * Math.PI, false);
-                ctx.arc(W - c, H + c, c + h, 1.5 * Math.PI, 2 * Math.PI, false);
+                if (xl) ctx.moveTo(L, H - h);
+                else ctx.arc(c, H + c, c + h, Math.PI, 1.5 * Math.PI, false);
+                if (xr) ctx.lineTo(R, H - h);
+                else ctx.arc(W - c, H + c, c + h, 1.5 * Math.PI, 2 * Math.PI, false);
                 ctx.stroke();
             }
 
@@ -155,9 +169,17 @@ Item {
             if (root.sides === "notch") {
                 // The left group, from the screen edge to the S that joins
                 // the top edge; the right one is the same path mirrored.
-                const notchSide = end => {
+                const notchSide = (end, extended) => {
                     const f = root.fillet;
                     ctx.beginPath();
+                    if (extended) {
+                        // Straight down into the sheet, whose line goes on.
+                        ctx.moveTo(end - h, H + 1);
+                        ctx.lineTo(end - h, f);
+                        ctx.arc(end + f, f, f + h, Math.PI, 1.5 * Math.PI, false);
+                        ctx.stroke();
+                        return;
+                    }
                     if (root.solid)
                         ctx.arc(c, H + c, c + h, Math.PI, 1.5 * Math.PI, false);
                     else
@@ -169,11 +191,11 @@ Item {
                     ctx.arc(end + f, f, f + h, Math.PI, 1.5 * Math.PI, false);
                     ctx.stroke();
                 };
-                notchSide(L);
+                notchSide(L, xl);
                 ctx.save();
                 ctx.translate(W, 0);
                 ctx.scale(-1, 1);
-                notchSide(W - R);
+                notchSide(W - R, xr);
                 ctx.restore();
             } else {
                 const r = Math.max(0, (root.sides === "pill" ? (H - 4) / 2 : innerR) - h);

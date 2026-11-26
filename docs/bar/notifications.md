@@ -17,7 +17,7 @@ They show on the left, in the middle of the screen.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/notifications-dark.webp"><img src="../screenshots/notifications.webp" alt="The notification centre"></picture>
 
-Click the bell, or press `Super + I`. The centre is a panel along the right edge of the screen: notifications grouped by app, under Today and Earlier, media controls, and Clear all.
+Click the bell, or press `Super + I`. The centre is a panel down the right edge of the screen ([how it sits](island.md#its-look)): notifications grouped by app, under Today and Earlier, media controls, and Clear all.
 
 ## Do not disturb
 

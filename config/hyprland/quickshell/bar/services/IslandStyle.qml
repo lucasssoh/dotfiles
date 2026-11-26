@@ -89,6 +89,7 @@ Singleton {
     }
     property color sideFill: "transparent"
     property color backdropFill: "transparent"
+    property color cornerFill: "transparent"
     readonly property bool sideVeil: !root.solid
     property real sideFillet: 18
     property bool _fillLightText: true
@@ -112,6 +113,10 @@ Singleton {
     // Small shapes still clamp to half their height.
     property real radius: 36
     property int edgeGap: 7
+    // bar.json's `sheets`: "floating" (default), the side sheets set apart
+    // like windows, or "attached", carrying the bar's side down the edge
+    // (modules/SideSheet.qml).
+    property bool sheetsAttached: false
     readonly property int band: 31                // shell.qml's bandHeight
     readonly property real outerRadius: root.radius + root.edgeGap
     readonly property real drawerRadius: Math.max(6, root.outerRadius - root.edgeGap)
@@ -196,6 +201,9 @@ Singleton {
         if (c.gap !== undefined && !isNumber(c.gap))
             console.warn("[bar] gap must be a number");
         root.edgeGap = isNumber(c.gap) ? Math.round(between(c.gap, 0, 24)) : 7;
+        if (c.sheets !== undefined && c.sheets !== "floating" && c.sheets !== "attached")
+            console.warn("[bar] sheets must be floating or attached");
+        root.sheetsAttached = c.sheets === "attached";
 
         // A string is the old flat shape key; an object is a zone with its
         // own fill and text. `shape` and `style` are aliases inside a zone.
@@ -349,6 +357,10 @@ Singleton {
         root.sideFill = root.sides !== "none" ? side.fill
             : root.solid ? root.barFill : "transparent";
         root.backdropFill = root.solid ? root.barFill : root.sideFill;
+        // The concave corners under a solid bar, at the screen's edges: in
+        // the sides' colour when notch sides reach those edges.
+        root.cornerFill = !root.solid ? "transparent"
+            : root.sides === "notch" ? root.sideFill : root.barFill;
         root.sideFillet = isNumber(sidesCfg.fillet) ? between(sidesCfg.fillet, 0, 32) : root.barCurve;
     }
 }

@@ -43,6 +43,7 @@ There are three independent levels: the **bar** itself at the top level, then th
 | `style` | `solid`: one plain bar with concave corners under it and a gap to the windows. `floating`: a translucent band with detached blocks | `floating` |
 | `radius` | `0`–`40`: the windows' corners, which every other corner follows (see below) | `36` |
 | `gap` | `0`–`24`: the space round the windows and the drawers, to the screen's edges and to the bar | `7` |
+| `sheets` | `floating`: the notification centre and Programme sit `gap` from the edges, like windows. `attached`: they carry the bar's side down to the bottom, as wide as that side | `floating` |
 | `fill.colour` | The bar's own colour, `#rrggbb` or `#rrggbbaa` | near-black; opaque in `solid`, ~45 % in `floating` |
 | `fill.opacity` | From `0` (none) to `1` (opaque) | `1` in `solid`, `0.45` in `floating` |
 | `fill.blur` | Blur what is behind the bar | `false` |

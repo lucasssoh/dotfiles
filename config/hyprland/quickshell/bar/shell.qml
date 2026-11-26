@@ -1389,6 +1389,19 @@ ShellRoot {
                 outlineColour: ShellTheme.outlineColour
                 leftEnd: metrics.x + metrics.width + 4
                 rightStart: (launchers.width > 0 ? launchers.x : toolsIsland.x) - 4
+                // An attached side sheet open on this screen: that side runs
+                // down into it (modules/SideSheet.qml), as wide as the sheet.
+                extendLeft: IslandStyle.sheetsAttached && ProgrammeState.panelOpen && ProgrammeState.activeScreen === bar.screen
+                extendRight: IslandStyle.sheetsAttached && NotificationState.centerOpen && NotificationState.activeScreen === bar.screen
+                sheetMinWidth: SheetGeometry.minWidth
+                // What the sheets are as wide as.
+                onLeftEndChanged: report()
+                onRightStartChanged: report()
+                onWidthChanged: report()
+                Component.onCompleted: report()
+                function report() {
+                    if (bar.screen) SheetGeometry.report(bar.screen.name, leftEnd, width - rightStart);
+                }
             }
 
             // bar.json's notch: the concave fillets joining the
@@ -3047,12 +3060,11 @@ ShellRoot {
         }
     }
 
-    // Programme's drawer: a panel down the whole left edge of the screen,
-    // whatever its content, sliding in from the left (asked for: "toute la
-    // hauteur de l'écran, l'animation de gauche à droite, collé au bord
-    // gauche et bas"), starting under the bar ("il faut l'espace en haut"). A window of its own rather than the bar's: the bar's
-    // surface is kept short on purpose (see its implicitHeight), and this
-    // one only exists while the drawer is open or sliding out.
+    // Programme's drawer: the bar's left group carried on down the whole
+    // left edge (modules/SideSheet.qml). A window of its own rather than
+    // the bar's: the bar's surface is kept short on purpose (see its
+    // implicitHeight), and this one only exists while the drawer is open
+    // or rolling back up.
     property bool programmeMapped: false
     Connections {
         target: ProgrammeState
@@ -3070,98 +3082,23 @@ ShellRoot {
     LazyLoader {
         active: shell.programmeMapped
 
-        PanelWindow {
-            id: programmeSheetWindow
+        Modules.SideSheet {
+            edge: "left"
+            open: ProgrammeState.panelOpen
             screen: ProgrammeState.activeScreen || Quickshell.screens[0]
-            color: "transparent"
-            exclusionMode: ExclusionMode.Ignore
-            aboveWindows: true
             // Its forms (close, settings, first run) need the keyboard;
             // on demand, so it is handed over on a click, not seized.
             WlrLayershell.keyboardFocus: ProgrammeState.textInput ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-            anchors { top: true; left: true; bottom: true }
-            margins {
-                top: BarPosition.bottom ? 0 : 31
-                bottom: BarPosition.bottom ? 31 : 0
-            }
-            implicitWidth: 440
 
-            // Glass like the bar's drawers (see GLASS there): Hyprland
-            // blurs behind the sheet, following it as it slides.
-            //
-            // Only over the first 80% of the slide. The region reaches the
-            // compositor a frame or two behind the sheet, so near the end
-            // of a close it left a dark blurred strip where the sheet had
-            // just been. Cutting it short drops the blur under a sheet
-            // that is nearly gone, where nobody can see it go.
-            // Its own namespace, for hypr/windowrules.lua's no_anim: the
-            // sheet slides itself, and Hyprland's layer animation on top
-            // replayed the glass after the window had gone.
-            WlrLayershell.namespace: "quickshell-sheet"
-            BackgroundEffect.blurRegion: Modules.SmoothRegion {
-                pixelRatio: programmeSheetWindow.devicePixelRatio
-                x: programmeSheet.x
-                width: DrawerTheme.glass && -programmeSheet.x < programmeSheet.width * 0.8 ? programmeSheet.width : 0
-                height: programmeSheet.height
-                topLeftRadius: programmeSheet.topLeftRadius
-                topRightRadius: programmeSheet.topRightRadius
-                bottomLeftRadius: programmeSheet.bottomLeftRadius
-                bottomRightRadius: programmeSheet.bottomRightRadius
-            }
-
-            Rectangle {
-                id: programmeSheet
-                property bool entered: false
-                width: parent.width
-                height: parent.height
-                x: entered && ProgrammeState.panelOpen ? 0 : -width
-                Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                // The slide waits for the new window's first few frames:
-                // started on creation, it shared them with the first render
-                // (shaders, glyphs), and held its first frame twice.
-                FrameAnimation {
-                    running: !programmeSheet.entered
-                    onTriggered: if (currentFrame >= 3) programmeSheet.entered = true
-                }
-                color: DrawerTheme.paneTop
-                // Rounded where it meets the desktop, and on the screen's
-                // side with the screen's own corners (see ScreenCorner.qml).
-                topLeftRadius: 18
-                topRightRadius: 32
-                bottomLeftRadius: 18
-                bottomRightRadius: 32
-                // Denser glass on the lower part, mostly empty, where the
-                // wallpaper's colours showed through in blotches.
-                Rectangle {
-                    anchors.fill: parent
-                    topLeftRadius: parent.topLeftRadius
-                    topRightRadius: parent.topRightRadius
-                    bottomLeftRadius: parent.bottomLeftRadius
-                    bottomRightRadius: parent.bottomRightRadius
-                    gradient: Gradient {
-                        GradientStop { position: 0.38; color: DrawerTheme.clear(DrawerTheme.paneVeil) }
-                        GradientStop { position: 1.0; color: DrawerTheme.paneVeil }
-                    }
-                }
-                Modules.PaneEdge {
-                    topLeftRadius: 18; topRightRadius: 32; bottomLeftRadius: 18; bottomRightRadius: 32
-                    highlight: false
-                    fade: true
-                }
-
-                ProgrammeHome {
-                    anchors.fill: parent
-                    anchors.topMargin: 8
-                    drawerOpen: ProgrammeState.panelOpen
-                    fill: true
-                }
+            ProgrammeHome {
+                anchors.fill: parent
+                drawerOpen: ProgrammeState.panelOpen
+                fill: true
             }
         }
     }
 
-    // The notification centre, the same panel mirrored on the right edge
-    // ("il faut faire de même pour notif à droite"): under the bar, down to
-    // the bottom, sliding in from the right.
+    // The notification centre, the same sheet down the right edge.
     property bool notificationsMapped: false
     Connections {
         target: NotificationState
@@ -3179,77 +3116,15 @@ ShellRoot {
     LazyLoader {
         active: shell.notificationsMapped
 
-        PanelWindow {
-            id: notificationsSheetWindow
+        Modules.SideSheet {
+            edge: "right"
+            open: NotificationState.centerOpen
             screen: NotificationState.activeScreen || Quickshell.screens[0]
-            color: "transparent"
-            exclusionMode: ExclusionMode.Ignore
-            aboveWindows: true
-            anchors { top: true; right: true; bottom: true }
-            margins {
-                top: BarPosition.bottom ? 0 : 31
-                bottom: BarPosition.bottom ? 31 : 0
-            }
-            implicitWidth: 440
 
-            // Glass, like Programme's sheet above (and cut short the same
-            // way, see there).
-            // Its own namespace, for hypr/windowrules.lua's no_anim: the
-            // sheet slides itself, and Hyprland's layer animation on top
-            // replayed the glass after the window had gone.
-            WlrLayershell.namespace: "quickshell-sheet"
-            BackgroundEffect.blurRegion: Modules.SmoothRegion {
-                pixelRatio: notificationsSheetWindow.devicePixelRatio
-                x: notificationsSheet.x
-                width: DrawerTheme.glass && notificationsSheet.x < notificationsSheet.width * 0.8 ? notificationsSheet.width : 0
-                height: notificationsSheet.height
-                topLeftRadius: notificationsSheet.topLeftRadius
-                topRightRadius: notificationsSheet.topRightRadius
-                bottomLeftRadius: notificationsSheet.bottomLeftRadius
-                bottomRightRadius: notificationsSheet.bottomRightRadius
-            }
-
-            Rectangle {
-                id: notificationsSheet
-                property bool entered: false
-                width: parent.width
-                height: parent.height
-                x: entered && NotificationState.centerOpen ? 0 : width
-                Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                // As Programme's sheet: the slide waits for the first frames.
-                FrameAnimation {
-                    running: !notificationsSheet.entered
-                    onTriggered: if (currentFrame >= 3) notificationsSheet.entered = true
-                }
-                color: DrawerTheme.paneTop
-                // As Programme's sheet, mirrored.
-                topLeftRadius: 32
-                topRightRadius: 18
-                bottomLeftRadius: 32
-                bottomRightRadius: 18
-                Rectangle {
-                    anchors.fill: parent
-                    topLeftRadius: parent.topLeftRadius
-                    topRightRadius: parent.topRightRadius
-                    bottomLeftRadius: parent.bottomLeftRadius
-                    bottomRightRadius: parent.bottomRightRadius
-                    gradient: Gradient {
-                        GradientStop { position: 0.38; color: DrawerTheme.clear(DrawerTheme.paneVeil) }
-                        GradientStop { position: 1.0; color: DrawerTheme.paneVeil }
-                    }
-                }
-                Modules.PaneEdge {
-                    topLeftRadius: 32; topRightRadius: 18; bottomLeftRadius: 32; bottomRightRadius: 18
-                    highlight: false
-                    fade: true
-                }
-
-                Modules.NotificationCenter {
-                    anchors.fill: parent
-                    anchors.topMargin: 8
-                    drawerOpen: NotificationState.centerOpen
-                    availableHeight: notificationsSheet.height - 8
-                }
+            Modules.NotificationCenter {
+                anchors.fill: parent
+                drawerOpen: NotificationState.centerOpen
+                availableHeight: parent.height
             }
         }
     }

@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed
+- **Notification centre, Programme:** the panel sits like a window, `gap` from the screen's edges and the bar, with the same corners. `"sheets": "attached"` in `bar.json` carries the bar's side down to the bottom instead.
 - **Corners:** one rule for every corner of the shell. `radius` in `bar.json`, now 36 by default, sets the windows; a new `gap` sets the space round them, 7 on every side. Drawers, tiles, the bar's curves and the screen corners follow, each concentric with its neighbour. Themes no longer set a radius.
 - **WezTerm:** Adwaita Mono is the font. JetBrains Mono and GoogleSansCode stay installed, ready to pick in `local.lua`.
 - **WezTerm:** inactive panes are dimmer, and nothing draws a line between panes any more.

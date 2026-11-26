@@ -33,7 +33,7 @@ A notification also comes:
 
 ## The drawer
 
-A panel along the left edge of the screen.
+A panel down the left edge of the screen ([how it sits](island.md#its-look)).
 
 | Tab | What it holds |
 |---|---|
