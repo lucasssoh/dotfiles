@@ -440,10 +440,11 @@
     border-radius: 6px !important;
 }
 
-/* room round the strip: the first tab clear of the window's corner */
+/* room round the strip: the first tab and the window's buttons clear of
+   its rounded corners, at the widest radius bar.json allows (wide, 36px) */
 #TabsToolbar {
     padding-top: 4px !important;
-    padding-inline-start: 8px !important;
+    padding-inline: 18px !important;
 }
 
 #tabbrowser-tabs:not([orient="vertical"]) .tabbrowser-tab:not([pinned]) .tab-content {
