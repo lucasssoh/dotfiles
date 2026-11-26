@@ -9,10 +9,11 @@ Local to the machine. Ignored by upgrades. A missing file means the defaults.
 | File | Sets | Guide |
 |---|---|---|
 | `~/.config/hypr/private.lua` | User window rules and keys | [Hyprland](session/hyprland.md#user-rules-and-keys) |
-| `~/.config/hypr/bar.json` | The bar's position, style, shapes, colours and shared corner radius | [Position](bar/index.md#position), [look](bar/island.md#its-look) |
+| `~/.config/hypr/bar.json` | The bar's position, style, shapes and colours, and the corners and gaps of the whole shell | [Position](bar/index.md#position), [look](bar/island.md#its-look) |
 | `~/.config/hypr/shell-theme.json` | The shell-wide look, `default` or `cartoon`, and its theme | [Theme and fonts](session/theme.md#the-shell-theme) |
 | `~/.config/hypr/themes/*.json` | Your cartoon themes, one file each | [Theme files](session/theme.md#theme-files) |
 | `~/.config/hypr/bar-radius` | Generated from `bar.json`: Hyprland's window rounding | [Look](bar/island.md#its-look) |
+| `~/.config/hypr/bar-gap` | Generated from `bar.json`: Hyprland's gaps round the windows | [Look](bar/island.md#its-look) |
 | `~/.config/hypr/monitor-layout.json` | Where the screens sit | [Displays](session/displays.md#where-they-sit) |
 | `~/.config/hypr/scale.json` | The scale of each screen | [Displays](session/displays.md#scale) |
 | `~/.config/hypr/display-layout.json` | Which screens are on, and which is the main one | [Displays](session/displays.md#which-screens-are-on) |

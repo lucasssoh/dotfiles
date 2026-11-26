@@ -174,7 +174,7 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 50
-                radius: ShellTheme.cartoon ? ShellTheme.radius : 25
+                radius: IslandStyle.tileRadius
                 color: ShellTheme.cartoon ? ShellTheme.highlight : DrawerTheme.card
                 border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
                 border.color: ShellTheme.outlineColour

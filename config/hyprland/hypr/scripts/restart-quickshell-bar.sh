@@ -19,14 +19,15 @@ settings="$(python3 - "$bar_config" <<'PY'
 import json
 import sys
 
-radius = 18
+radius = 36
+gap = 7
 try:
     with open(sys.argv[1], encoding="utf-8") as f:
         config = json.load(f)
 except FileNotFoundError:
     config = {}
 except (OSError, json.JSONDecodeError) as error:
-    print(f"Invalid bar config: {error}; using top/18", file=sys.stderr)
+    print(f"Invalid bar config: {error}; using top/36/7", file=sys.stderr)
     config = {}
 
 value = config.get("position", "top") if isinstance(config, dict) else None
@@ -35,31 +36,40 @@ if value not in ("top", "bottom"):
     value = "top"
 
 if isinstance(config, dict):
-    candidate = config.get("radius", 18)
+    candidate = config.get("radius", 36)
     if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
-        radius = max(0, min(32, round(candidate)))
+        radius = max(0, min(40, round(candidate)))
     elif candidate is not None:
-        print("Invalid bar radius; using 18", file=sys.stderr)
+        print("Invalid bar radius; using 36", file=sys.stderr)
+    candidate = config.get("gap", 7)
+    if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+        gap = max(0, min(24, round(candidate)))
+    elif candidate is not None:
+        print("Invalid bar gap; using 7", file=sys.stderr)
 
 print(value)
 print(radius)
+print(gap)
 PY
 )"
 position="$(sed -n 1p <<<"$settings")"
 radius="$(sed -n 2p <<<"$settings")"
+gap="$(sed -n 3p <<<"$settings")"
 export QUICKSHELL_BAR_POSITION="$position"
 
-# The window rounding is the same knob as the bar's curves. Keep a copy
-# for hyprland.lua's next load and apply it now, so saving bar.json is
-# enough even when the bar itself does not need restarting.
-rounding_file="$HOME/.config/hypr/bar-radius"
-rounding_tmp="${rounding_file}.tmp"
-printf '%s\n' "$radius" > "$rounding_tmp"
-mv -f "$rounding_tmp" "$rounding_file"
+# The window rounding and the gap round the windows are the same knobs as
+# the bar's curves. Keep a copy of each for hyprland.lua's next load and
+# apply them now, so saving bar.json is enough even when the bar itself
+# does not need restarting.
+for pair in "bar-radius:$radius" "bar-gap:$gap"; do
+    file="$HOME/.config/hypr/${pair%%:*}"
+    printf '%s\n' "${pair#*:}" > "$file.tmp"
+    mv -f "$file.tmp" "$file"
+done
 if command -v hyprctl >/dev/null 2>&1; then
     # This Hyprland uses the Lua config API: `hyprctl keyword` answers
     # "unknown request", while `hl.config` applies at runtime.
-    hyprctl eval "hl.config({ decoration = { rounding = $radius } })" >/dev/null 2>&1 || true
+    hyprctl eval "hl.config({ decoration = { rounding = $radius }, general = { gaps_out = { top = $gap, right = $gap, bottom = $gap, left = $gap } } })" >/dev/null 2>&1 || true
 fi
 
 mapfile -t pids < <(quickshell list --all | awk '

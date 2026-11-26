@@ -42,7 +42,7 @@ Rectangle {
 
     width: parent ? parent.width : 0
     height: 40
-    radius: ShellTheme.cartoon ? ShellTheme.radius : 11
+    radius: Math.min(IslandStyle.tileRadius, height / 2)
 
     // Same glass edge every other block in this bar now carries --
     // see GlassCard.qml. Only the block itself goes through the lens;

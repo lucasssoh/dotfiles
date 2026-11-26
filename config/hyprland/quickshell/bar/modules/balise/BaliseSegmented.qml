@@ -42,7 +42,7 @@ Item {
                     ? (seg.width - 6 * (seg.options.length - 1)) / seg.options.length
                     : 0
                 height: seg.height
-                radius: ShellTheme.cartoon ? Math.min(ShellTheme.radius, 12) : 10
+                radius: Math.min(IslandStyle.tileRadius, 12)
 
                 // Same glass edge every other block in this bar now carries --
                 // see GlassCard.qml. Only the block itself goes through the lens;

@@ -28,7 +28,7 @@ Each theme is one file in `~/.config/hypr/themes/<id>.json`, with one schema and
   "schema": "coucou-theme/1",
   "name": "My theme",
   "font": "Fredoka",
-  "geometry": { "outline-width": 3, "radius": 18 },
+  "geometry": { "outline-width": 3 },
   "modes": {
     "dark": {
       "surfaces": {
@@ -75,7 +75,7 @@ Every key is required in both modes, as `#rrggbb`. While a theme is missing or i
 | `accents.info` | Bluetooth, display and night controls |
 | `accents.warning`, `accents.danger` | Warnings and alerts |
 | `outline`, `shadow` | Inked edges and shadows |
-| `geometry.outline-width`, `geometry.radius` | Outline thickness and corner radius |
+| `geometry.outline-width` | Outline thickness. Corners come from [`bar.json`](../bar/island.md#its-look) |
 | `font` | Interface font family |
 
 `Super + Shift + W` lists Glass and every theme by its `name`. Glass keeps the theme, for when you switch back.

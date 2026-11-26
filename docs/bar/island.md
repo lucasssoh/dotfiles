@@ -20,7 +20,8 @@ There are three independent levels: the **bar** itself at the top level, then th
 {
   "position": "top",
   "style": "solid",
-  "radius": 18,
+  "radius": 36,
+  "gap": 7,
   "fill": { "colour": "#000000", "opacity": 1, "blur": false },
   "text": { "mode": "dynamic", "colour": "#FFFFFF" },
   "center": {
@@ -40,7 +41,8 @@ There are three independent levels: the **bar** itself at the top level, then th
 |---|---|---|
 | `position` | `top` or `bottom` (see [Position](index.md#position)) | `top` |
 | `style` | `solid`: one plain bar with concave corners under it and a gap to the windows. `floating`: a translucent band with detached blocks | `floating` |
-| `radius` | `0`–`32`: the curve shared by window corners, the bar's concave corners and fillets, the convex blocks and the screen corners | `18` |
+| `radius` | `0`–`40`: the windows' corners, which every other corner follows (see below) | `36` |
+| `gap` | `0`–`24`: the space round the windows and the drawers, to the screen's edges and to the bar | `7` |
 | `fill.colour` | The bar's own colour, `#rrggbb` or `#rrggbbaa` | near-black; opaque in `solid`, ~45 % in `floating` |
 | `fill.opacity` | From `0` (none) to `1` (opaque) | `1` in `solid`, `0.45` in `floating` |
 | `fill.blur` | Blur what is behind the bar | `false` |
@@ -60,7 +62,16 @@ There are three independent levels: the **bar** itself at the top level, then th
 
 Both zone shapes are honoured in `solid` too: the side shapes are drawn over the bar's surface. `shape` is accepted as an alias of a zone's `style`, and a string shortcut still works (`"center": "notch"`). Old flat configs, with no zone object, still get their fill on both zones as before. The old `bar-island.json` and `bar-position.json` are still read while `bar.json` is missing; installing the bar moves them into it and keeps them as `*.old`.
 
-`radius` is the one curve for the whole shell. Saving it writes `~/.config/hypr/bar-radius` for Hyprland's own config and applies `decoration:rounding` immediately; the bar's concave corners, notch fillets, blocks, drawer rows and [screen corners](index.md#screen-corners) follow the same number. Small shapes clamp it to half their height, so a 24px block becomes a full pill while a drawer stays under its own limit. Drawers that open wider keep their larger 28–32px corners.
+`radius` and `gap` set every corner of the shell. Nested corners share one centre, so each radius is its neighbour's plus or minus the space between them, and the curves run parallel:
+
+| Corner | Radius | With the defaults |
+|---|---|---|
+| Windows, drawers | `radius` | 36 |
+| Concave corners under the bar, [screen corners](index.md#screen-corners) away from the bar | `radius` + `gap` | 43 |
+| Tiles in the drawers | `radius` − 8 | 28 |
+| A notch's curves, screen corners on the bar's side | Half the bar's height | 15.5 |
+
+Saving `bar.json` applies the window rounding and the gaps in Hyprland at once. Small shapes clamp their radius to half their height.
 
 ## Cartoon look
 

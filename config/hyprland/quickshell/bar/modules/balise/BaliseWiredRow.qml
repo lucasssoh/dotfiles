@@ -25,7 +25,7 @@ Rectangle {
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
-    radius: ShellTheme.cartoon ? ShellTheme.radius : 20
+    radius: IslandStyle.tileRadius
 
     // Same glass edge every other block in this bar now carries --
     // see GlassCard.qml. Only the block itself goes through the lens;

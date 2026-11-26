@@ -23,7 +23,7 @@ Rectangle {
 
     readonly property real level: OsdState.brightness
 
-    radius: ShellTheme.cartoon ? ShellTheme.radius : 24
+    radius: IslandStyle.tileRadius
     color: DrawerTheme.cardRaised
     // Cartoon: inked like the tiles beside it, filled with the theme's
     // sun colour, and a line of ink on the level's surface.

@@ -247,6 +247,22 @@ end
 local cartoon_active = dark_session and "rgba(4D4D4DFF)" or "rgba(000000FF)"
 local cartoon_inactive = dark_session and "rgba(242424FF)" or "rgba(00000040)"
 
+-- A number bar.json mirrors into ~/.config/hypr/<name> (see
+-- scripts/restart-quickshell-bar.sh), or `default` before it has run.
+local function bar_setting(name, default, max)
+    local path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") or "") .. "/.config")
+        .. "/hypr/" .. name
+    local handle = io.open(path, "r")
+    if not handle then return default end
+    local saved = tonumber((handle:read("*l") or ""):match("^%s*(%d+)%s*$"))
+    handle:close()
+    return (saved and saved >= 0 and saved <= max) and saved or default
+end
+
+-- The gap round every window, the same on all four sides: bar.json's
+-- `gap`. The shell's curves are concentric with the windows' through it.
+local edge_gap = bar_setting("bar-gap", 7, 24)
+
 -- ============================================================
 -- GENERAL
 -- ============================================================
@@ -260,7 +276,7 @@ hl.config({
         -- left fields on this build, not a CSS-shorthand string -- that
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
-        gaps_out         = { top = 7, right = 7, bottom = 6, left = 7 },
+        gaps_out         = { top = edge_gap, right = edge_gap, bottom = edge_gap, left = edge_gap },
         border_size      = 3,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
@@ -322,15 +338,7 @@ hl.config({
 -- into bar-radius by scripts/restart-quickshell-bar.sh (which also applies
 -- it live on every save). Read it here so a Hyprland reload keeps it; the
 -- default matches bar.json's before that script has run once.
-local rounding = 18
-local rounding_file = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") or "") .. "/.config")
-    .. "/hypr/bar-radius"
-local rounding_handle = io.open(rounding_file, "r")
-if rounding_handle then
-    local saved = tonumber((rounding_handle:read("*l") or ""):match("^%s*(%d+)%s*$"))
-    rounding_handle:close()
-    if saved and saved >= 0 and saved <= 64 then rounding = saved end
-end
+local rounding = bar_setting("bar-radius", 36, 64)
 
 hl.config({
     decoration = {

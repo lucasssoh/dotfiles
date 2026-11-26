@@ -3,8 +3,7 @@
   "name": "Jellybeans",
   "font": "Fredoka",
   "geometry": {
-    "outline-width": 3,
-    "radius": 18
+    "outline-width": 3
   },
   "modes": {
     "dark": {

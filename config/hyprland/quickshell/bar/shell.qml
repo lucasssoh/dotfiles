@@ -1478,7 +1478,7 @@ ShellRoot {
                 // other drawer, light or dark with the system.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 10) : 28
+                drawerRadius: IslandStyle.drawerRadius
                 paneEdge: true
                 drawerGap: 0
                 drawerEdge: bar.bandHeight + 6
@@ -1581,7 +1581,8 @@ ShellRoot {
                 anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - clockIsland.rowHeight) / 2)
                 anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - clockIsland.rowHeight) / 2) : 0
                 anchors.left: parent.left
-                anchors.leftMargin: 6
+                // bar.json's gap: its drawer then sits that far from the edge.
+                anchors.leftMargin: IslandStyle.edgeGap
                 flushTop: false
 
                 twoPhase: false
@@ -1598,13 +1599,13 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
+                drawerRadius: IslandStyle.drawerRadius
                 paneEdge: true
                 drawerGap: 0
                 // Measured from the island, which sits a few pixels inside the
                 // band: taking that inset off butts the pane against the band's
                 // own edge, at the top as at the bottom.
-                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - clockIsland.rowHeight) / 2)
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - clockIsland.rowHeight) / 2) + IslandStyle.edgeGap
                 // Left-aligned band, the mirror of TOOLS' right-aligned
                 // one: an anchor half a pane in from the island's own
                 // margin lands the band's outer edge exactly on the
@@ -1671,10 +1672,10 @@ ShellRoot {
                 splitDrawer: true
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
+                drawerRadius: IslandStyle.drawerRadius
                 paneEdge: true
                 drawerGap: 0
-                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - programmeIsland.rowHeight) / 2)
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - programmeIsland.rowHeight) / 2) + IslandStyle.edgeGap
                 // Flush with the clock's left edge, so with the screen's,
                 // the way the notification centre sits on the right one
                 // ("aligne avec le bord gauche comme notif avec bord
@@ -1870,8 +1871,8 @@ ShellRoot {
                 // under the pointer that just clicked one).
                 splitDrawer: true
                 drawerGap: 0
-                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - launchers.rowHeight) / 2)
-                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - launchers.rowHeight) / 2) + IslandStyle.edgeGap
+                drawerRadius: IslandStyle.drawerRadius
                 paneEdge: true
                 widenOnOpen: false
                 // Pinned, not "whatever the row happens to be": the row
@@ -1999,7 +2000,8 @@ ShellRoot {
                 anchors.topMargin: BarPosition.bottom ? 0 : Math.round((barBand.height - toolsIsland.rowHeight) / 2)
                 anchors.bottomMargin: BarPosition.bottom ? Math.round((barBand.height - toolsIsland.rowHeight) / 2) : 0
                 anchors.right: parent.right
-                anchors.rightMargin: 6
+                // bar.json's gap: its drawer then sits that far from the edge.
+                anchors.rightMargin: IslandStyle.edgeGap
                 flushTop: false
                 // ONE gap for the whole row -- asked for: "regularise le
                 // gap entre chaque bloc de module dans tools island". This
@@ -2151,7 +2153,7 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
+                drawerRadius: IslandStyle.drawerRadius
                 paneEdge: true
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.
@@ -2188,7 +2190,7 @@ ShellRoot {
                 // wants a rounded top ("arrondi les coins du dessus ...
                 // vu qu'il y a un espace").
                 drawerGap: 0
-                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - toolsIsland.rowHeight) / 2)
+                drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - toolsIsland.rowHeight) / 2) + IslandStyle.edgeGap
 
                 // The notification centre is a panel of its own, down the
                 // screen's right edge (the LazyLoader after the bars).

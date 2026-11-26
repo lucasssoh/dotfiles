@@ -20,13 +20,12 @@ PanelWindow {
     // "topLeft", "topRight", "bottomLeft" or "bottomRight".
     required property string corner
 
-    // Concentric with the windows: bar.json's global radius (mirrored to
-    // Hyprland's decoration.rounding) plus the gap they keep from the side
-    // and bottom edges (gaps_out 7 and 6), so a window's curve and the
-    // screen's run parallel.
-    readonly property int radius: Math.round(IslandStyle.radius + 6)
-
     readonly property bool atTop: corner === "topLeft" || corner === "topRight"
+    // Away from the bar, concentric with the windows (IslandStyle's
+    // outerRadius). On the bar's side the bar fills the corner: it takes
+    // the bar's own curve, half its height, like a notch's S.
+    readonly property bool barSide: root.atTop !== BarPosition.bottom
+    readonly property int radius: Math.round(root.barSide ? IslandStyle.barCurve : IslandStyle.outerRadius)
     readonly property bool atLeft: corner === "topLeft" || corner === "bottomLeft"
 
     anchors {

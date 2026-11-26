@@ -82,21 +82,41 @@ Singleton {
     property real sideFillet: 18
     property bool _fillLightText: true
 
-    // One radius for every curve: Hyprland's window rounding, the bar's
-    // concave corners and fillets, the convex blocks and the screen corners
-    // (the latter plus the gap windows keep from the edge). Small shapes
-    // clamp it to half their height where they have to.
-    property real radius: 18
+    // Two numbers from bar.json, `radius` (the windows' corners) and `gap`
+    // (their distance to the screen's edge and to the bar, on every side).
+    // Every other corner is concentric with its neighbour: its radius is
+    // that one's plus or minus the distance between them, so the curves
+    // run parallel.
+    //   outerRadius   radius + gap: the concave corners under the bar and
+    //                 the screen corners away from it
+    //   drawerRadius  outerRadius - gap: a drawer hangs `gap` from the bar
+    //                 and the edge, like a window
+    //   tileRadius    radius - 8: the tiles, rows and cards in a drawer.
+    //                 Not the strict concentric value (the drawer's minus
+    //                 its 16 px inset), which made them near square: they
+    //                 keep the rounder shape they had, 28 by default.
+    //   barCurve      half the bar's height: what belongs to the bar (a
+    //                 notch's S, the screen corners it fills), whatever
+    //                 the radius
+    // Small shapes still clamp to half their height.
+    property real radius: 36
+    property int edgeGap: 7
+    readonly property int band: 31                // shell.qml's bandHeight
+    readonly property real outerRadius: root.radius + root.edgeGap
+    readonly property real drawerRadius: Math.max(6, root.outerRadius - root.edgeGap)
+    readonly property real tileRadius: Math.max(6, root.radius - 8)
+    readonly property real barCurve: root.band / 2
 
     property real inset: 2
     property real innerInset: 2
     property real edgeRadius: 18
     property real innerRadius: 18
     property real fillet: 18
-    // Solid style: the gap between the bar and the windows, and the radius
-    // of the concave corners under it (the windows' own rounding).
-    readonly property int gap: root.solid ? 6 : 0
-    readonly property real cornerRadius: root.radius
+    // Solid style: the gap between the bar and the windows (the same as
+    // on every other side), and the concave corners under it, concentric
+    // with the windows' own.
+    readonly property int gap: root.solid ? root.edgeGap : 0
+    readonly property real cornerRadius: root.outerRadius
 
     onDarkModeChanged: root.resolve()
     Connections {
@@ -158,7 +178,10 @@ Singleton {
         const requestedRadius = first(c.radius, obj(c.shape).radius);
         if (requestedRadius !== undefined && !isNumber(requestedRadius))
             console.warn("[bar] radius must be a number");
-        root.radius = isNumber(requestedRadius) ? between(requestedRadius, 0, 32) : 18;
+        root.radius = isNumber(requestedRadius) ? between(requestedRadius, 0, 40) : 36;
+        if (c.gap !== undefined && !isNumber(c.gap))
+            console.warn("[bar] gap must be a number");
+        root.edgeGap = isNumber(c.gap) ? Math.round(between(c.gap, 0, 24)) : 7;
 
         // A string is the old flat shape key; an object is a zone with its
         // own fill and text. `shape` and `style` are aliases inside a zone.
@@ -174,7 +197,7 @@ Singleton {
 
         const shapes = {
             island: { inset: 2, innerInset: 2, edge: root.radius, inner: root.radius, fillet: 0 },
-            notch: { inset: 0, innerInset: 0, edge: 0, inner: root.radius, fillet: root.radius },
+            notch: { inset: 0, innerInset: 0, edge: 0, inner: root.radius, fillet: root.barCurve },
             dome: { inset: 0, innerInset: 0, edge: 0, inner: Math.max(18, root.radius), fillet: 0 },
             pill: { inset: 2, innerInset: 2, edge: 999, inner: 999, fillet: 0 },
             flush: { inset: 0, innerInset: 0, edge: 0, inner: 0, fillet: 0 }
@@ -308,6 +331,6 @@ Singleton {
         root.sideFill = root.sides !== "none" ? side.fill
             : root.solid ? root.barFill : "transparent";
         root.backdropFill = root.solid ? root.barFill : root.sideFill;
-        root.sideFillet = isNumber(sidesCfg.fillet) ? between(sidesCfg.fillet, 0, 32) : root.radius;
+        root.sideFillet = isNumber(sidesCfg.fillet) ? between(sidesCfg.fillet, 0, 32) : root.barCurve;
     }
 }

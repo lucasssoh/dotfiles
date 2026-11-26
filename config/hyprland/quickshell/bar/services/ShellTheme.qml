@@ -11,7 +11,7 @@ import Quickshell.Io
 // schema and both light and dark modes in the same file:
 //
 //   { "schema": "coucou-theme/1", "name": "Cuivre & Cyan",
-//     "font": "Fredoka", "geometry": { "outline-width": 3, "radius": 18 },
+//     "font": "Fredoka", "geometry": { "outline-width": 3 },
 //     "modes": { "dark": { "surfaces": {...}, "text": {...},
 //                          "accents": {...}, "outline": "#000000",
 //                          "shadow": "#000000" },
@@ -99,8 +99,6 @@ Singleton {
     readonly property var geometry: root.theme && root.theme.geometry ? root.theme.geometry : ({})
     readonly property real outline: root.cartoon
         ? Math.max(1, Math.min(6, typeof root.geometry["outline-width"] === "number" ? root.geometry["outline-width"] : 3)) : 0
-    readonly property real radius: root.cartoon
-        ? Math.max(12, Math.min(32, typeof root.geometry.radius === "number" ? root.geometry.radius : 18)) : 18
 
     FileView {
         path: root.configPath

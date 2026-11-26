@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed
+- **Corners:** one rule for every corner of the shell. `radius` in `bar.json`, now 36 by default, sets the windows; a new `gap` sets the space round them, 7 on every side. Drawers, tiles, the bar's curves and the screen corners follow, each concentric with its neighbour. Themes no longer set a radius.
 - **WezTerm:** Adwaita Mono is the font. JetBrains Mono and GoogleSansCode stay installed, ready to pick in `local.lua`.
 - **WezTerm:** inactive panes are dimmer, and nothing draws a line between panes any more.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.

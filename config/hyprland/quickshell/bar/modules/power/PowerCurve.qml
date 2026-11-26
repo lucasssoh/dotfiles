@@ -121,7 +121,7 @@ Item {
         visible: ShellTheme.cartoon
         width: root.plotWidth
         height: root.plotHeight
-        radius: Math.min(ShellTheme.radius, height / 2)
+        radius: Math.min(IslandStyle.tileRadius, height / 2)
         color: "transparent"
         border.width: ShellTheme.outline
         border.color: ShellTheme.outlineColour

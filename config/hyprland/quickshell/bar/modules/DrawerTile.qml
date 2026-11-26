@@ -43,7 +43,7 @@ Rectangle {
     // place, or leaves this unconnected.
     signal activatedSecondary()
 
-    radius: ShellTheme.cartoon ? ShellTheme.radius : 24
+    radius: IslandStyle.tileRadius
 
     // Same glass edge every other block in this bar now carries -- see
     // GlassCard.qml. Only while this is HOVERED or ON: the glass is a

@@ -95,7 +95,8 @@ Rectangle {
     readonly property real contentHeight: Math.max(card.tile, card.textHeight)
 
     width: 340
-    radius: ShellTheme.cartoon ? ShellTheme.radius : 26
+    // A card on its own over the desktop, like a window.
+    radius: IslandStyle.radius
     height: card.pad + card.contentHeight + (card.hasActions ? 12 + actionRow.height : card.pad)
     color: DrawerTheme.paneTop
 
@@ -155,7 +156,8 @@ Rectangle {
         y: card.pad
         width: card.tile
         height: card.tile
-        radius: ShellTheme.cartoon ? ShellTheme.radius : 13
+        // Concentric with the card around it.
+        radius: Math.max(6, IslandStyle.radius - card.pad)
         color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
         border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
         border.color: ShellTheme.outlineColour
