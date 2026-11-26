@@ -10,7 +10,7 @@ The colours apply with Firefox's default, Light and Dark themes. Pick another th
 
 ## Tabs
 
-Along the top, tabs have the same width, with their title centred. The address reads centred until clicked. The page sits as a rounded card in the window, edge to edge in full screen.
+Along the top, tabs have the same width, with their title centred. The address reads centred until clicked. The page runs to the window's edges, its corners rounded with the window's.
 
 To put the tabs down the side, right-click them and choose *Turn on vertical tabs*. `Ctrl + Alt + Z` opens or closes the sidebar.
 

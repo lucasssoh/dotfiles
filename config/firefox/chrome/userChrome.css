@@ -479,20 +479,11 @@
     border: 1px solid color-mix(in srgb, var(--coucou-primary) 16%, transparent) !important;
 }
 
-/* ---- the page, a card in the frame ------------------------------------- */
-#browser {
-    background-color: var(--toolbox-background-color, var(--coucou-shell)) !important;
-}
-
+/* ---- the page, edge to edge ------------------------------------------- */
+/* No inset card: the page runs to the window's edges and Hyprland's
+   rounding (bar.json's radius) cuts its corners, so they follow every other
+   window's. Firefox's own sidebar layout would inset and round it. */
 #tabbrowser-tabbox {
-    margin: 0 6px 6px !important;
-    border-radius: 10px !important;
-    overflow: clip !important;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--coucou-primary, CanvasText) 8%, transparent) !important;
-}
-
-/* full screen and a page in full screen keep every pixel */
-:root:is([inFullscreen], [inDOMFullscreen]) #tabbrowser-tabbox {
     margin: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
