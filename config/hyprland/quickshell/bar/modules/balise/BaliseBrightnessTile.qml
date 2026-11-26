@@ -23,8 +23,12 @@ Rectangle {
 
     readonly property real level: OsdState.brightness
 
-    radius: 24
+    radius: ShellTheme.cartoon ? ShellTheme.radius : 24
     color: DrawerTheme.cardRaised
+    // Cartoon: inked like the tiles beside it, filled with the theme's
+    // sun colour, and a line of ink on the level's surface.
+    readonly property real ink: ShellTheme.outline
+    readonly property color fillColour: ShellTheme.cartoon ? ShellTheme.highlight : DrawerTheme.on
 
     Connections {
         target: BaliseState
@@ -51,13 +55,35 @@ Rectangle {
         clip: true
         Behavior on height { enabled: !drag.pressed; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
+        // Inside the outline, on the radius it draws inward: at the same
+        // size its antialiased edge showed past the ink at the corners.
         Rectangle {
+            x: tile.ink
             anchors.bottom: parent.bottom
-            width: tile.width
-            height: tile.height
-            radius: tile.radius
-            color: DrawerTheme.on
+            anchors.bottomMargin: tile.ink
+            width: tile.width - 2 * tile.ink
+            height: tile.height - 2 * tile.ink
+            radius: Math.max(0, tile.radius - tile.ink)
+            color: tile.fillColour
         }
+        // The surface, under the outline's own top and bottom.
+        Rectangle {
+            visible: tile.ink > 0 && fill.height > tile.ink && fill.height < tile.height - tile.ink
+            width: parent.width
+            height: tile.ink
+            color: ShellTheme.outlineColour
+        }
+    }
+
+    // Over the fill, so the level never paints across it.
+    Rectangle {
+        anchors.fill: parent
+        visible: tile.ink > 0
+        radius: tile.radius
+        color: "transparent"
+        border.width: tile.ink
+        border.color: ShellTheme.outlineColour
+        z: 1
     }
 
     Text {

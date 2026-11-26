@@ -9,6 +9,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Shell theme:** eighteen cartoon themes, each with a light and a dark mode. Your own go in `~/.config/hypr/themes/`, and saving one recolours the shell live.
 - **Shell theme:** WezTerm and Neovim take the selected theme's colours, light or dark, and follow when it changes. Neovim keeps the theme's background under any colorscheme.
 - **Window borders:** in cartoon, Hyprland windows wear an ink outline and no shadow: lighter grey on a dark desktop, black on a light one, quieter on idle windows. The default glass gradient is untouched.
+- **Cartoon theme:** the brightness slider in Balise is inked like the tiles around it, filled with the theme's highlight colour.
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed

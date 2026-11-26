@@ -70,7 +70,7 @@ Every key is required in both modes, as `#rrggbb`. While a theme is missing or i
 | `text.primary`, `secondary`, `muted`, `faint` | Text inside the drawers |
 | `text.on-accent` | Text on an accent fill |
 | `accents.active` | Active tiles, Wi-Fi, dark mode, the centre zone |
-| `accents.highlight` | Current workspace, today in the calendar |
+| `accents.highlight` | Current workspace, today in the calendar, the brightness level |
 | `accents.success` | Fast charge and other good states |
 | `accents.info` | Bluetooth, display and night controls |
 | `accents.warning`, `accents.danger` | Warnings and alerts |
