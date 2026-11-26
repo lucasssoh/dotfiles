@@ -220,11 +220,14 @@ Item {
                     anchors.rightMargin: 14
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: root.ask && root.ask.echo ? TextInput.Normal : TextInput.Password
-                    passwordCharacter: "•"
+                    // A bigger dot than the UI font's bullet, which at 14 px
+                    // was a speck.
+                    passwordCharacter: "●"
                     color: DrawerTheme.primary
                     selectionColor: DrawerTheme.ink(0.25)
                     font.family: Fonts.ui
                     font.pixelSize: 14
+                    font.letterSpacing: echoMode === TextInput.Password ? 3 : 0
                     clip: true
                     focus: true
                     Keys.onReturnPressed: root.submit()

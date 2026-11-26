@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed
+- **Password prompts:** the dots for what you type are bigger and spaced out.
 - **Firefox:** the page runs to the window's edges, its corners rounded with the window's, instead of sitting as an inset card.
 - **Notification centre, Programme:** the panel sits like a window, `gap` from the screen's edges and the bar, with the same corners. `"sheets": "attached"` in `bar.json` carries the bar's side down to the bottom instead.
 - **Corners:** one rule for every corner of the shell. `radius` in `bar.json` sets the windows, `none` (square everywhere), `narrow`, `medium` or `wide` (the default); a new `gap` sets the space round them, 7 on every side. Drawers, tiles, the bar's curves and the screen corners follow, each concentric with its neighbour. Themes no longer set a radius.
