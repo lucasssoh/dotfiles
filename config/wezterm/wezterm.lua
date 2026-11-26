@@ -5,13 +5,9 @@ local act = wezterm.action
 -- =========================
 -- FONT
 -- =========================
-config.font = wezterm.font_with_fallback({
-  {
-    family = 'GoogleSansCode Nerd Font Mono', 
---[[     family = 'JetBrains Mono', ]]
-    weight = 'Regular',
-  },
-})
+-- Adwaita Mono: GNOME's monospace, plain and readable at any size.
+-- JetBrains Mono and GoogleSansCode are installed too; local.lua picks one.
+config.font = wezterm.font("Adwaita Mono")
 -- 13.0, not 12.0: sized for a 14" 1920x1200 panel (~162 DPI) at scale 1.
 -- The previous 12.0 was tuned on a 15.6" 1920x1080 (~143 DPI), where the
 -- same point size renders ~13% larger physically. Point sizes are

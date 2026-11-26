@@ -8,8 +8,10 @@ local wezterm = require 'wezterm'
 
 return {
   -- Font ---------------------------------------------------------------
+  -- font = wezterm.font("Adwaita Mono"),
+  -- Also installed:
+  -- font = wezterm.font("JetBrains Mono"),
   -- font = wezterm.font("GoogleSansCode Nerd Font Mono"),
-  -- font = wezterm.font_with_fallback({ "JetBrains Mono", "Noto Color Emoji" }),
   -- font_size = 13.0,
   -- line_height = 1.0,
   -- harfbuzz_features = { "calt=0", "liga=0" },   -- no ligatures

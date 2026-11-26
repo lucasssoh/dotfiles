@@ -12,6 +12,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed
+- **WezTerm:** Adwaita Mono is the font. JetBrains Mono and GoogleSansCode stay installed, ready to pick in `local.lua`.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.
 
 ## 2.7.3

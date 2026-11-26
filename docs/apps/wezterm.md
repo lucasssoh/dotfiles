@@ -18,7 +18,7 @@ cc-pkg-mng install wezterm
 
 ## Author's setup
 
-The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../config/wezterm/wezterm.lua). An opaque terminal, light or dark with the desktop.
+The `config-wezterm` unit, when adopted: [`config/wezterm/wezterm.lua`](../../config/wezterm/wezterm.lua). An opaque terminal in Adwaita Mono, light or dark with the desktop.
 
 | Key | Does |
 |---|---|
@@ -49,4 +49,4 @@ return {
 }
 ```
 
-Top-level keys apply in both modes, `light` and `dark` only when the desktop is in that mode. `colors` is merged key by key, `tab_bar` included; the tab bar follows `background` and `window_background_opacity` unless you set it. Below `1`, the opacity lets the desktop's blur show through. A new install starts from [`local.example.lua`](../../config/wezterm/local.example.lua), every setting commented with the author's value. A `color_scheme` replaces the author's colours, in one mode or both. For more control, return a `function(config, wezterm, light)` that changes `config`; `light` is `true` when the desktop is light.
+Top-level keys apply in both modes, `light` and `dark` only when the desktop is in that mode. `colors` is merged key by key, `tab_bar` included; the tab bar follows `background` and `window_background_opacity` unless you set it. Below `1`, the opacity lets the desktop's blur show through. A new install starts from [`local.example.lua`](../../config/wezterm/local.example.lua), every setting commented with the author's value. JetBrains Mono and GoogleSansCode are installed and ready to uncomment there. A `color_scheme` replaces the author's colours, in one mode or both. For more control, return a `function(config, wezterm, light)` that changes `config`; `light` is `true` when the desktop is light.

@@ -1,10 +1,10 @@
 name     = "fonts"
 layer    = "core"
-summary  = "UI and icon fonts: MiSans, JetBrains Mono, Iosevka, Cascadia Code, GoogleSansCode, Phosphor, Lucide, MingCute"
+summary  = "UI and icon fonts: MiSans, Adwaita Mono, JetBrains Mono, Iosevka, Cascadia Code, GoogleSansCode, Phosphor, Lucide, MingCute"
 
 [packages]
 dnf = [
-  "google-noto-sans-fonts", "google-noto-emoji-fonts", "jetbrains-mono-fonts-all",
+  "google-noto-sans-fonts", "google-noto-emoji-fonts", "adwaita-mono-fonts", "jetbrains-mono-fonts-all",
   "fontawesome-6-free-fonts", "fontawesome-6-brands-fonts",
 ]
 
