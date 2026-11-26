@@ -302,6 +302,9 @@ Item {
     property color rowIslandColor: DrawerTheme.islandPane
     // Cartoon marks the zone groups with a strong outline, not a shadow.
     property color rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : root.paneRim
+    // The slab's edge against the screen, if any: see PaneEdge.openEdge.
+    property string rowIslandOpenEdge: ""
+    property real rowIslandOpenCut: 0
     property bool rowIslandHighlight: true
     property color rowIslandHighlightColor: root.paneHighlight
     property color rowIslandShadow: "transparent"
@@ -1483,6 +1486,8 @@ Item {
             bottomLeftRadius: root.rowPaneBLRadius
             bottomRightRadius: root.rowPaneBRRadius
             rimColor: root.rowIslandRim
+            openEdge: root.rowIslandOpenEdge
+            openCut: root.rowIslandOpenCut
             highlight: root.rowIslandHighlight
             highlightColor: root.rowIslandHighlightColor
         }

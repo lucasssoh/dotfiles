@@ -2,7 +2,9 @@ import QtQuick
 
 // The notch style's strip along the screen edge, the central island hanging
 // from it joined by concave fillets. The island's own pane draws the
-// hanging part; this draws the strip on both sides and the fillets.
+// hanging part; this draws the strip on both sides and the fillets. With an
+// `outline` (cartoon), the ink runs along each fillet's curve, where the
+// island pane's own edge (cut short by `fillet`, see PaneEdge) takes over.
 Item {
     id: band
 
@@ -12,6 +14,8 @@ Item {
     property real fillet: 8
     property real strip: 10
     property color notchColor: "black"
+    property real outline: 0
+    property color outlineColour: "black"
 
     onFromBottomChanged: notchCanvas.requestPaint()
     onWidthChanged: notchCanvas.requestPaint()
@@ -21,6 +25,8 @@ Item {
     onIslandWidthChanged: notchCanvas.requestPaint()
     onStripChanged: notchCanvas.requestPaint()
     onNotchColorChanged: notchCanvas.requestPaint()
+    onOutlineChanged: notchCanvas.requestPaint()
+    onOutlineColourChanged: notchCanvas.requestPaint()
 
     Canvas {
         id: notchCanvas
@@ -63,6 +69,20 @@ Item {
                 ctx.arc(right + r, s + r, r, Math.PI, 3 * Math.PI / 2, false);
                 ctx.closePath();
                 ctx.fill();
+
+                const w = band.outline;
+                if (w > 0) {
+                    const h = w / 2;
+                    const oc = band.outlineColour;
+                    ctx.lineWidth = w;
+                    ctx.strokeStyle = "rgba(" + Math.round(oc.r * 255) + "," + Math.round(oc.g * 255) + "," + Math.round(oc.b * 255) + "," + oc.a + ")";
+                    ctx.beginPath();
+                    ctx.arc(left - r, s + r, r + h, 0, -Math.PI / 2, true);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(right + r, s + r, r + h, Math.PI, 3 * Math.PI / 2, false);
+                    ctx.stroke();
+                }
             }
         }
     }

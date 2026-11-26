@@ -48,6 +48,11 @@ QtObject {
     function shade(a) {
         return Qt.rgba(blend.staticInk.r, blend.staticInk.g, blend.staticInk.b, a);
     }
+    // Cartoon puts the zone on the theme's panel, the drawers' own ground,
+    // so the states keep their colours there: the drawers' tokens.
+    function state(themed) {
+        return ShellTheme.cartoon ? themed : blend.staticInk;
+    }
 
     // Same property names as Ink/InkLight -- that is the whole contract:
     // a module's `ink` can hold any of the three and it cannot tell.
@@ -55,13 +60,13 @@ QtObject {
     readonly property color secondary: blend.useStatic ? blend.shade(0.72) : blend.mix(Ink.secondary, InkLight.secondary)
     readonly property color muted: blend.useStatic ? blend.shade(0.72) : blend.mix(Ink.muted, InkLight.muted)
     readonly property color faint: blend.useStatic ? blend.shade(0.45) : blend.mix(Ink.faint, InkLight.faint)
-    readonly property color danger: blend.useStatic ? blend.staticInk : blend.mix(Ink.danger, InkLight.danger)
-    readonly property color accent: blend.useStatic ? blend.staticInk : blend.mix(Ink.accent, InkLight.accent)
-    readonly property color positive: blend.useStatic ? blend.staticInk : blend.mix(Ink.positive, InkLight.positive)
-    readonly property color play: blend.useStatic ? blend.staticInk : blend.mix(Ink.play, InkLight.play)
-    readonly property color hdr: blend.useStatic ? blend.staticInk : blend.mix(Ink.hdr, InkLight.hdr)
-    readonly property color warning: blend.useStatic ? blend.staticInk : blend.mix(Ink.warning, InkLight.warning)
-    readonly property color conserve: blend.useStatic ? blend.staticInk : blend.mix(Ink.conserve, InkLight.conserve)
+    readonly property color danger: blend.useStatic ? blend.state(DrawerTheme.danger) : blend.mix(Ink.danger, InkLight.danger)
+    readonly property color accent: blend.useStatic ? blend.state(DrawerTheme.accent) : blend.mix(Ink.accent, InkLight.accent)
+    readonly property color positive: blend.useStatic ? blend.state(DrawerTheme.positive) : blend.mix(Ink.positive, InkLight.positive)
+    readonly property color play: blend.useStatic ? blend.state(DrawerTheme.play) : blend.mix(Ink.play, InkLight.play)
+    readonly property color hdr: blend.useStatic ? blend.state(DrawerTheme.hdr) : blend.mix(Ink.hdr, InkLight.hdr)
+    readonly property color warning: blend.useStatic ? blend.state(DrawerTheme.warning) : blend.mix(Ink.warning, InkLight.warning)
+    readonly property color conserve: blend.useStatic ? blend.state(DrawerTheme.conserve) : blend.mix(Ink.conserve, InkLight.conserve)
     readonly property color onLight: blend.useStatic ? blend.staticInk : blend.mix(Ink.onLight, InkLight.onLight)
 
 }

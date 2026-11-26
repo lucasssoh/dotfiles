@@ -3,7 +3,9 @@ import QtQuick
 // What sits behind the bar's blocks, from bar.json: the bar's own surface
 // (solid), and over it the side blocks' shapes (island, notch, pill) in
 // their own colour. Drawn from the screen edge down; flipped for a bottom
-// bar.
+// bar. With an `outline` (cartoon), the ink follows each shape's edge
+// where it meets the desktop: the concave corners, the notch's S, the
+// rounded ends. Never along the screen edge itself.
 Item {
     id: root
 
@@ -19,6 +21,8 @@ Item {
     // The side groups' extent, in this item's x.
     property real leftEnd: 0
     property real rightStart: 0
+    property real outline: 0
+    property color outlineColour: "black"
 
     readonly property bool active: root.solid || root.sides !== "none"
     visible: root.active
@@ -35,6 +39,8 @@ Item {
     onSideColourChanged: repaint()
     onLeftEndChanged: repaint()
     onRightStartChanged: repaint()
+    onOutlineChanged: repaint()
+    onOutlineColourChanged: repaint()
     onWidthChanged: repaint()
     onHeightChanged: repaint()
 
@@ -58,6 +64,7 @@ Item {
             }
             const H = root.band;
             const W = width;
+            const L = root.leftEnd, R = root.rightStart;
             const innerR = Math.max(0, Math.min(root.radius, H / 2));
 
             // A concave corner hanging from (x, y), opening toward +dir.
@@ -93,28 +100,85 @@ Item {
                 ctx.fillRect(0, 0, W, H);
                 fillet(0, H, root.corner, 1);
                 fillet(W, H, root.corner, -1);
-                if (root.sides === "none") return;
             }
 
             // The sides zone, on top of the bar (or on the band alone).
-            ctx.fillStyle = rgba(root.sideColour);
-            const L = root.leftEnd, R = root.rightStart;
-            if (root.sides === "notch") {
-                rect(0, 0, L, H, 0, 0, innerR, 0);
-                rect(R, 0, W, H, 0, 0, 0, innerR);
-                // On a solid bar the side shapes reach the screen edges,
-                // so they have to carry the same concave descent under
-                // those edges as the bar itself, in the sides' own colour.
-                if (root.solid) {
-                    fillet(0, H, root.corner, 1);
-                    fillet(W, H, root.corner, -1);
+            if (root.sides !== "none") {
+                ctx.fillStyle = rgba(root.sideColour);
+                if (root.sides === "notch") {
+                    rect(0, 0, L, H, 0, 0, innerR, 0);
+                    rect(R, 0, W, H, 0, 0, 0, innerR);
+                    // On a solid bar the side shapes reach the screen edges,
+                    // so they have to carry the same concave descent under
+                    // those edges as the bar itself, in the sides' own colour.
+                    if (root.solid) {
+                        fillet(0, H, root.corner, 1);
+                        fillet(W, H, root.corner, -1);
+                    }
+                    fillet(L, 0, root.fillet, 1);
+                    fillet(R, 0, root.fillet, -1);
+                } else {
+                    const r = root.sides === "pill" ? (H - 4) / 2 : innerR;
+                    rect(2, 2, L, H - 2, r, r, r, r);
+                    rect(R, 2, W - 2, H - 2, r, r, r, r);
                 }
-                fillet(L, 0, root.fillet, 1);
-                fillet(R, 0, root.fillet, -1);
+            }
+
+            // ---- the ink ---------------------------------------------------
+            // Each line runs half inside its shape: same centres as the
+            // fills, with edges and radii moved by h.
+            const w = root.outline;
+            if (w <= 0)
+                return;
+            const h = w / 2;
+            const c = root.corner;
+            ctx.lineWidth = w;
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = rgba(root.outlineColour);
+
+            // A solid band that shows: its lower edge, concave at both ends.
+            const bandShows = root.solid && root.barColour.a > 0.02;
+            if (bandShows) {
+                ctx.beginPath();
+                ctx.arc(c, H + c, c + h, Math.PI, 1.5 * Math.PI, false);
+                ctx.arc(W - c, H + c, c + h, 1.5 * Math.PI, 2 * Math.PI, false);
+                ctx.stroke();
+            }
+
+            // The side shapes, unless they melt into a band of their colour.
+            if (root.sides === "none" || root.sideColour.a <= 0.02
+                    || (bandShows && Qt.colorEqual(root.barColour, root.sideColour)))
+                return;
+            if (root.sides === "notch") {
+                // The left group, from the screen edge to the S that joins
+                // the top edge; the right one is the same path mirrored.
+                const notchSide = end => {
+                    const f = root.fillet;
+                    ctx.beginPath();
+                    if (root.solid)
+                        ctx.arc(c, H + c, c + h, Math.PI, 1.5 * Math.PI, false);
+                    else
+                        ctx.moveTo(0, H - h);
+                    ctx.lineTo(end - innerR, H - h);
+                    if (innerR > h)
+                        ctx.arc(end - innerR, H - innerR, innerR - h, Math.PI / 2, 0, true);
+                    ctx.lineTo(end - h, f);
+                    ctx.arc(end + f, f, f + h, Math.PI, 1.5 * Math.PI, false);
+                    ctx.stroke();
+                };
+                notchSide(L);
+                ctx.save();
+                ctx.translate(W, 0);
+                ctx.scale(-1, 1);
+                notchSide(W - R);
+                ctx.restore();
             } else {
-                const r = root.sides === "pill" ? (H - 4) / 2 : innerR;
-                rect(2, 2, L, H - 2, r, r, r, r);
-                rect(R, 2, W - 2, H - 2, r, r, r, r);
+                const r = Math.max(0, (root.sides === "pill" ? (H - 4) / 2 : innerR) - h);
+                for (const [x0, x1] of [[2, L], [R, W - 2]]) {
+                    ctx.beginPath();
+                    ctx.roundedRect(x0 + h, 2 + h, x1 - x0 - w, H - 4 - w, r, r);
+                    ctx.stroke();
+                }
             }
         }
     }

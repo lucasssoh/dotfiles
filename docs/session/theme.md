@@ -65,7 +65,7 @@ Every key is required in both modes, as `#rrggbb`. While a theme is missing or i
 
 | Key | Where it shows |
 |---|---|
-| `surfaces.panel` | Drawer panels and sheet backgrounds |
+| `surfaces.panel` | Drawer panels, sheet backgrounds, the bar's band and sides |
 | `surfaces.card`, `card-hover`, `card-raised`, `card-sunken` | Cards inside the drawers |
 | `text.primary`, `secondary`, `muted`, `faint` | Text inside the drawers |
 | `text.on-accent` | Text on an accent fill |

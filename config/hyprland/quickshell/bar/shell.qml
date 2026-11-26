@@ -1385,6 +1385,8 @@ ShellRoot {
                 radius: IslandStyle.radius
                 barColour: IslandStyle.barFill
                 sideColour: IslandStyle.sideFill
+                outline: ShellTheme.outline
+                outlineColour: ShellTheme.outlineColour
                 leftEnd: metrics.x + metrics.width + 4
                 rightStart: (launchers.width > 0 ? launchers.x : toolsIsland.x) - 4
             }
@@ -1403,6 +1405,8 @@ ShellRoot {
                 islandWidth: centerIsland.rowPaneW
                 fillet: IslandStyle.fillet
                 strip: 0
+                outline: ShellTheme.outline
+                outlineColour: ShellTheme.outlineColour
                 notchColor: Qt.rgba(IslandStyle.background.r, IslandStyle.background.g,
                                     IslandStyle.background.b, IslandStyle.alpha)
             }
@@ -1463,6 +1467,9 @@ ShellRoot {
                 // No border: neither the rim nor the top light ("enlève la
                 // bordure"); the glass and its shadow draw the island.
                 rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : "transparent"
+                // Notch, dome and flush hang from the screen edge.
+                rowIslandOpenEdge: IslandStyle.inset > 0 ? "" : BarPosition.bottom ? "bottom" : "top"
+                rowIslandOpenCut: IslandStyle.style === "notch" ? IslandStyle.fillet : 0
                 rowIslandHighlight: false
                 rowIslandShadow: ShellTheme.cartoon ? "transparent" : islandGlass.shadow
                 flushTop: !BarPosition.bottom

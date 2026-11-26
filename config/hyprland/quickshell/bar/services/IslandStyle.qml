@@ -200,9 +200,10 @@ Singleton {
         const bf = Object.assign({}, obj(c.fill), obj(topMode.fill));
         const barColour = first(bf.colour, c.background);
         const barOpacity = first(bf.opacity, c.opacity);
-        // For now only the centre is cartoon-styled: the band itself keeps
-        // bar.json's fill, opacity, blur and text, like the sides do.
-        const barBg = isColour(barColour) ? barColour
+        // Cartoon takes the band's colour from the theme (the drawers'
+        // panel); its opacity and blur still come from bar.json.
+        const barBg = cartoon ? paper
+            : isColour(barColour) ? barColour
             : root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#0c0c0e";
         const barA = isNumber(barOpacity) ? between(barOpacity, 0, 1)
             : root.solid ? 1 : 0.45;
@@ -213,8 +214,9 @@ Singleton {
         const bBlur = first(bf.blur, c.blur);
         root.barBlur = typeof bBlur === "boolean" ? bBlur : false;
         const bt = Object.assign({}, obj(c.text), obj(topMode.text));
-        root.barDynamic = first(bt.mode, c.mode, root.solid ? "static" : "dynamic") !== "static";
-        root.barTextColour = isColour(bt.colour) ? bt.colour
+        root.barDynamic = !cartoon && first(bt.mode, c.mode, root.solid ? "static" : "dynamic") !== "static";
+        root.barTextColour = cartoon ? paperInk
+            : isColour(bt.colour) ? bt.colour
             : typeof c.text === "string" ? c.text
             : root.solid ? (root.darkMode ? "#f2f2f7" : "#1c1c1e") : "#f2f2f7";
 
@@ -233,13 +235,13 @@ Singleton {
             const colour = first(f.colour, legacyZone ? c.background : undefined);
             const opacity = first(f.opacity, legacyZone ? c.opacity : undefined);
             const hasFill = isColour(colour);
-            // For now the sides are not cartoon-styled: they keep exactly
-            // the fill, opacity, text and shape written in bar.json. Only
-            // the centre takes the cartoon tint.
-            const useCartoon = cartoon && role !== "sides";
+            // Cartoon: the colours come from the theme, the shapes from
+            // bar.json. The centre takes the accent, the sides the drawers'
+            // panel, so a drawer reads as the bar opening up.
+            const useCartoon = cartoon;
             const bg = useCartoon
                 ? (legacyZone ? (root.solid ? zonePaper : paper)
-                   : hasFill ? ShellTheme.accent : "transparent")
+                   : hasFill ? (role === "sides" ? paper : ShellTheme.accent) : "transparent")
                 : hasFill ? colour
                 : legacyZone ? (root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#2c2c2e")
                              : "#000000";
@@ -264,7 +266,8 @@ Singleton {
             return {
                 background: bg, alpha: a,
                 blur: useCartoon ? false : typeof b === "boolean" ? b : false,
-                dynamic: first(t.mode, c.mode, defaultMode) !== "static",
+                // An opaque cartoon fill hides the wallpaper: its ink is fixed.
+                dynamic: !useCartoon && first(t.mode, c.mode, defaultMode) !== "static",
                 textColour: ink,
                 fill: Qt.rgba(rgb.r, rgb.g, rgb.b, a)
             };

@@ -64,7 +64,7 @@ Both zone shapes are honoured in `solid` too: the side shapes are drawn over the
 
 ## Cartoon look
 
-With `"style": "cartoon"` in [`shell-theme.json`](../session/theme.md#the-shell-theme), the bar keeps its structure and the way its shapes are drawn: `position`, `style`, zone shapes, `radius`, opacities and text modes still come from `bar.json`, as does the window rounding. Only the centre zone is repainted — lilac, or copper in `cuivre-cyan`, with an ink outline and larger workspace marks. The band and the sides keep the fills, text and shapes from `bar.json`. The side groups, audio and battery are left unframed; accents mark the current workspace and an appointment. Switch back to `default` to get your own colours and glass again.
+With `"style": "cartoon"` in [`shell-theme.json`](../session/theme.md#the-shell-theme), `position`, `style`, zone shapes, `radius`, opacities and the window rounding still come from `bar.json`. The colours come from the theme: the band and the sides take the drawers' panel colour, the centre the accent, and the text follows them. An ink outline follows each shape where it meets the desktop: the concave corners, a notch's curves, the ends of an island or a pill. Switch back to `default` to get your own colours and glass again.
 
 ## Shapes to try
 

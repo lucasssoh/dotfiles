@@ -30,6 +30,11 @@ Item {
     // blanche bizarre qui n'est pas censé être là").
     property color rimColor: DrawerTheme.paneRim
     property color highlightColor: DrawerTheme.paneHighlight
+    // A pane flush against the screen: "top" or "bottom" draws no rim along
+    // that edge, nor along the sides for `openCut` px from it (a notch's
+    // fillets carry the line there instead).
+    property string openEdge: ""
+    property real openCut: 0
 
     anchors.fill: parent
 
@@ -73,16 +78,29 @@ Item {
         }
     }
 
-    Rectangle {
+    Item {
         visible: !edge.fade || ShellTheme.cartoon
-        anchors.fill: parent
-        color: "transparent"
-        topLeftRadius: edge.topLeftRadius
-        topRightRadius: edge.topRightRadius
-        bottomLeftRadius: edge.bottomLeftRadius
-        bottomRightRadius: edge.bottomRightRadius
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
-        border.color: edge.rimColor
+        readonly property real cut: edge.openEdge !== "" ? edge.openCut : 0
+        // Past the open edge by more than the line, so it falls outside.
+        readonly property real spill: edge.openEdge !== "" ? rim.border.width + 1 : 0
+        y: edge.openEdge === "top" ? cut : 0
+        width: edge.width
+        height: Math.max(0, edge.height - cut)
+        clip: edge.openEdge !== ""
+
+        Rectangle {
+            id: rim
+            y: edge.openEdge === "top" ? -parent.cut - parent.spill : 0
+            width: edge.width
+            height: edge.height + parent.spill
+            color: "transparent"
+            topLeftRadius: edge.topLeftRadius
+            topRightRadius: edge.topRightRadius
+            bottomLeftRadius: edge.bottomLeftRadius
+            bottomRightRadius: edge.bottomRightRadius
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.color: edge.rimColor
+        }
     }
 
     // The top light: a second ring one pixel in, kept to the top band so
