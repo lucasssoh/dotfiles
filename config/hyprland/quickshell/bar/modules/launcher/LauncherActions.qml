@@ -88,10 +88,10 @@ Item {
         height: 30
         radius: IslandStyle.round(8)
         color: rowArea.containsMouse
-        border.width: DrawerTheme.edgeWidth()
-        border.color: DrawerTheme.edgeColour()
             ? arow.hoverFill
             : DrawerTheme.clear(arow.hoverFill)
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         Behavior on color { ColorAnimation { duration: 100 } }
 
         readonly property color fg: arow.destructive ? DrawerTheme.danger : DrawerTheme.primary

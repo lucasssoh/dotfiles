@@ -258,10 +258,10 @@ Item {
                         height: 36
                         radius: IslandStyle.round(18)
                         color: modelData.main
-                        border.width: DrawerTheme.edgeWidth()
-                        border.color: DrawerTheme.edgeColour()
                             ? (hover.containsMouse ? Qt.darker(DrawerTheme.on, DrawerTheme.dark ? 1.08 : 0.8) : DrawerTheme.on)
                             : (hover.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
+                        border.width: DrawerTheme.edgeWidth()
+                        border.color: DrawerTheme.edgeColour()
                         Text {
                             id: label
                             anchors.centerIn: parent
