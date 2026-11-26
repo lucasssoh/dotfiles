@@ -51,8 +51,8 @@ Item {
         height: ShellTheme.cartoon ? 10 : 4
         radius: height / 2
         color: root.tint
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         // Quiet at rest, clearly live on hover -- it is an affordance,
         // not a piece of the panel's information.
         opacity: hit.containsMouse ? 0.9 : 0.4

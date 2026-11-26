@@ -27,9 +27,8 @@ Rectangle {
     height: cap.size
     radius: cap.size / 2
     color: DrawerTheme.card
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : Math.max(1.2, cap.size / 32)
-    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(cap.tinted ? 0.16 : 0.28)
-
+    border.width: DrawerTheme.edgeWidth(Math.max(1.2, cap.size / 32))
+    border.color: DrawerTheme.edgeColour(DrawerTheme.ink(cap.tinted ? 0.16 : 0.28))
     Text {
         visible: cap.kind === "letter"
         anchors.centerIn: parent

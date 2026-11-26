@@ -53,11 +53,11 @@ Rectangle {
     // nothing has switched on carries no edge at all. It also means
     // the layer is allocated only for the one element in play.
     color: input.activeFocus ? DrawerTheme.cardRaised : DrawerTheme.card
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+    border.width: DrawerTheme.edgeWidth(1)
     // The focus ring is the only cue that keystrokes are landing here --
     // there is no window title bar or system focus indicator on a layer
     // surface to fall back on.
-    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (input.activeFocus ? DrawerTheme.accent : DrawerTheme.ink(0.10))
+    border.color: DrawerTheme.edgeColour(input.activeFocus ? DrawerTheme.accent : DrawerTheme.ink(0.10))
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 

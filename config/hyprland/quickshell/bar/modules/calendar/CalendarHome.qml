@@ -252,7 +252,7 @@ Item {
                                 : "transparent"
                             border.width: ShellTheme.cartoon && (modelData.today || cellHit.containsMouse)
                                 ? Math.min(ShellTheme.outline, 2) : 0
-                            border.color: ShellTheme.outlineColour
+                            border.color: DrawerTheme.edgeColour()
                         }
 
                         Text {

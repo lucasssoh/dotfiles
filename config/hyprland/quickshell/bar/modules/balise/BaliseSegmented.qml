@@ -63,15 +63,14 @@ Item {
                     ? (pillArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
                     : (pillArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.cardHover)
                 Behavior on color { ColorAnimation { duration: 120 } }
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                border.color: ShellTheme.outlineColour
-
+                border.width: DrawerTheme.edgeWidth()
+                border.color: DrawerTheme.edgeColour()
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.QtRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
-                    color: ShellTheme.cartoon && pill.selected ? ShellTheme.ink : (pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary)
+                    color: pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary
                     font.family: Fonts.ui
                     font.pixelSize: 12
                     font.weight: Fonts.weight(pill.selected ? Font.Bold : Font.Normal)

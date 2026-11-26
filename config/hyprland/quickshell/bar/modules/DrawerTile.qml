@@ -59,18 +59,12 @@ Rectangle {
     // the inverse one, the way HyperOS control-centre tiles light up and
     // the way the bar's active workspace already reads. Hover is a small
     // step in the same direction on either side.
-    color: ShellTheme.cartoon && tile.active
-        ? (mouseArea.containsMouse ? Qt.lighter(tile.pastel, 1.06) : tile.pastel)
-        : tile.active
-        ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
-        : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
+    color: DrawerTheme.tileFill(tile.active, mouseArea.containsMouse, tile.pastel)
     Behavior on color { ColorAnimation { duration: 120 } }
     // On: a stronger veil and a fine edge, not a block of `on` (V3).
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : (tile.active ? 1 : 0)
-    border.color: ShellTheme.outlineColour
-
-
-    readonly property color fg: ShellTheme.cartoon && tile.active ? ShellTheme.ink : (tile.active ? DrawerTheme.activeInk : DrawerTheme.primary)
+    border.width: DrawerTheme.edgeWidth(tile.active ? 1 : 0)
+    border.color: DrawerTheme.edgeColour(DrawerTheme.activeEdge)
+    readonly property color fg: tile.active ? DrawerTheme.activeInk : DrawerTheme.primary
 
     // Vertically centered rather than top-anchored with a fixed margin:
     // tiles differ in whether they carry a status line, and centering

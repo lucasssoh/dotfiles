@@ -26,8 +26,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color: sw.checked ? sw.accent : DrawerTheme.ink(0.18)
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Rectangle {
@@ -35,8 +35,8 @@ Item {
             height: 18
             radius: 9
             color: DrawerTheme.onInk
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-            border.color: ShellTheme.outlineColour
+            border.width: DrawerTheme.edgeWidth()
+            border.color: DrawerTheme.edgeColour()
             anchors.verticalCenter: parent.verticalCenter
             x: sw.checked ? parent.width - width - 2 : 2
             Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

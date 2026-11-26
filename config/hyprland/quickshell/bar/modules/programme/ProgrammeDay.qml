@@ -36,9 +36,8 @@ Column {
                 height: block.implicitHeight + 16
                 radius: 12
                 color: line.r.type === "course" ? DrawerTheme.card : "transparent"
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : (line.r.type === "session" ? 1 : 0)
-                border.color: ShellTheme.outlineColour
-
+                border.width: DrawerTheme.edgeWidth(line.r.type === "session" ? 1 : 0)
+                border.color: DrawerTheme.edgeColour(DrawerTheme.primary)
                 Canvas {
                     anchors.fill: parent
                     visible: line.r.type === "offer"
@@ -46,7 +45,7 @@ Column {
                         const c = getContext("2d");
                         c.reset();
                         c.setLineDash([4, 4]);
-                        c.strokeStyle = ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.muted;
+                        c.strokeStyle = DrawerTheme.edgeColour(DrawerTheme.muted);
                         c.lineWidth = ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 1;
                         c.beginPath();
                         c.roundedRect(0.5, 0.5, width - 1, height - 1, 12, 12);

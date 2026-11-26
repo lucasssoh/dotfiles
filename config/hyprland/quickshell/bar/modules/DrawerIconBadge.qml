@@ -37,7 +37,7 @@ Rectangle {
     // veil and its normal inks, see DrawerTheme's "active" block.
     color: badge.active ? DrawerTheme.activeDisc : (ShellTheme.cartoon ? badge.accent : DrawerTheme.cardRaised)
     border.width: ShellTheme.cartoon && !badge.active ? ShellTheme.outline : 0
-    border.color: ShellTheme.outlineColour
+    border.color: DrawerTheme.edgeColour()
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Text {

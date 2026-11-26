@@ -433,10 +433,9 @@ Item {
                 height: 196
                 radius: 26
                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                 CartoonGloss { active: on; opacityScale: 0.7 }
-                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
-
+                border.color: DrawerTheme.edgeColour(on ? DrawerTheme.primary : "transparent")
                 ClippingRectangle {
                     x: 14
                     y: 14
@@ -537,9 +536,9 @@ Item {
                             height: 210
                             radius: 18
                             color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                            border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                            border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                             CartoonGloss { active: on; opacityScale: 0.7 }
-                            border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
+                            border.color: DrawerTheme.edgeColour(on ? DrawerTheme.primary : "transparent")
                             scale: on ? 1.04 : 1
                             Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
 
@@ -618,9 +617,9 @@ Item {
                                 height: 56
                                 radius: 16
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                                border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                                 CartoonGloss { active: on; opacityScale: 0.7 }
-                                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
+                                border.color: DrawerTheme.edgeColour(on ? DrawerTheme.primary : "transparent")
                                 IconImage {
                                     x: 12
                                     anchors.verticalCenter: parent.verticalCenter
@@ -677,9 +676,9 @@ Item {
                                 height: 56
                                 radius: 16
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                                border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                                 CartoonGloss { active: on; opacityScale: 0.7 }
-                                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
+                                border.color: DrawerTheme.edgeColour(on ? DrawerTheme.primary : "transparent")
                                 Row {
                                     id: sysRow
                                     anchors.centerIn: parent
@@ -742,8 +741,8 @@ Item {
                         anchors.margins: 6
                         radius: 22
                         color: cell.on ? DrawerTheme.cardRaised : DrawerTheme.card
-                        border.width: ShellTheme.cartoon ? ShellTheme.outline : (cell.on ? 2 : 0)
-                        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (cell.on ? DrawerTheme.primary : "transparent")
+                        border.width: DrawerTheme.edgeWidth(cell.on ? 2 : 0)
+                        border.color: DrawerTheme.edgeColour(cell.on ? DrawerTheme.primary : "transparent")
                         scale: cell.on ? 1.04 : 1
                         Column {
                             anchors.centerIn: parent

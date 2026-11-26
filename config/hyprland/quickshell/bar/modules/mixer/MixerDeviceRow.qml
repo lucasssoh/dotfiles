@@ -28,10 +28,8 @@ Rectangle {
     width: parent ? parent.width : 0
     height: 34
     radius: 10
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-    border.color: ShellTheme.outlineColour
-
-
+    border.width: DrawerTheme.edgeWidth()
+    border.color: DrawerTheme.edgeColour()
     // The current entry gets no fill at all, only the tick on the right.
     // It was given the lit `accentSoft` treatment first and that was
     // wrong: in a list whose whole job is "click one of these", a

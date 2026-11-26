@@ -503,8 +503,8 @@ Item {
                         height: width
                         radius: width / 2
                         color: curve.dischargeColor
-                        border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
-                        border.color: ShellTheme.outlineColour
+                        border.width: DrawerTheme.edgeWidth(0, 2)
+                        border.color: DrawerTheme.edgeColour()
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -524,8 +524,8 @@ Item {
                         height: width
                         radius: width / 2
                         color: curve.chargeColor
-                        border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
-                        border.color: ShellTheme.outlineColour
+                        border.width: DrawerTheme.edgeWidth(0, 2)
+                        border.color: DrawerTheme.edgeColour()
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter

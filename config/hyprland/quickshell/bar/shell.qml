@@ -1466,7 +1466,7 @@ ShellRoot {
                 rowIslandColor: islandGlass.fill
                 // No border: neither the rim nor the top light ("enlève la
                 // bordure"); the glass and its shadow draw the island.
-                rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : "transparent"
+                rowIslandRim: DrawerTheme.edgeColour()
                 // Notch, dome and flush hang from the screen edge.
                 rowIslandOpenEdge: IslandStyle.inset > 0 ? "" : BarPosition.bottom ? "bottom" : "top"
                 rowIslandOpenCut: IslandStyle.style === "notch" ? IslandStyle.fillet : 0

@@ -102,7 +102,7 @@ Item {
         radius: ShellTheme.cartoon ? Math.min(height / 2, 24) : 14
         color: DrawerTheme.card
         border.width: ShellTheme.cartoon ? ShellTheme.outline + 1 : 0
-        border.color: ShellTheme.outlineColour
+        border.color: DrawerTheme.edgeColour()
     }
 
     // Under the pointer the line lightens a touch, as a toast does.

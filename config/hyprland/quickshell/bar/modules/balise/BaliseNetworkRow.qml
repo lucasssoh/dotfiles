@@ -51,10 +51,9 @@ Rectangle {
         : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
     // Connected: a stronger veil and a fine edge, only the disc inverts (V3).
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : (row.connected ? 1 : 0)
+    border.width: DrawerTheme.edgeWidth(row.connected ? 1 : 0)
     CartoonGloss { active: row.connected }
-    border.color: ShellTheme.outlineColour
-
+    border.color: DrawerTheme.edgeColour(DrawerTheme.activeEdge)
     MouseArea {
         id: rowArea
         anchors.fill: parent
@@ -73,8 +72,7 @@ Rectangle {
         radius: width / 2
         color: row.connected ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
         border.width: 0
-        border.color: ShellTheme.outlineColour
-
+        border.color: DrawerTheme.edgeColour()
         Text {
             anchors.centerIn: parent
             renderType: Text.QtRendering
@@ -109,7 +107,7 @@ Rectangle {
             // this bar yet, and the security type is spelled out on the
             // status line right below anyway.
             text: row.modelData.ssid || ""
-            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
+            color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -129,7 +127,7 @@ Rectangle {
                 const saved = row.modelData.is_saved ? " · Saved" : "";
                 return sec + " · " + (row.modelData.signal || 0) + "%" + saved;
             }
-            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+            color: row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

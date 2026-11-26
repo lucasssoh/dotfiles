@@ -88,8 +88,8 @@ Item {
         height: 30
         radius: 8
         color: rowArea.containsMouse
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
             ? arow.hoverFill
             : DrawerTheme.clear(arow.hoverFill)
         Behavior on color { ColorAnimation { duration: 100 } }

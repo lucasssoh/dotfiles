@@ -469,16 +469,11 @@ Item {
         // panel that is switched off now recedes into it, and only what
         // is on or under the pointer comes forward.
         // Inverted when on, flat and rimless -- same rule as DrawerTile.
-        color: ShellTheme.cartoon && trow.checked
-            ? (mouseArea.containsMouse ? Qt.lighter(trow.pastel, 1.06) : trow.pastel)
-            : trow.checked
-            ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
-            : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
+        color: DrawerTheme.tileFill(trow.checked, mouseArea.containsMouse, trow.pastel)
         Behavior on color { ColorAnimation { duration: 120 } }
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : (trow.checked ? 1 : 0)
+        border.width: DrawerTheme.edgeWidth(trow.checked ? 1 : 0)
         CartoonGloss { active: trow.checked }
-        border.color: ShellTheme.outlineColour
-
+        border.color: DrawerTheme.edgeColour(DrawerTheme.activeEdge)
         // The same badge the connectivity tiles above carry -- asked
         // for, so that SYSTEM reads as the same kind of control as the
         // grid rather than as a list of bare labels. One shared
@@ -512,7 +507,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: ShellTheme.cartoon && trow.checked ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary)
+                color: trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary
                 font.family: Fonts.ui
                 // 13, matching DrawerTile's own title, not the 14 these
                 // rows used before they had icons. Two reasons and they
@@ -531,7 +526,7 @@ Item {
                 renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: ShellTheme.cartoon && trow.checked ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+                color: trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary
                 font.family: Fonts.ui
                 font.pixelSize: 12
                 elide: Text.ElideRight
@@ -572,8 +567,8 @@ Item {
         // SYSTEM). The hairline it used to need is gone: the neutral card
         // tier now stands off the black panel on its own.
         color: mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         Behavior on color { ColorAnimation { duration: 120 } }
 
         // Never `active`: a one-shot action has no on-state to tint,

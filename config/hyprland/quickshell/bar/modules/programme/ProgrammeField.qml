@@ -15,9 +15,8 @@ Rectangle {
     height: 40
     radius: 12
     color: DrawerTheme.card
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : (input.activeFocus ? 1 : 0)
-    border.color: ShellTheme.outlineColour
-
+    border.width: DrawerTheme.edgeWidth(input.activeFocus ? 1 : 0)
+    border.color: DrawerTheme.edgeColour(DrawerTheme.secondary)
     TextInput {
         id: input
         anchors.fill: parent

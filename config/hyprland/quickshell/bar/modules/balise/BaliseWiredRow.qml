@@ -42,10 +42,9 @@ Rectangle {
         : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
     // Connected: a stronger veil and a fine edge, only the disc inverts (V3).
-    border.width: ShellTheme.cartoon ? ShellTheme.outline : (row.connected ? 1 : 0)
+    border.width: DrawerTheme.edgeWidth(row.connected ? 1 : 0)
     CartoonGloss { active: row.connected }
-    border.color: ShellTheme.outlineColour
-
+    border.color: DrawerTheme.edgeColour(DrawerTheme.activeEdge)
     MouseArea {
         id: rowArea
         anchors.fill: parent
@@ -64,8 +63,7 @@ Rectangle {
         radius: width / 2
         color: row.connected ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
         border.width: 0
-        border.color: ShellTheme.outlineColour
-
+        border.color: DrawerTheme.edgeColour()
         Text {
             anchors.centerIn: parent
             renderType: Text.QtRendering
@@ -92,7 +90,7 @@ Rectangle {
             renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || row.modelData.device_name || ""
-            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
+            color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -105,7 +103,7 @@ Rectangle {
             text: row.connected
                 ? ("Connected" + (row.modelData.ip4_address ? " · " + row.modelData.ip4_address : ""))
                 : (row.modelData.has_carrier ? "Cable plugged in" : "Unplugged")
-            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+            color: row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

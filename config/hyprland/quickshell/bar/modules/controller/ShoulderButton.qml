@@ -19,7 +19,7 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            strokeColor: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.28)
+            strokeColor: DrawerTheme.edgeColour(DrawerTheme.ink(0.28))
             strokeWidth: ShellTheme.cartoon ? ShellTheme.outline : 1.2
             fillColor: ShellTheme.cartoon ? ShellTheme.highlight : "transparent"
             PathSvg {

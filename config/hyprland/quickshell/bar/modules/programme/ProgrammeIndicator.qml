@@ -92,8 +92,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color: ShellTheme.cartoon ? ShellTheme.accent : "transparent"
-        border.width: ShellTheme.cartoon ? Math.min(2, ShellTheme.outline) : 1
-        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : root.ink.primary
+        border.width: DrawerTheme.edgeWidth(1, 2)
+        border.color: DrawerTheme.edgeColour(root.ink.primary)
         visible: root.imminent
         opacity: ShellTheme.cartoon ? 1 : 0.8
     }

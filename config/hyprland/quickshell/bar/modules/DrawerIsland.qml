@@ -301,7 +301,7 @@ Item {
     // would darken the inside too.
     property color rowIslandColor: DrawerTheme.islandPane
     // Cartoon marks the zone groups with a strong outline, not a shadow.
-    property color rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : root.paneRim
+    property color rowIslandRim: DrawerTheme.edgeColour(root.paneRim)
     // The slab's edge against the screen, if any: see PaneEdge.openEdge.
     property string rowIslandOpenEdge: ""
     property real rowIslandOpenCut: 0

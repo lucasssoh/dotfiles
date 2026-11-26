@@ -176,8 +176,8 @@ Item {
                 height: 50
                 radius: IslandStyle.tileRadius
                 color: ShellTheme.cartoon ? ShellTheme.highlight : DrawerTheme.card
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                border.color: ShellTheme.outlineColour
+                border.width: DrawerTheme.edgeWidth()
+                border.color: DrawerTheme.edgeColour()
                 Text {
                     id: glass
                     x: 18
@@ -298,9 +298,8 @@ Item {
                     anchors.bottomMargin: 2
                     radius: 14
                     color: entry.on ? DrawerTheme.cardHover : (hit.containsMouse ? DrawerTheme.ink(0.03) : "transparent")
-                    border.width: ShellTheme.cartoon ? ShellTheme.outline : (entry.on ? 1 : 0)
-                    border.color: ShellTheme.outlineColour
-
+                    border.width: DrawerTheme.edgeWidth(entry.on ? 1 : 0)
+                    border.color: DrawerTheme.edgeColour(DrawerTheme.muted)
                     ProgrammeText {
                         id: kind
                         x: 12
@@ -402,8 +401,8 @@ Item {
             width: 300
             radius: 22
             color: ShellTheme.cartoon ? ShellTheme.info : "transparent"
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
-            border.color: ShellTheme.outlineColour
+            border.width: DrawerTheme.edgeWidth(1)
+            border.color: DrawerTheme.edgeColour(DrawerTheme.ink(0.12))
             readonly property var r: root.selected ? root.selected.row : null
             readonly property int hitSection: root.selected ? root.selected.section : -1
 

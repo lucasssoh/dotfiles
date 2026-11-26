@@ -156,9 +156,8 @@ Item {
             height: 132
             radius: 14
             color: DrawerTheme.card
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-            border.color: ShellTheme.outlineColour
-
+            border.width: DrawerTheme.edgeWidth()
+            border.color: DrawerTheme.edgeColour()
             RevealPop { item: eqCard; index: 2 }
 
             Row {

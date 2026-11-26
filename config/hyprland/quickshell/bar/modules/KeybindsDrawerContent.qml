@@ -220,7 +220,7 @@ Item {
                         : cap.lit ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card)
                     border.width: ShellTheme.cartoon
                         ? ShellTheme.outline : (cap.lit || cap.held ? 0 : 1)
-                    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.12)
+                    border.color: DrawerTheme.edgeColour(DrawerTheme.ink(0.12))
                     opacity: cap.elsewhere ? 0.5 : 1
                     CartoonGloss { active: cap.lit && !cap.held; opacityScale: 0.7 }
                     Behavior on color { ColorAnimation { duration: 150 } }

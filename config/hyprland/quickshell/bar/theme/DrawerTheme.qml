@@ -70,6 +70,35 @@ QtObject {
         return Qt.tint(ShellTheme.surfaceCard, Qt.rgba(ShellTheme.accent.r, ShellTheme.accent.g, ShellTheme.accent.b, amount));
     }
 
+    // ---- edges ---------------------------------------------------------
+    // A surface's edge in the current look, decided here and nowhere else.
+    // A component states the edge it wants in glass (a hairline, its
+    // colour, or nothing); cartoon inks every surface with the theme's
+    // outline, at most `inkMax` thick for small things.
+    function edgeWidth(glassWidth, inkMax) {
+        if (ShellTheme.cartoon)
+            return inkMax === undefined ? ShellTheme.outline : Math.min(ShellTheme.outline, inkMax);
+        return glassWidth === undefined ? 0 : glassWidth;
+    }
+    function edgeColour(glassColour) {
+        if (ShellTheme.cartoon)
+            return ShellTheme.outlineColour;
+        return glassColour === undefined ? "transparent" : glassColour;
+    }
+
+    // ---- tiles -----------------------------------------------------------
+    // A tile's fill, on or off, at rest or under the pointer. On, glass
+    // takes the stronger veil; cartoon fills with the tile's own accent
+    // (`tint`, its category), a step lighter under the pointer.
+    function tileFill(active, hovered, tint) {
+        if (!active)
+            return hovered ? root.cardHover : root.card;
+        if (!ShellTheme.cartoon)
+            return hovered ? root.activeFillHover : root.activeFill;
+        const t = tint === undefined ? root.activeFill : tint;
+        return hovered ? Qt.lighter(t, 1.06) : t;
+    }
+
     // The primary ink at `alpha` -- what every `Qt.rgba(1, 1, 1, a)` in
     // the drawers became.
     function ink(alpha) {

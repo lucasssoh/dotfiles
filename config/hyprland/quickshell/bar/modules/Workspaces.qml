@@ -128,7 +128,7 @@ Item {
                     // the short dots and the lemon active one.
                     border.width: ShellTheme.cartoon
                         ? Math.min(ShellTheme.outline, 2) : (mark.hollow ? 1.2 : 0)
-                    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : mark.ink
+                    border.color: DrawerTheme.edgeColour(mark.ink)
                     // The bar stretching into place on a workspace switch.
                     // Rare (workspace changes only): a one-off burst, not a
                     // recurring cost.

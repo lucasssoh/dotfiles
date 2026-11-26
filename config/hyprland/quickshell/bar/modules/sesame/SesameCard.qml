@@ -108,8 +108,8 @@ Item {
                     height: 42
                     radius: 14
                     color: DrawerTheme.card
-                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                    border.color: ShellTheme.outlineColour
+                    border.width: DrawerTheme.edgeWidth()
+                    border.color: DrawerTheme.edgeColour()
                     Text {
                         anchors.centerIn: parent
                         text: root.glyph
@@ -165,9 +165,8 @@ Item {
                     height: steps.height + 12 * 2
                     radius: 14
                     color: DrawerTheme.card
-                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                    border.color: ShellTheme.outlineColour
-
+                    border.width: DrawerTheme.edgeWidth()
+                    border.color: DrawerTheme.edgeColour()
                     Column {
                         id: steps
                         x: 14
@@ -212,9 +211,8 @@ Item {
                 height: 42
                 radius: 13
                 color: "transparent"
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : (field.activeFocus ? 1.5 : 1)
-                border.color: ShellTheme.outlineColour
-
+                border.width: DrawerTheme.edgeWidth(field.activeFocus ? 1.5 : 1)
+                border.color: DrawerTheme.edgeColour(field.activeFocus ? DrawerTheme.primary : DrawerTheme.faint)
                 TextInput {
                     id: field
                     anchors.fill: parent
@@ -260,8 +258,8 @@ Item {
                         height: 36
                         radius: 18
                         color: modelData.main
-                        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                        border.color: ShellTheme.outlineColour
+                        border.width: DrawerTheme.edgeWidth()
+                        border.color: DrawerTheme.edgeColour()
                             ? (hover.containsMouse ? Qt.darker(DrawerTheme.on, DrawerTheme.dark ? 1.08 : 0.8) : DrawerTheme.on)
                             : (hover.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
                         Text {

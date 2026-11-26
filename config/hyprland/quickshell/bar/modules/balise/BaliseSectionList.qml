@@ -87,8 +87,8 @@ Item {
             // nothing has switched on carries no edge at all. It also means
             // the layer is allocated only for the one element in play.
             color: backArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.card
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-            border.color: ShellTheme.outlineColour
+            border.width: DrawerTheme.edgeWidth()
+            border.color: DrawerTheme.edgeColour()
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Text {
@@ -208,8 +208,8 @@ Item {
         // nothing has switched on carries no edge at all. It also means
         // the layer is allocated only for the one element in play.
         color: masterArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Column {
@@ -255,8 +255,8 @@ Item {
             height: 22
             radius: 11
             color: root.masterChecked ? root.accent : DrawerTheme.ink(0.18)
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-            border.color: ShellTheme.outlineColour
+            border.width: DrawerTheme.edgeWidth()
+            border.color: DrawerTheme.edgeColour()
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Rectangle {
@@ -264,8 +264,8 @@ Item {
                 height: 18
                 radius: 9
                 color: DrawerTheme.onInk
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                border.color: ShellTheme.outlineColour
+                border.width: DrawerTheme.edgeWidth()
+                border.color: DrawerTheme.edgeColour()
                 anchors.verticalCenter: parent.verticalCenter
                 x: root.masterChecked ? parent.width - width - 2 : 2
                 Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

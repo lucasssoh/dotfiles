@@ -298,8 +298,8 @@ Item {
                 height: 20
                 radius: 10
                 color: NotificationState.dnd ? DrawerTheme.accent : DrawerTheme.cardRaised
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : (NotificationState.dnd ? 0 : 1)
-                border.color: ShellTheme.outlineColour
+                border.width: DrawerTheme.edgeWidth(NotificationState.dnd ? 0 : 1)
+                border.color: DrawerTheme.edgeColour(DrawerTheme.ink(DrawerTheme.dark ? 0.10 : 0.12))
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 Rectangle {
@@ -311,8 +311,8 @@ Item {
                     height: 14
                     radius: 7
                     color: ShellTheme.cartoon ? "#ffffff" : (NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.secondary)
-                    border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
-                    border.color: ShellTheme.outlineColour
+                    border.width: DrawerTheme.edgeWidth(0, 2)
+                    border.color: DrawerTheme.edgeColour()
                     Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                     Behavior on color { ColorAnimation { duration: 140 } }
                 }
@@ -480,8 +480,8 @@ Item {
             anchors.fill: parent
             radius: width / 2
             color: ShellTheme.cartoon ? (tb.enabled ? ShellTheme.highlight : DrawerTheme.cardRaised) : DrawerTheme.cardHover
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-            border.color: ShellTheme.outlineColour
+            border.width: DrawerTheme.edgeWidth()
+            border.color: DrawerTheme.edgeColour()
             opacity: ShellTheme.cartoon ? 1 : ((tb.enabled && hover.containsMouse) ? 1 : 0)
             Behavior on opacity { NumberAnimation { duration: 110 } }
 
@@ -870,9 +870,8 @@ Item {
                     height: 22
                     radius: ShellTheme.cartoon ? 10 : 7
                     color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
-                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-                    border.color: ShellTheme.outlineColour
-
+                    border.width: DrawerTheme.edgeWidth()
+                    border.color: DrawerTheme.edgeColour()
                     Image {
                         id: appImage
                         anchors.fill: parent

@@ -82,7 +82,7 @@ Rectangle {
         radius: tile.radius
         color: "transparent"
         border.width: tile.ink
-        border.color: ShellTheme.outlineColour
+        border.color: DrawerTheme.edgeColour()
         z: 1
     }
 

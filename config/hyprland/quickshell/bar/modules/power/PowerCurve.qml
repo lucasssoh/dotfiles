@@ -124,7 +124,7 @@ Item {
         radius: Math.min(IslandStyle.tileRadius, height / 2)
         color: "transparent"
         border.width: ShellTheme.outline
-        border.color: ShellTheme.outlineColour
+        border.color: DrawerTheme.edgeColour()
     }
 
     // ---------------------------------------------------------------
@@ -294,7 +294,7 @@ Item {
         y: 0
         height: root.plotHeight
         x: root.hoverPoint ? root.xOf(root.hoverPoint.t) : 0
-        color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.22)
+        color: DrawerTheme.edgeColour(DrawerTheme.ink(0.22))
     }
 
     Rectangle {
@@ -306,8 +306,8 @@ Item {
         x: (root.hoverPoint ? root.xOf(root.hoverPoint.t) : 0) - 3.5
         y: (root.hoverPoint ? root.yOf(root.hoverPoint.pct) : 0) - 3.5
         color: root.hoverPoint && root.hoverPoint.up ? root.chargeColor : root.dischargeColor
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 1.5
-        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.cardDeep
+        border.width: DrawerTheme.edgeWidth(1.5)
+        border.color: DrawerTheme.edgeColour(DrawerTheme.cardDeep)
     }
 
     Rectangle {
@@ -321,9 +321,8 @@ Item {
         height: 20
         radius: 10
         color: DrawerTheme.accentStrongest
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
-
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         // Centred on the crosshair, then clamped so it never hangs off
         // either end of the plot.
         x: {

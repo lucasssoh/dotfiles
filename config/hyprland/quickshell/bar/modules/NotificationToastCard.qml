@@ -159,8 +159,8 @@ Rectangle {
         // Concentric with the card around it.
         radius: Math.max(6, IslandStyle.radius - card.pad)
         color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
-        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
-        border.color: ShellTheme.outlineColour
+        border.width: DrawerTheme.edgeWidth()
+        border.color: DrawerTheme.edgeColour()
         clip: true
 
         Image {
@@ -280,7 +280,7 @@ Rectangle {
                 height: card.thumbHeight
                 radius: 14
                 color: "transparent"
-                border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+                border.width: DrawerTheme.edgeWidth(1)
                 border.color: DrawerTheme.paneRim
             }
         }

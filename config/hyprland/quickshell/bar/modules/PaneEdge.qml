@@ -58,7 +58,7 @@ Item {
             topRightRadius: edge.topRightRadius
             bottomLeftRadius: edge.bottomLeftRadius
             bottomRightRadius: edge.bottomRightRadius
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.width: DrawerTheme.edgeWidth(1)
             border.color: edge.rimColor
         }
     }
@@ -98,7 +98,7 @@ Item {
             topRightRadius: edge.topRightRadius
             bottomLeftRadius: edge.bottomLeftRadius
             bottomRightRadius: edge.bottomRightRadius
-            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.width: DrawerTheme.edgeWidth(1)
             border.color: edge.rimColor
         }
     }
