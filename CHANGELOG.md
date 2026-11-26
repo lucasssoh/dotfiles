@@ -5,13 +5,13 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ## Unreleased
 
 ### Added
-- **Window borders:** in cartoon, Hyprland windows wear a pronounced ink outline and no shadow at all: lighter grey on a dark desktop, black on a light one, with a quieter outline for idle windows and a short hard shadow that always falls down-right; the default glass gradient is untouched. The borders follow `shell-theme.json` live.
-- **Cartoon theme:** a faint top-edge reflection on the drawer panels, on controls that are on, and on active-but-unpressed key sheet keys; other elements stay flat.
-- **Shell theme:** a `cuivre-cyan` palette for the cartoon look, following the "3 touches" mockup: copper, cyan, indigo and sage touches on neutral #292929 shells and #3b3b3b cards, with each colour sorted by control category. Set it with `"palette": "cuivre-cyan"` in `shell-theme.json`; the structure stays the same as the pastel palette.
-- **Shell theme:** a `cartoon` look you can switch on in `~/.config/hypr/shell-theme.json`, alongside the default glass look. It brings thick outlines, hard shadows, pastels and a rounded font to the bar, OSD, notifications, controller, mixer and key sheet, and to the tiles, buttons, switches, fields and charts inside the drawers. The file is watched, so saving it changes the look without a restart.
+- **Shell theme:** a cartoon look beside the default glass one: thick outlines, hard shadows, flat colours and a rounded font on the bar, OSD, notifications, controller, mixer, key sheet and drawers. The bar keeps its shapes from `bar.json`; its centre takes the theme. `Super + Shift + W` picks the look and its theme in fuzzel.
+- **Shell theme:** eighteen cartoon themes, each with a light and a dark mode. Your own go in `~/.config/hypr/themes/`, and saving one recolours the shell live.
+- **Shell theme:** WezTerm and Neovim take the selected theme's colours, light or dark, and follow when it changes. Neovim keeps the theme's background under any colorscheme.
+- **Window borders:** in cartoon, Hyprland windows wear an ink outline and no shadow: lighter grey on a dark desktop, black on a light one, quieter on idle windows. The default glass gradient is untouched.
+- **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
 
 ### Changed
-- **Cartoon theme:** the bar keeps `bar.json`'s shape drawing untouched and only changes its look: bar.json colours for the band and sides, cartoon centre, opaque fills, an ink outline on the centre block and on every workspace mark, and lemon/lilac accents for the current workspace and appointment. Fredoka's heaviest weights are softened in the bar and drawers.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.
 
 ## 2.7.3

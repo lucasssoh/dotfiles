@@ -92,7 +92,7 @@ Rectangle {
             renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || row.modelData.device_name || ""
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -105,7 +105,7 @@ Rectangle {
             text: row.connected
                 ? ("Connected" + (row.modelData.ip4_address ? " · " + row.modelData.ip4_address : ""))
                 : (row.modelData.has_carrier ? "Cable plugged in" : "Unplugged")
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

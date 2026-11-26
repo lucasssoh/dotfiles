@@ -1,0 +1,63 @@
+{
+  "schema": "coucou-theme/1",
+  "name": "Tokyo Night",
+  "font": "Fredoka",
+  "geometry": {
+    "outline-width": 3,
+    "radius": 18
+  },
+  "modes": {
+    "dark": {
+      "surfaces": {
+        "panel": "#16161e",
+        "card": "#1a1b26",
+        "card-hover": "#292e42",
+        "card-raised": "#394b70",
+        "card-sunken": "#0c0e14"
+      },
+      "text": {
+        "primary": "#c0caf5",
+        "secondary": "#a9b1d6",
+        "muted": "#737aa2",
+        "faint": "#565f89",
+        "on-accent": "#1a1b26"
+      },
+      "accents": {
+        "active": "#7aa2f7",
+        "highlight": "#e0af68",
+        "success": "#9ece6a",
+        "info": "#7dcfff",
+        "warning": "#ff9e64",
+        "danger": "#f7768e"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    },
+    "light": {
+      "surfaces": {
+        "panel": "#d0d5e3",
+        "card": "#e1e2e7",
+        "card-hover": "#c4c8da",
+        "card-raised": "#b7c1e3",
+        "card-sunken": "#b4b5b9"
+      },
+      "text": {
+        "primary": "#3760bf",
+        "secondary": "#6172b0",
+        "muted": "#848cb5",
+        "faint": "#a8aecb",
+        "on-accent": "#e1e2e7"
+      },
+      "accents": {
+        "active": "#2e7de9",
+        "highlight": "#8c6c3e",
+        "success": "#587539",
+        "info": "#007197",
+        "warning": "#b15c00",
+        "danger": "#f52a65"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    }
+  }
+}

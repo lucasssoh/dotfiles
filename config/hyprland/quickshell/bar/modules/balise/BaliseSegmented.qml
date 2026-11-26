@@ -71,7 +71,7 @@ Item {
                     renderType: Text.QtRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
-                    color: ShellTheme.cartoon ? ShellTheme.ink : (pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary)
+                    color: ShellTheme.cartoon && pill.selected ? ShellTheme.ink : (pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary)
                     font.family: Fonts.ui
                     font.pixelSize: 12
                     font.weight: Fonts.weight(pill.selected ? Font.Bold : Font.Normal)

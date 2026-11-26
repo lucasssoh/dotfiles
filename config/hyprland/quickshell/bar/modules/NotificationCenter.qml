@@ -479,7 +479,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: ShellTheme.cartoon ? (tb.enabled ? ShellTheme.lemon : DrawerTheme.cardRaised) : DrawerTheme.cardHover
+            color: ShellTheme.cartoon ? (tb.enabled ? ShellTheme.highlight : DrawerTheme.cardRaised) : DrawerTheme.cardHover
             border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
             border.color: ShellTheme.outlineColour
             opacity: ShellTheme.cartoon ? 1 : ((tb.enabled && hover.containsMouse) ? 1 : 0)
@@ -869,7 +869,7 @@ Item {
                     width: 22
                     height: 22
                     radius: ShellTheme.cartoon ? 10 : 7
-                    color: ShellTheme.cartoon ? ShellTheme.sky : DrawerTheme.cardRaised
+                    color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
                     border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
                     border.color: ShellTheme.outlineColour
 

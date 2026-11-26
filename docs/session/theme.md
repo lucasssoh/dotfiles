@@ -8,32 +8,81 @@ The Dark mode tile in [Balise](../bar/balise.md) switches the shell, GTK apps an
 
 ## The shell theme
 
-`~/.config/hypr/shell-theme.json` switches the whole shell between its two looks:
+`~/.config/hypr/shell-theme.json` only selects the look and the theme:
 
 ```json
-{ "style": "cartoon" }
+{ "style": "cartoon", "theme": "cuivre-cyan" }
 ```
 
 | `style` | Look |
 |---|---|
 | `default` | The regular glass bar, panes and MiSans interface font |
-| `cartoon` | Rounded panels with heavy black outlines and hard offset shadows, pastel accents, and the rounded Fredoka font |
+| `cartoon` | The inked, rounded look described below |
 
-Cartoon covers the bar, the OSD, notifications and toasts, the controller's popup and face buttons, the mixer, the key sheet and Hyprland's window borders (a pronounced outline and no shadow at all — a lighter grey on a dark desktop, black on a light one, with a lower-contrast outline for idle windows — instead of the glass gradient and halo). Inside every drawer, the tiles, rows, buttons, switches, fields, segments and charts are inked too: Balise, Power, the calendar, Programme, the launcher, Sesame and the library.
+## Theme files
 
-The bar keeps its own hierarchy and the way its shapes are drawn: `style`, zone shapes, `radius`, opacities and text modes still come from [`bar.json`](../bar/island.md#its-look), and the band, notches and fillets are drawn exactly as in the default look. For now only the centre zone is repainted (lilac, or copper in `cuivre-cyan`): the band and the sides keep the fills, text and shapes written in `bar.json`. The centre block and every workspace mark keep a strong ink outline, with larger circular states for the workspaces; the side groups, audio and battery stay unframed. Cartoon is opaque throughout. The faint fading top-edge reflection is reserved for the global drawer containers, controls that are on, and key sheet keys that are active but not held; other elements stay flat. Accents mark what matters: lemon for the current workspace, lilac for an upcoming appointment. In `cuivre-cyan`, the extra indigo and sage sort the controls by category — copper for Wi-Fi, profile and dark mode, indigo for Bluetooth and display, sage for Ethernet, fast charge and power states. The heaviest Fredoka weights are softened at the bar's small text sizes. Saving `shell-theme.json` changes the look on the running shell, without a restart.
+Each theme is one file in `~/.config/hypr/themes/<id>.json`, with one schema and both light and dark modes in the same file. Eighteen ship with the shell: `coucou` (the default, Neovim's coucou palette), `pastel`, `cuivre-cyan`, and bamboo, catppuccin, darkvoid, dracula, everforest, gruvbox, jellybeans-nvim, kanagawa, melange, nightfox, nord, oceanic-next, onedark, rose-pine and tokyonight. Add your own next to them.
 
-Optional keys let you tune the cartoon look:
+```json
+{
+  "schema": "coucou-theme/1",
+  "name": "My theme",
+  "font": "Fredoka",
+  "geometry": { "outline-width": 3, "radius": 18 },
+  "modes": {
+    "dark": {
+      "surfaces": {
+        "panel": "#292929",
+        "card": "#3b3b3b",
+        "card-hover": "#474747",
+        "card-raised": "#505050",
+        "card-sunken": "#1f1f1f"
+      },
+      "text": {
+        "primary": "#f1eee6",
+        "secondary": "#c8c8c4",
+        "muted": "#a0a09c",
+        "faint": "#757570",
+        "on-accent": "#000000"
+      },
+      "accents": {
+        "active": "#eda16b",
+        "highlight": "#74ccd2",
+        "success": "#a9c7a0",
+        "info": "#8fa6dc",
+        "warning": "#eda16b",
+        "danger": "#eda16b"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    },
+    "light": { "...": "the same keys, with your light colours" }
+  }
+}
+```
 
-| Key | Default | Effect |
-|---|---|---|
-| `palette` | `pastel` | Colourway of the cartoon look: `pastel` (lilac/lemon/mint) or `cuivre-cyan` (copper #EDA16B, cyan #74CCD2, indigo #8FA6DC and sage #A9C7A0 on #292929 shells and #3b3b3b cards) |
-| `font` | `Fredoka` | Interface font family, if you prefer another rounded face |
-| `outline` | `3` | Outline thickness, from 1 to 6 px |
-| `radius` | `18` | Base corner radius, from 12 to 32 px |
-| `accent` | `#c9baf5` | The main pastel, used for active controls |
+Every key is required in both modes, as `#rrggbb`. While a theme is missing or invalid, `coucou` stands in. Saving a theme recolours the running shell.
 
-A missing file means `default`. Fredoka is installed by `cc-pkg-mng install fonts` (SIL Open Font License 1.1).
+| Key | Where it shows |
+|---|---|
+| `surfaces.panel` | Drawer panels and sheet backgrounds |
+| `surfaces.card`, `card-hover`, `card-raised`, `card-sunken` | Cards inside the drawers |
+| `text.primary`, `secondary`, `muted`, `faint` | Text inside the drawers |
+| `text.on-accent` | Text on an accent fill |
+| `accents.active` | Active tiles, Wi-Fi, dark mode, the centre zone |
+| `accents.highlight` | Current workspace, today in the calendar |
+| `accents.success` | Fast charge and other good states |
+| `accents.info` | Bluetooth, display and night controls |
+| `accents.warning`, `accents.danger` | Warnings and alerts |
+| `outline`, `shadow` | Inked edges and shadows |
+| `geometry.outline-width`, `geometry.radius` | Outline thickness and corner radius |
+| `font` | Interface font family |
+
+`Super + Shift + W` lists Glass and every theme by its `name`. Glass keeps the theme, for when you switch back.
+
+## WezTerm and Neovim
+
+They take the selected theme's colours, light or dark, and follow when it changes. In Neovim, the `coucou` colorscheme takes the whole palette; any other colorscheme keeps its colours on the theme's background, except with `--bg=transparent`.
 
 ## Colours
 

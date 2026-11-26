@@ -156,16 +156,25 @@ local function apply_transparency()
     vim.defer_fn(clear_backgrounds, 250)
 end
 
-local function apply_bg(bg)
+-- The shell theme's palette (coucou.synced_palette): when there is one,
+-- its `bg` is the editor background whatever the colorscheme, so every
+-- theme sits on the shell's colour.
+local function synced_background()
+    local palette = require("coucou").synced_palette()
+    return palette and type(palette.bg) == "string" and palette.bg or nil
+end
+
+local function apply_bg(bg, color_override)
     if bg == "transparent" then
         apply_transparency()
         return
     end
 
-    local color = nil
-    if bg == "black" then
+    local color = color_override
+    if not color and bg == "black" then
         color = "#000000"
-    else
+    end
+    if not color then
         return
     end
 
@@ -208,7 +217,7 @@ local function apply_theme(name, bg, scheme)
     -- Fire the plugins' own ColorScheme handlers first, then clear: several
     -- of them (bufferline, coucou) rebuild their groups from that event.
     vim.cmd("doautocmd ColorScheme")
-    apply_bg(active_bg)
+    apply_bg(active_bg, synced_background())
 end
 
 local function save_theme(name, bg, scheme)
@@ -241,8 +250,9 @@ local function follow_system(on)
             for _, line in ipairs(lines) do
                 if line:find("color-scheme", 1, true) then
                     local bg = line:match("prefer%-dark") and "dark" or "light"
-                    if active_scheme == "auto" and active_name and bg ~= vim.o.background then
-                        apply_theme(active_name, active_bg, "auto")
+                    local follows = active_scheme == "auto" or active_name == "coucou"
+                    if follows and active_name and bg ~= vim.o.background then
+                        apply_theme(active_name, bg, active_scheme == "auto" and "auto" or bg)
                     end
                 end
             end
@@ -254,6 +264,37 @@ local function follow_system(on)
     if follow_job <= 0 then
         follow_job = nil
     end
+end
+
+-- Follow the shell theme while nvim runs: its palette file is rewritten
+-- when the theme changes. The directory is watched rather than the file,
+-- which is replaced (renamed over) on each write.
+local palette_watch = nil
+
+local function follow_palette()
+    if palette_watch or #vim.api.nvim_list_uis() == 0 then
+        return
+    end
+    local path = require("coucou").synced_path
+    local dir, name = vim.fs.dirname(path), vim.fs.basename(path)
+    vim.fn.mkdir(dir, "p")
+    palette_watch = vim.uv.new_fs_event()
+    if not palette_watch then
+        return
+    end
+    local pending = false
+    palette_watch:start(dir, {}, function(err, file)
+        if err or file ~= name or pending then
+            return
+        end
+        pending = true
+        vim.defer_fn(function()
+            pending = false
+            if active_name then
+                apply_theme(active_name, active_bg, active_scheme)
+            end
+        end, 100)
+    end)
 end
 
 -- :SetTheme [--auto|--light|--dark] [--bg=default|black|transparent] <theme>
@@ -332,6 +373,9 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     callback = function()
         if active_bg == "transparent" then
             apply_transparency()
+        else
+            local synced = synced_background()
+            if synced then apply_bg(active_bg, synced) end
         end
     end,
 })
@@ -339,8 +383,9 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
     callback = function()
-        apply_bg(saved_bg)
+        apply_bg(saved_bg, synced_background())
         follow_system(saved_scheme == "auto")
+        follow_palette()
     end,
 })
 

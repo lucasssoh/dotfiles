@@ -99,7 +99,7 @@ Rectangle {
             renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || ""
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -116,7 +116,7 @@ Rectangle {
                 }
                 return row.paired ? "Paired" : "Not paired";
             }
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

@@ -175,7 +175,7 @@ Item {
                 width: parent.width
                 height: 50
                 radius: ShellTheme.cartoon ? ShellTheme.radius : 25
-                color: ShellTheme.cartoon ? ShellTheme.lemon : DrawerTheme.card
+                color: ShellTheme.cartoon ? ShellTheme.highlight : DrawerTheme.card
                 border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
                 border.color: ShellTheme.outlineColour
                 Text {
@@ -401,7 +401,7 @@ Item {
             anchors.bottom: list.bottom
             width: 300
             radius: 22
-            color: ShellTheme.cartoon ? ShellTheme.sky : "transparent"
+            color: ShellTheme.cartoon ? ShellTheme.info : "transparent"
             border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
             border.color: ShellTheme.outlineColour
             readonly property var r: root.selected ? root.selected.row : null

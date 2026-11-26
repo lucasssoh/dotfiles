@@ -744,38 +744,58 @@ ShellRoot {
 
     // Hyprland's window borders follow the same theme switch. The Lua
     // config reads shell-theme.json at load; this keeps it in sync when
-    // the file changes on a running session. Switching back reloads the
-    // config so the author's own default borders come back untouched.
+    // the file or the mode changes on a running session. Switching back
+    // reloads the config so the author's own default borders come back
+    // untouched. The colours are hyprland.lua's cartoon pair: an ink
+    // outline, lighter grey on a dark desktop and black on a light one.
     Process {
         id: windowThemeApply
-        // The Lua reads the current light/dark mode itself, so there is no
-        // lag between the gsettings flip and the border change.
-        property string lua: !ShellTheme.cartoon ? "" :
-            'local m = io.popen("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null"); '
-               + 'local s = m and m:read("*a") or ""; if m then m:close() end; '
-               + 'local d = s:find("prefer%-dark") ~= nil; '
-               + 'local a = d and "rgba(4D4D4DFF)" or "rgba(000000FF)"; '
-               + 'local i = d and "rgba(242424FF)" or "rgba(00000040)"; '
-               + 'hl.config({ general = { col = { active_border = { colors = { a, a, a }, angle = 270 }, inactive_border = i } }, '
-               + 'decoration = { shadow = { enabled = false } } })'
-        command: ["hyprctl", "eval", windowThemeApply.lua]
+        readonly property string active: AppearanceState.dark ? "rgba(4D4D4DFF)" : "rgba(000000FF)"
+        readonly property string inactive: AppearanceState.dark ? "rgba(242424FF)" : "rgba(00000040)"
+        command: ["hyprctl", "eval",
+            'hl.config({ general = { col = { active_border = { colors = { "' + active + '", "' + active + '", "' + active
+            + '" }, angle = 270 }, inactive_border = "' + inactive + '" } }, decoration = { shadow = { enabled = false } } })']
     }
     Process {
         id: windowThemeReset
         command: ["hyprctl", "reload"]
     }
+    // Deferred, so the command above has rebound to the new mode first.
+    function applyWindowTheme() {
+        if (ShellTheme.cartoon) windowThemeApply.running = true;
+    }
     Connections {
         target: ShellTheme
         function onCartoonChanged() {
-            if (ShellTheme.cartoon) windowThemeApply.running = true;
+            if (ShellTheme.cartoon) Qt.callLater(shell.applyWindowTheme);
             else windowThemeReset.running = true;
         }
     }
     Connections {
         target: AppearanceState
-        function onDarkChanged() {
-            if (ShellTheme.cartoon) windowThemeApply.running = true;
+        function onDarkChanged() { Qt.callLater(shell.applyWindowTheme) }
+    }
+
+    // WezTerm and Neovim read Lua files written from the same theme JSON,
+    // with both modes in each, so only a theme change (another theme, or
+    // the file edited) needs a sync. One run at a time; a change during a
+    // run queues one more, so the last edit always lands.
+    property bool themeSyncQueued: false
+    function syncTheme() {
+        if (themeSync.running) shell.themeSyncQueued = true;
+        else themeSync.running = true;
+    }
+    Process {
+        id: themeSync
+        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/shell-theme.py", "sync"]
+        onExited: if (shell.themeSyncQueued) {
+            shell.themeSyncQueued = false;
+            themeSync.running = true;
         }
+    }
+    Connections {
+        target: ShellTheme
+        function onThemeChanged() { shell.syncTheme() }
     }
     // A config reload puts hyprland.lua's dark pair back, whatever the mode:
     // send the tone again.

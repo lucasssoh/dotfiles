@@ -156,7 +156,7 @@ Rectangle {
         width: card.tile
         height: card.tile
         radius: ShellTheme.cartoon ? ShellTheme.radius : 13
-        color: ShellTheme.cartoon ? ShellTheme.sky : DrawerTheme.cardRaised
+        color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
         border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
         border.color: ShellTheme.outlineColour
         clip: true

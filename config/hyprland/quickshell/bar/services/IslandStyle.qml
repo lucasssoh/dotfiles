@@ -101,8 +101,8 @@ Singleton {
     onDarkModeChanged: root.resolve()
     Connections {
         target: ShellTheme
-        function onCartoonChanged() { root.resolve() }
-        function onPaletteChanged() { root.resolve() }
+        function onCartoonChanged() { Qt.callLater(root.resolve) }
+        function onColoursChanged() { Qt.callLater(root.resolve) }
     }
 
     FileView {
@@ -144,15 +144,14 @@ Singleton {
         const modeKey = root.darkMode ? "dark" : "light";
         const topMode = obj(c[modeKey]);
         // Cartoon keeps the hierarchy of bar.json instead of flattening it:
-        // the bar is paper, a zone that asks for its own fill becomes a
-        // pastel (lilac for the centre, mint for the sides), and a zone with
-        // no fill stays transparent. Position, style, zone shapes, radius,
-        // opacity and text mode all still come from bar.json; only the
-        // palette changes. Default mode uses the colours as written.
+        // the bar is paper, a zone that asks for its own fill takes the
+        // palette's accent, and a zone with no fill stays transparent.
+        // Position, style, zone shapes, radius, opacity and text mode all
+        // still come from bar.json; only the palette changes. Default mode uses the colours as written.
         const cartoon = ShellTheme.cartoon;
-        const paper = root.darkMode ? ShellTheme.surfacePanel : "#fdf8ef";
-        const paperInk = root.darkMode ? ShellTheme.textPrimary : "#1b1b22";
-        const zonePaper = root.darkMode ? ShellTheme.surfaceCard : "#ffffff";
+        const paper = ShellTheme.surfacePanel;
+        const paperInk = ShellTheme.textPrimary;
+        const zonePaper = ShellTheme.surfaceCard;
 
         root.solid = c.style === "solid";
 

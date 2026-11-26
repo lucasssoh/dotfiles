@@ -107,6 +107,8 @@ end, { non_consuming = true })
 -- Absolute path required: processes launched by Hyprland don't inherit
 -- ~/.local/bin in their PATH (see commit bbb8f61).
 bind(mod .. "+ W",       hl.dsp.exec_cmd("$HOME/.local/bin/prisme"), { description = "Wallpaper" })
+-- Shell theme: fuzzel writes shell-theme.json, which Quickshell watches.
+bind(mod .. "+SHIFT+ W", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/shell-theme.py pick"), { description = "Theme" })
 
 -- Agenda: add an event (or delete one) through fuzzel, stored in khal;
 -- the bar's calendar drawer shows it and rings its reminders.

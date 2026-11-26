@@ -1,0 +1,63 @@
+{
+  "schema": "coucou-theme/1",
+  "name": "Melange",
+  "font": "Fredoka",
+  "geometry": {
+    "outline-width": 3,
+    "radius": 18
+  },
+  "modes": {
+    "dark": {
+      "surfaces": {
+        "panel": "#292522",
+        "card": "#34302c",
+        "card-hover": "#403a36",
+        "card-raised": "#867462",
+        "card-sunken": "#292522"
+      },
+      "text": {
+        "primary": "#ece1d7",
+        "secondary": "#c1a78e",
+        "muted": "#867462",
+        "faint": "#867462",
+        "on-accent": "#292522"
+      },
+      "accents": {
+        "active": "#89b3b6",
+        "highlight": "#ebc06d",
+        "success": "#85b695",
+        "info": "#a3a9ce",
+        "warning": "#e49b5d",
+        "danger": "#d47766"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    },
+    "light": {
+      "surfaces": {
+        "panel": "#f1f1f1",
+        "card": "#e9e1db",
+        "card-hover": "#d9d3ce",
+        "card-raised": "#e9e1db",
+        "card-sunken": "#f1f1f1"
+      },
+      "text": {
+        "primary": "#54433a",
+        "secondary": "#7d6658",
+        "muted": "#a98a78",
+        "faint": "#a98a78",
+        "on-accent": "#f1f1f1"
+      },
+      "accents": {
+        "active": "#3d6568",
+        "highlight": "#a06d00",
+        "success": "#3a684a",
+        "info": "#465aa4",
+        "warning": "#bc5c00",
+        "danger": "#bf0021"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    }
+  }
+}

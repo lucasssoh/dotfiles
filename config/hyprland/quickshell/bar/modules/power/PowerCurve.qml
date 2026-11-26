@@ -41,13 +41,10 @@ Item {
     // PowerState.gapSeconds.
     property int gapSeconds: 3600
 
-    // Same two tokens the rest of the bar already uses for these states:
-    // BatteryIcon's charging green, and the sky blue Battery.qml picked
-    // for "charging under the conservation cap". Deliberately NOT the
-    // saturated blue/green of a phone's battery screen -- this drawer is
-    // greyed glass, and two fully saturated primaries in it would read as
-    // a different application.
-    readonly property color dischargeColor: DrawerTheme.conserve
+    // Two distinct states: green is charging (the success token), while
+    // discharging takes the theme's warning token. Both come from the
+    // active theme, so every colourway keeps them apart.
+    readonly property color dischargeColor: DrawerTheme.warning
     readonly property color chargeColor: DrawerTheme.positive
 
     // Room on the right for "100%". Everything that draws inside the plot

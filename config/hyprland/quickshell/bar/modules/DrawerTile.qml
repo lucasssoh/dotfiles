@@ -34,8 +34,8 @@ Rectangle {
     // Balise's wide Wi-Fi tile uses it.
     property int signalBars: -1
     property color accent: DrawerTheme.accent
-    // A category tint for the copper/cyan colourway: Wi-Fi, Bluetooth,
-    // power and display each get their own pastel when switched on.
+    // The cartoon fill when on: Wi-Fi, Bluetooth, power and display each
+    // take their own accent of the palette.
     property color pastel: DrawerTheme.accent
     signal activated()
     // Right-click opens this tile's section list (WiFi/Bluetooth in
@@ -59,7 +59,7 @@ Rectangle {
     // the inverse one, the way HyperOS control-centre tiles light up and
     // the way the bar's active workspace already reads. Hover is a small
     // step in the same direction on either side.
-    color: ShellTheme.cartoon && ShellTheme.copperCyan && tile.active
+    color: ShellTheme.cartoon && tile.active
         ? (mouseArea.containsMouse ? Qt.lighter(tile.pastel, 1.06) : tile.pastel)
         : tile.active
         ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
@@ -70,7 +70,7 @@ Rectangle {
     border.color: ShellTheme.outlineColour
 
 
-    readonly property color fg: ShellTheme.cartoon ? ShellTheme.ink : (tile.active ? DrawerTheme.activeInk : DrawerTheme.primary)
+    readonly property color fg: ShellTheme.cartoon && tile.active ? ShellTheme.ink : (tile.active ? DrawerTheme.activeInk : DrawerTheme.primary)
 
     // Vertically centered rather than top-anchored with a fixed margin:
     // tiles differ in whether they carry a status line, and centering
@@ -95,7 +95,7 @@ Rectangle {
             glyph: tile.glyph
             glyphFont: tile.glyphFont
             active: tile.active
-            accent: ShellTheme.copperCyan ? tile.pastel : tile.accent
+            accent: ShellTheme.cartoon ? tile.pastel : tile.accent
         }
         // Title and status as their own tight pair: the outer 8 is the
         // badge's breathing room, too loose between two lines of text.

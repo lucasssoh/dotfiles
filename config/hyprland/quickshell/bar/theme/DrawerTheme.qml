@@ -37,35 +37,38 @@ QtObject {
     // mid grey, and #636366 on it
     // vanished (the calendar's weekdays, Power's history axis).
     readonly property color primary: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textPrimary : "#1b1b22") : (root.dark ? "#f2f2f7" : "#1c1c1e")
+        ? ShellTheme.textPrimary : (root.dark ? "#f2f2f7" : "#1c1c1e")
     readonly property color secondary: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textSecondary : "#3c3b47")
+        ? ShellTheme.textSecondary
         : (root.dark ? (root.glass ? "#a1a1a6" : "#8e8e93") : (root.glass ? "#3f3f44" : "#56565b"))
     readonly property color muted: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textMuted : "#5d5c69")
+        ? ShellTheme.textMuted
         : (root.dark ? (root.glass ? "#7c7c80" : "#636366") : (root.glass ? "#5e5e64" : "#86868b"))
     readonly property color faint: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textFaint : "#8c8a96")
+        ? ShellTheme.textFaint
         : (root.dark ? (root.glass ? "#5a5a5e" : "#48484a") : (root.glass ? "#9a9aa0" : "#c4c3be"))
-    readonly property color danger: ShellTheme.cartoon ? ShellTheme.salmon : (root.dark ? "#ff6e6e" : "#b3261e")
+    readonly property color danger: ShellTheme.cartoon ? ShellTheme.danger : (root.dark ? "#ff6e6e" : "#b3261e")
     readonly property color accent: ShellTheme.cartoon ? ShellTheme.accent : root.primary
     readonly property color positive: ShellTheme.cartoon
-        ? (ShellTheme.copperCyan ? ShellTheme.sage : ShellTheme.mint)
-        : (root.dark ? "#a3d9a5" : "#24692a")
-    readonly property color play: ShellTheme.cartoon
-        ? (ShellTheme.copperCyan ? ShellTheme.sage : ShellTheme.mint) : "#237823"
+        ? ShellTheme.success : (root.dark ? "#a3d9a5" : "#24692a")
+    readonly property color play: ShellTheme.cartoon ? ShellTheme.success : "#237823"
     readonly property color hdr: ShellTheme.cartoon
-        ? (ShellTheme.copperCyan ? ShellTheme.indigo : ShellTheme.sky)
+        ? ShellTheme.info
         : (root.dark ? "#6be3e8" : "#006b75")
     // Amber for "the charger just dropped" and an eco low battery, and
     // the sky blue of charging under the conservation cap.
     readonly property color warning: ShellTheme.cartoon
-        ? (ShellTheme.copperCyan ? ShellTheme.accent : ShellTheme.lemon)
+        ? ShellTheme.warning
         : (root.dark ? "#ffb454" : "#875000")
     readonly property color conserve: ShellTheme.cartoon
-        ? (ShellTheme.copperCyan ? ShellTheme.sage : ShellTheme.lilac)
+        ? ShellTheme.success
         : (root.dark ? "#8ecae6" : "#1d6386")
     readonly property color onLight: ShellTheme.cartoon ? ShellTheme.ink : (root.dark ? "#0c0c0e" : "#f7f5f0")
+
+    // The card with `amount` of the palette's accent laid over it.
+    function accentTint(amount) {
+        return Qt.tint(ShellTheme.surfaceCard, Qt.rgba(ShellTheme.accent.r, ShellTheme.accent.g, ShellTheme.accent.b, amount));
+    }
 
     // The primary ink at `alpha` -- what every `Qt.rgba(1, 1, 1, a)` in
     // the drawers became.
@@ -89,8 +92,8 @@ QtObject {
     // ("beaucoup trop intense"): a hint of warmth, not a colour. Kept off
     // every other drawer on purpose: it is the evening's ink, not a new
     // accent.
-    readonly property color cream: ShellTheme.cartoon ? "#fdf8ef" : "#efece5"
-    readonly property color cream2: ShellTheme.cartoon ? "#c6c2cf" : "#bdb9b0"
+    readonly property color cream: ShellTheme.cartoon ? ShellTheme.textPrimary : "#efece5"
+    readonly property color cream2: ShellTheme.cartoon ? ShellTheme.textMuted : "#bdb9b0"
     function creamInk(alpha) {
         return Qt.rgba(root.cream.r, root.cream.g, root.cream.b, alpha);
     }
@@ -101,11 +104,11 @@ QtObject {
     // reads from here is fixed: light inks, one step further from the
     // glass than they were from the black island, and veils for cards.
     readonly property color islandAccent: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textPrimary : "#1b1b22") : "#f2f2f7"
+        ? ShellTheme.textPrimary : "#f2f2f7"
     readonly property color islandMuted: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textMuted : "#5d5c69") : "#8e8e93"
+        ? ShellTheme.textMuted : "#8e8e93"
     readonly property color islandFaint: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.textFaint : "#8c8a96") : "#6a6a6e"
+        ? ShellTheme.textFaint : "#6a6a6e"
     readonly property color islandCard: Qt.rgba(0.95, 0.95, 0.97, 0.08)
     readonly property color islandKey: Qt.rgba(0.95, 0.95, 0.97, 0.11)
     readonly property color islandCardRaised: Qt.rgba(0.95, 0.95, 0.97, 0.16)
@@ -113,7 +116,7 @@ QtObject {
     // blur behind is bright, so the veil thickens to keep the cream inks
     // readable.
     readonly property color islandPane: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfacePanel : "#fdf8ef")
+        ? ShellTheme.surfacePanel
         : (root.dark ? root.glassPane : Qt.rgba(0.078, 0.078, 0.094, 0.72))
     // The edge of that pane, fixed dark like the rest of this palette:
     // the light-mode `paneRim` (white at 65%, the top light at 80%) drew
@@ -125,8 +128,10 @@ QtObject {
     // ---- the inversion ("on") -----------------------------------------
     readonly property color on: ShellTheme.cartoon ? ShellTheme.accent : root.primary
     readonly property color onInk: ShellTheme.cartoon ? ShellTheme.ink : root.onLight
+    // Cartoon: the accent's own ink, a step quieter, so it reads on any
+    // palette's accent in either mode.
     readonly property color onInk2: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardRaised : "#5d586b") : (root.dark ? "#3a3a3e" : "#c9c7c0")
+        ? Qt.rgba(ShellTheme.ink.r, ShellTheme.ink.g, ShellTheme.ink.b, 0.72) : (root.dark ? "#3a3a3e" : "#c9c7c0")
 
     // ---- active, without the large white block (V3) --------------------
     // A large control that is on (a tile, a Balise row, a connected
@@ -143,13 +148,13 @@ QtObject {
         ? ShellTheme.outlineColour
         : (root.dark ? root.ink(0.22) : Qt.rgba(0.11, 0.11, 0.12, 0.10))
     readonly property color activeInk: ShellTheme.cartoon ? ShellTheme.ink : root.primary
-    readonly property color activeInk2: ShellTheme.cartoon ? ShellTheme.surfaceCardRaised : root.secondary
+    readonly property color activeInk2: ShellTheme.cartoon ? root.onInk2 : root.secondary
     readonly property color activeDisc: ShellTheme.cartoon ? ShellTheme.ink : root.on
     readonly property color activeDiscInk: ShellTheme.cartoon ? ShellTheme.accent : root.onInk
 
     // ---- surfaces (Surfaces' names) -----------------------------------
     readonly property color panelTop: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfacePanel : "#fdf8ef")
+        ? ShellTheme.surfacePanel
         : (root.dark ? "#000000" : "#f5f3ee")
     readonly property color panelBottom: root.panelTop
     // Glass cards (V3, "Aérien sans tasser"): a veil of the ink over the
@@ -160,28 +165,29 @@ QtObject {
     // In light the veil is white: lighter than the warm grey glass, where
     // the opaque cards were lighter too.
     readonly property color card: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCard : "#ffffff") : (root.dark ? root.ink(0.08) : Qt.rgba(1, 1, 1, 0.46))
+        ? ShellTheme.surfaceCard : (root.dark ? root.ink(0.08) : Qt.rgba(1, 1, 1, 0.46))
     readonly property color cardHover: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardHover : "#f0eadb") : (root.dark ? root.ink(0.12) : Qt.rgba(1, 1, 1, 0.62))
+        ? ShellTheme.surfaceCardHover : (root.dark ? root.ink(0.12) : Qt.rgba(1, 1, 1, 0.62))
     // On a card (an icon's disc, a track): a further step of the ink in
     // dark, a shade of black in light, as the opaque greys stepped.
     readonly property color cardRaised: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardRaised : "#e7dfcd")
+        ? ShellTheme.surfaceCardRaised
         : (root.dark ? root.ink(0.10) : Qt.rgba(0, 0, 0, 0.06))
     readonly property color cardDeep: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardDeep : "#ded6c7")
+        ? ShellTheme.surfaceCardDeep
         : (root.dark ? Qt.rgba(0, 0, 0, 0.18) : Qt.rgba(1, 1, 1, 0.30))
+    // Cartoon light: the card tinted by the palette's accent.
     readonly property color accentSoft: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCard : "#efe7f9") : (root.dark ? "#1c1c20" : "#e8e6e0")
+        ? (root.dark ? ShellTheme.surfaceCard : root.accentTint(0.25)) : (root.dark ? "#1c1c20" : "#e8e6e0")
     readonly property color accentMedium: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardHover : "#e3d6f6") : (root.dark ? "#222226" : "#e1dfd8")
+        ? (root.dark ? ShellTheme.surfaceCardHover : root.accentTint(0.40)) : (root.dark ? "#222226" : "#e1dfd8")
     readonly property color accentStrong: ShellTheme.cartoon
-        ? (root.dark ? ShellTheme.surfaceCardRaised : ShellTheme.lilac) : (root.dark ? "#2a2a2f" : "#d9d7d0")
+        ? (root.dark ? ShellTheme.surfaceCardRaised : ShellTheme.accent) : (root.dark ? "#2a2a2f" : "#d9d7d0")
     readonly property color accentStrongest: ShellTheme.cartoon
-        ? ShellTheme.lilac : (root.dark ? root.ink(0.16) : Qt.rgba(0, 0, 0, 0.12))
+        ? ShellTheme.accent : (root.dark ? root.ink(0.16) : Qt.rgba(0, 0, 0, 0.12))
     readonly property color destructive: root.danger
     readonly property color destructiveSoft: ShellTheme.cartoon
-        ? (root.dark ? "#3b2a30" : "#fbe0dc") : (root.dark ? "#2b1f22" : "#f5dedd")
+        ? Qt.tint(ShellTheme.surfaceCard, Qt.rgba(ShellTheme.danger.r, ShellTheme.danger.g, ShellTheme.danger.b, 0.18)) : (root.dark ? "#2b1f22" : "#f5dedd")
     // ---- glass ---------------------------------------------------------
     // The split drawers' panes are glass: Hyprland blurs what is behind
     // them (the bar asks for it through ext-background-effect, see

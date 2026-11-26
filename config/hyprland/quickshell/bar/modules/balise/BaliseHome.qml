@@ -469,7 +469,7 @@ Item {
         // panel that is switched off now recedes into it, and only what
         // is on or under the pointer comes forward.
         // Inverted when on, flat and rimless -- same rule as DrawerTile.
-        color: ShellTheme.cartoon && ShellTheme.copperCyan && trow.checked
+        color: ShellTheme.cartoon && trow.checked
             ? (mouseArea.containsMouse ? Qt.lighter(trow.pastel, 1.06) : trow.pastel)
             : trow.checked
             ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
@@ -490,7 +490,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             glyph: trow.glyph
             active: trow.checked
-            accent: ShellTheme.cartoon && ShellTheme.copperCyan ? trow.pastel : root.accent
+            accent: ShellTheme.cartoon ? trow.pastel : root.accent
 
         }
 
@@ -512,7 +512,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: ShellTheme.cartoon ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary)
+                color: ShellTheme.cartoon && trow.checked ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary)
                 font.family: Fonts.ui
                 // 13, matching DrawerTile's own title, not the 14 these
                 // rows used before they had icons. Two reasons and they
@@ -531,7 +531,7 @@ Item {
                 renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: ShellTheme.cartoon ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+                color: ShellTheme.cartoon && trow.checked ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
                 font.family: Fonts.ui
                 font.pixelSize: 12
                 elide: Text.ElideRight
@@ -710,7 +710,7 @@ Item {
                             width: (parent.width - 8) / 2
                             height: 92
                             title: "Bluetooth"
-                    pastel: ShellTheme.indigo
+                    pastel: ShellTheme.info
                             revealIndex: 2
                             status: root.bluetoothTileStatus
                             glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
@@ -722,7 +722,7 @@ Item {
                             width: (parent.width - 8) / 2
                             height: 92
                             title: "Ethernet"
-                    pastel: ShellTheme.sage
+                    pastel: ShellTheme.success
                             revealIndex: 3
                             status: root.ethernetTileStatus
                             glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
@@ -773,7 +773,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
-                    pastel: ShellTheme.indigo
+                    pastel: ShellTheme.info
                     glyph: "\uF0DE"   // mgc moon
                     revealIndex: 8
                     checked: BaliseState.nightModeEnabled
@@ -783,7 +783,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "HDR"
-                    pastel: ShellTheme.sage
+                    pastel: ShellTheme.success
                     // lu-monitor: HDR is a per-DISPLAY capability here (this
                     // page binds `monitor: shell.hyprMonitorFor(...)`), so a
                     // screen is the honest picture -- and it collides with

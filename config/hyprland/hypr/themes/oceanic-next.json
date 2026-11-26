@@ -1,0 +1,63 @@
+{
+  "schema": "coucou-theme/1",
+  "name": "Oceanic Next",
+  "font": "Fredoka",
+  "geometry": {
+    "outline-width": 3,
+    "radius": 18
+  },
+  "modes": {
+    "dark": {
+      "surfaces": {
+        "panel": "#1b2b34",
+        "card": "#343d46",
+        "card-hover": "#4f5b66",
+        "card-raised": "#65737e",
+        "card-sunken": "#1b2b34"
+      },
+      "text": {
+        "primary": "#d8dee9",
+        "secondary": "#c0c5ce",
+        "muted": "#a7adba",
+        "faint": "#65737e",
+        "on-accent": "#1b2b34"
+      },
+      "accents": {
+        "active": "#62b3b2",
+        "highlight": "#fac863",
+        "success": "#99c794",
+        "info": "#6699cc",
+        "warning": "#f99157",
+        "danger": "#ec5f67"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    },
+    "light": {
+      "surfaces": {
+        "panel": "#f5f7fa",
+        "card": "#d4d8dc",
+        "card-hover": "#b4babf",
+        "card-raised": "#a7adba",
+        "card-sunken": "#f5f7fa"
+      },
+      "text": {
+        "primary": "#1b2b34",
+        "secondary": "#4f5b66",
+        "muted": "#65737e",
+        "faint": "#a7adba",
+        "on-accent": "#f5f7fa"
+      },
+      "accents": {
+        "active": "#569e9d",
+        "highlight": "#dcb057",
+        "success": "#87af82",
+        "info": "#5a87b4",
+        "warning": "#db804d",
+        "danger": "#d0545b"
+      },
+      "outline": "#000000",
+      "shadow": "#000000"
+    }
+  }
+}

@@ -84,7 +84,7 @@ Rectangle {
         clip: true
         selectByMouse: true
 
-        color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary
+        color: DrawerTheme.primary
         selectionColor: DrawerTheme.accentStrongest
         selectedTextColor: DrawerTheme.primary
         font.family: Fonts.ui

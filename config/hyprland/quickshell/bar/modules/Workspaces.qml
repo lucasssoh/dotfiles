@@ -122,7 +122,7 @@ Item {
                     // way the mockups light up the active page.
                     color: ShellTheme.cartoon
                         ? (mark.hollow ? DrawerTheme.clear(ShellTheme.ink)
-                           : pill.modelData.active ? ShellTheme.lemon : ShellTheme.ink)
+                           : pill.modelData.active ? ShellTheme.highlight : ShellTheme.ink)
                         : (mark.hollow ? DrawerTheme.clear(mark.ink) : mark.ink)
                     // Every workspace mark is inked in cartoon, including
                     // the short dots and the lemon active one.

@@ -109,7 +109,7 @@ Rectangle {
             // this bar yet, and the security type is spelled out on the
             // status line right below anyway.
             text: row.modelData.ssid || ""
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -129,7 +129,7 @@ Rectangle {
                 const saved = row.modelData.is_saved ? " · Saved" : "";
                 return sec + " · " + (row.modelData.signal || 0) + "%" + saved;
             }
-            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
+            color: ShellTheme.cartoon && row.connected ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

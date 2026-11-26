@@ -147,6 +147,22 @@ else
   }
 end
 
+-- The shell theme's colours, both modes in one file written by
+-- ~/.config/hypr/scripts/shell-theme.py sync. Watched, so a theme change
+-- recolours open windows; without the file the colours above stand.
+local state = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+local shared_path = state .. "/coucou-shell/theme/wezterm-theme.lua"
+wezterm.add_to_config_reload_watch_list(shared_path)
+local shared_ok, shared = pcall(dofile, shared_path)
+if shared_ok and type(shared) == "table" then
+  local themed = light and shared.light or shared.dark
+  if type(themed) == "table" then
+    background = themed.background or background
+    tab_inks = themed.tab_inks or tab_inks
+    config.colors = themed.colors or config.colors
+  end
+end
+
 -- =========================
 -- SHORTCUTS
 -- =========================

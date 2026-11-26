@@ -405,7 +405,7 @@ Item {
                 width: tileRow.tileWidth
                 height: parent.height
                 title: "Fast charge"
-                pastel: ShellTheme.sage
+                pastel: ShellTheme.success
                 revealIndex: 2
                 // The measured watts rather than "On"/"Off". The whole
                 // reason this toggle exists is that the EC's two modes
@@ -437,7 +437,7 @@ Item {
             width: parent.width
             height: 92
             title: "Profile"
-            pastel: ShellTheme.indigo
+            pastel: ShellTheme.info
             revealIndex: 3
             status: root.profileLabel(PowerProfiles.profile)
             glyph: root.profileGlyph(PowerProfiles.profile)

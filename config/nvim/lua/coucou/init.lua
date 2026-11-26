@@ -407,9 +407,25 @@ function M.set_plugin_groups(p)
     hl("ColorPickerActionGroup", { fg = p.cyan })
 end
 
+-- The shell theme's palette, both modes in one file written by
+-- ~/.config/hypr/scripts/shell-theme.py sync. Read afresh each time (not
+-- require'd, which would keep the first one), nil when absent.
+M.synced_path = (os.getenv("XDG_STATE_HOME") or (vim.env.HOME .. "/.local/state"))
+    .. "/coucou-shell/theme/nvim-palette.lua"
+
+function M.synced_palette()
+    local ok, palettes = pcall(dofile, M.synced_path)
+    if not ok or type(palettes) ~= "table" then
+        return nil
+    end
+    local p = palettes[vim.o.background == "light" and "light" or "dark"]
+    return type(p) == "table" and p or nil
+end
+
 function M.load()
-    local module_name = (vim.o.background == "light") and "coucou.palette_light" or "coucou.palette"
-    local p = require(module_name)
+    -- The shell theme's palette, or the hand-written one without it.
+    local p = M.synced_palette()
+        or require(vim.o.background == "light" and "coucou.palette_light" or "coucou.palette")
 
     M.set_editor_groups(p)
     M.set_plugin_groups(p)

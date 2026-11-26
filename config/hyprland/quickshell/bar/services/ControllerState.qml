@@ -87,9 +87,9 @@ Singleton {
         const pastel = (shared, original) => ShellTheme.cartoon ? shared : original;
         switch (family) {
         case "xbox":
-            return { south: b("letter", "A", pastel(ShellTheme.mint, "#8fd49a")), east: b("letter", "B", pastel(ShellTheme.salmon, "#ef8f8f")), north: b("letter", "Y", pastel(ShellTheme.lemon, "#e9cf7d")), west: b("letter", "X", pastel(ShellTheme.sky, "#86aef0")), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };
+            return { south: b("letter", "A", pastel(ShellTheme.success, "#8fd49a")), east: b("letter", "B", pastel(ShellTheme.danger, "#ef8f8f")), north: b("letter", "Y", pastel(ShellTheme.highlight, "#e9cf7d")), west: b("letter", "X", pastel(ShellTheme.info, "#86aef0")), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };
         case "playstation":
-            return { south: b("cross", "", pastel(ShellTheme.sky, "#95b8f2")), east: b("circle", "", pastel(ShellTheme.salmon, "#f09aa4")), north: b("triangle", "", pastel(ShellTheme.mint, "#86d6c8")), west: b("square", "", pastel(ShellTheme.pink, "#e7a6d4")), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "PS button" };
+            return { south: b("cross", "", pastel(ShellTheme.info, "#95b8f2")), east: b("circle", "", pastel(ShellTheme.danger, "#f09aa4")), north: b("triangle", "", pastel(ShellTheme.success, "#86d6c8")), west: b("square", "", pastel(ShellTheme.warning, "#e7a6d4")), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "PS button" };
         case "nintendo":
             return { south: b("letter", "B"), east: b("letter", "A"), north: b("letter", "X"), west: b("letter", "Y"), lb: "L", rb: "R", lt: "ZL", rt: "ZR", guide: "Home" };
         case "steam":

@@ -21,7 +21,7 @@ Item {
         ShapePath {
             strokeColor: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.28)
             strokeWidth: ShellTheme.cartoon ? ShellTheme.outline : 1.2
-            fillColor: ShellTheme.cartoon ? ShellTheme.lemon : "transparent"
+            fillColor: ShellTheme.cartoon ? ShellTheme.highlight : "transparent"
             PathSvg {
                 path: {
                     const w = root.width, h = root.height,
