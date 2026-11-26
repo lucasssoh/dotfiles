@@ -221,7 +221,7 @@ Item {
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: root.ask && root.ask.echo ? TextInput.Normal : TextInput.Password
                     passwordCharacter: "•"
-                    color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary
+                    color: DrawerTheme.primary
                     selectionColor: DrawerTheme.ink(0.25)
                     font.family: Fonts.ui
                     font.pixelSize: 14
