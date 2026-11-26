@@ -73,7 +73,7 @@ Column {
             readonly property var d: modelData
             width: root.width
             height: 54
-            radius: 12
+            radius: IslandStyle.round(12)
             color: "transparent"
             border.width: 1
             border.color: DrawerTheme.faint

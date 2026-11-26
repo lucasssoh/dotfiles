@@ -47,7 +47,7 @@ Item {
             Rectangle {
                 width: 30
                 height: 30
-                radius: 15
+                radius: IslandStyle.round(15)
                 color: DrawerTheme.card
                 Text {
                     anchors.centerIn: parent

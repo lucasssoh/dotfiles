@@ -40,7 +40,7 @@ Column {
             readonly property string launch: modelData.launch || ""
             width: root.width
             height: col.implicitHeight + 28
-            radius: 14
+            radius: IslandStyle.round(14)
             color: DrawerTheme.card
             Column {
                 id: col

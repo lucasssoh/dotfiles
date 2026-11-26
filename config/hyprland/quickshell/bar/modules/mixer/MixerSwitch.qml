@@ -33,7 +33,7 @@ Item {
         Rectangle {
             width: 18
             height: 18
-            radius: 9
+            radius: IslandStyle.round(9)
             color: DrawerTheme.onInk
             border.width: DrawerTheme.edgeWidth()
             border.color: DrawerTheme.edgeColour()

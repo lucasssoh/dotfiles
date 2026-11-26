@@ -2917,7 +2917,7 @@ ShellRoot {
                 y: toastDeck.y + toastDeck.frontBlur.y
                 width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.frontBlur.width : 0
                 height: toastDeck.frontBlur.height
-                radius: 16
+                radius: IslandStyle.round(16)
             }
             Modules.SmoothRegion {
                 pixelRatio: notifToastWindow.devicePixelRatio
@@ -2926,7 +2926,7 @@ ShellRoot {
                 y: toastDeck.y + toastDeck.backBlur.y
                 width: DrawerTheme.glass && toastDeck.opacity > 0.5 ? toastDeck.backBlur.width : 0
                 height: toastDeck.backBlur.height
-                radius: 16
+                radius: IslandStyle.round(16)
             }
             BackgroundEffect.blurRegion: Region { regions: notifToastWindow.toastBlurs.concat([deckFrontBlur, deckBackBlur]) }
         }

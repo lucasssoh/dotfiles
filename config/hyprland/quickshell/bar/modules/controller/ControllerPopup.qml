@@ -302,7 +302,7 @@ Item {
                     id: badge
                     width: 42
                     height: 42
-                    radius: 14
+                    radius: IslandStyle.round(14)
                     color: DrawerTheme.card
                     PadSilhouette {
                         anchors.centerIn: parent
@@ -371,7 +371,7 @@ Item {
                                 readonly property bool on: index === root.tab
                                 width: tabLabel.implicitWidth + 20
                                 height: 24
-                                radius: 12
+                                radius: IslandStyle.round(12)
                                 color: on ? DrawerTheme.cardRaised : "transparent"
                                 border.width: on ? 1.5 : 0
                                 border.color: DrawerTheme.primary
@@ -431,7 +431,7 @@ Item {
                 readonly property bool on: root.focused("hero", 0)
                 width: parent.width
                 height: 196
-                radius: 26
+                radius: IslandStyle.round(26)
                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
                 border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                 CartoonGloss { active: on; opacityScale: 0.7 }
@@ -441,7 +441,7 @@ Item {
                     y: 14
                     width: 300
                     height: parent.height - 28
-                    radius: 18
+                    radius: IslandStyle.round(18)
                     color: DrawerTheme.cardRaised
                     Image {
                         anchors.fill: parent
@@ -534,7 +534,7 @@ Item {
                             readonly property bool on: root.focused("shelf", index)
                             width: 136
                             height: 210
-                            radius: 18
+                            radius: IslandStyle.round(18)
                             color: on ? DrawerTheme.cardRaised : DrawerTheme.card
                             border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                             CartoonGloss { active: on; opacityScale: 0.7 }
@@ -547,7 +547,7 @@ Item {
                                 y: 6
                                 width: parent.width - 12
                                 height: 160
-                                radius: 13
+                                radius: IslandStyle.round(13)
                                 color: DrawerTheme.cardRaised
                                 Image {
                                     visible: !!coverCard.modelData.cover
@@ -615,7 +615,7 @@ Item {
                                 readonly property bool on: root.focused("bottom", index)
                                 width: Math.max(150, launcherText.implicitWidth + 30 + 34 + 24)
                                 height: 56
-                                radius: 16
+                                radius: IslandStyle.round(16)
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
                                 border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                                 CartoonGloss { active: on; opacityScale: 0.7 }
@@ -674,7 +674,7 @@ Item {
                                 readonly property bool on: root.focused("bottom", root.launchers.length + index)
                                 width: sysRow.implicitWidth + 32
                                 height: 56
-                                radius: 16
+                                radius: IslandStyle.round(16)
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
                                 border.width: DrawerTheme.edgeWidth(on ? 2 : 0)
                                 CartoonGloss { active: on; opacityScale: 0.7 }
@@ -739,7 +739,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 6
-                        radius: 22
+                        radius: IslandStyle.round(22)
                         color: cell.on ? DrawerTheme.cardRaised : DrawerTheme.card
                         border.width: DrawerTheme.edgeWidth(cell.on ? 2 : 0)
                         border.color: DrawerTheme.edgeColour(cell.on ? DrawerTheme.primary : "transparent")
@@ -755,7 +755,7 @@ Item {
                                 ClippingRectangle {
                                     visible: cell.modelData.cover !== ""
                                     anchors.fill: parent
-                                    radius: 14
+                                    radius: IslandStyle.round(14)
                                     color: DrawerTheme.cardRaised
                                     Image {
                                         anchors.fill: parent
@@ -857,7 +857,7 @@ Item {
         property bool dark: false
         width: chipText.implicitWidth + 16
         height: 20
-        radius: 10
+        radius: IslandStyle.round(10)
         color: dark ? Qt.rgba(0, 0, 0, 0.6) : DrawerTheme.card
         Text {
             id: chipText

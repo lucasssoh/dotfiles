@@ -32,7 +32,7 @@ Column {
         property string icon: ""
         width: root.width
         height: Math.max(56, entryCol.implicitHeight + 24)
-        radius: 14
+        radius: IslandStyle.round(14)
         color: entryHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
         Behavior on color { ColorAnimation { duration: 120 } }
         scale: entryHit.pressed ? 0.98 : 1
@@ -43,7 +43,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: 34
             height: 34
-            radius: 10
+            radius: IslandStyle.round(10)
             color: DrawerTheme.cardRaised
             Text {
                 anchors.centerIn: parent

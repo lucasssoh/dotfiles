@@ -319,7 +319,7 @@ Item {
         y: 2
         width: bubbleText.implicitWidth + 16
         height: 20
-        radius: 10
+        radius: IslandStyle.round(10)
         color: DrawerTheme.accentStrongest
         border.width: DrawerTheme.edgeWidth()
         border.color: DrawerTheme.edgeColour()

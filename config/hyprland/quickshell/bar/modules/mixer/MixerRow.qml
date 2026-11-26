@@ -57,7 +57,7 @@ Rectangle {
     width: parent ? parent.width : 0
     implicitHeight: row.pad * 2 + body.implicitHeight
     height: row.implicitHeight
-    radius: 20
+    radius: IslandStyle.round(20)
     border.width: DrawerTheme.edgeWidth()
     border.color: DrawerTheme.edgeColour()
     // Only lit rows and hovered rows pay for the blur -- same gate
@@ -217,7 +217,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 30
                 height: 18
-                radius: 9
+                radius: IslandStyle.round(9)
                 color: DrawerTheme.on
 
                 Text {

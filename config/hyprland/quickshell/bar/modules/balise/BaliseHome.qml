@@ -441,8 +441,7 @@ Item {
         signal toggled(bool value)
 
         height: trow.subtitle !== "" ? 58 : 50
-        radius: 20
-
+        radius: IslandStyle.round(20)
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
         // any icon tile nested inside it is left plain, or the two
@@ -553,8 +552,7 @@ Item {
         signal activated()
 
         height: 50
-        radius: 20
-
+        radius: IslandStyle.round(20)
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
         // any icon tile nested inside it is left plain, or the two

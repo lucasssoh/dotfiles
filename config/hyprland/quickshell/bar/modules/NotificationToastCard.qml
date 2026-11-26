@@ -157,7 +157,7 @@ Rectangle {
         width: card.tile
         height: card.tile
         // Concentric with the card around it.
-        radius: Math.max(6, IslandStyle.radius - card.pad)
+        radius: IslandStyle.square ? 0 : Math.max(6, IslandStyle.radius - card.pad)
         color: ShellTheme.cartoon ? ShellTheme.info : DrawerTheme.cardRaised
         border.width: DrawerTheme.edgeWidth()
         border.color: DrawerTheme.edgeColour()
@@ -270,7 +270,7 @@ Rectangle {
                     maskSource: Rectangle {
                         width: thumb.width
                         height: thumb.height
-                        radius: 14
+                        radius: IslandStyle.round(14)
                     }
                 }
             }
@@ -278,7 +278,7 @@ Rectangle {
                 y: 10
                 width: parent.width
                 height: card.thumbHeight
-                radius: 14
+                radius: IslandStyle.round(14)
                 color: "transparent"
                 border.width: DrawerTheme.edgeWidth(1)
                 border.color: DrawerTheme.paneRim

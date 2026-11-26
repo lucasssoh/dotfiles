@@ -34,6 +34,8 @@ PanelWindow {
         left: root.atLeft
         right: !root.atLeft
     }
+    // `none` in bar.json: square screen corners, nothing to draw.
+    visible: root.radius > 0
     implicitWidth: root.radius
     implicitHeight: root.radius
     exclusionMode: ExclusionMode.Ignore

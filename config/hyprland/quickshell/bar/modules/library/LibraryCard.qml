@@ -296,7 +296,7 @@ Item {
                     anchors.fill: parent
                     anchors.topMargin: 2
                     anchors.bottomMargin: 2
-                    radius: 14
+                    radius: IslandStyle.round(14)
                     color: entry.on ? DrawerTheme.cardHover : (hit.containsMouse ? DrawerTheme.ink(0.03) : "transparent")
                     border.width: DrawerTheme.edgeWidth(entry.on ? 1 : 0)
                     border.color: DrawerTheme.edgeColour(DrawerTheme.muted)
@@ -399,7 +399,7 @@ Item {
             anchors.top: list.top
             anchors.bottom: list.bottom
             width: 300
-            radius: 22
+            radius: IslandStyle.round(22)
             color: ShellTheme.cartoon ? ShellTheme.info : "transparent"
             border.width: DrawerTheme.edgeWidth(1)
             border.color: DrawerTheme.edgeColour(DrawerTheme.ink(0.12))
@@ -468,7 +468,7 @@ Item {
                     readonly property bool lit: sec.index === preview.hitSection
                     width: secs.width
                     height: 28
-                    radius: 8
+                    radius: IslandStyle.round(8)
                     color: sec.lit ? DrawerTheme.cardRaised : (sh.containsMouse ? DrawerTheme.ink(0.04) : "transparent")
                     ProgrammeText {
                         x: 8 + (sec.modelData.sub ? 12 : 0)

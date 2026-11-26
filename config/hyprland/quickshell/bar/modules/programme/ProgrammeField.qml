@@ -13,7 +13,7 @@ Rectangle {
 
     width: parent ? parent.width : 200
     height: 40
-    radius: 12
+    radius: IslandStyle.round(12)
     color: DrawerTheme.card
     border.width: DrawerTheme.edgeWidth(input.activeFocus ? 1 : 0)
     border.color: DrawerTheme.edgeColour(DrawerTheme.secondary)

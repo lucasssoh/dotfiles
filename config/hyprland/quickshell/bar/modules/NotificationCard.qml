@@ -110,7 +110,7 @@ Item {
         anchors.fill: parent
         anchors.leftMargin: 0
         anchors.rightMargin: 0
-        radius: 10
+        radius: IslandStyle.round(10)
         color: DrawerTheme.ink(0.05)
         opacity: hover.hovered ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -131,7 +131,7 @@ Item {
             y: card.topPad
             width: 28
             height: 28
-            radius: 8
+            radius: IslandStyle.round(8)
             color: DrawerTheme.cardRaised
             clip: true
 
@@ -225,7 +225,7 @@ Item {
                         maskSource: Rectangle {
                             width: thumb.width
                             height: thumb.height
-                            radius: 12
+                            radius: IslandStyle.round(12)
                         }
                     }
                 }
@@ -233,7 +233,7 @@ Item {
                     y: 6
                     width: parent.width
                     height: card.thumbHeight
-                    radius: 12
+                    radius: IslandStyle.round(12)
                     color: "transparent"
                     border.width: 1
                     border.color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
@@ -320,7 +320,7 @@ Item {
                             color: actionArea.pressed || card.chosenAction === actionCell.index
                                 ? DrawerTheme.ink(0.12)
                                 : (actionArea.containsMouse ? DrawerTheme.ink(0.06) : DrawerTheme.ink(0))
-                            radius: 8
+                            radius: IslandStyle.round(8)
                             Behavior on color { ColorAnimation { duration: 90 } }
                         }
                         Rectangle {

@@ -20,7 +20,7 @@ There are three independent levels: the **bar** itself at the top level, then th
 {
   "position": "top",
   "style": "solid",
-  "radius": 36,
+  "radius": "wide",
   "gap": 7,
   "fill": { "colour": "#000000", "opacity": 1, "blur": false },
   "text": { "mode": "dynamic", "colour": "#FFFFFF" },
@@ -41,7 +41,7 @@ There are three independent levels: the **bar** itself at the top level, then th
 |---|---|---|
 | `position` | `top` or `bottom` (see [Position](index.md#position)) | `top` |
 | `style` | `solid`: one plain bar with concave corners under it and a gap to the windows. `floating`: a translucent band with detached blocks | `floating` |
-| `radius` | `0`–`40`: the windows' corners, which every other corner follows (see below) | `36` |
+| `radius` | The windows' corners, which every other corner follows (see below): `none` (square everywhere), `narrow` (16), `medium` (26) or `wide` (36) | `wide` |
 | `gap` | `0`–`24`: the space round the windows and the drawers, to the screen's edges and to the bar | `7` |
 | `sheets` | `floating`: the notification centre and Programme sit `gap` from the edges, like windows. `attached`: they carry the bar's side down to the bottom, as wide as that side | `floating` |
 | `fill.colour` | The bar's own colour, `#rrggbb` or `#rrggbbaa` | near-black; opaque in `solid`, ~45 % in `floating` |
@@ -72,7 +72,7 @@ Both zone shapes are honoured in `solid` too: the side shapes are drawn over the
 | Tiles in the drawers | `radius` − 8 | 28 |
 | A notch's curves, screen corners on the bar's side | Half the bar's height | 15.5 |
 
-Saving `bar.json` applies the window rounding and the gaps in Hyprland at once. Small shapes clamp their radius to half their height.
+With `none`, every corner in that table is square. Saving `bar.json` applies the window rounding and the gaps in Hyprland at once. Small shapes clamp their radius to half their height.
 
 ## Cartoon look
 

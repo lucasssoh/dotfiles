@@ -396,8 +396,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: 28
             height: 28
-            radius: 9
-
+            radius: IslandStyle.round(9)
             // Same glass edge every other block in this bar now carries --
             // see GlassChip.qml. Only the block itself goes through the lens;
             // any icon tile nested inside it is left plain, or the two
@@ -492,8 +491,7 @@ Item {
         Rectangle {
             width: parent.width
             height: 44
-            radius: 12
-
+            radius: IslandStyle.round(12)
             color: root.statusConnected ? DrawerTheme.activeFill : DrawerTheme.card
             border.width: DrawerTheme.edgeWidth(root.statusConnected ? 1 : 0)
             border.color: DrawerTheme.edgeColour(DrawerTheme.activeEdge)
@@ -547,8 +545,7 @@ Item {
                 RevealPop { item: formCard; index: 1 }
                 width: parent.width
                 height: formColumn.implicitHeight + 28
-                radius: 12
-
+                radius: IslandStyle.round(12)
                 color: DrawerTheme.card
                 border.width: DrawerTheme.edgeWidth()
                 border.color: DrawerTheme.edgeColour()
@@ -691,8 +688,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 40
-                        radius: 20
-
+                        radius: IslandStyle.round(20)
                         // Same glass edge every other block in this bar now carries --
                         // see GlassCard.qml. Only the block itself goes through the lens;
                         // any icon tile nested inside it is left plain, or the two
@@ -753,8 +749,7 @@ Item {
                 RevealPop { item: metaCard; index: 2 }
                 width: parent.width
                 height: metaColumn.implicitHeight + 16
-                radius: 12
-
+                radius: IslandStyle.round(12)
                 color: DrawerTheme.card
                 border.width: DrawerTheme.edgeWidth()
                 border.color: DrawerTheme.edgeColour()
@@ -825,8 +820,7 @@ Item {
                 RevealPop { item: optionsCard; index: 3 }
                 width: parent.width
                 height: 54
-                radius: 12
-
+                radius: IslandStyle.round(12)
                 // Same glass edge every other block in this bar now carries --
                 // see GlassCard.qml. Only the block itself goes through the lens;
                 // any icon tile nested inside it is left plain, or the two
@@ -878,7 +872,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 40
                     height: 22
-                    radius: 11
+                    radius: IslandStyle.round(11)
                     color: root.optionsValue ? root.accent : DrawerTheme.ink(0.18)
                     border.width: DrawerTheme.edgeWidth()
                     border.color: DrawerTheme.edgeColour()
@@ -887,7 +881,7 @@ Item {
                     Rectangle {
                         width: 18
                         height: 18
-                        radius: 9
+                        radius: IslandStyle.round(9)
                         color: DrawerTheme.onInk
                         anchors.verticalCenter: parent.verticalCenter
                         x: root.optionsValue ? parent.width - width - 2 : 2
@@ -927,7 +921,7 @@ Item {
                 RevealPop { item: shareCard; index: 3 }
                 width: parent.width
                 height: shareColumn.implicitHeight + 28
-                radius: 12
+                radius: IslandStyle.round(12)
                 color: DrawerTheme.card
                 border.width: DrawerTheme.edgeWidth()
                 border.color: DrawerTheme.edgeColour()
@@ -949,7 +943,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: 176
                         height: 176
-                        radius: 8
+                        radius: IslandStyle.round(8)
                         color: "#ffffff"
                         border.width: DrawerTheme.edgeWidth()
                         border.color: DrawerTheme.edgeColour()
@@ -1043,7 +1037,7 @@ Item {
                     RevealPop { item: actionBtn; index: actionBtn.index + 4 }
                     width: layout.width
                     height: 44
-                    radius: 22
+                    radius: IslandStyle.round(22)
                     readonly property color tint: actionBtn.modelData.style === "destructive" ? root.destructive
                         : (actionBtn.modelData.style === "primary" ? DrawerTheme.onInk : DrawerTheme.primary)
                     // Destructive gets a faintly red-tinted fill of its

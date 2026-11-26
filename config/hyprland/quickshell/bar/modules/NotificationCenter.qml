@@ -296,7 +296,7 @@ Item {
                 anchors.verticalCenterOffset: 2
                 width: 34
                 height: 20
-                radius: 10
+                radius: IslandStyle.round(10)
                 color: NotificationState.dnd ? DrawerTheme.accent : DrawerTheme.cardRaised
                 border.width: DrawerTheme.edgeWidth(NotificationState.dnd ? 0 : 1)
                 border.color: DrawerTheme.edgeColour(DrawerTheme.ink(DrawerTheme.dark ? 0.10 : 0.12))
@@ -309,7 +309,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 14
                     height: 14
-                    radius: 7
+                    radius: IslandStyle.round(7)
                     color: ShellTheme.cartoon ? "#ffffff" : (NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.secondary)
                     border.width: DrawerTheme.edgeWidth(0, 2)
                     border.color: DrawerTheme.edgeColour()

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../theme"
+import "../services"
 
 // ============================================================
 // Generic port of waybar's `custom/*` module contract: waybar's own
@@ -214,7 +215,7 @@ Item {
         // and "coin arrondi mais pas totalement arrondi comme un pill" is
         // still the rule these three share.
         height: 22
-        radius: 6
+        radius: IslandStyle.round(6)
         color: "transparent"
 
         // One GlassChip in place of the bottom+top GlassRim pair, same
@@ -222,7 +223,7 @@ Item {
         // layer.effect for the same reason, see there.
         layer.enabled: root.framed
         layer.effect: GlassChip {
-            radius: 6
+            radius: IslandStyle.round(6)
             lightBottom: 1.0
             lightTop: 0.45
         }

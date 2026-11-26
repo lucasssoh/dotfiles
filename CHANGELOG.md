@@ -15,7 +15,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 ### Changed
 - **Firefox:** the page runs to the window's edges, its corners rounded with the window's, instead of sitting as an inset card.
 - **Notification centre, Programme:** the panel sits like a window, `gap` from the screen's edges and the bar, with the same corners. `"sheets": "attached"` in `bar.json` carries the bar's side down to the bottom instead.
-- **Corners:** one rule for every corner of the shell. `radius` in `bar.json`, now 36 by default, sets the windows; a new `gap` sets the space round them, 7 on every side. Drawers, tiles, the bar's curves and the screen corners follow, each concentric with its neighbour. Themes no longer set a radius.
+- **Corners:** one rule for every corner of the shell. `radius` in `bar.json` sets the windows, `none` (square everywhere), `narrow`, `medium` or `wide` (the default); a new `gap` sets the space round them, 7 on every side. Drawers, tiles, the bar's curves and the screen corners follow, each concentric with its neighbour. Themes no longer set a radius.
 - **WezTerm:** Adwaita Mono is the font. JetBrains Mono and GoogleSansCode stay installed, ready to pick in `local.lua`.
 - **WezTerm:** inactive panes are dimmer, and nothing draws a line between panes any more.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.

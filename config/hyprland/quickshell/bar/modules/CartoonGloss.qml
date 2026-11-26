@@ -12,7 +12,7 @@ Item {
     property bool active: true
     property real opacityScale: 1
     property real rimInset: 3
-    readonly property real rimRadius: Math.max(0, (parent.radius || 18) - rimInset)
+    readonly property real rimRadius: Math.max(0, (parent.radius !== undefined ? parent.radius : 18) - rimInset)
 
     anchors.fill: parent
     visible: ShellTheme.cartoon && active

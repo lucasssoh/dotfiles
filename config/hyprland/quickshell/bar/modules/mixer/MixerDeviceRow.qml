@@ -27,7 +27,7 @@ Rectangle {
 
     width: parent ? parent.width : 0
     height: 34
-    radius: 10
+    radius: IslandStyle.round(10)
     border.width: DrawerTheme.edgeWidth()
     border.color: DrawerTheme.edgeColour()
     // The current entry gets no fill at all, only the tick on the right.

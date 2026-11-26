@@ -42,10 +42,10 @@ Item {
             y: -edge.tuck
             width: edge.width
             height: edge.height + edge.tuck
-            radius: 16
+            radius: IslandStyle.round(16)
             color: Qt.rgba(DrawerTheme.paneTop.r, DrawerTheme.paneTop.g, DrawerTheme.paneTop.b, DrawerTheme.paneTop.a * edge.alpha)
             PaneEdge {
-                radius: 16
+                radius: IslandStyle.round(16)
                 highlight: false
                 rimColor: Qt.rgba(DrawerTheme.paneRim.r, DrawerTheme.paneRim.g, DrawerTheme.paneRim.b, DrawerTheme.paneRim.a * edge.alpha)
             }
@@ -90,7 +90,7 @@ Item {
                     required property string modelData
                     width: 18
                     height: 18
-                    radius: 6
+                    radius: IslandStyle.round(6)
                     color: DrawerTheme.paneTop
                     border.width: 1.5
                     border.color: DrawerTheme.paneTop

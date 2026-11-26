@@ -86,7 +86,7 @@ Item {
 
         width: parent ? parent.width : 0
         height: 30
-        radius: 8
+        radius: IslandStyle.round(8)
         color: rowArea.containsMouse
         border.width: DrawerTheme.edgeWidth()
         border.color: DrawerTheme.edgeColour()

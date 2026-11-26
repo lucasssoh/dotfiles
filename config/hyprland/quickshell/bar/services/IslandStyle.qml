@@ -94,7 +94,8 @@ Singleton {
     property real sideFillet: 18
     property bool _fillLightText: true
 
-    // Two numbers from bar.json, `radius` (the windows' corners) and `gap`
+    // Two settings from bar.json, `radius` (the windows' corners, none,
+    // narrow, medium or wide) and `gap`
     // (their distance to the screen's edge and to the bar, on every side).
     // Every other corner is concentric with its neighbour: its radius is
     // that one's plus or minus the distance between them, so the curves
@@ -112,16 +113,23 @@ Singleton {
     //                 the radius
     // Small shapes still clamp to half their height.
     property real radius: 36
+    // bar.json's `radius`, from none (square everywhere) to wide.
+    readonly property var radii: ({ none: 0, narrow: 16, medium: 26, wide: 36 })
+    // `none`: every corner square, the derived ones too.
+    readonly property bool square: root.radius === 0
+    // A component's own designed corner, squared by `none`: what every
+    // fixed radius in the drawers goes through.
+    function round(r: real): real { return root.square ? 0 : r; }
     property int edgeGap: 7
     // bar.json's `sheets`: "floating" (default), the side sheets set apart
     // like windows, or "attached", carrying the bar's side down the edge
     // (modules/SideSheet.qml).
     property bool sheetsAttached: false
     readonly property int band: 31                // shell.qml's bandHeight
-    readonly property real outerRadius: root.radius + root.edgeGap
-    readonly property real drawerRadius: Math.max(6, root.outerRadius - root.edgeGap)
-    readonly property real tileRadius: Math.max(6, root.radius - 8)
-    readonly property real barCurve: root.band / 2
+    readonly property real outerRadius: root.square ? 0 : root.radius + root.edgeGap
+    readonly property real drawerRadius: root.square ? 0 : Math.max(6, root.outerRadius - root.edgeGap)
+    readonly property real tileRadius: root.square ? 0 : Math.max(6, root.radius - 8)
+    readonly property real barCurve: root.square ? 0 : root.band / 2
 
     property real inset: 2
     property real innerInset: 2
@@ -194,10 +202,20 @@ Singleton {
 
         root.solid = c.style === "solid";
 
+        // One of a fixed list, so what has to clear the corners (Firefox's
+        // tab strip) can plan for the widest. An older number snaps to the
+        // nearest.
         const requestedRadius = first(c.radius, obj(c.shape).radius);
-        if (requestedRadius !== undefined && !isNumber(requestedRadius))
-            console.warn("[bar] radius must be a number");
-        root.radius = isNumber(requestedRadius) ? between(requestedRadius, 0, 40) : 36;
+        if (typeof requestedRadius === "string" && root.radii[requestedRadius] !== undefined) {
+            root.radius = root.radii[requestedRadius];
+        } else {
+            if (requestedRadius !== undefined)
+                console.warn("[bar] radius is none, narrow, medium or wide");
+            root.radius = isNumber(requestedRadius)
+                ? Object.values(root.radii).reduce((a, b) =>
+                    Math.abs(b - requestedRadius) < Math.abs(a - requestedRadius) ? b : a)
+                : root.radii.wide;
+        }
         if (c.gap !== undefined && !isNumber(c.gap))
             console.warn("[bar] gap must be a number");
         root.edgeGap = isNumber(c.gap) ? Math.round(between(c.gap, 0, 24)) : 7;

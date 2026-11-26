@@ -76,8 +76,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: 28
             height: 28
-            radius: 9
-
+            radius: IslandStyle.round(9)
             // Same glass edge every other block in this bar now carries --
             // see GlassChip.qml. Only the block itself goes through the lens;
             // any icon tile nested inside it is left plain, or the two
@@ -197,8 +196,7 @@ Item {
         anchors.top: header.bottom
         anchors.topMargin: 14
         height: root.showMaster ? 54 : 0
-        radius: 20
-
+        radius: IslandStyle.round(20)
         // Same glass edge every other block in this bar now carries --
         // see GlassCard.qml. Only the block itself goes through the lens;
         // any icon tile nested inside it is left plain, or the two
@@ -253,7 +251,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: 40
             height: 22
-            radius: 11
+            radius: IslandStyle.round(11)
             color: root.masterChecked ? root.accent : DrawerTheme.ink(0.18)
             border.width: DrawerTheme.edgeWidth()
             border.color: DrawerTheme.edgeColour()
@@ -262,7 +260,7 @@ Item {
             Rectangle {
                 width: 18
                 height: 18
-                radius: 9
+                radius: IslandStyle.round(9)
                 color: DrawerTheme.onInk
                 border.width: DrawerTheme.edgeWidth()
                 border.color: DrawerTheme.edgeColour()

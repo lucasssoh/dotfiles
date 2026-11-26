@@ -34,7 +34,7 @@ Column {
             Rectangle {
                 width: line.width - 58
                 height: block.implicitHeight + 16
-                radius: 12
+                radius: IslandStyle.round(12)
                 color: line.r.type === "course" ? DrawerTheme.card : "transparent"
                 border.width: DrawerTheme.edgeWidth(line.r.type === "session" ? 1 : 0)
                 border.color: DrawerTheme.edgeColour(DrawerTheme.primary)

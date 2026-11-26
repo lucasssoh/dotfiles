@@ -539,8 +539,8 @@ Item {
                     // inner ones face the text and already fade to fully
                     // transparent there, so rounding them would be
                     // invisible anyway.
-                    topLeftRadius: 8
-                    bottomLeftRadius: 8
+                    topLeftRadius: IslandStyle.round(8)
+                    bottomLeftRadius: IslandStyle.round(8)
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "#000000" }
@@ -552,8 +552,8 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: 26
-                    topRightRadius: 8
-                    bottomRightRadius: 8
+                    topRightRadius: IslandStyle.round(8)
+                    bottomRightRadius: IslandStyle.round(8)
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "#00000000" }

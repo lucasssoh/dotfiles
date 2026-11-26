@@ -106,7 +106,7 @@ Item {
                 Rectangle {
                     width: 42
                     height: 42
-                    radius: 14
+                    radius: IslandStyle.round(14)
                     color: DrawerTheme.card
                     border.width: DrawerTheme.edgeWidth()
                     border.color: DrawerTheme.edgeColour()
@@ -163,7 +163,7 @@ Item {
                 Rectangle {
                     width: parent.width
                     height: steps.height + 12 * 2
-                    radius: 14
+                    radius: IslandStyle.round(14)
                     color: DrawerTheme.card
                     border.width: DrawerTheme.edgeWidth()
                     border.color: DrawerTheme.edgeColour()
@@ -209,7 +209,7 @@ Item {
                 visible: !root.confirm
                 width: parent.width
                 height: 42
-                radius: 13
+                radius: IslandStyle.round(13)
                 color: "transparent"
                 border.width: DrawerTheme.edgeWidth(field.activeFocus ? 1.5 : 1)
                 border.color: DrawerTheme.edgeColour(field.activeFocus ? DrawerTheme.primary : DrawerTheme.faint)
@@ -256,7 +256,7 @@ Item {
                         required property var modelData
                         width: label.implicitWidth + 36
                         height: 36
-                        radius: 18
+                        radius: IslandStyle.round(18)
                         color: modelData.main
                         border.width: DrawerTheme.edgeWidth()
                         border.color: DrawerTheme.edgeColour()

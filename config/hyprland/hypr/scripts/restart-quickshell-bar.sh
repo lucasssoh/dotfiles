@@ -36,11 +36,15 @@ if value not in ("top", "bottom"):
     value = "top"
 
 if isinstance(config, dict):
-    candidate = config.get("radius", 36)
-    if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
-        radius = max(0, min(40, round(candidate)))
-    elif candidate is not None:
-        print("Invalid bar radius; using 36", file=sys.stderr)
+    # none, narrow, medium or wide; an older number snaps to the nearest.
+    radii = {"none": 0, "narrow": 16, "medium": 26, "wide": 36}
+    candidate = config.get("radius", "wide")
+    if isinstance(candidate, str) and candidate in radii:
+        radius = radii[candidate]
+    elif isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+        radius = min(radii.values(), key=lambda r: abs(r - candidate))
+    else:
+        print("Invalid bar radius; using wide", file=sys.stderr)
     candidate = config.get("gap", 7)
     if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
         gap = max(0, min(24, round(candidate)))

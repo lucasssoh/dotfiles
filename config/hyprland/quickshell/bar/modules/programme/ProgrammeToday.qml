@@ -57,7 +57,7 @@ Column {
         visible: root.b.daemonConnected && root.b.setupNeeded
         width: parent.width
         height: setupCol.implicitHeight + 36
-        radius: 20
+        radius: IslandStyle.round(20)
         color: DrawerTheme.card
         border.width: DrawerTheme.edgeWidth()
         border.color: DrawerTheme.edgeColour()
@@ -77,7 +77,7 @@ Column {
         visible: root.b.daemonConnected && root.b.away !== "" && !root.active
         width: parent.width
         height: 64
-        radius: 20
+        radius: IslandStyle.round(20)
         color: DrawerTheme.clear(DrawerTheme.card)
         border.width: 1
         border.color: DrawerTheme.faint
@@ -110,7 +110,7 @@ Column {
         Rectangle {
             width: parent.width
             height: activeCol.implicitHeight + 36
-            radius: 20
+            radius: IslandStyle.round(20)
             color: DrawerTheme.clear(DrawerTheme.card)
             border.width: DrawerTheme.edgeWidth(1)
             border.color: DrawerTheme.edgeColour(DrawerTheme.faint)
@@ -167,7 +167,7 @@ Column {
         visible: root.b.justClosed !== ""
         width: parent.width
         height: 56
-        radius: 20
+        radius: IslandStyle.round(20)
         color: DrawerTheme.card
         border.width: DrawerTheme.edgeWidth()
         border.color: DrawerTheme.edgeColour()
@@ -196,7 +196,7 @@ Column {
             visible: root.next !== null
             width: parent.width
             height: nextCol.implicitHeight + 32
-            radius: 20
+            radius: IslandStyle.round(20)
             color: DrawerTheme.clear(DrawerTheme.card)
             border.width: DrawerTheme.edgeWidth(1)
             border.color: DrawerTheme.edgeColour(DrawerTheme.faint)
@@ -254,7 +254,7 @@ Column {
                                 required property var modelData
                                 width: (choices.width - choices.spacing) / 2
                                 height: 44
-                                radius: 14
+                                radius: IslandStyle.round(14)
                                 color: choiceHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
                                 Behavior on color { ColorAnimation { duration: 120 } }
                                 border.width: 1
@@ -310,7 +310,7 @@ Column {
         Rectangle {
             width: parent.width
             height: 52
-            radius: 20
+            radius: IslandStyle.round(20)
             color: startHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
             Behavior on color { ColorAnimation { duration: 120 } }
             border.width: DrawerTheme.edgeWidth(1)

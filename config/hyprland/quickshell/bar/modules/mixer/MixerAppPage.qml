@@ -154,7 +154,7 @@ Item {
             id: eqCard
             width: parent.width
             height: 132
-            radius: 14
+            radius: IslandStyle.round(14)
             color: DrawerTheme.card
             border.width: DrawerTheme.edgeWidth()
             border.color: DrawerTheme.edgeColour()
@@ -245,7 +245,7 @@ Item {
 
                     width: chipLabel.implicitWidth + 18
                     height: 24
-                    radius: 12
+                    radius: IslandStyle.round(12)
                     color: chip.current
                         ? DrawerTheme.on
                         : (chipHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
