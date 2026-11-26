@@ -13,6 +13,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 
 ### Changed
 - **WezTerm:** Adwaita Mono is the font. JetBrains Mono and GoogleSansCode stay installed, ready to pick in `local.lua`.
+- **WezTerm:** inactive panes are dimmer, and nothing draws a line between panes any more.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.
 
 ## 2.7.3

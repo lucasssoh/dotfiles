@@ -35,7 +35,7 @@ return {
   -- cursor_blink_rate = 0,
 
   -- Panes --------------------------------------------------------------
-  -- inactive_pane_hsb = { saturation = 1.0, brightness = 1.0 },
+  -- inactive_pane_hsb = { saturation = 0.8, brightness = 0.7 },
 
   -- Shell --------------------------------------------------------------
   -- default_prog = { "/usr/bin/fish", "-l" },
@@ -60,7 +60,7 @@ return {
       -- cursor_fg = "#f5f3ee",
       -- selection_fg = "#1c1c1e",
       -- selection_bg = "#dedad2",
-      -- split = "#c4c3be",
+      -- split = "#f5f3ee",                          -- the background: no line between panes
       -- ansi    = { "#1c1c1e", "#b3261e", "#24692a", "#6e5c0f", "#1d6386", "#6b4a96", "#006b75", "#86868b" },
       -- brights = { "#56565b", "#c4473f", "#2f7d36", "#875000", "#1f56b8", "#7d5aa8", "#2b7a82", "#c4c3be" },
       -- tab_bar = {                                -- follows background by default
@@ -78,7 +78,7 @@ return {
       -- cursor_bg = "#ffffff",
       -- selection_fg = "#e8e8e3",
       -- selection_bg = "#484e54",
-      -- split = "#605b51",
+      -- split = "#101010",
       -- ansi    = { "#232629", "#b0151a", "#028902", "#ffb400", "#0082c9", "#6d61a1", "#008b8b", "#f8f8f2" },
       -- brights = { "#484e54", "#b0151a", "#028902", "#ffb400", "#0082c9", "#6d61a1", "#008b8b", "#fcfcf6" },
       -- tab_bar = {                                -- follows background by default

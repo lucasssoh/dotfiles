@@ -60,8 +60,8 @@ end
 -- PANE FOCUS VISUAL
 -- =========================
 config.inactive_pane_hsb = {
-  saturation = 0.9,
-  brightness = 1.0,
+  saturation = 0.8,
+  brightness = 0.7,
 }
 
 -- =========================
@@ -114,7 +114,7 @@ if light then
     cursor_border = "#1c1c1e",
     selection_fg = "#1c1c1e",
     selection_bg = "#dedad2",
-    split = "#c4c3be",
+    split = background,
     ansi = {
       "#1c1c1e", "#b3261e", "#24692a", "#6e5c0f",
       "#1d6386", "#6b4a96", "#006b75", "#86868b",
@@ -131,7 +131,7 @@ else
     cursor_bg = "#ffffff",
     selection_fg = "#e8e8e3",
     selection_bg = "#484e54",
-    split = "#605b51",
+    split = background,
     ansi = {
       "#232629", "#b0151a", "#028902", "#ffb400",
       "#0082c9", "#6d61a1", "#008b8b", "#f8f8f2",
