@@ -68,14 +68,17 @@ Item {
             const innerR = Math.max(0, Math.min(root.radius, H / 2));
 
             // A concave corner hanging from (x, y), opening toward +dir.
+            // It reaches 1 px back over what it joins: two antialiased
+            // edges meeting exactly at x let the wallpaper through.
             function fillet(x, y, r, dir) {
                 ctx.beginPath();
-                ctx.moveTo(x, y);
+                ctx.moveTo(x - dir, y);
                 ctx.lineTo(x + dir * r, y);
                 if (dir > 0)
                     ctx.arc(x + r, y + r, r, -Math.PI / 2, Math.PI, true);
                 else
                     ctx.arc(x - r, y + r, r, -Math.PI / 2, 0, false);
+                ctx.lineTo(x - dir, y + r);
                 ctx.closePath();
                 ctx.fill();
             }

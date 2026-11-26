@@ -56,15 +56,18 @@ Item {
             ctx.fillRect(right, 0, width - right, s);
             if (r > 0) {
                 ctx.beginPath();
+                // 1 px under the island's pane, so no seam shows between.
                 ctx.moveTo(left - r, s);
-                ctx.lineTo(left, s);
+                ctx.lineTo(left + 1, s);
+                ctx.lineTo(left + 1, s + r);
                 ctx.lineTo(left, s + r);
                 ctx.arc(left - r, s + r, r, 0, -Math.PI / 2, true);
                 ctx.closePath();
                 ctx.fill();
                 ctx.beginPath();
                 ctx.moveTo(right + r, s);
-                ctx.lineTo(right, s);
+                ctx.lineTo(right - 1, s);
+                ctx.lineTo(right - 1, s + r);
                 ctx.lineTo(right, s + r);
                 ctx.arc(right + r, s + r, r, Math.PI, 3 * Math.PI / 2, false);
                 ctx.closePath();
