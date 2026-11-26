@@ -266,7 +266,7 @@ Item {
         // Phosphor this one IS a font.weight and not a second family --
         // harmless on a Phosphor-Bold `iconFont`, which is already the
         // bold cut and has no weight axis to move.
-        font.weight: Font.Bold
+        font.weight: Fonts.weight(Font.Bold)
         font.pixelSize: root.classIconSizes[root.moduleClass] !== undefined
             ? root.classIconSizes[root.moduleClass] : root.iconPixelSize
         font.letterSpacing: root.letterSpacing

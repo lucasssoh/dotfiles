@@ -405,6 +405,7 @@ Item {
                 width: tileRow.tileWidth
                 height: parent.height
                 title: "Fast charge"
+                pastel: ShellTheme.sage
                 revealIndex: 2
                 // The measured watts rather than "On"/"Off". The whole
                 // reason this toggle exists is that the EC's two modes
@@ -436,6 +437,7 @@ Item {
             width: parent.width
             height: 92
             title: "Profile"
+            pastel: ShellTheme.indigo
             revealIndex: 3
             status: root.profileLabel(PowerProfiles.profile)
             glyph: root.profileGlyph(PowerProfiles.profile)
@@ -497,8 +499,12 @@ Item {
                     spacing: 5
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 6; height: 6; radius: 3
+                        width: ShellTheme.cartoon ? 10 : 6
+                        height: width
+                        radius: width / 2
                         color: curve.dischargeColor
+                        border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
+                        border.color: ShellTheme.outlineColour
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -514,8 +520,12 @@ Item {
                     spacing: 5
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 6; height: 6; radius: 3
+                        width: ShellTheme.cartoon ? 10 : 6
+                        height: width
+                        radius: width / 2
                         color: curve.chargeColor
+                        border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
+                        border.color: ShellTheme.outlineColour
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter

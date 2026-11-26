@@ -39,5 +39,21 @@ else
     added=1
 fi
 
+# Fredoka, the rounded face of the cartoon shell theme. Pinned to a commit
+# and checked by sha256: the file is a variable TTF (width + weight), so a
+# future upstream edit would otherwise change every cartoon title silently.
+FREDOKA_COMMIT="eda3fe521878f70de0e2d91fd6d800f93f8c4758"
+FREDOKA_SHA256="2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8"
+if fc-list : family | grep -iF "Fredoka" >/dev/null; then
+    info "Fredoka already installed"
+else
+    info "downloading Fredoka"
+    curl -fsSL "https://raw.githubusercontent.com/google/fonts/$FREDOKA_COMMIT/ofl/fredoka/Fredoka%5Bwdth,wght%5D.ttf" -o "$tmp/Fredoka.ttf"
+    echo "$FREDOKA_SHA256  $tmp/Fredoka.ttf" | sha256sum -c -
+    mkdir -p "$FONT_DIR/Fredoka"
+    cp "$tmp/Fredoka.ttf" "$FONT_DIR/Fredoka/Fredoka.ttf"
+    added=1
+fi
+
 [ "$added" = 1 ] && fc-cache -f "$FONT_DIR"
 ok "fonts in place"

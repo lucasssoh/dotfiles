@@ -59,6 +59,8 @@ Column {
         height: setupCol.implicitHeight + 36
         radius: 20
         color: DrawerTheme.card
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         Column {
             id: setupCol
             x: 18
@@ -110,8 +112,8 @@ Column {
             height: activeCol.implicitHeight + 36
             radius: 20
             color: DrawerTheme.clear(DrawerTheme.card)
-            border.width: 1
-            border.color: DrawerTheme.faint
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.color: ShellTheme.outlineColour
             Column {
                 id: activeCol
                 x: 18
@@ -167,6 +169,8 @@ Column {
         height: 56
         radius: 20
         color: DrawerTheme.card
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         ProgrammeText {
             anchors.verticalCenter: parent.verticalCenter
             x: 18
@@ -194,8 +198,8 @@ Column {
             height: nextCol.implicitHeight + 32
             radius: 20
             color: DrawerTheme.clear(DrawerTheme.card)
-            border.width: 1
-            border.color: DrawerTheme.faint
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.color: ShellTheme.outlineColour
             Column {
                 id: nextCol
                 x: 18
@@ -309,8 +313,8 @@ Column {
             radius: 20
             color: startHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
             Behavior on color { ColorAnimation { duration: 120 } }
-            border.width: 1
-            border.color: DrawerTheme.faint
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.color: ShellTheme.outlineColour
             ProgrammeText {
                 x: 18
                 anchors.verticalCenter: parent.verticalCenter

@@ -407,6 +407,8 @@ Item {
             // nothing has switched on carries no edge at all. It also means
             // the layer is allocated only for the one element in play.
             color: backArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.card
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+            border.color: ShellTheme.outlineColour
             Behavior on color { ColorAnimation { duration: 120 } }
 
             Text {
@@ -493,8 +495,8 @@ Item {
             radius: 12
 
             color: root.statusConnected ? DrawerTheme.activeFill : DrawerTheme.card
-            border.width: root.statusConnected ? 1 : 0
-            border.color: DrawerTheme.activeEdge
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : (root.statusConnected ? 1 : 0)
+            border.color: ShellTheme.outlineColour
 
             Text {
                 anchors.left: parent.left
@@ -549,6 +551,8 @@ Item {
                 radius: 12
 
                 color: DrawerTheme.card
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
 
                 Column {
                     id: formColumn
@@ -704,6 +708,8 @@ Item {
                             return submitArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on;
                         }
                         Behavior on color { ColorAnimation { duration: 120 } }
+                        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                        border.color: ShellTheme.outlineColour
 
                         Text {
                             anchors.centerIn: parent
@@ -753,6 +759,8 @@ Item {
                 radius: 12
 
                 color: DrawerTheme.card
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
 
                 Column {
                     id: metaColumn
@@ -831,6 +839,8 @@ Item {
                 // carries an on/off state, so it keeps the glass -- lit
                 // only while it is actually on.
                 color: DrawerTheme.card
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
 
                 Column {
                     anchors.left: parent.left
@@ -875,6 +885,8 @@ Item {
                     height: 22
                     radius: 11
                     color: root.optionsValue ? root.accent : DrawerTheme.ink(0.18)
+                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                    border.color: ShellTheme.outlineColour
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     Rectangle {
@@ -922,6 +934,8 @@ Item {
                 height: shareColumn.implicitHeight + 28
                 radius: 12
                 color: DrawerTheme.card
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
 
                 Column {
                     id: shareColumn
@@ -943,6 +957,8 @@ Item {
                         height: 176
                         radius: 8
                         color: "#ffffff"
+                        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                        border.color: ShellTheme.outlineColour
                         visible: !!root.shareMatrix
 
                         Canvas {
@@ -1048,6 +1064,8 @@ Item {
                             return hovered ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on;
                         return hovered ? DrawerTheme.cardHover : DrawerTheme.card;
                     }
+                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                    border.color: ShellTheme.outlineColour
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     Text {

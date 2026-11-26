@@ -478,7 +478,9 @@ hl.layer_rule({ match = { namespace = "^prisme$" },             animation = "fad
 -- The bar (and the veil under it) slides in and out on its own (quickshell/bar/shell.qml), the
 -- same way at either edge. no_anim skips Hyprland's snapshot on exit; its
 -- entrance is a plain fade, played while the bar's content is still hidden.
-hl.layer_rule({ match = { namespace = "^quickshell-bar-(top|bottom|veil)$" }, animation = "fade", no_anim = true })
+-- Keep the bar below the screen-corner surfaces (order 100) even when
+-- it switches to Overlay for the central island's key sheet.
+hl.layer_rule({ match = { namespace = "^quickshell-bar-(top|bottom|veil)$" }, animation = "fade", no_anim = true, order = 50 })
 
 -- ============================================================
 -- LAYER NO-ANIM — the bar's side sheets (Programme, notifications)

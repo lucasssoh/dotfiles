@@ -274,8 +274,9 @@ Item {
 
             Rectangle {
                 width: parent.width
-                height: 1
-                color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
+                height: ShellTheme.cartoon ? 2 : 1
+                color: ShellTheme.cartoon ? Qt.rgba(0, 0, 0, 0.25)
+                    : DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
             }
             Text {
                 anchors.left: parent.left
@@ -297,17 +298,21 @@ Item {
                 height: 20
                 radius: 10
                 color: NotificationState.dnd ? DrawerTheme.accent : DrawerTheme.cardRaised
-                border.width: NotificationState.dnd ? 0 : 1
-                border.color: DrawerTheme.ink(DrawerTheme.dark ? 0.10 : 0.12)
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : (NotificationState.dnd ? 0 : 1)
+                border.color: ShellTheme.outlineColour
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 Rectangle {
-                    x: NotificationState.dnd ? parent.width - width - 3 : 3
+                    x: NotificationState.dnd
+                       ? parent.width - width - (ShellTheme.cartoon ? ShellTheme.outline + 1 : 3)
+                       : (ShellTheme.cartoon ? ShellTheme.outline + 1 : 3)
                     anchors.verticalCenter: parent.verticalCenter
                     width: 14
                     height: 14
                     radius: 7
-                    color: NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.secondary
+                    color: ShellTheme.cartoon ? "#ffffff" : (NotificationState.dnd ? DrawerTheme.onInk : DrawerTheme.secondary)
+                    border.width: ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 0
+                    border.color: ShellTheme.outlineColour
                     Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                     Behavior on color { ColorAnimation { duration: 140 } }
                 }
@@ -474,8 +479,10 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: DrawerTheme.cardHover
-            opacity: (tb.enabled && hover.containsMouse) ? 1 : 0
+            color: ShellTheme.cartoon ? (tb.enabled ? ShellTheme.lemon : DrawerTheme.cardRaised) : DrawerTheme.cardHover
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+            border.color: ShellTheme.outlineColour
+            opacity: ShellTheme.cartoon ? 1 : ((tb.enabled && hover.containsMouse) ? 1 : 0)
             Behavior on opacity { NumberAnimation { duration: 110 } }
 
             // GlassChip, not GlassCard: this disc is 30px and a 7px band
@@ -491,8 +498,9 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: tb.glyph
-            color: !tb.enabled ? DrawerTheme.ink(0.22)
-                 : hover.containsMouse ? DrawerTheme.accent : DrawerTheme.primary
+            color: ShellTheme.cartoon ? ShellTheme.ink
+                 : (!tb.enabled ? DrawerTheme.ink(0.22)
+                    : hover.containsMouse ? DrawerTheme.accent : DrawerTheme.primary)
             Behavior on color { ColorAnimation { duration: 110 } }
             font.family: Fonts.iconMingcute
             font.pixelSize: tb.glyphSize
@@ -622,8 +630,10 @@ Item {
         anchors.right: parent.right
         anchors.top: listHeader.bottom
         anchors.bottom: BarPosition.bottom ? handle.top : parent.bottom
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
+        // More room in cartoon: the notification cards carry a 4px ink
+        // outline that must stay clear of the drawer's clipped edges.
+        anchors.leftMargin: ShellTheme.cartoon ? 28 : 20
+        anchors.rightMargin: ShellTheme.cartoon ? 28 : 20
         anchors.topMargin: 12
         anchors.bottomMargin: 20
         clip: true
@@ -834,8 +844,9 @@ Item {
         // No fill: a hairline above each app parts it from the last.
         Rectangle {
             width: parent.width
-            height: 1
-            color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
+            height: ShellTheme.cartoon ? 2 : 1
+            color: ShellTheme.cartoon ? Qt.rgba(0, 0, 0, 0.25)
+                : DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
         }
 
         Column {
@@ -857,8 +868,10 @@ Item {
                     anchors.verticalCenterOffset: 2
                     width: 22
                     height: 22
-                    radius: 7
-                    color: DrawerTheme.cardRaised
+                    radius: ShellTheme.cartoon ? 10 : 7
+                    color: ShellTheme.cartoon ? ShellTheme.sky : DrawerTheme.cardRaised
+                    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                    border.color: ShellTheme.outlineColour
 
                     Image {
                         id: appImage
@@ -874,8 +887,8 @@ Item {
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                         text: "\uF126"   // mgc notification
-                        color: DrawerTheme.accent
-                        font.family: Fonts.iconMingcute
+                        color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.accent
+                    font.family: Fonts.iconMingcute
                         font.pixelSize: 12
                     }
                 }
@@ -935,8 +948,9 @@ Item {
                         visible: line.index > 0 && !line.continued
                         x: 2
                         width: parent.width - 4
-                        height: 1
-                        color: DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
+                        height: ShellTheme.cartoon ? 2 : 1
+                        color: ShellTheme.cartoon ? Qt.rgba(0, 0, 0, 0.25)
+                            : DrawerTheme.ink(DrawerTheme.dark ? 0.07 : 0.08)
                     }
                     NotificationCard {
                         id: rowCard

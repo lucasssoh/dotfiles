@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import "../../theme"
+import "../../services"
 
 // One face button as the pad in hand prints it: a letter (Xbox, Switch,
 // Steam), a PlayStation shape, or, for a pad nobody knows the labels of,
@@ -26,8 +27,8 @@ Rectangle {
     height: cap.size
     radius: cap.size / 2
     color: DrawerTheme.card
-    border.width: Math.max(1.2, cap.size / 32)
-    border.color: DrawerTheme.ink(cap.tinted ? 0.16 : 0.28)
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : Math.max(1.2, cap.size / 32)
+    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(cap.tinted ? 0.16 : 0.28)
 
     Text {
         visible: cap.kind === "letter"
@@ -37,7 +38,7 @@ Rectangle {
         color: cap.ink
         font.family: Fonts.ui
         font.pixelSize: Math.round(cap.size * 0.48)
-        font.weight: Font.ExtraBold
+        font.weight: Fonts.weight(Font.ExtraBold)
     }
 
     // The shapes take half the cap, as in the mock-up, drawn on a 24-unit

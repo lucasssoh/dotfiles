@@ -29,6 +29,12 @@ does   = "write bar.json, the bar's position and look, from the older files if a
 run    = "units/core/bar/hooks/bar-config.sh"
 
 [[hooks]]
+name   = "shell-theme-config"
+run_as = "user"
+does   = "write shell-theme.json, the shell-wide default or cartoon theme"
+run    = "units/core/bar/hooks/shell-theme.sh"
+
+[[hooks]]
 name   = "fontview-mime"
 run_as = "user"
 does   = "write fontview.desktop and make fontview the handler of font files"

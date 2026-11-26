@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 import ".."   // GlassCard/GlassChip live one level up
 
 // A row of mutually exclusive pills -- the EAP method / phase-2 auth
@@ -41,7 +42,7 @@ Item {
                     ? (seg.width - 6 * (seg.options.length - 1)) / seg.options.length
                     : 0
                 height: seg.height
-                radius: 10
+                radius: ShellTheme.cartoon ? Math.min(ShellTheme.radius, 12) : 10
 
                 // Same glass edge every other block in this bar now carries --
                 // see GlassCard.qml. Only the block itself goes through the lens;
@@ -62,16 +63,18 @@ Item {
                     ? (pillArea.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
                     : (pillArea.containsMouse ? DrawerTheme.cardRaised : DrawerTheme.cardHover)
                 Behavior on color { ColorAnimation { duration: 120 } }
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
 
                 Text {
                     anchors.centerIn: parent
                     renderType: Text.QtRendering
                     font.hintingPreference: Font.PreferNoHinting
                     text: pill.modelData.label
-                    color: pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary
+                    color: ShellTheme.cartoon ? ShellTheme.ink : (pill.selected ? DrawerTheme.onInk : DrawerTheme.secondary)
                     font.family: Fonts.ui
                     font.pixelSize: 12
-                    font.bold: pill.selected
+                    font.weight: Fonts.weight(pill.selected ? Font.Bold : Font.Normal)
                     elide: Text.ElideRight
                 }
 

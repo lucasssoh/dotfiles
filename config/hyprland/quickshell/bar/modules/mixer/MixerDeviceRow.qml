@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 import ".."          // GlassCard
 import "../balise"   // RevealPop
 
@@ -27,6 +28,8 @@ Rectangle {
     width: parent ? parent.width : 0
     height: 34
     radius: 10
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+    border.color: ShellTheme.outlineColour
 
 
     // The current entry gets no fill at all, only the tick on the right.

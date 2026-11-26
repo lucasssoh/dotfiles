@@ -82,13 +82,14 @@ Singleton {
         const ink = DrawerTheme.primary;
         // The tints are pastels made for the dark drawer; on the light one
         // they are taken down to a readable ink.
-        const tone = (t) => DrawerTheme.dark ? t : Qt.darker(t, 2.0);
+        const tone = (t) => DrawerTheme.dark ? t : Qt.darker(t, ShellTheme.cartoon ? 1.6 : 2.0);
         const b = (kind, label, tint) => ({ kind: kind, label: label, tint: tint ? tone(tint) : ink });
+        const pastel = (shared, original) => ShellTheme.cartoon ? shared : original;
         switch (family) {
         case "xbox":
-            return { south: b("letter", "A", "#8fd49a"), east: b("letter", "B", "#ef8f8f"), north: b("letter", "Y", "#e9cf7d"), west: b("letter", "X", "#86aef0"), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };
+            return { south: b("letter", "A", pastel(ShellTheme.mint, "#8fd49a")), east: b("letter", "B", pastel(ShellTheme.salmon, "#ef8f8f")), north: b("letter", "Y", pastel(ShellTheme.lemon, "#e9cf7d")), west: b("letter", "X", pastel(ShellTheme.sky, "#86aef0")), lb: "LB", rb: "RB", lt: "LT", rt: "RT", guide: "Guide" };
         case "playstation":
-            return { south: b("cross", "", "#95b8f2"), east: b("circle", "", "#f09aa4"), north: b("triangle", "", "#86d6c8"), west: b("square", "", "#e7a6d4"), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "PS button" };
+            return { south: b("cross", "", pastel(ShellTheme.sky, "#95b8f2")), east: b("circle", "", pastel(ShellTheme.salmon, "#f09aa4")), north: b("triangle", "", pastel(ShellTheme.mint, "#86d6c8")), west: b("square", "", pastel(ShellTheme.pink, "#e7a6d4")), lb: "L1", rb: "R1", lt: "L2", rt: "R2", guide: "PS button" };
         case "nintendo":
             return { south: b("letter", "B"), east: b("letter", "A"), north: b("letter", "X"), west: b("letter", "Y"), lb: "L", rb: "R", lt: "ZL", rt: "ZR", guide: "Home" };
         case "steam":

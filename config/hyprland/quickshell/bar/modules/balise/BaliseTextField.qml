@@ -1,4 +1,5 @@
 import QtQuick
+import "../../services"
 import "../../theme"
 import ".."   // GlassCard/GlassChip live one level up
 
@@ -41,7 +42,7 @@ Rectangle {
 
     width: parent ? parent.width : 0
     height: 40
-    radius: 11
+    radius: ShellTheme.cartoon ? ShellTheme.radius : 11
 
     // Same glass edge every other block in this bar now carries --
     // see GlassCard.qml. Only the block itself goes through the lens;
@@ -52,11 +53,11 @@ Rectangle {
     // nothing has switched on carries no edge at all. It also means
     // the layer is allocated only for the one element in play.
     color: input.activeFocus ? DrawerTheme.cardRaised : DrawerTheme.card
-    border.width: 1
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
     // The focus ring is the only cue that keystrokes are landing here --
     // there is no window title bar or system focus indicator on a layer
     // surface to fall back on.
-    border.color: input.activeFocus ? DrawerTheme.accent : DrawerTheme.ink(0.10)
+    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (input.activeFocus ? DrawerTheme.accent : DrawerTheme.ink(0.10))
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 
@@ -83,7 +84,7 @@ Rectangle {
         clip: true
         selectByMouse: true
 
-        color: DrawerTheme.primary
+        color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary
         selectionColor: DrawerTheme.accentStrongest
         selectedTextColor: DrawerTheme.primary
         font.family: Fonts.ui

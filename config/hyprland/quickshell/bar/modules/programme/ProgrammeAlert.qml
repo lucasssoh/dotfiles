@@ -92,7 +92,7 @@ Item {
             wrapMode: Text.WordWrap
             font.family: Fonts.ui
             font.pixelSize: 30
-            font.weight: Font.DemiBold
+            font.weight: Fonts.weight(Font.DemiBold)
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
         }
@@ -172,7 +172,7 @@ Item {
                         color: btn.primary ? DrawerTheme.onInk : DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 15
-                        font.weight: Font.DemiBold
+                        font.weight: Fonts.weight(Font.DemiBold)
                         renderType: Text.NativeRendering
                         font.hintingPreference: Font.PreferNoHinting
                     }

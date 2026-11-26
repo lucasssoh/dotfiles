@@ -1,5 +1,6 @@
 import QtQuick
 import "../theme"
+import "../services"
 
 // The edge of a glass pane, drawn over it: a hairline rim all round and
 // a brighter line just inside the top, where the light catches. Replaces
@@ -39,7 +40,7 @@ Item {
     // (the top corners with it, their radii are far shorter than that),
     // then each side is a 1px line fading out by 85%.
     Item {
-        visible: edge.fade
+        visible: edge.fade && !ShellTheme.cartoon
         width: edge.width
         height: Math.round(edge.height * 0.2)
         clip: true
@@ -52,12 +53,12 @@ Item {
             topRightRadius: edge.topRightRadius
             bottomLeftRadius: edge.bottomLeftRadius
             bottomRightRadius: edge.bottomRightRadius
-            border.width: 1
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
             border.color: edge.rimColor
         }
     }
     Repeater {
-        model: edge.fade ? [0, edge.width - 1] : []
+        model: edge.fade && !ShellTheme.cartoon ? [0, edge.width - 1] : []
 
         Rectangle {
             required property real modelData
@@ -73,14 +74,14 @@ Item {
     }
 
     Rectangle {
-        visible: !edge.fade
+        visible: !edge.fade || ShellTheme.cartoon
         anchors.fill: parent
         color: "transparent"
         topLeftRadius: edge.topLeftRadius
         topRightRadius: edge.topRightRadius
         bottomLeftRadius: edge.bottomLeftRadius
         bottomRightRadius: edge.bottomRightRadius
-        border.width: 1
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
         border.color: edge.rimColor
     }
 
@@ -88,7 +89,7 @@ Item {
     // it fades out down the corners instead of tracing the whole pane.
     Item {
         id: topLight
-        visible: edge.highlight
+        visible: edge.highlight && !ShellTheme.cartoon
         x: 1
         y: 1
         width: Math.max(0, edge.width - 2)
@@ -115,7 +116,7 @@ Item {
     // the height) there is no straight side at all, and a line run on
     // down stood out past the curve, a stray stroke beside the pane.
     Repeater {
-        model: edge.highlight && edge.sideHighlight ? [1, edge.width - 2] : []
+        model: edge.highlight && edge.sideHighlight && !ShellTheme.cartoon ? [1, edge.width - 2] : []
 
         Rectangle {
             required property real modelData

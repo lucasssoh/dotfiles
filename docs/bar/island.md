@@ -62,6 +62,10 @@ Both zone shapes are honoured in `solid` too: the side shapes are drawn over the
 
 `radius` is the one curve for the whole shell. Saving it writes `~/.config/hypr/bar-radius` for Hyprland's own config and applies `decoration:rounding` immediately; the bar's concave corners, notch fillets, blocks, drawer rows and [screen corners](index.md#screen-corners) follow the same number. Small shapes clamp it to half their height, so a 24px block becomes a full pill while a drawer stays under its own limit. Drawers that open wider keep their larger 28–32px corners.
 
+## Cartoon look
+
+With `"style": "cartoon"` in [`shell-theme.json`](../session/theme.md#the-shell-theme), the bar keeps its structure and the way its shapes are drawn: `position`, `style`, zone shapes, `radius`, opacities and text modes still come from `bar.json`, as does the window rounding. Only the centre zone is repainted — lilac, or copper in `cuivre-cyan`, with an ink outline and larger workspace marks. The band and the sides keep the fills, text and shapes from `bar.json`. The side groups, audio and battery are left unframed; accents mark the current workspace and an appointment. Switch back to `default` to get your own colours and glass again.
+
 ## Shapes to try
 
 Change just one key, save, and the bar restarts. The centre:

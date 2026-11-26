@@ -1,5 +1,6 @@
 import QtQuick
 import "../theme"
+import "../services"
 import "balise"   // RevealPop
 
 // The square-ish toggle card used in a drawer's tile grid: icon badge,
@@ -22,6 +23,7 @@ Rectangle {
 
     property int revealIndex: 0
     RevealPop { item: tile; index: tile.revealIndex }
+    CartoonGloss { active: tile.active }
 
     property string title: ""
     property string status: ""
@@ -32,13 +34,16 @@ Rectangle {
     // Balise's wide Wi-Fi tile uses it.
     property int signalBars: -1
     property color accent: DrawerTheme.accent
+    // A category tint for the copper/cyan colourway: Wi-Fi, Bluetooth,
+    // power and display each get their own pastel when switched on.
+    property color pastel: DrawerTheme.accent
     signal activated()
     // Right-click opens this tile's section list (WiFi/Bluetooth in
     // Balise); a tile with no second action routes both to the same
     // place, or leaves this unconnected.
     signal activatedSecondary()
 
-    radius: 24
+    radius: ShellTheme.cartoon ? ShellTheme.radius : 24
 
     // Same glass edge every other block in this bar now carries -- see
     // GlassCard.qml. Only while this is HOVERED or ON: the glass is a
@@ -54,16 +59,18 @@ Rectangle {
     // the inverse one, the way HyperOS control-centre tiles light up and
     // the way the bar's active workspace already reads. Hover is a small
     // step in the same direction on either side.
-    color: tile.active
+    color: ShellTheme.cartoon && ShellTheme.copperCyan && tile.active
+        ? (mouseArea.containsMouse ? Qt.lighter(tile.pastel, 1.06) : tile.pastel)
+        : tile.active
         ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
         : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
     // On: a stronger veil and a fine edge, not a block of `on` (V3).
-    border.width: tile.active ? 1 : 0
-    border.color: DrawerTheme.activeEdge
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : (tile.active ? 1 : 0)
+    border.color: ShellTheme.outlineColour
 
 
-    readonly property color fg: tile.active ? DrawerTheme.activeInk : DrawerTheme.primary
+    readonly property color fg: ShellTheme.cartoon ? ShellTheme.ink : (tile.active ? DrawerTheme.activeInk : DrawerTheme.primary)
 
     // Vertically centered rather than top-anchored with a fixed margin:
     // tiles differ in whether they carry a status line, and centering
@@ -88,7 +95,7 @@ Rectangle {
             glyph: tile.glyph
             glyphFont: tile.glyphFont
             active: tile.active
-            accent: tile.accent
+            accent: ShellTheme.copperCyan ? tile.pastel : tile.accent
         }
         // Title and status as their own tight pair: the outer 8 is the
         // badge's breathing room, too loose between two lines of text.

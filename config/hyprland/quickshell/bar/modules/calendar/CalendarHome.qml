@@ -250,6 +250,9 @@ Item {
                             color: modelData.today ? DrawerTheme.accent
                                 : cellHit.containsMouse ? DrawerTheme.cardHover
                                 : "transparent"
+                            border.width: ShellTheme.cartoon && (modelData.today || cellHit.containsMouse)
+                                ? Math.min(ShellTheme.outline, 2) : 0
+                            border.color: ShellTheme.outlineColour
                         }
 
                         Text {

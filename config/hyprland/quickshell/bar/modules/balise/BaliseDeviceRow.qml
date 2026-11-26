@@ -1,4 +1,5 @@
 import QtQuick
+import "../../services"
 import "../../theme"
 import ".."   // GlassCard/GlassChip live one level up
 
@@ -29,7 +30,7 @@ Rectangle {
 
     width: ListView.view ? ListView.view.width : 0
     height: 58
-    radius: 20
+    radius: ShellTheme.cartoon ? ShellTheme.radius : 20
 
     // Same glass edge every other block in this bar now carries --
     // see GlassCard.qml. Only the block itself goes through the lens;
@@ -46,8 +47,9 @@ Rectangle {
         : (rowArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
     Behavior on color { ColorAnimation { duration: 120 } }
     // Connected: a stronger veil and a fine edge, only the disc inverts (V3).
-    border.width: row.connected ? 1 : 0
-    border.color: DrawerTheme.activeEdge
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : (row.connected ? 1 : 0)
+    CartoonGloss { active: row.connected }
+    border.color: ShellTheme.outlineColour
 
     MouseArea {
         id: rowArea
@@ -66,6 +68,8 @@ Rectangle {
         height: 32
         radius: width / 2
         color: row.connected ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
+        border.width: 0
+        border.color: ShellTheme.outlineColour
 
         Text {
             anchors.centerIn: parent
@@ -76,7 +80,7 @@ Rectangle {
             // mgc bluetooth either way: "connected" is the accent ink and
             // the tinted badge behind it, MingCute has no separate glyph.
             text: "\uEA40"
-            color: row.connected ? DrawerTheme.activeDiscInk : DrawerTheme.primary
+            color: ShellTheme.cartoon ? (row.connected ? DrawerTheme.activeDiscInk : ShellTheme.ink) : (row.connected ? DrawerTheme.activeDiscInk : DrawerTheme.primary)
             font.family: Fonts.iconMingcute
             font.pixelSize: 17
         }
@@ -95,7 +99,7 @@ Rectangle {
             renderType: Text.QtRendering
             font.hintingPreference: Font.PreferNoHinting
             text: row.modelData.name || ""
-            color: row.connected ? DrawerTheme.activeInk : DrawerTheme.primary
+            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk : DrawerTheme.primary)
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
@@ -112,7 +116,7 @@ Rectangle {
                 }
                 return row.paired ? "Paired" : "Not paired";
             }
-            color: row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary
+            color: ShellTheme.cartoon ? ShellTheme.ink : (row.connected ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
             font.family: Fonts.ui
             font.pixelSize: 12
             elide: Text.ElideRight

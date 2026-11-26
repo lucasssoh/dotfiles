@@ -16,7 +16,7 @@ Hold `Super` and the [key sheet](key-sheet.md) opens under the island. [Veille](
 
 ## Position
 
-The bar sits at the top or at the bottom of the screen. Edit `~/.config/hypr/bar.json`:
+The bar sits at the top or at the bottom of the screen. The layout mirrors, but the cartoon support shadow stays down-right in both positions. Edit `~/.config/hypr/bar.json`:
 
 ```json
 { "position": "bottom" }
@@ -55,7 +55,7 @@ qs -c bar ipc call bar toggleBalise
 
 ## Screen corners
 
-The bar rounds the screen's four corners, concentric with the windows: `bar.json`'s [`radius`](island.md#its-look) plus the gap windows keep from the edge. A fullscreen window covers them.
+The bar rounds the screen's four corners, concentric with the windows: `bar.json`'s [`radius`](island.md#its-look) plus the gap windows keep from the edge. They stay black and above every window, including when the bar rises to `Overlay` for the central island's key sheet. A fullscreen window covers them.
 
 ## Demo mode
 

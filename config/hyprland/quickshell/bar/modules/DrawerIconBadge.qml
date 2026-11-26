@@ -1,5 +1,6 @@
 import QtQuick
 import "../theme"
+import "../services"
 
 // The rounded-square icon badge a drawer control carries: accent-tinted
 // while its control is on, a flat neutral otherwise.
@@ -34,7 +35,9 @@ Rectangle {
     radius: width / 2
     // On, only the disc inverts (V3): the control around it keeps its
     // veil and its normal inks, see DrawerTheme's "active" block.
-    color: badge.active ? DrawerTheme.activeDisc : DrawerTheme.cardRaised
+    color: badge.active ? DrawerTheme.activeDisc : (ShellTheme.cartoon ? badge.accent : DrawerTheme.cardRaised)
+    border.width: ShellTheme.cartoon && !badge.active ? ShellTheme.outline : 0
+    border.color: ShellTheme.outlineColour
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Text {
@@ -42,7 +45,7 @@ Rectangle {
         renderType: Text.NativeRendering
         font.hintingPreference: Font.PreferNoHinting
         text: badge.glyph
-        color: badge.active ? DrawerTheme.activeDiscInk : DrawerTheme.primary
+        color: badge.active ? DrawerTheme.activeDiscInk : (ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary)
         font.family: badge.glyphFont
         // A TWO-glyph badge -- PowerHome's double bolt, the only one so
         // far -- does not fit at the single-glyph size. Every Lucide

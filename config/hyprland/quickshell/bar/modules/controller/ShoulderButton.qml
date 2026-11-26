@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import "../../theme"
+import "../../services"
 
 // A shoulder button (LB, L1, L…), shaped like the mock-up's: one outline,
 // corners of 7 px on top and 10 px underneath, so it reads as a trigger cap
@@ -18,12 +19,13 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            strokeColor: DrawerTheme.ink(0.28)
-            strokeWidth: 1.2
-            fillColor: "transparent"
+            strokeColor: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.28)
+            strokeWidth: ShellTheme.cartoon ? ShellTheme.outline : 1.2
+            fillColor: ShellTheme.cartoon ? ShellTheme.lemon : "transparent"
             PathSvg {
                 path: {
-                    const w = root.width, h = root.height, e = 0.6, t = 7, b = 10;
+                    const w = root.width, h = root.height,
+                        e = ShellTheme.cartoon ? ShellTheme.outline / 2 + 0.6 : 0.6, t = 7, b = 10;
                     return "M " + t + " " + e
                         + " L " + (w - t) + " " + e
                         + " A " + (t - e) + " " + (t - e) + " 0 0 1 " + (w - e) + " " + t
@@ -43,9 +45,9 @@ Item {
         anchors.verticalCenterOffset: 0.5
         renderType: Text.NativeRendering
         text: root.label
-        color: DrawerTheme.ink(0.78)
+        color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.ink(0.78)
         font.family: Fonts.ui
         font.pixelSize: 10
-        font.weight: Font.ExtraBold
+        font.weight: Fonts.weight(Font.ExtraBold)
     }
 }

@@ -172,30 +172,10 @@ ShellRoot {
         shell.keybindsShift = false;
     }
 
-    // The bar climbs to the Overlay layer while the keybinds sheet is up,
-    // and only then. Programme's and the notifications' sheets are their
-    // own windows on the same Top layer, mapped after the bar, so they
-    // stacked over the sheet hanging from the central island; z inside
-    // the bar's window cannot reach them, the layer can (layer-shell's
-    // set_layer, no remap). Not Overlay for good: that layer sits above
-    // fullscreen windows too, and the bar must not cover a video.
-    //
-    // Held a little past the release, so the sheet finishes closing on
-    // top instead of dropping under the side sheets mid-fade.
-    property bool barRaised: false
-    onKeybindsVisibleChanged: {
-        if (shell.keybindsVisible) {
-            barLowerTimer.stop();
-            shell.barRaised = true;
-        } else {
-            barLowerTimer.restart();
-        }
-    }
-    Timer {
-        id: barLowerTimer
-        interval: 400
-        onTriggered: shell.barRaised = false
-    }
+    // The bar stays on the Top layer with a high order (see windowrules)
+    // instead of climbing to Overlay for the keybinds sheet. Changing layers
+    // re-stacked it over the screen-corner windows, which must stay black
+    // and above everything; the order keeps it over the other Top sheets.
 
     // Hyprland events that mean "a shortcut just DID something", used to
     // dismiss the sheet when its release bind never arrives.
@@ -761,6 +741,42 @@ ShellRoot {
     }
     onGlassToneLuaChanged: glassPump.start()
     Component.onCompleted: glassPump.start()
+
+    // Hyprland's window borders follow the same theme switch. The Lua
+    // config reads shell-theme.json at load; this keeps it in sync when
+    // the file changes on a running session. Switching back reloads the
+    // config so the author's own default borders come back untouched.
+    Process {
+        id: windowThemeApply
+        // The Lua reads the current light/dark mode itself, so there is no
+        // lag between the gsettings flip and the border change.
+        property string lua: !ShellTheme.cartoon ? "" :
+            'local m = io.popen("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null"); '
+               + 'local s = m and m:read("*a") or ""; if m then m:close() end; '
+               + 'local d = s:find("prefer%-dark") ~= nil; '
+               + 'local a = d and "rgba(4D4D4DFF)" or "rgba(000000FF)"; '
+               + 'local i = d and "rgba(242424FF)" or "rgba(00000040)"; '
+               + 'hl.config({ general = { col = { active_border = { colors = { a, a, a }, angle = 270 }, inactive_border = i } }, '
+               + 'decoration = { shadow = { enabled = false } } })'
+        command: ["hyprctl", "eval", windowThemeApply.lua]
+    }
+    Process {
+        id: windowThemeReset
+        command: ["hyprctl", "reload"]
+    }
+    Connections {
+        target: ShellTheme
+        function onCartoonChanged() {
+            if (ShellTheme.cartoon) windowThemeApply.running = true;
+            else windowThemeReset.running = true;
+        }
+    }
+    Connections {
+        target: AppearanceState
+        function onDarkChanged() {
+            if (ShellTheme.cartoon) windowThemeApply.running = true;
+        }
+    }
     // A config reload puts hyprland.lua's dark pair back, whatever the mode:
     // send the tone again.
     Connections {
@@ -892,11 +908,9 @@ ShellRoot {
             // Reserved only while the bar is in place, so windows make
             // room as it slides in and take the room back as it leaves.
             exclusiveZone: bar.shown ? 24 + IslandStyle.gap : 0
-            // The layer spelled out rather than `aboveWindows: true`, which
-            // pins it to Top: see `barRaised`, the bar climbs above
-            // Programme's and the notifications' sheets while the keybinds
-            // sheet is showing.
-            WlrLayershell.layer: shell.barRaised ? WlrLayer.Overlay : WlrLayer.Top
+            // Top, with a high order in windowrules: above the other Top
+            // sheets, but below the Overlay screen corners.
+            WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: BarPosition.bottom ? "quickshell-bar-bottom" : "quickshell-bar-top"
             color: "transparent"
 
@@ -1428,16 +1442,16 @@ ShellRoot {
                 rowIslandColor: islandGlass.fill
                 // No border: neither the rim nor the top light ("enlève la
                 // bordure"); the glass and its shadow draw the island.
-                rowIslandRim: "transparent"
+                rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : "transparent"
                 rowIslandHighlight: false
-                rowIslandShadow: islandGlass.shadow
+                rowIslandShadow: ShellTheme.cartoon ? "transparent" : islandGlass.shadow
                 flushTop: !BarPosition.bottom
                 splitDrawer: true
                 // The drawers hanging from it wear the same glass as every
                 // other drawer, light or dark with the system.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 28
+                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 10) : 28
                 paneEdge: true
                 drawerGap: 0
                 drawerEdge: bar.bandHeight + 6
@@ -1557,7 +1571,7 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 32
+                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
                 paneEdge: true
                 drawerGap: 0
                 // Measured from the island, which sits a few pixels inside the
@@ -1630,7 +1644,7 @@ ShellRoot {
                 splitDrawer: true
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 32
+                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
                 paneEdge: true
                 drawerGap: 0
                 drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - programmeIsland.rowHeight) / 2)
@@ -1830,7 +1844,7 @@ ShellRoot {
                 splitDrawer: true
                 drawerGap: 0
                 drawerEdge: bar.bandHeight - Math.round((bar.bandHeight - launchers.rowHeight) / 2)
-                drawerRadius: 32
+                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
                 paneEdge: true
                 widenOnOpen: false
                 // Pinned, not "whatever the row happens to be": the row
@@ -2110,7 +2124,7 @@ ShellRoot {
                 // plat"): DrawerIsland's default `drawerLens: true`.
                 drawerFillTop: DrawerTheme.paneTop
                 drawerFillBottom: DrawerTheme.paneBottom
-                drawerRadius: 32
+                drawerRadius: ShellTheme.cartoon ? Math.min(36, ShellTheme.radius + 14) : 32
                 paneEdge: true
                 // These two together replace the old 8px gap, and the
                 // pair is the point -- neither alone gives the result.

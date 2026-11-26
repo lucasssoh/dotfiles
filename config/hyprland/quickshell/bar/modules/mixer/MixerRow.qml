@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 import ".."          // GlassCard
 import "../balise"   // RevealPop
 
@@ -57,6 +58,8 @@ Rectangle {
     implicitHeight: row.pad * 2 + body.implicitHeight
     height: row.implicitHeight
     radius: 20
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+    border.color: ShellTheme.outlineColour
 
     // Only lit rows and hovered rows pay for the blur -- same gate
     // DrawerTile and BaliseDeviceRow both use.

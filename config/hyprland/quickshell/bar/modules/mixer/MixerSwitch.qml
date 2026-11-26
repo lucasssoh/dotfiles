@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 
 // The bar's switch. Same 40x22 track and 18px thumb BaliseSectionList's
 // master toggle and NotificationCenter's DND button both draw, lifted into
@@ -25,6 +26,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color: sw.checked ? sw.accent : DrawerTheme.ink(0.18)
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         Behavior on color { ColorAnimation { duration: 120 } }
 
         Rectangle {
@@ -32,6 +35,8 @@ Item {
             height: 18
             radius: 9
             color: DrawerTheme.onInk
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+            border.color: ShellTheme.outlineColour
             anchors.verticalCenter: parent.verticalCenter
             x: sw.checked ? parent.width - width - 2 : 2
             Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

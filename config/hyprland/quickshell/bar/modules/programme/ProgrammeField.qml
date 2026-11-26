@@ -1,4 +1,5 @@
 import QtQuick
+import "../../services"
 import "../../theme"
 
 // A one-line text field in the drawers' look, with a placeholder.
@@ -14,8 +15,8 @@ Rectangle {
     height: 40
     radius: 12
     color: DrawerTheme.card
-    border.width: input.activeFocus ? 1 : 0
-    border.color: DrawerTheme.secondary
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : (input.activeFocus ? 1 : 0)
+    border.color: ShellTheme.outlineColour
 
     TextInput {
         id: input

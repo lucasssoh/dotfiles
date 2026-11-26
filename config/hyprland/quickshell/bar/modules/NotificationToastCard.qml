@@ -95,7 +95,7 @@ Rectangle {
     readonly property real contentHeight: Math.max(card.tile, card.textHeight)
 
     width: 340
-    radius: 26
+    radius: ShellTheme.cartoon ? ShellTheme.radius : 26
     height: card.pad + card.contentHeight + (card.hasActions ? 12 + actionRow.height : card.pad)
     color: DrawerTheme.paneTop
 
@@ -113,7 +113,7 @@ Rectangle {
 
     PaneEdge {
         radius: card.radius
-        rimColor: card.critical
+        rimColor: card.critical && !ShellTheme.cartoon
             ? Qt.rgba(DrawerTheme.warning.r, DrawerTheme.warning.g, DrawerTheme.warning.b, card.flare > 0 ? 0.7 + 0.3 * card.flare : 0.7)
             : Qt.rgba(DrawerTheme.paneRim.r, DrawerTheme.paneRim.g, DrawerTheme.paneRim.b,
                       Math.min(1, DrawerTheme.paneRim.a * (1 + 0.7 * hoverRim.value)))
@@ -155,8 +155,10 @@ Rectangle {
         y: card.pad
         width: card.tile
         height: card.tile
-        radius: 13
-        color: DrawerTheme.cardRaised
+        radius: ShellTheme.cartoon ? ShellTheme.radius : 13
+        color: ShellTheme.cartoon ? ShellTheme.sky : DrawerTheme.cardRaised
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         clip: true
 
         Image {
@@ -276,7 +278,7 @@ Rectangle {
                 height: card.thumbHeight
                 radius: 14
                 color: "transparent"
-                border.width: 1
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
                 border.color: DrawerTheme.paneRim
             }
         }

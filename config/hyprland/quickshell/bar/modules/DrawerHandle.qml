@@ -1,5 +1,6 @@
 import QtQuick
 import "../theme"
+import "../services"
 
 // The grabber at the bar-facing edge of a drawer -- a short thick rounded
 // line, clicked to close.
@@ -47,9 +48,11 @@ Item {
         // (radius = half the height) so it stays a lozenge, not a bar
         // with corners.
         width: 48
-        height: 4
+        height: ShellTheme.cartoon ? 10 : 4
         radius: height / 2
         color: root.tint
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         // Quiet at rest, clearly live on hover -- it is an affordance,
         // not a piece of the panel's information.
         opacity: hit.containsMouse ? 0.9 : 0.4

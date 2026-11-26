@@ -99,9 +99,14 @@ Item {
                     // else's dot. Occupied vs empty is already the colour
                     // (ink / grey); a third, mid-length bar for occupied
                     // said it twice.
-                    width: pill.modelData.active ? 22 : 5
-                    height: 5
-                    radius: 2.5
+                    // Cartoon gives each workspace state a slightly bigger
+                    // disc: the active one becomes a longer pill, the
+                    // others readable circles instead of tiny dots.
+                    width: ShellTheme.cartoon
+                        ? (pill.modelData.active ? 26 : 9)
+                        : (pill.modelData.active ? 22 : 5)
+                    height: ShellTheme.cartoon ? 9 : 5
+                    radius: height / 2
                     // Empty is hollow: the active workspace with nothing in
                     // it is the same long bar, hollow (you are here, and
                     // here is empty), and an empty one elsewhere a hollow
@@ -113,9 +118,17 @@ Item {
                     // does, with the island's own size unchanged.
                     readonly property var tone: (pill.x, mark.width, root.inkOf(mark))
                     readonly property color ink: pill.modelData.active ? mark.tone.primary : mark.tone.secondary
-                    color: mark.hollow ? DrawerTheme.clear(mark.ink) : mark.ink
-                    border.width: mark.hollow ? 1.2 : 0
-                    border.color: mark.ink
+                    // Cartoon marks the current workspace in lemon, the
+                    // way the mockups light up the active page.
+                    color: ShellTheme.cartoon
+                        ? (mark.hollow ? DrawerTheme.clear(ShellTheme.ink)
+                           : pill.modelData.active ? ShellTheme.lemon : ShellTheme.ink)
+                        : (mark.hollow ? DrawerTheme.clear(mark.ink) : mark.ink)
+                    // Every workspace mark is inked in cartoon, including
+                    // the short dots and the lemon active one.
+                    border.width: ShellTheme.cartoon
+                        ? Math.min(ShellTheme.outline, 2) : (mark.hollow ? 1.2 : 0)
+                    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : mark.ink
                     // The bar stretching into place on a workspace switch.
                     // Rare (workspace changes only): a one-off burst, not a
                     // recurring cost.

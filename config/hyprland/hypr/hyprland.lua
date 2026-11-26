@@ -218,6 +218,36 @@ hl.gesture({
 })
 
 -- ============================================================
+-- WINDOW BORDERS — cartoon look
+-- ============================================================
+-- The shell's theme lives in ~/.config/hypr/shell-theme.json (read live by
+-- Quickshell). Hyprland reads it here at config load: cartoon windows
+-- wear an ink outline and no shadow. The default look keeps its glass
+-- gradient and soft halo below.
+local cartoon_borders = false
+local theme_file = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") or "") .. "/.config")
+    .. "/hypr/shell-theme.json"
+local theme_handle = io.open(theme_file, "r")
+if theme_handle then
+    local raw = theme_handle:read("*a") or ""
+    theme_handle:close()
+    cartoon_borders = raw:find('"style"%s*:%s*"cartoon"') ~= nil
+end
+
+-- In cartoon the outline is the only cue: a lighter grey on a dark desktop,
+-- plain black on a light one, and a softer version of it for idle windows.
+-- No shadow at all — the default look keeps its glass halo below.
+local dark_session = true
+local mode_handle = io.popen("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null")
+if mode_handle then
+    local out = mode_handle:read("*a") or ""
+    mode_handle:close()
+    dark_session = out:find("prefer%-dark") ~= nil
+end
+local cartoon_active = dark_session and "rgba(4D4D4DFF)" or "rgba(000000FF)"
+local cartoon_inactive = dark_session and "rgba(242424FF)" or "rgba(00000040)"
+
+-- ============================================================
 -- GENERAL
 -- ============================================================
 hl.config({
@@ -231,7 +261,7 @@ hl.config({
         -- was tried first and rejected: "css_gap type requires an integer
         -- or a table with optional 'top','right','bottom','left' fields".)
         gaps_out         = { top = 7, right = 7, bottom = 6, left = 7 },
-        border_size      = 2,
+        border_size      = 3,
         col = {
             -- Convex/"bombé" bevel, not a flat colored strip: a single
             -- light source top-left, the border reading as a rounded,
@@ -261,10 +291,14 @@ hl.config({
                 --     "rgba(3A3A3C26)",  -- overlay, ~15% alpha -- entering shadow
                 --     "rgba(1C1C1E0F)",  -- background, ~6% alpha -- deep shadow, bottom-right
                 -- },
-                colors = {
+                -- Cartoon: a flat ink outline tinted by the colourway's
+                -- accent; default: the bevel ramp above.
+                colors = cartoon_borders and {
+                    cartoon_active, cartoon_active, cartoon_active
+                } or {
                     "rgba(40, 40, 40, 0.5)",
                     "rgba(20, 20, 20, 0.5)",
-                    "rgba(90,90,90, 0.5)",
+                    "rgba(170, 170, 170, 0.5)",
                 },
                 angle = 270,
             },
@@ -273,7 +307,7 @@ hl.config({
             -- opacity drop on inactive windows (inactive_opacity/dim_inactive
             -- below are both off), so an inactive rim would just compete
             -- with that single signal instead of reinforcing it.
-            inactive_border = "rgba(3E3E3300)",
+            inactive_border = cartoon_borders and cartoon_inactive or "rgba(3E3E3300)",
 
         },
         layout           = "dwindle",
@@ -366,14 +400,14 @@ hl.config({
             proportional      = true,
         },
         shadow = {
-            enabled       = true,
-            range         = 50,
-            render_power  = 4,
-            color         = "rgba(0,0,0,0.4)",
-            -- Back to none, same reasoning as inactive_border above: no
-            -- per-window treatment on unfocused windows at all, so the
-            -- active glass border stays the one unambiguous focus cue.
-            color_inactive= "rgba(0,0,0,0)",
+            enabled      = not cartoon_borders,
+            -- No shadow in cartoon: the outline alone shows focus. The
+            -- default look keeps its soft halo.
+            range        = 50,
+            render_power = 4,
+            color        = "rgba(0,0,0,0.4)",
+            offset       = "0 0",
+            color_inactive = "rgba(0,0,0,0)",
         },
         inactive_opacity = 1,
         active_opacity   = 1,

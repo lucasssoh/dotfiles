@@ -27,7 +27,7 @@ Column {
                 text: line.r.start
                 color: DrawerTheme.secondary
                 font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.weight: Fonts.weight(Font.DemiBold)
                 font.features: { "tnum": 1 }
             }
 
@@ -36,8 +36,8 @@ Column {
                 height: block.implicitHeight + 16
                 radius: 12
                 color: line.r.type === "course" ? DrawerTheme.card : "transparent"
-                border.width: line.r.type === "session" ? 1 : 0
-                border.color: DrawerTheme.primary
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : (line.r.type === "session" ? 1 : 0)
+                border.color: ShellTheme.outlineColour
 
                 Canvas {
                     anchors.fill: parent
@@ -46,8 +46,8 @@ Column {
                         const c = getContext("2d");
                         c.reset();
                         c.setLineDash([4, 4]);
-                        c.strokeStyle = DrawerTheme.muted;
-                        c.lineWidth = 1;
+                        c.strokeStyle = ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.muted;
+                        c.lineWidth = ShellTheme.cartoon ? Math.min(ShellTheme.outline, 2) : 1;
                         c.beginPath();
                         c.roundedRect(0.5, 0.5, width - 1, height - 1, 12, 12);
                         c.stroke();
@@ -64,7 +64,7 @@ Column {
                         width: parent.width
                         text: line.r.title + (line.r.state === "closed" ? "  ✓" : (line.r.state === "skipped" || line.r.state === "missed") ? "  ✗" : "")
                         font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font.weight: Fonts.weight(Font.DemiBold)
                         font.strikeout: line.r.state === "skipped"
                     }
                     ProgrammeText {

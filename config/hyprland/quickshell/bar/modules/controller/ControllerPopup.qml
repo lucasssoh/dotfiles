@@ -433,8 +433,9 @@ Item {
                 height: 196
                 radius: 26
                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                border.width: 2
-                border.color: on ? DrawerTheme.primary : "transparent"
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                CartoonGloss { active: on; opacityScale: 0.7 }
+                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
 
                 ClippingRectangle {
                     x: 14
@@ -462,7 +463,7 @@ Item {
                         color: DrawerTheme.secondary
                         font.family: Fonts.ui
                         font.pixelSize: 12
-                        font.weight: Font.DemiBold
+                        font.weight: Fonts.weight(Font.DemiBold)
                         font.letterSpacing: 0.8
                     }
                     Text {
@@ -472,7 +473,7 @@ Item {
                         color: DrawerTheme.primary
                         font.family: Fonts.ui
                         font.pixelSize: 26
-                        font.weight: Font.DemiBold
+                        font.weight: Fonts.weight(Font.DemiBold)
                         elide: Text.ElideRight
                     }
                     Row {
@@ -504,7 +505,7 @@ Item {
                             color: DrawerTheme.primary
                             font.family: Fonts.ui
                             font.pixelSize: 13
-                            font.weight: Font.DemiBold
+                            font.weight: Fonts.weight(Font.DemiBold)
                         }
                     }
                 }
@@ -536,8 +537,9 @@ Item {
                             height: 210
                             radius: 18
                             color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                            border.width: 2
-                            border.color: on ? DrawerTheme.primary : "transparent"
+                            border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                            CartoonGloss { active: on; opacityScale: 0.7 }
+                            border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
                             scale: on ? 1.04 : 1
                             Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
 
@@ -616,8 +618,9 @@ Item {
                                 height: 56
                                 radius: 16
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                                border.width: 2
-                                border.color: on ? DrawerTheme.primary : "transparent"
+                                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                                CartoonGloss { active: on; opacityScale: 0.7 }
+                                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
                                 IconImage {
                                     x: 12
                                     anchors.verticalCenter: parent.verticalCenter
@@ -634,7 +637,7 @@ Item {
                                         color: DrawerTheme.primary
                                         font.family: Fonts.ui
                                         font.pixelSize: 13
-                                        font.weight: Font.DemiBold
+                                        font.weight: Fonts.weight(Font.DemiBold)
                                     }
                                     Text {
                                         renderType: Text.NativeRendering
@@ -674,8 +677,9 @@ Item {
                                 height: 56
                                 radius: 16
                                 color: on ? DrawerTheme.cardRaised : DrawerTheme.card
-                                border.width: 2
-                                border.color: on ? DrawerTheme.primary : "transparent"
+                                border.width: ShellTheme.cartoon ? ShellTheme.outline : (on ? 2 : 0)
+                                CartoonGloss { active: on; opacityScale: 0.7 }
+                                border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (on ? DrawerTheme.primary : "transparent")
                                 Row {
                                     id: sysRow
                                     anchors.centerIn: parent
@@ -695,7 +699,7 @@ Item {
                                         color: sysCard.on ? DrawerTheme.primary : DrawerTheme.secondary
                                         font.family: Fonts.ui
                                         font.pixelSize: 13
-                                        font.weight: Font.DemiBold
+                                        font.weight: Fonts.weight(Font.DemiBold)
                                     }
                                 }
                                 MouseArea {
@@ -738,8 +742,8 @@ Item {
                         anchors.margins: 6
                         radius: 22
                         color: cell.on ? DrawerTheme.cardRaised : DrawerTheme.card
-                        border.width: 2
-                        border.color: cell.on ? DrawerTheme.primary : "transparent"
+                        border.width: ShellTheme.cartoon ? ShellTheme.outline : (cell.on ? 2 : 0)
+                        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : (cell.on ? DrawerTheme.primary : "transparent")
                         scale: cell.on ? 1.04 : 1
                         Column {
                             anchors.centerIn: parent
@@ -846,7 +850,7 @@ Item {
         color: DrawerTheme.ink(0.75)
         font.family: Fonts.ui
         font.pixelSize: 13
-        font.weight: Font.DemiBold
+        font.weight: Fonts.weight(Font.DemiBold)
     }
 
     component SourceChip: Rectangle {
@@ -865,7 +869,7 @@ Item {
             color: parent.dark ? Qt.rgba(1, 1, 1, 0.85) : DrawerTheme.ink(0.75)
             font.family: Fonts.ui
             font.pixelSize: 10
-            font.weight: Font.DemiBold
+            font.weight: Fonts.weight(Font.DemiBold)
         }
     }
 

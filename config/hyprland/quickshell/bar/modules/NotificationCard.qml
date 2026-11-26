@@ -89,11 +89,27 @@ Item {
 
     HoverHandler { id: hover }
 
+    // Cartoon gives each line its own inked card, like the mockups.
+    Rectangle {
+        visible: ShellTheme.cartoon
+        anchors.fill: parent
+        // Stay inside the delegate: the Flickable clips anything to the
+        // left/right of it, which used to shave the outline's ends off.
+        anchors.leftMargin: 0
+        anchors.rightMargin: 0
+        anchors.topMargin: ShellTheme.cartoon ? 2 : 0
+        anchors.bottomMargin: ShellTheme.cartoon ? 2 : 0
+        radius: ShellTheme.cartoon ? Math.min(height / 2, 24) : 14
+        color: DrawerTheme.card
+        border.width: ShellTheme.cartoon ? ShellTheme.outline + 1 : 0
+        border.color: ShellTheme.outlineColour
+    }
+
     // Under the pointer the line lightens a touch, as a toast does.
     Rectangle {
         anchors.fill: parent
-        anchors.leftMargin: -8
-        anchors.rightMargin: -8
+        anchors.leftMargin: 0
+        anchors.rightMargin: 0
         radius: 10
         color: DrawerTheme.ink(0.05)
         opacity: hover.hovered ? 1 : 0
@@ -102,7 +118,9 @@ Item {
 
     Item {
         id: content
-        width: parent.width
+        // Inset the content in cartoon so it clears the inked border.
+        x: ShellTheme.cartoon ? 14 : 0
+        width: parent.width - (ShellTheme.cartoon ? 28 : 0)
         height: parent.height
         transform: Translate { id: contentShift }
 

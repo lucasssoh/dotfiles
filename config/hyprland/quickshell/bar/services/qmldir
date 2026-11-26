@@ -22,3 +22,4 @@ singleton LibraryState 1.0 LibraryState.qml
 singleton ShellClock 1.0 ShellClock.qml
 singleton DemoState 1.0 DemoState.qml
 singleton IslandStyle 1.0 IslandStyle.qml
+singleton ShellTheme 1.0 ShellTheme.qml

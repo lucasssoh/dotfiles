@@ -138,8 +138,8 @@ Item {
             x: -width / 2
             y: -card.arcRadius - height / 2
             color: DrawerTheme.on
-            border.width: 2.5
-            border.color: DrawerTheme.panelTop
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 2.5
+            border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.panelTop
         }
     }
 

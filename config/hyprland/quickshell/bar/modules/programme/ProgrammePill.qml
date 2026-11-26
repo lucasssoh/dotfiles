@@ -1,4 +1,5 @@
 import QtQuick
+import "../../services"
 import "../../theme"
 
 // A button of the drawer: filled ("on") for the main action, outlined
@@ -15,8 +16,8 @@ Rectangle {
     radius: height / 2
     color: pill.primary ? (hit.containsMouse ? Qt.rgba(DrawerTheme.on.r, DrawerTheme.on.g, DrawerTheme.on.b, 0.88) : DrawerTheme.on)
                         : (hit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover))
-    border.width: pill.primary ? 0 : 1
-    border.color: DrawerTheme.faint
+    border.width: ShellTheme.cartoon ? ShellTheme.outline : (pill.primary ? 0 : 1)
+    border.color: ShellTheme.outlineColour
     // Like Balise's controls: the state change eases, the press gives.
     // The idle fill is DrawerTheme.clear(), not "transparent": see there.
     Behavior on color { ColorAnimation { duration: 120 } }

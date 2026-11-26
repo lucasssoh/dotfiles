@@ -52,8 +52,8 @@ Item {
         height: 38
         radius: height / 2
         color: DrawerTheme.card
-        border.width: 1
-        border.color: DrawerTheme.faint
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+        border.color: ShellTheme.outlineColour
 
         readonly property var pages: [
             { id: "today", label: root.b.tr("Today", "Aujourd'hui") },
@@ -70,6 +70,8 @@ Item {
             height: tabs.height - 8
             radius: height / 2
             color: DrawerTheme.on
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+            border.color: ShellTheme.outlineColour
             Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         }
         Row {
@@ -88,6 +90,8 @@ Item {
                         anchors.fill: parent
                         radius: height / 2
                         color: !seg.selected && segHit.containsMouse ? DrawerTheme.cardHover : DrawerTheme.clear(DrawerTheme.cardHover)
+                        border.width: ShellTheme.cartoon && !seg.selected && segHit.containsMouse ? ShellTheme.outline : 0
+                        border.color: ShellTheme.outlineColour
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
                     ProgrammeText {

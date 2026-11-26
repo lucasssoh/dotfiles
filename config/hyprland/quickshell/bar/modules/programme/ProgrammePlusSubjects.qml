@@ -29,7 +29,7 @@ Column {
     ProgrammeText {
         text: root.b.tr("Subjects", "Modules")
         font.pixelSize: 18
-        font.weight: Font.DemiBold
+        font.weight: Fonts.weight(Font.DemiBold)
     }
 
     Repeater {
@@ -48,7 +48,7 @@ Column {
                 y: 14
                 width: parent.width - 28
                 spacing: 8
-                ProgrammeText { text: card.modelData.id; font.weight: Font.DemiBold }
+                ProgrammeText { text: card.modelData.id; font.weight: Fonts.weight(Font.DemiBold) }
                 Flow {
                     width: parent.width
                     spacing: 6

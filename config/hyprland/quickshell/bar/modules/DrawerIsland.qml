@@ -300,7 +300,8 @@ Item {
     // OUTSIDE the slab -- a plain RectangularShadow under a clear fill
     // would darken the inside too.
     property color rowIslandColor: DrawerTheme.islandPane
-    property color rowIslandRim: root.paneRim
+    // Cartoon marks the zone groups with a strong outline, not a shadow.
+    property color rowIslandRim: ShellTheme.cartoon ? ShellTheme.outlineColour : root.paneRim
     property bool rowIslandHighlight: true
     property color rowIslandHighlightColor: root.paneHighlight
     property color rowIslandShadow: "transparent"
@@ -1550,8 +1551,14 @@ Item {
         height: drawerFill.height
         radius: drawerFill.radius
         opacity: drawerFill.opacity
-        offset.y: root.bottomEdge ? -18 : 18
-        blur: 50
+        // Cartoon trades the soft halo for a hard, offset ink shadow like
+        // the mockups. Golden rule: even with the bar on the bottom, the
+        // support shadow stays down-right — only the glass look mirrors.
+        offset.x: ShellTheme.cartoon ? ShellTheme.shadowOffset * 0.6 : 0
+        offset.y: ShellTheme.cartoon
+            ? ShellTheme.shadowOffset
+            : (root.bottomEdge ? -18 : 18)
+        blur: ShellTheme.cartoon ? 0 : 50
         color: DrawerTheme.paneShadow
         transform: [
             Scale {
@@ -1599,6 +1606,7 @@ Item {
         // Gated rather than left on: an FBO the size of this block is
         // not something to keep allocated for a drawer that is shut most
         // of the time.
+        CartoonGloss { }
         PaneEdge {
             visible: root.paneEdge
             radius: drawerFill.radius

@@ -5,6 +5,7 @@ config/hyprland/hypr/scale.json
 config/hyprland/hypr/bar-position.json
 config/hyprland/hypr/bar-island.json
 config/hyprland/hypr/bar.json
+config/hyprland/hypr/shell-theme.json
 config/hyprland/hypr/bar-radius
 config/hyprland/hypr/*.json.old
 config/hyprland/hypr/hdr-state.json

@@ -211,16 +211,18 @@ Item {
                     // keeps its shape while it flips.
                     readonly property bool elsewhere: !cap.lit && !cap.isShift
 
-                    radius: 9
+                    radius: ShellTheme.cartoon ? 12 : 9
                     // A bound key is a veil of light on the glass, with no
                     // outline; the held Shift inverts, the one small
                     // light area on the sheet. Everything else is a
                     // hairline.
                     color: cap.held ? DrawerTheme.on
                         : cap.lit ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card)
-                    border.width: cap.lit || cap.held ? 0 : 1
-                    border.color: DrawerTheme.ink(0.12)
+                    border.width: ShellTheme.cartoon
+                        ? ShellTheme.outline : (cap.lit || cap.held ? 0 : 1)
+                    border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.12)
                     opacity: cap.elsewhere ? 0.5 : 1
+                    CartoonGloss { active: cap.lit && !cap.held; opacityScale: 0.7 }
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
 

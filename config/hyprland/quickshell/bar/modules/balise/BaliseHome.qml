@@ -437,6 +437,7 @@ Item {
         property string subtitle: ""
         property string glyph: ""
         property bool checked: false
+        property color pastel: root.accent
         signal toggled(bool value)
 
         height: trow.subtitle !== "" ? 58 : 50
@@ -468,12 +469,15 @@ Item {
         // panel that is switched off now recedes into it, and only what
         // is on or under the pointer comes forward.
         // Inverted when on, flat and rimless -- same rule as DrawerTile.
-        color: trow.checked
+        color: ShellTheme.cartoon && ShellTheme.copperCyan && trow.checked
+            ? (mouseArea.containsMouse ? Qt.lighter(trow.pastel, 1.06) : trow.pastel)
+            : trow.checked
             ? (mouseArea.containsMouse ? DrawerTheme.activeFillHover : DrawerTheme.activeFill)
             : (mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card)
         Behavior on color { ColorAnimation { duration: 120 } }
-        border.width: trow.checked ? 1 : 0
-        border.color: DrawerTheme.activeEdge
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : (trow.checked ? 1 : 0)
+        CartoonGloss { active: trow.checked }
+        border.color: ShellTheme.outlineColour
 
         // The same badge the connectivity tiles above carry -- asked
         // for, so that SYSTEM reads as the same kind of control as the
@@ -486,7 +490,8 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             glyph: trow.glyph
             active: trow.checked
-            accent: root.accent
+            accent: ShellTheme.cartoon && ShellTheme.copperCyan ? trow.pastel : root.accent
+
         }
 
         Column {
@@ -507,7 +512,7 @@ Item {
                 text: trow.title
                 // Accent when on, same as Tile.fg -- the label is part of
                 // the highlight, not a neutral sitting inside it.
-                color: trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary
+                color: ShellTheme.cartoon ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk : DrawerTheme.primary)
                 font.family: Fonts.ui
                 // 13, matching DrawerTile's own title, not the 14 these
                 // rows used before they had icons. Two reasons and they
@@ -526,7 +531,7 @@ Item {
                 renderType: Text.QtRendering
                 font.hintingPreference: Font.PreferNoHinting
                 text: trow.subtitle
-                color: trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary
+                color: ShellTheme.cartoon ? ShellTheme.ink : (trow.checked ? DrawerTheme.activeInk2 : DrawerTheme.secondary)
                 font.family: Fonts.ui
                 font.pixelSize: 12
                 elide: Text.ElideRight
@@ -567,6 +572,8 @@ Item {
         // SYSTEM). The hairline it used to need is gone: the neutral card
         // tier now stands off the black panel on its own.
         color: mouseArea.containsMouse ? DrawerTheme.cardHover : DrawerTheme.card
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
         Behavior on color { ColorAnimation { duration: 120 } }
 
         // Never `active`: a one-shot action has no on-state to tint,
@@ -703,6 +710,7 @@ Item {
                             width: (parent.width - 8) / 2
                             height: 92
                             title: "Bluetooth"
+                    pastel: ShellTheme.indigo
                             revealIndex: 2
                             status: root.bluetoothTileStatus
                             glyph: BaliseState.bluetoothEnabled ? "\uEA40" : "\uEA42"   // mgc bluetooth / bluetooth_off
@@ -714,6 +722,7 @@ Item {
                             width: (parent.width - 8) / 2
                             height: 92
                             title: "Ethernet"
+                    pastel: ShellTheme.sage
                             revealIndex: 3
                             status: root.ethernetTileStatus
                             glyph: "\uF2AA"   // mgc router_modem -- on/off is the badge tint, MingCute has no "unplugged"
@@ -764,6 +773,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "Night mode"
+                    pastel: ShellTheme.indigo
                     glyph: "\uF0DE"   // mgc moon
                     revealIndex: 8
                     checked: BaliseState.nightModeEnabled
@@ -773,6 +783,7 @@ Item {
                 ToggleRow {
                     width: (parent.width - parent.spacing) / 2
                     title: "HDR"
+                    pastel: ShellTheme.sage
                     // lu-monitor: HDR is a per-DISPLAY capability here (this
                     // page binds `monitor: shell.hyprMonitorFor(...)`), so a
                     // screen is the honest picture -- and it collides with

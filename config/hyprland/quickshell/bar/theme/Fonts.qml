@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import "../services"
 
 // Central font definitions for the whole bar -- change `ui` here and
 // every module picks it up, instead of hunting through ~20 individual
@@ -24,6 +25,16 @@ import QtQuick
 // instead of one Text with both in the same string, so each renders with
 // the font actually meant for it.
 QtObject {
+    // Fredoka's heavy instances ink far more than MiSans at the bar's
+    // 10-14px sizes. Cartoon caps the two top steps so a selected chip or a
+    // key cap does not turn into a blob; default returns the weight as asked.
+    function weight(w) {
+        if (!ShellTheme.cartoon) return w;
+        if (w >= Font.ExtraBold) return Font.Bold;
+        if (w >= Font.Bold) return Font.DemiBold;
+        return w;
+    }
+
     // Was Inter, which holds up at 15px+ but goes mushy at the 11-13px
     // the bar actually runs at: this screen is 2560x1440 at scale 1
     // (~109 PPI), so a bar glyph gets barely 5-6 real pixels of x-height
@@ -52,7 +63,9 @@ QtObject {
     // Latin"` -> MiSansLatin-Medium.ttf). That lands a touch heavier
     // than Inter Regular did, which is exactly what the small sizes
     // wanted -- no per-module weight bump needed.
-    readonly property string ui: "MiSans Latin"
+    // The cartoon theme uses the rounded face; every other look keeps
+    // MiSans. Changing shell-theme.json rebinds this live.
+    readonly property string ui: ShellTheme.cartoon ? ShellTheme.font : "MiSans Latin"
     readonly property string mono: "JetBrains Mono"
     readonly property string icon: "JetBrainsMono Nerd Font"
 

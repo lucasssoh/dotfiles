@@ -1,5 +1,6 @@
 import QtQuick
 import "../../theme"
+import "../../services"
 
 // The charge history chart: battery level over time, on a fixed 0-100
 // axis, with the line coloured by what the battery was doing -- blue
@@ -96,9 +97,12 @@ Item {
                 // 0 and 100 are the frame of the chart, the three between
                 // them are only a reading aid -- drawn fainter so the
                 // curve stays the most contrasted thing in the block.
-                color: (parent.modelData === 0 || parent.modelData === 100)
-                    ? DrawerTheme.ink(0.13)
-                    : DrawerTheme.ink(0.06)
+                color: ShellTheme.cartoon
+                    ? Qt.rgba(ShellTheme.outlineColour.r, ShellTheme.outlineColour.g,
+                              ShellTheme.outlineColour.b,
+                              parent.modelData === 0 || parent.modelData === 100 ? 0.30 : 0.14)
+                    : (parent.modelData === 0 || parent.modelData === 100
+                       ? DrawerTheme.ink(0.13) : DrawerTheme.ink(0.06))
             }
 
             Text {
@@ -113,6 +117,17 @@ Item {
                 font.pixelSize: 10
             }
         }
+    }
+
+    // Cartoon inks the plot itself, like a panel inside the drawer.
+    Rectangle {
+        visible: ShellTheme.cartoon
+        width: root.plotWidth
+        height: root.plotHeight
+        radius: Math.min(ShellTheme.radius, height / 2)
+        color: "transparent"
+        border.width: ShellTheme.outline
+        border.color: ShellTheme.outlineColour
     }
 
     // ---------------------------------------------------------------
@@ -188,10 +203,17 @@ Item {
                 ctx.moveTo(root.xOf(pts[idx[0]].t), root.yOf(pts[idx[0]].pct));
                 for (let k = 1; k < idx.length; k++)
                     ctx.lineTo(root.xOf(pts[idx[k]].t), root.yOf(pts[idx[k]].pct));
-                ctx.strokeStyle = c;
-                ctx.lineWidth = 1.6;
                 ctx.lineJoin = "round";
                 ctx.lineCap = "round";
+                // Cartoon draws the ink under the pastel, so the line
+                // reads as a stroke on paper rather than a thin trace.
+                if (ShellTheme.cartoon) {
+                    ctx.strokeStyle = ShellTheme.outlineColour;
+                    ctx.lineWidth = 1.6 + 2 * ShellTheme.outline;
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = c;
+                ctx.lineWidth = 1.6;
                 ctx.stroke();
             }
 
@@ -206,6 +228,11 @@ Item {
                 ctx.arc(root.xOf(p.t), root.yOf(p.pct), 3.2, 0, 2 * Math.PI);
                 ctx.fillStyle = p.up ? root.chargeColor : root.dischargeColor;
                 ctx.fill();
+                if (ShellTheme.cartoon) {
+                    ctx.strokeStyle = ShellTheme.outlineColour;
+                    ctx.lineWidth = ShellTheme.outline;
+                    ctx.stroke();
+                }
             }
         }
     }
@@ -270,7 +297,7 @@ Item {
         y: 0
         height: root.plotHeight
         x: root.hoverPoint ? root.xOf(root.hoverPoint.t) : 0
-        color: DrawerTheme.ink(0.22)
+        color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.ink(0.22)
     }
 
     Rectangle {
@@ -282,8 +309,8 @@ Item {
         x: (root.hoverPoint ? root.xOf(root.hoverPoint.t) : 0) - 3.5
         y: (root.hoverPoint ? root.yOf(root.hoverPoint.pct) : 0) - 3.5
         color: root.hoverPoint && root.hoverPoint.up ? root.chargeColor : root.dischargeColor
-        border.width: 1.5
-        border.color: DrawerTheme.cardDeep
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 1.5
+        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : DrawerTheme.cardDeep
     }
 
     Rectangle {
@@ -297,6 +324,8 @@ Item {
         height: 20
         radius: 10
         color: DrawerTheme.accentStrongest
+        border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+        border.color: ShellTheme.outlineColour
 
         // Centred on the crosshair, then clamped so it never hangs off
         // either end of the plot.
@@ -318,7 +347,7 @@ Item {
                 const when = root.hoverShowsDate ? root.dayLabel(d) + " " + clock : clock;
                 return when + "  ·  " + Math.round(root.hoverPoint.pct) + "%";
             }
-            color: DrawerTheme.primary
+            color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary
             font.family: Fonts.ui
             font.pixelSize: 11
             font.weight: Font.Medium

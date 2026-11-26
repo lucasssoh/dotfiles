@@ -27,7 +27,7 @@ Column {
             ProgrammeText {
                 text: day.modelData.label
                 font.pixelSize: 15
-                font.weight: Font.DemiBold
+                font.weight: Fonts.weight(Font.DemiBold)
             }
             ProgrammeText {
                 visible: day.modelData.rows.length === 0

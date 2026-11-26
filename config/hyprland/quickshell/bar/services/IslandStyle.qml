@@ -99,6 +99,11 @@ Singleton {
     readonly property real cornerRadius: root.radius
 
     onDarkModeChanged: root.resolve()
+    Connections {
+        target: ShellTheme
+        function onCartoonChanged() { root.resolve() }
+        function onPaletteChanged() { root.resolve() }
+    }
 
     FileView {
         path: root.configPath
@@ -138,6 +143,16 @@ Singleton {
         const first = (...vs) => vs.find(v => v !== undefined);
         const modeKey = root.darkMode ? "dark" : "light";
         const topMode = obj(c[modeKey]);
+        // Cartoon keeps the hierarchy of bar.json instead of flattening it:
+        // the bar is paper, a zone that asks for its own fill becomes a
+        // pastel (lilac for the centre, mint for the sides), and a zone with
+        // no fill stays transparent. Position, style, zone shapes, radius,
+        // opacity and text mode all still come from bar.json; only the
+        // palette changes. Default mode uses the colours as written.
+        const cartoon = ShellTheme.cartoon;
+        const paper = root.darkMode ? ShellTheme.surfacePanel : "#fdf8ef";
+        const paperInk = root.darkMode ? ShellTheme.textPrimary : "#1b1b22";
+        const zonePaper = root.darkMode ? ShellTheme.surfaceCard : "#ffffff";
 
         root.solid = c.style === "solid";
 
@@ -186,6 +201,8 @@ Singleton {
         const bf = Object.assign({}, obj(c.fill), obj(topMode.fill));
         const barColour = first(bf.colour, c.background);
         const barOpacity = first(bf.opacity, c.opacity);
+        // For now only the centre is cartoon-styled: the band itself keeps
+        // bar.json's fill, opacity, blur and text, like the sides do.
         const barBg = isColour(barColour) ? barColour
             : root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#0c0c0e";
         const barA = isNumber(barOpacity) ? between(barOpacity, 0, 1)
@@ -205,7 +222,7 @@ Singleton {
         // ---- levels 2 and 3: the zones ---------------------------------
         // A zone with no object is the legacy zone: it still inherits the
         // flat fill. A real zone is transparent until it asks for a fill.
-        function zone(cfg, defaultMode) {
+        function zone(cfg, defaultMode, role) {
             const legacyZone = Object.keys(cfg).length === 0;
             const zm = obj(cfg[modeKey]);
             const f = Object.assign({}, legacyZone ? obj(c.fill) : {},
@@ -217,10 +234,19 @@ Singleton {
             const colour = first(f.colour, legacyZone ? c.background : undefined);
             const opacity = first(f.opacity, legacyZone ? c.opacity : undefined);
             const hasFill = isColour(colour);
-            const bg = hasFill ? colour
+            // For now the sides are not cartoon-styled: they keep exactly
+            // the fill, opacity, text and shape written in bar.json. Only
+            // the centre takes the cartoon tint.
+            const useCartoon = cartoon && role !== "sides";
+            const bg = useCartoon
+                ? (legacyZone ? (root.solid ? zonePaper : paper)
+                   : hasFill ? ShellTheme.accent : "transparent")
+                : hasFill ? colour
                 : legacyZone ? (root.solid ? (root.darkMode ? "#000000" : "#f5f3ee") : "#2c2c2e")
                              : "#000000";
-            const a = isNumber(opacity) ? between(opacity, 0, 1)
+            const a = useCartoon
+                ? (legacyZone || hasFill ? 1 : 0)
+                : isNumber(opacity) ? between(opacity, 0, 1)
                 : !legacyZone ? (hasFill ? 1 : 0)
                 : root.solid ? 1 : 0.20;
             const rgb = Qt.color(bg);
@@ -229,13 +255,16 @@ Singleton {
             // mid-grey for the static fallback: black at 0 % must not ask
             // for white text on a white wallpaper.
             const chosen = first(t.colour, typeof c.text === "string" ? c.text : undefined);
-            const ink = isColour(chosen) ? chosen
+            const ink = useCartoon
+                ? (a < 0.05 ? paperInk
+                   : (lum * a + 0.5 * (1 - a)) < 0.5 ? paperInk : ShellTheme.ink)
+                : isColour(chosen) ? chosen
                 : root.solid ? ((lum * a + 0.5 * (1 - a)) < 0.5 ? "#f2f2f7" : "#1c1c1e")
                              : "#f2f2f7";
             const b = first(f.blur, legacyZone ? c.blur : undefined);
             return {
                 background: bg, alpha: a,
-                blur: typeof b === "boolean" ? b : false,
+                blur: useCartoon ? false : typeof b === "boolean" ? b : false,
                 dynamic: first(t.mode, c.mode, defaultMode) !== "static",
                 textColour: ink,
                 fill: Qt.rgba(rgb.r, rgb.g, rgb.b, a)
@@ -244,8 +273,8 @@ Singleton {
 
         // The sides have always been contrast-driven; only the centre of a
         // solid bar defaults to static text.
-        const centre = zone(centerCfg, root.solid ? "static" : "dynamic");
-        const side = zone(sidesCfg, "dynamic");
+        const centre = zone(centerCfg, root.solid ? "static" : "dynamic", "center");
+        const side = zone(sidesCfg, "dynamic", "sides");
 
         // Source-over of a zone's fill on the bar beneath it. In solid
         // style the bar is opaque, so a transparent zone still has a real

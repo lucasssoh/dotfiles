@@ -174,8 +174,10 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 50
-                radius: 25
-                color: DrawerTheme.card
+                radius: ShellTheme.cartoon ? ShellTheme.radius : 25
+                color: ShellTheme.cartoon ? ShellTheme.lemon : DrawerTheme.card
+                border.width: ShellTheme.cartoon ? ShellTheme.outline : 0
+                border.color: ShellTheme.outlineColour
                 Text {
                     id: glass
                     x: 18
@@ -192,7 +194,7 @@ Item {
                     anchors.right: count.left
                     anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    color: DrawerTheme.primary
+                    color: ShellTheme.cartoon ? ShellTheme.ink : DrawerTheme.primary
                     selectionColor: DrawerTheme.ink(0.3)
                     font.family: Fonts.ui
                     font.pixelSize: 17
@@ -282,7 +284,7 @@ Item {
                     text: entry.modelData.header ? entry.modelData.name.toUpperCase() : ""
                     color: DrawerTheme.secondary
                     font.pixelSize: 11
-                    font.weight: Font.DemiBold
+                    font.weight: Fonts.weight(Font.DemiBold)
                     font.letterSpacing: 1
                     elide: Text.ElideRight
                     width: parent.width - 24
@@ -296,8 +298,8 @@ Item {
                     anchors.bottomMargin: 2
                     radius: 14
                     color: entry.on ? DrawerTheme.cardHover : (hit.containsMouse ? DrawerTheme.ink(0.03) : "transparent")
-                    border.width: entry.on ? 1 : 0
-                    border.color: DrawerTheme.muted
+                    border.width: ShellTheme.cartoon ? ShellTheme.outline : (entry.on ? 1 : 0)
+                    border.color: ShellTheme.outlineColour
 
                     ProgrammeText {
                         id: kind
@@ -399,9 +401,9 @@ Item {
             anchors.bottom: list.bottom
             width: 300
             radius: 22
-            color: "transparent"
-            border.width: 1
-            border.color: DrawerTheme.ink(0.12)
+            color: ShellTheme.cartoon ? ShellTheme.sky : "transparent"
+            border.width: ShellTheme.cartoon ? ShellTheme.outline : 1
+            border.color: ShellTheme.outlineColour
             readonly property var r: root.selected ? root.selected.row : null
             readonly property int hitSection: root.selected ? root.selected.section : -1
 
@@ -425,7 +427,7 @@ Item {
                         width: parent.width
                         text: preview.r ? preview.r.title : ""
                         font.pixelSize: 18
-                        font.weight: Font.DemiBold
+                        font.weight: Fonts.weight(Font.DemiBold)
                         maximumLineCount: 3
                         elide: Text.ElideRight
                     }

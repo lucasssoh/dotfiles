@@ -82,14 +82,19 @@ Item {
     implicitWidth: root.visible ? row.implicitWidth + 16 : 0
     implicitHeight: 24
 
-    // An outline when the session is close, to catch the eye.
+    readonly property bool imminent: root.mode === "soon" || root.mode === "now"
+    readonly property color badgeInk: ShellTheme.cartoon && root.imminent
+        ? ShellTheme.ink : root.ink.primary
+
+    // An outline when the session is close; in cartoon it becomes the
+    // lilac appointment pill of the mockups.
     Rectangle {
         anchors.fill: parent
         radius: height / 2
         color: "transparent"
         border.width: 1
         border.color: root.ink.primary
-        visible: root.mode === "soon" || root.mode === "now"
+        visible: root.imminent
         opacity: 0.8
     }
 
@@ -106,7 +111,7 @@ Item {
             height: 13
             anchors.verticalCenter: parent.verticalCenter
             readonly property real pomodoroLeft: 1 - ProgrammeState.phaseProgress
-            readonly property color ringColor: root.ink.primary
+            readonly property color ringColor: root.badgeInk
             onPomodoroLeftChanged: requestPaint()
             onRingColorChanged: requestPaint()
             onPaint: {
@@ -128,7 +133,7 @@ Item {
             visible: !ring.visible
             anchors.verticalCenter: parent.verticalCenter
             text: ""
-            color: root.ink.primary
+            color: root.badgeInk
             // The service stopped: still there, dimmed.
             opacity: root.mode === "off" ? 0.45 : 1
             font.family: Fonts.iconLucide
@@ -141,7 +146,7 @@ Item {
             renderType: Text.NativeRendering
             font.hintingPreference: Font.PreferNoHinting
             text: root.label
-            color: root.ink.primary
+            color: root.badgeInk
             font.family: Fonts.ui
             font.pixelSize: 13
             font.weight: Font.Medium
