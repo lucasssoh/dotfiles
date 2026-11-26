@@ -25,6 +25,7 @@ config/hyprland/antenne-src/target/
 crates/*/target/
 config/hyprland/roue/wheels/display.toml
 config/hyprland/roue/wheels/powerprofile.toml
+DEV_FEEDBACK/*
 
 # Bytecode Python des scripts de hypr/scripts (bar-tint).
 # Regenere a chaque import, et importe depuis
