@@ -76,6 +76,17 @@ Singleton {
     property bool sideBlur: false
     property bool sideDynamic: true
     property color sideTextColour: "#f2f2f7"
+    // Cartoon: black or white on the theme's accent, for what sits on it
+    // outside the zones (Programme's pill).
+    property color accentInk: "#000000"
+
+    // Black or white, whichever stands out more on `bg` (WCAG contrast).
+    function strongInk(bg) {
+        const q = Qt.color(bg);
+        const lin = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        const l = 0.2126 * lin(q.r) + 0.7152 * lin(q.g) + 0.0722 * lin(q.b);
+        return 1.05 / (l + 0.05) >= (l + 0.05) / 0.05 ? "#ffffff" : "#000000";
+    }
     property color sideFill: "transparent"
     property color backdropFill: "transparent"
     readonly property bool sideVeil: !root.solid
@@ -170,7 +181,10 @@ Singleton {
         // still come from bar.json; only the palette changes. Default mode uses the colours as written.
         const cartoon = ShellTheme.cartoon;
         const paper = ShellTheme.surfacePanel;
-        const paperInk = ShellTheme.textPrimary;
+        // The bar's text in cartoon is black or white, never the theme's
+        // tinted text colours: it has to read at a glance.
+        const paperInk = root.strongInk(paper);
+        root.accentInk = root.strongInk(ShellTheme.accent);
         const zonePaper = ShellTheme.surfaceCard;
 
         root.solid = c.style === "solid";
@@ -279,9 +293,13 @@ Singleton {
             // mid-grey for the static fallback: black at 0 % must not ask
             // for white text on a white wallpaper.
             const chosen = first(t.colour, typeof c.text === "string" ? c.text : undefined);
+            // Cartoon: the theme's own pair for each fill, the accent's ink
+            // on the accent and the text colour on the panel. Not by
+            // luminance: a light theme's accent is dark and its on-accent
+            // light, which a threshold reads backwards.
+            const onAccent = useCartoon && hasFill && !legacyZone && role !== "sides";
             const ink = useCartoon
-                ? (a < 0.05 ? paperInk
-                   : (lum * a + 0.5 * (1 - a)) < 0.5 ? paperInk : ShellTheme.ink)
+                ? (onAccent && a >= 0.05 ? root.accentInk : paperInk)
                 : isColour(chosen) ? chosen
                 : root.solid ? ((lum * a + 0.5 * (1 - a)) < 0.5 ? "#f2f2f7" : "#1c1c1e")
                              : "#f2f2f7";

@@ -84,18 +84,18 @@ Item {
 
     readonly property bool imminent: root.mode === "soon" || root.mode === "now"
     readonly property color badgeInk: ShellTheme.cartoon && root.imminent
-        ? ShellTheme.ink : root.ink.primary
+        ? IslandStyle.accentInk : root.ink.primary
 
-    // An outline when the session is close; in cartoon it becomes the
-    // lilac appointment pill of the mockups.
+    // An outline when the session is close; in cartoon, a pill in the
+    // theme's accent with an ink edge, which badgeInk is chosen for.
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: "transparent"
-        border.width: 1
-        border.color: root.ink.primary
+        color: ShellTheme.cartoon ? ShellTheme.accent : "transparent"
+        border.width: ShellTheme.cartoon ? Math.min(2, ShellTheme.outline) : 1
+        border.color: ShellTheme.cartoon ? ShellTheme.outlineColour : root.ink.primary
         visible: root.imminent
-        opacity: 0.8
+        opacity: ShellTheme.cartoon ? 1 : 0.8
     }
 
     Row {
