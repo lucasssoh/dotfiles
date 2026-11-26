@@ -77,7 +77,9 @@ Item {
     readonly property real thumbHeight: card.widePicture
         ? Math.min(170, Math.round(textCol.width / card.pictureRatio)) : 0
 
-    readonly property int topPad: card.continued ? 2 : 10
+    // A continued line runs on from the one above, except in cartoon,
+    // where it has its own inked card and needs the room to clear it.
+    readonly property int topPad: card.continued && !ShellTheme.cartoon ? 2 : 10
     readonly property real textHeight: (card.continued
             ? (card.hasBody ? bodyText.implicitHeight : summary.implicitHeight)
             : summary.implicitHeight + (card.hasBody ? 2 + bodyText.implicitHeight : 0))
@@ -174,7 +176,9 @@ Item {
             id: textCol
             x: card.showIcon ? iconTile.x + iconTile.width + 10 : card.inset
             y: card.topPad
-            width: card.width - x - card.inset - 20 - 8   // clear of the time / close slot
+            // Clear of the time, or the close button in its place. Off the
+            // content's width: in cartoon it is inset from the card's.
+            width: content.width - x - card.inset - Math.max(20, timeLabel.implicitWidth) - 8
             spacing: 2
             transform: Translate { id: textShift }
 
