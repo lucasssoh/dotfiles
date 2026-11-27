@@ -10,7 +10,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Shell theme:** WezTerm and Neovim take the selected theme's colours, light or dark, and follow when it changes. Neovim keeps the theme's background under any colorscheme.
 - **Window borders:** in cartoon, Hyprland windows wear an ink outline and no shadow: lighter grey on a dark desktop, black on a light one, quieter on idle windows. The default glass gradient is untouched.
 - **Cartoon theme:** the brightness slider in Balise is inked like the tiles around it, filled with the theme's highlight colour.
-- **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
+- **Cartoon theme:** a reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active: a lighter shade of what it sits on, softer on dark surfaces, full white on light ones.
 - **Cartoon theme:** Nemo, file dialogs, swayimg, Liseuse's reader and the font viewer take the theme's colours and font, with an ink outline on Nemo's buttons and current folder. They follow when the theme changes.
 - **Cartoon theme:** folders take the theme's colour, in Nautilus, Nemo and file dialogs. A theme can set its own with `folder`.
 - **Nautilus:** a gauge of the disk space used under the home folder and each mounted drive, and under each name a folder's item count or a file's size.
@@ -18,6 +18,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Password prompts:** under **Asked by**, a click on a command shows it whole, and `Tab` unfolds them all. The command asking opens unfolded, with the folder it runs in.
 
 ### Changed
+- **Key sheet:** at rest, More stands raised, in cartoon in the accent of the bar's centre and a shade darker while held, instead of looking already pressed.
 - **File manager:** Nautilus replaces Nemo on `Super + E`, in the cartoon look with the whole tile of a selected file outlined. Set up with Nemo, you get it at the next upgrade; a file manager you chose yourself stays your default. Nemo stays as an optional unit.
 - **Themes:** Dracula's light mode is now Alucard, Dracula's own; Rosé Pine's surfaces and greens come from its palette; Nord's light mode takes its darker blue; Cuivre & Cyan and Pastel get a red of their own for alerts; text on an accent is dark wherever the light one could not be read.
 - **Password prompts:** the dots for what you type are bigger and spaced out.

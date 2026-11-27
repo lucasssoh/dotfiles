@@ -40,6 +40,16 @@ Item {
     // band, so the handle is grabbable without having to land on 4px.
     implicitHeight: 18
 
+    // The pill is see-through at rest; in cartoon the panel's reflection
+    // ran through it. A backing in the panel's colour keeps it on top.
+    Rectangle {
+        visible: ShellTheme.cartoon
+        anchors.centerIn: parent
+        width: 48
+        height: 10
+        radius: height / 2
+        color: DrawerTheme.panelTop
+    }
     Rectangle {
         anchors.centerIn: parent
         // "Épais" and "long" both asked for: 4px on a ~340px-wide panel

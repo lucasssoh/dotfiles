@@ -1611,7 +1611,9 @@ Item {
         // Gated rather than left on: an FBO the size of this block is
         // not something to keep allocated for a drawer that is shut most
         // of the time.
-        CartoonGloss { }
+        // The fill is a gradient, so the Rectangle's own colour is the
+        // default white: name the real one. Quieter than on a control.
+        CartoonGloss { base: root.drawerFillTop; opacityScale: 0.5 }
         PaneEdge {
             visible: root.paneEdge
             radius: drawerFill.radius

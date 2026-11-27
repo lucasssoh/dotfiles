@@ -215,20 +215,25 @@ Item {
                     // A bound key is a veil of light on the glass, with no
                     // outline; the held Shift inverts, the one small
                     // light area on the sheet. Everything else is a
-                    // hairline.
-                    color: cap.held ? DrawerTheme.on
+                    // hairline. Shift at rest is raised like a bound key,
+                    // in cartoon in the accent of the bar's centre zone
+                    // (left clear, it read as a key already pressed), and
+                    // held, the same accent a shade darker.
+                    color: cap.held ? (ShellTheme.cartoon ? Qt.darker(ShellTheme.accent, 1.3) : DrawerTheme.on)
+                        : cap.isShift ? (ShellTheme.cartoon ? ShellTheme.accent : DrawerTheme.card)
                         : cap.lit ? DrawerTheme.card : DrawerTheme.clear(DrawerTheme.card)
                     border.width: ShellTheme.cartoon
-                        ? ShellTheme.outline : (cap.lit || cap.held ? 0 : 1)
+                        ? ShellTheme.outline : (cap.lit || cap.isShift ? 0 : 1)
                     border.color: DrawerTheme.edgeColour(DrawerTheme.ink(0.12))
                     opacity: cap.elsewhere ? 0.5 : 1
-                    CartoonGloss { active: cap.lit && !cap.held; opacityScale: 0.7 }
+                    CartoonGloss { active: (cap.lit || cap.isShift) && !cap.held }
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
 
-                    readonly property color ink: cap.held ? DrawerTheme.onInk
-                        : cap.lit ? DrawerTheme.primary
-                        : cap.isShift ? DrawerTheme.secondary : DrawerTheme.faint
+                    readonly property color ink: cap.isShift && ShellTheme.cartoon ? ShellTheme.ink
+                        : cap.held ? DrawerTheme.onInk
+                        : cap.isShift ? DrawerTheme.primary
+                        : cap.lit ? DrawerTheme.primary : DrawerTheme.faint
 
                     // What the key prints: its name for the fixed keys,
                     // the layout's glyph otherwise -- letters upper-cased
@@ -288,7 +293,8 @@ Item {
                             color: cap.ink
                             font.family: Fonts.ui
                             font.pixelSize: 11
-                            font.weight: Font.Medium
+                            // More, on its coloured cap, needs the weight.
+                            font.weight: cap.isShift ? Font.DemiBold : Font.Medium
                             renderType: Text.NativeRendering
                             font.hintingPreference: Font.PreferNoHinting
                         }
