@@ -29,10 +29,10 @@ fi
 
 # Icons: Coucou is Adwaita with the folders in the shell theme's colour,
 # which shell-theme.py sync writes (Adwaita's own blue in the glass look).
-# Written before it is chosen, so the name never points at nothing.
-if [ -x "$HOME/.config/hypr/scripts/shell-theme.py" ]; then
-    "$HOME/.config/hypr/scripts/shell-theme.py" sync >/dev/null || true
-fi
+# Written before it is chosen, so the name never points at nothing. Run
+# from the checkout: on a first install this unit comes before hyprland's
+# ~/.config/hypr link.
+python3 "$REPO/config/hyprland/hypr/scripts/shell-theme.py" sync >/dev/null || true
 if have gsettings && [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Coucou/index.theme" ]; then
     # Only replace the default, never an icon theme the user chose.
     [ "$(gsettings get org.gnome.desktop.interface icon-theme)" = "'Adwaita'" ] \

@@ -51,6 +51,10 @@ THEME_ID = re.compile(r"[A-Za-z0-9_-]+")
 CONFIG = Path(__file__).resolve().parents[3]
 INK_CSS = CONFIG / "nemo/theme/ink.css"
 NAUTILUS_CSS = CONFIG / "nautilus/ink.css"
+# Before ~/.config/hypr is linked (the theme unit's hook, on a first
+# install), the checkout's own themes.
+if not THEMES.is_dir():
+    THEMES = CONFIG / "hyprland/hypr/themes"
 # The folder icons: Adwaita's, recoloured into a theme of ours that
 # inherits it; two names for one folder, as for the GTK themes.
 ADWAITA_PLACES = Path("/usr/share/icons/Adwaita/scalable/places")

@@ -5,7 +5,7 @@ summary  = "GTK3 theme generated in the bar's palette, icons, cursors, Qt settin
 [packages]
 dnf = [
   "papirus-icon-theme", "gtk-murrine-engine",  # gnome-themes-extra: not in Fedora 44, dropped
-  "adwaita-cursor-theme",
+  "adwaita-cursor-theme", "adwaita-icon-theme",  # Coucou icons inherit Adwaita
   "librsvg2-tools", "xcursorgen", "qt5ct", "qt6ct",
 ]
 
