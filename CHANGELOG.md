@@ -11,7 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Window borders:** in cartoon, Hyprland windows wear an ink outline and no shadow: pure black on idle windows, the theme's accent, toned down, on the focused one. It follows the theme and the mode. The default glass gradient is untouched.
 - **Cartoon theme:** the brightness slider in Balise is inked like the tiles around it, filled with the theme's highlight colour.
 - **Cartoon theme:** a reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active: a lighter shade of what it sits on, softer on dark surfaces, full white on light ones.
-- **Cartoon theme:** Nemo, file dialogs, swayimg, Liseuse's reader and the font viewer take the theme's colours and font, with an ink outline on Nemo's buttons and current folder. They follow when the theme changes.
+- **Cartoon theme:** Nautilus, Nemo, file dialogs, swayimg, Liseuse's reader and the font viewer take the theme's colours and font, with an ink outline on the file manager's buttons and current folder. They follow when the theme changes.
 - **Cartoon theme:** folders take the theme's colour, in Nautilus, Nemo and file dialogs. A theme can set its own with `folder`.
 - **Nautilus:** a gauge of the disk space used under the home folder and each mounted drive, and under each name a folder's item count or a file's size.
 - **Shell theme:** themes may set `blue`, `magenta` and `cyan`, and all eighteen do: the terminal shows each theme's own instead of borrowing its orange for magenta.
@@ -33,6 +33,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.
 
 ### Fixed
+- **File manager:** `Super + E` opens Nautilus again instead of doing nothing.
 - **Firefox:** tooltips show as cards in the shell's colours, instead of blending into the address bar.
 
 ## 2.7.3

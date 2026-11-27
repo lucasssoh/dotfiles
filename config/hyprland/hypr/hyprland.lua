@@ -366,10 +366,10 @@ hl.config({
         --     its quickshell replacement closes via HyprlandFocusGrab
         --     instead of an oversized click-catching surface, so it
         --     never needed this hack in the first place.
-        --   - windows with an opacity override below 1.0 (Thunar, Nemo,
-        --     Pavucontrol -- see windowrules.lua) pick up a blurred
-        --     backdrop as a side effect of already being translucent.
-        --     Minor and arguably a nice bonus, not a new risk on its own.
+        --   - windows with an opacity override below 1.0 (Pavucontrol --
+        --     see windowrules.lua) pick up a blurred backdrop as a side
+        --     effect of already being translucent. Minor and arguably a
+        --     nice bonus, not a new risk on its own.
         -- Layer surfaces need an explicit layerrule to opt in at all, so
         -- the bar (quickshell layer) is safe by simply never getting one,
         -- not by an explicit opt-out. Real windows are the opt-out case:
@@ -387,8 +387,8 @@ hl.config({
         -- These are the dark mode's settings, the ones the session starts
         -- with; the bar pushes the light mode's ("Lait": lifted, greyer)
         -- whenever the desktop flips, see DrawerTheme's glass block and
-        -- shell.qml's GLASS TONE. Blur settings are global, so Roue and
-        -- the slightly translucent Nemo and Pavucontrol follow them too.
+        -- shell.qml's GLASS TONE. Blur settings are global, so Roue, Prisme
+        -- and Pavucontrol follow them too.
         --
         -- The dark look is "Vibrant": what shows through is darkened hard
         -- (brightness) so the drawers' white tiles and grey labels stay

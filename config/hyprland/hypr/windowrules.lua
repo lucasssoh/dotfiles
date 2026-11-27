@@ -350,8 +350,8 @@ hl.window_rule({
     tag             = "+dialog",
 })
 
--- Generic safety net: targets any open/save dialog launched by Nemo or a
--- browser, whatever the toolkit.
+-- Generic safety net: targets any open/save dialog launched by a file
+-- manager or a browser, whatever the toolkit.
 -- no_follow_mouse on every rule here: without it, focus-follows-mouse
 -- (input.follow_mouse = 1) hands focus back to the window under the
 -- cursor as soon as it drifts off this dialog's tracked geometry

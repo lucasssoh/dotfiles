@@ -24,7 +24,7 @@
 -- tag is gone. hypridle honours it (ext-idle-notify is inhibited), and
 -- its timers restart from the moment the book leaves the screen.
 --
--- Every zathura window, not just Liseuse's: a PDF opened from nemo and
+-- Every zathura window, not just Liseuse's: a PDF opened from the file manager and
 -- left on screen is being read just the same, and Liseuse already treats
 -- every zathura window as its own (ZATHURA_CLASS).
 --

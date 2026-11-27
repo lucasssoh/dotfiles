@@ -34,7 +34,7 @@
 # state of its own about books at all.
 #
 # That is not just less code, it is more correct: zathura writes that row
-# whether the book was opened from SUPER+F, from nemo, from Firefox's
+# whether the book was opened from SUPER+F, from the file manager, from Firefox's
 # download list or from a terminal, and none of those go through this
 # script. A private history here would have been a second copy of the
 # same fact, wrong every time a book was opened any other way.
@@ -84,7 +84,7 @@ MD2PDF="$(dirname -- "$(readlink -f -- "$0")")/md2pdf.py"
 ZATHURARC="$(dirname -- "$(readlink -f -- "$0")")/zathurarc"
 # Where the themed copy of zathurarc is assembled. Not ~/.config/zathura,
 # which stays a plain symlink to the repo file so that a PDF opened from
-# nemo still gets the (dark) reader.
+# the file manager still gets the (dark) reader.
 ZATHURA_CFG="$CACHE_DIR/zathura"
 
 # Formats where a page COUNT is a fixed property of the file. The

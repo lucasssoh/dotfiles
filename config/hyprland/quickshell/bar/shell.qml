@@ -181,7 +181,7 @@ ShellRoot {
     // dismiss the sheet when its release bind never arrives.
     //
     // It doesn't arrive whenever the hold ended in an actual combo --
-    // hold SUPER, press E, let go: nemo opens, but the sheet stays up.
+    // hold SUPER, press E, let go: the file manager opens, but the sheet stays up.
     // That is Hyprland behaving as designed, not a bug to bind around: a
     // modifier's release bind is deliberately suppressed once another
     // key was pressed during the hold, which is exactly what stops
@@ -688,8 +688,7 @@ ShellRoot {
     // hard behind light ink, lifted behind dark ink. hyprland.lua starts
     // on the dark pair; this pushes whichever the current mode wants, at
     // startup and on every flip. Nothing else in the session is blurred
-    // through these settings but Roue and the slightly translucent Nemo
-    // and Pavucontrol.
+    // through these settings but Roue, Prisme and Pavucontrol.
     //
     // It also fades. A drawer's blur region is on or off (the protocol
     // has no opacity), so a pane fading in over it still landed on a
@@ -698,7 +697,7 @@ ShellRoot {
     // pair: each bar pushes its fading pane's opacity here (DrawerIsland
     // `glassFade`). Quantised to sixths, and one push at a time, so a
     // fade costs a handful of ~9 ms hyprctl calls, not one per frame.
-    // At rest the level is 1, so Roue, Nemo and Pavucontrol keep their
+    // At rest the level is 1, so Roue, Prisme and Pavucontrol keep their
     // blur; they only see it dip while a drawer is fading.
     property real glassLevel: 1
     readonly property real glassStep: Math.round(shell.glassLevel * 6) / 6
@@ -796,7 +795,7 @@ ShellRoot {
         onTriggered: shell.applyWindowTheme()
     }
 
-    // WezTerm, Neovim, Nemo, swayimg and zathura read files written from
+    // WezTerm, Neovim, Nautilus, Nemo, swayimg and zathura read files written from
     // the same theme JSON, with both modes in each, so only a theme change
     // (another theme, or the file edited) or a change of look needs a
     // sync. One run at a time; a change during a run queues one more, so

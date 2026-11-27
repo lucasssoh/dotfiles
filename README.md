@@ -53,7 +53,7 @@ cc-pkg-mng status     # check that everything is in place
 | [**Liseuse**](docs/tools/liseuse.md) | A reading library on one key |
 | [**cc-pkg-mng**](docs/cc-pkg-mng.md) | Installs the parts you pick, and moves between releases |
 
-![At work: Nemo, WezTerm with fastfetch, Neovim](docs/screenshots/work-dark.webp)
+![At work: Nautilus, WezTerm with fastfetch, Neovim](docs/screenshots/work-dark.webp)
 
 ## Documentation
 

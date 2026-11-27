@@ -17,7 +17,7 @@ local card   = 0xff17171a  -- DrawerTheme.card
 local deep   = 0xff0b0b0d  -- DrawerTheme.cardDeep
 
 swayimg.decoration = false
-swayimg.imagelist.adjacent = true   -- opened from Nemo, the whole folder follows
+swayimg.imagelist.adjacent = true   -- opened from the file manager, the whole folder follows
 
 swayimg.text.font = "sans-serif"    -- MiSans, through 70-ui-font.conf
 swayimg.text.size = 13

@@ -126,7 +126,7 @@ mkdir -p ~/Livres
 # ------------------------------------------------------------
 # 4. Default application for the formats zathura handles
 # ------------------------------------------------------------
-# So that opening a PDF from nemo, Firefox's download list or a terminal
+# So that opening a PDF from the file manager, Firefox's download list or a terminal
 # lands in the same reader with the same theme and, above all, the same
 # history file -- which is what keeps the picker's "en cours" ranking
 # honest about books opened outside SUPER+F.

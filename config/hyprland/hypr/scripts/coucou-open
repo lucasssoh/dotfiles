@@ -108,10 +108,16 @@ browser)
 files)
     dir="${1:-$HOME}"
     id="$(xdg-mime query default inode/directory 2>/dev/null)"
+    # Nautilus's desktop entry is DBusActivatable: gtk-launch only activates
+    # the running --gapplication-service, which shows no window. Launch the
+    # binary the way the entry's own Exec line does.
+    if [ "$id" = org.gnome.Nautilus.desktop ] && have nautilus; then
+        run nautilus --new-window "$dir"
+    fi
     if [ -n "$id" ] && have gtk-launch; then
         run gtk-launch "$id" "$dir"
     fi
-    have nautilus && run nautilus "$dir"
+    have nautilus && run nautilus --new-window "$dir"
     have nemo && run nemo "$dir"
     run xdg-open "$dir"
     ;;

@@ -78,7 +78,7 @@ Key bindings target roles, not binaries, so apps stay replaceable:
 |---|---|---|---|
 | `Super + Enter` | terminal | `xdg-terminal-exec` | WezTerm |
 | `Super + B` | browser | `xdg-settings get default-web-browser` | Firefox |
-| `Super + E` | files | default handler of `inode/directory` | Nemo |
+| `Super + E` | files | default handler of `inode/directory` | Nautilus |
 
 `coucou-open <role> [--class <class>] [-- command…]` does the resolution; it lives in `config/hyprland/hypr/scripts/`, so both managers ship it. With no terminal preference in the config dirs (`xdg-terminals.list`, `<desktop>-xdg-terminals.list`), it opens WezTerm when installed. The distro's own list orders nothing, and would pick kitty over WezTerm alphabetically. `--class` covers floating TUIs: the adapter knows each common terminal's flag (`--class` for WezTerm, kitty, Alacritty, Ghostty; `--app-id` for foot), since their desktop entries do not declare one for `xdg-terminal-exec`. Every role falls back to a working launcher when its standard piece is missing. `--print` shows the command instead of running it.
 
