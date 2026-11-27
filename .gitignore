@@ -56,3 +56,5 @@ rpms/
 # Programme's tests read a capture of the promotion's ADE feed when it is
 # there; it stays out of the repository until its owner agrees.
 config/hyprland/programme-src/tests/fixtures/ade-promo.ics
+
+*.log
