@@ -369,6 +369,11 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        // In cartoon, inside the inked edge.
+        readonly property real inset: ShellTheme.cartoon ? ShellTheme.outline : 0
+        anchors.leftMargin: inset
+        anchors.rightMargin: inset
+        anchors.bottomMargin: inset
         height: card.hasActions ? 40 : 0
 
         Rectangle {
@@ -392,13 +397,18 @@ Rectangle {
                     width: actionRow.width / actionRepeater.count
                     height: parent.height
 
+                    // In cartoon a pill of its own, clear of the inked
+                    // corners (a fill reaching them poked past the curve);
+                    // in glass the outer two round off with the card.
                     Rectangle {
                         anchors.fill: parent
+                        anchors.margins: ShellTheme.cartoon ? 4 : 0
                         color: actionArea.pressed || card.chosenAction === actionCell.index
                             ? DrawerTheme.ink(0.12)
                             : (actionArea.containsMouse ? DrawerTheme.ink(0.06) : DrawerTheme.ink(0))
-                        bottomLeftRadius: actionCell.index === 0 ? card.radius : 0
-                        bottomRightRadius: actionCell.index === actionRepeater.count - 1 ? card.radius : 0
+                        radius: ShellTheme.cartoon ? 12 : 0
+                        bottomLeftRadius: ShellTheme.cartoon ? 12 : (actionCell.index === 0 ? card.radius : 0)
+                        bottomRightRadius: ShellTheme.cartoon ? 12 : (actionCell.index === actionRepeater.count - 1 ? card.radius : 0)
                         Behavior on color { ColorAnimation { duration: 90 } }
                     }
                     Rectangle {

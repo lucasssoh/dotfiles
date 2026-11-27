@@ -87,7 +87,10 @@ Item {
     readonly property real contentHeight: Math.max(card.showIcon ? 28 : 0, card.textHeight)
 
     width: 340
-    height: card.topPad + card.contentHeight + (card.hasActions ? 10 + actionRow.height : 10)
+    height: card.topPad + card.contentHeight + (card.hasActions ? 10 + actionRow.height + card.actionLift : 10)
+    // In cartoon, the actions sit inside the inked card: above its bottom
+    // margin and outline, with a little air.
+    readonly property real actionLift: ShellTheme.cartoon ? 2 + (ShellTheme.outline + 1) + 4 : 0
 
     HoverHandler { id: hover }
 
@@ -298,6 +301,7 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: card.actionLift
             height: card.hasActions ? 38 : 0
 
             Rectangle {
@@ -321,12 +325,17 @@ Item {
                         width: actionRow.width / actionRepeater.count
                         height: parent.height
 
+                        // In cartoon a rounded button of its own inside the
+                        // card, its corners following the card's.
                         Rectangle {
                             anchors.fill: parent
+                            anchors.topMargin: ShellTheme.cartoon ? 4 : 0
+                            anchors.leftMargin: ShellTheme.cartoon ? 2 : 0
+                            anchors.rightMargin: ShellTheme.cartoon ? 2 : 0
                             color: actionArea.pressed || card.chosenAction === actionCell.index
                                 ? DrawerTheme.ink(0.12)
                                 : (actionArea.containsMouse ? DrawerTheme.ink(0.06) : DrawerTheme.ink(0))
-                            radius: IslandStyle.round(8)
+                            radius: ShellTheme.cartoon ? Math.max(8, inked.radius - inked.border.width - 6) : IslandStyle.round(8)
                             Behavior on color { ColorAnimation { duration: 90 } }
                         }
                         Rectangle {
