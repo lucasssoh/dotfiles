@@ -57,7 +57,7 @@ To add a machine, create `hosts/<id>.env` with only the values that differ from 
 |---|---|---|
 | Terminal | WezTerm | List desktop ids in `~/.config/xdg-terminals.list`, favourite first (for example `kitty.desktop`) |
 | Web browser | Firefox | `xdg-settings set default-web-browser brave-browser.desktop` |
-| File manager | Nemo | `xdg-mime default org.gnome.Nautilus.desktop inode/directory` |
+| File manager | Nautilus | `xdg-mime default nemo.desktop inode/directory` |
 
 ```bash
 ~/.config/hypr/scripts/coucou-open --print terminal   # what Super+Enter would open

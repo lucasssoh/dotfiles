@@ -108,12 +108,12 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("bash ~/.config/hypr/scripts/restore-mic-port.sh")
     -- Clipboard history
     hl.exec_cmd("wl-paste --watch cliphist store")
-    -- Nemo D-Bus daemon, for other applications' "Open location"
-    -- integration (file manager always available). --no-default-window,
-    -- the flag Nemo's own D-Bus service files use: Nemo 6.6 does not know
-    -- --gapplication-service and exits on it ("Option inconnue"), so the
-    -- previous line never started anything.
-    hl.exec_cmd("nemo --no-default-window")
+    -- The file manager's service, for other applications' "Open
+    -- location" and a window at once on Super+E: Nautilus, or Nemo when it
+    -- is the default for folders. Nemo takes --no-default-window, the flag
+    -- of its own D-Bus service files: it does not know
+    -- --gapplication-service and exits on it ("Option inconnue").
+    hl.exec_cmd([[case "$(xdg-mime query default inode/directory)" in nemo*) exec nemo --no-default-window ;; *) command -v nautilus >/dev/null && exec nautilus --gapplication-service ;; esac]])
 
     -- Fixed workspaces 1-10, set at runtime via hyprctl eval -- not
     -- persisted in a Lua file, so they must be replayed on every startup

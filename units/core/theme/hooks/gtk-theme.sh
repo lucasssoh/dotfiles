@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GTK3 Adwaita-dark and Adwaita-light generated in the shell's palette; gtk-theme follows color-scheme.
+# GTK3 Adwaita-dark and Adwaita-light generated in the shell's palette; gtk-theme follows color-scheme; the Coucou icon theme.
 . "$(dirname "$(readlink -f "$0")")/../../../lib/hook.sh"
 
 python3 "$REPO/config/nemo/theme/build-themes.py" >/dev/null
@@ -25,6 +25,19 @@ if have gsettings; then
             esac
             ;;
     esac
+fi
+
+# Icons: Coucou is Adwaita with the folders in the shell theme's colour,
+# which shell-theme.py sync writes (Adwaita's own blue in the glass look).
+# Written before it is chosen, so the name never points at nothing.
+if [ -x "$HOME/.config/hypr/scripts/shell-theme.py" ]; then
+    "$HOME/.config/hypr/scripts/shell-theme.py" sync >/dev/null || true
+fi
+if have gsettings && [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Coucou/index.theme" ]; then
+    # Only replace the default, never an icon theme the user chose.
+    [ "$(gsettings get org.gnome.desktop.interface icon-theme)" = "'Adwaita'" ] \
+        && gsettings set org.gnome.desktop.interface icon-theme Coucou
+    ok "Icons: Coucou (Adwaita, folders in the theme's colour)"
 fi
 
 # The GTK portal caches the theme; running GTK apps pick it up on restart.

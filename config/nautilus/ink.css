@@ -1,0 +1,211 @@
+/* Ink for Nautilus (GTK4): the mockup's piste C. The generator puts the
+   theme's colours in :root (light) and a prefers-color-scheme: dark block
+   above this body. */
+
+window { font-family: Fredoka, sans-serif; }
+
+/* One surface: header, sidebar and files on the panel, a hairline between
+   the sidebar and the files. */
+:root {
+    --window-bg-color: var(--ink-panel);
+    --window-fg-color: var(--ink-primary);
+    --view-bg-color: var(--ink-panel);
+    --view-fg-color: var(--ink-primary);
+    --headerbar-bg-color: var(--ink-panel);
+    --headerbar-fg-color: var(--ink-primary);
+    --headerbar-backdrop-color: var(--ink-panel);
+    --headerbar-border-color: transparent;
+    --headerbar-shade-color: transparent;
+    --sidebar-bg-color: var(--ink-panel);
+    --sidebar-backdrop-color: var(--ink-panel);
+    --sidebar-fg-color: var(--ink-primary);
+    --sidebar-border-color: var(--ink-hair);
+    --sidebar-shade-color: transparent;
+    --accent-bg-color: var(--ink-active);
+    --accent-fg-color: var(--ink-onaccent);
+    --accent-color: var(--ink-active);
+    --card-bg-color: var(--ink-card);
+    --popover-bg-color: var(--ink-card);
+    --dialog-bg-color: var(--ink-panel);
+}
+
+/* ---- header -------------------------------------------------------------- */
+headerbar { padding: 8px 10px 4px; min-height: 52px; }
+/* libadwaita fades the header to half while the window is not focused:
+   the ink stays whole, as in Nemo. */
+headerbar:backdrop > windowhandle,
+searchbar > revealer > box:backdrop > * { filter: none; }
+/* Every header button is an inked tile; the window's close button and the
+   path's own buttons are left out. */
+headerbar button.ink,
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize) {
+    background-color: var(--ink-card);
+    background-image: none;
+    border: var(--ink-w) solid var(--ink-outline);
+    border-radius: 12px;
+    box-shadow: none;
+    color: var(--ink-secondary);
+    margin: 0 2px;
+    min-height: 28px;
+    min-width: 28px;
+}
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):hover {
+    background-color: var(--ink-cardh);
+    color: var(--ink-primary);
+}
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):checked {
+    background-color: var(--ink-active);
+    color: var(--ink-onaccent);
+}
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):disabled {
+    background-color: transparent;
+    border-color: color-mix(in srgb, var(--ink-outline) 40%, transparent);
+    color: var(--ink-faint);
+}
+/* The view switcher: its two halves as two buttons, like the mockup's. */
+headerbar splitbutton { background: none; border: none; box-shadow: none; }
+headerbar splitbutton > separator { background: none; min-width: 0; }
+/* The path's menu stays bare. */
+headerbar .nautilus-pathbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize) {
+    background: none;
+    border-color: transparent;
+}
+/* The path: parents quiet, the current folder an inked chip. */
+.nautilus-pathbar { background: none; box-shadow: none; }
+.nautilus-path-button {
+    background: none;
+    border: var(--ink-w) solid transparent;
+    border-radius: 12px;
+    color: var(--ink-muted);
+    padding: 2px 10px;
+}
+.nautilus-path-button:hover { background-color: var(--ink-cardh); color: var(--ink-primary); }
+/* The current folder spans the rest of the path (Nautilus sets it so) and
+   only its name keeps its own width, so the chip is the name. */
+.nautilus-path-button.current-dir,
+.nautilus-path-button.current-dir:hover { background: none; border-color: transparent; padding: 0; }
+.nautilus-path-button.current-dir label {
+    background-color: var(--ink-card);
+    border: var(--ink-w) solid var(--ink-outline);
+    border-radius: 12px;
+    color: var(--ink-primary);
+    font-weight: 600;
+    padding: 2px 10px;
+}
+
+/* ---- sidebar ------------------------------------------------------------- */
+.navigation-sidebar { padding: 4px 10px 12px; }
+.navigation-sidebar > row {
+    border: var(--ink-w) solid transparent;
+    border-radius: 12px;
+    color: var(--ink-secondary);
+    margin: 1px 0;
+    min-height: 0;
+    padding: 4px 7px;
+}
+.navigation-sidebar > row image { color: var(--ink-secondary); }
+.navigation-sidebar > row:hover { background-color: var(--ink-cardh); color: var(--ink-primary); }
+.navigation-sidebar > row:selected,
+.navigation-sidebar > row:selected:hover {
+    background-color: var(--ink-card);
+    border-color: var(--ink-outline);
+    color: var(--ink-primary);
+}
+.navigation-sidebar > row:selected image { color: var(--ink-active); }
+/* A disk's gauge, under its name (drawn by the coucou_ink extension). */
+levelbar.coucou-gauge > trough {
+    background-color: var(--ink-sunken);
+    border: 2px solid var(--ink-outline);
+    border-radius: 5px;
+    min-height: 6px;
+    padding: 0;
+}
+levelbar.coucou-gauge > trough > block {
+    border: none;
+    border-radius: 3px;
+    min-height: 6px;
+    min-width: 6px;
+}
+levelbar.coucou-gauge > trough > block.filled { background-color: var(--ink-active); }
+levelbar.coucou-gauge > trough > block.empty { background: none; }
+.navigation-sidebar > separator { background-color: var(--ink-hair); margin: 8px 10px; }
+
+/* ---- files --------------------------------------------------------------- */
+.nautilus-grid-view gridview { padding: 8px 18px 70px; border-spacing: 8px; }
+/* The whole tile, icon and name, takes the ink. */
+.nautilus-grid-view gridview > child {
+    background: none;
+    border: var(--ink-w) solid transparent;
+    border-radius: 16px;
+    box-shadow: none;
+}
+.nautilus-grid-view gridview > child:hover { background-color: var(--ink-cardh); }
+.nautilus-grid-view gridview > child:selected,
+.nautilus-grid-view gridview > child:selected:hover {
+    background-color: var(--ink-card);
+    border-color: var(--ink-outline);
+}
+.nautilus-grid-view .icon-ui-labels-box label:not(.caption) {
+    border-radius: 8px;
+    color: var(--ink-primary);
+    padding: 1px 6px;
+}
+.nautilus-grid-view gridview > child:selected .icon-ui-labels-box label:not(.caption) {
+    background-color: var(--ink-active);
+    color: var(--ink-onaccent);
+}
+.nautilus-grid-view gridview > child:selected .nautilus-view-cell { background: none; }
+/* Captions under the name (a folder's item count, a file's size). */
+.nautilus-grid-view .icon-ui-labels-box label.caption {
+    color: var(--ink-muted);
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+rubberband {
+    background-color: color-mix(in srgb, var(--ink-active) 18%, transparent);
+    border: 2px solid var(--ink-outline);
+    border-radius: 8px;
+}
+
+/* List view rows. */
+.nautilus-list-view columnview > listview > row {
+    border: var(--ink-w) solid transparent;
+    border-radius: 12px;
+}
+.nautilus-list-view columnview > listview > row:selected {
+    background-color: var(--ink-card);
+    border-color: var(--ink-outline);
+}
+
+/* The floating bar: an inked pill. */
+.floating-bar {
+    background-color: var(--ink-card);
+    border: var(--ink-w) solid var(--ink-outline);
+    border-radius: 999px;
+    color: var(--ink-secondary);
+    margin: 16px;
+    padding: 4px 14px;
+}
+
+/* Boxed lists and cards (Properties, Preferences): inked cards. */
+list.boxed-list,
+.boxed-list,
+.card {
+    background-color: var(--ink-card);
+    border: var(--ink-w) solid var(--ink-outline);
+    border-radius: 14px;
+    box-shadow: none;
+}
+list.boxed-list > row:not(:last-child) { border-bottom: 1px solid var(--ink-hair); }
+
+/* ---- menus, popovers, fields --------------------------------------------- */
+popover > contents {
+    border: var(--ink-w) solid var(--ink-outline);
+    border-radius: 14px;
+    box-shadow: none;
+}
+popover modelbutton:hover { background-color: var(--ink-active); color: var(--ink-onaccent); }
+entry, searchbar entry, .nautilus-query-editor {
+    border: 2px solid var(--ink-outline);
+    border-radius: 12px;
+}

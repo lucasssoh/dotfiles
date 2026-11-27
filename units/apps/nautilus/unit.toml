@@ -1,0 +1,17 @@
+name     = "nautilus"
+layer    = "apps"
+summary  = "Nautilus file manager, in the shell's theme"
+default  = true
+
+[packages]
+dnf = ["nautilus", "nautilus-python"]
+
+# The extension that loads the Ink sheet live and draws the disk gauges.
+[links]
+"config/nautilus/coucou_ink.py" = "~/.local/share/nautilus-python/extensions/coucou_ink.py"
+
+[[hooks]]
+name   = "file-manager"
+run_as = "user"
+does   = "Nautilus as the inode/directory handler and org.freedesktop.FileManager1, folder captions (item count, size)"
+run    = "units/apps/nautilus/hooks/file-manager.sh"

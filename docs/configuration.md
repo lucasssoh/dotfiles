@@ -42,6 +42,7 @@ The other settings are files of the checkout (`~/coucou-shell` by default), link
 | Liseuse's folders, keys and pages | `config/liseuse/sources.conf`, `zathurarc`, `markdown.css` | [Liseuse](tools/liseuse.md#settings) |
 | Calendars | `config/hyprland/khal/config` | [Clock and agenda](bar/clock-agenda.md#calendars) |
 | GTK colours and shapes | `config/nemo/theme/` | [Theme](session/theme.md#colours) |
+| Nautilus in the cartoon look | `config/nautilus/ink.css` | [Nautilus](apps/nautilus.md) |
 | The equalizer's bands | `config/pipewire/50-equalizer.conf` | [Audio](session/audio.md) |
 
 A change that adds a package or runs a script needs `cc-pkg-mng install <unit>`.

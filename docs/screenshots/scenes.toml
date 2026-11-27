@@ -41,12 +41,12 @@ crop = "full"
 # Neovim keeps dark colours on the see-through terminal: in light mode its
 # text can't be read.
 modes = ["dark"]
-# Nemo on the repository above WezTerm with fastfetch, Neovim on the right
+# Nautilus on the repository above WezTerm with fastfetch, Neovim on the right
 # with three files open, CONTRIBUTING.md in front. Each terminal is a
 # process of its own (--always-new-process): closing the scene's windows
 # never touches yours.
 steps = [
-    "run nemo {repo}",
+    "run nautilus --new-window {repo}",
     "wait 2",
     "run wezterm start --always-new-process --class pellicule-editor --cwd {repo} -- nvim +blast config/hyprland/hypr/private.lua LICENSE CONTRIBUTING.md",
     "wait 2.5",

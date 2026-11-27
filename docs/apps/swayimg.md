@@ -1,6 +1,6 @@
 # swayimg
 
-The image viewer. It opens images by default. Its settings are in [`config/swayimg/init.lua`](../../config/swayimg/init.lua). In the cartoon look, it takes the [shell theme](../session/theme.md#nemo-and-the-viewers)'s colours.
+The image viewer. It opens images by default. Its settings are in [`config/swayimg/init.lua`](../../config/swayimg/init.lua). In the cartoon look, it takes the [shell theme](../session/theme.md#nautilus-and-the-viewers)'s colours.
 
 | Key | Does |
 |---|---|

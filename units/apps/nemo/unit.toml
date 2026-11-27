@@ -1,7 +1,7 @@
 name     = "nemo"
 layer    = "apps"
 summary  = "Nemo file manager"
-default  = true
+default  = false
 
 [packages]
 dnf = ["nemo", "nemo-fileroller"]

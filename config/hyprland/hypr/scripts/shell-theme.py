@@ -26,6 +26,7 @@ they open, fontview watches its file.
 """
 
 import json
+import math
 import os
 import re
 import subprocess
@@ -49,6 +50,12 @@ THEME_ID = re.compile(r"[A-Za-z0-9_-]+")
 # The repo's config/ folder, through the ~/.config/hypr link.
 CONFIG = Path(__file__).resolve().parents[3]
 INK_CSS = CONFIG / "nemo/theme/ink.css"
+NAUTILUS_CSS = CONFIG / "nautilus/ink.css"
+# The folder icons: Adwaita's, recoloured into a theme of ours that
+# inherits it; two names for one folder, as for the GTK themes.
+ADWAITA_PLACES = Path("/usr/share/icons/Adwaita/scalable/places")
+ICONS = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "icons"
+ICON_TWINS = {"Coucou": "Coucou-twin", "Coucou-twin": "Coucou"}
 GTK_TWINS = {"Adwaita-dark": "Coucou-dark", "Coucou-dark": "Adwaita-dark",
              "Adwaita-light": "Coucou-light", "Coucou-light": "Adwaita-light"}
 
@@ -327,11 +334,200 @@ def sync():
     fontview["font"] = theme.get("font") if isinstance(theme.get("font"), str) else "Fredoka"
     fontview["outline"] = outline_width(theme)
     write_atomic(STATE / "fontview-theme.json", (json.dumps(fontview, indent=1) if ink else "null") + "\n")
+    write_atomic(STATE / "nautilus-ink.css",
+                 nautilus_ink(theme) if ink else nautilus_glass())
+    if write_folder_icons(folder_colour(theme) if ink else None):
+        reload_icons()
     write_atomic(STATE / "swayimg-theme.lua",
                  header + (lua({m: swayimg_mode(theme, modes[m]) for m in ("dark", "light")}) if ink else "nil") + "\n")
     if gtk_changed:
         reload_gtk()
     return 0
+
+
+# ---- Nautilus --------------------------------------------------------------
+
+def nautilus_ink(theme):
+    """Nautilus's Ink sheet: both modes' colours as CSS variables (the dark
+    ones under a prefers-color-scheme query, which GTK4 follows live), then
+    config/nautilus/ink.css. The coucou_ink extension loads it and reads it
+    again when it changes."""
+    def block(mode, indent):
+        s, t, a = mode["surfaces"], mode["text"], mode["accents"]
+        # The places and buttons are read in the secondary ink: where a
+        # theme's is too faint on its panel (Everforest, Kanagawa and
+        # Tokyo Night in light), it moves toward the primary until it reads.
+        secondary = t["secondary"]
+        for step in range(1, 11):
+            if contrast(secondary, s["panel"]) >= 4.5:
+                break
+            secondary = mix(t["secondary"], [int(t["primary"][i:i + 2], 16) for i in (1, 3, 5)], step / 10)
+        names = {"panel": s["panel"], "card": s["card"], "cardh": s["card-hover"],
+                 "sunken": s["card-sunken"], "primary": t["primary"], "secondary": secondary,
+                 "muted": t["muted"], "faint": t["faint"], "onaccent": t["on-accent"],
+                 "active": a["active"], "outline": mode["outline"], "hair": alpha(t["faint"], 0.6)}
+        return "".join(f"{indent}--ink-{k}: {v};\n" for k, v in names.items())
+    try:
+        body = NAUTILUS_CSS.read_text(encoding="utf-8")
+    except OSError:
+        return "/* No config/nautilus/ink.css. */\n"
+    font = theme.get("font") if isinstance(theme.get("font"), str) else "Fredoka"
+    modes = theme["modes"]
+    return ("/* Written by shell-theme.py sync from the selected shell theme"
+            " and config/nautilus/ink.css. */\n"
+            ":root {\n" + block(modes["light"], "    ")
+            + f"    --ink-w: {outline_width(theme)}px;\n}}\n"
+            "@media (prefers-color-scheme: dark) {\n  :root {\n" + block(modes["dark"], "    ") + "  }\n}\n"
+            + body.replace("Fredoka, sans-serif", f"{json.dumps(font)}, sans-serif"))
+
+
+def contrast(a, b):
+    """WCAG contrast ratio of two #rrggbb colours."""
+    def lum(value):
+        c = [int(value[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    la, lb = sorted((lum(a), lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+GLASS_NAMES = {"panel": "c_chrome", "card": "c_card", "cardh": "c_cardh", "sunken": "c_gtrack",
+               "primary": "c_ink", "secondary": "c_ink2", "muted": "c_muted", "faint": "c_faint",
+               "onaccent": "c_onink", "active": "c_on", "outline": "c_actedge", "hair": "c_hair"}
+
+
+def nautilus_glass():
+    """Nautilus in the glass look: the same sheet in Nemo's glass palette
+    (config/nemo/theme/palette-*.css), hairlines for outlines, the inverted
+    ink for what is on, and the system font."""
+    def block(name, indent):
+        try:
+            text = (CONFIG / "nemo/theme" / f"palette-{name}.css").read_text(encoding="utf-8")
+        except OSError:
+            return ""
+        found = dict(re.findall(r"@define-color\s+(\w+)\s+([^;]+);", text))
+        return "".join(f"{indent}--ink-{k}: {found[v].strip()};\n" for k, v in GLASS_NAMES.items() if v in found)
+    try:
+        body = NAUTILUS_CSS.read_text(encoding="utf-8")
+    except OSError:
+        return "/* No config/nautilus/ink.css. */\n"
+    return ("/* Written by shell-theme.py sync: the glass look, from config/nemo/theme"
+            " and config/nautilus/ink.css. */\n"
+            ":root {\n" + block("light", "    ") + "    --ink-w: 1px;\n}\n"
+            "@media (prefers-color-scheme: dark) {\n  :root {\n" + block("dark", "    ") + "  }\n}\n"
+            + body.replace("font-family: Fredoka, sans-serif;", "font-family: inherit;"))
+
+
+# ---- folder icons ----------------------------------------------------------
+# OKLab, to move a colour's hue and chroma without touching how light it
+# looks (https://bottosson.github.io/posts/oklab/).
+
+def _lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _gam(c):
+    return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+
+
+def oklch(value):
+    r, g, b = (_lin(int(value[i:i + 2], 16) / 255) for i in (1, 3, 5))
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+    B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    return L, (A * A + B * B) ** 0.5, math.atan2(B, A)
+
+
+def from_oklch(L, C, H):
+    """The nearest sRGB colour: chroma is lowered until it fits."""
+    for _ in range(40):
+        A, B = C * math.cos(H), C * math.sin(H)
+        l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3
+        m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3
+        s = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3
+        rgb = (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+               -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+               -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+        if all(-1e-4 <= c <= 1.0001 for c in rgb):
+            break
+        C *= 0.92
+    return "#" + "".join(f"{round(max(0, min(1, _gam(max(0, c)))) * 255):02x}" for c in rgb)
+
+
+# Adwaita's folder ramp, darkest to lightest; #62a0ea is the main face.
+ADWAITA_FOLDER = ("#438de6", "#62a0ea", "#a4caee", "#afd4ff", "#c0d5ea")
+ADWAITA_BASE = "#62a0ea"
+
+
+def folder_colour(theme):
+    """The theme's own folder colour, else its dark mode's info accent."""
+    value = theme.get("folder")
+    if isinstance(value, str) and HEX.fullmatch(value):
+        return value
+    return theme["modes"]["dark"]["accents"]["info"]
+
+
+def folder_ramp(colour):
+    """Adwaita's five folder colours turned to `colour`: its hue, its
+    chroma in proportion, and half of its lightness gap, so a pale or a
+    deep colour still reads as a folder on light and dark grounds."""
+    bl, bc, _ = oklch(ADWAITA_BASE)
+    fl, fc, fh = oklch(colour)
+    ramp = {}
+    for src in ADWAITA_FOLDER:
+        l, c, _ = oklch(src)
+        ramp[src] = from_oklch(min(0.97, max(0.25, l + (fl - bl) / 2)), c * fc / bc, fh)
+    return ramp
+
+
+def write_folder_icons(colour):
+    """The Coucou icon theme: Adwaita's folder icons in `colour`, or none
+    (pure Adwaita) when there is no colour. Returns True on a change."""
+    root = ICONS / "Coucou"
+    places = root / "scalable/places"
+    changed = False
+    sources = sorted(ADWAITA_PLACES.glob("folder*.svg")) + [ADWAITA_PLACES / n for n in ("user-desktop.svg", "user-home.svg")]
+    if colour:
+        ramp = folder_ramp(colour)
+        for src in sources:
+            try:
+                svg = src.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for old, new in ramp.items():
+                svg = re.sub(re.escape(old), new, svg, flags=re.IGNORECASE)
+            changed |= write_atomic(places / src.name, svg)
+    elif places.exists():
+        for f in places.glob("*.svg"):
+            f.unlink()
+            changed = True
+    changed |= write_atomic(root / "index.theme",
+                            "[Icon Theme]\nName=Coucou\nComment=Adwaita, folders in the shell theme's colour\n"
+                            "Inherits=Adwaita,hicolor\nDirectories=scalable/places\n\n"
+                            "[scalable/places]\nSize=128\nMinSize=8\nMaxSize=512\nType=Scalable\nContext=Places\n")
+    twin = ICONS / "Coucou-twin"
+    if not twin.is_symlink():
+        try:
+            twin.symlink_to("Coucou")
+        except OSError:
+            pass
+    return changed
+
+
+def reload_icons():
+    """GTK reads an icon theme again only when its name changes: move
+    icon-theme to the twin of the current name. A name not ours stays."""
+    try:
+        current = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "icon-theme"],
+                                 capture_output=True, text=True, timeout=5).stdout.strip().strip("'")
+        if current in ICON_TWINS:
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "icon-theme",
+                            ICON_TWINS[current]], timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 # ---- pick ------------------------------------------------------------------

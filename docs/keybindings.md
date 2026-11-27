@@ -14,7 +14,7 @@ Hold `Super` and the bar shows the bindings on a keyboard. Add `Shift` for the s
 |---|---|
 | `Super + Enter` | Terminal (WezTerm by default) |
 | `Super + Space` | App launcher (fuzzel) |
-| `Super + E` | File manager (Nemo by default) |
+| `Super + E` | File manager (Nautilus by default) |
 | `Super + B` | Web browser (Firefox by default) |
 | `Super + W` | Prisme, the wallpaper picker |
 | `Super + Shift + W` | [Shell theme](session/theme.md#the-shell-theme): Glass or a cartoon theme, in fuzzel |

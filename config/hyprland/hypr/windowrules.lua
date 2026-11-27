@@ -337,6 +337,19 @@ hl.window_rule({
 -- ============================================================
 -- UNIVERSAL DIALOG BOXES (XDG Portals, GTK, QT)
 -- ============================================================
+-- NAUTILUS — its dialogs open inside the window (libadwaita), except
+-- Properties when another app asks for it (FileManager1.ShowItemProperties,
+-- "Show properties" in a browser): a toplevel with no parent, which would
+-- tile. Its title is the bare "Propriétés" / "Properties".
+hl.window_rule({
+    match           = { class = "org.gnome.Nautilus", initial_title = "^(Propriétés|Properties)$" },
+    float           = true,
+    center          = true,
+    size            = "520 640",
+    no_follow_mouse = true,
+    tag             = "+dialog",
+})
+
 -- Generic safety net: targets any open/save dialog launched by Nemo or a
 -- browser, whatever the toolkit.
 -- no_follow_mouse on every rule here: without it, focus-follows-mouse

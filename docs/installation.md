@@ -27,7 +27,7 @@ The questions come first, then the install runs to the end.
 | The login screen (greetd + tuigreet) | no |
 | The boot splash | no |
 | Programme, the study agenda | no |
-| Applications | WezTerm, Firefox, Nemo, Neovim, mpv and swayimg. Steam and Lutris, Brave, MangoHud, fastfetch, ccnote and ccslide are also on offer |
+| Applications | WezTerm, Firefox, Nautilus, Neovim, mpv and swayimg. Nemo, Steam and Lutris, Brave, MangoHud, fastfetch, ccnote and ccslide are also on offer |
 | WezTerm build | `stable`, the packaged one. `smear` builds it from source with a cursor smear effect |
 | Each personal setup (shell, WezTerm, Neovim, extras) | not adopted. A file an adopted setup replaces is backed up first |
 
@@ -48,7 +48,7 @@ dir     = "~/coucou-shell"
 channel = "stable"
 # Optional parts, applications and personal setups to install.
 # The core is always installed.
-units   = ["plymouth", "wezterm", "firefox", "nemo", "neovim", "mpv", "config-shell"]
+units   = ["plymouth", "wezterm", "firefox", "nautilus", "neovim", "mpv", "config-shell"]
 
 [answers.wezterm]
 variant = "stable"

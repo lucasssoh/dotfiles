@@ -40,7 +40,8 @@ Each is the application alone. To use another instead, install it, then make it 
 |---|---|---|---|
 | `wezterm` | The terminal | yes | [WezTerm](apps/wezterm.md) |
 | `firefox` | The web browser | yes | [Firefox](apps/firefox.md) |
-| `nemo` | The file manager | yes | [Nemo](apps/nemo.md) |
+| `nautilus` | The file manager | yes | [Nautilus](apps/nautilus.md) |
+| `nemo` | Another file manager | no | [Nemo](apps/nemo.md) |
 | `neovim` | The editor | yes | [Neovim](apps/neovim.md) |
 | `mpv` | The video and music player | yes | [mpv](apps/mpv.md) |
 | `swayimg` | The image viewer | yes | [swayimg](apps/swayimg.md) |

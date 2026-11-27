@@ -26,7 +26,7 @@ liseuse open FILE --section "Title"
 | `Super + Shift + F` | Fullscreen |
 | `F1` | Every key |
 
-Light and dark follow the desktop, and in the cartoon look the reader takes the [shell theme](../session/theme.md#nemo-and-the-viewers)'s colours. While a book is visible, notifications keep quiet and the screen stays on.
+Light and dark follow the desktop, and in the cartoon look the reader takes the [shell theme](../session/theme.md#nautilus-and-the-viewers)'s colours. While a book is visible, notifications keep quiet and the screen stays on.
 
 ## Formats
 

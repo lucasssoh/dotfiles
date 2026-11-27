@@ -89,6 +89,8 @@ Item {
         "org.wezfurlong.wezterm": "wezterm",
         // Nemo's initialTitle is the folder it opened on ("Home").
         "nemo": "Files",
+        // Nautilus titles a window with the folder alone.
+        "org.gnome.Nautilus": "Files",
         "chromium": "Chromium",
         "google-chrome": "Chrome",
         "org.pwmt.zathura": "Liseuse",

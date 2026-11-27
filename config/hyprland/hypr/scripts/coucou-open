@@ -111,6 +111,7 @@ files)
     if [ -n "$id" ] && have gtk-launch; then
         run gtk-launch "$id" "$dir"
     fi
+    have nautilus && run nautilus "$dir"
     have nemo && run nemo "$dir"
     run xdg-open "$dir"
     ;;
