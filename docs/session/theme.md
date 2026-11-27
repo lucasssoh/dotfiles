@@ -84,6 +84,10 @@ Every key is required in both modes, as `#rrggbb`. While a theme is missing or i
 
 They take the selected theme's colours, light or dark, and follow when it changes. In Neovim, the `coucou` colorscheme takes the whole palette; any other colorscheme keeps its colours on the theme's background, except with `--bg=transparent`.
 
+## Nemo and the viewers
+
+In the cartoon look, Nemo, other apps' file dialogs, [swayimg](../apps/swayimg.md), [Liseuse](../tools/liseuse.md) and the [font viewer](../tools/fontview.md) take the theme's colours and font. In Nemo, the header's buttons, the current folder and the status pill carry the outline. Nemo and the font viewer change with the theme at once, swayimg and Liseuse the next time they open.
+
 ## Colours
 
 GTK3 apps (Nemo, file dialogs) take the shell's colours, light or dark. The icons are Papirus, the cursor Comix Cursors.
@@ -92,6 +96,7 @@ GTK3 apps (Nemo, file dialogs) take the shell's colours, light or dark. The icon
 |---|---|
 | The colours | [`theme/palette-dark.css`](../../config/nemo/theme/palette-dark.css) and [`theme/palette-light.css`](../../config/nemo/theme/palette-light.css). Restart Nemo to see them |
 | The shapes (Nemo, buttons, menus, dialogs) | [`theme/overlay.css`](../../config/nemo/theme/overlay.css). Restart Nemo to see it |
+| The cartoon look in Nemo and dialogs | [`theme/ink.css`](../../config/nemo/theme/ink.css). Run `~/.config/hypr/scripts/shell-theme.py sync` to see it |
 
 ## Fonts
 

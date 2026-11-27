@@ -1,6 +1,6 @@
 # Font viewer
 
-Open a font file from Nemo, or run `fontview FILE`.
+Open a font file from Nemo, or run `fontview FILE`. In the cartoon look, it takes the [shell theme](../session/theme.md#nemo-and-the-viewers)'s colours.
 
 | Key | Does |
 |---|---|

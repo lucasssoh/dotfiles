@@ -6,5 +6,6 @@ The file manager, on `Super + E`.
 - The menu bar and the status bar are hidden. Press `Alt` to show the menu bar.
 - Thumbnails show for files up to 32 MiB.
 - Other apps' file dialogs take the same colours.
+- In the cartoon look, it takes the [shell theme](../session/theme.md#nemo-and-the-viewers)'s colours, font and outlines.
 
 Its colours and shapes come from the [theme](../session/theme.md#colours). To use another file manager, see [default applications](../session/hyprland.md#default-applications).

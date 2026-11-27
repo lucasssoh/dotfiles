@@ -11,6 +11,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Window borders:** in cartoon, Hyprland windows wear an ink outline and no shadow: lighter grey on a dark desktop, black on a light one, quieter on idle windows. The default glass gradient is untouched.
 - **Cartoon theme:** the brightness slider in Balise is inked like the tiles around it, filled with the theme's highlight colour.
 - **Cartoon theme:** a faint reflection along the top edge of the drawer panels, of controls that are on, and of key sheet keys that are active.
+- **Cartoon theme:** Nemo, file dialogs, swayimg, Liseuse's reader and the font viewer take the theme's colours and font, with an ink outline on Nemo's buttons and current folder. They follow when the theme changes.
 
 ### Changed
 - **Password prompts:** the dots for what you type are bigger and spaced out.

@@ -497,13 +497,16 @@ window.background.nemo-window:not(.popup):not(.tooltip),
 
 /* ---- status ----------------------------------------------------------- */
 /* The status bar is hidden by default; Nemo then shows its floating bar
-   over the files, here a small quiet pill. */
+   over the files, here a small quiet pill. Nemo paints its background over
+   the CSS margin too (a square behind the pill), so the gap from the
+   window's edge is a transparent border, the background clipped inside. */
 .nemo-window .floating-bar {
+    background-clip: padding-box;
     background-color: @c_card;
-    border: none;
-    border-radius: 10px;
+    border: 14px solid transparent;
+    border-radius: 24px;
     color: @c_ink2;
-    margin: 14px;
+    margin: 0;
     padding: 2px 6px;
 }
 /* For whoever shows the status bar again: quiet, its toggles bare. */

@@ -196,6 +196,14 @@ LIGHT
         } > "$out" || return 1
     fi
 
+    # ---- Ink --------------------------------------------------------
+    # In the shell's Ink look, the theme's colours over the ones above:
+    # hypr/scripts/shell-theme.py sync writes one file per mode, empty in
+    # glass. Recolor itself stays decided here.
+    local ink="${XDG_STATE_HOME:-$HOME/.local/state}/coucou-shell/theme/zathura-ink-light"
+    desktop_is_dark && ink="${ink%-light}-dark"
+    if [ -s "$ink" ]; then cat -- "$ink" >> "$out"; fi
+
     # ---- orientation ------------------------------------------------
     # Appended last, so it wins over the base file (zathura applies
     # settings in order).

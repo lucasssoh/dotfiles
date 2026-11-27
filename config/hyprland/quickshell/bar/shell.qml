@@ -776,10 +776,11 @@ ShellRoot {
         function onDarkChanged() { Qt.callLater(shell.applyWindowTheme) }
     }
 
-    // WezTerm and Neovim read Lua files written from the same theme JSON,
-    // with both modes in each, so only a theme change (another theme, or
-    // the file edited) needs a sync. One run at a time; a change during a
-    // run queues one more, so the last edit always lands.
+    // WezTerm, Neovim, Nemo, swayimg and zathura read files written from
+    // the same theme JSON, with both modes in each, so only a theme change
+    // (another theme, or the file edited) or a change of look needs a
+    // sync. One run at a time; a change during a run queues one more, so
+    // the last edit always lands.
     property bool themeSyncQueued: false
     function syncTheme() {
         if (themeSync.running) shell.themeSyncQueued = true;
@@ -796,6 +797,7 @@ ShellRoot {
     Connections {
         target: ShellTheme
         function onThemeChanged() { shell.syncTheme() }
+        function onStyleChanged() { shell.syncTheme() }
     }
     // A config reload puts hyprland.lua's dark pair back, whatever the mode:
     // send the tone again.

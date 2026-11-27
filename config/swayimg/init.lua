@@ -63,6 +63,32 @@ swayimg.gallery.text = {
   bottomleft = { "← → ↑ ↓ choose   Return open   E edit   t hide" },
 }
 
+-- In the Ink look, the shell theme's colours instead, in the desktop's
+-- mode: hypr/scripts/shell-theme.py sync writes them, and returns nil in
+-- glass, where the colours above stay. The selected thumbnail is inked
+-- on the accent, like the bar's active workspace.
+local state = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+local found, themes = pcall(dofile, state .. "/coucou-shell/theme/swayimg-theme.lua")
+if found and type(themes) == "table" then
+  local pipe = io.popen("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null")
+  local scheme = pipe and pipe:read("*a") or ""
+  if pipe then pipe:close() end
+  local ink = themes[scheme:find("prefer%-dark") and "dark" or "light"]
+  if ink then
+    swayimg.text.color = ink.text
+    swayimg.text.shadow = 0
+    swayimg.viewer.set_window_background(ink.window)
+    swayimg.viewer.set_image_chessboard(16, ink.chess[1], ink.chess[2])
+    swayimg.viewer.mark_color = ink.mark
+    swayimg.slideshow.set_window_background(ink.window)
+    swayimg.gallery.border_size = ink.border_size
+    swayimg.gallery.border_color = ink.border
+    swayimg.gallery.selected_color = ink.selected
+    swayimg.gallery.unselected_color = ink.unselected
+    swayimg.gallery.window_color = ink.window
+  end
+end
+
 -- satty writes "photo-edit.png" beside "photo.jpg"; the original is never
 -- touched. Single quotes escaped for the shell, '%' doubled because satty
 -- reads the output name as a strftime pattern.
