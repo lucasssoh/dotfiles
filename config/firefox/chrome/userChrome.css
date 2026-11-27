@@ -388,6 +388,18 @@
     border-top-color: var(--coucou-on-ink-2) !important;
 }
 
+/* Tooltips: drawn by Firefox, like the menus. Left native, GTK paints the
+   theme's translucent black (rgba 0 0 0 / 0.8) with its own corners, and
+   the address field shows through at the ends. */
+:root:not([lwtheme]) tooltip {
+    appearance: none !important;
+    background-color: var(--coucou-card) !important;
+    color: var(--coucou-primary) !important;
+    border: 1px solid var(--coucou-on-ink-2) !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+}
+
 /* ==========================================================================
  * Surfaces
  *

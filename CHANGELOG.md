@@ -30,6 +30,9 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **WezTerm:** inactive panes are dimmer, and nothing draws a line between panes any more.
 - **WezTerm:** tab titles now show only the window number, with the active tab blending into the terminal and a darker dark-mode background.
 
+### Fixed
+- **Firefox:** tooltips show as cards in the shell's colours, instead of blending into the address bar.
+
 ## 2.7.3
 
 ### Added
