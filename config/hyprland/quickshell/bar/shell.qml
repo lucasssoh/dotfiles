@@ -746,12 +746,21 @@ ShellRoot {
     // config reads shell-theme.json at load; this keeps it in sync when
     // the file or the mode changes on a running session. Switching back
     // reloads the config so the author's own default borders come back
-    // untouched. The colours are hyprland.lua's cartoon pair: an ink
-    // outline, lighter grey on a dark desktop and black on a light one.
+    // untouched. Inactive windows wear pure black ink, a colour the
+    // themes almost never use; the focused one the theme's accent (the
+    // centre island's), taken 35 % toward the panel so it stays calm.
     Process {
         id: windowThemeApply
-        readonly property string active: AppearanceState.dark ? "rgba(4D4D4DFF)" : "rgba(000000FF)"
-        readonly property string inactive: AppearanceState.dark ? "rgba(242424FF)" : "rgba(00000040)"
+        function hex(c) {
+            const h = v => ("0" + Math.round(v * 255).toString(16)).slice(-2);
+            return "rgba(" + h(c.r) + h(c.g) + h(c.b) + "FF)";
+        }
+        readonly property color calmAccent: Qt.rgba(
+            ShellTheme.accent.r + (ShellTheme.surfacePanel.r - ShellTheme.accent.r) * 0.35,
+            ShellTheme.accent.g + (ShellTheme.surfacePanel.g - ShellTheme.accent.g) * 0.35,
+            ShellTheme.accent.b + (ShellTheme.surfacePanel.b - ShellTheme.accent.b) * 0.35, 1)
+        readonly property string active: hex(calmAccent)
+        readonly property string inactive: "rgba(000000FF)"
         command: ["hyprctl", "eval",
             'hl.config({ general = { col = { active_border = { colors = { "' + active + '", "' + active + '", "' + active
             + '" }, angle = 270 }, inactive_border = "' + inactive + '" } }, decoration = { shadow = { enabled = false } } })']
@@ -774,6 +783,17 @@ ShellRoot {
     Connections {
         target: AppearanceState
         function onDarkChanged() { Qt.callLater(shell.applyWindowTheme) }
+    }
+    // Another theme brings another accent; at start, hyprland.lua's
+    // placeholder pair gives way to it.
+    Connections {
+        target: ShellTheme
+        function onThemeChanged() { Qt.callLater(shell.applyWindowTheme) }
+    }
+    Timer {
+        interval: 500
+        running: true
+        onTriggered: shell.applyWindowTheme()
     }
 
     // WezTerm, Neovim, Nemo, swayimg and zathura read files written from
@@ -807,6 +827,7 @@ ShellRoot {
             if (event.name !== "configreloaded") return;
             shell.glassSent = "";
             glassPump.start();
+            Qt.callLater(shell.applyWindowTheme);
         }
     }
 

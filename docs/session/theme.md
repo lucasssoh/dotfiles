@@ -76,7 +76,7 @@ Four keys are optional:
 | `surfaces.card`, `card-hover`, `card-raised`, `card-sunken` | Cards inside the drawers |
 | `text.primary`, `secondary`, `muted`, `faint` | Text inside the drawers |
 | `text.on-accent` | Text on an accent fill |
-| `accents.active` | Active tiles, Wi-Fi, dark mode, the centre zone |
+| `accents.active` | Active tiles, Wi-Fi, dark mode, the centre zone, the focused window's border (toned down) |
 | `accents.highlight` | Current workspace, today in the calendar, the brightness level |
 | `accents.success` | Fast charge and other good states |
 | `accents.info` | Bluetooth, display and night controls |

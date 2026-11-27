@@ -245,8 +245,12 @@ if mode_handle then
     mode_handle:close()
     dark_session = out:find("prefer%-dark") ~= nil
 end
-local cartoon_active = dark_session and "rgba(4D4D4DFF)" or "rgba(000000FF)"
-local cartoon_inactive = dark_session and "rgba(242424FF)" or "rgba(00000040)"
+-- Cartoon: inactive windows in pure black ink, a colour the themes almost
+-- never use. The focused one takes the theme's accent, toned down, which
+-- the bar sends once it is up (shell.qml, windowThemeApply); until then a
+-- neutral grey stands in.
+local cartoon_active = dark_session and "rgba(4D4D4DFF)" or "rgba(6E6E73FF)"
+local cartoon_inactive = "rgba(000000FF)"
 
 -- A number bar.json mirrors into ~/.config/hypr/<name> (see
 -- scripts/restart-quickshell-bar.sh), or `default` before it has run.
