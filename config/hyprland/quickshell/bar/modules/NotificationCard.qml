@@ -93,6 +93,7 @@ Item {
 
     // Cartoon gives each line its own inked card, like the mockups.
     Rectangle {
+        id: inked
         visible: ShellTheme.cartoon
         anchors.fill: parent
         // Stay inside the delegate: the Flickable clips anything to the
@@ -107,12 +108,13 @@ Item {
         border.color: DrawerTheme.edgeColour()
     }
 
-    // Under the pointer the line lightens a touch, as a toast does.
+    // Under the pointer the line lightens a touch, as a toast does. In
+    // cartoon, inside the inked card's outline and with its rounding: the
+    // line's full box showed past the card's corners.
     Rectangle {
-        anchors.fill: parent
-        anchors.leftMargin: 0
-        anchors.rightMargin: 0
-        radius: IslandStyle.round(10)
+        anchors.fill: ShellTheme.cartoon ? inked : parent
+        anchors.margins: ShellTheme.cartoon ? inked.border.width : 0
+        radius: ShellTheme.cartoon ? Math.max(0, inked.radius - inked.border.width) : IslandStyle.round(10)
         color: DrawerTheme.ink(0.05)
         opacity: hover.hovered ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
