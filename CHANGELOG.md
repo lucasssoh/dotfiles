@@ -18,7 +18,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Password prompts:** under **Asked by**, a click on a command shows it whole, and `Tab` unfolds them all. The command asking opens unfolded, with the folder it runs in.
 
 ### Changed
-- **File manager:** Nautilus replaces Nemo on `Super + E`, in the cartoon look with the whole tile of a selected file outlined. Nemo stays as an optional unit.
+- **File manager:** Nautilus replaces Nemo on `Super + E`, in the cartoon look with the whole tile of a selected file outlined. Set up with Nemo, you get it at the next upgrade; a file manager you chose yourself stays your default. Nemo stays as an optional unit.
 - **Themes:** Dracula's light mode is now Alucard, Dracula's own; Rosé Pine's surfaces and greens come from its palette; Nord's light mode takes its darker blue; Cuivre & Cyan and Pastel get a red of their own for alerts; text on an accent is dark wherever the light one could not be read.
 - **Password prompts:** the dots for what you type are bigger and spaced out.
 - **Firefox:** the page runs to the window's edges, its corners rounded with the window's, instead of sitting as an inset card.

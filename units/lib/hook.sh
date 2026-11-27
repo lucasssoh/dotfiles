@@ -29,3 +29,13 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # One-time marker: `once NAME || exit 0` skips a step already done.
 once() { [ ! -e "$HOOK_STATE/$1.done" ]; }
 done_once() { touch "$HOOK_STATE/$1.done"; }
+
+# Is this desktop entry (org.gnome.Nautilus.desktop) installed?
+desktop_installed() {
+    [ -n "${1:-}" ] || return 1
+    local d IFS=:
+    for d in ${XDG_DATA_HOME:-$HOME/.local/share} ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do
+        [ -f "$d/applications/$1" ] && return 0
+    done
+    return 1
+}

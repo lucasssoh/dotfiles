@@ -47,7 +47,7 @@ coucou-shell is split into **units**, grouped in three layers:
 | Layer | What's in it | When it's installed |
 |---|---|---|
 | **core** | The shell itself: Hyprland, the bar, Roue, Prisme, Balise, Manette, Sésame, Liseuse, fonts, theme, drivers | Always. The login screen, the boot splash and Programme are optional |
-| **apps** | Default applications: WezTerm, Firefox, Nemo, Neovim, mpv, and a few extras | Only the ones picked. Any of them can be swapped for another app |
+| **apps** | Default applications: WezTerm, Firefox, Nautilus, Neovim, mpv, and a few extras | Only the ones picked. Any of them can be swapped for another app |
 | **configs** | The author's setups for the shell, WezTerm, Neovim and a few apps | Only when adopted |
 
 `cc-pkg-mng list` shows every unit, and `cc-pkg-mng info <unit>` shows what one contains. The [units](units.md) page lists them all, with their guides.

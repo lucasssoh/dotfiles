@@ -56,8 +56,15 @@ That gives the script a few helpers:
 - `REPO`, the path to the checkout;
 - `as_root`, for steps that need root;
 - `once NAME`, for steps that should only ever run once;
+- `desktop_installed ID`, whether an app's desktop entry is installed;
 - `info`, `ok` and `warn`, to print messages;
 - the answers, as `CCPKG_ANSWER_<ID>`.
+
+When a new unit takes over from an older one, name the pair in [`units/handover.toml`](../units/handover.toml): at the next upgrade, a machine with the old unit and not the new one gets the new one, once. Removing it afterwards sticks.
+
+```toml
+nemo = "nautilus"
+```
 
 To check the manifests before installing anything:
 

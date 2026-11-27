@@ -110,10 +110,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("wl-paste --watch cliphist store")
     -- The file manager's service, for other applications' "Open
     -- location" and a window at once on Super+E: Nautilus, or Nemo when it
-    -- is the default for folders. Nemo takes --no-default-window, the flag
-    -- of its own D-Bus service files: it does not know
-    -- --gapplication-service and exits on it ("Option inconnue").
-    hl.exec_cmd([[case "$(xdg-mime query default inode/directory)" in nemo*) exec nemo --no-default-window ;; *) command -v nautilus >/dev/null && exec nautilus --gapplication-service ;; esac]])
+    -- is the default for folders; nothing for another file manager. Nemo
+    -- takes --no-default-window, the flag of its own D-Bus service files:
+    -- it does not know --gapplication-service and exits on it ("Option
+    -- inconnue").
+    hl.exec_cmd([[case "$(xdg-mime query default inode/directory)" in nemo*) exec nemo --no-default-window ;; org.gnome.Nautilus*|"") command -v nautilus >/dev/null && exec nautilus --gapplication-service ;; esac]])
 
     -- Fixed workspaces 1-10, set at runtime via hyprctl eval -- not
     -- persisted in a Lua file, so they must be replayed on every startup

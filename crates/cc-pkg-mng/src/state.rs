@@ -34,6 +34,10 @@ pub struct State {
     pub upgrading: Option<Upgrading>,
     #[serde(default)]
     pub units: BTreeMap<String, UnitState>,
+    /// Hand-overs from units/handover.toml already made, as "old>new":
+    /// each happens once, so removing the new unit afterwards sticks.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub handed_over: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -12,4 +12,4 @@ The file manager, on `Super + E`.
 | What shows under the names | Nautilus's menu, *Preferences*, *Grid view captions* |
 | The cartoon look | Edit [`config/nautilus/ink.css`](../../config/nautilus/ink.css), then run `~/.config/hypr/scripts/shell-theme.py sync` |
 
-Nemo stays available: install the `nemo` unit, then make it the [default for folders](../session/hyprland.md#default-applications).
+Set up with Nemo before, the next `cc-pkg-mng upgrade` installs Nautilus and gives it the folders, once. Nemo stays available: install the `nemo` unit, then make it the [default for folders](../session/hyprland.md#default-applications).

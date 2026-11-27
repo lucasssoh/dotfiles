@@ -141,6 +141,17 @@ def check_legacy_map(units):
             err(rel, f'{module} maps to no unit and is not listed under [dropped]')
 
 
+def check_handover(units):
+    path = UNITS / 'handover.toml'
+    if not path.is_file():
+        return
+    rel = path.relative_to(ROOT)
+    for old, new in tomllib.loads(path.read_text()).items():
+        for unit in (old, new):
+            if not isinstance(unit, str) or unit not in units:
+                err(rel, f'names an unknown unit: {unit}')
+
+
 def _repoquery(*args):
     return set(subprocess.run(
         ['dnf', 'repoquery', '--quiet', '--queryformat', '%{name}\n', *args],
@@ -175,6 +186,7 @@ def main():
     check_paths(units)
     check_requires(units)
     check_legacy_map(units)
+    check_handover(units)
     if '--packages' in sys.argv[1:]:
         check_packages(units)
     for e in errors:

@@ -1,0 +1,5 @@
+# At an upgrade, a machine with the unit on the left installed and not the
+# one on the right gets the right one, once (cc-pkg-mng 1.3.0 and later).
+# The successor's hook decides what it takes over.
+
+nemo = "nautilus"

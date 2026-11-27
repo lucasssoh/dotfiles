@@ -149,9 +149,40 @@ fn archive(repo: &Path, rev: &str, paths: &[String], dir: &Path) -> Result<()> {
     Ok(())
 }
 
+/// units/handover.toml: an installed unit (left) brings in its successor
+/// (right) at the next upgrade, once. A file of its own rather than a key in
+/// unit.toml, which an older cc-pkg-mng, reading the new version's units
+/// before it updates itself, would refuse.
+fn load_handover(tree: &Path) -> std::collections::BTreeMap<String, String> {
+    std::fs::read_to_string(tree.join("units/handover.toml"))
+        .ok()
+        .and_then(|t| toml::from_str(&t).ok())
+        .unwrap_or_default()
+}
+
+/// The successors to bring in: their predecessor is installed, they are
+/// not, the version has them, and this hand-over was never made here.
+fn handovers(
+    map: &std::collections::BTreeMap<String, String>,
+    installed: &BTreeSet<String>,
+    units: &Units,
+    done: &[String],
+) -> Vec<(String, String)> {
+    map.iter()
+        .filter(|(old, new)| {
+            installed.contains(*old)
+                && !installed.contains(*new)
+                && units.contains_key(*new)
+                && !done.contains(&format!("{old}>{new}"))
+        })
+        .map(|(o, n)| (o.clone(), n.clone()))
+        .collect()
+}
+
 /// Everything installed that the version still has, plus the core units it
-/// adds; units it dropped are named and forgotten.
-fn reapply_names(ui: &mut Ui, state: &mut State, units: &Units, to: &str) -> Vec<String> {
+/// adds and the successors units/handover.toml names; units it dropped are
+/// named and forgotten.
+fn reapply_names(ui: &mut Ui, state: &mut State, units: &Units, tree: &Path, to: &str) -> Vec<String> {
     let gone: Vec<String> = state.units.keys().filter(|n| !units.contains_key(*n)).cloned().collect();
     for n in &gone {
         ui.warn(&format!("{n}: gone from {to}, links left in place"));
@@ -161,6 +192,14 @@ fn reapply_names(ui: &mut Ui, state: &mut State, units: &Units, to: &str) -> Vec
     for u in units.values().filter(|u| u.layer == Layer::Core && !u.optional) {
         if !names.contains(&u.name) {
             names.push(u.name.clone());
+        }
+    }
+    let installed: BTreeSet<String> = state.units.keys().cloned().collect();
+    for (old, new) in handovers(&load_handover(tree), &installed, units, &state.handed_over) {
+        ui.line(&format!(" {new} replaces {old}"));
+        state.handed_over.push(format!("{old}>{new}"));
+        if !names.contains(&new) {
+            names.push(new);
         }
     }
     names
@@ -192,7 +231,7 @@ pub fn run(ui: &mut Ui, flags: &Flags, repo: &Path, state: &mut State, job: Job)
     let to_label = job.mv.as_ref().map(|m| m.to.clone()).unwrap_or_else(|| git::describe(repo));
     let names = match &job.names {
         Some(n) => n.clone(),
-        None => reapply_names(ui, state, &units, &to_label),
+        None => reapply_names(ui, state, &units, &tree, &to_label),
     };
     let order = resolve::closure(&units, &names)?;
     let answers = lifecycle::ask(ui, flags, &units, state, &order, &job.preset)?;
@@ -630,6 +669,33 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn units_named(names: &[&str]) -> Units {
+        let mut units = Units::new();
+        for n in names {
+            let unit: manifest::Unit =
+                toml::from_str(&format!("name = \"{n}\"\nlayer = \"apps\"\nsummary = \"x\"\n")).unwrap();
+            units.insert(n.to_string(), unit);
+        }
+        units
+    }
+
+    #[test]
+    fn hands_over_once() {
+        let map = [("nemo".to_string(), "nautilus".to_string())].into_iter().collect();
+        let units = units_named(&["nemo", "nautilus"]);
+        let with_nemo: BTreeSet<String> = ["nemo".to_string()].into_iter().collect();
+        // Nemo installed, Nautilus not: brought in.
+        assert_eq!(handovers(&map, &with_nemo, &units, &[]), vec![("nemo".into(), "nautilus".into())]);
+        // Already made here: never again, even with Nautilus removed since.
+        assert!(handovers(&map, &with_nemo, &units, &["nemo>nautilus".into()]).is_empty());
+        // Both installed, or no Nemo: nothing to do.
+        let both: BTreeSet<String> = ["nemo".to_string(), "nautilus".to_string()].into_iter().collect();
+        assert!(handovers(&map, &both, &units, &[]).is_empty());
+        assert!(handovers(&map, &BTreeSet::new(), &units, &[]).is_empty());
+        // A version without the successor: nothing.
+        assert!(handovers(&map, &with_nemo, &units_named(&["nemo"]), &[]).is_empty());
+    }
 
     #[test]
     fn wraps_long_problems() {

@@ -2,17 +2,21 @@
 # Nemo as the file manager: directory handler, FileManager1 D-Bus name, preferences.
 . "$(dirname "$(readlink -f "$0")")/../../../lib/hook.sh"
 
-mime="$HOME/.config/mimeapps.list"
-[ -f "$mime" ] && sed -i '/inode\/directory/d' "$mime"
-xdg-mime default nemo.desktop inode/directory
-
-services="$HOME/.local/share/dbus-1/services"
-mkdir -p "$services"
-cat > "$services/org.freedesktop.FileManager1.service" <<EOF
+# Nemo is the alternative: it takes folders only from no installed app,
+# never from the file manager in place. To switch, see docs/apps/nemo.md.
+current="$(xdg-mime query default inode/directory 2>/dev/null || true)"
+if [ "$current" = nemo.desktop ] || ! desktop_installed "$current"; then
+    mime="$HOME/.config/mimeapps.list"
+    [ -f "$mime" ] && sed -i '/inode\/directory/d' "$mime"
+    xdg-mime default nemo.desktop inode/directory
+    services="$HOME/.local/share/dbus-1/services"
+    mkdir -p "$services"
+    cat > "$services/org.freedesktop.FileManager1.service" <<EOF
 [D-BUS Service]
 Name=org.freedesktop.FileManager1
 Exec=/usr/bin/nemo --no-default-window
 EOF
+fi
 
 if have gsettings; then
     # Only replace Nemo's own defaults, never a value the user chose.
@@ -40,4 +44,4 @@ if have gsettings; then
         fi
     fi
 fi
-ok "Nemo is the file manager"
+ok "Nemo set up"

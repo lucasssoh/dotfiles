@@ -32,7 +32,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Symlink portal priorities configuration
 safe_link "$SCRIPT_DIR/hyprland-portals.conf" "$XDG_CONF_DIR/hyprland-portals.conf"
 
-# 3. Clean up and force MIME types
+# 3-4. Folders and FileManager1 to Nemo, unless another installed file
+# manager has them (Nautilus is the default now; Nemo never takes its
+# place, see units/apps/nemo/hooks/file-manager.sh).
+current="$(xdg-mime query default inode/directory 2>/dev/null || true)"
+take_folders=1
+if [ -n "$current" ] && [ "$current" != nemo.desktop ]; then
+    for d in ${XDG_DATA_HOME:-$HOME/.local/share} $(echo "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr ':' ' '); do
+        [ -f "$d/applications/$current" ] && take_folders=0
+    done
+fi
+if [ "$take_folders" = 1 ]; then
 MIME_FILE="$HOME/.config/mimeapps.list"
 if [ -f "$MIME_FILE" ]; then
     info "Purging old directory associations (Dolphin/Thunar) to avoid duplicates..."
@@ -42,7 +52,7 @@ fi
 info "Setting Nemo as the default file manager..."
 xdg-mime default nemo.desktop inode/directory
 
-# 4. Create local D-Bus service override for FileManager1 (prevents crashes from missing Dolphin)
+# Create local D-Bus service override for FileManager1 (prevents crashes from missing Dolphin)
 DBUS_SERVICES_DIR="$HOME/.local/share/dbus-1/services"
 info "Setting up D-Bus FileManager1 interface redirect to Nemo..."
 mkdir -p "$DBUS_SERVICES_DIR"
@@ -57,6 +67,9 @@ cat << EOF > "$DBUS_SERVICES_DIR/org.freedesktop.FileManager1.service"
 Name=org.freedesktop.FileManager1
 Exec=/usr/bin/nemo --no-default-window
 EOF
+else
+    info "Folders stay with ${current%.desktop}"
+fi
 
 # 5. Reload and restart user services
 info "Reloading systemd user daemons..."
