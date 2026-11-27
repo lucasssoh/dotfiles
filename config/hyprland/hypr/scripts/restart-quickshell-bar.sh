@@ -146,6 +146,16 @@ if (( ${#pids[@]} > 0 )); then
     fi
 
     for pid in "${pids[@]}"; do
+        # Quickshell does not stop its Process children on SIGTERM (checked:
+        # an exec'd `sleep` survives as PID 1's child). The bar's two
+        # `pactl subscribe` watchers -- OsdState's port glyph and
+        # MixerState's device availability -- would therefore outlive every
+        # restart, each holding one of pipewire-pulse's 64 client slots.
+        # Enough restarts and no application can connect to audio at all,
+        # so take the watchers down while they are still our children.
+        for child in $(pgrep -P "$pid" -f 'pactl subscribe' || true); do
+            kill -TERM "$child" 2>/dev/null || true
+        done
         kill -TERM "$pid"
     done
 
