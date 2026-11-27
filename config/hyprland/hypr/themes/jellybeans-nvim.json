@@ -5,13 +5,14 @@
   "geometry": {
     "outline-width": 3
   },
+  "folder": "#fad07a",
   "modes": {
     "dark": {
       "surfaces": {
         "panel": "#151515",
         "card": "#1c1c1c",
-        "card-hover": "#1f1f1f",
-        "card-raised": "#333333",
+        "card-hover": "#333333",
+        "card-raised": "#404040",
         "card-sunken": "#101010"
       },
       "text": {
@@ -27,7 +28,10 @@
         "success": "#70b950",
         "info": "#668799",
         "warning": "#ffb964",
-        "danger": "#cf6a4c"
+        "danger": "#cf6a4c",
+        "magenta": "#c6b6ee",
+        "cyan": "#8fbfdc",
+        "blue": "#8197bf"
       },
       "outline": "#000000",
       "shadow": "#000000"
@@ -53,7 +57,10 @@
         "success": "#4b8027",
         "info": "#41687a",
         "warning": "#a35a10",
-        "danger": "#a13b28"
+        "danger": "#a13b28",
+        "magenta": "#7a5aa8",
+        "cyan": "#3a6f9e",
+        "blue": "#41687a"
       },
       "outline": "#000000",
       "shadow": "#000000"

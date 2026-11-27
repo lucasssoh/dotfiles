@@ -14,9 +14,11 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Cartoon theme:** Nemo, file dialogs, swayimg, Liseuse's reader and the font viewer take the theme's colours and font, with an ink outline on Nemo's buttons and current folder. They follow when the theme changes.
 - **Cartoon theme:** folders take the theme's colour, in Nautilus, Nemo and file dialogs. A theme can set its own with `folder`.
 - **Nautilus:** a gauge of the disk space used under the home folder and each mounted drive, and under each name a folder's item count or a file's size.
+- **Shell theme:** themes may set `blue`, `magenta` and `cyan`, and all eighteen do: the terminal shows each theme's own instead of borrowing its orange for magenta.
 
 ### Changed
 - **File manager:** Nautilus replaces Nemo on `Super + E`, in the cartoon look with the whole tile of a selected file outlined. Nemo stays as an optional unit.
+- **Themes:** Dracula's light mode is now Alucard, Dracula's own; Rosé Pine's surfaces and greens come from its palette; Nord's light mode takes its darker blue; Cuivre & Cyan and Pastel get a red of their own for alerts; text on an accent is dark wherever the light one could not be read.
 - **Password prompts:** the dots for what you type are bigger and spaced out.
 - **Firefox:** the page runs to the window's edges, its corners rounded with the window's, instead of sitting as an inset card.
 - **Notification centre, Programme:** the panel sits like a window, `gap` from the screen's edges and the bar, with the same corners. `"sheets": "attached"` in `bar.json` carries the bar's side down to the bottom instead.

@@ -61,7 +61,14 @@ Each theme is one file in `~/.config/hypr/themes/<id>.json`, with one schema and
 }
 ```
 
-Every key is required in both modes, as `#rrggbb`. While a theme is missing or invalid, `coucou` stands in. Saving a theme recolours the running shell.
+Every key above is required in both modes, as `#rrggbb`. While a theme is missing or invalid, `coucou` stands in. Saving a theme recolours the running shell.
+
+Four keys are optional:
+
+| Key | What it sets | Without it |
+|---|---|---|
+| `folder` (next to `font`) | The folders' colour in the file manager | `accents.info` of the dark mode |
+| `accents.blue`, `accents.magenta`, `accents.cyan` | The terminal's blue, magenta and cyan | `info`, `warning` and `active` |
 
 | Key | Where it shows |
 |---|---|

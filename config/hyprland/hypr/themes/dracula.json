@@ -5,20 +5,21 @@
   "geometry": {
     "outline-width": 3
   },
+  "folder": "#bd93f9",
   "modes": {
     "dark": {
       "surfaces": {
         "panel": "#21222c",
         "card": "#282a36",
-        "card-hover": "#3e4452",
-        "card-raised": "#44475a",
+        "card-hover": "#343746",
+        "card-raised": "#424450",
         "card-sunken": "#191a21"
       },
       "text": {
         "primary": "#f8f8f2",
-        "secondary": "#abb2bf",
+        "secondary": "#bcc2d3",
         "muted": "#6272a4",
-        "faint": "#4b5263",
+        "faint": "#485274",
         "on-accent": "#191a21"
       },
       "accents": {
@@ -27,33 +28,39 @@
         "success": "#50fa7b",
         "info": "#8be9fd",
         "warning": "#ffb86c",
-        "danger": "#ff5555"
+        "danger": "#ff5555",
+        "magenta": "#ff79c6",
+        "cyan": "#8be9fd",
+        "blue": "#bd93f9"
       },
       "outline": "#000000",
       "shadow": "#000000"
     },
     "light": {
       "surfaces": {
-        "panel": "#f5f4ef",
-        "card": "#fffdf7",
-        "card-hover": "#ebe9e1",
-        "card-raised": "#dedbd2",
-        "card-sunken": "#d8d5cc"
+        "panel": "#ece9df",
+        "card": "#fffbeb",
+        "card-hover": "#dedccf",
+        "card-raised": "#ceccc0",
+        "card-sunken": "#dedccf"
       },
       "text": {
-        "primary": "#282a36",
-        "secondary": "#44475a",
-        "muted": "#6272a4",
-        "faint": "#a0a4b0",
-        "on-accent": "#fffdf7"
+        "primary": "#1f1f1f",
+        "secondary": "#423f33",
+        "muted": "#6c664b",
+        "faint": "#a6a18e",
+        "on-accent": "#fffbeb"
       },
       "accents": {
-        "active": "#7c4dbe",
-        "highlight": "#8a8000",
-        "success": "#1f9d55",
-        "info": "#2b7fa8",
-        "warning": "#b25e1e",
-        "danger": "#c21f3d"
+        "active": "#644ac9",
+        "highlight": "#846e15",
+        "success": "#14710a",
+        "info": "#036a96",
+        "warning": "#a34d14",
+        "danger": "#cb3a2a",
+        "magenta": "#a3144d",
+        "cyan": "#036a96",
+        "blue": "#644ac9"
       },
       "outline": "#000000",
       "shadow": "#000000"

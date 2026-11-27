@@ -162,12 +162,26 @@ def nvim_palette(mode):
     }
 
 
+def extra(accents, key, fallback):
+    """An optional accent (blue, magenta, cyan), or `fallback`."""
+    value = accents.get(key)
+    return value if isinstance(value, str) and HEX.fullmatch(value) else fallback
+
+
 def wezterm_mode(mode):
     s, t, a = mode["surfaces"], mode["text"], mode["accents"]
     background = s["card-sunken"]
+    # blue, magenta and cyan are optional in a theme: without them, info,
+    # warning and active stand in, as before they existed.
     ansi = [background, a["danger"], a["success"], a["highlight"],
-            a["info"], a["warning"], a["active"], t["primary"]]
-    brights = [t["muted"]] + [lighten(c) for c in ansi[1:7]] + [lighten(t["primary"], 0.1)]
+            extra(a, "blue", a["info"]), extra(a, "magenta", a["warning"]),
+            extra(a, "cyan", a["active"]), t["primary"]]
+    # Brights lift each colour off a dark ground; on a light one, lightened
+    # colours faded into it, so there they deepen a little instead.
+    if contrast(background, "#000000") > contrast(background, "#ffffff"):
+        brights = [t["muted"]] + [darken(c, 0.15) for c in ansi[1:7]] + [darken(t["primary"], 0.2)]
+    else:
+        brights = [t["muted"]] + [lighten(c) for c in ansi[1:7]] + [lighten(t["primary"], 0.1)]
     return {
         "background": background,
         "tab_inks": [t["primary"], t["muted"], t["secondary"]],

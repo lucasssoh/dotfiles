@@ -5,6 +5,7 @@
   "geometry": {
     "outline-width": 3
   },
+  "folder": "#4f9eff",
   "modes": {
     "dark": {
       "surfaces": {
@@ -27,7 +28,9 @@
         "success": "#4ade80",
         "info": "#4f9eff",
         "warning": "#e1df95",
-        "danger": "#ff6e6e"
+        "danger": "#ff6e6e",
+        "magenta": "#c58cff",
+        "cyan": "#4fefff"
       },
       "outline": "#000000",
       "shadow": "#000000"
@@ -53,7 +56,9 @@
         "success": "#24692a",
         "info": "#1d6386",
         "warning": "#6e5c0f",
-        "danger": "#b3261e"
+        "danger": "#b3261e",
+        "magenta": "#7b3fa8",
+        "cyan": "#006b75"
       },
       "outline": "#000000",
       "shadow": "#000000"
