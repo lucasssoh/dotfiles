@@ -25,15 +25,13 @@ const EASE_RATE: f64 = 14.0;
 const CASCADE_STAGGER_MS: f64 = 40.0;
 const CASCADE_DURATION_MS: f64 = 320.0;
 
-/// Margin (px) between the bottom of the row (tallest possible card, focus
-/// + selection) and the bottom of the allocated area -- the row is
-/// bottom-centered (not screen-centered) to leave the full-screen preview
-/// visible above it, and clears the position/hint line main.rs lays along
-/// the very bottom.
-const BOTTOM_MARGIN_PX: f64 = 64.0;
+/// How far above the bottom of the allocated area the row's centre line
+/// sits: high enough for the band below (roll.rs) to show under it, above
+/// the position/hint line main.rs lays along the very bottom.
+pub const ROW_FROM_BOTTOM_PX: f64 = 272.0;
 
 /// Air (px) between two neighbouring cards.
-const CARD_GAP_PX: f64 = 12.0;
+pub const CARD_GAP_PX: f64 = 12.0;
 
 /// Extra height (px) for a selected card (Dynamic mode) -- added on top of
 /// the focus interpolation, so chosen cards visibly "stick out" of the row
@@ -58,6 +56,11 @@ mod imp {
     #[derive(Default)]
     pub struct Carousel {
         pub entries: RefCell<Vec<Card>>,
+        /// The cards on the ring, in order, as indices into `entries`: all
+        /// of them, or the ones a filter keeps (main.rs, "Matching"). The
+        /// ring and its positions (`target`, `offset`, `reveal_origin`)
+        /// count in these slots; a card's index never changes.
+        pub order: RefCell<Vec<usize>>,
         /// "Logical" position targeted on the ring -- an UNBOUNDED float
         /// (never wrapped here). ± N per full loop, so always monotonically
         /// increasing/decreasing with navigation: this is what allows
@@ -120,7 +123,13 @@ mod imp {
         // `queue_allocate()` in `tick()`, not just on resize.
         fn size_allocate(&self, width: i32, height: i32, _baseline: i32) {
             let entries = self.entries.borrow();
-            let len = entries.len();
+            let order = self.order.borrow();
+            let len = order.len();
+            for (i, card) in entries.iter().enumerate() {
+                if !order.contains(&i) {
+                    card.set_child_visible(false);
+                }
+            }
             if len == 0 {
                 return;
             }
@@ -139,11 +148,11 @@ mod imp {
             // exceeds BOTTOM_MARGIN_PX from the bottom -- each card then
             // grows equally up AND down from this line, so a picked card
             // sticks out on both sides rather than climbing alone.
-            let max_h = card::HEIGHT_FOCUSED + SELECTED_HEIGHT_BOOST;
-            let row_center_y = height - BOTTOM_MARGIN_PX - max_h / 2.0;
+            let row_center_y = height - ROW_FROM_BOTTOM_PX;
             let visible_margin = card::WIDTH_FOCUSED + 40.0;
 
-            for (i, card) in entries.iter().enumerate() {
+            for (i, &index) in order.iter().enumerate() {
+                let card = &entries[index];
                 // Signed distance on the ring, wrapped into [-N/2, N/2) --
                 // the only place wrapping happens (see `target`'s doc in
                 // Inner). Stays continuous during the animation since
@@ -200,7 +209,7 @@ mod imp {
                 self.start.set(Some(Instant::now()));
             }
             let elapsed_ms = self.start.get().unwrap().elapsed().as_secs_f64() * 1000.0;
-            let len_f = self.entries.borrow().len() as f64;
+            let len_f = self.order.borrow().len() as f64;
             // Farthest possible point on the ring from the cascade's
             // start -- past its delay + duration, no card can still change
             // its reveal value.
@@ -228,8 +237,10 @@ mod imp {
                 .set(if (next - target).abs() < 0.0005 { target } else { next });
 
             let entries = self.entries.borrow();
+            let order = self.order.borrow();
             let origin = self.reveal_origin.get();
-            for (i, card) in entries.iter().enumerate() {
+            for (i, &index) in order.iter().enumerate() {
+                let card = &entries[index];
                 // Distance on the ring from the starting point (not the
                 // raw index) -- the cascade entrance starts from the
                 // initially focused card and spills toward both sides at
@@ -287,6 +298,7 @@ impl Carousel {
 
                 entries.push(card);
             }
+            *carousel.imp().order.borrow_mut() = (0..entries.len()).collect();
         }
 
         // Scroll / trackpad -- an accumulator rather than a fixed step per
@@ -324,7 +336,7 @@ impl Carousel {
     }
 
     fn handle_card_click(&self, index: usize) {
-        let len = self.imp().entries.borrow().len();
+        let len = self.slots();
         if len == 0 {
             return;
         }
@@ -332,9 +344,11 @@ impl Carousel {
             self.activate_focused();
             return;
         }
+        let (Some(slot), Some(focused)) = (self.slot_of(index), self.slot_of(self.focused_index())) else {
+            return;
+        };
         let len_f = len as f64;
-        let focused = self.focused_index() as f64;
-        let mut diff = index as f64 - focused;
+        let mut diff = slot as f64 - focused as f64;
         if diff > len_f / 2.0 {
             diff -= len_f;
         } else if diff < -len_f / 2.0 {
@@ -372,11 +386,57 @@ impl Carousel {
     /// Index of the currently focused card, derived from `target` (not
     /// `offset`, which is only its animated/interpolated version).
     pub fn focused_index(&self) -> usize {
-        let len = self.imp().entries.borrow().len();
-        if len == 0 {
+        let order = self.imp().order.borrow();
+        if order.is_empty() {
             return 0;
         }
-        self.imp().target.get().round().rem_euclid(len as f64) as usize
+        order[self.imp().target.get().round().rem_euclid(order.len() as f64) as usize]
+    }
+
+    /// How many cards are on the ring.
+    pub fn slots(&self) -> usize {
+        self.imp().order.borrow().len()
+    }
+
+    /// Where card `index` sits on the ring, if it is on it.
+    pub fn slot_of(&self, index: usize) -> Option<usize> {
+        self.imp().order.borrow().iter().position(|&i| i == index)
+    }
+
+    /// The card at `slot` on the ring, wrapping.
+    pub fn index_at_slot(&self, slot: i64) -> Option<usize> {
+        let order = self.imp().order.borrow();
+        if order.is_empty() {
+            return None;
+        }
+        Some(order[slot.rem_euclid(order.len() as i64) as usize])
+    }
+
+    /// Distance on the ring between two cards, in slots; None when either
+    /// is off it.
+    pub fn slot_distance(&self, a: usize, b: usize) -> Option<f64> {
+        Some(ring_distance(self.slot_of(a)? as f64, self.slot_of(b)? as f64, self.slots() as f64))
+    }
+
+    /// Puts only `order`'s cards on the ring (indices, in ring order), the
+    /// focus on `keep` if it is among them, else on the first. Neither
+    /// slid nor cascaded: the ring changes in place (main.rs rolls the
+    /// bands around it). Notifies like a navigation.
+    pub fn set_order(&self, order: Vec<usize>, keep: usize) {
+        if order.is_empty() {
+            return;
+        }
+        let slot = order.iter().position(|&i| i == keep).unwrap_or(0) as f64;
+        for &i in &order {
+            if let Some(card) = self.imp().entries.borrow().get(i) {
+                card.set_reveal(1.0);
+            }
+        }
+        *self.imp().order.borrow_mut() = order;
+        self.imp().offset.set(slot);
+        self.imp().reveal_origin.set(slot);
+        self.set_target(slot);
+        self.queue_allocate();
     }
 
     pub fn len(&self) -> usize {
@@ -401,13 +461,12 @@ impl Carousel {
     /// `reveal_origin`) to this same index, so the entrance animation
     /// spills out from this card rather than from the start of the list.
     pub fn set_focus_index(&self, index: usize) {
-        let len = self.imp().entries.borrow().len();
-        if len == 0 || index >= len {
+        let Some(slot) = self.slot_of(index) else {
             return;
-        }
-        self.imp().target.set(index as f64);
-        self.imp().offset.set(index as f64);
-        self.imp().reveal_origin.set(index as f64);
+        };
+        self.imp().target.set(slot as f64);
+        self.imp().offset.set(slot as f64);
+        self.imp().reveal_origin.set(slot as f64);
     }
 
     pub fn activate_focused(&self) {

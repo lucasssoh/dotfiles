@@ -96,70 +96,17 @@ mod imp {
             }
             let focus = self.focus.get();
             let full = graphene::Rect::new(0.0, 0.0, w, h);
-
-            snapshot.push_rounded_clip(&rounded(&full, 0.0, CARD_CORNER_RADIUS));
-            let imp_pair = (self.texture.borrow().clone(), self.dark_texture.borrow().clone());
-            match (imp_pair, widget.shown_texture()) {
-                ((Some(light), Some(dark)), _) => {
-                    // Where the dark half starts, from the left: past the
-                    // card at rest (the scheme's half fills it), at a
-                    // quarter or three quarters with focus.
-                    let rest = if self.dark_scheme.get() { -CUT_SLANT } else { 1.0 + CUT_SLANT };
-                    let shown = self.shown.get() as f32;
-                    let open = (1.0 - SHOWN_SHARE) + (2.0 * SHOWN_SHARE - 1.0) * (1.0 - shown);
-                    let cut = rest + (open - rest) * focus as f32;
-                    let f = focus as f32;
-                    // Each half is drawn only over its own side of the cut,
-                    // and not at all once the cut has left the card: a half
-                    // painted underneath the other would bleed through the
-                    // antialiased rounded corners as a light rim.
-                    let (top, bottom) = ((cut + CUT_SLANT) * w, (cut - CUT_SLANT) * w);
-                    if top > 0.5 || bottom > 0.5 {
-                        let side = gsk::PathBuilder::new();
-                        side.move_to(-1.0, 0.0);
-                        // A pixel past the cut, so the seam has the light
-                        // half under it rather than a gap.
-                        side.line_to(top + 1.0, 0.0);
-                        side.line_to(bottom + 1.0, h);
-                        side.line_to(-1.0, h);
-                        side.close();
-                        snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
-                        draw_cover(snapshot, &light, w as f64, h as f64);
-                        if f * shown > 0.001 {
-                            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * shown), &full);
-                        }
-                        snapshot.pop();
-                    }
-                    if top < w - 0.5 || bottom < w - 0.5 {
-                        let side = gsk::PathBuilder::new();
-                        side.move_to(top, 0.0);
-                        side.line_to(w + 1.0, 0.0);
-                        side.line_to(w + 1.0, h);
-                        side.line_to(bottom, h);
-                        side.close();
-                        snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
-                        draw_cover(snapshot, &dark, w as f64, h as f64);
-                        if f * (1.0 - shown) > 0.001 {
-                            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * (1.0 - shown)), &full);
-                        }
-                        snapshot.pop();
-                    }
-                    let dim = (1.0 - focus) * REST_DIM;
-                    if dim > 0.001 {
-                        snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, dim as f32), &full);
-                    }
-                }
-                (_, Some(tex)) => {
-                    draw_cover(snapshot, &tex, w as f64, h as f64);
-                    let dim = (1.0 - focus) * REST_DIM;
-                    if dim > 0.001 {
-                        snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, dim as f32), &full);
-                    }
-                }
-                // Thumbnail not loaded yet -- neutral flat fill.
-                (_, None) => snapshot.append_color(&gdk::RGBA::new(0.11, 0.11, 0.12, 1.0), &full),
-            }
-            snapshot.pop();
+            paint(
+                snapshot,
+                w,
+                h,
+                self.texture.borrow().as_ref(),
+                self.dark_texture.borrow().as_ref(),
+                self.wallpaper.get().is_some_and(|w| w.dark.is_some()),
+                self.dark_scheme.get(),
+                self.shown.get(),
+                focus,
+            );
 
             // Focus frame: a white ring set off the picture by a thin dark
             // gap, so it reads on a white wallpaper too. Drawn outside the
@@ -240,11 +187,6 @@ impl Card {
     /// Whether pairs show their dark half (see `set_dark_scheme`).
     pub fn dark_scheme(&self) -> bool {
         self.imp().dark_scheme.get()
-    }
-
-    /// The half the colour scheme asks for.
-    fn shown_texture(&self) -> Option<gdk::Texture> {
-        self.texture(self.imp().dark_scheme.get())
     }
 
     /// Dimensions of the source file, (0, 0) until the thumbnail loads.
@@ -341,6 +283,93 @@ impl Card {
     pub fn is_selected(&self) -> bool {
         self.imp().selected.get()
     }
+}
+
+/// A card's picture, w×h at the origin: the thumbnail, or for a pair both
+/// halves either side of the slanted cut (`shown`: 0 light, 1 dark, how
+/// far the preview's half has opened; `focus` opens the cut), dimmed at
+/// rest. Shared by the live cards and the neighbouring bands (roll.rs), so
+/// a band rolling into place never changes look.
+#[allow(clippy::too_many_arguments)]
+pub fn paint(
+    snapshot: &gtk4::Snapshot,
+    w: f32,
+    h: f32,
+    light: Option<&gdk::Texture>,
+    dark: Option<&gdk::Texture>,
+    pair: bool,
+    dark_scheme: bool,
+    shown: f64,
+    focus: f64,
+) {
+    let full = graphene::Rect::new(0.0, 0.0, w, h);
+    snapshot.push_rounded_clip(&rounded(&full, 0.0, CARD_CORNER_RADIUS));
+    let rest_dim = |snapshot: &gtk4::Snapshot| {
+        let dim = (1.0 - focus) * REST_DIM;
+        if dim > 0.001 {
+            snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, dim as f32), &full);
+        }
+    };
+    match (light, dark) {
+        (Some(light), Some(dark)) => {
+            // Where the dark half starts, from the left: past the card at
+            // rest (the scheme's half fills it), at a quarter or three
+            // quarters with focus.
+            let rest = if dark_scheme { -CUT_SLANT } else { 1.0 + CUT_SLANT };
+            let shown = shown as f32;
+            let open = (1.0 - SHOWN_SHARE) + (2.0 * SHOWN_SHARE - 1.0) * (1.0 - shown);
+            let cut = rest + (open - rest) * focus as f32;
+            let f = focus as f32;
+            // Each half is drawn only over its own side of the cut, and not
+            // at all once the cut has left the card: a half painted
+            // underneath the other would bleed through the antialiased
+            // rounded corners as a light rim.
+            let (top, bottom) = ((cut + CUT_SLANT) * w, (cut - CUT_SLANT) * w);
+            if top > 0.5 || bottom > 0.5 {
+                let side = gsk::PathBuilder::new();
+                side.move_to(-1.0, 0.0);
+                // A pixel past the cut, so the seam has the light half
+                // under it rather than a gap.
+                side.line_to(top + 1.0, 0.0);
+                side.line_to(bottom + 1.0, h);
+                side.line_to(-1.0, h);
+                side.close();
+                snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
+                draw_cover(snapshot, light, w as f64, h as f64);
+                if f * shown > 0.001 {
+                    snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * shown), &full);
+                }
+                snapshot.pop();
+            }
+            if top < w - 0.5 || bottom < w - 0.5 {
+                let side = gsk::PathBuilder::new();
+                side.move_to(top, 0.0);
+                side.line_to(w + 1.0, 0.0);
+                side.line_to(w + 1.0, h);
+                side.line_to(bottom, h);
+                side.close();
+                snapshot.push_fill(&side.to_path(), gsk::FillRule::Winding);
+                draw_cover(snapshot, dark, w as f64, h as f64);
+                if f * (1.0 - shown) > 0.001 {
+                    snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, OTHER_DIM * f * (1.0 - shown)), &full);
+                }
+                snapshot.pop();
+            }
+            rest_dim(snapshot);
+        }
+        // A single picture, or the scheme's half while the other loads --
+        // never the other half instead: it would flash the light picture
+        // on a dark desktop until the right one decodes.
+        (single, other) => match if dark_scheme && pair { other } else { single } {
+            Some(tex) => {
+                draw_cover(snapshot, tex, w as f64, h as f64);
+                rest_dim(snapshot);
+            }
+            // Thumbnail not loaded yet -- neutral flat fill.
+            None => snapshot.append_color(&gdk::RGBA::new(0.11, 0.11, 0.12, 1.0), &full),
+        },
+    }
+    snapshot.pop();
 }
 
 /// `rect` grown by `outset` on every side, its corners rounded to match:

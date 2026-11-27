@@ -10,9 +10,13 @@ mod backdrop;
 mod cache;
 mod card;
 mod carousel;
+mod illus;
 mod keymap;
+mod palette;
 mod preview;
+mod roll;
 mod theme;
+mod themes;
 mod thumbs;
 mod wallpapers;
 
@@ -62,19 +66,39 @@ const HINT_MS: u64 = 3000;
 /// The preview's width, as a share of the screen's; its height follows at
 /// 16:10.
 const PREVIEW_SHARE: f64 = 0.525;
-/// Room kept under the panel for the cards and the bottom line: the panel
+/// Room kept under the panel for the bands and the bottom line: the panel
 /// is centred in what is left above them.
-const PANEL_CLEARANCE_PX: i32 = 284;
+const PANEL_CLEARANCE_PX: i32 = 560;
+/// The caption's height under the preview, kept when the preview is fitted
+/// to a short screen.
+const LEGEND_PX: i32 = 84;
 
 /// Interface strings -- fixed English (no system language detection, see
 /// keymap.rs for the same choice on the shortcuts side), like the rest of
 /// the shell. The screen looks like the desktop, so the words say plainly
 /// that nothing is set yet: Esc keeps the current wallpaper.
-const HINT_OPEN: &str = "Enter to apply · Esc to keep current · Tab for slideshow";
-const HINT_SLIDESHOW: &str = "Press ↓ to pick, Enter to start the slideshow";
+const HINT_OPEN: &str = "Enter to apply · Esc to keep current · ↑↓ for themes · Tab for slideshow";
+const HINT_SLIDESHOW: &str = "Shift ↓ to pick, Enter to start the slideshow";
 
 /// The primary ink, for the parts of a markup line that stand out.
 const INK: &str = "#f2f2f7";
+const INK_LIGHT: &str = "#1c1c1e";
+
+/// One band of the stack: Glass (no theme) or an Ink theme, its
+/// wallpapers in ring order, and the one it was left on.
+struct Band {
+    theme: Option<usize>,
+    order: Vec<usize>,
+    focus: usize,
+}
+
+/// A band's name at the left of its row.
+struct BandTitle {
+    root: gtk4::Box,
+    up: gtk4::Label,
+    down: gtk4::Label,
+    swatch: gtk4::DrawingArea,
+}
 
 /// "45 s", "2 min", "2 min 10 s", "1 h".
 fn format_every(secs: u32) -> String {
@@ -127,8 +151,7 @@ struct Ui {
     mode: Cell<Mode>,
     duration: Cell<u32>,
     scheme_dark: Cell<bool>,
-    /// C pressed on a pair: the preview shows the half the scheme
-    /// would not. Cleared when the focus moves on.
+    /// C pressed: the preview shows the mode the scheme would not.
     peek: Cell<bool>,
     preview: preview::PreviewLoader,
     sharp: RefCell<VecDeque<(preview::Key, gdk::Texture)>>,
@@ -138,6 +161,23 @@ struct Ui {
     /// +1 or -1: where the next preview is preloaded.
     direction: Cell<i64>,
     hint_serial: Cell<u64>,
+    /// The shell's themes; the bands (Glass, then one per Ink theme), the
+    /// one in the middle, and the one in use when Prisme opened (written
+    /// back on Enter if it changed).
+    themes: Vec<themes::Theme>,
+    bands: RefCell<Vec<Band>>,
+    band_i: Cell<usize>,
+    initial_band: usize,
+    /// Per theme, the wallpapers that suit it (palette.rs); None until
+    /// the colours are read.
+    matches: RefCell<Option<Vec<Vec<usize>>>>,
+    roll: roll::Roll,
+    titles: Vec<BandTitle>,
+    swatch_dark: Rc<Cell<bool>>,
+    legend: gtk4::Box,
+    frame: gtk4::Overlay,
+    illus: gtk4::DrawingArea,
+    look: Rc<RefCell<illus::State>>,
 }
 
 impl Ui {
@@ -145,9 +185,15 @@ impl Ui {
         self.carousel.card_at(i)
     }
 
+    /// The mode the preview shows: the desktop's, or the other one after
+    /// C. Everything follows it: the half of a pair, the sketch, the dress.
+    fn view_dark(&self) -> bool {
+        self.scheme_dark.get() != self.peek.get()
+    }
+
     /// Which half of card `i` the preview shows.
     fn shown_dark(&self, i: usize) -> bool {
-        self.walls.get(i).is_some_and(|w| w.dark.is_some()) && (self.scheme_dark.get() != self.peek.get())
+        self.walls.get(i).is_some_and(|w| w.dark.is_some()) && self.view_dark()
     }
 
     fn key(&self, i: usize) -> preview::Key {
@@ -179,19 +225,23 @@ impl Ui {
         }
     }
 
-    /// Shows one half of the focused pair: the preview, the card's cut and
-    /// the Light | Dark toggle follow.
+    /// Shows the preview in light or dark (C, or a click on Light |
+    /// Dark): the half of a pair, the sketch and the dress follow; held
+    /// from one wallpaper to the next.
     fn show_half(self: &Rc<Self>, dark: bool) {
-        let i = self.focus.get();
-        if self.walls.get(i).is_none_or(|w| w.dark.is_none()) || self.shown_dark(i) == dark {
+        if self.view_dark() == dark {
             return;
         }
         self.peek.set(dark != self.scheme_dark.get());
-        if let Some(card) = self.card(i) {
-            card.set_shown_dark(dark, true);
+        let i = self.focus.get();
+        if self.walls.get(i).is_some_and(|w| w.dark.is_some()) {
+            if let Some(card) = self.card(i) {
+                card.set_shown_dark(dark, true);
+            }
+            self.show_preview(false);
         }
         self.refresh_caption();
-        self.show_preview(false);
+        self.apply_look();
     }
 
     /// Sizes the preview to the monitor Prisme opened on.
@@ -202,9 +252,12 @@ impl Ui {
             .surface()
             .and_then(|s| display.monitor_at_surface(&s))
             .or_else(|| display.monitors().item(0).and_downcast::<gdk::Monitor>());
-        let width = monitor.map(|m| m.geometry().width()).unwrap_or(1920) as f64;
-        let w = (width * PREVIEW_SHARE).round() as i32;
+        let (width, height) = monitor.map(|m| (m.geometry().width(), m.geometry().height())).unwrap_or((1920, 1200));
+        // As wide as the share allows, as long as it fits above the bands.
+        let room = (height - PANEL_CLEARANCE_PX - LEGEND_PX - 32).max(200) as f64;
+        let w = (width as f64 * PREVIEW_SHARE).min(room * 16.0 / 10.0).round() as i32;
         self.backdrop.set_size_request(w, (w as f64 * 10.0 / 16.0).round() as i32);
+        self.legend.set_size_request(w, -1);
     }
 
     fn refresh_caption(&self) {
@@ -217,10 +270,14 @@ impl Ui {
         if let Some((w, h)) = self.card(i).map(|c| c.orig_dims()).filter(|&(w, h)| w > 0 && h > 0) {
             parts.push(format!("{w} × {h}"));
         }
-        self.details.set_markup(&parts.join(" · "));
-        self.details.set_visible(!parts.is_empty());
-        self.halves.set_visible(wall.dark.is_some());
-        let dark = self.shown_dark(i);
+        // Held in place while the thumbnail brings the size: a line coming
+        // and going made the centred panel jump.
+        self.details.set_markup(if parts.is_empty() { "\u{a0}" } else { "" });
+        if !parts.is_empty() {
+            self.details.set_markup(&parts.join(" · "));
+        }
+        self.halves.set_visible(true);
+        let dark = self.view_dark();
         let light_class = if dark { "prisme-half" } else { "prisme-half-on" };
         let dark_class = if dark { "prisme-half-on" } else { "prisme-half" };
         self.light.set_css_classes(&[light_class]);
@@ -228,17 +285,22 @@ impl Ui {
     }
 
     fn refresh_bottom(&self) {
-        let total = self.walls.len();
+        let ink = self.ink_hex();
+        let total = self.carousel.slots();
         if total > 0 {
-            self.position
-                .set_markup(&format!("<span foreground=\"{INK}\">{}</span> / {total}", self.focus.get() + 1));
+            let at = self.carousel.slot_of(self.focus.get()).map(|s| s + 1).unwrap_or(1);
+            let tag = match (self.matches.borrow().is_some(), self.band_theme()) {
+                (true, Some(t)) => format!(" · matching Ink · {}", glib::markup_escape_text(&t.name)),
+                _ => String::new(),
+            };
+            self.position.set_markup(&format!("<span foreground=\"{ink}\">{at}</span> / {total}{tag}"));
         }
         let dynamic = self.mode.get() == Mode::Dynamic;
         self.picked.set_visible(dynamic);
         if dynamic {
             let n = (0..self.carousel.len()).filter_map(|i| self.card(i)).filter(|c| c.is_selected()).count();
             self.picked.set_markup(&format!(
-                "{n} picked · every <span foreground=\"{INK}\">{}</span>",
+                "{n} picked · every <span foreground=\"{ink}\">{}</span>",
                 format_every(self.duration.get())
             ));
         }
@@ -261,21 +323,29 @@ impl Ui {
     }
 
     fn focus_changed(self: &Rc<Self>, i: usize) {
-        let len = self.walls.len() as i64;
-        let previous = self.focus.replace(i) as i64;
+        let len = self.carousel.slots() as i64;
+        let previous_index = self.focus.replace(i);
+        let previous = self.carousel.slot_of(previous_index).unwrap_or(0) as i64;
+        let previous_index = previous_index as i64;
+        let slot = self.carousel.slot_of(i).unwrap_or(0) as i64;
         if len > 0 {
             // Signed step on the ring, wrapping the short way round.
-            let diff = (i as i64 - previous).rem_euclid(len);
+            let diff = (slot - previous).rem_euclid(len);
             if diff != 0 {
                 self.direction.set(if diff <= len / 2 { 1 } else { -1 });
             }
         }
-        self.peek.set(false);
-        // The card left behind closes back to the scheme's half.
-        for j in [previous as usize, i] {
-            if let Some(card) = self.card(j) {
-                card.set_shown_dark(self.shown_dark(j), false);
+        // The card left behind closes back to the desktop's half: only the
+        // focused card follows C, the others keep their thumbnail.
+        let prev = previous_index as usize;
+        if prev != i {
+            if let Some(card) = self.card(prev) {
+                let pair = self.walls.get(prev).is_some_and(|w| w.dark.is_some());
+                card.set_shown_dark(pair && self.scheme_dark.get(), false);
             }
+        }
+        if let Some(card) = self.card(i) {
+            card.set_shown_dark(self.shown_dark(i), false);
         }
         self.refresh_caption();
         self.refresh_bottom();
@@ -343,10 +413,11 @@ impl Ui {
             let (_, dark) = self.key(i);
             wanted.push((i, !dark));
         }
-        let len = self.walls.len() as i64;
-        if len >= 2 {
-            let next = (i as i64 + self.direction.get()).rem_euclid(len) as usize;
-            wanted.push(self.key(next));
+        if self.carousel.slots() >= 2 {
+            let slot = self.carousel.slot_of(i).unwrap_or(0) as i64;
+            if let Some(next) = self.carousel.index_at_slot(slot + self.direction.get()) {
+                wanted.push(self.key(next));
+            }
         }
         let missing = wanted.into_iter().find(|key| !self.sharp.borrow().iter().any(|(k, _)| k == key));
         if let Some(key) = missing {
@@ -389,6 +460,158 @@ impl Ui {
         }
     }
 }
+
+impl Ui {
+    /// The ink for the parts of a markup line that stand out.
+    fn ink_hex(&self) -> &'static str {
+        if self.view_dark() { INK } else { INK_LIGHT }
+    }
+
+    /// The Ink theme of the band in the middle; None for Glass.
+    fn band_theme(&self) -> Option<&themes::Theme> {
+        self.bands.borrow().get(self.band_i.get()).and_then(|b| b.theme).and_then(|t| self.themes.get(t))
+    }
+
+    /// Prisme itself only follows light or dark; the preview alone shows
+    /// the shell, in the middle band's look and colours.
+    fn apply_look(&self) {
+        let dark = self.view_dark();
+        for (class, on) in [("dark", dark), ("light", !dark)] {
+            if on { self.window.add_css_class(class) } else { self.window.remove_css_class(class) }
+        }
+        let theme = self.band_theme();
+        if theme.is_some() { self.frame.add_css_class("ink") } else { self.frame.remove_css_class("ink") }
+        let colors = theme.map(|t| t.colors(dark).clone()).unwrap_or_default();
+        illus::set_look(&self.illus, &self.look, illus::Look { ink: theme.is_some(), dark, colors });
+        self.swatch_dark.set(dark);
+        for t in &self.titles {
+            t.swatch.queue_draw();
+        }
+        self.refresh_bottom();
+    }
+
+    /// Lights the middle band's name, and the keys beside its neighbours'.
+    fn refresh_titles(&self) {
+        let current = self.band_i.get() as i64;
+        for (k, t) in self.titles.iter().enumerate() {
+            let d = k as i64 - current;
+            let class = match d {
+                0 => "cur",
+                -1 => "up",
+                1 => "down",
+                _ => "far",
+            };
+            t.root.set_css_classes(&["prisme-band", class]);
+            t.up.set_visible(d == -1);
+            t.down.set_visible(d == 1);
+        }
+    }
+
+    /// Rolls to band `i` (clamped): the carousel takes its wallpapers, on
+    /// the one it was left on, and the stack slides from where it was.
+    fn set_band(self: &Rc<Self>, i: i64) {
+        let n = self.bands.borrow().len() as i64;
+        let i = i.clamp(0, (n - 1).max(0)) as usize;
+        let old = self.band_i.get();
+        if i == old {
+            return;
+        }
+        if let Some(b) = self.bands.borrow_mut().get_mut(old) {
+            b.focus = self.focus.get();
+        }
+        self.band_i.set(i);
+        self.refresh_titles();
+        self.roll.set_current(i, true);
+        let (order, focus) = {
+            let bands = self.bands.borrow();
+            (bands[i].order.clone(), bands[i].focus)
+        };
+        self.carousel.set_order(order, focus);
+        self.apply_look();
+    }
+
+    /// The colours are read: each Ink band keeps its theme's wallpapers,
+    /// best first. The band Prisme opened on keeps the wallpaper in use.
+    fn set_matches(&self, m: Vec<Vec<usize>>, keep: Option<usize>) {
+        {
+            let mut bands = self.bands.borrow_mut();
+            for (k, band) in bands.iter_mut().enumerate() {
+                let Some(t) = band.theme else {
+                    continue;
+                };
+                let mut order = m.get(t).cloned().unwrap_or_default();
+                if order.is_empty() {
+                    continue;
+                }
+                if k == self.initial_band {
+                    if let Some(w) = keep.filter(|w| !order.contains(w)) {
+                        order.insert(0, w);
+                    }
+                }
+                if !order.contains(&band.focus) {
+                    band.focus = order[0];
+                }
+                band.order = order;
+            }
+        }
+        *self.matches.borrow_mut() = Some(m);
+        let (order, focus) = {
+            let bands = self.bands.borrow();
+            let b = &bands[self.band_i.get()];
+            (b.order.clone(), if b.order.contains(&self.focus.get()) { self.focus.get() } else { b.focus })
+        };
+        self.carousel.set_order(order, focus);
+        self.roll.queue_draw();
+        self.refresh_bottom();
+    }
+
+    /// For the stack (roll.rs): the cards of the band `delta` from the
+    /// middle, around the one it was left on.
+    fn band_slots(&self, delta: i64) -> Vec<roll::Slot> {
+        let b = self.band_i.get() as i64 + delta;
+        let bands = self.bands.borrow();
+        let Some(band) = (b >= 0).then(|| bands.get(b as usize)).flatten() else {
+            return Vec::new();
+        };
+        let len = band.order.len() as i64;
+        let at = band.order.iter().position(|&i| i == band.focus).unwrap_or(0) as i64;
+        let reach = BAND_REACH.min((len - 1) / 2);
+        (-reach..=reach)
+            .filter_map(|d| {
+                let index = band.order[(at + d).rem_euclid(len) as usize];
+                let card = self.card(index)?;
+                let pair = card.wallpaper().dark.is_some();
+                Some(roll::Slot { d, light: card.texture(false), dark: if pair { card.texture(true) } else { None }, pair })
+            })
+            .collect()
+    }
+
+    /// The wallpapers of the bands just above and below, around where they
+    /// were left: their thumbnails are loaded with the middle band's.
+    fn neighbour_cards(&self) -> Vec<(usize, f64)> {
+        let bands = self.bands.borrow();
+        let mut out = Vec::new();
+        for delta in [-1i64, 1] {
+            let b = self.band_i.get() as i64 + delta;
+            let Some(band) = (b >= 0).then(|| bands.get(b as usize)).flatten() else {
+                continue;
+            };
+            let len = band.order.len() as i64;
+            let at = band.order.iter().position(|&i| i == band.focus).unwrap_or(0) as i64;
+            let reach = BAND_REACH.min((len - 1) / 2);
+            for d in -reach..=reach {
+                out.push((band.order[(at + d).rem_euclid(len) as usize], d.abs() as f64 + 1.0));
+            }
+        }
+        out
+    }
+}
+
+/// How many cards either side of its focus a neighbouring band shows.
+const BAND_REACH: i64 = 12;
+
+/// Glass's dots: neutral, as its shell is.
+const GLASS_DOTS: [&str; 4] = ["#f2f2f7", "#a9a9b2", "#3a3a40", "#e9dcc3"];
 
 /// Entry point: forces GPU rendering then delegates building the single
 /// window to `build_ui` on every GApplication activation.
@@ -455,7 +678,11 @@ fn build_ui(app: &Application) {
         .margin_bottom(PANEL_CLEARANCE_PX)
         .build();
     let backdrop = backdrop::Backdrop::new();
-    let legend = gtk4::Box::builder().orientation(gtk4::Orientation::Horizontal).css_classes(["prisme-legend"]).build();
+    let legend = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Horizontal)
+        .css_classes(["prisme-legend"])
+        .halign(gtk4::Align::Center)
+        .build();
     let caption = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .css_classes(["prisme-caption"])
@@ -489,9 +716,65 @@ fn build_ui(app: &Application) {
     caption.append(&details);
     legend.append(&caption);
     legend.append(&halves);
-    panel.append(&backdrop);
+    // The preview in a frame (the Ink outline is the frame's), the
+    // illustration laid over it.
+    let (illus_area, look) = illus::new();
+    let frame = gtk4::Overlay::builder().css_classes(["prisme-frame"]).halign(gtk4::Align::Center).build();
+    frame.set_overflow(gtk4::Overflow::Hidden);
+    frame.set_child(Some(&backdrop));
+    frame.add_overlay(&illus_area);
+    panel.append(&frame);
     panel.append(&legend);
 
+    // ── The bands' names: Glass, then the Ink themes (Coucou first, as
+    // the shell's theme picker lists them).
+    let mut all_themes = themes::load_all();
+    if let Some(k) = all_themes.iter().position(|t| t.id == "coucou") {
+        let coucou = all_themes.remove(k);
+        all_themes.insert(0, coucou);
+    }
+    let (ink, current_theme) = themes::selection();
+    let initial_band = if ink {
+        current_theme.and_then(|id| all_themes.iter().position(|t| t.id == id)).map(|t| t + 1).unwrap_or(0)
+    } else {
+        0
+    };
+    let swatch_dark = Rc::new(Cell::new(true));
+    let band_title = |name: &str, dots: Rc<dyn Fn(bool) -> [String; 4]>| {
+        let root = gtk4::Box::builder().orientation(gtk4::Orientation::Vertical).spacing(6).css_classes(["prisme-band"]).build();
+        let line = gtk4::Box::builder().orientation(gtk4::Orientation::Horizontal).spacing(6).build();
+        let up = gtk4::Label::builder().label("↑").css_classes(["prisme-band-key"]).visible(false).build();
+        let down = gtk4::Label::builder().label("↓").css_classes(["prisme-band-key"]).visible(false).build();
+        let label = gtk4::Label::builder().label(name).xalign(0.0).ellipsize(gtk4::pango::EllipsizeMode::End).build();
+        line.append(&up);
+        line.append(&down);
+        line.append(&label);
+        let swatch = gtk4::DrawingArea::builder().content_width(44).content_height(9).halign(gtk4::Align::Start).build();
+        let dark = swatch_dark.clone();
+        swatch.set_draw_func(move |_, cr, _, h| {
+            for (k, hex) in dots(dark.get()).iter().enumerate() {
+                let (r, g, b) = themes::rgb(hex);
+                cr.arc(4.5 + k as f64 * 11.0, h as f64 / 2.0, 4.0, 0.0, std::f64::consts::TAU);
+                cr.set_source_rgb(r, g, b);
+                let _ = cr.fill();
+            }
+        });
+        root.append(&line);
+        root.append(&swatch);
+        root.set_cursor_from_name(Some("pointer"));
+        BandTitle { root, up, down, swatch }
+    };
+    let mut titles = vec![band_title("Glass", Rc::new(|_| GLASS_DOTS.map(str::to_string)))];
+    for t in &all_themes {
+        let theme = t.clone();
+        titles.push(band_title(
+            &format!("Ink · {}", t.name),
+            Rc::new(move |dark| {
+                let c = theme.colors(dark);
+                [c.accent.clone(), c.highlight.clone(), c.success.clone(), c.danger.clone()]
+            }),
+        ));
+    }
 
     // ── Bottom line: position, hint, and the slideshow summary.
     let bar = gtk4::CenterBox::builder().css_classes(["prisme-bar"]).valign(gtk4::Align::End).build();
@@ -506,8 +789,15 @@ fn build_ui(app: &Application) {
     let walls = wallpapers::scan(&source_dir);
     let cards: Vec<card::Card> = walls.iter().map(|w| card::Card::new(w.clone())).collect();
     let carousel = carousel::Carousel::new(cards);
+    let roll = roll::Roll::new(&carousel, titles.iter().map(|t| t.root.clone().upcast()).collect());
+    roll.set_current(initial_band, false);
+    let all: Vec<usize> = (0..walls.len()).collect();
+    let bands: Vec<Band> = std::iter::once(None)
+        .chain((0..all_themes.len()).map(Some))
+        .map(|theme| Band { theme, order: all.clone(), focus: 0 })
+        .collect();
 
-    overlay.add_overlay(&carousel);
+    overlay.add_overlay(&roll);
     // Above the carousel, which takes the wheel over the whole window: the
     // Light | Dark words need the clicks over the panel.
     overlay.add_overlay(&panel);
@@ -538,7 +828,51 @@ fn build_ui(app: &Application) {
         focus: Cell::new(0),
         direction: Cell::new(1),
         hint_serial: Cell::new(0),
+        themes: all_themes,
+        bands: RefCell::new(bands),
+        band_i: Cell::new(initial_band),
+        initial_band,
+        matches: RefCell::new(None),
+        roll: roll.clone(),
+        titles,
+        swatch_dark,
+        legend: legend.clone(),
+        frame: frame.clone(),
+        illus: illus_area,
+        look,
     });
+    // The neighbouring bands come from the same cards; a click on one, or
+    // on its name, rolls to it.
+    {
+        let weak = Rc::downgrade(&ui);
+        roll.set_provider(Box::new(move |delta| weak.upgrade().map(|ui| ui.band_slots(delta)).unwrap_or_default()));
+        let weak = Rc::downgrade(&ui);
+        roll.connect_clicked(move |d| {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_band(ui.band_i.get() as i64 + d);
+            }
+        });
+    }
+
+    // Each wallpaper's colours, read off the GTK thread (palette.rs); the
+    // filter applies once they are in.
+    {
+        let (tx, rx) = async_channel::bounded(1);
+        let walls = walls.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send_blocking(palette::compute(&walls));
+        });
+        let weak = Rc::downgrade(&ui);
+        glib::MainContext::default().spawn_local(async move {
+            if let Ok(palettes) = rx.recv().await {
+                if let Some(ui) = weak.upgrade() {
+                    let m = palette::matches(&palettes, &ui.themes);
+                    let keep = apply::last_static().and_then(|name| ui.walls.iter().position(|w| w.answers_to(&name)));
+                    ui.set_matches(m, keep);
+                }
+            }
+        });
+    }
 
     // Duration: no text field to click into, the wheel over the summary
     // adjusts it (same vocabulary as the carousel's scroll).
@@ -573,6 +907,7 @@ fn build_ui(app: &Application) {
                 };
                 let dark = prefers_dark(settings);
                 ui.scheme_dark.set(dark);
+                ui.roll.set_dark_scheme(dark);
                 for i in 0..ui.carousel.len() {
                     if let Some(card) = ui.card(i) {
                         card.set_dark_scheme(dark);
@@ -584,10 +919,12 @@ fn build_ui(app: &Application) {
                 }
                 ui.refresh_caption();
                 ui.show_preview(false);
+                ui.apply_look();
             }
         };
         let dark = prefers_dark(&settings);
         ui.scheme_dark.set(dark);
+        roll.set_dark_scheme(dark);
         for i in 0..carousel.len() {
             if let Some(card) = carousel.card_at(i) {
                 card.set_dark_scheme(dark);
@@ -609,6 +946,9 @@ fn build_ui(app: &Application) {
     let initial_index = apply::last_static().and_then(|name| walls.iter().position(|w| w.answers_to(&name)));
     if let Some(index) = initial_index {
         carousel.set_focus_index(index);
+        for band in ui.bands.borrow_mut().iter_mut() {
+            band.focus = index;
+        }
     }
     ui.focus.set(initial_index.unwrap_or(0));
 
@@ -650,6 +990,7 @@ fn build_ui(app: &Application) {
                 if let (Some(card), Some(tex)) = (ui.card(result.index), result.texture) {
                     card.set_texture(result.dark, tex, result.orig_width, result.orig_height);
                     ui.thumb_ready(result.index);
+                    ui.roll.queue_draw();
                 }
             }
         });
@@ -659,25 +1000,30 @@ fn build_ui(app: &Application) {
         let walls = walls.clone();
         let carousel = carousel.clone();
         let loaded_thumbs = loaded_thumbs.clone();
+        let weak = Rc::downgrade(&ui);
         Rc::new(move |focus: usize| {
             let len = walls.len();
             if len == 0 {
                 return;
             }
-            let len_f = len as f64;
             // Sorted by distance to the focus (not just filtered) -- the
             // order of THIS vector is the order requests are sent in just
             // below, hence the order thumbs.rs's threads pick them up in:
             // the focused card (and its closest neighbors) must appear
             // first.
-            let mut wanted_by_distance: Vec<usize> = (0..len)
-                .filter(|&i| carousel::ring_distance(i as f64, focus as f64, len_f) <= THUMB_WINDOW_RADIUS as f64)
+            // The middle band's window, then the bands above and below
+            // around where they were left (roll.rs draws them).
+            let mut distance: std::collections::HashMap<usize, f64> = (0..len)
+                .filter_map(|i| carousel.slot_distance(i, focus).filter(|&d| d <= THUMB_WINDOW_RADIUS as f64).map(|d| (i, d)))
                 .collect();
-            wanted_by_distance.sort_by(|&a, &b| {
-                let da = carousel::ring_distance(a as f64, focus as f64, len_f);
-                let db = carousel::ring_distance(b as f64, focus as f64, len_f);
-                da.total_cmp(&db)
-            });
+            if let Some(ui) = weak.upgrade() {
+                for (i, d) in ui.neighbour_cards() {
+                    let e = distance.entry(i).or_insert(d);
+                    *e = e.min(d);
+                }
+            }
+            let mut wanted_by_distance: Vec<usize> = distance.keys().copied().collect();
+            wanted_by_distance.sort_by(|a, b| distance[a].total_cmp(&distance[b]));
             let wanted: HashSet<usize> = wanted_by_distance.iter().copied().collect();
 
             let mut loaded = loaded_thumbs.borrow_mut();
@@ -764,6 +1110,10 @@ fn build_ui(app: &Application) {
                     apply::apply_dynamic(&source_dir, ui.duration.get(), &names);
                 }
             }
+            // The band's look and theme become the shell's, if they changed.
+            if ui.band_i.get() != ui.initial_band {
+                themes::select(ui.band_theme().map(|t| t.id.as_str()));
+            }
             ui.window.close();
         });
     }
@@ -804,9 +1154,9 @@ fn build_ui(app: &Application) {
     let key_controller = gtk4::EventControllerKey::new();
     {
         let ui = Rc::downgrade(&ui);
-        key_controller.connect_key_pressed(move |_, key, _, _| {
+        key_controller.connect_key_pressed(move |_, key, _, state| {
             use keymap::Action;
-            let (Some(action), Some(ui)) = (keymap.action(key), ui.upgrade()) else {
+            let (Some(action), Some(ui)) = (keymap.action(key, state.contains(gdk::ModifierType::SHIFT_MASK)), ui.upgrade()) else {
                 return glib::Propagation::Proceed;
             };
             let dynamic = ui.mode.get() == Mode::Dynamic;
@@ -818,10 +1168,10 @@ fn build_ui(app: &Application) {
                 Action::ToggleMode => toggle_mode(),
                 Action::Select if dynamic => set_picked(true),
                 Action::Deselect if dynamic => set_picked(false),
-                Action::ToggleHalf if ui.walls.get(ui.focus.get()).is_some_and(|w| w.dark.is_some()) => {
-                    ui.show_half(!ui.shown_dark(ui.focus.get()));
-                }
-                Action::Select | Action::Deselect | Action::ToggleHalf => return glib::Propagation::Proceed,
+                Action::ToggleHalf => ui.show_half(!ui.view_dark()),
+                Action::Select | Action::Deselect => return glib::Propagation::Proceed,
+                Action::ThemePrev => ui.set_band(ui.band_i.get() as i64 - 1),
+                Action::ThemeNext => ui.set_band(ui.band_i.get() as i64 + 1),
             }
             glib::Propagation::Stop
         });
@@ -857,6 +1207,8 @@ fn build_ui(app: &Application) {
     }
 
     window.present();
+    ui.refresh_titles();
+    ui.apply_look();
     ui.refresh_caption();
     ui.refresh_bottom();
     ui.show_preview(false);

@@ -4,21 +4,28 @@ The wallpaper picker, on `Super + W`.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/prisme-dark.webp"><img src="../screenshots/prisme.webp" alt="Prisme"></picture>
 
-The selected wallpaper shows as a live preview, in the middle of the blurred desktop.
+The selected wallpaper shows as a live preview, in the middle of the blurred desktop, with a sketch of the desktop over it in the theme's look and colours. Under it, one band of wallpapers per [shell theme](../session/theme.md): Glass first, then each Ink theme, named `Ink · Bamboo`, `Ink · Nord`… Prisme sets the theme and the wallpaper together.
 
 ## Keys
 
 | Key | Does |
 |---|---|
 | `←` `→`, `h` `l` | Previous or next wallpaper |
-| `Enter`, `Space` | Sets it |
+| `↑` `↓`, `k` `j` | Previous or next theme: the band above or below |
+| `Enter`, `Space` | Sets the wallpaper, and the theme if you changed it |
 | `Esc`, `q` | Closes, and keeps the current one |
-| `C` | Previews the other version of a light and dark pair |
+| `C` | Previews in the other mode, light or dark |
 | `Tab` | Switches between one wallpaper and a slideshow |
-| `↓`, `j` | In a slideshow, adds the wallpaper |
-| `↑`, `k` | In a slideshow, removes it |
+| `Shift` + `↓`, `Shift` + `J` | In a slideshow, adds the wallpaper |
+| `Shift` + `↑`, `Shift` + `K` | In a slideshow, removes it |
+
+A click on a band above or below, or on its name, goes to that theme.
 
 To change them, edit `~/.config/prisme/keymap.conf`: one line per action, several keys separated by commas.
+
+## Bands
+
+Glass has every wallpaper. An Ink theme's band has the wallpapers whose colours suit it, best first. Each band stays on the wallpaper you left it on.
 
 ## Light and dark pairs
 

@@ -19,6 +19,9 @@ pub enum Action {
     Deselect,
     /// Shows the other half of a light/dark pair in the preview.
     ToggleHalf,
+    /// The band above / below: the previous / next theme.
+    ThemePrev,
+    ThemeNext,
 }
 
 /// Default config, hardcoded here rather than `include_str!`-ed from the
@@ -36,14 +39,16 @@ move_left = Left, h, H
 move_right = Right, l, L
 activate = Return, KP_Enter, space
 toggle_mode = Tab
-select = Down, j, J
-deselect = Up, k, K
+select = Shift+Down, Shift+J
+deselect = Shift+Up, Shift+K
 toggle_half = c, C
+theme_prev = Up, k
+theme_next = Down, j
 ";
 
 /// Resolved GDK key -> action table, ready to query from the keyboard
 /// event handler.
-pub struct Keymap(HashMap<gdk::Key, Action>);
+pub struct Keymap(HashMap<(gdk::Key, bool), Action>);
 
 impl Keymap {
     /// Loads ~/.config/prisme/keymap.conf if it exists, otherwise the
@@ -56,9 +61,15 @@ impl Keymap {
         Self(parse(&content))
     }
 
-    /// Action associated with a key, if any.
-    pub fn action(&self, key: gdk::Key) -> Option<Action> {
-        self.0.get(&key).copied()
+    /// Action associated with a key, Shift held or not: a binding made
+    /// with Shift wins, else the plain one (H still moves left).
+    pub fn action(&self, key: gdk::Key, shift: bool) -> Option<Action> {
+        if shift {
+            if let Some(a) = self.0.get(&(key, true)) {
+                return Some(*a);
+            }
+        }
+        self.0.get(&(key, false)).copied()
     }
 }
 
@@ -75,7 +86,7 @@ fn user_path() -> Option<std::path::PathBuf> {
 /// lookup table to maintain. An invalid line or key is ignored (with a
 /// message on stderr) rather than failing the whole file -- a typo
 /// shouldn't cost the user every other key.
-fn parse(content: &str) -> HashMap<gdk::Key, Action> {
+fn parse(content: &str) -> HashMap<(gdk::Key, bool), Action> {
     let mut map = HashMap::new();
     for line in content.lines() {
         let line = line.trim();
@@ -94,9 +105,13 @@ fn parse(content: &str) -> HashMap<gdk::Key, Action> {
             if key_name.is_empty() {
                 continue;
             }
-            match gdk::Key::from_name(key_name) {
+            let (shift, bare) = match key_name.strip_prefix("Shift+") {
+                Some(rest) => (true, rest),
+                None => (false, key_name),
+            };
+            match gdk::Key::from_name(bare) {
                 Some(key) => {
-                    map.insert(key, action);
+                    map.insert((key, shift), action);
                 }
                 None => eprintln!("[prisme] keymap.conf: unknown key '{key_name}'"),
             }
@@ -117,6 +132,8 @@ fn parse_action(name: &str) -> Option<Action> {
         "select" => Action::Select,
         "deselect" => Action::Deselect,
         "toggle_half" => Action::ToggleHalf,
+        "theme_prev" => Action::ThemePrev,
+        "theme_next" => Action::ThemeNext,
         _ => return None,
     })
 }

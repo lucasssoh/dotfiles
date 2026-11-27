@@ -85,7 +85,7 @@ Four keys are optional:
 | `geometry.outline-width` | Outline thickness. Corners come from [`bar.json`](../bar/island.md#its-look) |
 | `font` | Interface font family |
 
-`Super + Shift + W` lists Glass and every theme by its `name`. Glass keeps the theme, for when you switch back.
+`Super + Shift + W` lists Glass and every Ink theme, as `Ink · ` and its `name`. Glass keeps the theme, for when you switch back.
 
 ## WezTerm and Neovim
 

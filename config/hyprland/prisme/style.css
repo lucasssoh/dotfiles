@@ -82,3 +82,89 @@ window,
 .prisme-hint.faded {
     opacity: 0;
 }
+
+/* The bands' names, at the left of their rows: the middle one lit, the
+   ones above and below readable, with the key that reaches them. */
+.prisme-band {
+    color: rgba(242, 242, 247, 0.4);
+    font-size: 14px;
+    transition: color 220ms ease;
+}
+
+.prisme-band.cur {
+    color: #f2f2f7;
+    font-weight: 600;
+}
+
+.prisme-band.up,
+.prisme-band.down {
+    color: rgba(242, 242, 247, 0.62);
+}
+
+.prisme-band-key {
+    font-size: 11px;
+    padding: 0 4px;
+    border: 1px solid rgba(242, 242, 247, 0.18);
+    border-radius: 5px;
+}
+
+/* The preview's frame: bare for Glass, the ink outline for an Ink theme
+   (a shadow, so it takes no room and nothing moves). */
+.prisme-frame {
+    border-radius: 14px;
+}
+
+.prisme-frame.ink {
+    border-radius: 16px;
+    box-shadow: 0 0 0 3px #000000, 4px 4px 0 3px #000000;
+}
+
+/* Light: the same neutral inks, dark on a pale veil. C switches it with
+   the preview. */
+window.light,
+window.light .background {
+    background-color: rgba(245, 243, 238, 0.55);
+}
+
+window.light .prisme-legend,
+window.light .prisme-name,
+window.light .prisme-half-on,
+window.light .prisme-hint,
+window.light .prisme-band.cur {
+    color: #1c1c1e;
+}
+
+window.light .prisme-details,
+window.light .prisme-bar,
+window.light .prisme-band.up,
+window.light .prisme-band.down {
+    color: rgba(28, 28, 30, 0.6);
+}
+
+window.light .prisme-bar {
+    text-shadow: none;
+}
+
+window.light .prisme-half,
+window.light .prisme-band {
+    color: rgba(28, 28, 30, 0.4);
+}
+
+window.light .prisme-half:hover {
+    color: rgba(28, 28, 30, 0.72);
+}
+
+window.light .prisme-band-key {
+    border-color: rgba(28, 28, 30, 0.18);
+}
+
+/* C fades Prisme between light and dark over 220 ms, as the preview
+   fades its pictures. */
+window,
+.prisme-name,
+.prisme-details,
+.prisme-half,
+.prisme-half-on,
+.prisme-bar {
+    transition: background-color 220ms ease, color 220ms ease;
+}

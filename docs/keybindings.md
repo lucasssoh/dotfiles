@@ -16,7 +16,7 @@ Hold `Super` and the bar shows the bindings on a keyboard. Add `Shift` for the s
 | `Super + Space` | App launcher (fuzzel) |
 | `Super + E` | File manager (Nautilus by default) |
 | `Super + B` | Web browser (Firefox by default) |
-| `Super + W` | Prisme, the wallpaper picker |
+| `Super + W` | Prisme, the wallpaper and theme picker |
 | `Super + Shift + W` | [Shell theme](session/theme.md#the-shell-theme): Glass or a cartoon theme, in fuzzel |
 | `Super + G` | [Antenne](apps/antenne.md), the TV. Once it's in front, the guide |
 | `Super + F` | Liseuse: picks up the book being read, or opens the library to search one. Press `F1` inside a book for its manual |

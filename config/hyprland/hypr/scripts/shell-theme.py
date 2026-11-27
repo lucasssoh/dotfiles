@@ -431,12 +431,12 @@ def nautilus_glass():
         body = NAUTILUS_CSS.read_text(encoding="utf-8")
         glass = (CONFIG / "nautilus/glass.css").read_text(encoding="utf-8")
     except OSError:
-        return "/* No config/nautilus/ink.css. */\n"
+        return "/* No config/nautilus/ink.css or glass.css. */\n"
     return ("/* Written by shell-theme.py sync: the glass look, from config/nemo/theme"
             " and config/nautilus/ink.css. */\n"
             ":root {\n" + block("light", "    ") + "    --ink-w: 1px;\n}\n"
             "@media (prefers-color-scheme: dark) {\n  :root {\n" + block("dark", "    ") + "  }\n}\n"
-            + body.replace("font-family: Fredoka, sans-serif;", "font-family: inherit;"))
+            + body.replace("font-family: Fredoka, sans-serif;", "font-family: inherit;") + glass)
 
 
 # ---- folder icons ----------------------------------------------------------
@@ -565,7 +565,7 @@ def pick():
     paths = [p for p in THEMES.glob("*.json") if THEME_ID.fullmatch(p.stem)]
     named = sorted(((theme_name(p), p.stem) for p in paths),
                    key=lambda e: (e[1] != FALLBACK, e[0].lower()))
-    entries = [("default", theme_id, "Glass")] + [("cartoon", tid, name) for name, tid in named]
+    entries = [("default", theme_id, "Glass")] + [("cartoon", tid, f"Ink · {name}") for name, tid in named]
 
     lines = []
     for i, (e_style, e_theme, label) in enumerate(entries):
