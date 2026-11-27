@@ -1,0 +1,89 @@
+/* ============================================================
+   Nautilus in the glass look, read after ink.css: the same layout, the
+   state language of Nemo's Airy theme instead of ink. shell-theme.py sync
+   fills the variables from config/nemo/theme/palette-*.css (--ink-* as in
+   ink.css, plus --glass-hover, --glass-act and --glass-edge).
+
+   A small thing that is on (a selected name, the active view's icon, the
+   gauge's fill) is the inverted ink; a large one (the current place, a
+   selected tile or row) takes a veil and keeps its normal ink. Nothing is
+   outlined but the active view and fields.
+   ============================================================ */
+
+/* ---- header: bare buttons, a veil under the pointer ---------------------- */
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize),
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):backdrop {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--ink-secondary);
+}
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):hover {
+    background-color: var(--glass-hover);
+    color: var(--ink-primary);
+}
+/* The active view: an outline, nothing filled. */
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):checked {
+    background-color: transparent;
+    border-color: var(--glass-edge);
+    color: var(--ink-primary);
+}
+headerbar button:not(.nautilus-path-button):not(.close):not(.minimize):not(.maximize):disabled {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--ink-faint);
+}
+
+/* The current folder: the same size, in full ink and demibold, no chip. */
+.nautilus-path-button.current-dir label {
+    background: none;
+    border-color: transparent;
+    padding: 2px 4px;
+}
+.nautilus-path-button { border-width: 1px; }
+
+/* ---- sidebar: the current place veiled ---------------------------------- */
+.navigation-sidebar > row { border-width: 1px; }
+.navigation-sidebar > row:hover { background-color: var(--glass-hover); }
+.navigation-sidebar > row:selected,
+.navigation-sidebar > row:selected:hover {
+    background-color: var(--glass-act);
+    border-color: transparent;
+}
+.navigation-sidebar > row:selected image { color: var(--ink-primary); }
+
+/* A gauge: a thin track and the ink, no outline. */
+levelbar.coucou-gauge > trough {
+    border: none;
+    border-radius: 2px;
+    min-height: 4px;
+}
+levelbar.coucou-gauge > trough > block {
+    border-radius: 2px;
+    min-height: 4px;
+}
+
+/* ---- files: no frames, a veil for a selected tile ------------------------ */
+.nautilus-grid-view gridview > child { border-width: 1px; }
+.nautilus-grid-view gridview > child:hover { background-color: var(--glass-hover); }
+.nautilus-grid-view gridview > child:selected,
+.nautilus-grid-view gridview > child:selected:hover {
+    background-color: var(--glass-act);
+    border-color: transparent;
+}
+.nautilus-list-view columnview > listview > row { border-width: 1px; }
+.nautilus-list-view columnview > listview > row:selected {
+    background-color: var(--glass-act);
+    border-color: transparent;
+}
+rubberband { border-width: 1px; }
+
+/* The floating bar: a small quiet pill. */
+.floating-bar { border-color: transparent; }
+
+/* Cards and menus: a hairline. */
+list.boxed-list,
+.boxed-list,
+.card,
+popover > contents { border-color: var(--glass-edge); }
+popover modelbutton:hover { background-color: var(--glass-act); color: var(--ink-primary); }
+entry, searchbar entry, .nautilus-query-editor { border-width: 1px; border-color: var(--glass-edge); }

@@ -412,21 +412,24 @@ def contrast(a, b):
 GLASS_NAMES = {"panel": "c_chrome", "card": "c_card", "cardh": "c_cardh", "sunken": "c_gtrack",
                "primary": "c_ink", "secondary": "c_ink2", "muted": "c_muted", "faint": "c_faint",
                "onaccent": "c_onink", "active": "c_on", "outline": "c_actedge", "hair": "c_hair"}
+GLASS_EXTRA = {"hover": "c_hover", "act": "c_act", "edge": "c_actedge"}
 
 
 def nautilus_glass():
-    """Nautilus in the glass look: the same sheet in Nemo's glass palette
-    (config/nemo/theme/palette-*.css), hairlines for outlines, the inverted
-    ink for what is on, and the system font."""
+    """Nautilus in the glass look: ink.css in Nemo's glass palette
+    (config/nemo/theme/palette-*.css), then config/nautilus/glass.css, which
+    trades the outlines for Nemo Airy's veils, and the system font."""
     def block(name, indent):
         try:
             text = (CONFIG / "nemo/theme" / f"palette-{name}.css").read_text(encoding="utf-8")
         except OSError:
             return ""
         found = dict(re.findall(r"@define-color\s+(\w+)\s+([^;]+);", text))
-        return "".join(f"{indent}--ink-{k}: {found[v].strip()};\n" for k, v in GLASS_NAMES.items() if v in found)
+        return ("".join(f"{indent}--ink-{k}: {found[v].strip()};\n" for k, v in GLASS_NAMES.items() if v in found)
+                + "".join(f"{indent}--glass-{k}: {found[v].strip()};\n" for k, v in GLASS_EXTRA.items() if v in found))
     try:
         body = NAUTILUS_CSS.read_text(encoding="utf-8")
+        glass = (CONFIG / "nautilus/glass.css").read_text(encoding="utf-8")
     except OSError:
         return "/* No config/nautilus/ink.css. */\n"
     return ("/* Written by shell-theme.py sync: the glass look, from config/nemo/theme"
