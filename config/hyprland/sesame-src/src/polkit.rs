@@ -161,7 +161,7 @@ fn user_name(uid: u32) -> Option<String> {
 /// start from it, so the card shows the command it is about to run. A
 /// service checking on someone's behalf (systemd, NetworkManager) is not
 /// below the subject, and the subject tells more.
-fn chain_for(details: &HashMap<String, String>) -> Vec<String> {
+fn chain_for(details: &HashMap<String, String>) -> Vec<chain::Step> {
     let pid = |k: &str| details.get(k).and_then(|p| p.parse::<u32>().ok());
     let (Some(subject), caller) = (pid("polkit.subject-pid"), pid("polkit.caller-pid")) else {
         return Vec::new();
@@ -184,7 +184,7 @@ fn chain_for(details: &HashMap<String, String>) -> Vec<String> {
     }
 }
 
-fn session(user: &str, cookie: &str, message: &str, steps: Vec<String>, waker: &Waker, running: &Mutex<Running>) -> Outcome {
+fn session(user: &str, cookie: &str, message: &str, steps: Vec<chain::Step>, waker: &Waker, running: &Mutex<Running>) -> Outcome {
     let mut error = String::new();
     for _ in 0..TRIES {
         let Ok(mut child) = Command::new(HELPER)

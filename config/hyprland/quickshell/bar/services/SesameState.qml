@@ -18,7 +18,7 @@ Singleton {
 
     readonly property string socketPath: Quickshell.env("XDG_RUNTIME_DIR") + "/sesame.sock"
 
-    // [{ id, kind, title, message, echo, confirm, error, chain: [..] }],
+    // [{ id, kind, title, message, echo, confirm, error, chain: [{ cmd, cwd }..] }],
     // in the daemon's order. kind: "ssh" | "git" | "gpg" | "polkit".
     property var asks: []
     // Made-up asks, to look at the card without asking for anything real:
@@ -73,11 +73,14 @@ Singleton {
     function demo(kind) {
         const samples = {
             ssh: { kind: "ssh", title: "Unlock SSH key", message: "Enter passphrase for key '~/.ssh/id_ed25519'", echo: false, confirm: false, error: "",
-                   chain: ["claude", "git push origin master", "ssh git@github.com git-receive-pack 'lucasssoh/dotfiles.git'"] },
+                   chain: [{ cmd: "claude", cwd: "~/code/dotfiles" }, { cmd: "git push origin master", cwd: "~/code/dotfiles" },
+                           { cmd: "ssh -o SendEnv=GIT_PROTOCOL git@github.com git-receive-pack 'lucasssoh/dotfiles.git'", cwd: "~/code/dotfiles" }] },
             polkit: { kind: "polkit", title: "Authentication required", message: "Authentication is needed to run `/usr/bin/dnf' as the super user", echo: false, confirm: false, error: "",
-                      chain: ["cc-pkg-mng upgrade", "pkexec /usr/bin/dnf upgrade --refresh"] },
+                      chain: [{ cmd: "cc-pkg-mng upgrade", cwd: "~" }, { cmd: "pkexec /usr/bin/dnf upgrade --refresh", cwd: "~" }] },
             gpg: { kind: "gpg", title: "Unlock GPG key", message: "Please enter the passphrase to unlock the OpenPGP secret key:\n\"Lucas <lucas@example.org>\"\n255-bit EDDSA key, ID 4E2A91C0", echo: false, confirm: false, error: "",
-                   chain: ["bash packaging/make-repo.sh", "gpg --detach-sign --armor repomd.xml"] },
+                   chain: [{ cmd: "claude", cwd: "~/code/dotfiles" },
+                          { cmd: "git commit -S -m \"Nautilus : the file manager, inked like the mockup, with folders in the theme's colour and disk gauges\"", cwd: "~/code/dotfiles" },
+                          { cmd: "gpg --status-fd=2 -bsau 4E2A91C0", cwd: "~/code/dotfiles" }] },
             retry: { kind: "ssh", title: "Unlock SSH key", message: "Enter passphrase for key '~/.ssh/id_ed25519'", echo: false, confirm: false, error: "Wrong passphrase. Try again.",
                      chain: ["git push", "ssh git@github.com git-receive-pack 'lucasssoh/wallpapers.git'"] },
             confirm: { kind: "ssh", title: "Unknown host", message: "The authenticity of host 'github.com' can't be established.\nED25519 key fingerprint is SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU.\nAre you sure you want to continue connecting (yes/no/[fingerprint])?", echo: true, confirm: false, error: "",

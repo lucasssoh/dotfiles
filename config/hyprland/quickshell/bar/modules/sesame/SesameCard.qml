@@ -4,7 +4,8 @@ import "../../services"
 import ".."
 
 // The password card, centred on a veil over the whole screen: what asks,
-// the command that asked for it, the field. Enter answers, Escape cancels.
+// the command that asked for it, the field. Enter answers, Escape cancels,
+// Tab unrolls the commands.
 // Built while an ask is open and destroyed once it has faded (shell.qml).
 Item {
     id: root
@@ -13,6 +14,58 @@ Item {
     readonly property bool open: SesameState.open
     readonly property bool confirm: root.ask ? root.ask.confirm : false
     readonly property var chain: root.ask ? (root.ask.chain || []) : []
+
+    // Which steps of "Asked by" are unrolled, by index. A new ask starts
+    // with the step that asks unrolled, without animating.
+    property var openSteps: []
+    // Steps whose whole command already shows on one line: nothing to
+    // unfold, so they count as unfolded and Tab passes them by.
+    property var fitSteps: []
+    property bool animate: false
+    readonly property bool canUnfold: root.chain.some((_, i) => root.fitSteps[i] !== true)
+    readonly property bool allOpen: root.chain.every((_, i) => root.fitSteps[i] === true || root.openSteps[i] === true)
+    function setFit(i, fits) {
+        if ((root.fitSteps[i] === true) === fits) return;
+        const a = root.fitSteps.slice();
+        a[i] = fits;
+        root.fitSteps = a;
+    }
+    function setStep(i, open) {
+        const a = root.openSteps.slice();
+        a[i] = open;
+        root.openSteps = a;
+    }
+    // Tab: all unrolled or all folded, nearest step first, 40 ms apart.
+    property var staggerQueue: []
+    property bool staggerOpen: false
+    function setAll(open) {
+        const q = [];
+        for (let i = root.chain.length - 1; i >= 0; i--)
+            if (root.fitSteps[i] !== true && (root.openSteps[i] === true) !== open) q.push(i);
+        if (q.length === 0) return;
+        root.staggerOpen = open;
+        root.setStep(q[0], open);
+        root.staggerQueue = q.slice(1);
+        if (root.staggerQueue.length > 0) staggerTimer.restart();
+    }
+    Timer {
+        id: staggerTimer
+        interval: 40
+        repeat: true
+        onTriggered: {
+            if (root.staggerQueue.length === 0) { stop(); return; }
+            root.setStep(root.staggerQueue[0], root.staggerOpen);
+            root.staggerQueue = root.staggerQueue.slice(1);
+        }
+    }
+    // One line of the mono text, the height of a folded step.
+    Text {
+        id: lineProbe
+        visible: false
+        text: "x"
+        font.family: Fonts.mono
+        font.pixelSize: 12
+    }
 
     readonly property string glyph: {
         const k = root.ask ? root.ask.kind : "";
@@ -44,10 +97,23 @@ Item {
         if (root.ask && root.ask.id !== root.lastId) {
             root.lastId = root.ask.id;
             field.text = "";
+            root.resetSteps();
             Qt.callLater(root.focusInput);
         }
     }
-    Component.onCompleted: root.focusInput()
+    Component.onCompleted: {
+        root.lastId = root.ask ? root.ask.id : null;
+        root.resetSteps();
+        root.focusInput();
+    }
+    function resetSteps() {
+        root.animate = false;
+        staggerTimer.stop();
+        const steps = [];
+        if (root.chain.length > 0) steps[root.chain.length - 1] = true;
+        root.openSteps = steps;
+        Qt.callLater(() => root.animate = true);
+    }
     function focusInput() {
         if (root.confirm) keyCatcher.forceActiveFocus();
         else field.forceActiveFocus();
@@ -146,47 +212,206 @@ Item {
                 }
             }
 
-            // Asked by: outermost first, the step that asks last and brightest.
+            // Asked by: outermost first, the step that asks last and
+            // brightest. Each step shows one line; a click unrolls its whole
+            // command, Tab unrolls or folds them all, nearest first. The
+            // text is always wrapped: unrolling only grows its box, and a
+            // fade stands where the ellipsis would, so nothing jumps.
             Column {
                 visible: root.chain.length > 0
                 width: parent.width
                 spacing: 6
 
-                Text {
-                    renderType: Text.NativeRendering
-                    text: "Asked by"
-                    color: DrawerTheme.secondary
-                    font.family: Fonts.ui
-                    font.pixelSize: 11
-                    font.letterSpacing: 0.4
+                Item {
+                    width: parent.width
+                    height: askedLabel.implicitHeight
+                    Text {
+                        id: askedLabel
+                        renderType: Text.NativeRendering
+                        text: "Asked by"
+                        color: DrawerTheme.secondary
+                        font.family: Fonts.ui
+                        font.pixelSize: 11
+                        font.letterSpacing: 0.4
+                    }
+                    Row {
+                        visible: root.canUnfold
+                        anchors.right: parent.right
+                        anchors.verticalCenter: askedLabel.verticalCenter
+                        spacing: 4
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: tabKey.implicitWidth + 10
+                            height: tabKey.implicitHeight + 2
+                            radius: 5
+                            color: "transparent"
+                            border.width: 1.5
+                            border.color: DrawerTheme.muted
+                            Text {
+                                id: tabKey
+                                anchors.centerIn: parent
+                                renderType: Text.NativeRendering
+                                text: "Tab"
+                                color: DrawerTheme.muted
+                                font.family: Fonts.mono
+                                font.pixelSize: 10
+                            }
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            renderType: Text.NativeRendering
+                            text: root.allOpen ? "fold" : "unfold"
+                            color: DrawerTheme.muted
+                            font.family: Fonts.ui
+                            font.pixelSize: 11
+                        }
+                    }
                 }
                 Rectangle {
                     width: parent.width
-                    height: steps.height + 12 * 2
+                    height: steps.height + 10 * 2
                     radius: IslandStyle.round(14)
                     color: DrawerTheme.card
                     border.width: DrawerTheme.edgeWidth()
                     border.color: DrawerTheme.edgeColour()
                     Column {
                         id: steps
-                        x: 14
-                        y: 12
-                        width: parent.width - 28
-                        spacing: 3
+                        x: 8
+                        y: 10
+                        width: parent.width - 16
+                        spacing: 2
                         Repeater {
                             model: root.chain
-                            Text {
-                                required property string modelData
+                            Item {
+                                id: step
+                                required property var modelData
                                 required property int index
                                 readonly property bool last: index === root.chain.length - 1
+                                // A step is {cmd, cwd}; a bare string from an older daemon.
+                                readonly property string cmd: typeof modelData === "string" ? modelData : (modelData.cmd || "")
+                                readonly property string cwd: typeof modelData === "string" ? "" : (modelData.cwd || "")
+                                readonly property bool open: root.openSteps[index] === true
+                                readonly property bool showsCwd: last && cwd !== ""
+                                readonly property bool fits: full.lineCount <= 1 && !showsCwd
+                                onFitsChanged: root.setFit(index, fits)
+                                Component.onCompleted: root.setFit(index, fits)
+                                readonly property real indent: Math.min(index, 3) * 10
+                                readonly property color ground: stepHover.containsMouse && !fits ? DrawerTheme.cardHover : DrawerTheme.card
+
                                 width: steps.width
-                                renderType: Text.NativeRendering
-                                text: (index > 0 ? "› " : "") + modelData
-                                color: last ? DrawerTheme.primary : DrawerTheme.secondary
-                                font.family: Fonts.mono
-                                font.pixelSize: 12
-                                leftPadding: Math.min(index, 3) * 10
-                                elide: Text.ElideRight
+                                height: body.height + 4
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: IslandStyle.round(9)
+                                    color: step.ground
+                                    Behavior on color { ColorAnimation { duration: 140 } }
+                                }
+                                Text {
+                                    x: 6 + step.indent
+                                    y: 2
+                                    width: 14
+                                    height: lineProbe.implicitHeight
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    renderType: Text.NativeRendering
+                                    text: "›"
+                                    color: DrawerTheme.muted
+                                    font.family: Fonts.mono
+                                    font.pixelSize: 12
+                                    rotation: step.open && !step.fits ? 90 : 0
+                                    Behavior on rotation {
+                                        enabled: root.animate
+                                        NumberAnimation { duration: 260; easing.type: Easing.OutQuint }
+                                    }
+                                }
+                                Column {
+                                    id: body
+                                    x: 6 + step.indent + 18
+                                    y: 2
+                                    width: step.width - x - 6
+                                    Item {
+                                        width: parent.width
+                                        height: step.open ? full.implicitHeight : lineProbe.implicitHeight
+                                        clip: true
+                                        Behavior on height {
+                                            enabled: root.animate
+                                            NumberAnimation { duration: 260; easing.type: Easing.OutQuint }
+                                        }
+                                        Text {
+                                            id: full
+                                            width: parent.width
+                                            renderType: Text.NativeRendering
+                                            text: step.cmd
+                                            color: step.last ? DrawerTheme.primary : DrawerTheme.secondary
+                                            font.family: Fonts.mono
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                            maximumLineCount: 10
+                                            elide: Text.ElideRight
+                                        }
+                                        // In the ellipsis's place, at the end of the first line.
+                                        Rectangle {
+                                            anchors.right: parent.right
+                                            width: 48
+                                            height: lineProbe.implicitHeight
+                                            opacity: step.open || full.lineCount <= 1 ? 0 : 1
+                                            Behavior on opacity {
+                                                enabled: root.animate
+                                                NumberAnimation { duration: 140 }
+                                            }
+                                            gradient: Gradient {
+                                                orientation: Gradient.Horizontal
+                                                GradientStop { position: 0; color: Qt.rgba(step.ground.r, step.ground.g, step.ground.b, 0) }
+                                                GradientStop { position: 0.8; color: step.ground }
+                                            }
+                                        }
+                                    }
+                                    // Where the asking step runs, under it once unrolled.
+                                    Item {
+                                        width: parent.width
+                                        height: step.open && step.showsCwd ? cwdText.implicitHeight + 2 : 0
+                                        clip: true
+                                        Behavior on height {
+                                            enabled: root.animate
+                                            NumberAnimation { duration: 260; easing.type: Easing.OutQuint }
+                                        }
+                                        Text {
+                                            id: cwdText
+                                            y: step.open ? 2 : -4
+                                            width: parent.width
+                                            renderType: Text.NativeRendering
+                                            text: "in " + step.cwd
+                                            color: DrawerTheme.muted
+                                            font.family: Fonts.mono
+                                            font.pixelSize: 11
+                                            elide: Text.ElideMiddle
+                                            opacity: step.open ? 1 : 0
+                                            Behavior on y {
+                                                enabled: root.animate
+                                                NumberAnimation { duration: 260; easing.type: Easing.OutQuint }
+                                            }
+                                            Behavior on opacity {
+                                                enabled: root.animate
+                                                SequentialAnimation {
+                                                    PauseAnimation { duration: step.open ? 60 : 0 }
+                                                    NumberAnimation { duration: 180 }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                MouseArea {
+                                    id: stepHover
+                                    anchors.fill: parent
+                                    enabled: !step.fits
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.setStep(step.index, !step.open);
+                                        root.focusInput();
+                                    }
+                                }
                             }
                         }
                     }
@@ -233,6 +458,8 @@ Item {
                     Keys.onReturnPressed: root.submit()
                     Keys.onEnterPressed: root.submit()
                     Keys.onEscapePressed: root.dismiss()
+                    Keys.onTabPressed: root.setAll(!root.allOpen)
+                    Keys.onBacktabPressed: root.setAll(!root.allOpen)
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -291,6 +518,8 @@ Item {
     // Allow/Deny cards have no field to hold the keys.
     Item {
         id: keyCatcher
+        Keys.onTabPressed: root.setAll(!root.allOpen)
+        Keys.onBacktabPressed: root.setAll(!root.allOpen)
         Keys.onReturnPressed: root.submit()
         Keys.onEnterPressed: root.submit()
         Keys.onEscapePressed: root.dismiss()

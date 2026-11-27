@@ -24,7 +24,7 @@ pub enum FromAgent {
         message: String,
         echo: bool,
         error: String,
-        chain: Vec<String>,
+        chain: Vec<chain::Step>,
         reply: async_channel::Sender<Option<String>>,
     },
     /// polkit cancelled the request (the caller went away, or timed out).
@@ -75,7 +75,7 @@ struct Pending {
     echo: bool,
     confirm: bool,
     error: String,
-    chain: Vec<String>,
+    chain: Vec<chain::Step>,
     reply: Reply,
     /// For an askpass ask: who asked and what, to tell a second try.
     retry_key: Option<(u32, String)>,
@@ -410,9 +410,10 @@ impl Daemon {
             .pending
             .iter()
             .map(|p| {
+                let chain: Vec<Value> = p.chain.iter().map(|s| json!({ "cmd": s.cmd, "cwd": s.cwd })).collect();
                 json!({
                     "id": p.id, "kind": p.kind, "title": p.title, "message": p.message,
-                    "echo": p.echo, "confirm": p.confirm, "error": p.error, "chain": p.chain,
+                    "echo": p.echo, "confirm": p.confirm, "error": p.error, "chain": chain,
                 })
             })
             .collect();

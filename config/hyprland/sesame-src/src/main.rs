@@ -10,7 +10,7 @@
 //!   daemon -> asker   {"event":"answer","secret":"…"} | {"event":"cancel"}
 //!   bar -> daemon     {"cmd":"hello"}                     only the shell's own process is taken as the bar
 //!                     {"cmd":"answer","id":N,"secret":"…"} | {"cmd":"cancel","id":N}
-//!   daemon -> bar     {"event":"asks","asks":[{id,kind,title,message,echo,confirm,error,chain:[…]}]}
+//!   daemon -> bar     {"event":"asks","asks":[{id,kind,title,message,echo,confirm,error,chain:[{cmd,cwd}…]}]}
 //!
 //! No answer is kept: each ask is answered once, to the process that asked.
 

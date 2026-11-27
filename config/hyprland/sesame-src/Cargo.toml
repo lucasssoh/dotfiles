@@ -1,6 +1,6 @@
 [package]
 name = "sesame"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
 description = "Password prompts of coucou-shell: polkit agent, SSH askpass and GPG pinentry behind the bar's card"
 license = "GPL-3.0-or-later"

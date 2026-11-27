@@ -547,7 +547,7 @@ dependencies = [
 
 [[package]]
 name = "sesame"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "async-channel",
  "libc",

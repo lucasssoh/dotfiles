@@ -19,10 +19,11 @@ One card, in the middle of the screen, for every password asked outside a termin
 |---|---|
 | `Return` | Answers |
 | `Esc` | Cancels. The command fails |
+| `Tab` | Unfolds or folds every command under **Asked by** |
 
 While the card is up, it takes the keyboard and the mouse.
 
-Under **Asked by**, the card lists the commands behind the request, the one asking last: `claude › git push origin master › ssh git@github.com …`.
+Under **Asked by**, the card lists the commands behind the request, the one asking last: `claude › git push origin master › ssh git@github.com …`. Each shows one line: click it for the whole command. The one asking opens unfolded, with the folder it runs in.
 
 Each `git push` asks again.
 
