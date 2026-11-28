@@ -177,16 +177,41 @@ fn score(p: &Palette, accents: &[Lab], surfaces: &[Lab]) -> f64 {
         .sum()
 }
 
-/// For each theme (same order as `themes`), the wallpapers that suit it
-/// best, as indices into `palettes`, best first: a quarter of them, at
-/// least eight.
-pub fn matches(palettes: &[Option<Palette>], themes: &[Theme]) -> Vec<Vec<usize>> {
+/// The theme an Ink wallpaper was drawn for, from its name
+/// (`ink-<theme id>-<picture>`, wallpapers/coucou/ink.py), as an index
+/// into `themes`. The longest id wins, so a `catppuccin-latte` would not
+/// be taken for `catppuccin`.
+pub fn ink_owner(name: &str, themes: &[Theme]) -> Option<usize> {
+    let rest = name.strip_prefix("ink-")?;
+    themes
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| rest.strip_prefix(t.id.as_str()).is_some_and(|r| r.starts_with('-')))
+        .max_by_key(|(_, t)| t.id.len())
+        .map(|(i, _)| i)
+}
+
+/// Whether a wallpaper is one of the Ink sets, drawn for a theme.
+pub fn is_ink(name: &str) -> bool {
+    name.starts_with("ink-")
+}
+
+/// For each theme (same order as `themes`), its wallpapers, as indices
+/// into `palettes`: first its own Ink set, by name, then the others that
+/// suit it best by colour -- a quarter of them, at least eight. Another
+/// theme's Ink set is left out: it was drawn for that theme.
+pub fn matches(palettes: &[Option<Palette>], names: &[String], themes: &[Theme]) -> Vec<Vec<usize>> {
     let points: Vec<_> = themes.iter().map(theme_points).collect();
+    let ink = |w: usize| names.get(w).is_some_and(|n| is_ink(n));
     // rel[w][t]: how much better theme t suits wallpaper w than the
     // average theme does, in standard deviations (lower is better).
     let rel: Vec<Option<Vec<f64>>> = palettes
         .iter()
-        .map(|p| {
+        .enumerate()
+        .map(|(w, p)| {
+            if ink(w) {
+                return None;
+            }
             let p = p.as_ref()?;
             let s: Vec<f64> = points.iter().map(|(a, su)| score(p, a, su)).collect();
             let mean = s.iter().sum::<f64>() / s.len().max(1) as f64;
@@ -198,10 +223,14 @@ pub fn matches(palettes: &[Option<Palette>], themes: &[Theme]) -> Vec<Vec<usize>
     let keep = (known / 4).max(8).min(known);
     (0..themes.len())
         .map(|t| {
+            let mut own: Vec<usize> =
+                (0..palettes.len()).filter(|&w| ink(w) && ink_owner(&names[w], themes) == Some(t)).collect();
+            own.sort_by(|a, b| names[*a].cmp(&names[*b]));
             let mut ranked: Vec<(usize, f64)> =
                 rel.iter().enumerate().filter_map(|(w, r)| Some((w, r.as_ref()?[t]))).collect();
             ranked.sort_by(|a, b| a.1.total_cmp(&b.1));
-            ranked.into_iter().take(keep).map(|(w, _)| w).collect()
+            own.extend(ranked.into_iter().take(keep).map(|(w, _)| w));
+            own
         })
         .collect()
 }
@@ -226,5 +255,29 @@ mod tests {
         let p = dominant(&img);
         let red = oklab((1.0, 0.0, 0.0));
         assert!(p.iter().any(|&(c, w)| dist(c, red) < 0.05 && w > 0.3));
+    }
+
+    fn theme(id: &str) -> Theme {
+        let c = themes::Colors::default();
+        Theme { id: id.into(), name: id.into(), folder: None, dark: c.clone(), light: c }
+    }
+
+    #[test]
+    fn ink_owner_takes_the_longest_id() {
+        let ts = [theme("catppuccin"), theme("catppuccin-latte"), theme("nord")];
+        assert_eq!(ink_owner("ink-catppuccin-latte-soleil.jxl", &ts), Some(1));
+        assert_eq!(ink_owner("ink-catppuccin-collines.jxl", &ts), Some(0));
+        assert_eq!(ink_owner("ink-nordic-collines.jxl", &ts), None);
+        assert_eq!(ink_owner("coucou-aube-plis.jxl", &ts), None);
+    }
+
+    #[test]
+    fn a_theme_band_starts_with_its_own_set() {
+        let ts = [theme("nord"), theme("gruvbox")];
+        let names: Vec<String> =
+            ["ink-gruvbox-soleil.jxl", "photo.jpg", "ink-nord-rayons.jxl", "ink-nord-collines.jxl"].map(String::from).into();
+        let m = matches(&[None, None, None, None], &names, &ts);
+        assert_eq!(m[0], vec![3, 2]);
+        assert_eq!(m[1], vec![0]);
     }
 }

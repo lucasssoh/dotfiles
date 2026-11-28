@@ -792,9 +792,12 @@ fn build_ui(app: &Application) {
     let roll = roll::Roll::new(&carousel, titles.iter().map(|t| t.root.clone().upcast()).collect());
     roll.set_current(initial_band, false);
     let all: Vec<usize> = (0..walls.len()).collect();
+    // The Ink sets are drawn for their theme: Glass leaves them out.
+    let glass: Vec<usize> = all.iter().copied().filter(|&i| !palette::is_ink(&walls[i].name)).collect();
+    let glass = if glass.is_empty() { all.clone() } else { glass };
     let bands: Vec<Band> = std::iter::once(None)
         .chain((0..all_themes.len()).map(Some))
-        .map(|theme| Band { theme, order: all.clone(), focus: 0 })
+        .map(|theme| Band { theme, order: if theme.is_none() { glass.clone() } else { all.clone() }, focus: 0 })
         .collect();
 
     overlay.add_overlay(&roll);
@@ -866,7 +869,8 @@ fn build_ui(app: &Application) {
         glib::MainContext::default().spawn_local(async move {
             if let Ok(palettes) = rx.recv().await {
                 if let Some(ui) = weak.upgrade() {
-                    let m = palette::matches(&palettes, &ui.themes);
+                    let names: Vec<String> = ui.walls.iter().map(|w| w.name.clone()).collect();
+                    let m = palette::matches(&palettes, &names, &ui.themes);
                     let keep = apply::last_static().and_then(|name| ui.walls.iter().position(|w| w.answers_to(&name)));
                     ui.set_matches(m, keep);
                 }
@@ -947,10 +951,21 @@ fn build_ui(app: &Application) {
     if let Some(index) = initial_index {
         carousel.set_focus_index(index);
         for band in ui.bands.borrow_mut().iter_mut() {
+            // An Ink wallpaper in use stays in the Glass band it opens on.
+            if !band.order.contains(&index) {
+                band.order.insert(0, index);
+            }
             band.focus = index;
         }
     }
     ui.focus.set(initial_index.unwrap_or(0));
+    {
+        let bands = ui.bands.borrow();
+        let b = &bands[initial_band];
+        if b.order.len() != walls.len() {
+            carousel.set_order(b.order.clone(), b.focus);
+        }
+    }
 
     {
         let ui = Rc::downgrade(&ui);

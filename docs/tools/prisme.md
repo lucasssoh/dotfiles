@@ -25,7 +25,7 @@ To change them, edit `~/.config/prisme/keymap.conf`: one line per action, severa
 
 ## Bands
 
-Glass has every wallpaper. An Ink theme's band has the wallpapers whose colours suit it, best first. Each band stays on the wallpaper you left it on.
+Glass has every wallpaper except the [Ink ones](../session/wallpapers.md#ink-wallpapers). An Ink theme's band starts with its own Ink wallpapers, then the others whose colours suit it, best first. Each band stays on the wallpaper you left it on.
 
 ## Light and dark pairs
 
