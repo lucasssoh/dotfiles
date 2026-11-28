@@ -2,7 +2,9 @@
 
 Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). Major releases also get a code name, minor ones their date; patch releases have neither. On the stable channel, `cc-pkg-mng upgrade` moves you from one release to the next.
 
-## Unreleased
+## 3.0.0 « Ink »
+
+**To upgrade:** run `sudo dnf upgrade cc-pkg-mng` first, then `cc-pkg-mng upgrade`.
 
 ### Added
 - **Shell theme:** a cartoon look beside the default glass one: thick outlines, hard shadows, flat colours and a rounded font on the bar, OSD, notifications, controller, mixer, key sheet and drawers. The bar keeps its shapes from `bar.json` and takes its colours from the theme, with an ink outline that follows each shape. `Super + Shift + W` picks the look and its theme in fuzzel.
