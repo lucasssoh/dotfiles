@@ -6,9 +6,24 @@ coucou-shell comes with its own wallpapers and GNOME's, each in a light and a da
 |---|---|
 | coucou Aube | Plis, Relief and Soie |
 | coucou Nuit | Plis under a cold light |
+| Ink | Seven per [Ink theme](theme.md), in its colours |
 | GNOME | GNOME's default designs |
 
 Credits and licences are in [`wallpapers/CREDITS.md`](../../wallpapers/CREDITS.md).
+
+## Ink wallpapers
+
+Each Ink theme has seven, drawn in its colours with the cartoon look's outlines and shadows: Collines, Pastilles, Coucou, Rayons, and three suns after GNOME's Dithered Sun (Soleil, Soleil collines, Soleil points).
+
+In Prisme, a theme's band starts with its own. Glass leaves them out.
+
+For a theme of your own, draw them into a folder listed in `wallpapers-extra.conf` (see below):
+
+```bash
+python3 ~/coucou-shell/wallpapers/coucou/ink.py --theme-dir ~/.config/hypr/themes --themes my-theme --out ~/Images/Collection
+```
+
+It needs `cjxl` (package `libjxl-utils`), `python3-cairo`, `python3-numpy` and `python3-pillow`.
 
 ## Add wallpapers
 

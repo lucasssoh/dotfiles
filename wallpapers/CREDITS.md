@@ -24,11 +24,17 @@
 - `coucou-nuit-plis`: the folds of Plis under a cold light, blue then
   violet, a pair made by the same `coucou/make.py`, also the ground of
   Firefox's new tab. Same licence.
+- `ink/ink-<theme>-<picture>`: one set per shell theme, drawn in its
+  colours by `coucou/ink.py` at 5120x3200 and encoded to lossless JPEG XL:
+  Collines, Pastilles, Coucou, Rayons, and three suns (Soleil, Soleil
+  collines, Soleil points) whose ring sizes and placement follow GNOME's
+  Dithered Sun; no pixel of it is reused. coucou-shell's own, same licence
+  as the coucou sets.
 - A file named `<name>-dark.<ext>` next to `<name>.<ext>` makes a pair:
   Prisme shows it as one wallpaper, and the desktop shows the half that
-  matches light or dark mode. The GNOME and coucou sets are all pairs.
+  matches light or dark mode. The GNOME, coucou and Ink sets are all pairs.
 - Nothing else lives here, on purpose. Keeping only the GNOME set and
-  coucou-shell's own wallpapers means the public repo carries a coherent
+  coucou-shell's own wallpapers (coucou and Ink) means the public repo carries a coherent
   collection whose licences are all known. Personal picks (and the
   `macos-*` files) live in `~/code/wallpapers-private`, which isn't public,
   and are merged into the same wallpaper folder at runtime through

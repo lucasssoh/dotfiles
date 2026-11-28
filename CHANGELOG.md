@@ -17,6 +17,7 @@ Versions follow `MAJOR.MINOR.PATCH`, and each release is a git tag (`v1.0.0`). M
 - **Shell theme:** themes may set `blue`, `magenta` and `cyan`, and all eighteen do: the terminal shows each theme's own instead of borrowing its orange for magenta.
 - **Prisme:** one band of wallpapers per shell theme under the preview, Glass first, then each Ink theme with the wallpapers that suit it. `↑/↓` goes from one band to the next, and Enter sets the theme with the wallpaper. Over the preview, a sketch of the desktop in the theme's look and colours; `C` shows it in the other mode. In a slideshow, `Shift + ↓/↑` adds and removes wallpapers.
 - **Themes:** the theme picker names them `Ink · Bamboo`, `Ink · Nord`…
+- **Wallpapers:** seven for each Ink theme, light and dark, drawn in its colours with the cartoon outlines: hills, stickers, the Coucou bird, a sunburst, and three dithered suns after GNOME's. In Prisme, a theme's band starts with its own, and Glass leaves them out.
 - **Password prompts:** under **Asked by**, a click on a command shows it whole, and `Tab` unfolds them all. The command asking opens unfolded, with the folder it runs in.
 
 ### Changed

@@ -52,6 +52,9 @@ ONCE=0
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
 DOTFILES_SRC="$REPO_ROOT/wallpapers"
+# The Ink wallpapers, one set per shell theme (wallpapers/coucou/ink.py),
+# kept in a folder of their own and merged like the others.
+INK_SRC="$DOTFILES_SRC/ink"
 
 # Extra source folders merged in on top of DOTFILES_SRC -- see
 # prisme/wallpapers-extra.conf for the format. Read once at startup (like
@@ -76,7 +79,7 @@ mkdir -p "$CACHE_DIR"
 sync_merged_dir() {
     mkdir -p "$WALL_DIR"
     touch "$WALL_DIR/.wallpapers-merged"
-    for src in "$DOTFILES_SRC" "${EXTRA_SOURCES[@]}"; do
+    for src in "$DOTFILES_SRC" "$INK_SRC" "${EXTRA_SOURCES[@]}"; do
         [[ -d "$src" ]] || continue
         for f in "$src"/*; do
             [[ -f "$f" ]] || continue
@@ -156,6 +159,7 @@ run_pass
 # specific file the event was about.
 watch_dirs=()
 [[ -d "$DOTFILES_SRC" ]] && watch_dirs+=("$DOTFILES_SRC")
+[[ -d "$INK_SRC" ]] && watch_dirs+=("$INK_SRC")
 for src in "${EXTRA_SOURCES[@]}"; do
     [[ -d "$src" ]] && watch_dirs+=("$src")
 done

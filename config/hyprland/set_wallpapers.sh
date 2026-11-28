@@ -20,6 +20,8 @@ echo "[INFO] Configuration des wallpapers"
 # up (../..)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOTFILES_SRC="$REPO_ROOT/wallpapers"
+# The Ink wallpapers, one set per shell theme (wallpapers/coucou/ink.py).
+INK_SRC="$DOTFILES_SRC/ink"
 WALLPAPERS_DST="$HOME/Images/Wallpapers"
 
 # Extra source folders -- see prisme/wallpapers-extra.conf for the format.
@@ -56,7 +58,7 @@ mkdir -p "$HOME/Images" "$WALLPAPERS_DST"
 touch "$WALLPAPERS_DST/.wallpapers-merged"
 
 count=0
-for src in "$DOTFILES_SRC" "${EXTRA_SOURCES[@]}"; do
+for src in "$DOTFILES_SRC" "$INK_SRC" "${EXTRA_SOURCES[@]}"; do
     [ -d "$src" ] || continue
     for f in "$src"/*; do
         [ -f "$f" ] || continue
@@ -67,6 +69,7 @@ done
 
 echo "[OK] $WALLPAPERS_DST reconstruit ($count wallpapers) depuis :"
 echo "       - $DOTFILES_SRC"
+[ -d "$INK_SRC" ] && echo "       - $INK_SRC"
 for src in "${EXTRA_SOURCES[@]}"; do
     [ -d "$src" ] && echo "       - $src"
 done
